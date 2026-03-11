@@ -209,10 +209,11 @@ export default function Home() {
         open={dialogOpen}
         onOpenChange={(open) => {
           setDialogOpen(open);
-          if (!open) setEditingFirm(null);
+          if (!open) { setEditingFirm(null); setPreselectedType(null); }
         }}
         onSubmit={handleSubmit}
         editingFirm={editingFirm}
+        preselectedType={preselectedType}
       />
 
       <DeleteConfirmDialog
