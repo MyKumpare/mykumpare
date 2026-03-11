@@ -7,7 +7,7 @@ const FIRM_TYPE_TO_PRODUCT_TYPE = {
   "Manager of Managers": "Multi-Manager Product",
 };
 
-export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, products = [] }) {
+export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditProduct, products = [] }) {
   const productType = FIRM_TYPE_TO_PRODUCT_TYPE[firm.firm_type];
   const [expanded, setExpanded] = useState(false);
 
