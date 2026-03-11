@@ -27,6 +27,7 @@ export default function Home() {
   const [preselectedType, setPreselectedType] = useState(null);
   const [deletingFirm, setDeletingFirm] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [statsModal, setStatsModal] = useState(null); // "firms" | "products" | null
 
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
