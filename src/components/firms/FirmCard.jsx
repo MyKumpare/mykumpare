@@ -36,8 +36,12 @@ export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditP
           className="flex items-center gap-3 min-w-0 flex-1 text-left"
           onClick={handleFirmClick}
         >
-          <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center">
-            <Building2 className="w-4 h-4 text-indigo-600" />
+          <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center overflow-hidden">
+            {firm.logo_url ? (
+              <img src={firm.logo_url} alt={firm.name} className="w-full h-full object-contain p-1" />
+            ) : (
+              <Building2 className="w-4 h-4 text-indigo-600" />
+            )}
           </div>
           <span className="font-medium text-gray-900 truncate hover:text-indigo-600 transition-colors">{firm.name}</span>
           {showProducts && (
