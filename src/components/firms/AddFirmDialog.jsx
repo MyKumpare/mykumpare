@@ -366,21 +366,53 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               </div>
             ) : null}
 
-            <div className="space-y-3">
-              {phones.map((ph, i) => (
-                <PhoneForm
-                  key={ph.id}
-                  phone={ph}
-                  onChange={(updated) => handlePhoneChange(i, updated)}
-                  onDelete={() => handleDeletePhone(i)}
-                  onSetDefault={() => handleSetDefaultPhone(i)}
-                  isDefault={ph.is_default}
-                  isEditing={activelyEditing}
-                  isOnly={phones.length === 1}
-                  addresses={addresses}
-                />
-              ))}
-            </div>
+            {activelyEditing ? (
+              <div className="space-y-3">
+                {phones.map((ph, i) => (
+                  <PhoneForm
+                    key={ph.id}
+                    phone={ph}
+                    onChange={(updated) => handlePhoneChange(i, updated)}
+                    onDelete={() => handleDeletePhone(i)}
+                    onSetDefault={() => handleSetDefaultPhone(i)}
+                    isDefault={ph.is_default}
+                    isEditing={activelyEditing}
+                    isOnly={phones.length === 1}
+                    addresses={addresses}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {addresses.map((addr) => {
+                  const addressPhones = phones.filter(p => p.address_id === addr.id);
+                  if (addressPhones.length === 0) return null;
+                  return (
+                    <div key={addr.id} className="space-y-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+                        <span>{addr.is_headquarters ? "🏢" : "📍"}</span>
+                        <span>{addr.city}, {addr.state}</span>
+                      </div>
+                      <div className="space-y-2">
+                        {addressPhones.map((ph, i) => (
+                          <PhoneForm
+                            key={ph.id}
+                            phone={ph}
+                            onChange={(updated) => handlePhoneChange(phones.indexOf(ph), updated)}
+                            onDelete={() => handleDeletePhone(phones.indexOf(ph))}
+                            onSetDefault={() => handleSetDefaultPhone(phones.indexOf(ph))}
+                            isDefault={ph.is_default}
+                            isEditing={false}
+                            isOnly={addressPhones.length === 1}
+                            addresses={addresses}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
