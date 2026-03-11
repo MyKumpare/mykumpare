@@ -41,6 +41,12 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, editingFir
     }
   }, [editingFirm, preselectedType, open]);
 
+  useEffect(() => {
+    if (open && preselectedType && !editingFirm) {
+      setTimeout(() => nameInputRef.current?.focus(), 50);
+    }
+  }, [open, preselectedType, editingFirm]);
+
   const isDuplicate = firmName.trim().length > 0 &&
     existingFirms.some((f) => {
       if (f.id === editingFirm?.id) return false;
