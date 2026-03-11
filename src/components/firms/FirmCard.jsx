@@ -1,7 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, Building2 } from "lucide-react";
+import { Building2 } from "lucide-react";
 
 export default function FirmCard({ firm, onEdit, onDelete }) {
   return (

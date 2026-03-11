@@ -26,7 +26,7 @@ const FIRM_TYPES = [
   "Trade Organizations",
 ];
 
-export default function AddFirmDialog({ open, onOpenChange, onSubmit, editingFirm, preselectedType, existingFirms = [] }) {
+export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, editingFirm, preselectedType, existingFirms = [] }) {
   const [firmType, setFirmType] = useState(editingFirm?.firm_type || "");
   const [firmName, setFirmName] = useState(editingFirm?.name || "");
   const nameInputRef = useRef(null);
@@ -109,17 +109,30 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, editingFir
             )}
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={!isValid}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white"
-          >
-            {editingFirm ? "Save Changes" : "Add Firm"}
-          </Button>
+        <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-between gap-2">
+          <div>
+            {editingFirm && onDelete && (
+              <Button
+                variant="ghost"
+                className="text-red-500 hover:text-red-600 hover:bg-red-50 w-full sm:w-auto"
+                onClick={() => { onOpenChange(false); onDelete(editingFirm); }}
+              >
+                Delete Firm
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={!isValid}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            >
+              {editingFirm ? "Save Changes" : "Add Firm"}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
