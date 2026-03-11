@@ -148,7 +148,7 @@ export default function AddProductDialog({
           {/* Product Type */}
           <div className="space-y-2">
             <Label className="text-sm font-medium text-gray-700">Product Type</Label>
-            {!activelyEditing ? (
+            {!activelyEditing || (preselectedProductType && !editingProduct) ? (
               <div className="h-11 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-700 font-medium">
                 {productType}
               </div>
