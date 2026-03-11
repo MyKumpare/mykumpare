@@ -18,8 +18,12 @@ function getAddressLabel(addr) {
 
 function getCountryCodeFromCountryName(countryName) {
   if (!countryName) return "";
-  const match = COUNTRY_CODES.find(c => c.country.toLowerCase() === countryName.toLowerCase());
-  return match ? match.code : "";
+  // Handle both full country names and 2-letter codes
+  const match = COUNTRY_CODES.find(c => 
+    c.country.toLowerCase() === countryName.toLowerCase() || 
+    c.code.toLowerCase() === countryName.toLowerCase()
+  );
+  return match ? match.code : "1"; // Default to US if not found
 }
 
 export default function PhoneForm({ phone, onChange, onDelete, onSetDefault, isDefault, isEditing, isOnly, addresses = [] }) {
