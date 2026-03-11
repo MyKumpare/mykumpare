@@ -10,6 +10,7 @@ import AddFirmDialog from "../components/firms/AddFirmDialog";
 import FirmTypeSection from "../components/firms/FirmTypeSection";
 import DeleteConfirmDialog from "../components/firms/DeleteConfirmDialog";
 import AddProductDialog from "../components/products/AddProductDialog";
+import StatsListModal from "../components/stats/StatsListModal";
 
 const FIRM_TYPES = [
   "Manager of Managers",
