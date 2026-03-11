@@ -97,6 +97,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, editingFir
           <div className="space-y-2">
             <Label className="text-sm font-medium text-gray-700">Firm Name</Label>
             <Input
+              ref={nameInputRef}
               placeholder="Enter firm name..."
               value={firmName}
               onChange={(e) => setFirmName(e.target.value)}
