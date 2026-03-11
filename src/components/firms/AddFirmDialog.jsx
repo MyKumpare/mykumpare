@@ -462,32 +462,19 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                        <div className="space-y-2">
                          {orphanedPhones.map((ph) => {
                            const phoneIndex = phones.findIndex(p => p.id === ph.id);
-                           const [expandPhone, setExpandPhone] = React.useState(false);
+                           const isExpanded = expandedPhoneId === ph.id;
                            return (
-                             <div key={ph.id} onClick={() => setExpandPhone(!expandPhone)}>
-                               {expandPhone ? (
-                                 <PhoneForm
-                                   phone={ph}
-                                   onChange={(updated) => handlePhoneChange(phoneIndex, updated)}
-                                   onDelete={() => handleDeletePhone(phoneIndex)}
-                                   onSetDefault={() => handleSetDefaultPhone(phoneIndex)}
-                                   isDefault={ph.is_default}
-                                   isEditing={true}
-                                   isOnly={orphanedPhones.length === 1}
-                                   addresses={addresses}
-                                 />
-                               ) : (
-                                 <PhoneForm
-                                   phone={ph}
-                                   onChange={(updated) => handlePhoneChange(phoneIndex, updated)}
-                                   onDelete={() => handleDeletePhone(phoneIndex)}
-                                   onSetDefault={() => handleSetDefaultPhone(phoneIndex)}
-                                   isDefault={ph.is_default}
-                                   isEditing={false}
-                                   isOnly={orphanedPhones.length === 1}
-                                   addresses={addresses}
-                                 />
-                               )}
+                             <div key={ph.id} onClick={() => setExpandedPhoneId(isExpanded ? null : ph.id)}>
+                               <PhoneForm
+                                 phone={ph}
+                                 onChange={(updated) => handlePhoneChange(phoneIndex, updated)}
+                                 onDelete={() => handleDeletePhone(phoneIndex)}
+                                 onSetDefault={() => handleSetDefaultPhone(phoneIndex)}
+                                 isDefault={ph.is_default}
+                                 isEditing={isExpanded}
+                                 isOnly={orphanedPhones.length === 1}
+                                 addresses={addresses}
+                               />
                              </div>
                            );
                          })}
