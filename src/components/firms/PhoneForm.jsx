@@ -26,7 +26,18 @@ export default function PhoneForm({ phone, onChange, onDelete, onSetDefault, isD
   const midRef = useRef(null);
   const lastRef = useRef(null);
 
-  const areaCodes = getAreaCodesForCountry(phone.country_code || "");
+  const selectedAddress = useMemo(() => {
+    return addresses.find(a => a.id === phone.address_id);
+  }, [phone.address_id, addresses]);
+
+  const areaCodes = useMemo(() => {
+    if (!phone.country_code) return [];
+    // Filter area codes by city if selected address has a city
+    if (selectedAddress?.city && phone.country_code === "1") {
+      return getAreaCodesForCity(selectedAddress.city) || getAreaCodesForCountry(phone.country_code);
+    }
+    return getAreaCodesForCountry(phone.country_code);
+  }, [phone.country_code, selectedAddress?.city]);
 
   const handleAddressChange = (addressId) => {
     const selectedAddr = addresses.find(a => a.id === addressId);
