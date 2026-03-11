@@ -89,7 +89,9 @@ export default function Home() {
   );
 
   const groupedFirms = FIRM_TYPES.reduce((acc, type) => {
-    const typeFirms = filteredFirms.filter((f) => f.firm_type === type);
+    const typeFirms = filteredFirms
+      .filter((f) => f.firm_type === type)
+      .sort((a, b) => a.name.localeCompare(b.name));
     if (typeFirms.length > 0) acc[type] = typeFirms;
     return acc;
   }, {});
