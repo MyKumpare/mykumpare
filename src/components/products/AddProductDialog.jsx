@@ -71,7 +71,9 @@ export default function AddProductDialog({
   }, [productType]);
 
   const eligibleFirms = productType
-    ? firms.filter((f) => f.firm_type === PRODUCT_TYPE_TO_FIRM_TYPE[productType])
+    ? firms
+        .filter((f) => f.firm_type === PRODUCT_TYPE_TO_FIRM_TYPE[productType])
+        .sort((a, b) => a.name.localeCompare(b.name))
     : [];
 
   const hasChanges = editingProduct
