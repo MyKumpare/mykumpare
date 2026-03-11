@@ -11,6 +11,7 @@ import {
 import { Pencil, Building2, Plus, Upload, X } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import AddressForm from "./AddressForm";
+import PhoneForm from "./PhoneForm";
 
 const FIRM_TYPES = [
   "Manager of Managers",
@@ -20,6 +21,16 @@ const FIRM_TYPES = [
   "Securities Brokerage",
   "Trade Organizations",
 ];
+
+const newPhone = () => ({
+  id: crypto.randomUUID(),
+  phone_type: "",
+  country_code: "",
+  area_code: "",
+  number_mid: "",
+  number_last: "",
+  is_default: false,
+});
 
 const newAddress = () => ({
   id: crypto.randomUUID(),
