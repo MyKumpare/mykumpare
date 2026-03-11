@@ -84,9 +84,12 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, editingFir
               placeholder="Enter firm name..."
               value={firmName}
               onChange={(e) => setFirmName(e.target.value)}
-              className="h-11"
+              className={`h-11 ${isDuplicate ? "border-red-400 focus-visible:ring-red-400" : ""}`}
               onKeyDown={(e) => e.key === "Enter" && isValid && handleSubmit()}
             />
+            {isDuplicate && (
+              <p className="text-sm text-red-500 mt-1">The Firm is Already in the System.</p>
+            )}
           </div>
         </div>
         <DialogFooter>
