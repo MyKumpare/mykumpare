@@ -241,6 +241,15 @@ export default function PhoneForm({ phone, onChange, onDelete, onSetDefault, isD
         </div>
       ) : (
         <div className="space-y-2">
+          {phone.address_id && addresses.length > 0 && (() => {
+            const linked = addresses.find((a) => a.id === phone.address_id);
+            return linked ? (
+              <div className="flex items-center gap-1.5 text-xs text-gray-600 mb-2 p-2 bg-blue-50 rounded border border-blue-100">
+                <MapPin className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0" />
+                <span className="font-medium">{linked.is_headquarters ? "🏢 " : "📍 "}{getAddressLabel(linked)}</span>
+              </div>
+            ) : null;
+          })()}
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
               <Label className="text-xs font-medium text-gray-500">Type</Label>
@@ -251,15 +260,6 @@ export default function PhoneForm({ phone, onChange, onDelete, onSetDefault, isD
               {viewText(displayNumber())}
             </div>
           </div>
-          {phone.address_id && addresses.length > 0 && (() => {
-            const linked = addresses.find((a) => a.id === phone.address_id);
-            return linked ? (
-              <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-1">
-                <MapPin className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
-                <span>{linked.is_headquarters ? "🏢 " : ""}{getAddressLabel(linked)}</span>
-              </div>
-            ) : null;
-          })()}
         </div>
       )}
     </div>
