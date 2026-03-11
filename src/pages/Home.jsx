@@ -297,7 +297,11 @@ export default function Home() {
         open={productDialogOpen}
         onOpenChange={(open) => {
           setProductDialogOpen(open);
-          if (!open) setEditingProduct(null);
+          if (!open) {
+            setEditingProduct(null);
+            setPreselectedProductType(null);
+            setPreselectedFirmId(null);
+          }
         }}
         onSubmit={handleProductSubmit}
         onDelete={(product) => {
@@ -307,6 +311,8 @@ export default function Home() {
         editingProduct={editingProduct}
         firms={firms}
         existingProducts={products}
+        preselectedProductType={preselectedProductType}
+        preselectedFirmId={preselectedFirmId}
       />
     </div>
   );
