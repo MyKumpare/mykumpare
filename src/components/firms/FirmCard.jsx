@@ -15,14 +15,6 @@ export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditP
   const firmProducts = products.filter((p) => p.firm_id === firm.id).sort((a, b) => a.name.localeCompare(b.name));
   const showProducts = !!productType;
 
-  const handleFirmClick = () => {
-    if (showProducts) {
-      setExpanded((v) => !v);
-    } else {
-      onEdit(firm);
-    }
-  };
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -32,29 +24,44 @@ export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditP
       className="bg-white rounded-xl border border-gray-100 hover:border-indigo-200 hover:shadow-md transition-all duration-200"
     >
       <div className="group flex items-center justify-between p-4">
-        <button
-          className="flex items-center gap-3 min-w-0 flex-1 text-left"
-          onClick={handleFirmClick}
-        >
-          <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center overflow-hidden">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          {/* Logo / icon — clicking opens form */}
+          <button
+            className="flex-shrink-0 w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center overflow-hidden hover:ring-2 hover:ring-indigo-300 transition-all"
+            onClick={() => onEdit(firm)}
+          >
             {firm.logo_url ? (
               <img src={firm.logo_url} alt={firm.name} className="w-full h-full object-contain p-1" />
             ) : (
               <Building2 className="w-4 h-4 text-indigo-600" />
             )}
-          </div>
-          <span className="font-medium text-gray-900 truncate hover:text-indigo-600 transition-colors">{firm.name}</span>
+          </button>
+
+          {/* Firm name — clicking opens form */}
+          <button
+            className="font-medium text-gray-900 truncate hover:text-indigo-600 transition-colors text-left"
+            onClick={() => onEdit(firm)}
+          >
+            {firm.name}
+          </button>
+
+          {/* Product count + chevron — clicking toggles expansion */}
           {showProducts && (
-            <span className="flex-shrink-0 text-xs text-gray-400 font-medium ml-1">
-              {firmProducts.length > 0 ? `${firmProducts.length}` : ""}
-            </span>
+            <button
+              className="flex items-center gap-1 flex-shrink-0 ml-1"
+              onClick={() => setExpanded((v) => !v)}
+            >
+              <span className="text-xs text-gray-400 font-medium">
+                {firmProducts.length > 0 ? firmProducts.length : ""}
+              </span>
+              {isExpanded
+                ? <ChevronDown className="w-4 h-4 text-gray-400" />
+                : <ChevronRight className="w-4 h-4 text-gray-400" />
+              }
+            </button>
           )}
-          {showProducts && (
-            isExpanded
-              ? <ChevronDown className="flex-shrink-0 w-4 h-4 text-gray-400" />
-              : <ChevronRight className="flex-shrink-0 w-4 h-4 text-gray-400" />
-          )}
-        </button>
+        </div>
+
         <div className="flex items-center gap-1 flex-shrink-0 ml-2">
           {showProducts && onAddProduct && (
             <button
@@ -64,13 +71,6 @@ export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditP
             >
               <Plus className="w-3.5 h-3.5" />
             </button>
-          )}
-          {!showProducts && (
-            <button
-              className="w-7 h-7 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400 transition-colors opacity-0 group-hover:opacity-100"
-              onClick={(e) => { e.stopPropagation(); onEdit(firm); }}
-              title="Edit firm"
-            />
           )}
         </div>
       </div>
