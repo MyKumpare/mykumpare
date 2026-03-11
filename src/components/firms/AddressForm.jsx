@@ -5,8 +5,22 @@ import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { MapPin, Trash2, Star } from "lucide-react";
+import { MapPin, Trash2, Star, ExternalLink } from "lucide-react";
 import { COUNTRIES, getStatesForCountry, getCitiesForState, lookupZipCode } from "./geoData";
+
+function buildMapsUrl(address) {
+  const parts = [
+    address.address_line1,
+    address.address_line2,
+    address.city,
+    address.state,
+    address.postal_code,
+    COUNTRIES.find(c => c.code === address.country)?.name,
+  ].filter(Boolean);
+  if (parts.length < 2) return null;
+  const query = encodeURIComponent(parts.join(", "));
+  return `https://www.google.com/maps/dir/?api=1&destination=${query}`;
+}
 
 export default function AddressForm({ address, onChange, onDelete, onSetHeadquarters, isHeadquarters, isEditing, isOnly }) {
   const [cityOptions, setCityOptions] = useState([]);
