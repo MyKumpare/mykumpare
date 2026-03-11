@@ -238,6 +238,7 @@ export default function Home() {
                   onAddToType={handleAddToType}
                   onAddProduct={handleAddProductFromFirm}
                   forceExpand={!!searchQuery}
+                  products={products}
                 />
               ) : null
             )}
