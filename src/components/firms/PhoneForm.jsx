@@ -226,6 +226,15 @@ export default function PhoneForm({ phone, onChange, onDelete, onSetDefault, isD
               {viewText(displayNumber())}
             </div>
           </div>
+          {phone.address_id && addresses.length > 0 && (() => {
+            const linked = addresses.find((a) => a.id === phone.address_id);
+            return linked ? (
+              <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-1">
+                <MapPin className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
+                <span>{linked.is_headquarters ? "🏢 " : ""}{getAddressLabel(linked)}</span>
+              </div>
+            ) : null;
+          })()}
         </div>
       )}
     </div>
