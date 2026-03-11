@@ -53,13 +53,13 @@ export default function AddProductDialog({
         setProductName(editingProduct.name);
         setIsEditing(false);
       } else {
-        setProductType("");
-        setFirmId("");
+        setProductType(preselectedProductType || "");
+        setFirmId(preselectedFirmId || "");
         setProductName("");
         setIsEditing(true);
       }
     }
-  }, [editingProduct, open]);
+  }, [editingProduct, open, preselectedProductType, preselectedFirmId]);
 
   useEffect(() => {
     if (isEditing && editingProduct) {
