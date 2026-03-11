@@ -66,6 +66,7 @@ export default function FirmTypeSection({ type, firms, onEdit, onDelete, onAddTo
                     onAddProduct={onAddProduct}
                     onEditProduct={onEditProduct}
                     products={products}
+                    forceExpand={forceExpand}
                   />
                 ))}
               </AnimatePresence>
