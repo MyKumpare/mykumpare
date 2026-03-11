@@ -346,8 +346,42 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                   </>
                 )}
               </div>
-            </div>
-          </div>
+
+              {/* Website */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Website</Label>
+                {!activelyEditing ? (
+                  <div className="h-9 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-600">
+                    {website ? <a href={website} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">{website}</a> : <span className="text-gray-400">—</span>}
+                  </div>
+                ) : (
+                  <Input
+                    placeholder="https://example.com"
+                    value={website}
+                    onChange={(e) => setWebsite(e.target.value)}
+                    className="h-9"
+                  />
+                )}
+              </div>
+
+              {/* Description */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Description</Label>
+                {!activelyEditing ? (
+                  <div className="px-3 py-2 rounded-md border bg-gray-50 text-sm text-gray-700 min-h-20 whitespace-pre-wrap">
+                    {description || <span className="text-gray-400">—</span>}
+                  </div>
+                ) : (
+                  <Textarea
+                    placeholder="Enter firm description..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="min-h-20"
+                  />
+                )}
+              </div>
+              </div>
+              </div>
 
           {/* Addresses & Phone Numbers Tabs */}
           <Tabs defaultValue="addresses" className="w-full">
