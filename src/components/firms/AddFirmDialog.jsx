@@ -124,6 +124,12 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const handleAddPhone = () => {
     const ph = newPhone();
     if (phones.length === 0) ph.is_default = true;
+    // Pre-select first address if available
+    if (addresses.length > 0 && !ph.address_id) {
+      ph.address_id = addresses[0].id;
+      const addr = addresses[0];
+      ph.country_code = getCountryCodeFromCountryName(addr.country);
+    }
     setPhones([...phones, ph]);
   };
 
