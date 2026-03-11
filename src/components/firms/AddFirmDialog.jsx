@@ -334,6 +334,46 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               ))}
             </div>
           </div>
+
+          {/* Phone Numbers Section */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-semibold text-gray-700">Phone Numbers</Label>
+              {activelyEditing && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs"
+                  onClick={handleAddPhone}
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Add Phone
+                </Button>
+              )}
+            </div>
+
+            {phones.length === 0 && (
+              <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
+                {activelyEditing ? 'Click "Add Phone" to add a number' : "No phone numbers added"}
+              </div>
+            )}
+
+            <div className="space-y-3">
+              {phones.map((ph, i) => (
+                <PhoneForm
+                  key={ph.id}
+                  phone={ph}
+                  onChange={(updated) => handlePhoneChange(i, updated)}
+                  onDelete={() => handleDeletePhone(i)}
+                  onSetDefault={() => handleSetDefaultPhone(i)}
+                  isDefault={ph.is_default}
+                  isEditing={activelyEditing}
+                  isOnly={phones.length === 1}
+                />
+              ))}
+            </div>
+          </div>
         </div>
 
         <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-between gap-2 pt-2 border-t">
