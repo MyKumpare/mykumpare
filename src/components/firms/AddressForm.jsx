@@ -75,10 +75,31 @@ export default function AddressForm({ address, onChange, onDelete, onSetHeadquar
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <MapPin className={`w-4 h-4 ${isHeadquarters ? "text-indigo-500" : "text-gray-400"}`} />
-          <span className="text-sm font-medium text-gray-700">
-            {isHeadquarters ? "Headquarters" : "Office"}
-          </span>
+          {(() => {
+            const mapsUrl = buildMapsUrl(address);
+            return mapsUrl ? (
+              <a
+                href={mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`flex items-center gap-2 group hover:text-indigo-600 transition-colors ${isHeadquarters ? "text-indigo-500" : "text-gray-500"}`}
+                title="Open in Google Maps for directions"
+              >
+                <MapPin className="w-4 h-4 group-hover:text-indigo-600 transition-colors" />
+                <span className="text-sm font-medium text-gray-700 group-hover:text-indigo-600 transition-colors underline decoration-dotted underline-offset-2">
+                  {isHeadquarters ? "Headquarters" : "Office"}
+                </span>
+                <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </a>
+            ) : (
+              <div className="flex items-center gap-2">
+                <MapPin className={`w-4 h-4 ${isHeadquarters ? "text-indigo-500" : "text-gray-400"}`} />
+                <span className="text-sm font-medium text-gray-700">
+                  {isHeadquarters ? "Headquarters" : "Office"}
+                </span>
+              </div>
+            );
+          })()}
         </div>
         {isEditing && (
           <div className="flex items-center gap-1">
