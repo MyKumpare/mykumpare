@@ -13,15 +13,16 @@ const TYPE_COLORS = {
   "Trade Organizations": "bg-cyan-100 text-cyan-700",
 };
 
-export default function FirmTypeSection({ type, firms, onEdit, onDelete, onAddToType }) {
+export default function FirmTypeSection({ type, firms, onEdit, onDelete, onAddToType, forceExpand }) {
   const [expanded, setExpanded] = useState(false);
+  const isExpanded = forceExpand || expanded;
   const colorClass = TYPE_COLORS[type] || "bg-gray-100 text-gray-700";
 
   return (
     <div className="mb-6">
       <div className="flex items-center gap-2 mb-3">
         <button
-          onClick={() => setExpanded(!expanded)}
+          onClick={() => setExpanded(!isExpanded)}
           className="flex-1 flex items-center gap-3 group cursor-pointer"
         >
           <div className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider ${colorClass}`}>
@@ -29,7 +30,7 @@ export default function FirmTypeSection({ type, firms, onEdit, onDelete, onAddTo
           </div>
           <div className="h-px flex-1 bg-gray-100" />
           <span className="text-xs text-gray-400 font-medium">{firms.length}</span>
-          {expanded ? (
+          {isExpanded ? (
             <ChevronDown className="w-4 h-4 text-gray-400" />
           ) : (
             <ChevronRight className="w-4 h-4 text-gray-400" />
@@ -46,7 +47,7 @@ export default function FirmTypeSection({ type, firms, onEdit, onDelete, onAddTo
         </Button>
       </div>
       <AnimatePresence>
-        {expanded && (
+        {isExpanded && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
