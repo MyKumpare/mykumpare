@@ -172,6 +172,7 @@ export default function Home() {
                   onEdit={handleEdit}
                   onDelete={setDeletingFirm}
                   onAddToType={handleAddToType}
+                  forceExpand={!!searchQuery}
                 />
               ) : null
             )}
