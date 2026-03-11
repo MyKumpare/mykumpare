@@ -40,10 +40,13 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, editingFir
     }
   }, [editingFirm, preselectedType, open]);
 
-  const isDuplicate = firmName.trim() &&
-    existingFirms.some(
-      (f) => f.name.toLowerCase() === firmName.trim().toLowerCase() && f.id !== editingFirm?.id
-    );
+  const isDuplicate = firmName.trim().length > 0 &&
+    existingFirms.some((f) => {
+      if (f.id === editingFirm?.id) return false;
+      const existing = f.name.toLowerCase();
+      const input = firmName.trim().toLowerCase();
+      return existing.includes(input) || input.includes(existing);
+    });
 
   const handleSubmit = () => {
     if (!firmType || !firmName.trim() || isDuplicate) return;
