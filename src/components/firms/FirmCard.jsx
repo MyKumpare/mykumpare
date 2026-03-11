@@ -46,7 +46,7 @@ export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditP
             </span>
           )}
           {showProducts && (
-            expanded
+            isExpanded
               ? <ChevronDown className="flex-shrink-0 w-4 h-4 text-gray-400" />
               : <ChevronRight className="flex-shrink-0 w-4 h-4 text-gray-400" />
           )}
