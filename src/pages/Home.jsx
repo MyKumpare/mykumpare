@@ -130,6 +130,13 @@ export default function Home() {
     setProductDialogOpen(true);
   };
 
+  const handleEditProduct = (product) => {
+    setEditingProduct(product);
+    setPreselectedProductType(null);
+    setPreselectedFirmId(null);
+    setProductDialogOpen(true);
+  };
+
   const handleDeleteConfirm = () => {
     if (deletingFirm) {
       deleteMutation.mutate(deletingFirm.id);
