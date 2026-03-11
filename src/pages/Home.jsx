@@ -333,6 +333,8 @@ export default function Home() {
         mode={statsModal}
         firms={firms}
         products={products}
+        onFirmClick={handleEdit}
+        onProductClick={handleEditProduct}
       />
 
       <AddProductDialog
