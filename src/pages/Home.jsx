@@ -179,9 +179,7 @@ export default function Home() {
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">MyKumpare</h1>
           </div>
-          <p className="text-indigo-200 text-sm sm:text-base mt-1">
-            Manage and organize your firms in one place
-          </p>
+
           <div className="mt-6 flex items-center gap-6">
             <button
               onClick={() => setStatsModal("firms")}
