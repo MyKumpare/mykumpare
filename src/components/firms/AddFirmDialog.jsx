@@ -30,6 +30,7 @@ const newPhone = () => ({
   number_mid: "",
   number_last: "",
   is_default: false,
+  address_id: "",
 });
 
 const newAddress = () => ({
