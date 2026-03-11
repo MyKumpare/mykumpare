@@ -29,6 +29,7 @@ const FIRM_TYPES = [
 export default function AddFirmDialog({ open, onOpenChange, onSubmit, editingFirm, preselectedType, existingFirms = [] }) {
   const [firmType, setFirmType] = useState(editingFirm?.firm_type || "");
   const [firmName, setFirmName] = useState(editingFirm?.name || "");
+  const nameInputRef = useRef(null);
 
   useEffect(() => {
     if (editingFirm) {
