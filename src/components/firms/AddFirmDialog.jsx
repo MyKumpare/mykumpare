@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -30,7 +30,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, editingFir
   const [firmType, setFirmType] = useState(editingFirm?.firm_type || "");
   const [firmName, setFirmName] = useState(editingFirm?.name || "");
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (editingFirm) {
       setFirmType(editingFirm.firm_type);
       setFirmName(editingFirm.name);
