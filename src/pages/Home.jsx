@@ -182,11 +182,26 @@ export default function Home() {
           <p className="text-indigo-200 text-sm sm:text-base mt-1">
             Manage and organize your firms in one place
           </p>
-          <div className="mt-6 flex items-center gap-4">
-            <div className="text-3xl sm:text-4xl font-bold">{totalFirms}</div>
-            <div className="text-indigo-200 text-sm leading-tight">
-              Total<br />Firms
-            </div>
+          <div className="mt-6 flex items-center gap-6">
+            <button
+              onClick={() => setStatsModal("firms")}
+              className="flex items-center gap-3 group hover:opacity-80 transition-opacity"
+            >
+              <div className="text-3xl sm:text-4xl font-bold underline decoration-dotted underline-offset-4 decoration-indigo-300">{totalFirms}</div>
+              <div className="text-indigo-200 text-sm leading-tight text-left group-hover:text-white transition-colors">
+                Total<br />Firms
+              </div>
+            </button>
+            <div className="w-px h-10 bg-white/20" />
+            <button
+              onClick={() => setStatsModal("products")}
+              className="flex items-center gap-3 group hover:opacity-80 transition-opacity"
+            >
+              <div className="text-3xl sm:text-4xl font-bold underline decoration-dotted underline-offset-4 decoration-violet-300">{totalProducts}</div>
+              <div className="text-indigo-200 text-sm leading-tight text-left group-hover:text-white transition-colors">
+                Total<br />Products
+              </div>
+            </button>
           </div>
         </div>
       </div>
