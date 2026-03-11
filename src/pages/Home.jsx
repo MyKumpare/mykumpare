@@ -2,13 +2,14 @@ import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus, Building, Search } from "lucide-react";
+import { Plus, Building, Search, Package } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import AddFirmDialog from "../components/firms/AddFirmDialog";
 import FirmTypeSection from "../components/firms/FirmTypeSection";
 import DeleteConfirmDialog from "../components/firms/DeleteConfirmDialog";
+import AddProductDialog from "../components/products/AddProductDialog";
 
 const FIRM_TYPES = [
   "Manager of Managers",
