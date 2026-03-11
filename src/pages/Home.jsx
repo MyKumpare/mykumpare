@@ -30,6 +30,8 @@ export default function Home() {
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [deletingProduct, setDeletingProduct] = useState(null);
+  const [preselectedProductType, setPreselectedProductType] = useState(null);
+  const [preselectedFirmId, setPreselectedFirmId] = useState(null);
 
   const queryClient = useQueryClient();
 
