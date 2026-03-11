@@ -68,6 +68,13 @@ export default function Home() {
 
   const handleEdit = (firm) => {
     setEditingFirm(firm);
+    setPreselectedType(null);
+    setDialogOpen(true);
+  };
+
+  const handleAddToType = (type) => {
+    setEditingFirm(null);
+    setPreselectedType(type);
     setDialogOpen(true);
   };
 
