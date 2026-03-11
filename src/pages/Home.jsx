@@ -280,6 +280,22 @@ export default function Home() {
         firm={deletingFirm}
         onConfirm={handleDeleteConfirm}
       />
+
+      <AddProductDialog
+        open={productDialogOpen}
+        onOpenChange={(open) => {
+          setProductDialogOpen(open);
+          if (!open) setEditingProduct(null);
+        }}
+        onSubmit={handleProductSubmit}
+        onDelete={(product) => {
+          setDeletingProduct(product);
+          deleteProductMutation.mutate(product.id);
+        }}
+        editingProduct={editingProduct}
+        firms={firms}
+        existingProducts={products}
+      />
     </div>
   );
 }
