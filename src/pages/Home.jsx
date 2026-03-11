@@ -165,6 +165,7 @@ export default function Home() {
   }, {});
 
   const totalFirms = firms.length;
+  const totalProducts = products.length;
   const hasResults = Object.keys(groupedFirms).length > 0;
 
   return (
