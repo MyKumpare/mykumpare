@@ -154,7 +154,8 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     ? firmName.trim() !== editingFirm.name ||
       firmType !== editingFirm.firm_type ||
       logoUrl !== (editingFirm.logo_url || "") ||
-      JSON.stringify(addresses) !== JSON.stringify(editingFirm.addresses || [])
+      JSON.stringify(addresses) !== JSON.stringify(editingFirm.addresses || []) ||
+      JSON.stringify(phones) !== JSON.stringify(editingFirm.phones || [])
     : false;
 
   const isValid = firmType && firmName.trim() && !isDuplicate;
