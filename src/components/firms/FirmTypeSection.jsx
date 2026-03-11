@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import FirmCard from "./FirmCard";
 
 const TYPE_ICONS = {
