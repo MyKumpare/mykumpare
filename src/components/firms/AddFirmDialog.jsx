@@ -301,7 +301,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
           {/* Contact / Addresses Section */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-semibold text-gray-700">Contact Addresses</Label>
+              <Label className="text-sm font-semibold text-gray-700">Addresses</Label>
               {activelyEditing && (
                 <Button
                   type="button"
