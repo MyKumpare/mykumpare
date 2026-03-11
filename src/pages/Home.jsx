@@ -202,6 +202,8 @@ export default function Home() {
             <Button
               onClick={() => {
                 setEditingProduct(null);
+                setPreselectedProductType(null);
+                setPreselectedFirmId(null);
                 setProductDialogOpen(true);
               }}
               className="h-11 px-5 bg-violet-600 hover:bg-violet-700 text-white shadow-sm"
