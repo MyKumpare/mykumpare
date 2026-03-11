@@ -176,6 +176,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     setFirmName(editingFirm.name);
     setLogoUrl(editingFirm.logo_url || "");
     setAddresses(editingFirm.addresses || []);
+    setPhones(editingFirm.phones || []);
     setIsEditing(false);
   };
 
