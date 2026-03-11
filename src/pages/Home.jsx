@@ -214,6 +214,7 @@ export default function Home() {
           if (!open) { setEditingFirm(null); setPreselectedType(null); }
         }}
         onSubmit={handleSubmit}
+        onDelete={setDeletingFirm}
         editingFirm={editingFirm}
         preselectedType={preselectedType}
         existingFirms={firms}
