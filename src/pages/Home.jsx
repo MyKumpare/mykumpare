@@ -27,6 +27,10 @@ export default function Home() {
   const [deletingFirm, setDeletingFirm] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
 
+  const [productDialogOpen, setProductDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [deletingProduct, setDeletingProduct] = useState(null);
+
   const queryClient = useQueryClient();
 
   const { data: firms = [], isLoading } = useQuery({
