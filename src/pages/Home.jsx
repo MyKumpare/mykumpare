@@ -123,6 +123,13 @@ export default function Home() {
     setDialogOpen(true);
   };
 
+  const handleAddProductFromFirm = (firm, productType) => {
+    setEditingProduct(null);
+    setPreselectedProductType(productType);
+    setPreselectedFirmId(firm.id);
+    setProductDialogOpen(true);
+  };
+
   const handleDeleteConfirm = () => {
     if (deletingFirm) {
       deleteMutation.mutate(deletingFirm.id);
