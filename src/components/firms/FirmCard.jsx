@@ -11,7 +11,7 @@ export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditP
   const productType = FIRM_TYPE_TO_PRODUCT_TYPE[firm.firm_type];
   const [expanded, setExpanded] = useState(false);
 
-  const firmProducts = products.filter((p) => p.firm_id === firm.id);
+  const firmProducts = products.filter((p) => p.firm_id === firm.id).sort((a, b) => a.name.localeCompare(b.name));
   const showProducts = !!productType;
 
   const handleFirmClick = () => {
