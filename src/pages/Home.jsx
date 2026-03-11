@@ -244,6 +244,7 @@ export default function Home() {
                   onDelete={setDeletingFirm}
                   onAddToType={handleAddToType}
                   onAddProduct={handleAddProductFromFirm}
+                  onEditProduct={handleEditProduct}
                   forceExpand={!!searchQuery}
                   products={products}
                 />
