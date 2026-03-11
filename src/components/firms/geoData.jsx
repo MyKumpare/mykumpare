@@ -261,3 +261,27 @@ export function getStatesForCountry(countryCode) {
 export function getCitiesForState(stateCode) {
   return CITIES_BY_STATE[stateCode] || [];
 }
+
+export function getAreaCodesForCity(city) {
+  // Map common US cities to their primary area codes
+  const cityAreaCodes = {
+    "New York City": [{ code: "212", label: "212 - Manhattan" }, { code: "718", label: "718 - Outer Boroughs" }, { code: "347", label: "347 - Manhattan Overlay" }],
+    "Los Angeles": [{ code: "213", label: "213 - Central LA" }, { code: "310", label: "310 - West LA" }, { code: "424", label: "424 - LA Overlay" }],
+    "Chicago": [{ code: "312", label: "312 - Downtown Chicago" }, { code: "773", label: "773 - North/West Chicago" }, { code: "872", label: "872 - Chicago Overlay" }],
+    "Houston": [{ code: "713", label: "713 - Houston" }, { code: "281", label: "281 - Surrounding" }, { code: "832", label: "832 - Houston Overlay" }],
+    "Phoenix": [{ code: "602", label: "602 - Phoenix" }, { code: "480", label: "480 - East Valley" }],
+    "Philadelphia": [{ code: "215", label: "215 - Philadelphia" }, { code: "267", label: "267 - Philadelphia Overlay" }],
+    "San Antonio": [{ code: "210", label: "210 - San Antonio" }, { code: "737", label: "737 - San Antonio Overlay" }],
+    "San Diego": [{ code: "619", label: "619 - Downtown SD" }, { code: "858", label: "858 - North County" }],
+    "Dallas": [{ code: "214", label: "214 - Dallas" }, { code: "972", label: "972 - Metroplex" }, { code: "469", label: "469 - Dallas Overlay" }],
+    "San Jose": [{ code: "408", label: "408 - San Jose" }, { code: "669", label: "669 - San Jose Overlay" }],
+    "Austin": [{ code: "512", label: "512 - Austin" }, { code: "737", label: "737 - Austin Overlay" }],
+    "Miami": [{ code: "305", label: "305 - Miami" }, { code: "786", label: "786 - Miami Overlay" }],
+    "Denver": [{ code: "303", label: "303 - Denver" }, { code: "720", label: "720 - Denver Overlay" }],
+    "Seattle": [{ code: "206", label: "206 - Seattle" }, { code: "425", label: "425 - Eastside" }],
+    "Boston": [{ code: "617", label: "617 - Boston" }, { code: "857", label: "857 - Boston Overlay" }],
+    "Atlanta": [{ code: "404", label: "404 - Atlanta" }, { code: "770", label: "770 - Metro Atlanta" }, { code: "678", label: "678 - Overlay" }],
+    "Washington": [{ code: "202", label: "202 - Washington DC" }, { code: "703", label: "703 - Northern Virginia" }, { code: "571", label: "571 - Overlay" }],
+  };
+  return cityAreaCodes[city] || [];
+}
