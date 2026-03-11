@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useMemo } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/select";
 import { Phone, Trash2, Star, MapPin } from "lucide-react";
 import { COUNTRY_CODES, getAreaCodesForCountry } from "./phoneData";
+import { getAreaCodesForCity } from "./geoData";
 
 const PHONE_TYPES = ["Office Main Number", "Toll Free Number", "Fax Number"];
 
