@@ -101,6 +101,8 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         setFirmType(editingFirm.firm_type || "");
         setFirmName(editingFirm.name || "");
         setLogoUrl(editingFirm.logo_url || "");
+        setWebsite(editingFirm.website || "");
+        setDescription(editingFirm.description || "");
         setAddresses(editingFirm.addresses?.length ? editingFirm.addresses : []);
         setPhones(editingFirm.phones?.length ? editingFirm.phones : []);
         setIsEditing(false);
@@ -108,6 +110,8 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         setFirmType(preselectedType || "");
         setFirmName("");
         setLogoUrl("");
+        setWebsite("");
+        setDescription("");
         setAddresses([]);
         setPhones([]);
         setIsEditing(true);
