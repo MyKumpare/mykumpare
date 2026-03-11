@@ -465,17 +465,32 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                            const phoneIndex = phones.findIndex(p => p.id === ph.id);
                            const isExpanded = expandedPhoneId === ph.id;
                            return (
-                             <div key={ph.id} onClick={() => setExpandedPhoneId(isExpanded ? null : ph.id)} className="cursor-pointer hover:opacity-80 transition-opacity">
-                               <PhoneForm
-                                 phone={ph}
-                                 onChange={(updated) => handlePhoneChange(phoneIndex, updated)}
-                                 onDelete={() => handleDeletePhone(phoneIndex)}
-                                 onSetDefault={() => handleSetDefaultPhone(phoneIndex)}
-                                 isDefault={ph.is_default}
-                                 isEditing={isExpanded}
-                                 isOnly={orphanedPhones.length === 1}
-                                 addresses={addresses}
-                               />
+                             <div key={ph.id}>
+                               <div onClick={() => !isExpanded && setExpandedPhoneId(ph.id)} className={!isExpanded ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}>
+                                 <PhoneForm
+                                   phone={ph}
+                                   onChange={(updated) => handlePhoneChange(phoneIndex, updated)}
+                                   onDelete={() => handleDeletePhone(phoneIndex)}
+                                   onSetDefault={() => handleSetDefaultPhone(phoneIndex)}
+                                   isDefault={ph.is_default}
+                                   isEditing={isExpanded}
+                                   isOnly={orphanedPhones.length === 1}
+                                   addresses={addresses}
+                                 />
+                               </div>
+                               {isExpanded && (
+                                 <div className="flex gap-2 mt-2 px-4">
+                                   <Button
+                                     type="button"
+                                     variant="outline"
+                                     size="sm"
+                                     className="h-8 text-xs"
+                                     onClick={() => setExpandedPhoneId(null)}
+                                   >
+                                     Done
+                                   </Button>
+                                 </div>
+                               )}
                              </div>
                            );
                          })}
