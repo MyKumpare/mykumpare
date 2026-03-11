@@ -5,12 +5,17 @@ import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Phone, Trash2, Star } from "lucide-react";
+import { Phone, Trash2, Star, MapPin } from "lucide-react";
 import { COUNTRY_CODES, getAreaCodesForCountry } from "./phoneData";
 
 const PHONE_TYPES = ["Office Main Number", "Toll Free Number", "Fax Number"];
 
-export default function PhoneForm({ phone, onChange, onDelete, onSetDefault, isDefault, isEditing, isOnly }) {
+function getAddressLabel(addr) {
+  const parts = [addr.city, addr.state, addr.country].filter(Boolean);
+  return parts.length > 0 ? parts.join(", ") : (addr.address_line1 || "Unnamed Location");
+}
+
+export default function PhoneForm({ phone, onChange, onDelete, onSetDefault, isDefault, isEditing, isOnly, addresses = [] }) {
   const midRef = useRef(null);
   const lastRef = useRef(null);
 
