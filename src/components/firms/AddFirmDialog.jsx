@@ -451,11 +451,34 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                     </div>
                   );
                 })}
-                {phones.length > 0 && addresses.every(addr => phones.filter(p => p.address_id === addr.id).length === 0) && (
-                  <div className="text-sm text-amber-600 italic py-2 px-3 text-center border border-dashed border-amber-200 rounded-xl bg-amber-50">
-                    Phone numbers have no associated address
-                  </div>
-                )}
+                {(() => {
+                  const orphanedPhones = phones.filter(p => !p.address_id || !addresses.find(a => a.id === p.address_id));
+                  return orphanedPhones.length > 0 ? (
+                    <div className="space-y-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                      <div className="text-xs font-semibold text-amber-700">
+                        Phones without address
+                      </div>
+                      <div className="space-y-2">
+                        {orphanedPhones.map((ph) => {
+                          const phoneIndex = phones.findIndex(p => p.id === ph.id);
+                          return (
+                            <PhoneForm
+                              key={ph.id}
+                              phone={ph}
+                              onChange={(updated) => handlePhoneChange(phoneIndex, updated)}
+                              onDelete={() => handleDeletePhone(phoneIndex)}
+                              onSetDefault={() => handleSetDefaultPhone(phoneIndex)}
+                              isDefault={ph.is_default}
+                              isEditing={false}
+                              isOnly={orphanedPhones.length === 1}
+                              addresses={addresses}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
               </div>
             )}
           </div>
