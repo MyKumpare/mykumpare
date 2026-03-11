@@ -68,18 +68,17 @@ export default function AddressForm({ address, onChange, onDelete, onSetHeadquar
         </div>
         {isEditing && (
           <div className="flex items-center gap-1">
-            {!isHeadquarters && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-7 px-2 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50 gap-1"
-                onClick={onSetHeadquarters}
-              >
-                <Star className="w-3 h-3" />
-                Set as HQ
-              </Button>
-            )}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className={`h-7 px-2 text-xs gap-1 ${isHeadquarters ? "text-amber-500 hover:text-amber-600 hover:bg-amber-50" : "text-gray-400 hover:text-amber-500 hover:bg-amber-50"}`}
+              onClick={isHeadquarters ? () => onChange({ ...address, is_headquarters: false }) : onSetHeadquarters}
+              title={isHeadquarters ? "Unset as HQ" : "Set as HQ"}
+            >
+              <Star className={`w-3.5 h-3.5 ${isHeadquarters ? "fill-amber-400 text-amber-500" : ""}`} />
+              <span>{isHeadquarters ? "HQ" : "Set HQ"}</span>
+            </Button>
             {!isOnly && (
               <Button
                 type="button"
