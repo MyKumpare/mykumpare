@@ -15,6 +15,12 @@ function getAddressLabel(addr) {
   return parts.length > 0 ? parts.join(", ") : (addr.address_line1 || "Unnamed Location");
 }
 
+function getCountryCodeFromCountryName(countryName) {
+  if (!countryName) return "";
+  const match = COUNTRY_CODES.find(c => c.country.toLowerCase() === countryName.toLowerCase());
+  return match ? match.code : "";
+}
+
 export default function PhoneForm({ phone, onChange, onDelete, onSetDefault, isDefault, isEditing, isOnly, addresses = [] }) {
   const midRef = useRef(null);
   const lastRef = useRef(null);
