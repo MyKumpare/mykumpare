@@ -159,7 +159,9 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
       JSON.stringify(phones) !== JSON.stringify(editingFirm.phones || [])
     : false;
 
-  const isValid = firmType && firmName.trim() && !isDuplicate;
+  const phonesValid = phones.length === 0 || phones.every(p => p.address_id && p.phone_type && p.country_code && p.number_mid && p.number_last);
+
+  const isValid = firmType && firmName.trim() && !isDuplicate && phonesValid;
 
   const handleSubmit = () => {
     if (!isValid) return;
