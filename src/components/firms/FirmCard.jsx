@@ -7,9 +7,10 @@ const FIRM_TYPE_TO_PRODUCT_TYPE = {
   "Manager of Managers": "Multi-Manager Product",
 };
 
-export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditProduct, products = [] }) {
+export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditProduct, products = [], forceExpand = false }) {
   const productType = FIRM_TYPE_TO_PRODUCT_TYPE[firm.firm_type];
   const [expanded, setExpanded] = useState(false);
+  const isExpanded = forceExpand || expanded;
 
   const firmProducts = products.filter((p) => p.firm_id === firm.id).sort((a, b) => a.name.localeCompare(b.name));
   const showProducts = !!productType;
