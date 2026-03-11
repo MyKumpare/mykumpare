@@ -19,9 +19,10 @@ export default function FirmTypeSection({ type, firms, onEdit, onDelete, onAddTo
 
   return (
     <div className="mb-6">
+      <div className="flex items-center gap-2 mb-3">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-3 mb-3 group cursor-pointer"
+        className="flex-1 flex items-center gap-3 group cursor-pointer"
       >
         <div className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider ${colorClass}`}>
           {type}
