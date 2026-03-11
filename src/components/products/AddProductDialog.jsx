@@ -34,6 +34,8 @@ export default function AddProductDialog({
   editingProduct,
   firms = [],
   existingProducts = [],
+  preselectedProductType = null,
+  preselectedFirmId = null,
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [productType, setProductType] = useState("");
