@@ -64,12 +64,14 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         setFirmName(editingFirm.name || "");
         setLogoUrl(editingFirm.logo_url || "");
         setAddresses(editingFirm.addresses?.length ? editingFirm.addresses : []);
+        setPhones(editingFirm.phones?.length ? editingFirm.phones : []);
         setIsEditing(false);
       } else {
         setFirmType(preselectedType || "");
         setFirmName("");
         setLogoUrl("");
         setAddresses([]);
+        setPhones([]);
         setIsEditing(true);
       }
     }
