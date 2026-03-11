@@ -35,6 +35,16 @@ export default function FirmTypeSection({ type, firms, onEdit, onDelete, onAddTo
           <ChevronRight className="w-4 h-4 text-gray-400" />
         )}
       </button>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => onAddToType(type)}
+        className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 flex-shrink-0"
+      >
+        <Plus className="w-3.5 h-3.5 mr-1" />
+        <span className="text-xs">Add</span>
+      </Button>
+      </div>
       <AnimatePresence>
         {expanded && (
           <motion.div
