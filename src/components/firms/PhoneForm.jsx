@@ -221,28 +221,6 @@ export default function PhoneForm({ phone, onChange, onDelete, onSetDefault, isD
             </div>
           </div>
 
-          {/* Location Tag */}
-          {addresses.length > 0 && (
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-gray-600">Associated Location</Label>
-              <Select
-                value={phone.address_id || "none"}
-                onValueChange={(val) => onChange({ ...phone, address_id: val === "none" ? "" : val })}
-              >
-                <SelectTrigger className="h-9 bg-white">
-                  <SelectValue placeholder="Tag to a location..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">— No location —</SelectItem>
-                  {addresses.map((addr) => (
-                    <SelectItem key={addr.id} value={addr.id}>
-                      {addr.is_headquarters ? "🏢 " : "📍 "}{getAddressLabel(addr)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
         </div>
       ) : (
         <div className="space-y-2">
