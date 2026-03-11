@@ -72,7 +72,7 @@ export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditP
       </div>
 
       <AnimatePresence>
-        {expanded && showProducts && (
+        {isExpanded && showProducts && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
