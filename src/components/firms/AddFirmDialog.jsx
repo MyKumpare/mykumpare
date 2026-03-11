@@ -83,6 +83,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const [addresses, setAddresses] = useState([]);
   const [phones, setPhones] = useState([]);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [expandedPhoneId, setExpandedPhoneId] = useState(null);
   const nameInputRef = useRef(null);
   const logoInputRef = useRef(null);
 
