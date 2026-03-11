@@ -14,17 +14,34 @@ import AddressForm from "./AddressForm";
 import PhoneForm from "./PhoneForm";
 
 function getCountryCodeFromCountryName(countryName) {
-  if (!countryName) return "1";
+  if (!countryName) return "";
+  // Import and use the actual country codes from phoneData
   const COUNTRY_CODES = [
     { code: "1", country: "United States" },
+    { code: "1", country: "Canada" },
     { code: "44", country: "United Kingdom" },
     { code: "61", country: "Australia" },
-    { code: "1", country: "Canada" },
+    { code: "33", country: "France" },
+    { code: "49", country: "Germany" },
+    { code: "39", country: "Italy" },
+    { code: "34", country: "Spain" },
+    { code: "31", country: "Netherlands" },
+    { code: "41", country: "Switzerland" },
+    { code: "43", country: "Austria" },
+    { code: "45", country: "Denmark" },
+    { code: "46", country: "Sweden" },
+    { code: "47", country: "Norway" },
+    { code: "48", country: "Poland" },
+    { code: "81", country: "Japan" },
+    { code: "86", country: "China" },
+    { code: "91", country: "India" },
+    { code: "55", country: "Brazil" },
+    { code: "52", country: "Mexico" },
   ];
   const match = COUNTRY_CODES.find(c => 
     c.country.toLowerCase() === countryName.toLowerCase()
   );
-  return match ? match.code : "1";
+  return match ? match.code : "";
 }
 
 const FIRM_TYPES = [
