@@ -1,0 +1,216 @@
+import React, { useState } from "react";
+import { base44 } from "@/api/base44Client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Plus, Building, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+
+import AddFirmDialog from "../components/firms/AddFirmDialog";
+import FirmTypeSection from "../components/firms/FirmTypeSection";
+import DeleteConfirmDialog from "../components/firms/DeleteConfirmDialog";
+
+const FIRM_TYPES = [
+  "Manager of Managers",
+  "Investment Manager",
+  "Allocator",
+  "Investment Consultant",
+  "Securities Brokerage",
+  "Trade Organizations",
+];
+
+export default function Home() {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingFirm, setEditingFirm] = useState(null);
+  const [deletingFirm, setDeletingFirm] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const queryClient = useQueryClient();
+
+  const { data: firms = [], isLoading } = useQuery({
+    queryKey: ["firms"],
+    queryFn: () => base44.entities.Firm.list("-created_date"),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data) => base44.entities.Firm.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["firms"] });
+      setDialogOpen(false);
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Firm.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["firms"] });
+      setDialogOpen(false);
+      setEditingFirm(null);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.Firm.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["firms"] });
+      setDeletingFirm(null);
+    },
+  });
+
+  const handleSubmit = (data) => {
+    if (editingFirm) {
+      updateMutation.mutate({ id: editingFirm.id, data });
+    } else {
+      createMutation.mutate(data);
+    }
+  };
+
+  const handleEdit = (firm) => {
+    setEditingFirm(firm);
+    setDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (deletingFirm) {
+      deleteMutation.mutate(deletingFirm.id);
+    }
+  };
+
+  const filteredFirms = firms.filter((f) =>
+    f.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const groupedFirms = FIRM_TYPES.reduce((acc, type) => {
+    const typeFirms = filteredFirms.filter((f) => f.firm_type === type);
+    if (typeFirms.length > 0) acc[type] = typeFirms;
+    return acc;
+  }, {});
+
+  const totalFirms = firms.length;
+  const hasResults = Object.keys(groupedFirms).length > 0;
+
+  return (
+    <div className="min-h-screen bg-gray-50/80">
+      {/* Hero header */}
+      <div className="bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 text-white">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-10 pb-16 sm:pt-14 sm:pb-20">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+              <Building className="w-5 h-5 text-white" />
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">MyKumpare</h1>
+          </div>
+          <p className="text-indigo-200 text-sm sm:text-base mt-1">
+            Manage and organize your firms in one place
+          </p>
+          <div className="mt-6 flex items-center gap-4">
+            <div className="text-3xl sm:text-4xl font-bold">{totalFirms}</div>
+            <div className="text-indigo-200 text-sm leading-tight">
+              Total<br />Firms
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main content — overlaps the header */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 -mt-8">
+        {/* Action bar */}
+        <div className="bg-white rounded-2xl shadow-lg shadow-gray-200/50 border border-gray-100 p-4 sm:p-5 mb-8">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                placeholder="Search firms..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 h-11 bg-gray-50 border-gray-200"
+              />
+            </div>
+            <Button
+              onClick={() => {
+                setEditingFirm(null);
+                setDialogOpen(true);
+              }}
+              className="h-11 px-6 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Firm
+            </Button>
+          </div>
+        </div>
+
+        {/* Firms list */}
+        {isLoading ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="h-6 w-40 rounded-lg" />
+                <Skeleton className="h-16 w-full rounded-xl" />
+                <Skeleton className="h-16 w-full rounded-xl" />
+              </div>
+            ))}
+          </div>
+        ) : hasResults ? (
+          <div>
+            {FIRM_TYPES.map((type) =>
+              groupedFirms[type] ? (
+                <FirmTypeSection
+                  key={type}
+                  type={type}
+                  firms={groupedFirms[type]}
+                  onEdit={handleEdit}
+                  onDelete={setDeletingFirm}
+                />
+              ) : null
+            )}
+          </div>
+        ) : (
+          <div className="text-center py-20">
+            <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+              <Building className="w-7 h-7 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">
+              {searchQuery ? "No firms found" : "No firms yet"}
+            </h3>
+            <p className="text-sm text-gray-500 mb-6">
+              {searchQuery
+                ? "Try a different search term"
+                : "Click "Add Firm" to create your first firm"}
+            </p>
+            {!searchQuery && (
+              <Button
+                onClick={() => {
+                  setEditingFirm(null);
+                  setDialogOpen(true);
+                }}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Firm
+              </Button>
+            )}
+          </div>
+        )}
+
+        <div className="h-12" />
+      </div>
+
+      <AddFirmDialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) setEditingFirm(null);
+        }}
+        onSubmit={handleSubmit}
+        editingFirm={editingFirm}
+      />
+
+      <DeleteConfirmDialog
+        open={!!deletingFirm}
+        onOpenChange={(open) => !open && setDeletingFirm(null)}
+        firm={deletingFirm}
+        onConfirm={handleDeleteConfirm}
+      />
+    </div>
+  );
+}
