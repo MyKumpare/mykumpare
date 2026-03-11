@@ -26,7 +26,7 @@ const FIRM_TYPES = [
   "Trade Organizations",
 ];
 
-export default function AddFirmDialog({ open, onOpenChange, onSubmit, editingFirm }) {
+export default function AddFirmDialog({ open, onOpenChange, onSubmit, editingFirm, preselectedType }) {
   const [firmType, setFirmType] = useState(editingFirm?.firm_type || "");
   const [firmName, setFirmName] = useState(editingFirm?.name || "");
 
@@ -35,10 +35,10 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, editingFir
       setFirmType(editingFirm.firm_type);
       setFirmName(editingFirm.name);
     } else {
-      setFirmType("");
+      setFirmType(preselectedType || "");
       setFirmName("");
     }
-  }, [editingFirm, open]);
+  }, [editingFirm, preselectedType, open]);
 
   const handleSubmit = () => {
     if (!firmType || !firmName.trim()) return;
