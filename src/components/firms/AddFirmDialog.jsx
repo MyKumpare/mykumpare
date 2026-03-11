@@ -214,8 +214,8 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
   const handleSubmit = () => {
     if (!isValid) return;
-    onSubmit({ firm_type: firmType, name: firmName.trim(), logo_url: logoUrl, addresses, phones });
-    setFirmType(""); setFirmName(""); setLogoUrl(""); setAddresses([]); setPhones([]);
+    onSubmit({ firm_type: firmType, name: firmName.trim(), logo_url: logoUrl, website, description, addresses, phones });
+    setFirmType(""); setFirmName(""); setLogoUrl(""); setWebsite(""); setDescription(""); setAddresses([]); setPhones([]);
   };
 
   const handleClose = () => {
