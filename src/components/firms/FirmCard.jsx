@@ -1,8 +1,15 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Building2 } from "lucide-react";
+import { Building2, Plus } from "lucide-react";
 
-export default function FirmCard({ firm, onEdit, onDelete }) {
+const FIRM_TYPE_TO_PRODUCT_TYPE = {
+  "Investment Manager": "Investment Manager Product",
+  "Manager of Managers": "Multi-Manager Product",
+};
+
+export default function FirmCard({ firm, onEdit, onDelete, onAddProduct }) {
+  const productType = FIRM_TYPE_TO_PRODUCT_TYPE[firm.firm_type];
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -20,6 +27,15 @@ export default function FirmCard({ firm, onEdit, onDelete }) {
         </div>
         <span className="font-medium text-gray-900 truncate hover:text-indigo-600 transition-colors">{firm.name}</span>
       </button>
+      {productType && onAddProduct && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onAddProduct(firm, productType); }}
+          className="flex-shrink-0 ml-2 w-7 h-7 rounded-lg bg-violet-50 hover:bg-violet-100 flex items-center justify-center text-violet-600 transition-colors opacity-0 group-hover:opacity-100"
+          title={`Add ${productType}`}
+        >
+          <Plus className="w-3.5 h-3.5" />
+        </button>
+      )}
     </motion.div>
   );
 }
