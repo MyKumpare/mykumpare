@@ -137,6 +137,7 @@ export default function Home() {
             <Button
               onClick={() => {
                 setEditingFirm(null);
+                setPreselectedType(null);
                 setDialogOpen(true);
               }}
               className="h-11 px-6 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
