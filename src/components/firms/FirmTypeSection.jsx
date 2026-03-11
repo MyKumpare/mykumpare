@@ -27,7 +27,7 @@ export default function FirmTypeSection({ type, firms, onEdit, onDelete, onAddTo
           {type}
         </div>
         <div className="h-px flex-1 bg-gray-100" />
-        <span className="text-xs text-gray-400 font-medium mr-1">{firms.length}</span>
+        <span className="text-xs text-gray-400 font-medium">{firms.length}</span>
         {expanded ? (
           <ChevronDown className="w-4 h-4 text-gray-400" />
         ) : (
