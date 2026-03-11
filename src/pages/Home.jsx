@@ -327,6 +327,14 @@ export default function Home() {
         onConfirm={handleDeleteConfirm}
       />
 
+      <StatsListModal
+        open={!!statsModal}
+        onOpenChange={(open) => !open && setStatsModal(null)}
+        mode={statsModal}
+        firms={firms}
+        products={products}
+      />
+
       <AddProductDialog
         open={productDialogOpen}
         onOpenChange={(open) => {
