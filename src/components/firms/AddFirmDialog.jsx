@@ -75,18 +75,24 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, editingFir
         <div className="space-y-5 py-4">
           <div className="space-y-2">
             <Label className="text-sm font-medium text-gray-700">Type of Firm</Label>
-            <Select value={firmType} onValueChange={setFirmType}>
-              <SelectTrigger className="h-11">
-                <SelectValue placeholder="Select firm type..." />
-              </SelectTrigger>
-              <SelectContent>
-                {FIRM_TYPES.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {preselectedType && !editingFirm ? (
+              <div className="h-11 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-700 font-medium">
+                {firmType}
+              </div>
+            ) : (
+              <Select value={firmType} onValueChange={setFirmType}>
+                <SelectTrigger className="h-11">
+                  <SelectValue placeholder="Select firm type..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {FIRM_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
           <div className="space-y-2">
             <Label className="text-sm font-medium text-gray-700">Firm Name</Label>
