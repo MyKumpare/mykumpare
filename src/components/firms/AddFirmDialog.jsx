@@ -26,7 +26,7 @@ const FIRM_TYPES = [
   "Trade Organizations",
 ];
 
-export default function AddFirmDialog({ open, onOpenChange, onSubmit, editingFirm, preselectedType }) {
+export default function AddFirmDialog({ open, onOpenChange, onSubmit, editingFirm, preselectedType, existingFirms = [] }) {
   const [firmType, setFirmType] = useState(editingFirm?.firm_type || "");
   const [firmName, setFirmName] = useState(editingFirm?.name || "");
 
@@ -40,14 +40,19 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, editingFir
     }
   }, [editingFirm, preselectedType, open]);
 
+  const isDuplicate = firmName.trim() &&
+    existingFirms.some(
+      (f) => f.name.toLowerCase() === firmName.trim().toLowerCase() && f.id !== editingFirm?.id
+    );
+
   const handleSubmit = () => {
-    if (!firmType || !firmName.trim()) return;
+    if (!firmType || !firmName.trim() || isDuplicate) return;
     onSubmit({ firm_type: firmType, name: firmName.trim() });
     setFirmType("");
     setFirmName("");
   };
 
-  const isValid = firmType && firmName.trim();
+  const isValid = firmType && firmName.trim() && !isDuplicate;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
