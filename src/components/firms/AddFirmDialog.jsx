@@ -92,6 +92,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
   useEffect(() => {
     if (open) {
+      setExpandedPhoneId(null);
       if (editingFirm) {
         setFirmType(editingFirm.firm_type || "");
         setFirmName(editingFirm.name || "");
