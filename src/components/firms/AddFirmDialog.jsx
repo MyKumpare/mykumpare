@@ -394,23 +394,31 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                         <span>{addr.city}, {addr.state}</span>
                       </div>
                       <div className="space-y-2">
-                        {addressPhones.map((ph, i) => (
-                          <PhoneForm
-                            key={ph.id}
-                            phone={ph}
-                            onChange={(updated) => handlePhoneChange(phones.indexOf(ph), updated)}
-                            onDelete={() => handleDeletePhone(phones.indexOf(ph))}
-                            onSetDefault={() => handleSetDefaultPhone(phones.indexOf(ph))}
-                            isDefault={ph.is_default}
-                            isEditing={false}
-                            isOnly={addressPhones.length === 1}
-                            addresses={addresses}
-                          />
-                        ))}
+                        {addressPhones.map((ph) => {
+                          const phoneIndex = phones.findIndex(p => p.id === ph.id);
+                          return (
+                            <PhoneForm
+                              key={ph.id}
+                              phone={ph}
+                              onChange={(updated) => handlePhoneChange(phoneIndex, updated)}
+                              onDelete={() => handleDeletePhone(phoneIndex)}
+                              onSetDefault={() => handleSetDefaultPhone(phoneIndex)}
+                              isDefault={ph.is_default}
+                              isEditing={false}
+                              isOnly={addressPhones.length === 1}
+                              addresses={addresses}
+                            />
+                          );
+                        })}
                       </div>
                     </div>
                   );
                 })}
+                {phones.length > 0 && addresses.every(addr => phones.filter(p => p.address_id === addr.id).length === 0) && (
+                  <div className="text-sm text-amber-600 italic py-2 px-3 text-center border border-dashed border-amber-200 rounded-xl bg-amber-50">
+                    Phone numbers have no associated address
+                  </div>
+                )}
               </div>
             )}
           </div>
