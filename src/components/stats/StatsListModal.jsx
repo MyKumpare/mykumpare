@@ -27,8 +27,18 @@ const TYPE_COLORS = {
   "Multi-Manager Product": "bg-violet-100 text-violet-700",
 };
 
-export default function StatsListModal({ open, onOpenChange, mode, firms = [], products = [] }) {
+export default function StatsListModal({ open, onOpenChange, mode, firms = [], products = [], onFirmClick, onProductClick }) {
   const isFirms = mode === "firms";
+
+  const handleFirmClick = (firm) => {
+    onOpenChange(false);
+    onFirmClick?.(firm);
+  };
+
+  const handleProductClick = (product) => {
+    onOpenChange(false);
+    onProductClick?.(product);
+  };
 
   const renderFirms = () => {
     return FIRM_TYPES.map((type) => {
@@ -43,10 +53,14 @@ export default function StatsListModal({ open, onOpenChange, mode, firms = [], p
           </div>
           <div className="space-y-1">
             {group.map((firm) => (
-              <div key={firm.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 text-sm text-gray-800">
+              <button
+                key={firm.id}
+                onClick={() => handleFirmClick(firm)}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 hover:bg-indigo-50 hover:text-indigo-700 text-sm text-gray-800 transition-colors text-left"
+              >
                 <Building2 className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
                 <span>{firm.name}</span>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -70,13 +84,17 @@ export default function StatsListModal({ open, onOpenChange, mode, firms = [], p
           </div>
           <div className="space-y-1">
             {group.map((product) => (
-              <div key={product.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 text-sm text-gray-800">
+              <button
+                key={product.id}
+                onClick={() => handleProductClick(product)}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 hover:bg-violet-50 hover:text-violet-700 text-sm text-gray-800 transition-colors text-left"
+              >
                 <Package className="w-3.5 h-3.5 text-violet-400 flex-shrink-0" />
                 <span className="truncate">{product.name}</span>
                 {product.firm_name && (
                   <span className="ml-auto text-xs text-gray-400 flex-shrink-0">{product.firm_name}</span>
                 )}
-              </div>
+              </button>
             ))}
           </div>
         </div>
