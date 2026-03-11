@@ -143,8 +143,15 @@ export default function Home() {
     }
   };
 
+  const q = searchQuery.toLowerCase();
+
+  // Firms that match by name, OR have a matching product
+  const matchingProductFirmIds = q
+    ? new Set(products.filter((p) => p.name.toLowerCase().includes(q)).map((p) => p.firm_id))
+    : new Set();
+
   const filteredFirms = firms.filter((f) =>
-    f.name.toLowerCase().includes(searchQuery.toLowerCase())
+    f.name.toLowerCase().includes(q) || matchingProductFirmIds.has(f.id)
   );
 
   const groupedFirms = FIRM_TYPES.reduce((acc, type) => {
