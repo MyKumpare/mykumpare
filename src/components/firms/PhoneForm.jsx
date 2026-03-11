@@ -115,6 +115,24 @@ export default function PhoneForm({ phone, onChange, onDelete, onSetDefault, isD
 
       {isEditing ? (
         <div className="space-y-3">
+          {/* Location Tag (First & Required) */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-gray-600">Associated Location *</Label>
+            <Select value={phone.address_id || ""} onValueChange={handleAddressChange}>
+              <SelectTrigger className={`h-9 bg-white ${!phone.address_id ? "border-red-400" : ""}`}>
+                <SelectValue placeholder="Select a location..." />
+              </SelectTrigger>
+              <SelectContent>
+                {addresses.map((addr) => (
+                  <SelectItem key={addr.id} value={addr.id}>
+                    {addr.is_headquarters ? "🏢 " : "📍 "}{getAddressLabel(addr)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {!phone.address_id && <p className="text-xs text-red-500">A location is required</p>}
+          </div>
+
           {/* Phone Type */}
           <div className="space-y-1.5">
             <Label className="text-xs font-medium text-gray-600">Phone Type</Label>
