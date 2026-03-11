@@ -340,7 +340,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label className="text-sm font-semibold text-gray-700">Phone Numbers</Label>
-              {activelyEditing && (
+              {activelyEditing && addresses.length > 0 && (
                 <Button
                   type="button"
                   variant="ghost"
@@ -354,11 +354,15 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               )}
             </div>
 
-            {phones.length === 0 && (
+            {addresses.length === 0 && activelyEditing ? (
+              <div className="text-sm text-amber-600 italic py-2 px-3 text-center border border-dashed border-amber-200 rounded-xl bg-amber-50">
+                Add an address first before adding phone numbers
+              </div>
+            ) : phones.length === 0 ? (
               <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
                 {activelyEditing ? 'Click "Add Phone" to add a number' : "No phone numbers added"}
               </div>
-            )}
+            ) : null}
 
             <div className="space-y-3">
               {phones.map((ph, i) => (
