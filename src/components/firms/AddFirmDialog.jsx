@@ -338,170 +338,174 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
             </div>
           </div>
 
-          {/* Contact / Addresses Section */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm font-semibold text-gray-700">Addresses</Label>
-              {activelyEditing && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs"
-                  onClick={handleAddAddress}
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  Add Address
-                </Button>
+          {/* Addresses & Phone Numbers Tabs */}
+          <Tabs defaultValue="addresses" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="addresses">Addresses</TabsTrigger>
+              <TabsTrigger value="phones">Phone Numbers</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="addresses" className="space-y-3">
+              <div className="flex items-center justify-between">
+                {activelyEditing && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs ml-auto"
+                    onClick={handleAddAddress}
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add Address
+                  </Button>
+                )}
+              </div>
+
+              {addresses.length === 0 && (
+                <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
+                  {activelyEditing ? 'Click "Add Address" to add a location' : "No addresses added"}
+                </div>
               )}
-            </div>
 
-            {addresses.length === 0 && (
-              <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
-                {activelyEditing ? 'Click "Add Address" to add a location' : "No addresses added"}
-              </div>
-            )}
-
-            <div className="space-y-3">
-              {addresses.map((addr, i) => (
-                <AddressForm
-                  key={addr.id}
-                  address={addr}
-                  onChange={(updated) => handleAddressChange(i, updated)}
-                  onDelete={() => handleDeleteAddress(i)}
-                  onSetHeadquarters={() => handleSetHeadquarters(i)}
-                  isHeadquarters={addr.is_headquarters}
-                  isEditing={activelyEditing}
-                  isOnly={addresses.length === 1}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Phone Numbers Section */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm font-semibold text-gray-700">Phone Numbers</Label>
-              {activelyEditing && addresses.length > 0 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs"
-                  onClick={handleAddPhone}
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  Add Phone
-                </Button>
-              )}
-            </div>
-
-            {addresses.length === 0 && activelyEditing ? (
-              <div className="text-sm text-amber-600 italic py-2 px-3 text-center border border-dashed border-amber-200 rounded-xl bg-amber-50">
-                Add an address first before adding phone numbers
-              </div>
-            ) : phones.length === 0 ? (
-              <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
-                {activelyEditing ? 'Click "Add Phone" to add a number' : "No phone numbers added"}
-              </div>
-            ) : null}
-
-            {activelyEditing ? (
               <div className="space-y-3">
-                {phones.map((ph, i) => (
-                  <PhoneForm
-                    key={ph.id}
-                    phone={ph}
-                    onChange={(updated) => handlePhoneChange(i, updated)}
-                    onDelete={() => handleDeletePhone(i)}
-                    onSetDefault={() => handleSetDefaultPhone(i)}
-                    isDefault={ph.is_default}
+                {addresses.map((addr, i) => (
+                  <AddressForm
+                    key={addr.id}
+                    address={addr}
+                    onChange={(updated) => handleAddressChange(i, updated)}
+                    onDelete={() => handleDeleteAddress(i)}
+                    onSetHeadquarters={() => handleSetHeadquarters(i)}
+                    isHeadquarters={addr.is_headquarters}
                     isEditing={activelyEditing}
-                    isOnly={phones.length === 1}
-                    addresses={addresses}
+                    isOnly={addresses.length === 1}
                   />
                 ))}
               </div>
-            ) : (
-              <div className="space-y-4">
-                {addresses.map((addr) => {
-                  const addressPhones = phones.filter(p => p.address_id === addr.id);
-                  if (addressPhones.length === 0) return null;
-                  return (
-                    <div key={addr.id} className="space-y-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                      <div className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
-                        <span>{addr.is_headquarters ? "🏢" : "📍"}</span>
-                        <span>{addr.city}, {addr.state}</span>
-                      </div>
-                      <div className="space-y-2">
-                        {addressPhones.map((ph) => {
-                          const phoneIndex = phones.findIndex(p => p.id === ph.id);
-                          return (
-                            <PhoneForm
-                              key={ph.id}
-                              phone={ph}
-                              onChange={(updated) => handlePhoneChange(phoneIndex, updated)}
-                              onDelete={() => handleDeletePhone(phoneIndex)}
-                              onSetDefault={() => handleSetDefaultPhone(phoneIndex)}
-                              isDefault={ph.is_default}
-                              isEditing={false}
-                              isOnly={addressPhones.length === 1}
-                              addresses={addresses}
-                            />
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-                {(() => {
-                  const orphanedPhones = phones.filter(p => !p.address_id || !addresses.find(a => a.id === p.address_id));
-                  return orphanedPhones.length > 0 ? (
-                    <div className="space-y-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
-                      <div className="text-xs font-semibold text-amber-700">
-                        ⚠️ Phones without address - click to fix
-                      </div>
-                      <div className="space-y-2">
-                        {orphanedPhones.map((ph) => {
-                          const phoneIndex = phones.findIndex(p => p.id === ph.id);
-                          const isExpanded = expandedPhoneId === ph.id;
-                          return (
-                            <div key={ph.id}>
-                              <div onClick={() => !isExpanded && setExpandedPhoneId(ph.id)} className={!isExpanded ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}>
-                                <PhoneForm
-                                  phone={ph}
-                                  onChange={(updated) => handlePhoneChange(phoneIndex, updated)}
-                                  onDelete={() => handleDeletePhone(phoneIndex)}
-                                  onSetDefault={() => handleSetDefaultPhone(phoneIndex)}
-                                  isDefault={ph.is_default}
-                                  isEditing={isExpanded}
-                                  isOnly={orphanedPhones.length === 1}
-                                  addresses={addresses}
-                                />
-                              </div>
-                              {isExpanded && (
-                                <div className="flex gap-2 mt-2 px-4">
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 text-xs"
-                                    onClick={() => setExpandedPhoneId(null)}
-                                  >
-                                    Done
-                                  </Button>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ) : null;
-                })()}
+            </TabsContent>
+
+            <TabsContent value="phones" className="space-y-3">
+              <div className="flex items-center justify-between">
+                {activelyEditing && addresses.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs ml-auto"
+                    onClick={handleAddPhone}
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add Phone
+                  </Button>
+                )}
               </div>
-            )}
-          </div>
+
+              {addresses.length === 0 && activelyEditing ? (
+                <div className="text-sm text-amber-600 italic py-2 px-3 text-center border border-dashed border-amber-200 rounded-xl bg-amber-50">
+                  Add an address first before adding phone numbers
+                </div>
+              ) : phones.length === 0 ? (
+                <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
+                  {activelyEditing ? 'Click "Add Phone" to add a number' : "No phone numbers added"}
+                </div>
+              ) : null}
+
+              {activelyEditing ? (
+                <div className="space-y-3">
+                  {phones.map((ph, i) => (
+                    <PhoneForm
+                      key={ph.id}
+                      phone={ph}
+                      onChange={(updated) => handlePhoneChange(i, updated)}
+                      onDelete={() => handleDeletePhone(i)}
+                      onSetDefault={() => handleSetDefaultPhone(i)}
+                      isDefault={ph.is_default}
+                      isEditing={activelyEditing}
+                      isOnly={phones.length === 1}
+                      addresses={addresses}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {addresses.map((addr) => {
+                    const addressPhones = phones.filter(p => p.address_id === addr.id);
+                    if (addressPhones.length === 0) return null;
+                    return (
+                      <div key={addr.id} className="space-y-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+                          <span>{addr.is_headquarters ? "🏢" : "📍"}</span>
+                          <span>{addr.city}, {addr.state}</span>
+                        </div>
+                        <div className="space-y-2">
+                          {addressPhones.map((ph) => {
+                            const phoneIndex = phones.findIndex(p => p.id === ph.id);
+                            return (
+                              <PhoneForm
+                                key={ph.id}
+                                phone={ph}
+                                onChange={(updated) => handlePhoneChange(phoneIndex, updated)}
+                                onDelete={() => handleDeletePhone(phoneIndex)}
+                                onSetDefault={() => handleSetDefaultPhone(phoneIndex)}
+                                isDefault={ph.is_default}
+                                isEditing={false}
+                                isOnly={addressPhones.length === 1}
+                                addresses={addresses}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {(() => {
+                    const orphanedPhones = phones.filter(p => !p.address_id || !addresses.find(a => a.id === p.address_id));
+                    return orphanedPhones.length > 0 ? (
+                      <div className="space-y-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                        <div className="text-xs font-semibold text-amber-700">
+                          ⚠️ Phones without address - click to fix
+                        </div>
+                        <div className="space-y-2">
+                          {orphanedPhones.map((ph) => {
+                            const phoneIndex = phones.findIndex(p => p.id === ph.id);
+                            const isExpanded = expandedPhoneId === ph.id;
+                            return (
+                              <div key={ph.id}>
+                                <div onClick={() => !isExpanded && setExpandedPhoneId(ph.id)} className={!isExpanded ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}>
+                                  <PhoneForm
+                                    phone={ph}
+                                    onChange={(updated) => handlePhoneChange(phoneIndex, updated)}
+                                    onDelete={() => handleDeletePhone(phoneIndex)}
+                                    onSetDefault={() => handleSetDefaultPhone(phoneIndex)}
+                                    isDefault={ph.is_default}
+                                    isEditing={isExpanded}
+                                    isOnly={orphanedPhones.length === 1}
+                                    addresses={addresses}
+                                  />
+                                </div>
+                                {isExpanded && (
+                                  <div className="flex gap-2 mt-2 px-4">
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-8 text-xs"
+                                      onClick={() => setExpandedPhoneId(null)}
+                                    >
+                                      Done
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
 
         <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-between gap-2 pt-2 border-t">
