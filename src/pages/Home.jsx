@@ -185,10 +185,20 @@ export default function Home() {
                 setPreselectedType(null);
                 setDialogOpen(true);
               }}
-              className="h-11 px-6 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
+              className="h-11 px-5 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
             >
               <Plus className="w-4 h-4 mr-2" />
               Add Firm
+            </Button>
+            <Button
+              onClick={() => {
+                setEditingProduct(null);
+                setProductDialogOpen(true);
+              }}
+              className="h-11 px-5 bg-violet-600 hover:bg-violet-700 text-white shadow-sm"
+            >
+              <Package className="w-4 h-4 mr-2" />
+              Add Product
             </Button>
           </div>
         </div>
