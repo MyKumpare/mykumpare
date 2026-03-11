@@ -46,8 +46,8 @@ export default function PhoneForm({ phone, onChange, onDelete, onSetDefault, isD
   const handleAddressChange = (addressId) => {
     const selectedAddr = addresses.find(a => a.id === addressId);
     const countryCode = selectedAddr ? getCountryCodeFromCountryName(selectedAddr.country) : "";
-    // Immediately update the phone object with new address and country code
-    onChange({ ...phone, address_id: addressId, country_code: countryCode, area_code: "", number_mid: "", number_last: "" });
+    // Update only address and country code, preserve phone number
+    onChange({ ...phone, address_id: addressId, country_code: countryCode });
   };
 
   const handleCountryCodeChange = (val) => {
