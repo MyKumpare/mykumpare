@@ -22,6 +22,7 @@ const FIRM_TYPES = [
 export default function Home() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingFirm, setEditingFirm] = useState(null);
+  const [preselectedType, setPreselectedType] = useState(null);
   const [deletingFirm, setDeletingFirm] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
 
