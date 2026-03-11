@@ -9,6 +9,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { Pencil, Building2, Plus, Upload, X } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import AddressForm from "./AddressForm";
