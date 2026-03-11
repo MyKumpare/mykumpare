@@ -157,6 +157,10 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                   onChange={(e) => setFirmName(e.target.value)}
                   className={`h-11 ${isDuplicate ? "border-red-400 focus-visible:ring-red-400" : ""}`}
                   onKeyDown={(e) => e.key === "Enter" && isValid && handleSubmit()}
+                  spellCheck={true}
+                  autoCorrect="on"
+                  autoCapitalize="words"
+                  lang="en"
                 />
                 {isDuplicate && (
                   <p className="text-sm text-red-500 mt-1">The Firm is Already in the System.</p>
