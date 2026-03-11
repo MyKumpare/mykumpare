@@ -452,33 +452,48 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                   );
                 })}
                 {(() => {
-                  const orphanedPhones = phones.filter(p => !p.address_id || !addresses.find(a => a.id === p.address_id));
-                  return orphanedPhones.length > 0 ? (
-                    <div className="space-y-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
-                      <div className="text-xs font-semibold text-amber-700">
-                        Phones without address
-                      </div>
-                      <div className="space-y-2">
-                        {orphanedPhones.map((ph) => {
-                          const phoneIndex = phones.findIndex(p => p.id === ph.id);
-                          return (
-                            <PhoneForm
-                              key={ph.id}
-                              phone={ph}
-                              onChange={(updated) => handlePhoneChange(phoneIndex, updated)}
-                              onDelete={() => handleDeletePhone(phoneIndex)}
-                              onSetDefault={() => handleSetDefaultPhone(phoneIndex)}
-                              isDefault={ph.is_default}
-                              isEditing={false}
-                              isOnly={orphanedPhones.length === 1}
-                              addresses={addresses}
-                            />
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ) : null;
-                })()}
+                   const orphanedPhones = phones.filter(p => !p.address_id || !addresses.find(a => a.id === p.address_id));
+                   return orphanedPhones.length > 0 ? (
+                     <div className="space-y-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                       <div className="text-xs font-semibold text-amber-700">
+                         ⚠️ Phones without address - click to fix
+                       </div>
+                       <div className="space-y-2">
+                         {orphanedPhones.map((ph) => {
+                           const phoneIndex = phones.findIndex(p => p.id === ph.id);
+                           const [expandPhone, setExpandPhone] = React.useState(false);
+                           return (
+                             <div key={ph.id} onClick={() => setExpandPhone(!expandPhone)}>
+                               {expandPhone ? (
+                                 <PhoneForm
+                                   phone={ph}
+                                   onChange={(updated) => handlePhoneChange(phoneIndex, updated)}
+                                   onDelete={() => handleDeletePhone(phoneIndex)}
+                                   onSetDefault={() => handleSetDefaultPhone(phoneIndex)}
+                                   isDefault={ph.is_default}
+                                   isEditing={true}
+                                   isOnly={orphanedPhones.length === 1}
+                                   addresses={addresses}
+                                 />
+                               ) : (
+                                 <PhoneForm
+                                   phone={ph}
+                                   onChange={(updated) => handlePhoneChange(phoneIndex, updated)}
+                                   onDelete={() => handleDeletePhone(phoneIndex)}
+                                   onSetDefault={() => handleSetDefaultPhone(phoneIndex)}
+                                   isDefault={ph.is_default}
+                                   isEditing={false}
+                                   isOnly={orphanedPhones.length === 1}
+                                   addresses={addresses}
+                                 />
+                               )}
+                             </div>
+                           );
+                         })}
+                       </div>
+                     </div>
+                   ) : null;
+                 })()}
               </div>
             )}
           </div>
