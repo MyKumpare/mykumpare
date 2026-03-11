@@ -175,7 +175,7 @@ export default function Home() {
             <p className="text-sm text-gray-500 mb-6">
               {searchQuery
                 ? "Try a different search term"
-                : "Click "Add Firm" to create your first firm"}
+                : 'Click "Add Firm" to create your first firm'}
             </p>
             {!searchQuery && (
               <Button
