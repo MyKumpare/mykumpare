@@ -169,6 +169,7 @@ export default function Home() {
                   firms={groupedFirms[type]}
                   onEdit={handleEdit}
                   onDelete={setDeletingFirm}
+                  onAddToType={handleAddToType}
                 />
               ) : null
             )}
