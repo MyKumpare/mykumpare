@@ -216,6 +216,7 @@ export default function Home() {
         onSubmit={handleSubmit}
         editingFirm={editingFirm}
         preselectedType={preselectedType}
+        existingFirms={firms}
       />
 
       <DeleteConfirmDialog
