@@ -38,6 +38,44 @@ export default function Home() {
     queryFn: () => base44.entities.Firm.list("-created_date"),
   });
 
+  const { data: products = [] } = useQuery({
+    queryKey: ["products"],
+    queryFn: () => base44.entities.Product.list("-created_date"),
+  });
+
+  const createProductMutation = useMutation({
+    mutationFn: (data) => base44.entities.Product.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      setProductDialogOpen(false);
+    },
+  });
+
+  const updateProductMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Product.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      setProductDialogOpen(false);
+      setEditingProduct(null);
+    },
+  });
+
+  const deleteProductMutation = useMutation({
+    mutationFn: (id) => base44.entities.Product.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      setDeletingProduct(null);
+    },
+  });
+
+  const handleProductSubmit = (data) => {
+    if (editingProduct) {
+      updateProductMutation.mutate({ id: editingProduct.id, data });
+    } else {
+      createProductMutation.mutate(data);
+    }
+  };
+
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Firm.create(data),
     onSuccess: () => {
