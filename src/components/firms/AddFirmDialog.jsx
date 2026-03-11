@@ -120,6 +120,28 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     setAddresses(addresses.map((a, i) => ({ ...a, is_headquarters: i === index })));
   };
 
+  const handleAddPhone = () => {
+    const ph = newPhone();
+    if (phones.length === 0) ph.is_default = true;
+    setPhones([...phones, ph]);
+  };
+
+  const handlePhoneChange = (index, updated) => {
+    setPhones(phones.map((p, i) => i === index ? updated : p));
+  };
+
+  const handleDeletePhone = (index) => {
+    const remaining = phones.filter((_, i) => i !== index);
+    if (phones[index].is_default && remaining.length > 0) {
+      remaining[0].is_default = true;
+    }
+    setPhones(remaining);
+  };
+
+  const handleSetDefaultPhone = (index) => {
+    setPhones(phones.map((p, i) => ({ ...p, is_default: i === index })));
+  };
+
   const isDuplicate = firmName.trim().length > 0 &&
     existingFirms.some((f) => {
       if (f.id === editingFirm?.id) return false;
