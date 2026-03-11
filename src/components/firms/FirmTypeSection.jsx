@@ -14,7 +14,7 @@ const TYPE_COLORS = {
 };
 
 export default function FirmTypeSection({ type, firms, onEdit, onDelete, onAddToType }) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const colorClass = TYPE_COLORS[type] || "bg-gray-100 text-gray-700";
 
   return (
