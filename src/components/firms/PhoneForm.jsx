@@ -81,6 +81,13 @@ export default function PhoneForm({ phone, onChange, onDelete, onSetDefault, isD
     return parts.join(" ") || "—";
   };
 
+  const getTelLink = () => {
+    if (phone.country_code && phone.area_code && phone.number_mid && phone.number_last) {
+      return `tel:+${phone.country_code}${phone.area_code}${phone.number_mid}${phone.number_last}`;
+    }
+    return null;
+  };
+
   const viewText = (val) => (
     <div className="h-9 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-800">
       {val || <span className="text-gray-400">—</span>}
