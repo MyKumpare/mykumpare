@@ -371,6 +371,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                   isDefault={ph.is_default}
                   isEditing={activelyEditing}
                   isOnly={phones.length === 1}
+                  addresses={addresses}
                 />
               ))}
             </div>
