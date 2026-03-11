@@ -13,6 +13,20 @@ import { base44 } from "@/api/base44Client";
 import AddressForm from "./AddressForm";
 import PhoneForm from "./PhoneForm";
 
+function getCountryCodeFromCountryName(countryName) {
+  if (!countryName) return "1";
+  const COUNTRY_CODES = [
+    { code: "1", country: "United States" },
+    { code: "44", country: "United Kingdom" },
+    { code: "61", country: "Australia" },
+    { code: "1", country: "Canada" },
+  ];
+  const match = COUNTRY_CODES.find(c => 
+    c.country.toLowerCase() === countryName.toLowerCase()
+  );
+  return match ? match.code : "1";
+}
+
 const FIRM_TYPES = [
   "Manager of Managers",
   "Investment Manager",
