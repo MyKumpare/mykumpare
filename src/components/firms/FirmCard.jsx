@@ -84,13 +84,14 @@ export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditP
                 <p className="text-xs text-gray-400 italic py-1 pl-1">No products yet</p>
               ) : (
                 firmProducts.map((product) => (
-                  <div
+                  <button
                     key={product.id}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-violet-50 text-sm text-violet-800"
+                    onClick={() => onEditProduct?.(product)}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-violet-50 hover:bg-violet-100 text-sm text-violet-800 transition-colors text-left"
                   >
                     <Package className="w-3.5 h-3.5 text-violet-500 flex-shrink-0" />
                     <span className="truncate font-medium">{product.name}</span>
-                  </div>
+                  </button>
                 ))
               )}
             </div>
