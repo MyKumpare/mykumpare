@@ -20,11 +20,11 @@ import { Pencil } from "lucide-react";
 
 // Map product type -> firm type(s) that can be associated
 const PRODUCT_TYPE_TO_FIRM_TYPE = {
-  "Investment Product": "Investment Manager",
+  "Investment Manager Product": "Investment Manager",
   "Multi-Manager Product": "Manager of Managers",
 };
 
-const PRODUCT_TYPES = ["Investment Product", "Multi-Manager Product"];
+const PRODUCT_TYPES = ["Investment Manager Product", "Multi-Manager Product"];
 
 export default function AddProductDialog({
   open,
