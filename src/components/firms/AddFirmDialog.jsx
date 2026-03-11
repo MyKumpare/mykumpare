@@ -464,7 +464,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                            const phoneIndex = phones.findIndex(p => p.id === ph.id);
                            const isExpanded = expandedPhoneId === ph.id;
                            return (
-                             <div key={ph.id} onClick={() => setExpandedPhoneId(isExpanded ? null : ph.id)}>
+                             <div key={ph.id} onClick={() => setExpandedPhoneId(isExpanded ? null : ph.id)} className="cursor-pointer hover:opacity-80 transition-opacity">
                                <PhoneForm
                                  phone={ph}
                                  onChange={(updated) => handlePhoneChange(phoneIndex, updated)}
