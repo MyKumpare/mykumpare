@@ -12,7 +12,7 @@ const TYPE_ICONS = {
   "Trade Organizations": "bg-cyan-100 text-cyan-700",
 };
 
-export default function FirmTypeSection({ type, firms, onEdit, onDelete }) {
+export default function FirmTypeSection({ type, firms, onEdit, onDelete, onAddToType }) {
   const [expanded, setExpanded] = useState(true);
   const colorClass = TYPE_ICONS[type] || "bg-gray-100 text-gray-700";
 
