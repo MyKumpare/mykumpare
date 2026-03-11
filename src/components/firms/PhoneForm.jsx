@@ -27,6 +27,12 @@ export default function PhoneForm({ phone, onChange, onDelete, onSetDefault, isD
 
   const areaCodes = getAreaCodesForCountry(phone.country_code || "");
 
+  const handleAddressChange = (addressId) => {
+    const selectedAddr = addresses.find(a => a.id === addressId);
+    const countryCode = selectedAddr ? getCountryCodeFromCountryName(selectedAddr.country) : "";
+    onChange({ ...phone, address_id: addressId, country_code: countryCode, area_code: "", number_mid: "", number_last: "" });
+  };
+
   const handleCountryCodeChange = (val) => {
     onChange({ ...phone, country_code: val, area_code: "", number_mid: "", number_last: "" });
   };
