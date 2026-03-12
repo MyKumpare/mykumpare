@@ -51,6 +51,11 @@ export default function Home() {
     queryFn: () => base44.entities.Product.list("-created_date"),
   });
 
+  const { data: contacts = [] } = useQuery({
+    queryKey: ["contacts"],
+    queryFn: () => base44.entities.Contact.list("-created_date"),
+  });
+
   const createProductMutation = useMutation({
     mutationFn: (data) => base44.entities.Product.create(data),
     onSuccess: () => {
