@@ -21,6 +21,8 @@ export default function OwnershipTab({ firmId, firmName }) {
   const [ownershipPercentage, setOwnershipPercentage] = useState("");
   const [showAddContact, setShowAddContact] = useState(false);
   const [addContactType, setAddContactType] = useState("Employee");
+  const [selectedOwnership, setSelectedOwnership] = useState(null);
+  const [viewMode, setViewMode] = useState(true);
 
   const queryClient = useQueryClient();
 
@@ -39,16 +41,21 @@ export default function OwnershipTab({ firmId, firmName }) {
   // Get most recent ownership breakdown
   const mostRecentOwnership = ownershipHistory[0];
 
-  // When opening form with most recent data
+  // When opening form with most recent data or selected ownership
   useEffect(() => {
-    if (showUpdateForm && mostRecentOwnership) {
+    if (selectedOwnership) {
+      setEffectiveDate(new Date(selectedOwnership.effective_date));
+      setOwners(selectedOwnership.owners || []);
+      setViewMode(true);
+      setShowUpdateForm(false);
+    } else if (showUpdateForm && mostRecentOwnership) {
       setEffectiveDate(new Date(mostRecentOwnership.effective_date));
       setOwners(mostRecentOwnership.owners || []);
     } else if (showUpdateForm) {
       setEffectiveDate(new Date());
       setOwners([]);
     }
-  }, [showUpdateForm, mostRecentOwnership]);
+  }, [selectedOwnership, showUpdateForm, mostRecentOwnership]);
 
   // Get firm contacts
   const firmContacts = allContacts.filter(c => c.firm_ids?.includes(firmId));
@@ -126,9 +133,23 @@ export default function OwnershipTab({ firmId, firmName }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ownership", firmId] });
       setShowUpdateForm(false);
+      setSelectedOwnership(null);
       setOwners([]);
       setSelectedContactId("");
       setOwnershipPercentage("");
+      setViewMode(true);
+    },
+  });
+
+  const updateOwnershipMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Ownership.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ownership", firmId] });
+      setSelectedOwnership(null);
+      setOwners([]);
+      setSelectedContactId("");
+      setOwnershipPercentage("");
+      setViewMode(true);
     },
   });
 
@@ -159,11 +180,21 @@ export default function OwnershipTab({ firmId, firmName }) {
   const handleSaveOwnership = () => {
     if (!isValidPercentage) return;
 
-    addOwnerMutation.mutate({
-      firm_id: firmId,
-      effective_date: format(effectiveDate, "yyyy-MM-dd"),
-      owners,
-    });
+    if (selectedOwnership) {
+      updateOwnershipMutation.mutate({
+        id: selectedOwnership.id,
+        data: {
+          effective_date: format(effectiveDate, "yyyy-MM-dd"),
+          owners,
+        },
+      });
+    } else {
+      addOwnerMutation.mutate({
+        firm_id: firmId,
+        effective_date: format(effectiveDate, "yyyy-MM-dd"),
+        owners,
+      });
+    }
   };
 
   const availableContacts = getAvailableContacts(selectedOwnerType);
@@ -175,7 +206,12 @@ export default function OwnershipTab({ firmId, firmName }) {
         <div className="space-y-3">
           <h3 className="text-sm font-semibold text-gray-900">Ownership History</h3>
           {ownershipHistory.map((breakdown) => (
-            <div key={breakdown.id} className="rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-2">
+            <button
+              key={breakdown.id}
+              type="button"
+              onClick={() => setSelectedOwnership(breakdown)}
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 hover:border-indigo-300 transition-colors p-3 space-y-2 text-left"
+            >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-gray-600">
                   {format(new Date(breakdown.effective_date), "MMM d, yyyy")}
@@ -198,133 +234,174 @@ export default function OwnershipTab({ firmId, firmName }) {
                   </div>
                 ))}
               </div>
-            </div>
+            </button>
           ))}
         </div>
       )}
 
       {/* Update Ownership Button */}
-      <Button
-        type="button"
-        onClick={() => setShowUpdateForm(!showUpdateForm)}
-        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white gap-2"
-      >
-        <Plus className="w-4 h-4" />
-        Update Ownership
-      </Button>
+      {!selectedOwnership && (
+        <Button
+          type="button"
+          onClick={() => setShowUpdateForm(!showUpdateForm)}
+          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          Update Ownership
+        </Button>
+      )}
 
-      {/* Update Form */}
-      {showUpdateForm && (
+      {/* Update/View Form */}
+      {(showUpdateForm || selectedOwnership) && (
         <div className="space-y-4 rounded-lg border border-indigo-200 bg-indigo-50 p-4">
-          {/* Date Picker */}
-          <div className="space-y-1.5">
-            <Label className="text-sm font-medium text-gray-700">Effective Date</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-start text-left font-normal gap-2">
-                  <CalendarIcon className="w-4 h-4" />
-                  {format(effectiveDate, "MMM d, yyyy")}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={effectiveDate}
-                  onSelect={(date) => date && setEffectiveDate(date)}
-                  disabled={(date) => date > new Date()}
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          {/* Add Owner Section */}
-          <div className="space-y-3 rounded-lg border border-white bg-white p-3">
-            <h4 className="text-xs font-semibold text-gray-900">Add Owner</h4>
-
-            {/* Owner Type Selection */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-gray-700">Owner Type</Label>
-              <div className="flex gap-2">
-                {["Employee", "Non-Employee"].map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => {
-                      setSelectedOwnerType(type);
-                      setSelectedContactId("");
-                    }}
-                    className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${
-                      selectedOwnerType === type
-                        ? "bg-indigo-600 text-white border-indigo-600"
-                        : "bg-white text-gray-700 border-gray-300 hover:border-indigo-300"
-                    }`}
-                  >
-                    {type}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Contact Selection */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-gray-700">Contact</Label>
-              <div className="flex gap-2">
-                <Select value={selectedContactId} onValueChange={setSelectedContactId}>
-                  <SelectTrigger className="h-9 text-sm flex-1">
-                    <SelectValue placeholder="Select contact..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableContacts.length === 0 ? (
-                      <div className="px-2 py-1.5 text-xs text-gray-500">No {selectedOwnerType.toLowerCase()}s available</div>
-                    ) : (
-                      availableContacts.map((contact) => (
-                        <SelectItem key={contact.id} value={contact.id}>
-                          {[contact.first_name, contact.middle_name, contact.last_name].filter(Boolean).join(" ")}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-900">
+              {viewMode ? "Ownership Breakdown" : "Update Ownership"}
+            </h3>
+            <div className="flex gap-2">
+              {viewMode && selectedOwnership && (
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="h-9 px-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50 gap-1"
-                  onClick={() => {
-                    setAddContactType(selectedOwnerType);
-                    setShowAddContact(true);
-                  }}
+                  onClick={() => setViewMode(false)}
+                  className="text-indigo-600 border-indigo-200 hover:bg-indigo-100"
                 >
-                  <Plus className="w-3.5 h-3.5" />
-                  New
+                  Edit
                 </Button>
-              </div>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedOwnership(null);
+                  setShowUpdateForm(false);
+                  setOwners([]);
+                  setViewMode(true);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
             </div>
-
-            {/* Ownership Percentage */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-gray-700">Ownership %</Label>
-              <Input
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                placeholder="0.00"
-                value={ownershipPercentage}
-                onChange={(e) => setOwnershipPercentage(e.target.value)}
-                className="h-9 text-sm"
-              />
-            </div>
-
-            <Button
-              type="button"
-              onClick={handleAddOwner}
-              disabled={!selectedContactId || !ownershipPercentage}
-              className="w-full h-8 text-sm bg-indigo-600 hover:bg-indigo-700 text-white"
-            >
-              Add Owner
-            </Button>
           </div>
+
+          {/* Date Picker */}
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium text-gray-700">Effective Date</Label>
+            {viewMode ? (
+              <div className="text-sm px-3 py-2 bg-white rounded-md border border-gray-300 text-gray-900">
+                {format(effectiveDate, "MMM d, yyyy")}
+              </div>
+            ) : (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start text-left font-normal gap-2">
+                    <CalendarIcon className="w-4 h-4" />
+                    {format(effectiveDate, "MMM d, yyyy")}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={effectiveDate}
+                    onSelect={(date) => date && setEffectiveDate(date)}
+                    disabled={(date) => date > new Date()}
+                  />
+                </PopoverContent>
+              </Popover>
+            )}
+          </div>
+
+          {/* Add Owner Section - only show in edit mode */}
+          {!viewMode && (
+            <div className="space-y-3 rounded-lg border border-white bg-white p-3">
+              <h4 className="text-xs font-semibold text-gray-900">Add Owner</h4>
+
+              {/* Owner Type Selection */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-gray-700">Owner Type</Label>
+                <div className="flex gap-2">
+                  {["Employee", "Non-Employee"].map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => {
+                        setSelectedOwnerType(type);
+                        setSelectedContactId("");
+                      }}
+                      className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${
+                        selectedOwnerType === type
+                          ? "bg-indigo-600 text-white border-indigo-600"
+                          : "bg-white text-gray-700 border-gray-300 hover:border-indigo-300"
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Contact Selection */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-gray-700">Contact</Label>
+                <div className="flex gap-2">
+                  <Select value={selectedContactId} onValueChange={setSelectedContactId}>
+                    <SelectTrigger className="h-9 text-sm flex-1">
+                      <SelectValue placeholder="Select contact..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableContacts.length === 0 ? (
+                        <div className="px-2 py-1.5 text-xs text-gray-500">No {selectedOwnerType.toLowerCase()}s available</div>
+                      ) : (
+                        availableContacts.map((contact) => (
+                          <SelectItem key={contact.id} value={contact.id}>
+                            {[contact.first_name, contact.middle_name, contact.last_name].filter(Boolean).join(" ")}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-9 px-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50 gap-1"
+                    onClick={() => {
+                      setAddContactType(selectedOwnerType);
+                      setShowAddContact(true);
+                    }}
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    New
+                  </Button>
+                </div>
+              </div>
+
+              {/* Ownership Percentage */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-gray-700">Ownership %</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={ownershipPercentage}
+                  onChange={(e) => setOwnershipPercentage(e.target.value)}
+                  className="h-9 text-sm"
+                />
+              </div>
+
+              <Button
+                type="button"
+                onClick={handleAddOwner}
+                disabled={!selectedContactId || !ownershipPercentage}
+                className="w-full h-8 text-sm bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                Add Owner
+              </Button>
+            </div>
+          )}
 
           {/* Percentage Progress */}
           <div className="space-y-1.5 rounded-lg border border-white bg-white p-3">
@@ -387,14 +464,31 @@ export default function OwnershipTab({ firmId, firmName }) {
                         </div>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                        <span className="text-xs font-medium text-indigo-600 min-w-[3rem] text-right">{owner.ownership_percentage.toFixed(2)}%</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveOwner(owner.id)}
-                          className="text-gray-400 hover:text-red-500 transition-colors"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.01"
+                            value={owner.ownership_percentage}
+                            onChange={(e) => {
+                              const updated = owners.map(o => o.id === owner.id ? { ...o, ownership_percentage: parseFloat(e.target.value) || 0 } : o);
+                              setOwners(updated);
+                            }}
+                            disabled={viewMode}
+                            className="text-xs font-medium text-indigo-600 min-w-[3rem] text-right px-1 py-0.5 rounded border border-indigo-200 disabled:bg-transparent disabled:border-0"
+                          />
+                          <span className="text-xs">%</span>
+                          {!viewMode && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveOwner(owner.id)}
+                              className="text-gray-400 hover:text-red-500 transition-colors"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
@@ -437,27 +531,31 @@ export default function OwnershipTab({ firmId, firmName }) {
           )}
 
           {/* Action Buttons */}
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setShowUpdateForm(false);
-                setOwners([]);
-              }}
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={handleSaveOwnership}
-              disabled={!isValidPercentage || addOwnerMutation.isPending}
-              className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white"
-            >
-              {addOwnerMutation.isPending ? "Saving..." : "Save Ownership"}
-            </Button>
-          </div>
+          {!viewMode && (
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowUpdateForm(false);
+                  setSelectedOwnership(null);
+                  setOwners([]);
+                  setViewMode(true);
+                }}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSaveOwnership}
+                disabled={!isValidPercentage || addOwnerMutation.isPending || updateOwnershipMutation.isPending}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                {addOwnerMutation.isPending || updateOwnershipMutation.isPending ? "Saving..." : "Save Ownership"}
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
