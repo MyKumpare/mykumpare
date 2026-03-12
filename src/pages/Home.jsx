@@ -33,6 +33,8 @@ export default function Home() {
   const [statsModal, setStatsModal] = useState(null); // "firms" | "products" | null
   const [contactsModalOpen, setContactsModalOpen] = useState(false);
   const [addContactOpen, setAddContactOpen] = useState(false);
+  const [viewingContact, setViewingContact] = useState(null);
+  const [searchFocused, setSearchFocused] = useState(false);
 
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
