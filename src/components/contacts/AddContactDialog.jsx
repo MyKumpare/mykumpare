@@ -47,6 +47,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [suffix, setSuffix] = useState("");
   const [title, setTitle] = useState("");
   const [email, setEmail] = useState("");
+  const [linkedinUrl, setLinkedinUrl] = useState("");
   const [biography, setBiography] = useState("");
   const [designations, setDesignations] = useState([]);
   const [contactRole, setContactRole] = useState("");
