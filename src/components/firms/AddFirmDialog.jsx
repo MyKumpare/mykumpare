@@ -240,9 +240,14 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
       <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
         <DialogHeader>
           <div className="flex items-center justify-between pr-6">
-            <DialogTitle className="text-xl font-semibold">
-              {isAddMode ? "Add Firm" : "Firm Details"}
-            </DialogTitle>
+            <div>
+              <DialogTitle className="text-xl font-semibold">
+                {isAddMode ? "Add Firm" : "Firm Details"}
+              </DialogTitle>
+              {!isAddMode && firmName && (
+                <p className="text-sm text-indigo-600 font-medium mt-0.5">{firmName}</p>
+              )}
+            </div>
             {!isAddMode && !isEditing && (
               <Button
                 variant="ghost"
