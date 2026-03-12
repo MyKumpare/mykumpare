@@ -15,6 +15,7 @@ import { base44 } from "@/api/base44Client";
 import AddressForm from "./AddressForm";
 import PhoneForm from "./PhoneForm";
 import ContactsTab from "../contacts/ContactsTab";
+import OwnershipTab from "./OwnershipTab";
 
 function getCountryCodeFromCountryName(countryName) {
   if (!countryName) return "";
@@ -422,13 +423,14 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               </div>
               </div>
 
-          {/* Contacts, Addresses & Phone Numbers Tabs */}
-          <Tabs defaultValue="contacts" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="contacts">Contacts</TabsTrigger>
-              <TabsTrigger value="addresses">Addresses</TabsTrigger>
-              <TabsTrigger value="phones">Phone Numbers</TabsTrigger>
-            </TabsList>
+          {/* Contacts, Addresses, Phones & Ownership Tabs */}
+           <Tabs defaultValue="contacts" className="w-full">
+             <TabsList className="grid w-full grid-cols-4">
+               <TabsTrigger value="contacts">Contacts</TabsTrigger>
+               <TabsTrigger value="addresses">Addresses</TabsTrigger>
+               <TabsTrigger value="phones">Phone Numbers</TabsTrigger>
+               <TabsTrigger value="ownership">Ownership</TabsTrigger>
+             </TabsList>
 
             <TabsContent value="contacts" className="space-y-3">
               {editingFirm ? (
@@ -597,9 +599,19 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                   })()}
                 </div>
               )}
-            </TabsContent>
-          </Tabs>
-        </div>
+              </TabsContent>
+
+              <TabsContent value="ownership" className="space-y-3">
+              {editingFirm ? (
+                <OwnershipTab firmId={editingFirm.id} firmName={editingFirm.name} />
+              ) : (
+                <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
+                  Save the firm first to add ownership information
+                </div>
+              )}
+              </TabsContent>
+              </Tabs>
+              </div>
 
         <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-between gap-2 pt-2 border-t">
           <div>
