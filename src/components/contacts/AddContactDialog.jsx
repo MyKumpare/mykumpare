@@ -140,8 +140,15 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
 
   const isValid = firstName.trim() && lastName.trim();
 
+  const hasUndetermined = gender === "Undetermined" || ethnicity.length === 0 || veteranStatus === "Undetermined" || disabilityStatus === "Undetermined";
+
   const handleSubmit = () => {
     if (!isValid) return;
+    if (hasUndetermined && !showUndeterminedWarning) {
+      setShowUndeterminedWarning(true);
+      return;
+    }
+    setShowUndeterminedWarning(false);
     const data = {
       photo_url: photoUrl,
       salutation,
