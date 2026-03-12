@@ -235,11 +235,24 @@ export default function Home() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
-                placeholder="Search firms or products..."
+                placeholder="Search firms, products or contacts..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
                 className="pl-10 h-11 bg-gray-50 border-gray-200"
               />
+              {searchFocused && searchQuery.trim() && (
+                <SearchResults
+                  query={searchQuery}
+                  firms={firms}
+                  products={products}
+                  contacts={contacts}
+                  onFirmClick={(firm) => { setSearchQuery(""); handleEdit(firm); }}
+                  onContactClick={(contact) => { setSearchQuery(""); setViewingContact(contact); }}
+                  onProductClick={(product) => { setSearchQuery(""); handleEditProduct(product); }}
+                />
+              )}
             </div>
             <Button
               onClick={() => {
