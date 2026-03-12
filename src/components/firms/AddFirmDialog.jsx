@@ -404,18 +404,16 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
             <TabsContent value="addresses" className="space-y-3">
               <div className="flex items-center justify-between">
-                {activelyEditing && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs ml-auto"
-                    onClick={handleAddAddress}
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    Add Address
-                  </Button>
-                )}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs ml-auto"
+                  onClick={() => { if (!activelyEditing) setIsEditing(true); handleAddAddress(); }}
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Add Address
+                </Button>
               </div>
 
               {addresses.length === 0 && (
