@@ -231,7 +231,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
               </div>
               <div className="min-w-0">
                 <DialogTitle className="text-base leading-tight">
-                  {[salutation, firstName, middleName, lastName, suffix].filter(Boolean).join(" ")}
+                  {formatFullName()}
                   {designations?.length > 0 && `, ${designations.join(", ")}`}
                 </DialogTitle>
                 {firmIds.length > 0 && (
