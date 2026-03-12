@@ -404,6 +404,14 @@ export default function Home() {
         firms={firms}
       />
 
+      <AddContactDialog
+        open={!!viewingContact}
+        onOpenChange={(open) => !open && setViewingContact(null)}
+        editingContact={viewingContact}
+        firms={firms}
+        viewMode={true}
+      />
+
       <AddProductDialog
         open={productDialogOpen}
         onOpenChange={(open) => {
