@@ -20,6 +20,7 @@ export default function ContactsListModal({ open, onOpenChange, contacts = [], f
   const sorted = [...filtered].sort((a, b) => a.last_name.localeCompare(b.last_name));
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
         <DialogHeader>
