@@ -180,15 +180,31 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>
-            {viewMode
-              ? `${editingContact?.first_name} ${editingContact?.last_name}`
-              : editingContact ? "Edit Contact" : "Add Contact"}
-          </DialogTitle>
-          {editingContact && firmIds.length > 0 && (
-            <p className="text-sm text-indigo-600 font-medium mt-0.5">
-              {firmIds.map(id => getFirmName(id)).join(", ")}
-            </p>
+          {viewMode && editingContact ? (
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center overflow-hidden flex-shrink-0 border-2 border-indigo-200">
+                {photoUrl ? (
+                  <img src={photoUrl} alt="Contact" className="w-full h-full object-cover" />
+                ) : (
+                  <User className="w-6 h-6 text-indigo-400" />
+                )}
+              </div>
+              <div className="min-w-0">
+                <DialogTitle className="text-base leading-tight">
+                  {[salutation, firstName, middleName, lastName, suffix].filter(Boolean).join(" ")}
+                  {designations?.length > 0 && `, ${designations.join(", ")}`}
+                </DialogTitle>
+                {firmIds.length > 0 && (
+                  <p className="text-sm text-indigo-600 font-medium mt-0.5 truncate">
+                    {firmIds.map(id => getFirmName(id)).join(", ")}
+                  </p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <DialogTitle>
+              {editingContact ? "Edit Contact" : "Add Contact"}
+            </DialogTitle>
           )}
         </DialogHeader>
 
