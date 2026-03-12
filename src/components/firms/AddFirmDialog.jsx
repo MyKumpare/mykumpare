@@ -240,14 +240,25 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
       <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
         <DialogHeader>
           <div className="flex items-center justify-between pr-6">
-            <div>
+            {!isAddMode && !isEditing ? (
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  {logoUrl ? (
+                    <img src={logoUrl} alt="logo" className="w-full h-full object-contain p-0.5" />
+                  ) : (
+                    <Building2 className="w-5 h-5 text-gray-300" />
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <DialogTitle className="text-base font-semibold leading-tight">Firm Details</DialogTitle>
+                  {firmName && <p className="text-sm text-indigo-600 font-medium mt-0.5 truncate">{firmName}</p>}
+                </div>
+              </div>
+            ) : (
               <DialogTitle className="text-xl font-semibold">
-                {isAddMode ? "Add Firm" : "Firm Details"}
+                {isAddMode ? "Add Firm" : "Edit Firm"}
               </DialogTitle>
-              {!isAddMode && firmName && (
-                <p className="text-sm text-indigo-600 font-medium mt-0.5">{firmName}</p>
-              )}
-            </div>
+            )}
             {!isAddMode && !isEditing && (
               <Button
                 variant="ghost"
