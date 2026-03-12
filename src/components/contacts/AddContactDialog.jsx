@@ -208,8 +208,9 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   };
 
   const formatFullName = () => {
-    const parts = [salutation, firstName, formatMiddleName(middleName), lastName, suffix && `,`].filter(Boolean);
-    return parts.join(" ");
+    const parts = [salutation, firstName, formatMiddleName(middleName), lastName].filter(Boolean);
+    const name = parts.join(" ");
+    return suffix ? `${name}, ${suffix}` : name;
   };
 
   const ro = (val, className = "text-sm text-gray-900 px-1") => (
