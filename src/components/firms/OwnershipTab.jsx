@@ -180,9 +180,9 @@ export default function OwnershipTab({ firmId, firmName }) {
     });
 
     return categoryOwners.map(owner => {
-      const contact = allContacts.find(c => c.id === owner.contact_id);
       return {
         fullName: owner.contact_full_name,
+        photoUrl: owner.contact_photo_url,
         percentage: owner.ownership_percentage,
         type: owner.owner_type,
       };
