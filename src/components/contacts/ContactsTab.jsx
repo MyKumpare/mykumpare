@@ -2,12 +2,13 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, User, Pencil, Trash2 } from "lucide-react";
+import { Plus, User } from "lucide-react";
 import AddContactDialog from "./AddContactDialog";
 
 export default function ContactsTab({ firmId, firms = [] }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingContact, setEditingContact] = useState(null);
+  const [viewMode, setViewMode] = useState(false);
 
   const queryClient = useQueryClient();
 
