@@ -54,6 +54,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [ethnicity, setEthnicity] = useState([]);
   const [veteranStatus, setVeteranStatus] = useState("Undetermined");
   const [disabilityStatus, setDisabilityStatus] = useState("Undetermined");
+  const [showUndeterminedWarning, setShowUndeterminedWarning] = useState(false);
   const [notes, setNotes] = useState("");
   const [firmIds, setFirmIds] = useState([]);
   const [firmSearch, setFirmSearch] = useState("");
