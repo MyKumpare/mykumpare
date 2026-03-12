@@ -97,6 +97,10 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setDesignations([]);
         setEmail("");
         setContactRole("");
+        setGender("Undetermined");
+        setEthnicity([]);
+        setVeteranStatus("Undetermined");
+        setDisabilityStatus("Undetermined");
         setBiography("");
         setNotes("");
         setFirmIds(currentFirmId ? [currentFirmId] : []);
