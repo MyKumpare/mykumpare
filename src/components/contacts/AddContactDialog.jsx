@@ -379,7 +379,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
               </div>
 
               {/* Demographics */}
-              <div className="space-y-3 rounded-xl border border-gray-100 bg-gray-50/60 p-3">
+              <div className={`space-y-3 rounded-xl border p-3 ${hasUndetermined && !viewMode ? "border-red-200 bg-red-50/40" : "border-gray-100 bg-gray-50/60"}`}>
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Demographics</p>
 
                 {/* Gender */}
@@ -393,7 +393,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                         <button key={g} type="button"
                           onClick={() => setGender(g)}
                           className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${gender === g
-                            ? "bg-indigo-600 text-white border-indigo-600"
+                            ? g === "Undetermined" ? "bg-red-500 text-white border-red-500" : "bg-indigo-600 text-white border-indigo-600"
                             : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-indigo-600"}`}>
                           {g}
                         </button>
@@ -404,7 +404,10 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
 
                 {/* Ethnicity (multi-select) */}
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-gray-700">Ethnicity</Label>
+                  <Label className="text-xs font-medium text-gray-700">
+                    Ethnicity
+                    {!viewMode && ethnicity.length === 0 && <span className="ml-1.5 text-red-500 text-xs font-normal">(none selected)</span>}
+                  </Label>
                   {viewMode ? (
                     <div className="text-sm px-1 text-gray-900">
                       {ethnicity?.length > 0 ? ethnicity.join(", ") : <span className="text-gray-400 italic">Undetermined</span>}
@@ -438,7 +441,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                         <button key={v} type="button"
                           onClick={() => setVeteranStatus(v)}
                           className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${veteranStatus === v
-                            ? "bg-indigo-600 text-white border-indigo-600"
+                            ? v === "Undetermined" ? "bg-red-500 text-white border-red-500" : "bg-indigo-600 text-white border-indigo-600"
                             : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-indigo-600"}`}>
                           {v}
                         </button>
@@ -458,7 +461,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                         <button key={d} type="button"
                           onClick={() => setDisabilityStatus(d)}
                           className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${disabilityStatus === d
-                            ? "bg-indigo-600 text-white border-indigo-600"
+                            ? d === "Undetermined" ? "bg-red-500 text-white border-red-500" : "bg-indigo-600 text-white border-indigo-600"
                             : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-indigo-600"}`}>
                           {d}
                         </button>
