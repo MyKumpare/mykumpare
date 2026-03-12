@@ -210,6 +210,16 @@ export default function Home() {
                 Total<br />Products
               </div>
             </button>
+            <div className="w-px h-10 bg-white/20" />
+            <button
+              onClick={() => setContactsModalOpen(true)}
+              className="flex items-center gap-3 group hover:opacity-80 transition-opacity"
+            >
+              <div className="text-3xl sm:text-4xl font-bold underline decoration-dotted underline-offset-4 decoration-pink-300">{totalContacts}</div>
+              <div className="text-indigo-200 text-sm leading-tight text-left group-hover:text-white transition-colors">
+                Total<br />Contacts
+              </div>
+            </button>
           </div>
         </div>
       </div>
