@@ -9,7 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { X, Plus, Building2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
-import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
+import QuickAddFirmForm from "./QuickAddFirmForm";
 
 export default function AddContactDialog({ open, onOpenChange, editingContact, currentFirmId, firms = [] }) {
   const [firstName, setFirstName] = useState("");
