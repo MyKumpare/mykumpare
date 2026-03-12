@@ -378,11 +378,9 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                   isOnly={phones.length === 1}
                 />
               ))}
-              {!viewMode && (
-                <Button type="button" variant="outline" size="sm" className="w-full h-8 text-xs gap-1 text-indigo-600 border-indigo-200 hover:bg-indigo-50" onClick={addPhone}>
-                  <Plus className="w-3.5 h-3.5" /> Add Phone
-                </Button>
-              )}
+              <Button type="button" variant="outline" size="sm" className="w-full h-8 text-xs gap-1 text-indigo-600 border-indigo-200 hover:bg-indigo-50" onClick={() => { if (viewMode) setViewMode(false); addPhone(); }}>
+                <Plus className="w-3.5 h-3.5" /> Add Phone
+              </Button>
             </TabsContent>
 
             {/* ── ADDRESSES TAB ── */}
