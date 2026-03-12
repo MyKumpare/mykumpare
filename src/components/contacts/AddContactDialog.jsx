@@ -102,6 +102,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setEthnicity([]);
         setVeteranStatus("Undetermined");
         setDisabilityStatus("Undetermined");
+        setShowUndeterminedWarning(false);
         setBiography("");
         setNotes("");
         setFirmIds(currentFirmId ? [currentFirmId] : []);
