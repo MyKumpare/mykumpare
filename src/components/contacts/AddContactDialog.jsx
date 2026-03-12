@@ -99,6 +99,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setTitle("");
         setDesignations([]);
         setEmail("");
+        setLinkedinUrl("");
         setContactRole("");
         setGender("Undetermined");
         setEthnicity([]);
