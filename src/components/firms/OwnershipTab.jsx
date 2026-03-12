@@ -161,9 +161,9 @@ export default function OwnershipTab({ firmId, firmName }) {
     }));
   };
 
-  // Get all ethnicities present in ethnic minority owners
+  // Get all ethnicities with their total percentage
   const getEthnicities = () => {
-    const ethnicities = new Set();
+    const ethnicityMap = {};
     const ethnicMinorityOwners = owners.filter((owner) => {
       const contact = allContacts.find(c => c.id === owner.contact_id);
       if (!contact) return false;
@@ -174,12 +174,16 @@ export default function OwnershipTab({ firmId, firmName }) {
       const contact = allContacts.find(c => c.id === owner.contact_id);
       if (contact && contact.ethnicity) {
         contact.ethnicity.forEach(eth => {
-          if (eth !== "Caucasian") ethnicities.add(eth);
+          if (eth !== "Caucasian") {
+            ethnicityMap[eth] = (ethnicityMap[eth] || 0) + owner.ownership_percentage;
+          }
         });
       }
     });
     
-    return Array.from(ethnicities).sort();
+    return Object.entries(ethnicityMap)
+      .map(([ethnicity, total]) => ({ ethnicity, total }))
+      .sort((a, b) => b.total - a.total);
   };
 
   // Helper function to get ownership composition for a specific category
@@ -648,13 +652,13 @@ export default function OwnershipTab({ firmId, firmName }) {
                     <tr>
                       <td colSpan="4" className="p-3 border border-gray-200 bg-gray-50">
                         <div className="space-y-2">
-                          {getEthnicities().map((ethnicity) => (
+                          {getEthnicities().map(({ ethnicity, total }) => (
                             <div key={ethnicity}>
                               <button
                                 onClick={() => setExpandedEthnicity(expandedEthnicity === ethnicity ? null : ethnicity)}
                                 className="text-xs font-medium text-indigo-600 hover:text-indigo-700 cursor-pointer mb-1"
                               >
-                                {ethnicity}
+                                {ethnicity} {total.toFixed(2)}%
                               </button>
                               {expandedEthnicity === ethnicity && (
                                 <div className="space-y-1 ml-4">
