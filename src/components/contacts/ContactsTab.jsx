@@ -75,7 +75,7 @@ export default function ContactsTab({ firmId, firms = [] }) {
                     <div className="text-xs text-gray-500">{contact.title}</div>
                   )}
                   {contact.email && (
-                    <div className="text-xs text-indigo-600">{contact.email}</div>
+                    <a href={`mailto:${contact.email}`} className="text-xs text-indigo-600 hover:underline" onClick={(e) => e.stopPropagation()}>{contact.email}</a>
                   )}
                 </div>
               </div>
