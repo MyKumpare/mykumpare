@@ -70,6 +70,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setLastName(editingContact.last_name || "");
         setSuffix(editingContact.suffix || "");
         setTitle(editingContact.title || "");
+        setDesignations(editingContact.designations || []);
         setEmail(editingContact.email || "");
         setContactRole(editingContact.contact_role || "");
         setBiography(editingContact.biography || "");
