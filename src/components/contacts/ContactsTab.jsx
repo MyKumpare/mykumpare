@@ -85,10 +85,11 @@ export default function ContactsTab({ firmId, firms = [] }) {
 
       <AddContactDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(o) => { setDialogOpen(o); if (!o) setViewMode(false); }}
         editingContact={editingContact}
         currentFirmId={firmId}
         firms={firms}
+        viewMode={viewMode}
       />
     </div>
   );
