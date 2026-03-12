@@ -362,6 +362,21 @@ export default function Home() {
         onProductClick={handleEditProduct}
       />
 
+      <ContactsListModal
+        open={contactsModalOpen}
+        onOpenChange={setContactsModalOpen}
+        contacts={contacts}
+        firms={firms}
+      />
+
+      <AddContactDialog
+        open={addContactOpen}
+        onOpenChange={setAddContactOpen}
+        editingContact={null}
+        currentFirmId={null}
+        firms={firms}
+      />
+
       <AddProductDialog
         open={productDialogOpen}
         onOpenChange={(open) => {
