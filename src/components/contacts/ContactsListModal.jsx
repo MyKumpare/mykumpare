@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Search, User, Building2 } from "lucide-react";
+import { User, Building2 } from "lucide-react";
+import AddContactDialog from "./AddContactDialog";
 
 export default function ContactsListModal({ open, onOpenChange, contacts = [], firms = [] }) {
   const [firmSearch, setFirmSearch] = useState("");
+  const [viewingContact, setViewingContact] = useState(null);
 
   const getFirmName = (id) => firms.find((f) => f.id === id)?.name || "";
 
