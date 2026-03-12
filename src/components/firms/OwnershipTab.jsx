@@ -64,6 +64,62 @@ export default function OwnershipTab({ firmId, firmName }) {
   const totalOwnershipPercentage = owners.reduce((sum, o) => sum + (parseFloat(o.ownership_percentage) || 0), 0);
   const isValidPercentage = totalOwnershipPercentage > 0;
   const percentageWarning = totalOwnershipPercentage !== 100;
+  const remainingToAllocate = Math.max(0, 100 - totalOwnershipPercentage);
+  const exceedsMax = totalOwnershipPercentage > 100;
+
+  // Calculate ownership summary
+  const calculateOwnershipSummary = () => {
+    const summary = {
+      totalEmployeeOwned: 0,
+      totalVeteranOwned: 0,
+      totalDisabledOwned: 0,
+      totalEthnicMinorityOwned: 0,
+      totalWomenOwned: 0,
+      totalEthnicMinorityAndWomenOwned: 0,
+    };
+
+    owners.forEach((owner) => {
+      const contact = allContacts.find(c => c.id === owner.contact_id);
+      if (!contact) return;
+
+      const percentage = parseFloat(owner.ownership_percentage) || 0;
+
+      // Employee owned
+      if (owner.owner_type === "Employee") {
+        summary.totalEmployeeOwned += percentage;
+      }
+
+      // Veteran owned
+      if (contact.veteran_status === "Veteran Owned") {
+        summary.totalVeteranOwned += percentage;
+      }
+
+      // Disabled owned
+      if (contact.disability_status === "Disabled") {
+        summary.totalDisabledOwned += percentage;
+      }
+
+      // Ethnic minority owned (all except Caucasian)
+      const isEthnicMinority = contact.ethnicity && contact.ethnicity.length > 0 && !contact.ethnicity.includes("Caucasian");
+      if (isEthnicMinority) {
+        summary.totalEthnicMinorityOwned += percentage;
+      }
+
+      // Women owned
+      if (contact.gender === "Female") {
+        summary.totalWomenOwned += percentage;
+      }
+
+      // Ethnic minority AND women owned
+      if (isEthnicMinority && contact.gender === "Female") {
+        summary.totalEthnicMinorityAndWomenOwned += percentage;
+      }
+    });
+
+    return summary;
+  };
+
+  const ownershipSummary = calculateOwnershipSummary();
 
   const addOwnerMutation = useMutation({
     mutationFn: (data) => base44.entities.Ownership.create(data),
@@ -270,48 +326,112 @@ export default function OwnershipTab({ firmId, firmName }) {
             </Button>
           </div>
 
+          {/* Percentage Progress */}
+          <div className="space-y-1.5 rounded-lg border border-white bg-white p-3">
+            <div className="flex items-center justify-between mb-1">
+              <h4 className="text-xs font-semibold text-gray-900">Ownership Allocation</h4>
+              <span className={`text-xs font-medium ${totalOwnershipPercentage === 100 ? "text-green-600" : exceedsMax ? "text-red-600" : "text-amber-600"}`}>
+                {totalOwnershipPercentage.toFixed(2)}%
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+              <div
+                className={`h-full transition-all ${exceedsMax ? "bg-red-500" : totalOwnershipPercentage === 100 ? "bg-green-500" : "bg-amber-500"}`}
+                style={{ width: `${Math.min(totalOwnershipPercentage, 100)}%` }}
+              />
+            </div>
+            {exceedsMax && (
+              <p className="text-xs text-red-600 font-medium">⚠️ Ownership exceeds 100% by {(totalOwnershipPercentage - 100).toFixed(2)}%</p>
+            )}
+            {!exceedsMax && totalOwnershipPercentage < 100 && (
+              <p className="text-xs text-amber-600">{remainingToAllocate.toFixed(2)}% remaining to allocate</p>
+            )}
+            {totalOwnershipPercentage === 100 && (
+              <p className="text-xs text-green-600 font-medium">✓ Ownership fully allocated</p>
+            )}
+          </div>
+
           {/* Current Owners List */}
           {owners.length > 0 && (
             <div className="space-y-2 rounded-lg border border-white bg-white p-3">
-              <div className="flex items-center justify-between">
-                <h4 className="text-xs font-semibold text-gray-900">Owners ({owners.length})</h4>
-                <span className={`text-xs font-medium ${totalOwnershipPercentage === 100 ? "text-green-600" : "text-amber-600"}`}>
-                  Total: {totalOwnershipPercentage.toFixed(2)}%
-                </span>
-              </div>
+              <h4 className="text-xs font-semibold text-gray-900">Owners ({owners.length})</h4>
 
-              {percentageWarning && (
-                <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 p-2">
-                  <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-amber-700">Total ownership is {totalOwnershipPercentage.toFixed(2)}%, not 100%</p>
-                </div>
-              )}
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {owners.map((owner) => {
+                  const contact = allContacts.find(c => c.id === owner.contact_id);
+                  const demographics = [];
+                  if (contact?.gender === "Female") demographics.push("Woman");
+                  if (contact?.veteran_status === "Veteran Owned") demographics.push("Veteran");
+                  if (contact?.disability_status === "Disabled") demographics.push("Disabled");
+                  if (contact?.ethnicity && contact.ethnicity.length > 0 && !contact.ethnicity.includes("Caucasian")) {
+                    demographics.push(contact.ethnicity.slice(0, 2).join(", "));
+                  }
 
-              <div className="space-y-2 max-h-40 overflow-y-auto">
-                {owners.map((owner) => (
-                  <div key={owner.id} className="flex items-center justify-between bg-gray-50 rounded-lg p-2 border border-gray-200">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <Avatar className="h-6 w-6 flex-shrink-0">
-                        <AvatarImage src={owner.contact_photo_url} alt={owner.contact_full_name} />
-                        <AvatarFallback className="text-xs">{owner.contact_full_name?.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-gray-900 truncate">{owner.contact_full_name}</p>
-                        <p className="text-xs text-gray-500">{owner.owner_type}</p>
+                  return (
+                    <div key={owner.id} className="flex items-start justify-between bg-gray-50 rounded-lg p-2 border border-gray-200">
+                      <div className="flex items-start gap-2 flex-1 min-w-0">
+                        <Avatar className="h-6 w-6 flex-shrink-0 mt-0.5">
+                          <AvatarImage src={owner.contact_photo_url} alt={owner.contact_full_name} />
+                          <AvatarFallback className="text-xs">{owner.contact_full_name?.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-gray-900">{owner.contact_full_name}</p>
+                          <p className="text-xs text-gray-500">{owner.owner_type}</p>
+                          {demographics.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {demographics.map((d) => (
+                                <span key={d} className="inline-block text-xs px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700">{d}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                        <span className="text-xs font-medium text-indigo-600 min-w-[3rem] text-right">{owner.ownership_percentage.toFixed(2)}%</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveOwner(owner.id)}
+                          className="text-gray-400 hover:text-red-500 transition-colors"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-xs font-medium text-indigo-600 min-w-[3rem] text-right">{owner.ownership_percentage.toFixed(2)}%</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveOwner(owner.id)}
-                        className="text-gray-400 hover:text-red-500 transition-colors"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Ownership Summary Table */}
+          {owners.length > 0 && (
+            <div className="space-y-2 rounded-lg border border-white bg-white p-3">
+              <h4 className="text-xs font-semibold text-gray-900">Ownership Summary</h4>
+              <div className="space-y-1 text-xs">
+                <div className="flex items-center justify-between p-1.5 bg-gray-50 rounded">
+                  <span className="text-gray-700">Employee Owned</span>
+                  <span className="font-medium text-indigo-600">{ownershipSummary.totalEmployeeOwned.toFixed(2)}%</span>
+                </div>
+                <div className="flex items-center justify-between p-1.5 bg-gray-50 rounded">
+                  <span className="text-gray-700">Veteran Owned</span>
+                  <span className="font-medium text-indigo-600">{ownershipSummary.totalVeteranOwned.toFixed(2)}%</span>
+                </div>
+                <div className="flex items-center justify-between p-1.5 bg-gray-50 rounded">
+                  <span className="text-gray-700">Disability Owned</span>
+                  <span className="font-medium text-indigo-600">{ownershipSummary.totalDisabledOwned.toFixed(2)}%</span>
+                </div>
+                <div className="flex items-center justify-between p-1.5 bg-gray-50 rounded">
+                  <span className="text-gray-700">Ethnic Minority Owned</span>
+                  <span className="font-medium text-indigo-600">{ownershipSummary.totalEthnicMinorityOwned.toFixed(2)}%</span>
+                </div>
+                <div className="flex items-center justify-between p-1.5 bg-gray-50 rounded">
+                  <span className="text-gray-700">Women Owned</span>
+                  <span className="font-medium text-indigo-600">{ownershipSummary.totalWomenOwned.toFixed(2)}%</span>
+                </div>
+                <div className="flex items-center justify-between p-1.5 bg-indigo-50 rounded border border-indigo-200">
+                  <span className="text-gray-900 font-medium">Ethnic Minority & Women Owned</span>
+                  <span className="font-semibold text-indigo-700">{ownershipSummary.totalEthnicMinorityAndWomenOwned.toFixed(2)}%</span>
+                </div>
               </div>
             </div>
           )}
