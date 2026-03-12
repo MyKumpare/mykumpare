@@ -19,18 +19,15 @@ export default function ContactsTab({ firmId, firms = [] }) {
 
   const firmContacts = contacts.filter((c) => c.firm_ids?.includes(firmId));
 
-  const deleteContactMutation = useMutation({
-    mutationFn: (id) => base44.entities.Contact.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["contacts"] }),
-  });
-
-  const handleEdit = (contact) => {
+  const handleView = (contact) => {
     setEditingContact(contact);
+    setViewMode(true);
     setDialogOpen(true);
   };
 
   const handleAdd = () => {
     setEditingContact(null);
+    setViewMode(false);
     setDialogOpen(true);
   };
 
