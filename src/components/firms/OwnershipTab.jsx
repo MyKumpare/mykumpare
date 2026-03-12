@@ -1068,6 +1068,7 @@ export default function OwnershipTab({ firmId, firmName }) {
             if (!open) {
               setSelectedContact(null);
               queryClient.invalidateQueries({ queryKey: ["contacts"] });
+              queryClient.invalidateQueries({ queryKey: ["ownership", firmId] });
             }
           }}
           editingContact={selectedContact}
