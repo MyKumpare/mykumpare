@@ -80,9 +80,12 @@ export default function OwnershipTab({ firmId, firmName }) {
       totalEmployeeOwned: 0,
       totalVeteranOwned: 0,
       totalDisabledOwned: 0,
+      totalDisabledVeteranOwned: 0,
       totalEthnicMinorityOwned: 0,
       totalWomenOwned: 0,
       totalEthnicMinorityAndWomenOwned: 0,
+      totalEthnicMinorityAndWomenAndVeteranOwned: 0,
+      totalEthnicMinorityAndWomenAndDisabledVeteranOwned: 0,
     };
 
     owners.forEach((owner) => {
@@ -97,13 +100,20 @@ export default function OwnershipTab({ firmId, firmName }) {
       }
 
       // Veteran owned
-      if (contact.veteran_status === "Veteran Owned") {
+      const isVeteran = contact.veteran_status === "Veteran Owned";
+      if (isVeteran) {
         summary.totalVeteranOwned += percentage;
       }
 
       // Disabled owned
-      if (contact.disability_status === "Disabled") {
+      const isDisabled = contact.disability_status === "Disabled";
+      if (isDisabled) {
         summary.totalDisabledOwned += percentage;
+      }
+
+      // Disabled Veteran owned
+      if (isDisabled && isVeteran) {
+        summary.totalDisabledVeteranOwned += percentage;
       }
 
       // Ethnic minority owned (all except Caucasian)
@@ -113,13 +123,24 @@ export default function OwnershipTab({ firmId, firmName }) {
       }
 
       // Women owned
-      if (contact.gender === "Female") {
+      const isWoman = contact.gender === "Female";
+      if (isWoman) {
         summary.totalWomenOwned += percentage;
       }
 
       // Ethnic minority AND women owned
-      if (isEthnicMinority && contact.gender === "Female") {
+      if (isEthnicMinority && isWoman) {
         summary.totalEthnicMinorityAndWomenOwned += percentage;
+      }
+
+      // Ethnic minority & women AND veteran owned
+      if (isEthnicMinority && isWoman && isVeteran) {
+        summary.totalEthnicMinorityAndWomenAndVeteranOwned += percentage;
+      }
+
+      // Ethnic minority & women AND disabled veteran owned
+      if (isEthnicMinority && isWoman && isDisabled && isVeteran) {
+        summary.totalEthnicMinorityAndWomenAndDisabledVeteranOwned += percentage;
       }
     });
 
@@ -514,21 +535,33 @@ export default function OwnershipTab({ firmId, firmName }) {
                   <span className="font-medium text-indigo-600">{ownershipSummary.totalVeteranOwned.toFixed(2)}%</span>
                 </div>
                 <div className="flex items-center justify-between p-1.5 bg-gray-50 rounded">
-                  <span className="text-gray-700">Disability Owned</span>
-                  <span className="font-medium text-indigo-600">{ownershipSummary.totalDisabledOwned.toFixed(2)}%</span>
-                </div>
-                <div className="flex items-center justify-between p-1.5 bg-gray-50 rounded">
-                  <span className="text-gray-700">Ethnic Minority Owned</span>
-                  <span className="font-medium text-indigo-600">{ownershipSummary.totalEthnicMinorityOwned.toFixed(2)}%</span>
-                </div>
-                <div className="flex items-center justify-between p-1.5 bg-gray-50 rounded">
-                  <span className="text-gray-700">Women Owned</span>
-                  <span className="font-medium text-indigo-600">{ownershipSummary.totalWomenOwned.toFixed(2)}%</span>
-                </div>
-                <div className="flex items-center justify-between p-1.5 bg-indigo-50 rounded border border-indigo-200">
-                  <span className="text-gray-900 font-medium">Ethnic Minority & Women Owned</span>
-                  <span className="font-semibold text-indigo-700">{ownershipSummary.totalEthnicMinorityAndWomenOwned.toFixed(2)}%</span>
-                </div>
+                   <span className="text-gray-700">Disability Owned</span>
+                   <span className="font-medium text-indigo-600">{ownershipSummary.totalDisabledOwned.toFixed(2)}%</span>
+                 </div>
+                 <div className="flex items-center justify-between p-1.5 bg-gray-50 rounded">
+                   <span className="text-gray-700">Disabled Veteran Owned</span>
+                   <span className="font-medium text-indigo-600">{ownershipSummary.totalDisabledVeteranOwned.toFixed(2)}%</span>
+                 </div>
+                 <div className="flex items-center justify-between p-1.5 bg-gray-50 rounded">
+                   <span className="text-gray-700">Ethnic Minority Owned</span>
+                   <span className="font-medium text-indigo-600">{ownershipSummary.totalEthnicMinorityOwned.toFixed(2)}%</span>
+                 </div>
+                 <div className="flex items-center justify-between p-1.5 bg-gray-50 rounded">
+                   <span className="text-gray-700">Women Owned</span>
+                   <span className="font-medium text-indigo-600">{ownershipSummary.totalWomenOwned.toFixed(2)}%</span>
+                 </div>
+                 <div className="flex items-center justify-between p-1.5 bg-indigo-50 rounded border border-indigo-200">
+                   <span className="text-gray-900 font-medium">Ethnic Minority & Women Owned</span>
+                   <span className="font-semibold text-indigo-700">{ownershipSummary.totalEthnicMinorityAndWomenOwned.toFixed(2)}%</span>
+                 </div>
+                 <div className="flex items-center justify-between p-1.5 bg-indigo-50 rounded border border-indigo-200">
+                   <span className="text-gray-900 font-medium">Ethnic Minority & Women & Veteran Owned</span>
+                   <span className="font-semibold text-indigo-700">{ownershipSummary.totalEthnicMinorityAndWomenAndVeteranOwned.toFixed(2)}%</span>
+                 </div>
+                 <div className="flex items-center justify-between p-1.5 bg-indigo-50 rounded border border-indigo-200">
+                   <span className="text-gray-900 font-medium">Ethnic Minority & Women & Disabled Veteran Owned</span>
+                   <span className="font-semibold text-indigo-700">{ownershipSummary.totalEthnicMinorityAndWomenAndDisabledVeteranOwned.toFixed(2)}%</span>
+                 </div>
               </div>
             </div>
           )}
