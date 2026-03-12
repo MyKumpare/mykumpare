@@ -384,12 +384,23 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               </div>
               </div>
 
-          {/* Addresses & Phone Numbers Tabs */}
-          <Tabs defaultValue="addresses" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+          {/* Contacts, Addresses & Phone Numbers Tabs */}
+          <Tabs defaultValue="contacts" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="contacts">Contacts</TabsTrigger>
               <TabsTrigger value="addresses">Addresses</TabsTrigger>
               <TabsTrigger value="phones">Phone Numbers</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="contacts" className="space-y-3">
+              {editingFirm ? (
+                <ContactsTab firmId={editingFirm.id} firms={existingFirms} />
+              ) : (
+                <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
+                  Save the firm first to add contacts
+                </div>
+              )}
+            </TabsContent>
 
             <TabsContent value="addresses" className="space-y-3">
               <div className="flex items-center justify-between">
