@@ -43,7 +43,7 @@ export default function FirmTypeSection({ type, firms, onEdit, onDelete, onAddTo
           className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 flex-shrink-0"
         >
           <Plus className="w-3.5 h-3.5 mr-1" />
-          <span className="text-xs">Add</span>
+          <span className="text-xs">Add Firm</span>
         </Button>
       </div>
       <AnimatePresence>
