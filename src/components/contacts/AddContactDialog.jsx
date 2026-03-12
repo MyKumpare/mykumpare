@@ -54,8 +54,9 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
       setFirmSearch("");
       setShowFirmPicker(false);
       setShowQuickAddFirm(false);
+      setViewMode(initialViewMode);
     }
-  }, [open, editingContact, currentFirmId]);
+  }, [open, editingContact, currentFirmId, initialViewMode]);
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Contact.create(data),
