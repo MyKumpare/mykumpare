@@ -23,6 +23,7 @@ export default function OwnershipTab({ firmId, firmName }) {
   const [addContactType, setAddContactType] = useState("Employee");
   const [selectedOwnership, setSelectedOwnership] = useState(null);
   const [viewMode, setViewMode] = useState(true);
+  const [selectedContact, setSelectedContact] = useState(null);
 
   const queryClient = useQueryClient();
 
@@ -476,8 +477,14 @@ export default function OwnershipTab({ firmId, firmName }) {
                           <AvatarFallback className="text-xs">{owner.contact_full_name?.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-gray-900">{owner.contact_full_name}</p>
-                          <p className="text-xs text-gray-500">{owner.owner_type}</p>
+                           <button
+                             type="button"
+                             onClick={() => setSelectedContact(allContacts.find(c => c.id === owner.contact_id))}
+                             className="text-xs font-medium text-indigo-600 hover:text-indigo-700 hover:underline text-left"
+                           >
+                             {owner.contact_full_name}
+                           </button>
+                           <p className="text-xs text-gray-500">{owner.owner_type}</p>
                           {demographics.length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-1">
                               {demographics.map((d) => (
@@ -602,6 +609,16 @@ export default function OwnershipTab({ firmId, firmName }) {
         currentFirmId={firmId}
         firms={[]}
       />
+
+      {/* View/Edit Contact Dialog */}
+      {selectedContact && (
+        <AddContactDialog
+          open={!!selectedContact}
+          onOpenChange={(open) => !open && setSelectedContact(null)}
+          contact={selectedContact}
+          firms={[]}
+        />
+      )}
     </div>
   );
 }
