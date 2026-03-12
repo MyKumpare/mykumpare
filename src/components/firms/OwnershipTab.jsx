@@ -958,17 +958,31 @@ export default function OwnershipTab({ firmId, firmName }) {
                   {expandedSummaryRow === "disabledVeteran" && (
                     <tr>
                       <td colSpan="4" className="p-3 border border-gray-200 bg-gray-50">
-                        <div className="space-y-1.5">
-                          {getOwnershipComposition("disabledVeteran").map((o, i) => (
-                            <div key={i} className="flex items-center justify-between text-xs">
-                              <div className="flex items-center gap-2">
-                                <Avatar className="h-5 w-5">
-                                  <AvatarImage src={o.photoUrl} alt={o.fullName} />
-                                  <AvatarFallback className="text-xs">{o.fullName?.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                                <span className="text-gray-700">{o.fullName}</span>
-                              </div>
-                              <span className="text-gray-500">{o.type} • {o.percentage}%</span>
+                        <div className="space-y-2">
+                          {getEthnicityBreakdownForCategory("disabledVeteran").map(({ ethnicity, total }) => (
+                            <div key={ethnicity}>
+                              <button
+                                onClick={() => setExpandedEthnicity(expandedEthnicity === `disabledVeteran-${ethnicity}` ? null : `disabledVeteran-${ethnicity}`)}
+                                className="text-xs font-medium text-indigo-600 hover:text-indigo-700 cursor-pointer mb-1"
+                              >
+                                {ethnicity} {total.toFixed(2)}%
+                              </button>
+                              {expandedEthnicity === `disabledVeteran-${ethnicity}` && (
+                                <div className="space-y-1 ml-4">
+                                  {getOwnersByEthnicityAndCategory(ethnicity, "disabledVeteran").map((o, i) => (
+                                    <div key={i} className="flex items-center justify-between text-xs">
+                                      <div className="flex items-center gap-2">
+                                        <Avatar className="h-4 w-4">
+                                          <AvatarImage src={o.photoUrl} alt={o.fullName} />
+                                          <AvatarFallback className="text-xs">{o.fullName?.charAt(0)}</AvatarFallback>
+                                        </Avatar>
+                                        <span className="text-gray-700">{o.fullName}</span>
+                                      </div>
+                                      <span className="text-gray-500">{o.type} • {o.percentage}%</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
