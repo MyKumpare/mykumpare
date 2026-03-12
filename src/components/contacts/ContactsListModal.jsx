@@ -53,7 +53,7 @@ export default function ContactsListModal({ open, onOpenChange, contacts = [], f
                     {c.first_name} {c.last_name}
                   </div>
                   {c.title && <div className="text-xs text-gray-500">{c.title}</div>}
-                  {c.email && <div className="text-xs text-indigo-600">{c.email}</div>}
+                  {c.email && <a href={`mailto:${c.email}`} className="text-xs text-indigo-600 hover:underline" onClick={(e) => e.stopPropagation()}>{c.email}</a>}
                   {c.firm_ids?.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1">
                       {c.firm_ids.map((fid) => (
