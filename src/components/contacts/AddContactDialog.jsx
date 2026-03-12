@@ -15,6 +15,7 @@ import { X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload } from 
 import { base44 } from "@/api/base44Client";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import QuickAddFirmForm from "./QuickAddFirmForm";
+import DesignationsPicker from "./DesignationsPicker";
 import ContactPhoneForm from "./ContactPhoneForm";
 import ContactAddressForm from "./ContactAddressForm";
 
