@@ -538,6 +538,18 @@ export default function OwnershipTab({ firmId, firmName }) {
                 </thead>
                 <tbody className="text-xs">
                   <tr>
+                    <td className="text-gray-700 p-2 border border-gray-200">Ethnic Minority Owned</td>
+                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{ownershipSummary.ethnicMinorityOwned.employee.toFixed(2)}%</td>
+                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{ownershipSummary.ethnicMinorityOwned.nonEmployee.toFixed(2)}%</td>
+                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{(ownershipSummary.ethnicMinorityOwned.employee + ownershipSummary.ethnicMinorityOwned.nonEmployee).toFixed(2)}%</td>
+                  </tr>
+                  <tr>
+                    <td className="text-gray-700 p-2 border border-gray-200">Women Owned</td>
+                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{ownershipSummary.womenOwned.employee.toFixed(2)}%</td>
+                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{ownershipSummary.womenOwned.nonEmployee.toFixed(2)}%</td>
+                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{(ownershipSummary.womenOwned.employee + ownershipSummary.womenOwned.nonEmployee).toFixed(2)}%</td>
+                  </tr>
+                  <tr>
                     <td className="text-gray-700 p-2 border border-gray-200">Veteran Owned</td>
                     <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{ownershipSummary.veteranOwned.employee.toFixed(2)}%</td>
                     <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{ownershipSummary.veteranOwned.nonEmployee.toFixed(2)}%</td>
@@ -554,18 +566,6 @@ export default function OwnershipTab({ firmId, firmName }) {
                     <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{ownershipSummary.disabledVeteranOwned.employee.toFixed(2)}%</td>
                     <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{ownershipSummary.disabledVeteranOwned.nonEmployee.toFixed(2)}%</td>
                     <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{(ownershipSummary.disabledVeteranOwned.employee + ownershipSummary.disabledVeteranOwned.nonEmployee).toFixed(2)}%</td>
-                  </tr>
-                  <tr>
-                    <td className="text-gray-700 p-2 border border-gray-200">Ethnic Minority Owned</td>
-                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{ownershipSummary.ethnicMinorityOwned.employee.toFixed(2)}%</td>
-                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{ownershipSummary.ethnicMinorityOwned.nonEmployee.toFixed(2)}%</td>
-                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{(ownershipSummary.ethnicMinorityOwned.employee + ownershipSummary.ethnicMinorityOwned.nonEmployee).toFixed(2)}%</td>
-                  </tr>
-                  <tr>
-                    <td className="text-gray-700 p-2 border border-gray-200">Women Owned</td>
-                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{ownershipSummary.womenOwned.employee.toFixed(2)}%</td>
-                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{ownershipSummary.womenOwned.nonEmployee.toFixed(2)}%</td>
-                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{(ownershipSummary.womenOwned.employee + ownershipSummary.womenOwned.nonEmployee).toFixed(2)}%</td>
                   </tr>
                   <tr className="bg-indigo-50">
                     <td className="text-gray-900 font-medium p-2 border border-indigo-200">Ethnic Minority & Women Owned</td>
