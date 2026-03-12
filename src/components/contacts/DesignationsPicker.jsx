@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 
 const DEFAULT_DESIGNATIONS = [
   "CFA", "CFP", "CPA", "MBA", "PhD", "MD", "JD", "CAIA", "FRM", "PMP",
-  "CIMA", "CIPM", "CFA Institute", "CMT", "ChFC", "CLU", "CPWA", "RIA",
+  "CIMA", "CIPM", "CMT", "ChFC", "CLU", "CPWA", "RIA",
   "Esq.", "Series 7", "Series 65", "Series 66"
 ];
 
