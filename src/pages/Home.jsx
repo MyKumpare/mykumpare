@@ -159,13 +159,24 @@ export default function Home() {
 
   const q = searchQuery.toLowerCase();
 
-  // Firms that match by name, OR have a matching product
+  // Firms that match by name, OR have a matching product, OR have a matching contact
   const matchingProductFirmIds = q
     ? new Set(products.filter((p) => p.name.toLowerCase().includes(q)).map((p) => p.firm_id))
     : new Set();
 
+  const matchingContactFirmIds = q
+    ? new Set(
+        contacts
+          .filter(c => {
+            const fullName = [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ").toLowerCase();
+            return fullName.includes(q) || (c.email || "").toLowerCase().includes(q) || (c.title || "").toLowerCase().includes(q);
+          })
+          .flatMap(c => c.firm_ids || [])
+      )
+    : new Set();
+
   const filteredFirms = firms.filter((f) =>
-    f.name.toLowerCase().includes(q) || matchingProductFirmIds.has(f.id)
+    f.name.toLowerCase().includes(q) || matchingProductFirmIds.has(f.id) || matchingContactFirmIds.has(f.id)
   );
 
   const groupedFirms = FIRM_TYPES.reduce((acc, type) => {
