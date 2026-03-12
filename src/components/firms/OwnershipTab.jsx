@@ -1144,17 +1144,31 @@ export default function OwnershipTab({ firmId, firmName }) {
                   {expandedSummaryRow === "ethnicMinorityAndWomenAndDisabledVeteran" && (
                     <tr>
                       <td colSpan="4" className="p-3 border border-indigo-200 bg-indigo-100">
-                        <div className="space-y-1.5">
-                          {getOwnershipComposition("ethnicMinorityAndWomenAndDisabledVeteran").map((o, i) => (
-                            <div key={i} className="flex items-center justify-between text-xs">
-                              <div className="flex items-center gap-2">
-                                <Avatar className="h-5 w-5">
-                                  <AvatarImage src={o.photoUrl} alt={o.fullName} />
-                                  <AvatarFallback className="text-xs">{o.fullName?.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                                <span className="text-gray-700">{o.fullName}</span>
-                              </div>
-                              <span className="text-gray-500">{o.type} • {o.percentage}%</span>
+                        <div className="space-y-2">
+                          {getEthnicityBreakdownForCategory("ethnicMinorityAndWomenAndDisabledVeteran").map(({ ethnicity, total }) => (
+                            <div key={ethnicity}>
+                              <button
+                                onClick={() => setExpandedEthnicity(expandedEthnicity === `ethnicMinorityAndWomenAndDisabledVeteran-${ethnicity}` ? null : `ethnicMinorityAndWomenAndDisabledVeteran-${ethnicity}`)}
+                                className="text-xs font-medium text-indigo-600 hover:text-indigo-700 cursor-pointer mb-1"
+                              >
+                                {ethnicity} {total.toFixed(2)}%
+                              </button>
+                              {expandedEthnicity === `ethnicMinorityAndWomenAndDisabledVeteran-${ethnicity}` && (
+                                <div className="space-y-1 ml-4">
+                                  {getOwnersByEthnicityAndCategory(ethnicity, "ethnicMinorityAndWomenAndDisabledVeteran").map((o, i) => (
+                                    <div key={i} className="flex items-center justify-between text-xs">
+                                      <div className="flex items-center gap-2">
+                                        <Avatar className="h-4 w-4">
+                                          <AvatarImage src={o.photoUrl} alt={o.fullName} />
+                                          <AvatarFallback className="text-xs">{o.fullName?.charAt(0)}</AvatarFallback>
+                                        </Avatar>
+                                        <span className="text-gray-700">{o.fullName}</span>
+                                      </div>
+                                      <span className="text-gray-500">{o.type} • {o.percentage}%</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
