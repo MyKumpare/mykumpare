@@ -409,16 +409,21 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
 
                 {/* Ethnicity (multi-select) */}
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-gray-700">
-                    Ethnicity
-                    {!viewMode && ethnicity.length === 0 && <span className="ml-1.5 text-red-500 text-xs font-normal">(none selected)</span>}
-                  </Label>
+                  <Label className="text-xs font-medium text-gray-700">Ethnicity</Label>
                   {viewMode ? (
                     <div className="text-sm px-1 text-gray-900">
                       {ethnicity?.length > 0 ? ethnicity.join(", ") : <span className="text-gray-400 italic">Undetermined</span>}
                     </div>
                   ) : (
                     <div className="flex flex-wrap gap-2">
+                      {/* Undetermined pill — shown when nothing is selected */}
+                      <button type="button"
+                        className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${ethnicity.length === 0
+                          ? "bg-red-500 text-white border-red-500"
+                          : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-indigo-600"}`}
+                        onClick={() => setEthnicity([])}>
+                        Undetermined
+                      </button>
                       {["African American", "Asian American", "Caucasian", "Latino American", "Native American Indian", "Native Alaskan Indian"].map(e => {
                         const selected = ethnicity.includes(e);
                         return (
