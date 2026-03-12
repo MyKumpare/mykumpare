@@ -142,6 +142,11 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
 
   const hasUndetermined = gender === "Undetermined" || ethnicity.length === 0 || veteranStatus === "Undetermined" || disabilityStatus === "Undetermined";
 
+  // Dismiss warning automatically when all undetermined items are resolved
+  React.useEffect(() => {
+    if (!hasUndetermined) setShowUndeterminedWarning(false);
+  }, [hasUndetermined]);
+
   const handleSubmit = () => {
     if (!isValid) return;
     if (hasUndetermined && !showUndeterminedWarning) {
