@@ -47,6 +47,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [title, setTitle] = useState("");
   const [email, setEmail] = useState("");
   const [biography, setBiography] = useState("");
+  const [contactRole, setContactRole] = useState("");
   const [notes, setNotes] = useState("");
   const [firmIds, setFirmIds] = useState([]);
   const [firmSearch, setFirmSearch] = useState("");
