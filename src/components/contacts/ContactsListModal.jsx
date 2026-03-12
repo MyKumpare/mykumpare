@@ -45,8 +45,10 @@ export default function ContactsListModal({ open, onOpenChange, contacts = [], f
           ) : (
             sorted.map((c) => (
               <div key={c.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100 hover:bg-indigo-50 hover:border-indigo-100 transition-colors cursor-pointer" onClick={() => setViewingContact(c)}>
-                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <User className="w-4 h-4 text-indigo-600" />
+                <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 mt-0.5 overflow-hidden">
+                  {c.photo_url
+                    ? <img src={c.photo_url} alt="" className="w-full h-full object-cover" />
+                    : <User className="w-4 h-4 text-indigo-600" />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium text-indigo-700 hover:underline">
