@@ -24,6 +24,7 @@ export default function OwnershipTab({ firmId, firmName }) {
   const [selectedOwnership, setSelectedOwnership] = useState(null);
   const [viewMode, setViewMode] = useState(true);
   const [selectedContact, setSelectedContact] = useState(null);
+  const [expandedSummaryRow, setExpandedSummaryRow] = useState(null);
 
   const queryClient = useQueryClient();
 
@@ -144,6 +145,49 @@ export default function OwnershipTab({ firmId, firmName }) {
   };
 
   const ownershipSummary = calculateOwnershipSummary();
+
+  // Helper function to get ownership composition for a specific category
+  const getOwnershipComposition = (category) => {
+    const categoryOwners = owners.filter((owner) => {
+      const contact = allContacts.find(c => c.id === owner.contact_id);
+      if (!contact) return false;
+
+      const isVeteran = contact.veteran_status === "Veteran Owned";
+      const isDisabled = contact.disability_status === "Disabled";
+      const isEthnicMinority = contact.ethnicity && contact.ethnicity.length > 0 && !contact.ethnicity.includes("Caucasian");
+      const isWoman = contact.gender === "Female";
+
+      switch (category) {
+        case "ethnicMinority":
+          return isEthnicMinority;
+        case "women":
+          return isWoman;
+        case "veteran":
+          return isVeteran;
+        case "disabled":
+          return isDisabled;
+        case "disabledVeteran":
+          return isDisabled && isVeteran;
+        case "ethnicMinorityAndWomen":
+          return isEthnicMinority && isWoman;
+        case "ethnicMinorityAndWomenAndVeteran":
+          return isEthnicMinority && isWoman && isVeteran;
+        case "ethnicMinorityAndWomenAndDisabledVeteran":
+          return isEthnicMinority && isWoman && isDisabled && isVeteran;
+        default:
+          return false;
+      }
+    });
+
+    return categoryOwners.map(owner => {
+      const contact = allContacts.find(c => c.id === owner.contact_id);
+      return {
+        fullName: owner.contact_full_name,
+        percentage: owner.ownership_percentage,
+        type: owner.owner_type,
+      };
+    });
+  };
 
   const addOwnerMutation = useMutation({
     mutationFn: (data) => base44.entities.Ownership.create(data),
