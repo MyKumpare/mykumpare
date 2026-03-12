@@ -581,54 +581,341 @@ export default function OwnershipTab({ firmId, firmName }) {
                   </tr>
                 </thead>
                 <tbody className="text-xs">
+                  {/* Ethnic Minority Owned */}
                   <tr>
-                    <td className="text-gray-700 p-2 border border-gray-200">Ethnic Minority Owned</td>
-                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{ownershipSummary.ethnicMinorityOwned.employee.toFixed(2)}%</td>
-                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{ownershipSummary.ethnicMinorityOwned.nonEmployee.toFixed(2)}%</td>
-                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{(ownershipSummary.ethnicMinorityOwned.employee + ownershipSummary.ethnicMinorityOwned.nonEmployee).toFixed(2)}%</td>
+                    <td 
+                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "ethnicMinority" ? null : "ethnicMinority")}
+                      className="text-gray-700 p-2 border border-gray-200 cursor-pointer hover:bg-gray-50"
+                    >
+                      Ethnic Minority Owned
+                    </td>
+                    <td 
+                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "ethnicMinority" ? null : "ethnicMinority")}
+                      className="text-right font-medium text-indigo-600 p-2 border border-gray-200 cursor-pointer hover:bg-gray-50"
+                    >
+                      {ownershipSummary.ethnicMinorityOwned.employee.toFixed(2)}%
+                    </td>
+                    <td 
+                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "ethnicMinority" ? null : "ethnicMinority")}
+                      className="text-right font-medium text-indigo-600 p-2 border border-gray-200 cursor-pointer hover:bg-gray-50"
+                    >
+                      {ownershipSummary.ethnicMinorityOwned.nonEmployee.toFixed(2)}%
+                    </td>
+                    <td 
+                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "ethnicMinority" ? null : "ethnicMinority")}
+                      className="text-right font-medium text-indigo-600 p-2 border border-gray-200 cursor-pointer hover:bg-gray-50"
+                    >
+                      {(ownershipSummary.ethnicMinorityOwned.employee + ownershipSummary.ethnicMinorityOwned.nonEmployee).toFixed(2)}%
+                    </td>
                   </tr>
+                  {expandedSummaryRow === "ethnicMinority" && (
+                    <tr>
+                      <td colSpan="4" className="p-3 border border-gray-200 bg-gray-50">
+                        <div className="space-y-1.5">
+                          {getOwnershipComposition("ethnicMinority").map((o, i) => (
+                            <div key={i} className="flex justify-between text-xs">
+                              <span className="text-gray-700">{o.fullName}</span>
+                              <span className="text-gray-500">{o.type} • {o.percentage}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+
+                  {/* Women Owned */}
                   <tr>
-                    <td className="text-gray-700 p-2 border border-gray-200">Women Owned</td>
-                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{ownershipSummary.womenOwned.employee.toFixed(2)}%</td>
-                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{ownershipSummary.womenOwned.nonEmployee.toFixed(2)}%</td>
-                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{(ownershipSummary.womenOwned.employee + ownershipSummary.womenOwned.nonEmployee).toFixed(2)}%</td>
+                    <td 
+                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "women" ? null : "women")}
+                      className="text-gray-700 p-2 border border-gray-200 cursor-pointer hover:bg-gray-50"
+                    >
+                      Women Owned
+                    </td>
+                    <td 
+                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "women" ? null : "women")}
+                      className="text-right font-medium text-indigo-600 p-2 border border-gray-200 cursor-pointer hover:bg-gray-50"
+                    >
+                      {ownershipSummary.womenOwned.employee.toFixed(2)}%
+                    </td>
+                    <td 
+                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "women" ? null : "women")}
+                      className="text-right font-medium text-indigo-600 p-2 border border-gray-200 cursor-pointer hover:bg-gray-50"
+                    >
+                      {ownershipSummary.womenOwned.nonEmployee.toFixed(2)}%
+                    </td>
+                    <td 
+                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "women" ? null : "women")}
+                      className="text-right font-medium text-indigo-600 p-2 border border-gray-200 cursor-pointer hover:bg-gray-50"
+                    >
+                      {(ownershipSummary.womenOwned.employee + ownershipSummary.womenOwned.nonEmployee).toFixed(2)}%
+                    </td>
                   </tr>
+                  {expandedSummaryRow === "women" && (
+                    <tr>
+                      <td colSpan="4" className="p-3 border border-gray-200 bg-gray-50">
+                        <div className="space-y-1.5">
+                          {getOwnershipComposition("women").map((o, i) => (
+                            <div key={i} className="flex justify-between text-xs">
+                              <span className="text-gray-700">{o.fullName}</span>
+                              <span className="text-gray-500">{o.type} • {o.percentage}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+
+                  {/* Veteran Owned */}
                   <tr>
-                    <td className="text-gray-700 p-2 border border-gray-200">Veteran Owned</td>
-                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{ownershipSummary.veteranOwned.employee.toFixed(2)}%</td>
-                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{ownershipSummary.veteranOwned.nonEmployee.toFixed(2)}%</td>
-                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{(ownershipSummary.veteranOwned.employee + ownershipSummary.veteranOwned.nonEmployee).toFixed(2)}%</td>
+                    <td 
+                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "veteran" ? null : "veteran")}
+                      className="text-gray-700 p-2 border border-gray-200 cursor-pointer hover:bg-gray-50"
+                    >
+                      Veteran Owned
+                    </td>
+                    <td 
+                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "veteran" ? null : "veteran")}
+                      className="text-right font-medium text-indigo-600 p-2 border border-gray-200 cursor-pointer hover:bg-gray-50"
+                    >
+                      {ownershipSummary.veteranOwned.employee.toFixed(2)}%
+                    </td>
+                    <td 
+                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "veteran" ? null : "veteran")}
+                      className="text-right font-medium text-indigo-600 p-2 border border-gray-200 cursor-pointer hover:bg-gray-50"
+                    >
+                      {ownershipSummary.veteranOwned.nonEmployee.toFixed(2)}%
+                    </td>
+                    <td 
+                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "veteran" ? null : "veteran")}
+                      className="text-right font-medium text-indigo-600 p-2 border border-gray-200 cursor-pointer hover:bg-gray-50"
+                    >
+                      {(ownershipSummary.veteranOwned.employee + ownershipSummary.veteranOwned.nonEmployee).toFixed(2)}%
+                    </td>
                   </tr>
+                  {expandedSummaryRow === "veteran" && (
+                    <tr>
+                      <td colSpan="4" className="p-3 border border-gray-200 bg-gray-50">
+                        <div className="space-y-1.5">
+                          {getOwnershipComposition("veteran").map((o, i) => (
+                            <div key={i} className="flex justify-between text-xs">
+                              <span className="text-gray-700">{o.fullName}</span>
+                              <span className="text-gray-500">{o.type} • {o.percentage}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+
+                  {/* Disability Owned */}
                   <tr>
-                    <td className="text-gray-700 p-2 border border-gray-200">Disability Owned</td>
-                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{ownershipSummary.disabledOwned.employee.toFixed(2)}%</td>
-                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{ownershipSummary.disabledOwned.nonEmployee.toFixed(2)}%</td>
-                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{(ownershipSummary.disabledOwned.employee + ownershipSummary.disabledOwned.nonEmployee).toFixed(2)}%</td>
+                    <td 
+                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "disabled" ? null : "disabled")}
+                      className="text-gray-700 p-2 border border-gray-200 cursor-pointer hover:bg-gray-50"
+                    >
+                      Disability Owned
+                    </td>
+                    <td 
+                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "disabled" ? null : "disabled")}
+                      className="text-right font-medium text-indigo-600 p-2 border border-gray-200 cursor-pointer hover:bg-gray-50"
+                    >
+                      {ownershipSummary.disabledOwned.employee.toFixed(2)}%
+                    </td>
+                    <td 
+                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "disabled" ? null : "disabled")}
+                      className="text-right font-medium text-indigo-600 p-2 border border-gray-200 cursor-pointer hover:bg-gray-50"
+                    >
+                      {ownershipSummary.disabledOwned.nonEmployee.toFixed(2)}%
+                    </td>
+                    <td 
+                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "disabled" ? null : "disabled")}
+                      className="text-right font-medium text-indigo-600 p-2 border border-gray-200 cursor-pointer hover:bg-gray-50"
+                    >
+                      {(ownershipSummary.disabledOwned.employee + ownershipSummary.disabledOwned.nonEmployee).toFixed(2)}%
+                    </td>
                   </tr>
+                  {expandedSummaryRow === "disabled" && (
+                    <tr>
+                      <td colSpan="4" className="p-3 border border-gray-200 bg-gray-50">
+                        <div className="space-y-1.5">
+                          {getOwnershipComposition("disabled").map((o, i) => (
+                            <div key={i} className="flex justify-between text-xs">
+                              <span className="text-gray-700">{o.fullName}</span>
+                              <span className="text-gray-500">{o.type} • {o.percentage}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+
+                  {/* Disabled Veteran Owned */}
                   <tr>
-                    <td className="text-gray-700 p-2 border border-gray-200">Disabled Veteran Owned</td>
-                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{ownershipSummary.disabledVeteranOwned.employee.toFixed(2)}%</td>
-                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{ownershipSummary.disabledVeteranOwned.nonEmployee.toFixed(2)}%</td>
-                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{(ownershipSummary.disabledVeteranOwned.employee + ownershipSummary.disabledVeteranOwned.nonEmployee).toFixed(2)}%</td>
+                    <td 
+                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "disabledVeteran" ? null : "disabledVeteran")}
+                      className="text-gray-700 p-2 border border-gray-200 cursor-pointer hover:bg-gray-50"
+                    >
+                      Disabled Veteran Owned
+                    </td>
+                    <td 
+                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "disabledVeteran" ? null : "disabledVeteran")}
+                      className="text-right font-medium text-indigo-600 p-2 border border-gray-200 cursor-pointer hover:bg-gray-50"
+                    >
+                      {ownershipSummary.disabledVeteranOwned.employee.toFixed(2)}%
+                    </td>
+                    <td 
+                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "disabledVeteran" ? null : "disabledVeteran")}
+                      className="text-right font-medium text-indigo-600 p-2 border border-gray-200 cursor-pointer hover:bg-gray-50"
+                    >
+                      {ownershipSummary.disabledVeteranOwned.nonEmployee.toFixed(2)}%
+                    </td>
+                    <td 
+                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "disabledVeteran" ? null : "disabledVeteran")}
+                      className="text-right font-medium text-indigo-600 p-2 border border-gray-200 cursor-pointer hover:bg-gray-50"
+                    >
+                      {(ownershipSummary.disabledVeteranOwned.employee + ownershipSummary.disabledVeteranOwned.nonEmployee).toFixed(2)}%
+                    </td>
                   </tr>
+                  {expandedSummaryRow === "disabledVeteran" && (
+                    <tr>
+                      <td colSpan="4" className="p-3 border border-gray-200 bg-gray-50">
+                        <div className="space-y-1.5">
+                          {getOwnershipComposition("disabledVeteran").map((o, i) => (
+                            <div key={i} className="flex justify-between text-xs">
+                              <span className="text-gray-700">{o.fullName}</span>
+                              <span className="text-gray-500">{o.type} • {o.percentage}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+
+                  {/* Ethnic Minority & Women Owned */}
                   <tr className="bg-indigo-50">
-                    <td className="text-gray-900 font-medium p-2 border border-indigo-200">Ethnic Minority & Women Owned</td>
-                    <td className="text-right font-semibold text-indigo-700 p-2 border border-indigo-200">{ownershipSummary.ethnicMinorityAndWomenOwned.employee.toFixed(2)}%</td>
-                    <td className="text-right font-semibold text-indigo-700 p-2 border border-indigo-200">{ownershipSummary.ethnicMinorityAndWomenOwned.nonEmployee.toFixed(2)}%</td>
-                    <td className="text-right font-semibold text-indigo-700 p-2 border border-indigo-200">{(ownershipSummary.ethnicMinorityAndWomenOwned.employee + ownershipSummary.ethnicMinorityAndWomenOwned.nonEmployee).toFixed(2)}%</td>
+                    <td 
+                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "ethnicMinorityAndWomen" ? null : "ethnicMinorityAndWomen")}
+                      className="text-gray-900 font-medium p-2 border border-indigo-200 cursor-pointer hover:bg-indigo-100"
+                    >
+                      Ethnic Minority & Women Owned
+                    </td>
+                    <td 
+                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "ethnicMinorityAndWomen" ? null : "ethnicMinorityAndWomen")}
+                      className="text-right font-semibold text-indigo-700 p-2 border border-indigo-200 cursor-pointer hover:bg-indigo-100"
+                    >
+                      {ownershipSummary.ethnicMinorityAndWomenOwned.employee.toFixed(2)}%
+                    </td>
+                    <td 
+                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "ethnicMinorityAndWomen" ? null : "ethnicMinorityAndWomen")}
+                      className="text-right font-semibold text-indigo-700 p-2 border border-indigo-200 cursor-pointer hover:bg-indigo-100"
+                    >
+                      {ownershipSummary.ethnicMinorityAndWomenOwned.nonEmployee.toFixed(2)}%
+                    </td>
+                    <td 
+                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "ethnicMinorityAndWomen" ? null : "ethnicMinorityAndWomen")}
+                      className="text-right font-semibold text-indigo-700 p-2 border border-indigo-200 cursor-pointer hover:bg-indigo-100"
+                    >
+                      {(ownershipSummary.ethnicMinorityAndWomenOwned.employee + ownershipSummary.ethnicMinorityAndWomenOwned.nonEmployee).toFixed(2)}%
+                    </td>
                   </tr>
+                  {expandedSummaryRow === "ethnicMinorityAndWomen" && (
+                    <tr>
+                      <td colSpan="4" className="p-3 border border-indigo-200 bg-indigo-100">
+                        <div className="space-y-1.5">
+                          {getOwnershipComposition("ethnicMinorityAndWomen").map((o, i) => (
+                            <div key={i} className="flex justify-between text-xs">
+                              <span className="text-gray-700">{o.fullName}</span>
+                              <span className="text-gray-500">{o.type} • {o.percentage}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+
+                  {/* Ethnic Minority & Women & Veteran Owned */}
                   <tr className="bg-indigo-50">
-                    <td className="text-gray-900 font-medium p-2 border border-indigo-200">Ethnic Minority & Women & Veteran Owned</td>
-                    <td className="text-right font-semibold text-indigo-700 p-2 border border-indigo-200">{ownershipSummary.ethnicMinorityAndWomenAndVeteranOwned.employee.toFixed(2)}%</td>
-                    <td className="text-right font-semibold text-indigo-700 p-2 border border-indigo-200">{ownershipSummary.ethnicMinorityAndWomenAndVeteranOwned.nonEmployee.toFixed(2)}%</td>
-                    <td className="text-right font-semibold text-indigo-700 p-2 border border-indigo-200">{(ownershipSummary.ethnicMinorityAndWomenAndVeteranOwned.employee + ownershipSummary.ethnicMinorityAndWomenAndVeteranOwned.nonEmployee).toFixed(2)}%</td>
+                    <td 
+                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "ethnicMinorityAndWomenAndVeteran" ? null : "ethnicMinorityAndWomenAndVeteran")}
+                      className="text-gray-900 font-medium p-2 border border-indigo-200 cursor-pointer hover:bg-indigo-100"
+                    >
+                      Ethnic Minority & Women & Veteran Owned
+                    </td>
+                    <td 
+                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "ethnicMinorityAndWomenAndVeteran" ? null : "ethnicMinorityAndWomenAndVeteran")}
+                      className="text-right font-semibold text-indigo-700 p-2 border border-indigo-200 cursor-pointer hover:bg-indigo-100"
+                    >
+                      {ownershipSummary.ethnicMinorityAndWomenAndVeteranOwned.employee.toFixed(2)}%
+                    </td>
+                    <td 
+                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "ethnicMinorityAndWomenAndVeteran" ? null : "ethnicMinorityAndWomenAndVeteran")}
+                      className="text-right font-semibold text-indigo-700 p-2 border border-indigo-200 cursor-pointer hover:bg-indigo-100"
+                    >
+                      {ownershipSummary.ethnicMinorityAndWomenAndVeteranOwned.nonEmployee.toFixed(2)}%
+                    </td>
+                    <td 
+                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "ethnicMinorityAndWomenAndVeteran" ? null : "ethnicMinorityAndWomenAndVeteran")}
+                      className="text-right font-semibold text-indigo-700 p-2 border border-indigo-200 cursor-pointer hover:bg-indigo-100"
+                    >
+                      {(ownershipSummary.ethnicMinorityAndWomenAndVeteranOwned.employee + ownershipSummary.ethnicMinorityAndWomenAndVeteranOwned.nonEmployee).toFixed(2)}%
+                    </td>
                   </tr>
+                  {expandedSummaryRow === "ethnicMinorityAndWomenAndVeteran" && (
+                    <tr>
+                      <td colSpan="4" className="p-3 border border-indigo-200 bg-indigo-100">
+                        <div className="space-y-1.5">
+                          {getOwnershipComposition("ethnicMinorityAndWomenAndVeteran").map((o, i) => (
+                            <div key={i} className="flex justify-between text-xs">
+                              <span className="text-gray-700">{o.fullName}</span>
+                              <span className="text-gray-500">{o.type} • {o.percentage}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+
+                  {/* Ethnic Minority & Women & Disabled Veteran Owned */}
                   <tr className="bg-indigo-50">
-                    <td className="text-gray-900 font-medium p-2 border border-indigo-200">Ethnic Minority & Women & Disabled Veteran Owned</td>
-                    <td className="text-right font-semibold text-indigo-700 p-2 border border-indigo-200">{ownershipSummary.ethnicMinorityAndWomenAndDisabledVeteranOwned.employee.toFixed(2)}%</td>
-                    <td className="text-right font-semibold text-indigo-700 p-2 border border-indigo-200">{ownershipSummary.ethnicMinorityAndWomenAndDisabledVeteranOwned.nonEmployee.toFixed(2)}%</td>
-                    <td className="text-right font-semibold text-indigo-700 p-2 border border-indigo-200">{(ownershipSummary.ethnicMinorityAndWomenAndDisabledVeteranOwned.employee + ownershipSummary.ethnicMinorityAndWomenAndDisabledVeteranOwned.nonEmployee).toFixed(2)}%</td>
+                    <td 
+                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "ethnicMinorityAndWomenAndDisabledVeteran" ? null : "ethnicMinorityAndWomenAndDisabledVeteran")}
+                      className="text-gray-900 font-medium p-2 border border-indigo-200 cursor-pointer hover:bg-indigo-100"
+                    >
+                      Ethnic Minority & Women & Disabled Veteran Owned
+                    </td>
+                    <td 
+                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "ethnicMinorityAndWomenAndDisabledVeteran" ? null : "ethnicMinorityAndWomenAndDisabledVeteran")}
+                      className="text-right font-semibold text-indigo-700 p-2 border border-indigo-200 cursor-pointer hover:bg-indigo-100"
+                    >
+                      {ownershipSummary.ethnicMinorityAndWomenAndDisabledVeteranOwned.employee.toFixed(2)}%
+                    </td>
+                    <td 
+                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "ethnicMinorityAndWomenAndDisabledVeteran" ? null : "ethnicMinorityAndWomenAndDisabledVeteran")}
+                      className="text-right font-semibold text-indigo-700 p-2 border border-indigo-200 cursor-pointer hover:bg-indigo-100"
+                    >
+                      {ownershipSummary.ethnicMinorityAndWomenAndDisabledVeteranOwned.nonEmployee.toFixed(2)}%
+                    </td>
+                    <td 
+                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "ethnicMinorityAndWomenAndDisabledVeteran" ? null : "ethnicMinorityAndWomenAndDisabledVeteran")}
+                      className="text-right font-semibold text-indigo-700 p-2 border border-indigo-200 cursor-pointer hover:bg-indigo-100"
+                    >
+                      {(ownershipSummary.ethnicMinorityAndWomenAndDisabledVeteranOwned.employee + ownershipSummary.ethnicMinorityAndWomenAndDisabledVeteranOwned.nonEmployee).toFixed(2)}%
+                    </td>
                   </tr>
+                  {expandedSummaryRow === "ethnicMinorityAndWomenAndDisabledVeteran" && (
+                    <tr>
+                      <td colSpan="4" className="p-3 border border-indigo-200 bg-indigo-100">
+                        <div className="space-y-1.5">
+                          {getOwnershipComposition("ethnicMinorityAndWomenAndDisabledVeteran").map((o, i) => (
+                            <div key={i} className="flex justify-between text-xs">
+                              <span className="text-gray-700">{o.fullName}</span>
+                              <span className="text-gray-500">{o.type} • {o.percentage}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
