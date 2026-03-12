@@ -27,6 +27,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [firmIds, setFirmIds] = useState([]);
   const [firmSearch, setFirmSearch] = useState("");
   const [showFirmPicker, setShowFirmPicker] = useState(false);
+  const [showQuickAddFirm, setShowQuickAddFirm] = useState(false);
 
   const queryClient = useQueryClient();
 
