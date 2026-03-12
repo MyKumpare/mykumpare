@@ -52,6 +52,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
       }
       setFirmSearch("");
       setShowFirmPicker(false);
+      setShowQuickAddFirm(false);
     }
   }, [open, editingContact, currentFirmId]);
 
