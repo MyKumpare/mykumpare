@@ -654,6 +654,19 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
           </Tabs>
         </div>
 
+        {showUndeterminedWarning && !viewMode && (
+          <div className="mx-0 px-4 py-2.5 bg-amber-50 border-t border-amber-200 flex items-start gap-2">
+            <span className="text-amber-500 text-base leading-tight">⚠️</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-amber-800">Undetermined demographics detected</p>
+              <p className="text-xs text-amber-700 mt-0.5">
+                {[gender === "Undetermined" && "Gender", ethnicity.length === 0 && "Ethnicity", veteranStatus === "Undetermined" && "Veteran Status", disabilityStatus === "Undetermined" && "Disability Status"].filter(Boolean).join(", ")} {" "}
+                {[gender === "Undetermined", ethnicity.length === 0, veteranStatus === "Undetermined", disabilityStatus === "Undetermined"].filter(Boolean).length > 1 ? "are" : "is"} still undetermined. Save anyway?
+              </p>
+            </div>
+          </div>
+        )}
+
         <DialogFooter className="pt-2 border-t gap-2">
           {viewMode ? (
             <>
@@ -670,9 +683,10 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
             </>
           ) : (
             <>
-              <Button variant="outline" onClick={() => editingContact ? setViewMode(true) : onOpenChange(false)}>Cancel</Button>
-              <Button onClick={handleSubmit} disabled={!isValid} className="bg-indigo-600 hover:bg-indigo-700 text-white">
-                {editingContact ? "Save Changes" : "Add Contact"}
+              <Button variant="outline" onClick={() => { setShowUndeterminedWarning(false); editingContact ? setViewMode(true) : onOpenChange(false); }}>Cancel</Button>
+              <Button onClick={handleSubmit} disabled={!isValid}
+                className={showUndeterminedWarning ? "bg-amber-500 hover:bg-amber-600 text-white" : "bg-indigo-600 hover:bg-indigo-700 text-white"}>
+                {showUndeterminedWarning ? "Save Anyway" : editingContact ? "Save Changes" : "Add Contact"}
               </Button>
             </>
           )}
