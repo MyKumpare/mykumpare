@@ -13,6 +13,7 @@ import AddProductDialog from "../components/products/AddProductDialog";
 import StatsListModal from "../components/stats/StatsListModal";
 import ContactsListModal from "../components/contacts/ContactsListModal";
 import AddContactDialog from "../components/contacts/AddContactDialog";
+import SearchResults from "../components/search/SearchResults";
 
 const FIRM_TYPES = [
   "Manager of Managers",
