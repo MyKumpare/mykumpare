@@ -78,15 +78,14 @@ export default function OwnershipTab({ firmId, firmName }) {
   // Calculate ownership summary
   const calculateOwnershipSummary = () => {
     const summary = {
-      totalEmployeeOwned: 0,
-      totalVeteranOwned: 0,
-      totalDisabledOwned: 0,
-      totalDisabledVeteranOwned: 0,
-      totalEthnicMinorityOwned: 0,
-      totalWomenOwned: 0,
-      totalEthnicMinorityAndWomenOwned: 0,
-      totalEthnicMinorityAndWomenAndVeteranOwned: 0,
-      totalEthnicMinorityAndWomenAndDisabledVeteranOwned: 0,
+      veteranOwned: { employee: 0, nonEmployee: 0 },
+      disabledOwned: { employee: 0, nonEmployee: 0 },
+      disabledVeteranOwned: { employee: 0, nonEmployee: 0 },
+      ethnicMinorityOwned: { employee: 0, nonEmployee: 0 },
+      womenOwned: { employee: 0, nonEmployee: 0 },
+      ethnicMinorityAndWomenOwned: { employee: 0, nonEmployee: 0 },
+      ethnicMinorityAndWomenAndVeteranOwned: { employee: 0, nonEmployee: 0 },
+      ethnicMinorityAndWomenAndDisabledVeteranOwned: { employee: 0, nonEmployee: 0 },
     };
 
     owners.forEach((owner) => {
@@ -94,54 +93,50 @@ export default function OwnershipTab({ firmId, firmName }) {
       if (!contact) return;
 
       const percentage = parseFloat(owner.ownership_percentage) || 0;
-
-      // Employee owned
-      if (owner.owner_type === "Employee") {
-        summary.totalEmployeeOwned += percentage;
-      }
+      const ownerType = owner.owner_type === "Employee" ? "employee" : "nonEmployee";
 
       // Veteran owned
       const isVeteran = contact.veteran_status === "Veteran Owned";
       if (isVeteran) {
-        summary.totalVeteranOwned += percentage;
+        summary.veteranOwned[ownerType] += percentage;
       }
 
       // Disabled owned
       const isDisabled = contact.disability_status === "Disabled";
       if (isDisabled) {
-        summary.totalDisabledOwned += percentage;
+        summary.disabledOwned[ownerType] += percentage;
       }
 
       // Disabled Veteran owned
       if (isDisabled && isVeteran) {
-        summary.totalDisabledVeteranOwned += percentage;
+        summary.disabledVeteranOwned[ownerType] += percentage;
       }
 
       // Ethnic minority owned (all except Caucasian)
       const isEthnicMinority = contact.ethnicity && contact.ethnicity.length > 0 && !contact.ethnicity.includes("Caucasian");
       if (isEthnicMinority) {
-        summary.totalEthnicMinorityOwned += percentage;
+        summary.ethnicMinorityOwned[ownerType] += percentage;
       }
 
       // Women owned
       const isWoman = contact.gender === "Female";
       if (isWoman) {
-        summary.totalWomenOwned += percentage;
+        summary.womenOwned[ownerType] += percentage;
       }
 
       // Ethnic minority AND women owned
       if (isEthnicMinority && isWoman) {
-        summary.totalEthnicMinorityAndWomenOwned += percentage;
+        summary.ethnicMinorityAndWomenOwned[ownerType] += percentage;
       }
 
       // Ethnic minority & women AND veteran owned
       if (isEthnicMinority && isWoman && isVeteran) {
-        summary.totalEthnicMinorityAndWomenAndVeteranOwned += percentage;
+        summary.ethnicMinorityAndWomenAndVeteranOwned[ownerType] += percentage;
       }
 
       // Ethnic minority & women AND disabled veteran owned
       if (isEthnicMinority && isWoman && isDisabled && isVeteran) {
-        summary.totalEthnicMinorityAndWomenAndDisabledVeteranOwned += percentage;
+        summary.ethnicMinorityAndWomenAndDisabledVeteranOwned[ownerType] += percentage;
       }
     });
 
@@ -530,46 +525,68 @@ export default function OwnershipTab({ firmId, firmName }) {
 
           {/* Ownership Summary Table */}
           {owners.length > 0 && (
-            <div className="space-y-2 rounded-lg border border-white bg-white p-3">
+            <div className="space-y-2 rounded-lg border border-white bg-white p-3 overflow-x-auto">
               <h4 className="text-xs font-semibold text-gray-900">Ownership Summary</h4>
-              <div className="space-y-1 text-xs">
-                <div className="flex items-center justify-between p-1.5 bg-gray-50 rounded">
-                  <span className="text-gray-700">Employee Owned</span>
-                  <span className="font-medium text-indigo-600">{ownershipSummary.totalEmployeeOwned.toFixed(2)}%</span>
-                </div>
-                <div className="flex items-center justify-between p-1.5 bg-gray-50 rounded">
-                  <span className="text-gray-700">Veteran Owned</span>
-                  <span className="font-medium text-indigo-600">{ownershipSummary.totalVeteranOwned.toFixed(2)}%</span>
-                </div>
-                <div className="flex items-center justify-between p-1.5 bg-gray-50 rounded">
-                   <span className="text-gray-700">Disability Owned</span>
-                   <span className="font-medium text-indigo-600">{ownershipSummary.totalDisabledOwned.toFixed(2)}%</span>
-                 </div>
-                 <div className="flex items-center justify-between p-1.5 bg-gray-50 rounded">
-                   <span className="text-gray-700">Disabled Veteran Owned</span>
-                   <span className="font-medium text-indigo-600">{ownershipSummary.totalDisabledVeteranOwned.toFixed(2)}%</span>
-                 </div>
-                 <div className="flex items-center justify-between p-1.5 bg-gray-50 rounded">
-                   <span className="text-gray-700">Ethnic Minority Owned</span>
-                   <span className="font-medium text-indigo-600">{ownershipSummary.totalEthnicMinorityOwned.toFixed(2)}%</span>
-                 </div>
-                 <div className="flex items-center justify-between p-1.5 bg-gray-50 rounded">
-                   <span className="text-gray-700">Women Owned</span>
-                   <span className="font-medium text-indigo-600">{ownershipSummary.totalWomenOwned.toFixed(2)}%</span>
-                 </div>
-                 <div className="flex items-center justify-between p-1.5 bg-indigo-50 rounded border border-indigo-200">
-                   <span className="text-gray-900 font-medium">Ethnic Minority & Women Owned</span>
-                   <span className="font-semibold text-indigo-700">{ownershipSummary.totalEthnicMinorityAndWomenOwned.toFixed(2)}%</span>
-                 </div>
-                 <div className="flex items-center justify-between p-1.5 bg-indigo-50 rounded border border-indigo-200">
-                   <span className="text-gray-900 font-medium">Ethnic Minority & Women & Veteran Owned</span>
-                   <span className="font-semibold text-indigo-700">{ownershipSummary.totalEthnicMinorityAndWomenAndVeteranOwned.toFixed(2)}%</span>
-                 </div>
-                 <div className="flex items-center justify-between p-1.5 bg-indigo-50 rounded border border-indigo-200">
-                   <span className="text-gray-900 font-medium">Ethnic Minority & Women & Disabled Veteran Owned</span>
-                   <span className="font-semibold text-indigo-700">{ownershipSummary.totalEthnicMinorityAndWomenAndDisabledVeteranOwned.toFixed(2)}%</span>
-                 </div>
-              </div>
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr>
+                    <th className="text-left text-gray-700 font-medium p-2 border border-gray-200 bg-gray-100">Category</th>
+                    <th className="text-right text-gray-700 font-medium p-2 border border-gray-200 bg-gray-100">Employee Owned</th>
+                    <th className="text-right text-gray-700 font-medium p-2 border border-gray-200 bg-gray-100">Non-Employee Owned</th>
+                    <th className="text-right text-gray-700 font-medium p-2 border border-gray-200 bg-gray-100">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="text-xs">
+                  <tr>
+                    <td className="text-gray-700 p-2 border border-gray-200">Veteran Owned</td>
+                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{ownershipSummary.veteranOwned.employee.toFixed(2)}%</td>
+                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{ownershipSummary.veteranOwned.nonEmployee.toFixed(2)}%</td>
+                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{(ownershipSummary.veteranOwned.employee + ownershipSummary.veteranOwned.nonEmployee).toFixed(2)}%</td>
+                  </tr>
+                  <tr>
+                    <td className="text-gray-700 p-2 border border-gray-200">Disability Owned</td>
+                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{ownershipSummary.disabledOwned.employee.toFixed(2)}%</td>
+                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{ownershipSummary.disabledOwned.nonEmployee.toFixed(2)}%</td>
+                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{(ownershipSummary.disabledOwned.employee + ownershipSummary.disabledOwned.nonEmployee).toFixed(2)}%</td>
+                  </tr>
+                  <tr>
+                    <td className="text-gray-700 p-2 border border-gray-200">Disabled Veteran Owned</td>
+                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{ownershipSummary.disabledVeteranOwned.employee.toFixed(2)}%</td>
+                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{ownershipSummary.disabledVeteranOwned.nonEmployee.toFixed(2)}%</td>
+                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{(ownershipSummary.disabledVeteranOwned.employee + ownershipSummary.disabledVeteranOwned.nonEmployee).toFixed(2)}%</td>
+                  </tr>
+                  <tr>
+                    <td className="text-gray-700 p-2 border border-gray-200">Ethnic Minority Owned</td>
+                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{ownershipSummary.ethnicMinorityOwned.employee.toFixed(2)}%</td>
+                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{ownershipSummary.ethnicMinorityOwned.nonEmployee.toFixed(2)}%</td>
+                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{(ownershipSummary.ethnicMinorityOwned.employee + ownershipSummary.ethnicMinorityOwned.nonEmployee).toFixed(2)}%</td>
+                  </tr>
+                  <tr>
+                    <td className="text-gray-700 p-2 border border-gray-200">Women Owned</td>
+                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{ownershipSummary.womenOwned.employee.toFixed(2)}%</td>
+                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{ownershipSummary.womenOwned.nonEmployee.toFixed(2)}%</td>
+                    <td className="text-right font-medium text-indigo-600 p-2 border border-gray-200">{(ownershipSummary.womenOwned.employee + ownershipSummary.womenOwned.nonEmployee).toFixed(2)}%</td>
+                  </tr>
+                  <tr className="bg-indigo-50">
+                    <td className="text-gray-900 font-medium p-2 border border-indigo-200">Ethnic Minority & Women Owned</td>
+                    <td className="text-right font-semibold text-indigo-700 p-2 border border-indigo-200">{ownershipSummary.ethnicMinorityAndWomenOwned.employee.toFixed(2)}%</td>
+                    <td className="text-right font-semibold text-indigo-700 p-2 border border-indigo-200">{ownershipSummary.ethnicMinorityAndWomenOwned.nonEmployee.toFixed(2)}%</td>
+                    <td className="text-right font-semibold text-indigo-700 p-2 border border-indigo-200">{(ownershipSummary.ethnicMinorityAndWomenOwned.employee + ownershipSummary.ethnicMinorityAndWomenOwned.nonEmployee).toFixed(2)}%</td>
+                  </tr>
+                  <tr className="bg-indigo-50">
+                    <td className="text-gray-900 font-medium p-2 border border-indigo-200">Ethnic Minority & Women & Veteran Owned</td>
+                    <td className="text-right font-semibold text-indigo-700 p-2 border border-indigo-200">{ownershipSummary.ethnicMinorityAndWomenAndVeteranOwned.employee.toFixed(2)}%</td>
+                    <td className="text-right font-semibold text-indigo-700 p-2 border border-indigo-200">{ownershipSummary.ethnicMinorityAndWomenAndVeteranOwned.nonEmployee.toFixed(2)}%</td>
+                    <td className="text-right font-semibold text-indigo-700 p-2 border border-indigo-200">{(ownershipSummary.ethnicMinorityAndWomenAndVeteranOwned.employee + ownershipSummary.ethnicMinorityAndWomenAndVeteranOwned.nonEmployee).toFixed(2)}%</td>
+                  </tr>
+                  <tr className="bg-indigo-50">
+                    <td className="text-gray-900 font-medium p-2 border border-indigo-200">Ethnic Minority & Women & Disabled Veteran Owned</td>
+                    <td className="text-right font-semibold text-indigo-700 p-2 border border-indigo-200">{ownershipSummary.ethnicMinorityAndWomenAndDisabledVeteranOwned.employee.toFixed(2)}%</td>
+                    <td className="text-right font-semibold text-indigo-700 p-2 border border-indigo-200">{ownershipSummary.ethnicMinorityAndWomenAndDisabledVeteranOwned.nonEmployee.toFixed(2)}%</td>
+                    <td className="text-right font-semibold text-indigo-700 p-2 border border-indigo-200">{(ownershipSummary.ethnicMinorityAndWomenAndDisabledVeteranOwned.employee + ownershipSummary.ethnicMinorityAndWomenAndDisabledVeteranOwned.nonEmployee).toFixed(2)}%</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           )}
 
