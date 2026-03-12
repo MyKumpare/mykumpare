@@ -295,6 +295,32 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                 )}
               </div>
 
+              {/* Contact Role */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Contact Role</Label>
+                {viewMode ? (
+                  <div className="text-sm px-1">
+                    {contactRole ? (
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${contactRole === "Primary" ? "bg-indigo-100 text-indigo-700" : "bg-gray-100 text-gray-600"}`}>
+                        {contactRole}
+                      </span>
+                    ) : <span className="text-gray-400 italic">—</span>}
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    {["Primary", "Secondary"].map(role => (
+                      <button key={role} type="button"
+                        onClick={() => setContactRole(contactRole === role ? "" : role)}
+                        className={`px-4 py-1.5 rounded-full text-xs font-medium border transition-colors ${contactRole === role
+                          ? role === "Primary" ? "bg-indigo-600 text-white border-indigo-600" : "bg-gray-600 text-white border-gray-600"
+                          : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-indigo-600"}`}>
+                        {role}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {/* Biography */}
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-gray-700">Biography</Label>
