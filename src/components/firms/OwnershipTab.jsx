@@ -613,8 +613,14 @@ export default function OwnershipTab({ firmId, firmName }) {
                       <td colSpan="4" className="p-3 border border-gray-200 bg-gray-50">
                         <div className="space-y-1.5">
                           {getOwnershipComposition("ethnicMinority").map((o, i) => (
-                            <div key={i} className="flex justify-between text-xs">
-                              <span className="text-gray-700">{o.fullName}</span>
+                            <div key={i} className="flex items-center justify-between text-xs">
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-5 w-5">
+                                  <AvatarImage src={o.photoUrl} alt={o.fullName} />
+                                  <AvatarFallback className="text-xs">{o.fullName?.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <span className="text-gray-700">{o.fullName}</span>
+                              </div>
                               <span className="text-gray-500">{o.type} • {o.percentage}%</span>
                             </div>
                           ))}
@@ -655,8 +661,14 @@ export default function OwnershipTab({ firmId, firmName }) {
                       <td colSpan="4" className="p-3 border border-gray-200 bg-gray-50">
                         <div className="space-y-1.5">
                           {getOwnershipComposition("women").map((o, i) => (
-                            <div key={i} className="flex justify-between text-xs">
-                              <span className="text-gray-700">{o.fullName}</span>
+                            <div key={i} className="flex items-center justify-between text-xs">
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-5 w-5">
+                                  <AvatarImage src={o.photoUrl} alt={o.fullName} />
+                                  <AvatarFallback className="text-xs">{o.fullName?.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <span className="text-gray-700">{o.fullName}</span>
+                              </div>
                               <span className="text-gray-500">{o.type} • {o.percentage}%</span>
                             </div>
                           ))}
@@ -697,8 +709,14 @@ export default function OwnershipTab({ firmId, firmName }) {
                       <td colSpan="4" className="p-3 border border-gray-200 bg-gray-50">
                         <div className="space-y-1.5">
                           {getOwnershipComposition("veteran").map((o, i) => (
-                            <div key={i} className="flex justify-between text-xs">
-                              <span className="text-gray-700">{o.fullName}</span>
+                            <div key={i} className="flex items-center justify-between text-xs">
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-5 w-5">
+                                  <AvatarImage src={o.photoUrl} alt={o.fullName} />
+                                  <AvatarFallback className="text-xs">{o.fullName?.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <span className="text-gray-700">{o.fullName}</span>
+                              </div>
                               <span className="text-gray-500">{o.type} • {o.percentage}%</span>
                             </div>
                           ))}
@@ -739,8 +757,14 @@ export default function OwnershipTab({ firmId, firmName }) {
                       <td colSpan="4" className="p-3 border border-gray-200 bg-gray-50">
                         <div className="space-y-1.5">
                           {getOwnershipComposition("disabled").map((o, i) => (
-                            <div key={i} className="flex justify-between text-xs">
-                              <span className="text-gray-700">{o.fullName}</span>
+                            <div key={i} className="flex items-center justify-between text-xs">
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-5 w-5">
+                                  <AvatarImage src={o.photoUrl} alt={o.fullName} />
+                                  <AvatarFallback className="text-xs">{o.fullName?.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <span className="text-gray-700">{o.fullName}</span>
+                              </div>
                               <span className="text-gray-500">{o.type} • {o.percentage}%</span>
                             </div>
                           ))}
@@ -781,8 +805,14 @@ export default function OwnershipTab({ firmId, firmName }) {
                       <td colSpan="4" className="p-3 border border-gray-200 bg-gray-50">
                         <div className="space-y-1.5">
                           {getOwnershipComposition("disabledVeteran").map((o, i) => (
-                            <div key={i} className="flex justify-between text-xs">
-                              <span className="text-gray-700">{o.fullName}</span>
+                            <div key={i} className="flex items-center justify-between text-xs">
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-5 w-5">
+                                  <AvatarImage src={o.photoUrl} alt={o.fullName} />
+                                  <AvatarFallback className="text-xs">{o.fullName?.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <span className="text-gray-700">{o.fullName}</span>
+                              </div>
                               <span className="text-gray-500">{o.type} • {o.percentage}%</span>
                             </div>
                           ))}
@@ -823,8 +853,14 @@ export default function OwnershipTab({ firmId, firmName }) {
                       <td colSpan="4" className="p-3 border border-indigo-200 bg-indigo-100">
                         <div className="space-y-1.5">
                           {getOwnershipComposition("ethnicMinorityAndWomen").map((o, i) => (
-                            <div key={i} className="flex justify-between text-xs">
-                              <span className="text-gray-700">{o.fullName}</span>
+                            <div key={i} className="flex items-center justify-between text-xs">
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-5 w-5">
+                                  <AvatarImage src={o.photoUrl} alt={o.fullName} />
+                                  <AvatarFallback className="text-xs">{o.fullName?.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <span className="text-gray-700">{o.fullName}</span>
+                              </div>
                               <span className="text-gray-500">{o.type} • {o.percentage}%</span>
                             </div>
                           ))}
@@ -865,8 +901,14 @@ export default function OwnershipTab({ firmId, firmName }) {
                       <td colSpan="4" className="p-3 border border-indigo-200 bg-indigo-100">
                         <div className="space-y-1.5">
                           {getOwnershipComposition("ethnicMinorityAndWomenAndVeteran").map((o, i) => (
-                            <div key={i} className="flex justify-between text-xs">
-                              <span className="text-gray-700">{o.fullName}</span>
+                            <div key={i} className="flex items-center justify-between text-xs">
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-5 w-5">
+                                  <AvatarImage src={o.photoUrl} alt={o.fullName} />
+                                  <AvatarFallback className="text-xs">{o.fullName?.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <span className="text-gray-700">{o.fullName}</span>
+                              </div>
                               <span className="text-gray-500">{o.type} • {o.percentage}%</span>
                             </div>
                           ))}
@@ -907,8 +949,14 @@ export default function OwnershipTab({ firmId, firmName }) {
                       <td colSpan="4" className="p-3 border border-indigo-200 bg-indigo-100">
                         <div className="space-y-1.5">
                           {getOwnershipComposition("ethnicMinorityAndWomenAndDisabledVeteran").map((o, i) => (
-                            <div key={i} className="flex justify-between text-xs">
-                              <span className="text-gray-700">{o.fullName}</span>
+                            <div key={i} className="flex items-center justify-between text-xs">
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-5 w-5">
+                                  <AvatarImage src={o.photoUrl} alt={o.fullName} />
+                                  <AvatarFallback className="text-xs">{o.fullName?.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <span className="text-gray-700">{o.fullName}</span>
+                              </div>
                               <span className="text-gray-500">{o.type} • {o.percentage}%</span>
                             </div>
                           ))}
