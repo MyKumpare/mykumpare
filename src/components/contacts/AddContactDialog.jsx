@@ -366,6 +366,41 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
 
             {/* ── PHONES TAB ── */}
             <TabsContent value="phones" className="space-y-3 mt-0">
+              {/* Firm phones suggestion */}
+              {!viewMode && (() => {
+                const firmPhones = firms
+                  .filter(f => firmIds.includes(f.id) && f.phones?.length > 0)
+                  .flatMap(f => f.phones.map(p => ({ ...p, _firmName: f.name })));
+                if (firmPhones.length === 0) return null;
+                const formatNum = (p) => [p.country_code ? `+${p.country_code}` : null, p.area_code ? `(${p.area_code})` : null, [p.number_mid, p.number_last].filter(Boolean).join("-") || null].filter(Boolean).join(" ") || "—";
+                const alreadyAdded = (p) => phones.some(ph => ph.area_code === p.area_code && ph.number_mid === p.number_mid && ph.number_last === p.number_last);
+                return (
+                  <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-3 space-y-2">
+                    <p className="text-xs font-medium text-indigo-700 flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5" /> Firm Phone Numbers</p>
+                    {firmPhones.map((p, i) => (
+                      <div key={i} className="flex items-center justify-between bg-white rounded-lg border border-indigo-100 px-3 py-2">
+                        <div>
+                          <div className="text-sm text-gray-800 font-mono">{formatNum(p)}</div>
+                          <div className="text-xs text-gray-400">{p.phone_type || "Phone"} · {p._firmName}</div>
+                        </div>
+                        {alreadyAdded(p) ? (
+                          <span className="text-xs text-green-600 font-medium">Added</span>
+                        ) : (
+                          <Button type="button" size="sm" variant="outline"
+                            className="h-7 text-xs text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                            onClick={() => setPhones(prev => {
+                              const hasEmpty = prev.some(ph => !ph.number_mid && !ph.number_last);
+                              const newEntry = { ...p, id: crypto.randomUUID(), is_default: false };
+                              return hasEmpty ? prev.map((ph, i) => i === prev.findIndex(ph => !ph.number_mid && !ph.number_last) ? newEntry : ph) : [...prev, newEntry];
+                            })}>
+                            Use This
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
               {phones.map((ph, idx) => (
                 <ContactPhoneForm
                   key={ph.id}
@@ -385,6 +420,41 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
 
             {/* ── ADDRESSES TAB ── */}
             <TabsContent value="addresses" className="space-y-3 mt-0">
+              {/* Firm addresses suggestion */}
+              {!viewMode && (() => {
+                const firmAddresses = firms
+                  .filter(f => firmIds.includes(f.id) && f.addresses?.length > 0)
+                  .flatMap(f => f.addresses.map(a => ({ ...a, _firmName: f.name })));
+                if (firmAddresses.length === 0) return null;
+                const formatAddr = (a) => [a.address_line1, a.city, a.state, a.country].filter(Boolean).join(", ") || "—";
+                const alreadyAdded = (a) => addresses.some(ad => ad.address_line1 === a.address_line1 && ad.city === a.city && ad.postal_code === a.postal_code);
+                return (
+                  <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-3 space-y-2">
+                    <p className="text-xs font-medium text-indigo-700 flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5" /> Firm Addresses</p>
+                    {firmAddresses.map((a, i) => (
+                      <div key={i} className="flex items-center justify-between bg-white rounded-lg border border-indigo-100 px-3 py-2">
+                        <div>
+                          <div className="text-sm text-gray-800">{formatAddr(a)}</div>
+                          <div className="text-xs text-gray-400">{a.is_headquarters ? "HQ · " : ""}{a._firmName}</div>
+                        </div>
+                        {alreadyAdded(a) ? (
+                          <span className="text-xs text-green-600 font-medium">Added</span>
+                        ) : (
+                          <Button type="button" size="sm" variant="outline"
+                            className="h-7 text-xs text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                            onClick={() => setAddresses(prev => {
+                              const hasEmpty = prev.some(ad => !ad.address_line1 && !ad.city);
+                              const newEntry = { ...a, id: crypto.randomUUID(), is_primary: false, _firmName: undefined };
+                              return hasEmpty ? prev.map((ad, i) => i === prev.findIndex(ad => !ad.address_line1 && !ad.city) ? newEntry : ad) : [...prev, newEntry];
+                            })}>
+                            Use This
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
               {addresses.map((addr, idx) => (
                 <ContactAddressForm
                   key={addr.id}
