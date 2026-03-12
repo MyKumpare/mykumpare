@@ -283,7 +283,9 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-gray-700">Email</Label>
                 {viewMode ? (
-                  <div className="text-sm text-indigo-600 px-1">{email || <span className="text-gray-400 italic">—</span>}</div>
+                  <div className="text-sm px-1">
+                    {email ? <a href={`mailto:${email}`} className="text-indigo-600 hover:underline">{email}</a> : <span className="text-gray-400 italic">—</span>}
+                  </div>
                 ) : (
                   <Input type="email" placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="h-9" />
                 )}
