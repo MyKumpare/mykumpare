@@ -1064,7 +1064,12 @@ export default function OwnershipTab({ firmId, firmName }) {
       {selectedContact && (
         <AddContactDialog
           open={!!selectedContact}
-          onOpenChange={(open) => !open && setSelectedContact(null)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setSelectedContact(null);
+              queryClient.invalidateQueries({ queryKey: ["contacts"] });
+            }
+          }}
           editingContact={selectedContact}
           firms={[]}
         />
