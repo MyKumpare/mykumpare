@@ -224,16 +224,16 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
 
             {/* ── INFO TAB ── */}
             <TabsContent value="info" className="space-y-4 mt-0">
-              {/* Photo */}
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center overflow-hidden flex-shrink-0 border-2 border-indigo-200">
-                  {photoUrl ? (
-                    <img src={photoUrl} alt="Contact" className="w-full h-full object-cover" />
-                  ) : (
-                    <User className="w-7 h-7 text-indigo-400" />
-                  )}
-                </div>
-                {!viewMode && (
+              {/* Photo (edit mode only — in view mode it appears in the header) */}
+              {!viewMode && (
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center overflow-hidden flex-shrink-0 border-2 border-indigo-200">
+                    {photoUrl ? (
+                      <img src={photoUrl} alt="Contact" className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="w-7 h-7 text-indigo-400" />
+                    )}
+                  </div>
                   <div>
                     <label className="cursor-pointer">
                       <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
@@ -248,8 +248,8 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                       </button>
                     )}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
 
               {/* Salutation + First Name + Middle Name */}
               <div className="grid grid-cols-3 gap-3">
