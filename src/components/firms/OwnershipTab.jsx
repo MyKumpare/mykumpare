@@ -25,6 +25,7 @@ export default function OwnershipTab({ firmId, firmName }) {
   const [viewMode, setViewMode] = useState(true);
   const [selectedContact, setSelectedContact] = useState(null);
   const [expandedSummaryRow, setExpandedSummaryRow] = useState(null);
+  const [expandedEthnicity, setExpandedEthnicity] = useState(null);
 
   const queryClient = useQueryClient();
 
@@ -145,6 +146,41 @@ export default function OwnershipTab({ firmId, firmName }) {
   };
 
   const ownershipSummary = calculateOwnershipSummary();
+
+  // Helper function to get owners by specific ethnicity
+  const getOwnersByEthnicity = (ethnicity) => {
+    return owners.filter((owner) => {
+      const contact = allContacts.find(c => c.id === owner.contact_id);
+      if (!contact) return false;
+      return contact.ethnicity && contact.ethnicity.includes(ethnicity);
+    }).map(owner => ({
+      fullName: owner.contact_full_name,
+      photoUrl: owner.contact_photo_url,
+      percentage: owner.ownership_percentage,
+      type: owner.owner_type,
+    }));
+  };
+
+  // Get all ethnicities present in ethnic minority owners
+  const getEthnicities = () => {
+    const ethnicities = new Set();
+    const ethnicMinorityOwners = owners.filter((owner) => {
+      const contact = allContacts.find(c => c.id === owner.contact_id);
+      if (!contact) return false;
+      return contact.ethnicity && contact.ethnicity.length > 0 && !contact.ethnicity.includes("Caucasian");
+    });
+    
+    ethnicMinorityOwners.forEach(owner => {
+      const contact = allContacts.find(c => c.id === owner.contact_id);
+      if (contact && contact.ethnicity) {
+        contact.ethnicity.forEach(eth => {
+          if (eth !== "Caucasian") ethnicities.add(eth);
+        });
+      }
+    });
+    
+    return Array.from(ethnicities).sort();
+  };
 
   // Helper function to get ownership composition for a specific category
   const getOwnershipComposition = (category) => {
