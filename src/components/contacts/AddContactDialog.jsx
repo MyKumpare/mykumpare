@@ -372,6 +372,18 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                 )}
               </div>
 
+              {/* LinkedIn URL */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">LinkedIn</Label>
+                {viewMode ? (
+                  <div className="text-sm px-1">
+                    {linkedinUrl ? <a href={linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">View LinkedIn</a> : <span className="text-gray-400 italic">—</span>}
+                  </div>
+                ) : (
+                  <Input type="url" placeholder="https://linkedin.com/in/..." value={linkedinUrl} onChange={(e) => setLinkedinUrl(e.target.value)} className="h-9" />
+                )}
+              </div>
+
               {/* Contact Role */}
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-gray-700">Contact Role</Label>
