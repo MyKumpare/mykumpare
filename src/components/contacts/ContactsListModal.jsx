@@ -69,5 +69,16 @@ export default function ContactsListModal({ open, onOpenChange, contacts = [], f
         </div>
       </DialogContent>
     </Dialog>
+
+    {viewingContact && (
+      <AddContactDialog
+        open={!!viewingContact}
+        onOpenChange={(o) => { if (!o) setViewingContact(null); }}
+        editingContact={viewingContact}
+        firms={firms}
+        viewMode={true}
+      />
+    )}
+  </>
   );
 }
