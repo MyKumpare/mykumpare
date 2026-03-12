@@ -261,6 +261,13 @@ export default function Home() {
               <Package className="w-4 h-4 mr-2" />
               Add Product
             </Button>
+            <Button
+              onClick={() => setAddContactOpen(true)}
+              className="h-11 px-5 bg-pink-600 hover:bg-pink-700 text-white shadow-sm"
+            >
+              <User className="w-4 h-4 mr-2" />
+              Add Contact
+            </Button>
           </div>
         </div>
 
