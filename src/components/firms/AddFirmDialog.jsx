@@ -84,6 +84,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const [firmName, setFirmName] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [website, setWebsite] = useState("");
+  const [linkedinUrl, setLinkedinUrl] = useState("");
   const [description, setDescription] = useState("");
   const [addresses, setAddresses] = useState([]);
   const [phones, setPhones] = useState([]);
@@ -103,6 +104,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         setFirmName(editingFirm.name || "");
         setLogoUrl(editingFirm.logo_url || "");
         setWebsite(editingFirm.website || "");
+        setLinkedinUrl(editingFirm.linkedin_url || "");
         setDescription(editingFirm.description || "");
         setAddresses(editingFirm.addresses?.length ? editingFirm.addresses : []);
         setPhones(editingFirm.phones?.length ? editingFirm.phones : []);
@@ -112,6 +114,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         setFirmName("");
         setLogoUrl("");
         setWebsite("");
+        setLinkedinUrl("");
         setDescription("");
         setAddresses([]);
         setPhones([]);
@@ -204,6 +207,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
       firmType !== editingFirm.firm_type ||
       logoUrl !== (editingFirm.logo_url || "") ||
       website !== (editingFirm.website || "") ||
+      linkedinUrl !== (editingFirm.linkedin_url || "") ||
       description !== (editingFirm.description || "") ||
       JSON.stringify(addresses) !== JSON.stringify(editingFirm.addresses || []) ||
       JSON.stringify(phones) !== JSON.stringify(editingFirm.phones || [])
@@ -215,8 +219,8 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
   const handleSubmit = () => {
     if (!isValid) return;
-    onSubmit({ firm_type: firmType, name: firmName.trim(), logo_url: logoUrl, website, description, addresses, phones });
-    setFirmType(""); setFirmName(""); setLogoUrl(""); setWebsite(""); setDescription(""); setAddresses([]); setPhones([]);
+    onSubmit({ firm_type: firmType, name: firmName.trim(), logo_url: logoUrl, website, linkedin_url: linkedinUrl, description, addresses, phones });
+    setFirmType(""); setFirmName(""); setLogoUrl(""); setWebsite(""); setLinkedinUrl(""); setDescription(""); setAddresses([]); setPhones([]);
   };
 
   const handleClose = () => {
@@ -229,6 +233,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     setFirmName(editingFirm.name);
     setLogoUrl(editingFirm.logo_url || "");
     setWebsite(editingFirm.website || "");
+    setLinkedinUrl(editingFirm.linkedin_url || "");
     setDescription(editingFirm.description || "");
     setAddresses(editingFirm.addresses || []);
     setPhones(editingFirm.phones || []);
@@ -376,6 +381,23 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                     placeholder="https://example.com"
                     value={website}
                     onChange={(e) => setWebsite(e.target.value)}
+                    className="h-9"
+                  />
+                )}
+              </div>
+
+              {/* LinkedIn URL */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">LinkedIn</Label>
+                {!activelyEditing ? (
+                  <div className="h-9 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-600">
+                    {linkedinUrl ? <a href={linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">View LinkedIn</a> : <span className="text-gray-400">—</span>}
+                  </div>
+                ) : (
+                  <Input
+                    placeholder="https://linkedin.com/company/..."
+                    value={linkedinUrl}
+                    onChange={(e) => setLinkedinUrl(e.target.value)}
                     className="h-9"
                   />
                 )}
