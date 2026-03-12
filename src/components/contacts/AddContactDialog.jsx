@@ -74,6 +74,14 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.Contact.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      onOpenChange(false);
+    },
+  });
+
   const isValid = firstName.trim() && lastName.trim();
 
   const handleSubmit = () => {
