@@ -68,8 +68,15 @@ export default function ContactsTab({ firmId, firms = [] }) {
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-indigo-700 hover:underline">
-                    {contact.first_name} {contact.last_name}
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm font-medium text-indigo-700 hover:underline">
+                      {contact.first_name} {contact.last_name}
+                    </div>
+                    {contact.contact_role && (
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium ${contact.contact_role === "Primary" ? "bg-indigo-100 text-indigo-700" : "bg-gray-100 text-gray-500"}`}>
+                        {contact.contact_role}
+                      </span>
+                    )}
                   </div>
                   {contact.title && (
                     <div className="text-xs text-gray-500">{contact.title}</div>
