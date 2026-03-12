@@ -69,6 +69,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setSuffix(editingContact.suffix || "");
         setTitle(editingContact.title || "");
         setEmail(editingContact.email || "");
+        setContactRole(editingContact.contact_role || "");
         setBiography(editingContact.biography || "");
         setNotes(editingContact.notes || "");
         setFirmIds(editingContact.firm_ids || []);
