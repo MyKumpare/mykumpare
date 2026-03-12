@@ -202,6 +202,16 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const setPrimaryAddress = (idx) => setAddresses(addresses.map((ad, i) => ({ ...ad, is_primary: i === idx })));
   const addAddress = () => setAddresses([...addresses, newAddress()]);
 
+  const formatMiddleName = (name) => {
+    if (!name) return "";
+    return name.length === 1 ? `${name}.` : name;
+  };
+
+  const formatFullName = () => {
+    const parts = [salutation, firstName, formatMiddleName(middleName), lastName, suffix && `,`].filter(Boolean);
+    return parts.join(" ");
+  };
+
   const ro = (val, className = "text-sm text-gray-900 px-1") => (
     <div className={className}>{val || <span className="text-gray-400 italic">—</span>}</div>
   );
