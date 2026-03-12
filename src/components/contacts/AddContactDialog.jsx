@@ -12,7 +12,12 @@ import { base44 } from "@/api/base44Client";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import QuickAddFirmForm from "./QuickAddFirmForm";
 
-export default function AddContactDialog({ open, onOpenChange, editingContact, currentFirmId, firms = [] }) {
+export default function AddContactDialog({ open, onOpenChange, editingContact, currentFirmId, firms: firmsProp = [] }) {
+  const { data: liveFirms = [] } = useQuery({
+    queryKey: ["firms"],
+    queryFn: () => base44.entities.Firm.list("-created_date"),
+  });
+  const firms = liveFirms.length > 0 ? liveFirms : firmsProp;
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [title, setTitle] = useState("");
