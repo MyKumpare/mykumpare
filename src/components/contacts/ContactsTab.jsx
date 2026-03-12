@@ -57,13 +57,18 @@ export default function ContactsTab({ firmId, firms = [] }) {
             .map((contact) => (
               <div
                 key={contact.id}
-                className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
+                className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-indigo-50 hover:border-indigo-200 transition-colors cursor-pointer"
+                onClick={() => handleView(contact)}
               >
-                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                  <User className="w-4 h-4 text-indigo-600" />
+                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  {contact.photo_url ? (
+                    <img src={contact.photo_url} alt={contact.first_name} className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="w-4 h-4 text-indigo-600" />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-gray-900">
+                  <div className="text-sm font-medium text-indigo-700 hover:underline">
                     {contact.first_name} {contact.last_name}
                   </div>
                   {contact.title && (
@@ -72,24 +77,6 @@ export default function ContactsTab({ firmId, firms = [] }) {
                   {contact.email && (
                     <div className="text-xs text-indigo-600">{contact.email}</div>
                   )}
-                </div>
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-gray-400 hover:text-indigo-600"
-                    onClick={() => handleEdit(contact)}
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-gray-400 hover:text-red-500"
-                    onClick={() => deleteContactMutation.mutate(contact.id)}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
                 </div>
               </div>
             ))}
