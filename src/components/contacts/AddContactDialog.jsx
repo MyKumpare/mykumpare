@@ -50,6 +50,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [biography, setBiography] = useState("");
   const [designations, setDesignations] = useState([]);
+  const [employeeStatus, setEmployeeStatus] = useState("");
   const [contactRole, setContactRole] = useState("");
   const [gender, setGender] = useState("Undetermined");
   const [ethnicity, setEthnicity] = useState([]);
@@ -79,6 +80,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setDesignations(editingContact.designations || []);
         setEmail(editingContact.email || "");
         setLinkedinUrl(editingContact.linkedin_url || "");
+        setEmployeeStatus(editingContact.employee_status || "");
         setContactRole(editingContact.contact_role || "");
         setGender(editingContact.gender || "Undetermined");
         setEthnicity(editingContact.ethnicity || []);
@@ -100,6 +102,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setDesignations([]);
         setEmail("");
         setLinkedinUrl("");
+        setEmployeeStatus("");
         setContactRole("");
         setGender("Undetermined");
         setEthnicity([]);
@@ -168,6 +171,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
       designations,
       email: email.trim(),
       linkedin_url: linkedinUrl.trim(),
+      employee_status: employeeStatus,
       contact_role: contactRole,
       gender,
       ethnicity,
@@ -381,6 +385,32 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                   </div>
                 ) : (
                   <Input type="url" placeholder="https://linkedin.com/in/..." value={linkedinUrl} onChange={(e) => setLinkedinUrl(e.target.value)} className="h-9" />
+                )}
+              </div>
+
+              {/* Employee Status */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Employee Status</Label>
+                {viewMode ? (
+                  <div className="text-sm px-1">
+                    {employeeStatus ? (
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${employeeStatus === "Employee" ? "bg-indigo-100 text-indigo-700" : "bg-amber-100 text-amber-700"}`}>
+                        {employeeStatus}
+                      </span>
+                    ) : <span className="text-gray-400 italic">—</span>}
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    {["Employee", "Non-Employee"].map(status => (
+                      <button key={status} type="button"
+                        onClick={() => setEmployeeStatus(employeeStatus === status ? "" : status)}
+                        className={`px-4 py-1.5 rounded-full text-xs font-medium border transition-colors ${employeeStatus === status
+                          ? status === "Employee" ? "bg-indigo-600 text-white border-indigo-600" : "bg-amber-600 text-white border-amber-600"
+                          : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-indigo-600"}`}>
+                        {status}
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
 
