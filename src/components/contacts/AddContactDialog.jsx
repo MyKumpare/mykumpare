@@ -394,7 +394,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                     <div className="text-sm px-1 text-gray-900">{gender || "Undetermined"}</div>
                   ) : (
                     <div className="flex gap-2 flex-wrap">
-                      {["Male", "Female", "Undetermined"].map(g => (
+                      {["Undetermined", "Male", "Female"].map(g => (
                         <button key={g} type="button"
                           onClick={() => setGender(g)}
                           className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${gender === g
@@ -447,7 +447,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                     <div className="text-sm px-1 text-gray-900">{veteranStatus || "Undetermined"}</div>
                   ) : (
                     <div className="flex gap-2 flex-wrap">
-                      {["Veteran Owned", "Non-Veteran Owned", "Undetermined"].map(v => (
+                      {["Undetermined", "Veteran Owned", "Non-Veteran Owned"].map(v => (
                         <button key={v} type="button"
                           onClick={() => setVeteranStatus(v)}
                           className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${veteranStatus === v
@@ -467,7 +467,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                     <div className="text-sm px-1 text-gray-900">{disabilityStatus || "Undetermined"}</div>
                   ) : (
                     <div className="flex gap-2 flex-wrap">
-                      {["Disabled", "Non-Disabled", "Undetermined"].map(d => (
+                      {["Undetermined", "Disabled", "Non-Disabled"].map(d => (
                         <button key={d} type="button"
                           onClick={() => setDisabilityStatus(d)}
                           className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${disabilityStatus === d
