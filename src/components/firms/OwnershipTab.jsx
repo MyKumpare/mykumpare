@@ -632,7 +632,7 @@ export default function OwnershipTab({ firmId, firmName }) {
         <AddContactDialog
           open={!!selectedContact}
           onOpenChange={(open) => !open && setSelectedContact(null)}
-          contact={selectedContact}
+          editingContact={selectedContact}
           firms={[]}
         />
       )}
