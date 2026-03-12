@@ -243,7 +243,10 @@ export default function OwnershipTab({ firmId, firmName }) {
       {!selectedOwnership && (
         <Button
           type="button"
-          onClick={() => setShowUpdateForm(!showUpdateForm)}
+          onClick={() => {
+            setShowUpdateForm(true);
+            setViewMode(false);
+          }}
           className="w-full bg-indigo-600 hover:bg-indigo-700 text-white gap-2"
         >
           <Plus className="w-4 h-4" />
