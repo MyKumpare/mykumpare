@@ -412,7 +412,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                   <Label className="text-xs font-medium text-gray-700">Ethnicity</Label>
                   {viewMode ? (
                     <div className="text-sm px-1 text-gray-900">
-                      {ethnicity?.length > 0 ? ethnicity.join(", ") : <span className="text-gray-400 italic">Undetermined</span>}
+                      {ethnicity?.length > 0 ? ethnicity.join(", ") : "Undetermined"}
                     </div>
                   ) : (
                     <div className="flex flex-wrap gap-2">
