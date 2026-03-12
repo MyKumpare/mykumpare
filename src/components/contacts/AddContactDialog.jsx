@@ -231,15 +231,34 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                     ))
                   )}
                 </div>
-                <div className="border-t px-2 py-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setShowFirmPicker(false)}
-                    className="text-xs text-gray-400 hover:text-gray-600"
-                  >
-                    Cancel
-                  </button>
-                </div>
+                {showQuickAddFirm ? (
+                  <QuickAddFirmForm
+                    onFirmCreated={(newFirm) => {
+                      setFirmIds((prev) => [...prev, newFirm.id]);
+                      setShowQuickAddFirm(false);
+                      setShowFirmPicker(false);
+                      setFirmSearch("");
+                    }}
+                    onCancel={() => setShowQuickAddFirm(false)}
+                  />
+                ) : (
+                  <div className="border-t px-2 py-1.5 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => setShowFirmPicker(false)}
+                      className="text-xs text-gray-400 hover:text-gray-600"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowQuickAddFirm(true)}
+                      className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-0.5"
+                    >
+                      <Plus className="w-3 h-3" /> Add New Firm
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
