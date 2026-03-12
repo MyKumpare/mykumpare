@@ -136,6 +136,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
       last_name: lastName.trim(),
       suffix,
       title: title.trim(),
+      designations,
       email: email.trim(),
       contact_role: contactRole,
       biography: biography.trim(),
