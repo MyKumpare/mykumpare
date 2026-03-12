@@ -14,6 +14,7 @@ import { Pencil, Building2, Plus, Upload, X } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import AddressForm from "./AddressForm";
 import PhoneForm from "./PhoneForm";
+import ContactsTab from "../contacts/ContactsTab";
 
 function getCountryCodeFromCountryName(countryName) {
   if (!countryName) return "";
