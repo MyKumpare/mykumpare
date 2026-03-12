@@ -77,6 +77,10 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setDesignations(editingContact.designations || []);
         setEmail(editingContact.email || "");
         setContactRole(editingContact.contact_role || "");
+        setGender(editingContact.gender || "Undetermined");
+        setEthnicity(editingContact.ethnicity || []);
+        setVeteranStatus(editingContact.veteran_status || "Undetermined");
+        setDisabilityStatus(editingContact.disability_status || "Undetermined");
         setBiography(editingContact.biography || "");
         setNotes(editingContact.notes || "");
         setFirmIds(editingContact.firm_ids || []);
