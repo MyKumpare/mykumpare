@@ -84,6 +84,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setSuffix("");
         setTitle("");
         setEmail("");
+        setContactRole("");
         setBiography("");
         setNotes("");
         setFirmIds(currentFirmId ? [currentFirmId] : []);
