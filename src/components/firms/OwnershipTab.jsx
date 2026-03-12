@@ -563,7 +563,7 @@ export default function OwnershipTab({ firmId, firmName }) {
                            >
                              {owner.contact_full_name}
                            </button>
-                           <p className="text-xs text-gray-500">{owner.owner_type}</p>
+                           <p className="text-xs text-gray-500">{contact?.employee_status || owner.owner_type}</p>
                           {demographics.length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-1">
                               {demographics.map((d) => (
