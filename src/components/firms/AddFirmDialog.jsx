@@ -440,13 +440,13 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
             <TabsContent value="phones" className="space-y-3">
               <div className="flex items-center justify-between">
-                {activelyEditing && addresses.length > 0 && (
+                {addresses.length > 0 && (
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs ml-auto"
-                    onClick={handleAddPhone}
+                    onClick={() => { if (!activelyEditing) setIsEditing(true); handleAddPhone(); }}
                   >
                     <Plus className="w-3.5 h-3.5" />
                     Add Phone
