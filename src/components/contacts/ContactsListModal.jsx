@@ -80,6 +80,6 @@ export default function ContactsListModal({ open, onOpenChange, contacts = [], f
         viewMode={true}
       />
     )}
-  </>
+    </>
   );
 }
