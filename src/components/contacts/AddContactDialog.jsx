@@ -180,6 +180,11 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
               ? `${editingContact?.first_name} ${editingContact?.last_name}`
               : editingContact ? "Edit Contact" : "Add Contact"}
           </DialogTitle>
+          {editingContact && firmIds.length > 0 && (
+            <p className="text-sm text-indigo-600 font-medium mt-0.5">
+              {firmIds.map(id => getFirmName(id)).join(", ")}
+            </p>
+          )}
         </DialogHeader>
 
         <div className="overflow-y-auto flex-1 py-2 pr-1">
