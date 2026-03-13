@@ -628,22 +628,27 @@ export default function OwnershipTab({ firmId, firmName }) {
                             <strong>{owner.contact_full_name}</strong> is listed as <strong>{owner.owner_type}</strong> in this ownership record, but their contact profile now shows <strong>{contact?.employee_status}</strong>.
                           </span>
                         </div>
-                        <div className="flex gap-2 ml-5">
-                          <button
-                            type="button"
-                            onClick={() => resolveOwnerTypeMismatch(owner.id, false)}
-                            className="px-2 py-1 rounded border border-amber-400 text-amber-700 hover:bg-amber-100 text-xs font-medium"
-                          >
-                            Keep "{owner.owner_type}"
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => resolveOwnerTypeMismatch(owner.id, true)}
-                            className="px-2 py-1 rounded bg-amber-600 text-white hover:bg-amber-700 text-xs font-medium"
-                          >
-                            Update to "{contact?.employee_status}"
-                          </button>
-                        </div>
+                        {!viewMode && (
+                          <div className="flex gap-2 ml-5">
+                            <button
+                              type="button"
+                              onClick={() => resolveOwnerTypeMismatch(owner.id, false)}
+                              className="px-2 py-1 rounded border border-amber-400 text-amber-700 hover:bg-amber-100 text-xs font-medium"
+                            >
+                              Keep "{owner.owner_type}"
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => resolveOwnerTypeMismatch(owner.id, true)}
+                              className="px-2 py-1 rounded bg-amber-600 text-white hover:bg-amber-700 text-xs font-medium"
+                            >
+                              Update to "{contact?.employee_status}"
+                            </button>
+                          </div>
+                        )}
+                        {viewMode && (
+                          <p className="text-amber-700 ml-5">Edit this ownership record to resolve the conflict.</p>
+                        )}
                       </div>
                     );
                   })}
