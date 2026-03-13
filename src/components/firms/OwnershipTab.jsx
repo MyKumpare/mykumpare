@@ -367,7 +367,7 @@ export default function OwnershipTab({ firmId, firmName }) {
     if (!contact || !contact.employee_status) return false;
     const contactType = contact.employee_status; // "Employee" or "Non-Employee"
     return owner.owner_type !== contactType;
-  });
+  }), [owners, allContacts]);
 
   const resolveOwnerTypeMismatch = (ownerId, useContactValue) => {
     const owner = owners.find(o => o.id === ownerId);
