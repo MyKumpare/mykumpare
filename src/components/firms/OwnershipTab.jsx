@@ -615,6 +615,41 @@ export default function OwnershipTab({ firmId, firmName }) {
             <div className="space-y-2 rounded-lg border border-white bg-white p-3">
               <h4 className="text-xs font-semibold text-gray-900">Owners ({owners.length})</h4>
 
+              {/* Mismatch warnings */}
+              {ownerTypeMismatches.length > 0 && (
+                <div className="space-y-2">
+                  {ownerTypeMismatches.map(owner => {
+                    const contact = allContacts.find(c => c.id === owner.contact_id);
+                    return (
+                      <div key={owner.id} className="rounded-md border border-amber-300 bg-amber-50 p-2.5 text-xs">
+                        <div className="flex items-start gap-2 mb-2">
+                          <AlertCircle className="w-3.5 h-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
+                          <span className="text-amber-800">
+                            <strong>{owner.contact_full_name}</strong> is listed as <strong>{owner.owner_type}</strong> in this ownership record, but their contact profile now shows <strong>{contact?.employee_status}</strong>.
+                          </span>
+                        </div>
+                        <div className="flex gap-2 ml-5">
+                          <button
+                            type="button"
+                            onClick={() => resolveOwnerTypeMismatch(owner.id, false)}
+                            className="px-2 py-1 rounded border border-amber-400 text-amber-700 hover:bg-amber-100 text-xs font-medium"
+                          >
+                            Keep "{owner.owner_type}"
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => resolveOwnerTypeMismatch(owner.id, true)}
+                            className="px-2 py-1 rounded bg-amber-600 text-white hover:bg-amber-700 text-xs font-medium"
+                          >
+                            Update to "{contact?.employee_status}"
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {owners.map((owner) => {
                   const contact = allContacts.find(c => c.id === owner.contact_id);
