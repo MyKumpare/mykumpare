@@ -816,68 +816,6 @@ export default function OwnershipTab({ firmId, firmName }) {
                     </tr>
                   )}
 
-                  {/* Caucasian Owned */}
-                  <tr>
-                    <td
-                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "caucasian" ? null : "caucasian")}
-                      className="text-gray-700 p-2 border border-gray-200 cursor-pointer hover:bg-gray-50"
-                    >
-                      Caucasian Owned
-                    </td>
-                    <td
-                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "caucasian" ? null : "caucasian")}
-                      className="text-right font-medium text-indigo-600 p-2 border border-gray-200 cursor-pointer hover:bg-gray-50"
-                    >
-                      {ownershipSummary.caucasianOwned.employee.toFixed(2)}%
-                    </td>
-                    <td
-                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "caucasian" ? null : "caucasian")}
-                      className="text-right font-medium text-indigo-600 p-2 border border-gray-200 cursor-pointer hover:bg-gray-50"
-                    >
-                      {ownershipSummary.caucasianOwned.nonEmployee.toFixed(2)}%
-                    </td>
-                    <td
-                      onClick={() => setExpandedSummaryRow(expandedSummaryRow === "caucasian" ? null : "caucasian")}
-                      className="text-right font-medium text-indigo-600 p-2 border border-gray-200 cursor-pointer hover:bg-gray-50"
-                    >
-                      {(ownershipSummary.caucasianOwned.employee + ownershipSummary.caucasianOwned.nonEmployee).toFixed(2)}%
-                    </td>
-                  </tr>
-                  {expandedSummaryRow === "caucasian" && (
-                    <tr>
-                      <td colSpan="4" className="p-3 border border-gray-200 bg-gray-50">
-                        <div className="space-y-2">
-                          {getEthnicityBreakdownForCategory("caucasian").map(({ ethnicity, total }) => (
-                            <div key={ethnicity}>
-                              <button
-                                onClick={() => setExpandedEthnicity(expandedEthnicity === `caucasian-${ethnicity}` ? null : `caucasian-${ethnicity}`)}
-                                className="text-xs font-medium text-indigo-600 hover:text-indigo-700 cursor-pointer mb-1"
-                              >
-                                {ethnicity} {total.toFixed(2)}%
-                              </button>
-                              {expandedEthnicity === `caucasian-${ethnicity}` && (
-                                <div className="space-y-1 ml-4">
-                                  {getOwnersByEthnicityAndCategory(ethnicity, "caucasian").map((o, i) => (
-                                    <div key={i} className="flex items-center justify-between text-xs">
-                                      <div className="flex items-center gap-2">
-                                        <Avatar className="h-4 w-4">
-                                          <AvatarImage src={o.photoUrl} alt={o.fullName} />
-                                          <AvatarFallback className="text-xs">{o.fullName?.charAt(0)}</AvatarFallback>
-                                        </Avatar>
-                                        <span className="text-gray-700">{o.fullName}</span>
-                                      </div>
-                                      <span className="text-gray-500">{o.type} • {o.percentage}%</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-
                   {/* Women Owned */}
                   <tr>
                     <td 
