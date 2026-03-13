@@ -183,6 +183,9 @@ export default function OwnershipTab({ firmId, firmName }) {
         case "ethnicMinority":
           categoryMatch = isEthnicMinority;
           break;
+        case "caucasian":
+          categoryMatch = contact.ethnicity && contact.ethnicity.includes("Caucasian");
+          break;
         case "ethnicMinorityAndWomen":
           categoryMatch = isEthnicMinority && isWoman;
           break;
