@@ -212,6 +212,8 @@ export default function OwnershipTab({ firmId, firmName }) {
       const isWoman = contact.gender === "Female";
 
       switch (category) {
+        case "ethnicMinority":
+          return isEthnicMinority;
         case "women":
           return isWoman;
         case "veteran":
