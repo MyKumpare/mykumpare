@@ -362,7 +362,7 @@ export default function OwnershipTab({ firmId, firmName }) {
   const availableContacts = getAvailableContacts(selectedOwnerType);
 
   // Detect mismatches between owner_type in ownership record and employee_status in contact
-  const ownerTypeMismatches = owners.filter(owner => {
+  const ownerTypeMismatches = useMemo(() => owners.filter(owner => {
     const contact = allContacts.find(c => c.id === owner.contact_id);
     if (!contact || !contact.employee_status) return false;
     const contactType = contact.employee_status; // "Employee" or "Non-Employee"
