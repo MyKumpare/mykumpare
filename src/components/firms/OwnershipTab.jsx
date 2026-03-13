@@ -145,7 +145,7 @@ export default function OwnershipTab({ firmId, firmName }) {
     return summary;
   };
 
-  const ownershipSummary = calculateOwnershipSummary();
+  const ownershipSummary = useMemo(() => calculateOwnershipSummary(), [owners, allContacts]);
 
   // Helper function to get owners by specific ethnicity and category
   const getOwnersByEthnicityAndCategory = (ethnicity, category) => {
