@@ -677,7 +677,7 @@ export default function OwnershipTab({ firmId, firmName }) {
                   if (contact?.gender === "Female") demographics.push("Woman");
                   if (contact?.veteran_status === "Veteran Owned") demographics.push("Veteran");
                   if (contact?.disability_status === "Disabled") demographics.push("Disabled");
-                  if (contact?.ethnicity && contact.ethnicity.length > 0 && !contact.ethnicity.includes("Caucasian")) {
+                  if (contact?.ethnicity && contact.ethnicity.length > 0) {
                     demographics.push(contact.ethnicity.slice(0, 2).join(", "));
                   }
 
