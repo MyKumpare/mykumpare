@@ -84,6 +84,7 @@ export default function OwnershipTab({ firmId, firmName }) {
       disabledOwned: { employee: 0, nonEmployee: 0 },
       disabledVeteranOwned: { employee: 0, nonEmployee: 0 },
       ethnicMinorityOwned: { employee: 0, nonEmployee: 0 },
+      caucasianOwned: { employee: 0, nonEmployee: 0 },
       womenOwned: { employee: 0, nonEmployee: 0 },
       ethnicMinorityAndWomenOwned: { employee: 0, nonEmployee: 0 },
       ethnicMinorityAndWomenAndVeteranOwned: { employee: 0, nonEmployee: 0 },
