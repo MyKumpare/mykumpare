@@ -121,6 +121,12 @@ export default function OwnershipTab({ firmId, firmName }) {
         summary.ethnicMinorityOwned[ownerType] += percentage;
       }
 
+      // Caucasian owned
+      const isCaucasian = contact.ethnicity && contact.ethnicity.includes("Caucasian");
+      if (isCaucasian) {
+        summary.caucasianOwned[ownerType] += percentage;
+      }
+
       // Women owned
       const isWoman = contact.gender === "Female";
       if (isWoman) {
