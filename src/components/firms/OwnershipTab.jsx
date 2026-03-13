@@ -711,17 +711,17 @@ export default function OwnershipTab({ firmId, firmName }) {
                     <tr>
                       <td colSpan="4" className="p-3 border border-gray-200 bg-gray-50">
                         <div className="space-y-2">
-                          {getEthnicities().map(({ ethnicity, total }) => (
-                            <div key={ethnicity}>
-                              <button
-                                onClick={() => setExpandedEthnicity(expandedEthnicity === ethnicity ? null : ethnicity)}
-                                className="text-xs font-medium text-indigo-600 hover:text-indigo-700 cursor-pointer mb-1"
-                              >
-                                {ethnicity} {total.toFixed(2)}%
-                              </button>
-                              {expandedEthnicity === ethnicity && (
-                                <div className="space-y-1 ml-4">
-                                  {getOwnersByEthnicity(ethnicity).map((o, i) => (
+                          {getEthnicityBreakdownForCategory("ethnicMinority").map(({ ethnicity, total }) => (
+                             <div key={ethnicity}>
+                               <button
+                                 onClick={() => setExpandedEthnicity(expandedEthnicity === `ethnicMinority-${ethnicity}` ? null : `ethnicMinority-${ethnicity}`)}
+                                 className="text-xs font-medium text-indigo-600 hover:text-indigo-700 cursor-pointer mb-1"
+                               >
+                                 {ethnicity} {total.toFixed(2)}%
+                               </button>
+                               {expandedEthnicity === `ethnicMinority-${ethnicity}` && (
+                                 <div className="space-y-1 ml-4">
+                                   {getOwnersByEthnicityAndCategory(ethnicity, "ethnicMinority").map((o, i) => (
                                     <div key={i} className="flex items-center justify-between text-xs">
                                       <div className="flex items-center gap-2">
                                         <Avatar className="h-4 w-4">
