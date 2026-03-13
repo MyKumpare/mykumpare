@@ -361,6 +361,23 @@ export default function OwnershipTab({ firmId, firmName }) {
 
   const availableContacts = getAvailableContacts(selectedOwnerType);
 
+  // Detect mismatches between owner_type in ownership record and employee_status in contact
+  const ownerTypeMismatches = owners.filter(owner => {
+    const contact = allContacts.find(c => c.id === owner.contact_id);
+    if (!contact || !contact.employee_status) return false;
+    const contactType = contact.employee_status; // "Employee" or "Non-Employee"
+    return owner.owner_type !== contactType;
+  });
+
+  const resolveOwnerTypeMismatch = (ownerId, useContactValue) => {
+    const owner = owners.find(o => o.id === ownerId);
+    if (!owner) return;
+    const contact = allContacts.find(c => c.id === owner.contact_id);
+    if (!contact) return;
+    const newType = useContactValue ? contact.employee_status : owner.owner_type;
+    setOwners(owners.map(o => o.id === ownerId ? { ...o, owner_type: newType } : o));
+  };
+
   return (
     <div className="space-y-4">
       {/* Ownership History */}
