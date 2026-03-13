@@ -273,6 +273,8 @@ export default function OwnershipTab({ firmId, firmName }) {
       switch (category) {
         case "ethnicMinority":
           return isEthnicMinority;
+        case "caucasian":
+          return contact.ethnicity && contact.ethnicity.includes("Caucasian");
         case "women":
           return isWoman;
         case "veteran":
