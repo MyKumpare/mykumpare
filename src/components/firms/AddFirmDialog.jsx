@@ -86,6 +86,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const [logoUrl, setLogoUrl] = useState("");
   const [website, setWebsite] = useState("");
   const [linkedinUrl, setLinkedinUrl] = useState("");
+  const [yearFounded, setYearFounded] = useState("");
   const [description, setDescription] = useState("");
   const [addresses, setAddresses] = useState([]);
   const [phones, setPhones] = useState([]);
