@@ -404,6 +404,26 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                 )}
               </div>
 
+              {/* Year Founded */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Year Founded</Label>
+                {!activelyEditing ? (
+                  <div className="h-9 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-700">
+                    {yearFounded || <span className="text-gray-400">—</span>}
+                  </div>
+                ) : (
+                  <Input
+                    placeholder="e.g. 1995"
+                    value={yearFounded}
+                    onChange={(e) => setYearFounded(e.target.value)}
+                    className="h-9"
+                    type="number"
+                    min="1800"
+                    max={new Date().getFullYear()}
+                  />
+                )}
+              </div>
+
               {/* Description */}
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-gray-700">Description</Label>
