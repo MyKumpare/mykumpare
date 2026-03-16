@@ -104,6 +104,7 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership 
         currentFirmId={firmId}
         firms={firms}
         viewMode={viewMode}
+        onNavigateToOwnership={onNavigateToOwnership}
       />
     </div>
   );
