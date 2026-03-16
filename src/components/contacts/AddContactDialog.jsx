@@ -292,17 +292,28 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
 
         <div className="overflow-y-auto flex-1 py-2 pr-1">
           <Tabs defaultValue="info">
-            <TabsList className="w-full mb-4">
-              <TabsTrigger value="info" className="flex-1 flex items-center gap-1.5">
-                <User className="w-3.5 h-3.5" /> Info
-              </TabsTrigger>
-              <TabsTrigger value="phones" className="flex-1 flex items-center gap-1.5">
-                <Phone className="w-3.5 h-3.5" /> Phones
-              </TabsTrigger>
-              <TabsTrigger value="addresses" className="flex-1 flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5" /> Addresses
-              </TabsTrigger>
-            </TabsList>
+            <div className="space-y-1 mb-4">
+              <TabsList className="w-full">
+                <TabsTrigger value="info" className="flex-1 flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5" /> Info
+                </TabsTrigger>
+                <TabsTrigger value="phones" className="flex-1 flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5" /> Phones
+                </TabsTrigger>
+                <TabsTrigger value="addresses" className="flex-1 flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5" /> Addresses
+                </TabsTrigger>
+              </TabsList>
+              <TabsList className="w-full">
+                <TabsTrigger value="classification" className="flex-1 flex items-center gap-1.5">
+                  <Tag className="w-3.5 h-3.5" /> Classification
+                </TabsTrigger>
+                <TabsTrigger value="ownership" className="flex-1 flex items-center gap-1.5">
+                  <TrendingUp className="w-3.5 h-3.5" /> Ownership
+                </TabsTrigger>
+                <div className="flex-1" />
+              </TabsList>
+            </div>
 
             {/* ── INFO TAB ── */}
             <TabsContent value="info" className="space-y-4 mt-0">
