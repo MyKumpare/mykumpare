@@ -434,32 +434,6 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                 )}
               </div>
 
-              {/* Employee Status */}
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-gray-700">Employee Status</Label>
-                {viewMode ? (
-                  <div className="text-sm px-1">
-                    {employeeStatus ? (
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${employeeStatus === "Employee" ? "bg-indigo-100 text-indigo-700" : "bg-amber-100 text-amber-700"}`}>
-                        {employeeStatus}
-                      </span>
-                    ) : <span className="text-gray-400 italic">—</span>}
-                  </div>
-                ) : (
-                  <div className="flex gap-2">
-                    {["Employee", "Non-Employee"].map(status => (
-                      <button key={status} type="button"
-                        onClick={() => setEmployeeStatus(employeeStatus === status ? "" : status)}
-                        className={`px-4 py-1.5 rounded-full text-xs font-medium border transition-colors ${employeeStatus === status
-                          ? status === "Employee" ? "bg-indigo-600 text-white border-indigo-600" : "bg-amber-600 text-white border-amber-600"
-                          : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-indigo-600"}`}>
-                        {status}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
               {/* Biography */}
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-gray-700">Biography</Label>
