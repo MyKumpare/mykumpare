@@ -898,9 +898,8 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
           ) : (
             <>
               <Button variant="outline" onClick={() => { setShowUndeterminedWarning(false); editingContact ? setViewMode(true) : onOpenChange(false); }}>Cancel</Button>
-              <Button onClick={handleSubmit} disabled={!isValid}
-                className={showUndeterminedWarning ? "bg-amber-500 hover:bg-amber-600 text-white" : "bg-indigo-600 hover:bg-indigo-700 text-white"}>
-                {showUndeterminedWarning ? "Save Anyway" : editingContact ? "Save Changes" : "Add Contact"}
+              <Button onClick={handleSubmit} disabled={!isValid} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                {editingContact ? "Save Changes" : "Add Contact"}
               </Button>
             </>
           )}
