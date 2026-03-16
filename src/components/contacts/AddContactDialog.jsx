@@ -621,6 +621,30 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
 
             {/* ── CLASSIFICATION TAB ── */}
             <TabsContent value="classification" className="space-y-4 mt-0">
+              {/* Contact Status */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Contact Status</Label>
+                {viewMode ? (
+                  <div className="text-sm px-1">
+                    {contactStatus ? (
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${contactStatus === "Active" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                        {contactStatus}
+                      </span>
+                    ) : <span className="text-gray-400 italic">—</span>}
+                  </div>
+                ) : (
+                  <Select value={contactStatus} onValueChange={setContactStatus}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Select status..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Active">Active</SelectItem>
+                      <SelectItem value="Inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
               {/* Contact Priority */}
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-gray-700">Contact Priority</Label>
