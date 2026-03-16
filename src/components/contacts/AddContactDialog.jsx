@@ -197,7 +197,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   });
 
   // Find all ownership records where this contact appears as an owner, grouped by firm
-  const contactOwnershipByFirm = React.useMemo(() => {
+  const contactOwnershipByFirm = useMemo(() => {
     if (!editingContact) return [];
     const result = {};
     allOwnerships.forEach(ownership => {
