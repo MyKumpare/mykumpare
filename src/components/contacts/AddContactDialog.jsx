@@ -639,6 +639,16 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
               />
             </TabsContent>
 
+            {/* ── EXPERIENCE TAB ── */}
+            <TabsContent value="experience" className="mt-0">
+              <ContactProfessionalExperienceTab
+                experience={professionalExperience}
+                onChange={setProfessionalExperience}
+                firms={firms}
+                viewMode={viewMode}
+              />
+            </TabsContent>
+
             {/* ── CLASSIFICATION TAB ── */}
             <TabsContent value="classification" className="space-y-4 mt-0">
               {/* Contact Status */}
