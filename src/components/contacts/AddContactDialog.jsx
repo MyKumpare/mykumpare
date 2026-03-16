@@ -178,6 +178,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
       email: email.trim(),
       linkedin_url: linkedinUrl.trim(),
       employee_status: employeeStatus,
+      contact_status: contactStatus,
       contact_role: contactRole,
       contact_type: contactType,
       gender,
