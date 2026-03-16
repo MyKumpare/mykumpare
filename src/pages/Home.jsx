@@ -126,9 +126,19 @@ export default function Home() {
     }
   };
 
+  const handleNavigateToOwnership = (firmId, ownershipId) => {
+    const firm = firms.find(f => f.id === firmId);
+    if (!firm) return;
+    setOwnershipNavTarget({ firmId, ownershipId });
+    setEditingFirm(firm);
+    setPreselectedType(null);
+    setDialogOpen(true);
+  };
+
   const handleEdit = (firm) => {
     setEditingFirm(firm);
     setPreselectedType(null);
+    setOwnershipNavTarget(null);
     setDialogOpen(true);
   };
 
