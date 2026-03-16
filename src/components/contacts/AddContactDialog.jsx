@@ -51,6 +51,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [biography, setBiography] = useState("");
   const [designations, setDesignations] = useState([]);
   const [employeeStatus, setEmployeeStatus] = useState("");
+  const [contactStatus, setContactStatus] = useState("Active");
   const [contactRole, setContactRole] = useState("");
   const [contactType, setContactType] = useState("");
   const [gender, setGender] = useState("Undetermined");
