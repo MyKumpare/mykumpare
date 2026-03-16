@@ -424,7 +424,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               </div>
 
           {/* Contacts, Addresses, Phones & Ownership Tabs */}
-           <Tabs defaultValue="contacts" className="w-full">
+           <Tabs defaultValue={defaultTab || "contacts"} className="w-full">
              <TabsList className="grid w-full grid-cols-4">
                <TabsTrigger value="contacts">Contacts</TabsTrigger>
                <TabsTrigger value="addresses">Addresses</TabsTrigger>
