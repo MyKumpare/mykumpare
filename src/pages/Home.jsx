@@ -374,13 +374,15 @@ export default function Home() {
         open={dialogOpen}
         onOpenChange={(open) => {
           setDialogOpen(open);
-          if (!open) { setEditingFirm(null); setPreselectedType(null); }
+          if (!open) { setEditingFirm(null); setPreselectedType(null); setOwnershipNavTarget(null); }
         }}
         onSubmit={handleSubmit}
         onDelete={setDeletingFirm}
         editingFirm={editingFirm}
         preselectedType={preselectedType}
         existingFirms={firms}
+        defaultTab={ownershipNavTarget ? "ownership" : undefined}
+        defaultOwnershipId={ownershipNavTarget?.ownershipId}
       />
 
       <DeleteConfirmDialog
