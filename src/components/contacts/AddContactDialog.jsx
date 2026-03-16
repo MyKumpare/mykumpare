@@ -484,9 +484,9 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                 </div>
               )}
 
-              {/* Contact Role */}
+              {/* Contact Priority */}
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-gray-700">Contact Role</Label>
+                <Label className="text-sm font-medium text-gray-700">Contact Priority</Label>
                 {viewMode ? (
                   <div className="text-sm px-1">
                     {contactRole ? (
