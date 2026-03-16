@@ -35,6 +35,7 @@ export default function Home() {
   const [addContactOpen, setAddContactOpen] = useState(false);
   const [viewingContact, setViewingContact] = useState(null);
   const [searchFocused, setSearchFocused] = useState(false);
+  const [ownershipNavTarget, setOwnershipNavTarget] = useState(null); // { firmId, ownershipId }
 
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
