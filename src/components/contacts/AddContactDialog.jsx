@@ -316,17 +316,19 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                 <TabsTrigger value="addresses" className="flex-1 flex items-center gap-1.5">
                   <MapPin className="w-3.5 h-3.5" /> Addresses
                 </TabsTrigger>
+              </TabsList>
+              <TabsList className="w-full">
                 <TabsTrigger value="education" className="flex-1 flex items-center gap-1.5">
                   <GraduationCap className="w-3.5 h-3.5" /> Education
                 </TabsTrigger>
-              </TabsList>
-              <TabsList className="w-full">
                 <TabsTrigger value="experience" className="flex-1 flex items-center gap-1.5">
                   <Briefcase className="w-3.5 h-3.5" /> Experience
                 </TabsTrigger>
                 <TabsTrigger value="classification" className="flex-1 flex items-center gap-1.5">
                   <Tag className="w-3.5 h-3.5" /> Classification
                 </TabsTrigger>
+              </TabsList>
+              <TabsList className="w-full">
                 <TabsTrigger value="demographics" className="flex-1 flex items-center gap-1.5">
                   Demographics
                 </TabsTrigger>
