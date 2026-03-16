@@ -106,6 +106,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setLinkedinUrl("");
         setEmployeeStatus("");
         setContactRole("");
+        setContactType("");
         setGender("Undetermined");
         setEthnicity([]);
         setVeteranStatus("Undetermined");
