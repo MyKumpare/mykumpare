@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, User } from "lucide-react";
 import AddContactDialog from "./AddContactDialog";
 
-export default function ContactsTab({ firmId, firms = [] }) {
+export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingContact, setEditingContact] = useState(null);
   const [viewMode, setViewMode] = useState(false);
