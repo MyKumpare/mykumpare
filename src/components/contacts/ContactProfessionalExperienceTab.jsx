@@ -8,12 +8,12 @@ const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: 80 }, (_, i) => CURRENT_YEAR - i);
 
 const COMMON_TITLES = [
-  "Analyst", "Associate", "Senior Associate", "Vice President", "Senior Vice President",
-  "Director", "Managing Director", "Principal", "Partner", "Managing Partner",
-  "Portfolio Manager", "Investment Manager", "Chief Investment Officer", "Chief Executive Officer",
-  "Chief Financial Officer", "Chief Operating Officer", "President", "Chairman",
-  "Research Analyst", "Quantitative Analyst", "Risk Manager", "Compliance Officer",
-  "Financial Advisor", "Wealth Manager", "Relationship Manager", "Business Development",
+  "Analyst", "Associate", "Business Development", "Chairman", "Chief Executive Officer",
+  "Chief Financial Officer", "Chief Investment Officer", "Chief Operating Officer",
+  "Compliance Officer", "Director", "Financial Advisor", "Investment Manager",
+  "Managing Director", "Managing Partner", "Partner", "Portfolio Manager", "President",
+  "Principal", "Quantitative Analyst", "Relationship Manager", "Research Analyst",
+  "Risk Manager", "Senior Associate", "Senior Vice President", "Vice President", "Wealth Manager",
 ];
 
 function YearPicker({ value, onChange, placeholder = "Select year..." }) {
