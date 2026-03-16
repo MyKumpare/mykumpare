@@ -205,6 +205,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
       if (ownerEntry) {
         if (!result[ownership.firm_id]) result[ownership.firm_id] = [];
         result[ownership.firm_id].push({
+          ownershipId: ownership.id,
           effective_date: ownership.effective_date,
           percentage: ownerEntry.ownership_percentage,
           owner_type: ownerEntry.owner_type,
