@@ -239,6 +239,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     setLogoUrl(editingFirm.logo_url || "");
     setWebsite(editingFirm.website || "");
     setLinkedinUrl(editingFirm.linkedin_url || "");
+    setYearFounded(editingFirm.year_founded ? String(editingFirm.year_founded) : "");
     setDescription(editingFirm.description || "");
     setAddresses(editingFirm.addresses || []);
     setPhones(editingFirm.phones || []);
