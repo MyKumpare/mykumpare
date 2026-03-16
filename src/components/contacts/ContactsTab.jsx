@@ -80,7 +80,7 @@ export default function ContactsTab({ firmId, firms = [] }) {
                       {contact.designations?.length > 0 && `, ${contact.designations.join(", ")}`}
                     </div>
                     {contact.contact_role && (
-                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium ${contact.contact_role === "Primary" ? "bg-indigo-100 text-indigo-700" : "bg-gray-100 text-gray-500"}`}>
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium ${contact.contact_role === "Primary" ? "bg-indigo-100 text-indigo-700" : "bg-amber-100 text-amber-700"}`}>
                         {contact.contact_role}
                       </span>
                     )}
