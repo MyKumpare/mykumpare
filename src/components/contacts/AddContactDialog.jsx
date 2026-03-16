@@ -461,7 +461,17 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                           <div className="space-y-0.5">
                             {history.map((h, i) => (
                               <div key={i} className="flex items-center justify-between text-xs text-gray-500">
-                                <span>{new Date(h.effective_date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}</span>
+                                {onNavigateToOwnership && h.ownershipId ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => { onOpenChange(false); onNavigateToOwnership(firmId, h.ownershipId); }}
+                                    className="text-indigo-600 hover:underline font-medium"
+                                  >
+                                    {new Date(h.effective_date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+                                  </button>
+                                ) : (
+                                  <span>{new Date(h.effective_date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}</span>
+                                )}
                                 <span className="font-medium text-gray-700">{h.percentage?.toFixed(2)}% · {h.owner_type}</span>
                               </div>
                             ))}
