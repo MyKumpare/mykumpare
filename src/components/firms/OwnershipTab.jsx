@@ -44,6 +44,14 @@ export default function OwnershipTab({ firmId, firmName, defaultOwnershipId }) {
   // Get most recent ownership breakdown
   const mostRecentOwnership = ownershipHistory[0];
 
+  // Pre-select a specific ownership record when navigated from contact dialog
+  useEffect(() => {
+    if (defaultOwnershipId && ownershipHistory.length > 0) {
+      const target = ownershipHistory.find(o => o.id === defaultOwnershipId);
+      if (target) setSelectedOwnership(target);
+    }
+  }, [defaultOwnershipId, ownershipHistory]);
+
   // When opening form with most recent data or selected ownership
   useEffect(() => {
     if (selectedOwnership) {
