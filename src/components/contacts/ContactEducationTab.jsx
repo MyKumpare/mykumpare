@@ -217,7 +217,7 @@ export default function ContactEducationTab({ education = [], onChange, designat
         )}
 
         <div className="space-y-3">
-          {education.map((entry, idx) => (
+          {[...education].sort((a, b) => (parseInt(b.graduation_year) || 0) - (parseInt(a.graduation_year) || 0)).map((entry, idx) => (
             <div key={entry.id} className="border rounded-xl p-3 bg-gray-50/60 space-y-3 relative">
               {!viewMode && (
                 <button type="button" onClick={() => removeEntry(entry.id)}
