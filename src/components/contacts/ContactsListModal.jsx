@@ -1,19 +1,24 @@
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { User, Building2 } from "lucide-react";
+import { User, Search } from "lucide-react";
 import AddContactDialog from "./AddContactDialog";
 
 export default function ContactsListModal({ open, onOpenChange, contacts = [], firms = [], onNavigateToOwnership }) {
-  const [firmSearch, setFirmSearch] = useState("");
+  const [search, setSearch] = useState("");
   const [viewingContact, setViewingContact] = useState(null);
 
   const getFirmName = (id) => firms.find((f) => f.id === id)?.name || "";
 
   const filtered = contacts.filter((c) => {
-    if (!firmSearch.trim()) return true;
-    return c.firm_ids?.some((fid) =>
-      getFirmName(fid).toLowerCase().includes(firmSearch.toLowerCase())
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    const fullName = [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ").toLowerCase();
+    return (
+      fullName.includes(q) ||
+      c.firm_ids?.some((fid) => getFirmName(fid).toLowerCase().includes(q)) ||
+      c.email?.toLowerCase().includes(q) ||
+      c.title?.toLowerCase().includes(q)
     );
   });
 
@@ -28,11 +33,11 @@ export default function ContactsListModal({ open, onOpenChange, contacts = [], f
         </DialogHeader>
 
         <div className="relative">
-          <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input
-            placeholder="Filter by firm name..."
-            value={firmSearch}
-            onChange={(e) => setFirmSearch(e.target.value)}
+            placeholder="Search by name, firm, email, or title..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
             className="pl-10 h-9"
           />
         </div>
@@ -40,7 +45,7 @@ export default function ContactsListModal({ open, onOpenChange, contacts = [], f
         <div className="overflow-y-auto flex-1 space-y-2 mt-1">
           {sorted.length === 0 ? (
             <div className="text-sm text-gray-400 italic text-center py-8">
-              {firmSearch ? "No contacts found for this firm" : "No contacts yet"}
+              {search ? "No contacts found" : "No contacts yet"}
             </div>
           ) : (
             sorted.map((c) => (
