@@ -423,6 +423,7 @@ export default function Home() {
         editingContact={viewingContact}
         firms={firms}
         viewMode={true}
+        onNavigateToOwnership={handleNavigateToOwnership}
       />
 
       <AddProductDialog
