@@ -417,15 +417,16 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                     {yearFounded || <span className="text-gray-400">—</span>}
                   </div>
                 ) : (
-                  <Input
-                    placeholder="e.g. 1995"
-                    value={yearFounded}
-                    onChange={(e) => setYearFounded(e.target.value)}
-                    className="h-9"
-                    type="number"
-                    min="1800"
-                    max={new Date().getFullYear()}
-                  />
+                  <Select value={yearFounded} onValueChange={setYearFounded}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Select year..." />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-56">
+                      {Array.from({ length: new Date().getFullYear() - 1799 }, (_, i) => String(new Date().getFullYear() - i)).map((yr) => (
+                        <SelectItem key={yr} value={yr}>{yr}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
               </div>
 
