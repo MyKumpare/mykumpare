@@ -195,6 +195,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
       biography: biography.trim(),
       notes: notes.trim(),
       education,
+      professional_experience: professionalExperience,
       firm_ids: firmIds,
       phones,
       addresses,
