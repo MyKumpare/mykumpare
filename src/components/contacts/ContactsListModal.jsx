@@ -81,6 +81,11 @@ export default function ContactsListModal({ open, onOpenChange, contacts = [], f
         editingContact={viewingContact}
         firms={firms}
         viewMode={true}
+        onNavigateToOwnership={onNavigateToOwnership ? (firmId, ownershipId) => {
+          setViewingContact(null);
+          onOpenChange(false);
+          onNavigateToOwnership(firmId, ownershipId);
+        } : undefined}
       />
     )}
     </>
