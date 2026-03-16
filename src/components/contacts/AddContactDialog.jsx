@@ -190,6 +190,34 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
     }
   };
 
+  const { data: allOwnerships = [] } = useQuery({
+    queryKey: ["ownership"],
+    queryFn: () => base44.entities.Ownership.list("-effective_date"),
+    enabled: !!editingContact,
+  });
+
+  // Find all ownership records where this contact appears as an owner, grouped by firm
+  const contactOwnershipByFirm = React.useMemo(() => {
+    if (!editingContact) return [];
+    const result = {};
+    allOwnerships.forEach(ownership => {
+      const ownerEntry = ownership.owners?.find(o => o.contact_id === editingContact.id);
+      if (ownerEntry) {
+        if (!result[ownership.firm_id]) result[ownership.firm_id] = [];
+        result[ownership.firm_id].push({
+          effective_date: ownership.effective_date,
+          percentage: ownerEntry.ownership_percentage,
+          owner_type: ownerEntry.owner_type,
+        });
+      }
+    });
+    // Sort each firm's history by date descending
+    Object.keys(result).forEach(fid => {
+      result[fid].sort((a, b) => new Date(b.effective_date) - new Date(a.effective_date));
+    });
+    return result;
+  }, [allOwnerships, editingContact]);
+
   const sortedFirms = [...firms].sort((a, b) => a.name.localeCompare(b.name));
   const filteredFirms = sortedFirms.filter(
     (f) => !firmIds.includes(f.id) && f.name.toLowerCase().includes(firmSearch.toLowerCase())
