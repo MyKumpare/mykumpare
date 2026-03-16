@@ -736,6 +736,98 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                 <Plus className="w-3.5 h-3.5" /> Add Address
               </Button>
             </TabsContent>
+
+            {/* ── CLASSIFICATION TAB ── */}
+            <TabsContent value="classification" className="space-y-4 mt-0">
+              {/* Contact Priority */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Contact Priority</Label>
+                {viewMode ? (
+                  <div className="text-sm px-1">
+                    {contactRole ? (
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${contactRole === "Primary" ? "bg-indigo-100 text-indigo-700" : "bg-gray-100 text-gray-600"}`}>
+                        {contactRole}
+                      </span>
+                    ) : <span className="text-gray-400 italic">—</span>}
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    {["Primary", "Secondary"].map(role => (
+                      <button key={role} type="button"
+                        onClick={() => setContactRole(contactRole === role ? "" : role)}
+                        className={`px-4 py-1.5 rounded-full text-xs font-medium border transition-colors ${contactRole === role
+                          ? role === "Primary" ? "bg-indigo-600 text-white border-indigo-600" : "bg-gray-600 text-white border-gray-600"
+                          : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-indigo-600"}`}>
+                        {role}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Contact Type */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Contact Type</Label>
+                {viewMode ? (
+                  <div className="text-sm px-1">
+                    {contactType ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">{contactType}</span>
+                    ) : <span className="text-gray-400 italic">—</span>}
+                  </div>
+                ) : (
+                  <Select value={contactType} onValueChange={(v) => setContactType(v === contactType ? "" : v)}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Select type..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {["Allocator", "Investment Consultant", "Investment Manager", "Securities Broker", "Trade Organization Representative"].map(t => (
+                        <SelectItem key={t} value={t}>{t}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            </TabsContent>
+
+            {/* ── OWNERSHIP TAB ── */}
+            <TabsContent value="ownership" className="space-y-4 mt-0">
+              {editingContact && Object.keys(contactOwnershipByFirm).length > 0 ? (
+                <div className="rounded-lg border border-indigo-100 bg-indigo-50/40 divide-y divide-indigo-100">
+                  {Object.entries(contactOwnershipByFirm).map(([firmId, history]) => {
+                    const firmName = getFirmName(firmId);
+                    const latest = history[0];
+                    return (
+                      <div key={firmId} className="p-2.5 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold text-indigo-700">{firmName}</span>
+                          <span className="text-sm font-bold text-indigo-600">{latest.percentage?.toFixed(2)}%</span>
+                        </div>
+                        <div className="space-y-0.5">
+                          {history.map((h, i) => (
+                            <div key={i} className="flex items-center justify-between text-xs text-gray-500">
+                              {onNavigateToOwnership && h.ownershipId ? (
+                                <button
+                                  type="button"
+                                  onClick={() => { onOpenChange(false); onNavigateToOwnership(firmId, h.ownershipId); }}
+                                  className="text-indigo-600 hover:underline font-medium"
+                                >
+                                  {new Date(h.effective_date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+                                </button>
+                              ) : (
+                                <span>{new Date(h.effective_date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}</span>
+                              )}
+                              <span className="font-medium text-gray-700">{h.percentage?.toFixed(2)}% · {h.owner_type}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-sm text-gray-400 italic text-center py-8">No ownership records found.</div>
+              )}
+            </TabsContent>
           </Tabs>
         </div>
 
