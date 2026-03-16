@@ -18,6 +18,7 @@ import QuickAddFirmForm from "./QuickAddFirmForm";
 import ContactPhoneForm from "./ContactPhoneForm";
 import ContactAddressForm from "./ContactAddressForm";
 import ContactEducationTab from "./ContactEducationTab";
+import ContactProfessionalExperienceTab from "./ContactProfessionalExperienceTab";
 
 const SALUTATIONS = ["Mr.", "Ms.", "Mrs.", "Dr.", "Prof.", "Hon."];
 const SUFFIXES = ["Jr.", "Sr.", "II", "III", "IV", "Esq.", "CFA", "CPA", "MBA", "PhD", "MD"];
