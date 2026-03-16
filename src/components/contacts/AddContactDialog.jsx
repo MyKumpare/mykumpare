@@ -168,10 +168,6 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
 
   const handleSubmit = () => {
     if (!isValid) return;
-    if (hasUndetermined && !showUndeterminedWarning) {
-      setShowUndeterminedWarning(true);
-      return;
-    }
     setShowUndeterminedWarning(false);
     const data = {
       photo_url: photoUrl,
