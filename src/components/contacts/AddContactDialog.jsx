@@ -620,6 +620,17 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
               </Button>
             </TabsContent>
 
+            {/* ── EDUCATION TAB ── */}
+            <TabsContent value="education" className="mt-0">
+              <ContactEducationTab
+                education={education}
+                onChange={setEducation}
+                designations={designations}
+                onDesignationsChange={setDesignations}
+                viewMode={viewMode}
+              />
+            </TabsContent>
+
             {/* ── CLASSIFICATION TAB ── */}
             <TabsContent value="classification" className="space-y-4 mt-0">
               {/* Contact Status */}
