@@ -308,10 +308,12 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                 <TabsTrigger value="classification" className="flex-1 flex items-center gap-1.5">
                   <Tag className="w-3.5 h-3.5" /> Classification
                 </TabsTrigger>
+                <TabsTrigger value="demographics" className="flex-1 flex items-center gap-1.5">
+                  Demographics
+                </TabsTrigger>
                 <TabsTrigger value="ownership" className="flex-1 flex items-center gap-1.5">
                   <TrendingUp className="w-3.5 h-3.5" /> Ownership
                 </TabsTrigger>
-                <div className="flex-1" />
               </TabsList>
             </div>
 
