@@ -488,30 +488,58 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                 </div>
               )}
 
-              {/* Contact Priority */}
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-gray-700">Contact Priority</Label>
-                {viewMode ? (
-                  <div className="text-sm px-1">
-                    {contactRole ? (
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${contactRole === "Primary" ? "bg-indigo-100 text-indigo-700" : "bg-gray-100 text-gray-600"}`}>
-                        {contactRole}
-                      </span>
-                    ) : <span className="text-gray-400 italic">—</span>}
-                  </div>
-                ) : (
-                  <div className="flex gap-2">
-                    {["Primary", "Secondary"].map(role => (
-                      <button key={role} type="button"
-                        onClick={() => setContactRole(contactRole === role ? "" : role)}
-                        className={`px-4 py-1.5 rounded-full text-xs font-medium border transition-colors ${contactRole === role
-                          ? role === "Primary" ? "bg-indigo-600 text-white border-indigo-600" : "bg-gray-600 text-white border-gray-600"
-                          : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-indigo-600"}`}>
-                        {role}
-                      </button>
-                    ))}
-                  </div>
-                )}
+              {/* Contact Classification */}
+              <div className="space-y-3 rounded-xl border border-gray-100 bg-gray-50/60 p-3">
+                <p className="text-xs font-semibold text-gray-500 tracking-wider">Contact Classification</p>
+
+                {/* Contact Priority */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-gray-700">Contact Priority</Label>
+                  {viewMode ? (
+                    <div className="text-sm px-1">
+                      {contactRole ? (
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${contactRole === "Primary" ? "bg-indigo-100 text-indigo-700" : "bg-gray-100 text-gray-600"}`}>
+                          {contactRole}
+                        </span>
+                      ) : <span className="text-gray-400 italic">—</span>}
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      {["Primary", "Secondary"].map(role => (
+                        <button key={role} type="button"
+                          onClick={() => setContactRole(contactRole === role ? "" : role)}
+                          className={`px-4 py-1.5 rounded-full text-xs font-medium border transition-colors ${contactRole === role
+                            ? role === "Primary" ? "bg-indigo-600 text-white border-indigo-600" : "bg-gray-600 text-white border-gray-600"
+                            : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-indigo-600"}`}>
+                          {role}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Contact Type */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-gray-700">Contact Type</Label>
+                  {viewMode ? (
+                    <div className="text-sm px-1">
+                      {contactType ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">{contactType}</span>
+                      ) : <span className="text-gray-400 italic">—</span>}
+                    </div>
+                  ) : (
+                    <Select value={contactType} onValueChange={(v) => setContactType(v === contactType ? "" : v)}>
+                      <SelectTrigger className="h-9 bg-white">
+                        <SelectValue placeholder="Select type..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {["Allocator", "Investment Consultant", "Investment Manager", "Securities Broker", "Trade Organization Representative"].map(t => (
+                          <SelectItem key={t} value={t}>{t}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
               </div>
 
               {/* Demographics */}
