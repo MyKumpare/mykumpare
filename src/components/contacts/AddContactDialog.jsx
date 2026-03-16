@@ -124,6 +124,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setNotes("");
         setFirmIds(currentFirmId ? [currentFirmId] : []);
         setEducation([]);
+        setProfessionalExperience([]);
         setPhones([newPhone()]);
         setAddresses([newAddress()]);
       }
