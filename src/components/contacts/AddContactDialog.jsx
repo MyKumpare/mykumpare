@@ -30,7 +30,7 @@ function newAddress() {
   return { id: crypto.randomUUID(), is_primary: false, country: "", state: "", city: "", postal_code: "", address_line1: "", address_line2: "" };
 }
 
-export default function AddContactDialog({ open, onOpenChange, editingContact, currentFirmId, firms: firmsProp = [], viewMode: initialViewMode = false }) {
+export default function AddContactDialog({ open, onOpenChange, editingContact, currentFirmId, firms: firmsProp = [], viewMode: initialViewMode = false, onNavigateToOwnership }) {
   const [viewMode, setViewMode] = useState(initialViewMode);
   const { data: liveFirms = [] } = useQuery({
     queryKey: ["firms"],
