@@ -94,6 +94,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setBiography(editingContact.biography || "");
         setNotes(editingContact.notes || "");
         setFirmIds(editingContact.firm_ids || []);
+        setEducation(editingContact.education || []);
         setPhones(editingContact.phones?.length > 0 ? editingContact.phones : [newPhone()]);
         setAddresses(editingContact.addresses?.length > 0 ? editingContact.addresses : [newAddress()]);
       } else {
