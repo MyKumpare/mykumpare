@@ -64,6 +64,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [firmSearch, setFirmSearch] = useState("");
   const [showFirmPicker, setShowFirmPicker] = useState(false);
   const [showQuickAddFirm, setShowQuickAddFirm] = useState(false);
+  const [education, setEducation] = useState([]);
   const [phones, setPhones] = useState([newPhone()]);
   const [addresses, setAddresses] = useState([newAddress()]);
 
