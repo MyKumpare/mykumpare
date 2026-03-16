@@ -190,6 +190,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
       disability_status: disabilityStatus,
       biography: biography.trim(),
       notes: notes.trim(),
+      education,
       firm_ids: firmIds,
       phones,
       addresses,
