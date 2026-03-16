@@ -53,7 +53,13 @@ export default function ContactsTab({ firmId, firms = [] }) {
       ) : (
         <div className="space-y-2">
           {firmContacts
-            .sort((a, b) => a.last_name.localeCompare(b.last_name))
+            .sort((a, b) => {
+              const roleOrder = { Primary: 0, Secondary: 1 };
+              const aOrder = roleOrder[a.contact_role] ?? 2;
+              const bOrder = roleOrder[b.contact_role] ?? 2;
+              if (aOrder !== bOrder) return aOrder - bOrder;
+              return (a.last_name || "").localeCompare(b.last_name || "");
+            })
             .map((contact) => (
               <div
                 key={contact.id}
