@@ -442,6 +442,37 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                 )}
               </div>
 
+              {/* Equity Ownership */}
+              {editingContact && Object.keys(contactOwnershipByFirm).length > 0 && (
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
+                    <TrendingUp className="w-3.5 h-3.5 text-indigo-500" /> Equity Ownership
+                  </Label>
+                  <div className="rounded-lg border border-indigo-100 bg-indigo-50/40 divide-y divide-indigo-100">
+                    {Object.entries(contactOwnershipByFirm).map(([firmId, history]) => {
+                      const firmName = getFirmName(firmId);
+                      const latest = history[0];
+                      return (
+                        <div key={firmId} className="p-2.5 space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-indigo-700">{firmName}</span>
+                            <span className="text-sm font-bold text-indigo-600">{latest.percentage?.toFixed(2)}%</span>
+                          </div>
+                          <div className="space-y-0.5">
+                            {history.map((h, i) => (
+                              <div key={i} className="flex items-center justify-between text-xs text-gray-500">
+                                <span>{new Date(h.effective_date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}</span>
+                                <span className="font-medium text-gray-700">{h.percentage?.toFixed(2)}% · {h.owner_type}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Contact Role */}
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-gray-700">Contact Role</Label>
