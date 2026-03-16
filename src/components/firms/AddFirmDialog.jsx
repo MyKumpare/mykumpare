@@ -79,7 +79,7 @@ const newAddress = () => ({
   address_line2: "",
 });
 
-export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, editingFirm, preselectedType, existingFirms = [] }) {
+export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, editingFirm, preselectedType, existingFirms = [], defaultTab, defaultOwnershipId }) {
   const [isEditing, setIsEditing] = useState(false);
   const [firmType, setFirmType] = useState("");
   const [firmName, setFirmName] = useState("");
