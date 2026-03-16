@@ -15,9 +15,9 @@ import { X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload, Trendi
 import { base44 } from "@/api/base44Client";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import QuickAddFirmForm from "./QuickAddFirmForm";
-import DesignationsPicker from "./DesignationsPicker";
 import ContactPhoneForm from "./ContactPhoneForm";
 import ContactAddressForm from "./ContactAddressForm";
+import ContactEducationTab from "./ContactEducationTab";
 
 const SALUTATIONS = ["Mr.", "Ms.", "Mrs.", "Dr.", "Prof.", "Hon."];
 const SUFFIXES = ["Jr.", "Sr.", "II", "III", "IV", "Esq.", "CFA", "CPA", "MBA", "PhD", "MD"];
