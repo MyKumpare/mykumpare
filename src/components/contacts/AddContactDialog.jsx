@@ -120,6 +120,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setBiography("");
         setNotes("");
         setFirmIds(currentFirmId ? [currentFirmId] : []);
+        setEducation([]);
         setPhones([newPhone()]);
         setAddresses([newAddress()]);
       }
