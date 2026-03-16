@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { User, Building2 } from "lucide-react";
 import AddContactDialog from "./AddContactDialog";
 
-export default function ContactsListModal({ open, onOpenChange, contacts = [], firms = [] }) {
+export default function ContactsListModal({ open, onOpenChange, contacts = [], firms = [], onNavigateToOwnership }) {
   const [firmSearch, setFirmSearch] = useState("");
   const [viewingContact, setViewingContact] = useState(null);
 
