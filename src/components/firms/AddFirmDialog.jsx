@@ -118,6 +118,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         setLogoUrl("");
         setWebsite("");
         setLinkedinUrl("");
+        setYearFounded("");
         setDescription("");
         setAddresses([]);
         setPhones([]);
