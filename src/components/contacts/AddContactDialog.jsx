@@ -693,6 +693,94 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
               </div>
             </TabsContent>
 
+            {/* ── DEMOGRAPHICS TAB ── */}
+            <TabsContent value="demographics" className="space-y-4 mt-0">
+              <div className={`space-y-3 rounded-xl border p-3 ${hasUndetermined && !viewMode ? "border-red-200 bg-red-50/40" : "border-gray-100 bg-gray-50/60"}`}>
+                {/* Gender */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-gray-700">Gender</Label>
+                  {viewMode ? (
+                    <div className="text-sm px-1 text-gray-900">{gender || "Undetermined"}</div>
+                  ) : (
+                    <div className="flex gap-2 flex-wrap">
+                      {["Undetermined", "Male", "Female"].map(g => (
+                        <button key={g} type="button" onClick={() => setGender(g)}
+                          className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${gender === g
+                            ? g === "Undetermined" ? "bg-red-500 text-white border-red-500" : "bg-indigo-600 text-white border-indigo-600"
+                            : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-indigo-600"}`}>
+                          {g}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Ethnicity */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-gray-700">Ethnicity</Label>
+                  {viewMode ? (
+                    <div className="text-sm px-1 text-gray-900">{ethnicity?.length > 0 ? ethnicity.join(", ") : "Undetermined"}</div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button"
+                        className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${ethnicity.length === 0 ? "bg-red-500 text-white border-red-500" : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-indigo-600"}`}
+                        onClick={() => setEthnicity([])}>
+                        Undetermined
+                      </button>
+                      {["African American", "Asian American", "Caucasian", "Latino American", "Native American Indian", "Native Alaskan Indian"].map(e => {
+                        const selected = ethnicity.includes(e);
+                        return (
+                          <button key={e} type="button"
+                            onClick={() => setEthnicity(selected ? ethnicity.filter(x => x !== e) : [...ethnicity, e])}
+                            className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${selected ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-indigo-600"}`}>
+                            {e}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Veteran Status */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-gray-700">Veteran Status</Label>
+                  {viewMode ? (
+                    <div className="text-sm px-1 text-gray-900">{veteranStatus || "Undetermined"}</div>
+                  ) : (
+                    <div className="flex gap-2 flex-wrap">
+                      {["Undetermined", "Veteran Owned", "Non-Veteran Owned"].map(v => (
+                        <button key={v} type="button" onClick={() => setVeteranStatus(v)}
+                          className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${veteranStatus === v
+                            ? v === "Undetermined" ? "bg-red-500 text-white border-red-500" : "bg-indigo-600 text-white border-indigo-600"
+                            : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-indigo-600"}`}>
+                          {v}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Disability Status */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-gray-700">Disability Status</Label>
+                  {viewMode ? (
+                    <div className="text-sm px-1 text-gray-900">{disabilityStatus || "Undetermined"}</div>
+                  ) : (
+                    <div className="flex gap-2 flex-wrap">
+                      {["Undetermined", "Disabled", "Non-Disabled"].map(d => (
+                        <button key={d} type="button" onClick={() => setDisabilityStatus(d)}
+                          className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${disabilityStatus === d
+                            ? d === "Undetermined" ? "bg-red-500 text-white border-red-500" : "bg-indigo-600 text-white border-indigo-600"
+                            : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-indigo-600"}`}>
+                          {d}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </TabsContent>
+
             {/* ── OWNERSHIP TAB ── */}
             <TabsContent value="ownership" className="space-y-4 mt-0">
               {editingContact && Object.keys(contactOwnershipByFirm).length > 0 ? (
