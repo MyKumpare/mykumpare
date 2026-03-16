@@ -212,6 +212,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
       logoUrl !== (editingFirm.logo_url || "") ||
       website !== (editingFirm.website || "") ||
       linkedinUrl !== (editingFirm.linkedin_url || "") ||
+      yearFounded !== (editingFirm.year_founded ? String(editingFirm.year_founded) : "") ||
       description !== (editingFirm.description || "") ||
       JSON.stringify(addresses) !== JSON.stringify(editingFirm.addresses || []) ||
       JSON.stringify(phones) !== JSON.stringify(editingFirm.phones || [])
