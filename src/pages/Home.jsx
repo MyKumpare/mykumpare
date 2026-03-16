@@ -407,6 +407,7 @@ export default function Home() {
         onOpenChange={setContactsModalOpen}
         contacts={contacts}
         firms={firms}
+        onNavigateToOwnership={handleNavigateToOwnership}
       />
 
       <AddContactDialog
