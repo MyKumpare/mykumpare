@@ -213,9 +213,13 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
       return existing.includes(input) || input.includes(existing);
     });
 
+  const existingTypes = editingFirm?.firm_types?.length
+    ? editingFirm.firm_types
+    : editingFirm?.firm_type ? [editingFirm.firm_type] : [];
+
   const hasChanges = editingFirm
     ? firmName.trim() !== editingFirm.name ||
-      firmType !== editingFirm.firm_type ||
+      JSON.stringify([...firmTypes].sort()) !== JSON.stringify([...existingTypes].sort()) ||
       logoUrl !== (editingFirm.logo_url || "") ||
       website !== (editingFirm.website || "") ||
       linkedinUrl !== (editingFirm.linkedin_url || "") ||
