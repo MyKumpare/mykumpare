@@ -426,23 +426,35 @@ export default function OrgChartTab({ firmId, firmName = "" }) {
   };
 
   const handlePrint = () => {
-    const printContent = chartRef.current?.innerHTML;
-    if (!printContent) return;
+    if (nodes.length === 0) return;
+    const reportDate = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+    const treeHtml = buildPrintTree(nodes, rootIds, firmContacts).join("");
     const w = window.open("", "_blank");
     w.document.write(`
-      <html><head><title>Org Chart</title>
-      <style>
-        body { font-family: sans-serif; padding: 20px; background: white; }
-        * { box-sizing: border-box; }
-        .no-print { display: none !important; }
-        img { max-width: 100%; }
-      </style>
-      <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2/dist/tailwind.min.css" rel="stylesheet"/>
-      </head><body>${printContent}</body></html>
+      <html>
+      <head>
+        <title>Org Chart – ${firmName}</title>
+        <style>
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body { font-family: 'Segoe UI', Arial, sans-serif; background: white; padding: 32px; color: #1e293b; }
+          .header { margin-bottom: 28px; border-bottom: 2px solid #e2e8f0; padding-bottom: 16px; }
+          .firm-name { font-size: 22px; font-weight: 800; color: #1e293b; }
+          .report-meta { font-size: 12px; color: #64748b; margin-top: 4px; }
+          .chart-wrap { display: flex; justify-content: center; padding-top: 8px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="firm-name">${firmName || "Organization Chart"}</div>
+          <div class="report-meta">Organizational Chart &nbsp;·&nbsp; Report Date: ${reportDate}</div>
+        </div>
+        <div class="chart-wrap">${treeHtml}</div>
+      </body>
+      </html>
     `);
     w.document.close();
     w.focus();
-    setTimeout(() => { w.print(); w.close(); }, 600);
+    setTimeout(() => { w.print(); }, 800);
   };
 
   const handleExportPNG = async () => {
