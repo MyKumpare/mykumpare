@@ -460,7 +460,25 @@ export default function OrgChartTab({ firmId, firmName = "" }) {
   const handleExportPNG = async () => {
     if (nodes.length === 0) return;
     const reportDate = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-    const treeHtml = buildPrintTree(nodes, rootIds, firmContacts).join("");
+
+    // Pre-fetch all contact photos as base64 to avoid cross-origin canvas issues
+    const photoCache = {};
+    const photoUrls = firmContacts.map(c => c.photo_url).filter(Boolean);
+    await Promise.all(photoUrls.map(async (url) => {
+      try {
+        const res = await fetch(url);
+        const blob = await res.blob();
+        photoCache[url] = await new Promise(resolve => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.readAsDataURL(blob);
+        });
+      } catch {
+        // ignore failed photos
+      }
+    }));
+
+    const treeHtml = buildPrintTree(nodes, rootIds, firmContacts, 0, photoCache).join("");
 
     // Build an off-screen iframe with the same styled HTML as the print view
     const iframe = document.createElement("iframe");
