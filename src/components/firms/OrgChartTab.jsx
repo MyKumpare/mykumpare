@@ -531,7 +531,7 @@ export default function OrgChartTab({ firmId }) {
         </div>
 
         {/* Chart canvas */}
-        <div className="flex-1 overflow-auto rounded-xl border border-gray-100 bg-gray-50/50 p-4">
+        <div ref={chartContainerRef} className="flex-1 overflow-auto rounded-xl border border-gray-100 bg-gray-50/50 p-4">
           <div
             ref={chartRef}
             style={{ transform: `scale(${zoom})`, transformOrigin: "top center", transition: "transform 0.15s ease" }}
