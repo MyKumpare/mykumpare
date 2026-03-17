@@ -201,6 +201,7 @@ function OrgNode({ node, contacts, onAddChild, onRemove, onDrop, onTitleChange, 
                   onRemove={onRemove}
                   onDrop={onDrop}
                   onTitleChange={onTitleChange}
+                  onViewContact={onViewContact}
                   depth={depth + 1}
                 />
               </div>
