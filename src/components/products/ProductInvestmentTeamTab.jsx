@@ -248,8 +248,8 @@ export default function ProductInvestmentTeamTab({ productId, firmId, isEditing 
         <AddContactDialog
           open={showAddContact}
           onOpenChange={setShowAddContact}
-          preselectedFirmId={firmId}
-          onSubmit={handleContactCreated}
+          currentFirmId={firmId}
+          onContactCreated={handleContactCreated}
         />
       )}
     </div>
