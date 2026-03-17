@@ -9,6 +9,25 @@ import { Plus, Package, Trash2, X } from "lucide-react";
 
 const PRODUCT_TYPES = ["Investment Manager Product", "Multi-Manager Product"];
 
+function ProductRow({ product, onDelete, disabled }) {
+  return (
+    <div className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-gray-200 bg-white hover:border-indigo-200 hover:bg-indigo-50/30 transition-colors">
+      <div className="flex items-center gap-2.5 min-w-0">
+        <Package className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+        <div className="text-sm font-medium text-gray-800 truncate">{product.name}</div>
+      </div>
+      <button
+        type="button"
+        onClick={onDelete}
+        className="ml-2 p-1 rounded text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0"
+        disabled={disabled}
+      >
+        <Trash2 className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+}
+
 export default function FirmProductsTab({ firmId, firmName }) {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
