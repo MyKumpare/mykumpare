@@ -67,6 +67,16 @@ export default function FirmProductsTab({ firmId, firmName, firms = [] }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products", firmId] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
+      setShowEditDialog(false);
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Product.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products", firmId] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      setShowEditDialog(false);
     },
   });
 
