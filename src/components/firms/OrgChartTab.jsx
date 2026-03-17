@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { User, Plus, X, ChevronDown, ChevronRight, GripVertical, Edit2, Check, Printer, Download, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
+import AddContactDialog from "@/components/contacts/AddContactDialog";
 
 function buildTree(nodes, rootIds) {
   return rootIds.map(id => {
