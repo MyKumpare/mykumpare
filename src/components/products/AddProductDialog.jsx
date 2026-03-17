@@ -337,6 +337,15 @@ export default function AddProductDialog({
               />
             </TabsContent>
 
+            {/* ── Investment Description Tab ── */}
+            <TabsContent value="description">
+              <ProductInvestmentDescriptionTab
+                descriptions={investmentDescriptions}
+                onChange={setInvestmentDescriptions}
+                isEditing={activelyEditing}
+              />
+            </TabsContent>
+
             {/* ── Investment Team Tab ── */}
             <TabsContent value="team">
               {editingProduct && (
