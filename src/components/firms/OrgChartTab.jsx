@@ -251,18 +251,19 @@ function RootDropZone({ onDrop, hasNodes }) {
   );
 }
 
-function buildPrintTree(nodes, rootIds, contacts, depth = 0) {
+function buildPrintTree(nodes, rootIds, contacts, depth = 0, photoCache = {}) {
   return rootIds.map(id => {
     const node = nodes.find(n => n.id === id);
     if (!node) return "";
     const contact = contacts.find(c => c.id === node.contact_id);
     const name = contact ? [contact.salutation, contact.first_name, contact.last_name].filter(Boolean).join(" ") : "Unknown";
     const title = node.title_override || contact?.title || "";
-    const photoHtml = contact?.photo_url
-      ? `<img src="${contact.photo_url}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid #e0e7ff;" />`
+    const photoSrc = contact?.photo_url ? (photoCache[contact.photo_url] || contact.photo_url) : null;
+    const photoHtml = photoSrc
+      ? `<img src="${photoSrc}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid #e0e7ff;" />`
       : `<div style="width:48px;height:48px;border-radius:50%;background:#e0e7ff;display:flex;align-items:center;justify-content:center;font-size:18px;color:#6366f1;">👤</div>`;
     const childrenHtml = (node.children || []).length > 0
-      ? buildPrintTree(nodes, node.children, contacts, depth + 1)
+      ? buildPrintTree(nodes, node.children, contacts, depth + 1, photoCache)
       : [];
 
     const depthColors = ["#eef2ff", "#eff6ff", "#f5f3ff", "#f0fdfa"];
