@@ -120,7 +120,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         setPhones(editingFirm.phones?.length ? editingFirm.phones : []);
         setIsEditing(false);
       } else {
-        setFirmType(preselectedType || "");
+        setFirmTypes(preselectedType ? [preselectedType] : []);
         setFirmName("");
         setLogoUrl("");
         setWebsite("");
