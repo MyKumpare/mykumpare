@@ -105,7 +105,7 @@ function OrgNode({ node, contacts, onAddChild, onRemove, onDrop, onTitleChange, 
         onDrop={handleDrop}
         className={`relative group flex flex-col items-center p-3 rounded-xl border-2 bg-white shadow-sm transition-all cursor-grab select-none
           ${dragOver ? "border-indigo-500 bg-indigo-50 scale-105 shadow-md" : `${depthColor} hover:shadow-md`}`}
-        style={{ width: 148 }}
+        style={{ width: 164 }}
       >
         <button
           type="button"
@@ -118,9 +118,15 @@ function OrgNode({ node, contacts, onAddChild, onRemove, onDrop, onTitleChange, 
         <ContactAvatar contact={contact} size="md" />
 
         <div className="mt-1.5 text-center w-full">
-          <div className="text-xs font-semibold text-gray-800 truncate w-full text-center">
+          {/* Clickable name */}
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onViewContact(contact); }}
+            className="text-xs font-semibold text-gray-800 hover:text-indigo-600 hover:underline w-full text-center leading-tight break-words whitespace-normal cursor-pointer transition-colors"
+            style={{ wordBreak: "break-word" }}
+          >
             {getContactName(contact)}
-          </div>
+          </button>
 
           {editingTitle ? (
             <div className="flex items-center gap-1 mt-1">
@@ -137,11 +143,12 @@ function OrgNode({ node, contacts, onAddChild, onRemove, onDrop, onTitleChange, 
             </div>
           ) : (
             <div
-              className="text-xs text-gray-500 truncate w-full text-center mt-0.5 cursor-pointer hover:text-indigo-500 flex items-center justify-center gap-0.5 group/title no-print-hover"
+              className="text-xs text-gray-500 w-full text-center mt-0.5 cursor-pointer hover:text-indigo-500 flex items-center justify-center gap-0.5 group/title leading-tight"
+              style={{ wordBreak: "break-word", whiteSpace: "normal" }}
               onClick={() => { setTitleVal(node.title_override || contact?.title || ""); setEditingTitle(true); }}
             >
               <span>{node.title_override || contact?.title || <span className="italic text-gray-300">Add title…</span>}</span>
-              <Edit2 className="w-2.5 h-2.5 opacity-0 group-hover/title:opacity-100 no-print" />
+              <Edit2 className="w-2.5 h-2.5 flex-shrink-0 opacity-0 group-hover/title:opacity-100 no-print" />
             </div>
           )}
         </div>
