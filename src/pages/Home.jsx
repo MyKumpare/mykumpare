@@ -190,9 +190,12 @@ export default function Home() {
     f.name.toLowerCase().includes(q) || matchingProductFirmIds.has(f.id) || matchingContactFirmIds.has(f.id)
   );
 
+  const getFirmTypes = (f) =>
+    f.firm_types?.length ? f.firm_types : f.firm_type ? [f.firm_type] : [];
+
   const groupedFirms = FIRM_TYPES.reduce((acc, type) => {
     const typeFirms = filteredFirms
-      .filter((f) => f.firm_type === type)
+      .filter((f) => getFirmTypes(f).includes(type))
       .sort((a, b) => a.name.localeCompare(b.name));
     if (typeFirms.length > 0) acc[type] = typeFirms;
     return acc;
