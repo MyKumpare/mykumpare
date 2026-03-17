@@ -73,6 +73,7 @@ export default function AddProductDialog({
   const [productName, setProductName] = useState("");
   const [description, setDescription] = useState("");
   const [classifications, setClassifications] = useState(EMPTY_CLASSIFICATIONS);
+  const [investmentDescriptions, setInvestmentDescriptions] = useState({});
   const nameInputRef = useRef(null);
 
   const isAddMode = !editingProduct;
