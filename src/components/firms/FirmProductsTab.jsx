@@ -21,7 +21,13 @@ export default function FirmProductsTab({ firmId, firmName }) {
     enabled: !!firmId,
   });
 
-  const sortedProducts = [...products].sort((a, b) => a.name.localeCompare(b.name));
+  const investmentManagerProducts = [...products]
+    .filter(p => p.product_type === "Investment Manager Product")
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const multiManagerProducts = [...products]
+    .filter(p => p.product_type === "Multi-Manager Product")
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Product.create(data),
