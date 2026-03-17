@@ -257,6 +257,16 @@ export default function ProductInvestmentTeamTab({ productId, firmId, isEditing 
           onContactCreated={handleContactCreated}
         />
       )}
+
+      {/* View/edit contact dialog */}
+      {viewingContact && (
+        <AddContactDialog
+          open={!!viewingContact}
+          onOpenChange={(o) => { if (!o) setViewingContact(null); }}
+          editingContact={viewingContact}
+          viewMode={true}
+        />
+      )}
     </div>
   );
 }
