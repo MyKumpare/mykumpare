@@ -6,6 +6,18 @@ import { Input } from "@/components/ui/input";
 import { User, Plus, X, ChevronDown, ChevronRight, GripVertical, Edit2, Check, Printer, Download, ZoomIn, ZoomOut, Maximize2, CheckCircle2, Loader2, Users, Layers, UserMinus } from "lucide-react";
 import AddContactDialog from "@/components/contacts/AddContactDialog";
 
+function getMaxDepth(nodes, rootIds) {
+  const calc = (id, depth) => {
+    const node = nodes.find(n => n.id === id);
+    if (!node) return depth;
+    const children = node.children || [];
+    if (children.length === 0) return depth;
+    return Math.max(...children.map(cid => calc(cid, depth + 1)));
+  };
+  if (rootIds.length === 0) return 0;
+  return Math.max(...rootIds.map(id => calc(id, 1)));
+}
+
 function buildTree(nodes, rootIds) {
   return rootIds.map(id => {
     const node = nodes.find(n => n.id === id);
