@@ -251,7 +251,49 @@ function RootDropZone({ onDrop, hasNodes }) {
   );
 }
 
-export default function OrgChartTab({ firmId }) {
+function buildPrintTree(nodes, rootIds, contacts, depth = 0) {
+  return rootIds.map(id => {
+    const node = nodes.find(n => n.id === id);
+    if (!node) return "";
+    const contact = contacts.find(c => c.id === node.contact_id);
+    const name = contact ? [contact.salutation, contact.first_name, contact.last_name].filter(Boolean).join(" ") : "Unknown";
+    const title = node.title_override || contact?.title || "";
+    const photoHtml = contact?.photo_url
+      ? `<img src="${contact.photo_url}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid #e0e7ff;" />`
+      : `<div style="width:48px;height:48px;border-radius:50%;background:#e0e7ff;display:flex;align-items:center;justify-content:center;font-size:18px;color:#6366f1;">👤</div>`;
+    const childrenHtml = (node.children || []).length > 0
+      ? buildPrintTree(nodes, node.children, contacts, depth + 1)
+      : [];
+
+    const depthColors = ["#eef2ff", "#eff6ff", "#f5f3ff", "#f0fdfa"];
+    const depthBorders = ["#a5b4fc", "#93c5fd", "#c4b5fd", "#5eead4"];
+    const bg = depthColors[depth % depthColors.length];
+    const border = depthBorders[depth % depthBorders.length];
+
+    const cardHtml = `
+      <div style="display:flex;flex-direction:column;align-items:center;min-width:160px;">
+        <div style="background:${bg};border:2px solid ${border};border-radius:12px;padding:12px;width:160px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+          <div style="display:flex;justify-content:center;margin-bottom:8px;">${photoHtml}</div>
+          <div style="font-size:12px;font-weight:700;color:#1e293b;line-height:1.3;">${name}</div>
+          ${title ? `<div style="font-size:11px;color:#64748b;margin-top:4px;line-height:1.3;">${title}</div>` : ""}
+        </div>
+        ${childrenHtml.length > 0 ? `
+          <div style="width:2px;height:20px;background:#d1d5db;"></div>
+          <div style="position:relative;display:flex;align-items:flex-start;gap:24px;">
+            ${childrenHtml.length > 1 ? `<div style="position:absolute;top:0;left:50%;transform:translateX(-50%);height:2px;width:calc(100% - 80px);background:#d1d5db;"></div>` : ""}
+            ${childrenHtml.map(ch => `
+              <div style="display:flex;flex-direction:column;align-items:center;">
+                <div style="width:2px;height:20px;background:#d1d5db;"></div>
+                ${ch}
+              </div>`).join("")}
+          </div>
+        ` : ""}
+      </div>`;
+    return cardHtml;
+  });
+}
+
+export default function OrgChartTab({ firmId, firmName = "" }) {
   const queryClient = useQueryClient();
   const [pendingAdd, setPendingAdd] = useState(null);
   const [zoom, setZoom] = useState(1);
