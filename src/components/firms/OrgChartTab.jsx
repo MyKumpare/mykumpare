@@ -256,8 +256,10 @@ export default function OrgChartTab({ firmId }) {
   const [pendingAdd, setPendingAdd] = useState(null);
   const [zoom, setZoom] = useState(1);
   const chartRef = useRef(null);
+  const chartContainerRef = useRef(null);
   const [viewingContact, setViewingContact] = useState(null);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
+  const [saveStatus, setSaveStatus] = useState(null); // null | "saving" | "saved"
 
   const handleViewContact = (contact) => {
     if (!contact) return;
