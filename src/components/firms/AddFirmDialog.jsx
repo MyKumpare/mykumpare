@@ -105,7 +105,11 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     if (open) {
       setExpandedPhoneId(null);
       if (editingFirm) {
-        setFirmType(editingFirm.firm_type || "");
+        // Support both legacy firm_type (string) and new firm_types (array)
+        const types = editingFirm.firm_types?.length
+          ? editingFirm.firm_types
+          : editingFirm.firm_type ? [editingFirm.firm_type] : [];
+        setFirmTypes(types);
         setFirmName(editingFirm.name || "");
         setLogoUrl(editingFirm.logo_url || "");
         setWebsite(editingFirm.website || "");
