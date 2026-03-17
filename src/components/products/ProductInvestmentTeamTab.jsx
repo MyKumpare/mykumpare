@@ -35,7 +35,7 @@ function ContactPicker({ firmId, existingMemberIds, onAdd }) {
         onFocus={() => setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
       />
-      {open && search.length > 0 && (
+      {open && (
         <div className="absolute z-50 mt-1 w-full rounded-md border bg-white shadow-lg max-h-48 overflow-y-auto">
           {firmContacts.length === 0 ? (
             <div className="px-3 py-2 text-sm text-gray-400 italic">No matching contacts found</div>
