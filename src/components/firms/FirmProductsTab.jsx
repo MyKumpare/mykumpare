@@ -29,11 +29,13 @@ function ProductRow({ product, onDelete, disabled }) {
   );
 }
 
-export default function FirmProductsTab({ firmId, firmName }) {
+export default function FirmProductsTab({ firmId, firmName, firms = [] }) {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [productName, setProductName] = useState("");
   const [productType, setProductType] = useState("");
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ["products", firmId],
