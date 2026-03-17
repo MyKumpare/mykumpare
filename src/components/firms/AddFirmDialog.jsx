@@ -16,6 +16,7 @@ import AddressForm from "./AddressForm";
 import PhoneForm from "./PhoneForm";
 import ContactsTab from "../contacts/ContactsTab";
 import OwnershipTab from "./OwnershipTab";
+import OrgChartTab from "./OrgChartTab";
 
 function getCountryCodeFromCountryName(countryName) {
   if (!countryName) return "";
