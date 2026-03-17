@@ -413,9 +413,22 @@ export default function OrgChartTab({ firmId }) {
     link.click();
   };
 
+  const handleFit = () => {
+    if (!chartRef.current || !chartContainerRef.current) { setZoom(1); return; }
+    const containerW = chartContainerRef.current.clientWidth - 32;
+    const containerH = chartContainerRef.current.clientHeight - 32;
+    const contentW = chartRef.current.scrollWidth;
+    const contentH = chartRef.current.scrollHeight;
+    if (contentW === 0 || contentH === 0) { setZoom(1); return; }
+    const fitZoom = Math.min(containerW / contentW, containerH / contentH, 1.5);
+    setZoom(Math.max(0.2, parseFloat(fitZoom.toFixed(2))));
+  };
+
   const tree = buildTree(nodes, rootIds);
   const usedContactIds = new Set(nodes.map(n => n.contact_id));
   const availableContacts = firmContacts.filter(c => !usedContactIds.has(c.id));
+  const levels = getMaxDepth(nodes, rootIds);
+  const unassignedCount = availableContacts.length;
 
   return (
     <div className="flex flex-col gap-3">
