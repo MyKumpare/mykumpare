@@ -343,21 +343,33 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               {/* Firm Type */}
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-gray-700">Type of Firm</Label>
-                {!activelyEditing || (preselectedType && !editingFirm) ? (
-                  <div className="h-9 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-700 font-medium">
-                    {firmType}
+                {!activelyEditing ? (
+                  <div className="px-3 py-2 flex flex-wrap gap-1 rounded-md border bg-gray-50 min-h-9">
+                    {firmTypes.length > 0
+                      ? firmTypes.map((t) => (
+                          <span key={t} className="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-700">{t}</span>
+                        ))
+                      : <span className="text-sm text-gray-400">—</span>
+                    }
                   </div>
                 ) : (
-                  <Select value={firmType} onValueChange={setFirmType}>
-                    <SelectTrigger className="h-9">
-                      <SelectValue placeholder="Select firm type..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {FIRM_TYPES.map((type) => (
-                        <SelectItem key={type} value={type}>{type}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="rounded-md border bg-white p-2 space-y-1.5">
+                    {FIRM_TYPES.map((type) => (
+                      <label key={type} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 px-1 py-0.5 rounded">
+                        <Checkbox
+                          checked={firmTypes.includes(type)}
+                          onCheckedChange={(checked) => {
+                            setFirmTypes(checked
+                              ? [...firmTypes, type]
+                              : firmTypes.filter((t) => t !== type)
+                            );
+                          }}
+                          disabled={preselectedType === type && !editingFirm}
+                        />
+                        <span className="text-sm text-gray-700">{type}</span>
+                      </label>
+                    ))}
+                  </div>
                 )}
               </div>
 
