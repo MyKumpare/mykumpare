@@ -95,7 +95,7 @@ function OrgNode({ node, contacts, onAddChild, onRemove, onDrop, onTitleChange, 
   const depthColor = depthColors[depth % depthColors.length];
 
   return (
-    <div className="flex flex-col items-center" style={{ minWidth: 160 }}>
+    <div className="flex flex-col items-center" style={{ minWidth: 164 }}>
       {/* Node card */}
       <div
         draggable
