@@ -244,6 +244,14 @@ export default function OrgChartTab({ firmId }) {
   const [pendingAdd, setPendingAdd] = useState(null);
   const [zoom, setZoom] = useState(1);
   const chartRef = useRef(null);
+  const [viewingContact, setViewingContact] = useState(null);
+  const [contactDialogOpen, setContactDialogOpen] = useState(false);
+
+  const handleViewContact = (contact) => {
+    if (!contact) return;
+    setViewingContact(contact);
+    setContactDialogOpen(true);
+  };
 
   const { data: allContacts = [] } = useQuery({
     queryKey: ["contacts"],
