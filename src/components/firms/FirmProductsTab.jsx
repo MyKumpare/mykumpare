@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Package, Trash2, X } from "lucide-react";
+import AddProductDialog from "@/components/products/AddProductDialog";
 
 const PRODUCT_TYPES = ["Investment Manager Product", "Multi-Manager Product"];
 
