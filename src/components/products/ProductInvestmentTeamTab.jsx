@@ -157,16 +157,20 @@ export default function ProductInvestmentTeamTab({ productId, firmId, isEditing 
                   </div>
                 )}
 
-                {/* Name & title */}
+                {/* Name & title — clickable */}
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-gray-800 truncate">
+                  <button
+                    type="button"
+                    className="text-sm font-medium text-indigo-700 hover:underline truncate text-left"
+                    onClick={() => setViewingContact(contact)}
+                  >
                     {contact.first_name} {contact.last_name}
                     {member.is_key && (
                       <Badge className="ml-2 text-[10px] px-1.5 py-0 bg-amber-100 text-amber-700 border-amber-200">
                         Key
                       </Badge>
                     )}
-                  </div>
+                  </button>
                   {contact.title && (
                     <div className="text-xs text-gray-400 truncate">{contact.title}</div>
                   )}
