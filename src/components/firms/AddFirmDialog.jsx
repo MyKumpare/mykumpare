@@ -640,6 +640,16 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                 </div>
               )}
               </TabsContent>
+
+              <TabsContent value="orgchart" className="space-y-3">
+              {editingFirm ? (
+                <OrgChartTab firmId={editingFirm.id} />
+              ) : (
+                <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
+                  Save the firm first to build the org chart
+                </div>
+              )}
+              </TabsContent>
               </Tabs>
               </div>
 
