@@ -152,6 +152,8 @@ export default function AddProductDialog({
       name: productName.trim(),
       description,
       ...classifications,
+      inv_desc_philosophy: investmentDescriptions.investment_philosophy || "",
+      inv_desc_process: investmentDescriptions.investment_process || "",
     });
     setProductType("");
     setFirmId("");
