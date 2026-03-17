@@ -138,7 +138,11 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Contact.create(data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["contacts"] }); onOpenChange(false); },
+    onSuccess: (createdContact) => {
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      onOpenChange(false);
+      if (onContactCreated) onContactCreated(createdContact);
+    },
   });
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Contact.update(id, data),
