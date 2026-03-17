@@ -201,9 +201,10 @@ export default function AddProductDialog({
 
         <div className="flex-1 overflow-y-auto pr-1">
           <Tabs defaultValue="details" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsList className="grid w-full grid-cols-3 mb-4">
               <TabsTrigger value="details">Details</TabsTrigger>
               <TabsTrigger value="classifications">Classifications</TabsTrigger>
+              <TabsTrigger value="team" disabled={isAddMode}>Investment Team</TabsTrigger>
             </TabsList>
 
             {/* ── Details Tab ── */}
