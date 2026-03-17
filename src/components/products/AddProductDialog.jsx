@@ -87,6 +87,10 @@ export default function AddProductDialog({
         setProductName(editingProduct.name);
         setDescription(editingProduct.description || "");
         setClassifications(classificationsFromProduct(editingProduct));
+        setInvestmentDescriptions({
+          investment_philosophy: editingProduct.inv_desc_philosophy || "",
+          investment_process: editingProduct.inv_desc_process || "",
+        });
         setIsEditing(false);
       } else {
         setProductType(preselectedProductType || "");
@@ -94,6 +98,7 @@ export default function AddProductDialog({
         setProductName("");
         setDescription("");
         setClassifications(EMPTY_CLASSIFICATIONS);
+        setInvestmentDescriptions({});
         setIsEditing(true);
       }
     }
