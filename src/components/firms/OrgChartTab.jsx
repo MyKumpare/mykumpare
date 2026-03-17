@@ -299,7 +299,13 @@ export default function OrgChartTab({ firmId }) {
       if (orgChart) return base44.entities.OrgChart.update(orgChart.id, data);
       return base44.entities.OrgChart.create(data);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["orgchart", firmId] }),
+    onMutate: () => setSaveStatus("saving"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orgchart", firmId] });
+      setSaveStatus("saved");
+      setTimeout(() => setSaveStatus(null), 2500);
+    },
+    onError: () => setSaveStatus(null),
   });
 
   const save = useCallback((newNodes, newRootIds) => {
