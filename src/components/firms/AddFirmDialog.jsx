@@ -457,8 +457,9 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                <TabsTrigger value="addresses">Addresses</TabsTrigger>
                <TabsTrigger value="phones">Phones</TabsTrigger>
              </TabsList>
-             <TabsList className="grid w-full grid-cols-1 mt-1">
+             <TabsList className="grid w-full grid-cols-2 mt-1">
                <TabsTrigger value="ownership">Ownership</TabsTrigger>
+               <TabsTrigger value="orgchart">Org Chart</TabsTrigger>
              </TabsList>
 
             <TabsContent value="contacts" className="space-y-3">
