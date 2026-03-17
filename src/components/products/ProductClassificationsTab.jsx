@@ -101,19 +101,19 @@ export default function ProductClassificationsTab({ classifications, onChange, i
             )}
           </FieldRow>
 
-          <FieldRow label="Investment Process">
+          <FieldRow label="Investment Approach">
             {isEditing ? (
-              <CreatableSelect value={classifications?.investment_process || ""} onChange={(v) => set("investment_process", v)} options={INVESTMENT_PROCESSES} placeholder="Select investment process..." />
+              <CreatableSelect value={classifications?.investment_process || ""} onChange={(v) => set("investment_process", v)} options={INVESTMENT_PROCESSES} placeholder="Select investment approach..." />
             ) : (
               <ReadOnlyValue value={classifications?.investment_process} />
             )}
           </FieldRow>
 
-          <FieldRow label="Implementation Process">
+          <FieldRow label="Implementation Approach">
             {isEditing ? (
               <Select value={classifications?.implementation_process || ""} onValueChange={(v) => set("implementation_process", v)}>
                 <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Select implementation process..." />
+                  <SelectValue placeholder="Select implementation approach..." />
                 </SelectTrigger>
                 <SelectContent>
                   {IMPLEMENTATION_PROCESSES.map((p) => (
