@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { User, Plus, X, ChevronDown, ChevronRight, GripVertical, Edit2, Check, Printer, Download, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
+import { User, Plus, X, ChevronDown, ChevronRight, GripVertical, Edit2, Check, Printer, Download, ZoomIn, ZoomOut, Maximize2, CheckCircle2, Loader2, Users, Layers, UserMinus } from "lucide-react";
 import AddContactDialog from "@/components/contacts/AddContactDialog";
 
 function buildTree(nodes, rootIds) {
