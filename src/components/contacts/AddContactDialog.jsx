@@ -880,6 +880,10 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                 <div className="text-sm text-gray-400 italic text-center py-8">No ownership records found.</div>
               )}
             </TabsContent>
+            {/* ── ACTIVITIES TAB ── */}
+            <TabsContent value="activities" className="mt-0">
+              <ContactActivitiesTab contactId={editingContact?.id} />
+            </TabsContent>
           </Tabs>
         </div>
 
