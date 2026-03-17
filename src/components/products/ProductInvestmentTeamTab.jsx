@@ -66,6 +66,7 @@ export default function ProductInvestmentTeamTab({ productId, firmId, isEditing 
   const queryClient = useQueryClient();
   const [showPicker, setShowPicker] = useState(false);
   const [showAddContact, setShowAddContact] = useState(false);
+  const [viewingContact, setViewingContact] = useState(null);
 
   // investment_team stored as array of { contact_id, is_key }
   const { data: product, isLoading } = useQuery({
