@@ -458,11 +458,65 @@ export default function OrgChartTab({ firmId, firmName = "" }) {
   };
 
   const handleExportPNG = async () => {
-    if (!chartRef.current) return;
+    if (nodes.length === 0) return;
+    const reportDate = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+    const treeHtml = buildPrintTree(nodes, rootIds, firmContacts).join("");
+
+    // Build an off-screen iframe with the same styled HTML as the print view
+    const iframe = document.createElement("iframe");
+    iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:1200px;height:2000px;border:none;visibility:hidden;";
+    document.body.appendChild(iframe);
+
+    iframe.contentDocument.write(`
+      <html>
+      <head>
+        <style>
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body { font-family: 'Segoe UI', Arial, sans-serif; background: white; padding: 32px; color: #1e293b; }
+          .header { margin-bottom: 28px; border-bottom: 2px solid #e2e8f0; padding-bottom: 16px; }
+          .firm-name { font-size: 22px; font-weight: 800; color: #1e293b; }
+          .report-meta { font-size: 12px; color: #64748b; margin-top: 4px; }
+          .chart-wrap { display: flex; justify-content: center; padding-top: 8px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="firm-name">${firmName || "Organization Chart"}</div>
+          <div class="report-meta">Organizational Chart &nbsp;·&nbsp; Report Date: ${reportDate}</div>
+        </div>
+        <div class="chart-wrap">${treeHtml}</div>
+      </body>
+      </html>
+    `);
+    iframe.contentDocument.close();
+
+    // Wait for images to load inside the iframe
+    const imgs = Array.from(iframe.contentDocument.querySelectorAll("img"));
+    await Promise.all(imgs.map(img => new Promise(resolve => {
+      if (img.complete) return resolve();
+      img.onload = resolve;
+      img.onerror = resolve;
+    })));
+
+    // Measure actual content height
+    const body = iframe.contentDocument.body;
+    const contentH = body.scrollHeight + 40;
+    iframe.style.height = `${contentH}px`;
+
     const { default: html2canvas } = await import("html2canvas");
-    const canvas = await html2canvas(chartRef.current, { backgroundColor: "#ffffff", scale: 2 });
+    const canvas = await html2canvas(iframe.contentDocument.body, {
+      backgroundColor: "#ffffff",
+      scale: 2,
+      width: 1200,
+      height: contentH,
+      windowWidth: 1200,
+      windowHeight: contentH,
+    });
+
+    document.body.removeChild(iframe);
+
     const link = document.createElement("a");
-    link.download = "org-chart.png";
+    link.download = `org-chart-${firmName || "export"}.png`;
     link.href = canvas.toDataURL("image/png");
     link.click();
   };
