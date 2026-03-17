@@ -58,7 +58,7 @@ function ConnectorLines({ childCount }) {
   );
 }
 
-function OrgNode({ node, contacts, onAddChild, onRemove, onDrop, onTitleChange, depth = 0 }) {
+function OrgNode({ node, contacts, onAddChild, onRemove, onDrop, onTitleChange, onViewContact, depth = 0 }) {
   const contact = contacts.find(c => c.id === node.contact_id);
   const [collapsed, setCollapsed] = useState(false);
   const [dragOver, setDragOver] = useState(false);
