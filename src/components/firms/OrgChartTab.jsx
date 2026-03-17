@@ -530,6 +530,8 @@ export default function OrgChartTab({ firmId, firmName = "" }) {
       height: contentH,
       windowWidth: 1200,
       windowHeight: contentH,
+      useCORS: true,
+      allowTaint: false,
     });
 
     document.body.removeChild(iframe);
