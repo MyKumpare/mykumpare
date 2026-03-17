@@ -180,6 +180,16 @@ export default function FirmProductsTab({ firmId, firmName, firms = [] }) {
           )}
         </div>
       )}
+
+      <AddProductDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        editingProduct={editingProduct}
+        firms={firms}
+        existingProducts={products}
+        onSubmit={(data) => updateMutation.mutate({ id: editingProduct.id, data })}
+        onDelete={(p) => deleteMutation.mutate(p.id)}
+      />
     </div>
   );
 }
