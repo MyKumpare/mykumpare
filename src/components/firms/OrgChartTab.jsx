@@ -435,17 +435,32 @@ export default function OrgChartTab({ firmId }) {
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-1">
-          <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" onClick={() => setZoom(z => Math.max(0.4, z - 0.1))}>
+          <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" onClick={() => setZoom(z => Math.max(0.2, z - 0.1))}>
             <ZoomOut className="w-3.5 h-3.5" />
           </Button>
           <span className="text-xs text-gray-500 w-10 text-center">{Math.round(zoom * 100)}%</span>
           <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" onClick={() => setZoom(z => Math.min(2, z + 0.1))}>
             <ZoomIn className="w-3.5 h-3.5" />
           </Button>
-          <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1 ml-1" onClick={() => setZoom(1)}>
+          <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1 ml-1" onClick={handleFit}>
             <Maximize2 className="w-3.5 h-3.5" /> Fit
           </Button>
         </div>
+
+        {/* Save status */}
+        <div className="flex items-center gap-1.5 min-w-[80px]">
+          {saveStatus === "saving" && (
+            <span className="flex items-center gap-1 text-xs text-amber-600 font-medium">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…
+            </span>
+          )}
+          {saveStatus === "saved" && (
+            <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
+              <CheckCircle2 className="w-3.5 h-3.5" /> Saved
+            </span>
+          )}
+        </div>
+
         {nodes.length > 0 && (
           <div className="flex items-center gap-1.5">
             <Button variant="outline" size="sm" className="h-7 px-2.5 text-xs gap-1.5" onClick={handlePrint}>
@@ -457,6 +472,26 @@ export default function OrgChartTab({ firmId }) {
           </div>
         )}
       </div>
+
+      {/* Stats panel */}
+      {nodes.length > 0 && (
+        <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-50 border border-gray-100">
+          <div className="flex items-center gap-1.5 text-xs text-gray-600">
+            <Users className="w-3.5 h-3.5 text-indigo-400" />
+            <span className="font-semibold text-gray-800">{nodes.length}</span> placed
+          </div>
+          <div className="w-px h-3 bg-gray-200" />
+          <div className="flex items-center gap-1.5 text-xs text-gray-600">
+            <Layers className="w-3.5 h-3.5 text-purple-400" />
+            <span className="font-semibold text-gray-800">{levels}</span> {levels === 1 ? "level" : "levels"}
+          </div>
+          <div className="w-px h-3 bg-gray-200" />
+          <div className="flex items-center gap-1.5 text-xs text-gray-600">
+            <UserMinus className="w-3.5 h-3.5 text-orange-400" />
+            <span className="font-semibold text-gray-800">{unassignedCount}</span> unassigned
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-4" style={{ minHeight: 380 }}>
         {/* Sidebar */}
