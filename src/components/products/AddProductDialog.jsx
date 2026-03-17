@@ -320,6 +320,17 @@ export default function AddProductDialog({
                 isEditing={activelyEditing}
               />
             </TabsContent>
+
+            {/* ── Investment Team Tab ── */}
+            <TabsContent value="team">
+              {editingProduct && (
+                <ProductInvestmentTeamTab
+                  productId={editingProduct.id}
+                  firmId={editingProduct.firm_id}
+                  isEditing={activelyEditing}
+                />
+              )}
+            </TabsContent>
           </Tabs>
         </div>
 
