@@ -127,34 +127,32 @@ export default function FirmProductsTab({ firmId, firmName }) {
 
       {isLoading ? (
         <div className="text-xs text-gray-400 italic py-4 text-center">Loading...</div>
-      ) : sortedProducts.length === 0 ? (
+      ) : products.length === 0 ? (
         <div className="text-sm text-gray-400 italic py-4 text-center border border-dashed border-gray-200 rounded-xl">
           No products added yet
         </div>
       ) : (
-        <div className="space-y-2">
-          {sortedProducts.map((product) => (
-            <div
-              key={product.id}
-              className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-gray-200 bg-white hover:border-indigo-200 hover:bg-indigo-50/30 transition-colors"
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <Package className="w-4 h-4 text-indigo-400 flex-shrink-0" />
-                <div className="min-w-0">
-                  <div className="text-sm font-medium text-gray-800 truncate">{product.name}</div>
-                  <div className="text-xs text-gray-400">{product.product_type}</div>
-                </div>
+        <div className="space-y-4">
+          {investmentManagerProducts.length > 0 && (
+            <div className="space-y-1.5">
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-0.5">Investment Manager Products</div>
+              <div className="space-y-1.5">
+                {investmentManagerProducts.map((product) => (
+                  <ProductRow key={product.id} product={product} onDelete={() => deleteMutation.mutate(product.id)} disabled={deleteMutation.isPending} />
+                ))}
               </div>
-              <button
-                type="button"
-                onClick={() => deleteMutation.mutate(product.id)}
-                className="ml-2 p-1 rounded text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0"
-                disabled={deleteMutation.isPending}
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
             </div>
-          ))}
+          )}
+          {multiManagerProducts.length > 0 && (
+            <div className="space-y-1.5">
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-0.5">Multi-Manager Products</div>
+              <div className="space-y-1.5">
+                {multiManagerProducts.map((product) => (
+                  <ProductRow key={product.id} product={product} onDelete={() => deleteMutation.mutate(product.id)} disabled={deleteMutation.isPending} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
