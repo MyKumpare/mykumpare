@@ -492,6 +492,16 @@ export default function OrgChartTab({ firmId }) {
           </div>
         </div>
       </div>
+
+      {viewingContact && (
+        <AddContactDialog
+          open={contactDialogOpen}
+          onOpenChange={(v) => { setContactDialogOpen(v); if (!v) setViewingContact(null); }}
+          editingContact={viewingContact}
+          viewMode={true}
+          firms={[]}
+        />
+      )}
     </div>
   );
 }
