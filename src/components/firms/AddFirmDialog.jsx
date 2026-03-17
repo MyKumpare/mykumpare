@@ -245,7 +245,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   };
 
   const handleCancelEdit = () => {
-    setFirmType(editingFirm.firm_type);
+    setFirmTypes(editingFirm.firm_types?.length ? editingFirm.firm_types : editingFirm.firm_type ? [editingFirm.firm_type] : []);
     setFirmName(editingFirm.name);
     setLogoUrl(editingFirm.logo_url || "");
     setWebsite(editingFirm.website || "");
