@@ -192,8 +192,8 @@ export default function AddProductDialog({
         {!isAddMode && productName && (
           <div className="px-1 pb-2 border-b mb-1">
             <p className="text-sm font-semibold text-indigo-700 truncate">{productName}</p>
-            {firms.find((f) => f.id === firmId)?.name && (
-              <p className="text-xs text-gray-400 truncate">{firms.find((f) => f.id === firmId)?.name}</p>
+            {(editingProduct?.firm_name || firms.find((f) => f.id === firmId)?.name) && (
+              <p className="text-xs text-gray-400 truncate">{editingProduct?.firm_name || firms.find((f) => f.id === firmId)?.name}</p>
             )}
           </div>
         )}
