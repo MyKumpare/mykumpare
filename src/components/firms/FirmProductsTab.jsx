@@ -163,7 +163,7 @@ export default function FirmProductsTab({ firmId, firmName, firms = [] }) {
               <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-0.5">Investment Manager Products</div>
               <div className="space-y-1.5">
                 {investmentManagerProducts.map((product) => (
-                  <ProductRow key={product.id} product={product} onDelete={() => deleteMutation.mutate(product.id)} disabled={deleteMutation.isPending} />
+                  <ProductRow key={product.id} product={product} onClick={() => { setEditingProduct(product); setShowEditDialog(true); }} />
                 ))}
               </div>
             </div>
