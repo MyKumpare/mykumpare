@@ -21,6 +21,7 @@ import {
 import { Pencil } from "lucide-react";
 import ProductClassificationsTab from "./ProductClassificationsTab";
 import ProductInvestmentTeamTab from "./ProductInvestmentTeamTab";
+import ProductInvestmentDescriptionTab from "./ProductInvestmentDescriptionTab";
 
 // Map product type -> firm type(s) that can be associated
 const PRODUCT_TYPE_TO_FIRM_TYPE = {
