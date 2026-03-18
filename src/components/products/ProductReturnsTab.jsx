@@ -177,8 +177,11 @@ export default function ProductReturnsTab({ productId, isEditing }) {
   };
 
   const handleSetupComplete = () => {
-    if (!returnType || !inceptionDate || !returnFrequency) return;
-    if (returnType === "Composite" && !gipsStatus) return;
+    if (returnTypes.length === 0 || !inceptionDate || !returnFrequency) return;
+    if (returnTypes.includes("Composite") && !gipsStatus) return;
+    if (returnTypes.includes("Composite") && !compositeName.trim()) return;
+    if (returnTypes.includes("Paper Portfolio") && !paperPortfolioName.trim()) return;
+    if (returnTypes.includes("Back-Test") && !backTestName.trim()) return;
 
     setShowSetupDialog(false);
     setShowUploadDialog(true);
