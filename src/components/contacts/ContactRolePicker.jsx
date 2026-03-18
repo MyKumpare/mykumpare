@@ -78,7 +78,9 @@ export default function ContactRolePicker({ value = [], onChange, viewMode = fal
     return allOptions.filter(o => o.toLowerCase().includes(q));
   }, [allOptions, search]);
 
-  const exactMatch = allOptions.some(o => o.toLowerCase() === search.trim().toLowerCase());
+  const trimmed = search.trim();
+  const exactMatch = allOptions.some(o => o.toLowerCase() === trimmed.toLowerCase());
+  const alreadySelected = value.some(v => v.toLowerCase() === trimmed.toLowerCase());
 
   const toggle = (role) => {
     if (value.includes(role)) {
