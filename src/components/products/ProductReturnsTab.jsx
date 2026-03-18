@@ -325,20 +325,69 @@ export default function ProductReturnsTab({ productId, isEditing }) {
             <DialogTitle>Add Return Series</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            {/* Return Type */}
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Return Type *</Label>
-              <Select value={returnType} onValueChange={setReturnType}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Select type..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {RETURN_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>{type}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Return Types (Multi-select) */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Return Types *</Label>
+              <div className="space-y-2">
+                {RETURN_TYPES.map((type) => (
+                  <div key={type} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id={type}
+                      checked={returnTypes.includes(type)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setReturnTypes([...returnTypes, type]);
+                        } else {
+                          setReturnTypes(returnTypes.filter(t => t !== type));
+                        }
+                      }}
+                      className="w-4 h-4 cursor-pointer"
+                    />
+                    <label htmlFor={type} className="text-sm text-gray-700 cursor-pointer">{type}</label>
+                  </div>
+                ))}
+              </div>
             </div>
+
+            {/* Composite Name */}
+            {returnTypes.includes("Composite") && (
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Composite Name *</Label>
+                <Input
+                  placeholder="Enter composite name..."
+                  value={compositeName}
+                  onChange={(e) => setCompositeName(e.target.value)}
+                  className="h-9"
+                />
+              </div>
+            )}
+
+            {/* Paper Portfolio Name */}
+            {returnTypes.includes("Paper Portfolio") && (
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Paper Portfolio Name *</Label>
+                <Input
+                  placeholder="Enter paper portfolio name..."
+                  value={paperPortfolioName}
+                  onChange={(e) => setPaperPortfolioName(e.target.value)}
+                  className="h-9"
+                />
+              </div>
+            )}
+
+            {/* Back-Test Name */}
+            {returnTypes.includes("Back-Test") && (
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Back-Test Name *</Label>
+                <Input
+                  placeholder="Enter back-test name..."
+                  value={backTestName}
+                  onChange={(e) => setBackTestName(e.target.value)}
+                  className="h-9"
+                />
+              </div>
+            )}
 
             {/* Inception Date */}
             <div className="space-y-1.5">
