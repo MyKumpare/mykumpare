@@ -141,8 +141,9 @@ export default function ContactRolePicker({ value = [], onChange, viewMode = fal
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
-              if (filtered.length === 1) toggle(filtered[0]);
-              else if (!exactMatch && search.trim()) addCustom();
+              const unselectedFiltered = filtered.filter(o => !value.includes(o));
+              if (unselectedFiltered.length === 1) toggle(unselectedFiltered[0]);
+              else if (!exactMatch && trimmed && !alreadySelected) addCustom();
             }
             if (e.key === "Escape") setShowDropdown(false);
           }}
