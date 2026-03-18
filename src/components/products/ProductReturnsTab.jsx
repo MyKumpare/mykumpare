@@ -558,7 +558,7 @@ export default function ProductReturnsTab({ productId, isEditing }) {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>
-              {editingReturnSeries ? "Edit Return Series" : "Upload Returns"}
+              Upload or Load Returns
             </DialogTitle>
           </DialogHeader>
 
