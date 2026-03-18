@@ -207,9 +207,21 @@ export default function AddProductDialog({
         {!isAddMode && productName && (
           <div className="px-1 pb-2 border-b mb-1">
             <p className="text-sm font-semibold text-indigo-700 truncate">{productName}</p>
-            {(editingProduct?.firm_name || firms.find((f) => f.id === firmId)?.name) && (
-              <p className="text-xs text-gray-400 truncate">{editingProduct?.firm_name || firms.find((f) => f.id === firmId)?.name}</p>
-            )}
+            {(editingProduct?.firm_name || firms.find((f) => f.id === firmId)?.name) && (() => {
+              const firmName = editingProduct?.firm_name || firms.find((f) => f.id === firmId)?.name;
+              const firm = firms.find((f) => f.id === firmId || f.name === editingProduct?.firm_name);
+              return onFirmClick && firm ? (
+                <button
+                  type="button"
+                  onClick={() => { handleClose(); onFirmClick(firm); }}
+                  className="text-xs text-indigo-500 hover:underline hover:text-indigo-700 truncate text-left"
+                >
+                  {firmName}
+                </button>
+              ) : (
+                <p className="text-xs text-gray-400 truncate">{firmName}</p>
+              );
+            })()}
           </div>
         )}
 
