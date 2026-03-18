@@ -291,8 +291,6 @@ export default function ProductReturnsTab({ productId, isEditing }) {
 
     if (editingReturnSeries) {
       updateReturnSeriesMutation.mutate({ id: editingReturnSeries.id, data });
-    } else {
-      createReturnSeriesMutation.mutate(data);
     }
   };
 
