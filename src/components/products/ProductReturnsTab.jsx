@@ -333,7 +333,7 @@ export default function ProductReturnsTab({ productId, isEditing }) {
       ) : (
         <div className="space-y-3">
           {[...returnSeries].sort((a, b) => new Date(a.inception_date) - new Date(b.inception_date)).map((series) => (
-            <div key={series.id} className="border rounded-lg p-3 bg-white space-y-2">
+            <div key={series.id} className="border rounded-lg p-3 bg-white space-y-2 cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => handleEditReturnSeries(series)}>
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-sm font-semibold text-gray-900">{series.return_types?.join(", ")}</p>
