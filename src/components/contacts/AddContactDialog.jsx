@@ -463,6 +463,35 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                 </div>
               </div>
 
+              {/* Duplicate warning */}
+              {duplicateContacts.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium text-amber-600">
+                    Similar contact{duplicateContacts.length > 1 ? "s" : ""} already associated with this firm:
+                  </p>
+                  {duplicateContacts.map((c) => (
+                    <div key={c.id} className="flex items-center gap-3 px-3 py-2 rounded-md bg-amber-50 border border-amber-200">
+                      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {c.photo_url ? (
+                          <img src={c.photo_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <User className="w-4 h-4 text-indigo-400" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-800 truncate">
+                          {[c.salutation, c.first_name, c.last_name, c.suffix].filter(Boolean).join(" ")}
+                        </p>
+                        {c.title && <p className="text-xs text-gray-500 truncate">{c.title}</p>}
+                        {(c.firm_ids || []).filter(fid => firmIds.includes(fid)).map(fid => (
+                          <p key={fid} className="text-xs text-gray-400 truncate">{getFirmName(fid)}</p>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* Title */}
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-gray-700">Title</Label>
