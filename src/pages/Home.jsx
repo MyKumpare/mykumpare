@@ -435,6 +435,7 @@ export default function Home() {
         firms={firms}
         onNavigateToOwnership={handleNavigateToOwnership}
         onProductClick={(product) => handleEditProduct(product, true)}
+        onFirmClick={(firm) => firm && handleEdit(firm, false, true)}
       />
 
       <AddContactDialog
