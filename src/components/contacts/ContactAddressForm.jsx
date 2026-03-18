@@ -103,71 +103,86 @@ export default function ContactAddressForm({ address, onChange, onDelete, onSetP
         )}
       </div>
 
-      {field("Country",
-        isEditing ? (
-          <Select value={address.country || ""} onValueChange={handleCountryChange}>
-            <SelectTrigger className="h-9 bg-white"><SelectValue placeholder="Select country..." /></SelectTrigger>
-            <SelectContent>
-              {COUNTRIES.map((c) => <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        ) : viewText(COUNTRIES.find(c => c.code === address.country)?.name)
-      )}
+      {!isEditing ? (
+        /* ── View mode: single formatted address block ── */
+        (() => {
+          const stateName = hasStates ? states.find(s => s.code === address.state)?.name : address.state;
+          const countryName = COUNTRIES.find(c => c.code === address.country)?.name;
+          const line1 = address.address_line1;
+          const line2 = address.address_line2;
+          const city = address.city;
+          const state = stateName;
+          const zip = address.postal_code;
+          const country = countryName;
+          const hasAny = line1 || line2 || city || state || zip || country;
+          if (!hasAny) return <div className="text-sm text-gray-400 italic px-1">No address on file</div>;
+          return (
+            <div className="text-sm text-gray-800 space-y-0.5 px-1">
+              {line1 && <div>{line1}</div>}
+              {line2 && <div>{line2}</div>}
+              {(city || state || zip) && (
+                <div>{[city, state, zip].filter(Boolean).join(", ")}</div>
+              )}
+              {country && <div>{country}</div>}
+            </div>
+          );
+        })()
+      ) : (
+        <>
+          {field("Country",
+            <Select value={address.country || ""} onValueChange={handleCountryChange}>
+              <SelectTrigger className="h-9 bg-white"><SelectValue placeholder="Select country..." /></SelectTrigger>
+              <SelectContent>
+                {COUNTRIES.map((c) => <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
 
-      <div className="grid grid-cols-2 gap-3">
-        {field("State / Province",
-          isEditing ? (
-            hasStates ? (
-              <Select value={address.state || ""} onValueChange={handleStateChange}>
-                <SelectTrigger className="h-9 bg-white"><SelectValue placeholder="Select state..." /></SelectTrigger>
+          <div className="grid grid-cols-2 gap-3">
+            {field("State / Province",
+              hasStates ? (
+                <Select value={address.state || ""} onValueChange={handleStateChange}>
+                  <SelectTrigger className="h-9 bg-white"><SelectValue placeholder="Select state..." /></SelectTrigger>
+                  <SelectContent>
+                    {states.map((s) => <SelectItem key={s.code} value={s.code}>{s.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input className="h-9 bg-white" placeholder="State / Province"
+                  value={address.state || ""} onChange={(e) => onChange({ ...address, state: e.target.value })} />
+              )
+            )}
+            {field("Postal / Zip Code",
+              <Input className="h-9 bg-white"
+                placeholder={address.country === "US" ? "e.g. 10001" : "Postal code"}
+                value={address.postal_code || ""} onChange={handlePostalChange} />
+            )}
+          </div>
+
+          {field("City",
+            cityOptions.length > 0 ? (
+              <Select value={address.city || ""} onValueChange={(val) => onChange({ ...address, city: val })}>
+                <SelectTrigger className="h-9 bg-white"><SelectValue placeholder="Select city..." /></SelectTrigger>
                 <SelectContent>
-                  {states.map((s) => <SelectItem key={s.code} value={s.code}>{s.name}</SelectItem>)}
+                  {cityOptions.map((city) => <SelectItem key={city} value={city}>{city}</SelectItem>)}
                 </SelectContent>
               </Select>
             ) : (
-              <Input className="h-9 bg-white" placeholder="State / Province"
-                value={address.state || ""} onChange={(e) => onChange({ ...address, state: e.target.value })} />
+              <Input className="h-9 bg-white" placeholder="City"
+                value={address.city || ""} onChange={(e) => onChange({ ...address, city: e.target.value })} />
             )
-          ) : viewText(hasStates ? states.find(s => s.code === address.state)?.name : address.state)
-        )}
+          )}
 
-        {field("Postal / Zip Code",
-          isEditing ? (
-            <Input className="h-9 bg-white"
-              placeholder={address.country === "US" ? "e.g. 10001" : "Postal code"}
-              value={address.postal_code || ""} onChange={handlePostalChange} />
-          ) : viewText(address.postal_code)
-        )}
-      </div>
+          {field("Street Address",
+            <Input className="h-9 bg-white" placeholder="123 Main Street"
+              value={address.address_line1 || ""} onChange={(e) => onChange({ ...address, address_line1: e.target.value })} />
+          )}
 
-      {field("City",
-        isEditing ? (
-          cityOptions.length > 0 ? (
-            <Select value={address.city || ""} onValueChange={(val) => onChange({ ...address, city: val })}>
-              <SelectTrigger className="h-9 bg-white"><SelectValue placeholder="Select city..." /></SelectTrigger>
-              <SelectContent>
-                {cityOptions.map((city) => <SelectItem key={city} value={city}>{city}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          ) : (
-            <Input className="h-9 bg-white" placeholder="City"
-              value={address.city || ""} onChange={(e) => onChange({ ...address, city: e.target.value })} />
-          )
-        ) : viewText(address.city)
-      )}
-
-      {field("Street Address",
-        isEditing ? (
-          <Input className="h-9 bg-white" placeholder="123 Main Street"
-            value={address.address_line1 || ""} onChange={(e) => onChange({ ...address, address_line1: e.target.value })} />
-        ) : viewText(address.address_line1)
-      )}
-
-      {field("Suite / Floor / Room",
-        isEditing ? (
-          <Input className="h-9 bg-white" placeholder="Suite 100, Floor 3..."
-            value={address.address_line2 || ""} onChange={(e) => onChange({ ...address, address_line2: e.target.value })} />
-        ) : viewText(address.address_line2)
+          {field("Suite / Floor / Room",
+            <Input className="h-9 bg-white" placeholder="Suite 100, Floor 3..."
+              value={address.address_line2 || ""} onChange={(e) => onChange({ ...address, address_line2: e.target.value })} />
+          )}
+        </>
       )}
     </div>
   );
