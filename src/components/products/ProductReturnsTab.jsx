@@ -211,9 +211,12 @@ export default function ProductReturnsTab({ productId, isEditing }) {
 
     const data = {
       product_id: productId,
-      return_type: returnType,
+      return_types: returnTypes,
+      composite_name: compositeName || null,
+      paper_portfolio_name: paperPortfolioName || null,
+      back_test_name: backTestName || null,
       inception_date: inceptionDate,
-      gips_status: returnType === "Composite" ? gipsStatus : null,
+      gips_status: returnTypes.includes("Composite") ? gipsStatus : null,
       return_frequency: returnFrequency,
       monthly_returns: uploadValidation.returns,
       start_date: startDate,
