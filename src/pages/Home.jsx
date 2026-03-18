@@ -379,7 +379,15 @@ export default function Home() {
         open={dialogOpen}
         onOpenChange={(open) => {
           setDialogOpen(open);
-          if (!open) { setEditingFirm(null); setPreselectedType(null); setOwnershipNavTarget(null); }
+          if (!open) {
+            setEditingFirm(null);
+            setPreselectedType(null);
+            setOwnershipNavTarget(null);
+            if (returnToProduct) {
+              setReturnToProduct(false);
+              setProductDialogOpen(true);
+            }
+          }
         }}
         onSubmit={handleSubmit}
         onDelete={setDeletingFirm}
