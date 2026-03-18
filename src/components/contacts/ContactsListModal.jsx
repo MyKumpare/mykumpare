@@ -95,6 +95,11 @@ export default function ContactsListModal({ open, onOpenChange, contacts = [], f
           setViewingContact(null);
           onProductClick(product);
         } : undefined}
+        onFirmClick={onFirmClick ? (firm) => {
+          setViewingContact(null);
+          onOpenChange(false);
+          onFirmClick(firm);
+        } : undefined}
       />
     )}
     </>
