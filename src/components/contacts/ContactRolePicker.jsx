@@ -165,16 +165,21 @@ export default function ContactRolePicker({ value = [], onChange, viewMode = fal
                 </button>
               );
             })}
-            {!exactMatch && search.trim() && (
+            {trimmed && alreadySelected && (
+              <div className="px-3 py-2 text-xs text-amber-600 italic border-t border-gray-100 flex items-center gap-1">
+                "{trimmed}" is already added
+              </div>
+            )}
+            {!exactMatch && trimmed && !alreadySelected && (
               <button
                 type="button"
                 onMouseDown={(e) => { e.preventDefault(); addCustom(); }}
                 className="w-full text-left px-3 py-1.5 text-xs text-indigo-600 hover:bg-indigo-50 flex items-center gap-1 border-t border-gray-100 font-medium"
               >
-                <Plus className="w-3 h-3" /> Add "{search.trim()}"
+                <Plus className="w-3 h-3" /> Add "{trimmed}"
               </button>
             )}
-            {filtered.length === 0 && !search.trim() && (
+            {filtered.length === 0 && !trimmed && (
               <div className="px-3 py-2 text-xs text-gray-400 italic">Type to search roles...</div>
             )}
           </div>
