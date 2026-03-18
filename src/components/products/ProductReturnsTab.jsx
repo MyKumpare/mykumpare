@@ -197,7 +197,7 @@ export default function ProductReturnsTab({ productId, isEditing }) {
     setEditingReturnSeries(null);
   };
 
-  const handleSetupComplete = () => {
+  const handleSetupComplete = async () => {
     if (returnTypes.length === 0 || !inceptionDate || returnFrequency.length === 0) return;
     if (returnTypes.includes("Composite") && gipsStatus.length === 0) return;
     if (returnTypes.includes("Composite") && !compositeName.trim()) return;
@@ -205,10 +205,47 @@ export default function ProductReturnsTab({ productId, isEditing }) {
     if (returnTypes.includes("Back-Test") && !backTestName.trim()) return;
 
     // Set default start and end dates
-    setStartDate(getFirstMonthEndAfterDate(inceptionDate));
-    setEndDate(getMostRecentMonthEnd());
-    setShowSetupDialog(false);
-    setShowUploadDialog(true);
+    const newStartDate = getFirstMonthEndAfterDate(inceptionDate);
+    const newEndDate = getMostRecentMonthEnd();
+    
+    setStartDate(newStartDate);
+    setEndDate(newEndDate);
+
+    // Save the return series configuration
+    const data = {
+      product_id: productId,
+      return_types: returnTypes,
+      composite_name: compositeName || null,
+      paper_portfolio_name: paperPortfolioName || null,
+      back_test_name: backTestName || null,
+      inception_date: inceptionDate,
+      gips_status: returnTypes.includes("Composite") ? gipsStatus.join(", ") : null,
+      return_frequency: returnFrequency.join("/"),
+      monthly_returns: [],
+      start_date: newStartDate,
+      end_date: newEndDate,
+    };
+
+    try {
+      if (editingReturnSeries) {
+        await base44.entities.ReturnSeries.update(editingReturnSeries.id, data);
+      } else {
+        await base44.entities.ReturnSeries.create(data);
+      }
+      queryClient.invalidateQueries({ queryKey: ["returnSeries", productId] });
+      
+      // Refresh the return series data and get the newly created record
+      const updated = await base44.entities.ReturnSeries.filter({ product_id: productId });
+      const newSeries = updated[updated.length - 1];
+      if (newSeries) {
+        setEditingReturnSeries(newSeries);
+      }
+      
+      setShowSetupDialog(false);
+      setShowUploadDialog(true);
+    } catch (error) {
+      console.error("Error saving return series:", error);
+    }
   };
 
   const handleDownloadTemplate = () => {
