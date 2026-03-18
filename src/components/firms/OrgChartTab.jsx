@@ -336,6 +336,7 @@ export default function OrgChartTab({ firmId, firmName = "" }) {
   const [viewingContact, setViewingContact] = useState(null);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null); // null | "saving" | "saved"
+  const [searchQuery, setSearchQuery] = useState("");
 
   const handleViewContact = (contact) => {
     if (!contact) return;
