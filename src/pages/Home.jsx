@@ -440,12 +440,13 @@ export default function Home() {
       />
 
       <AddContactDialog
-        open={!!viewingContact}
-        onOpenChange={(open) => !open && setViewingContact(null)}
+        open={!!viewingContact && !productDialogOpen}
+        onOpenChange={(open) => !open && !productDialogOpen && setViewingContact(null)}
         editingContact={viewingContact}
         firms={firms}
         viewMode={true}
         onNavigateToOwnership={handleNavigateToOwnership}
+        onProductClick={(product) => handleEditProduct(product, true)}
       />
 
       <AddProductDialog
