@@ -332,7 +332,7 @@ export default function ProductReturnsTab({ productId, isEditing }) {
         </div>
       ) : (
         <div className="space-y-3">
-          {returnSeries.map((series) => (
+          {[...returnSeries].sort((a, b) => new Date(a.inception_date) - new Date(b.inception_date)).map((series) => (
             <div key={series.id} className="border rounded-lg p-3 bg-white space-y-2">
               <div className="flex items-start justify-between">
                 <div>
