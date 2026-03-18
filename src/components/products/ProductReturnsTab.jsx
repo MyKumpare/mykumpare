@@ -328,9 +328,9 @@ export default function ProductReturnsTab({ productId, isEditing }) {
             <DialogTitle>Add Return Series</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            {/* Return Types (Multi-select) */}
+            {/* Performance Type (Multi-select) */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Return Types *</Label>
+              <Label className="text-sm font-medium">Performance Type *</Label>
               <div className="space-y-2">
                 {RETURN_TYPES.map((type) => (
                   <div key={type} className="flex items-center gap-2">
