@@ -768,6 +768,7 @@ export default function OrgChartTab({ firmId, firmName = "" }) {
                       onDrop={handleDrop}
                       onTitleChange={handleTitleChange}
                       onViewContact={handleViewContact}
+                      searchQuery={searchQuery}
                     />
                   ))}
                 </div>
