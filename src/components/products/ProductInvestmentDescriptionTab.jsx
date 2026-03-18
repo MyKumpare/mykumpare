@@ -19,7 +19,40 @@ const MARKET_POSITIONING_OPTIONS = [
   "Recession Cycle",
 ];
 
-function SectionBlock({ label, value, onChange, isEditing }) {
+function SectionBlock({ label, value, onChange, isEditing, type, options }) {
+  if (type === "multiselect") {
+    const selectedValues = Array.isArray(value) ? value : [];
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <div className="h-4 w-1 rounded-full bg-indigo-500 flex-shrink-0" />
+          <Label className="text-sm font-semibold text-gray-800">{label}</Label>
+        </div>
+        <div className="space-y-2">
+          {options.map((opt) => (
+            <label key={opt} className="flex items-center gap-2 cursor-pointer hover:opacity-80">
+              <Checkbox
+                checked={selectedValues.includes(opt)}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    onChange([...selectedValues, opt]);
+                  } else {
+                    onChange(selectedValues.filter(v => v !== opt));
+                  }
+                }}
+                disabled={!isEditing}
+              />
+              <span className="text-sm text-gray-700">{opt}</span>
+            </label>
+          ))}
+        </div>
+        {!isEditing && selectedValues.length === 0 && (
+          <div className="text-sm text-gray-400 italic">—</div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
