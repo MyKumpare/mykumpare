@@ -106,6 +106,7 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
         viewMode={viewMode}
         onNavigateToOwnership={onNavigateToOwnership}
         onProductClick={onProductClick ? (product) => { setDialogOpen(false); onProductClick(product); } : undefined}
+        onFirmClick={onFirmClick ? (firm) => { setDialogOpen(false); onFirmClick(firm); } : undefined}
       />
     </div>
   );
