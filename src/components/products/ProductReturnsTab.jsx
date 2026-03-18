@@ -408,20 +408,37 @@ export default function ProductReturnsTab({ productId, isEditing }) {
               <div className="space-y-2">
                 <Label className="text-sm font-medium">GIPS Compliance *</Label>
                 <div className="space-y-2">
-                  {GIPS_OPTIONS.map((option) => (
-                    <div key={option} className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        id={option}
-                        name="gips"
-                        value={option}
-                        checked={gipsStatus === option}
-                        onChange={(e) => setGipsStatus(e.target.value)}
-                        className="w-4 h-4 cursor-pointer"
-                      />
-                      <label htmlFor={option} className="text-sm text-gray-700 cursor-pointer">{option}</label>
-                    </div>
-                  ))}
+                  {GIPS_OPTIONS.map((option) => {
+                    const isGipsCalculated = gipsStatus.includes("GIPS Calculated");
+                    const isDisabled = 
+                      (option === "Non-GIPS Compliant" && isGipsCalculated) ||
+                      (option === "GIPS Verified" && !isGipsCalculated);
+                    
+                    return (
+                      <div key={option} className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id={option}
+                          checked={gipsStatus.includes(option)}
+                          disabled={isDisabled}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setGipsStatus([...gipsStatus, option]);
+                            } else {
+                              setGipsStatus(gipsStatus.filter(g => g !== option));
+                            }
+                          }}
+                          className="w-4 h-4 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                        />
+                        <label 
+                          htmlFor={option} 
+                          className={`text-sm cursor-pointer ${isDisabled ? "text-gray-400" : "text-gray-700"}`}
+                        >
+                          {option}
+                        </label>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
