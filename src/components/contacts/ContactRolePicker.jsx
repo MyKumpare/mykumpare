@@ -93,9 +93,12 @@ export default function ContactRolePicker({ value = [], onChange, viewMode = fal
   };
 
   const addCustom = () => {
-    const val = search.trim();
-    if (!val) return;
-    if (!value.includes(val)) onChange([...value, val]);
+    const val = trimmed;
+    if (!val || alreadySelected) return;
+    // Case-insensitive duplicate check across all options
+    if (!value.some(v => v.toLowerCase() === val.toLowerCase())) {
+      onChange([...value, val]);
+    }
     setSearch("");
     setShowDropdown(false);
   };
