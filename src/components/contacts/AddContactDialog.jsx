@@ -95,6 +95,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setContactStatus(editingContact.contact_status || "Active");
         setContactRole(editingContact.contact_role || "");
         setContactType(editingContact.contact_type || "");
+        setContactRoles(editingContact.contact_roles || []);
         setContactFirmRoles(editingContact.contact_firm_roles || []);
         setGender(editingContact.gender || "Undetermined");
         setEthnicity(editingContact.ethnicity || []);
