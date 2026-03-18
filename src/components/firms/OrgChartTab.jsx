@@ -247,6 +247,7 @@ function OrgNode({ node, contacts, onAddChild, onRemove, onDrop, onTitleChange, 
                   onTitleChange={onTitleChange}
                   onViewContact={onViewContact}
                   depth={depth + 1}
+                  searchQuery={searchQuery}
                 />
               </div>
             ))}
