@@ -839,7 +839,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
               {/* Contact Role (firm-specific, for IM / MoM firms) */}
               {(showContactFirmRoles || contactFirmRoles.length > 0) && (
                 <div className="space-y-1.5">
-                  <Label className="text-sm font-medium text-gray-700">Contact Role</Label>
+                  <Label className="text-sm font-medium text-gray-700">Contact Department</Label>
                   {viewMode ? (
                     <div className="flex flex-wrap gap-1.5 px-1">
                       {contactFirmRoles.length > 0
