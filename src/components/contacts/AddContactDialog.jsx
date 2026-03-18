@@ -881,7 +881,10 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                   })}
                 </div>
               ) : (
-                <div className="text-sm text-gray-400 italic text-center py-8">No ownership records found.</div>
+                <div className="flex flex-col items-center gap-2 py-8">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500">Not an Equity Owner</span>
+                <p className="text-sm text-gray-400 italic">No ownership records found.</p>
+              </div>
               )}
             </TabsContent>
             {/* ── ACTIVITIES TAB ── */}
