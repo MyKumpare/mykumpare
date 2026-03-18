@@ -85,7 +85,7 @@ function OrgNode({ node, contacts, onAddChild, onRemove, onDrop, onTitleChange, 
     const contactId = e.dataTransfer.getData("contact_id");
     const nodeId = e.dataTransfer.getData("node_id");
     if (contactId) onDrop({ type: "new", parentId: node.id, contactId });
-    if (nodeId && nodeId !== node.id) onDrop({ type: "move", parentId: node.id, nodeId });
+    if (nodeId && nodeId !== node.id) onDrop({ type: "move", parentId: node.id, nodeId, targetId: node.id });
   };
 
   const [isDragging, setIsDragging] = useState(false);
