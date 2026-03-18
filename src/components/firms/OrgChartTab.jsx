@@ -134,6 +134,13 @@ function OrgNode({ node, contacts, onAddChild, onRemove, onDrop, onTitleChange, 
           <GripVertical className="w-3.5 h-3.5 text-gray-500 rotate-90" />
         </div>
 
+        {/* Drop overlay */}
+        {dragOver && (
+          <div className="absolute inset-0 rounded-xl bg-indigo-100/60 flex items-center justify-center pointer-events-none z-20 no-print">
+            <span className="text-xs font-semibold text-indigo-600">Drop here</span>
+          </div>
+        )}
+
         <button
           type="button"
           onClick={() => onRemove(node.id)}
