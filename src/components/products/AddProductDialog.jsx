@@ -312,7 +312,7 @@ export default function AddProductDialog({
                       placeholder="Enter product name..."
                       value={productName}
                       onChange={(e) => setProductName(e.target.value)}
-                      className={`h-9 ${isDuplicate ? "border-red-400 focus-visible:ring-red-400" : ""}`}
+                      className={`h-9 ${isDuplicate ? "border-amber-400 focus-visible:ring-amber-400" : ""}`}
                       onKeyDown={(e) => e.key === "Enter" && isValid && handleSubmit()}
                       spellCheck={true}
                       autoCorrect="on"
