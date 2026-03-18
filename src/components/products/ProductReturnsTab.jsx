@@ -91,7 +91,7 @@ function getMostRecentMonthEnd() {
   return lastDay.toISOString().split("T")[0];
 }
 
-function validateAndParseCSV(csvText, startDate, endDate) {
+function validateAndParseCSV(csvText, startDate, endDate, returnFrequency) {
   const lines = csvText.trim().split("\n").filter(l => l.trim());
   if (lines.length < 2) return { valid: false, error: "CSV file is empty" };
 
@@ -111,25 +111,59 @@ function validateAndParseCSV(csvText, startDate, endDate) {
     current.setMonth(current.getMonth() + 1);
   }
 
+  // Parse header to find column indices
+  const headerLine = lines[0].split(",").map(h => h.trim());
+  const dateIdx = headerLine.findIndex(h => h.includes("Date"));
+  const grossIdx = headerLine.findIndex(h => h.includes("Gross"));
+  const netIdx = headerLine.findIndex(h => h.includes("Net"));
+
+  if (dateIdx === -1) {
+    return { valid: false, error: "Date column not found" };
+  }
+
   // Skip header and parse data rows
   for (let i = 1; i < lines.length; i++) {
-    const [dateStr, valueStr] = lines[i].split(",").map(s => s.trim());
-    if (!dateStr || valueStr === "") continue;
-
-    const returnValue = parseFloat(valueStr);
-    if (isNaN(returnValue)) {
-      return { valid: false, error: `Invalid return value at row ${i + 1}: ${valueStr}` };
-    }
+    const cols = lines[i].split(",").map(s => s.trim());
+    const dateStr = cols[dateIdx];
+    
+    if (!dateStr) continue;
 
     // Check if date is within range
     if (dateStr < startDate || dateStr > endDate) {
       return { valid: false, error: `Date ${dateStr} is outside the specified range` };
     }
 
+    // Parse gross and net returns
+    const grossStr = grossIdx >= 0 ? cols[grossIdx] : "";
+    const netStr = netIdx >= 0 ? cols[netIdx] : "";
+
+    if (!grossStr && !netStr) continue; // Skip if both are empty
+
+    const returnData = { date: dateStr };
+
+    if (grossStr) {
+      const grossVal = parseFloat(grossStr);
+      if (isNaN(grossVal)) {
+        return { valid: false, error: `Invalid gross return at row ${i + 1}: ${grossStr}` };
+      }
+      returnData.gross_return = grossVal;
+    }
+
+    if (netStr) {
+      const netVal = parseFloat(netStr);
+      if (isNaN(netVal)) {
+        return { valid: false, error: `Invalid net return at row ${i + 1}: ${netStr}` };
+      }
+      returnData.net_return = netVal;
+    }
+
+    // Set return_value to whichever is present (for backwards compatibility)
+    returnData.return_value = returnData.gross_return || returnData.net_return;
+
     if (returns.some(r => r.date === dateStr)) {
       duplicates.push(dateStr);
     } else {
-      returns.push({ date: dateStr, return_value: returnValue });
+      returns.push(returnData);
       expectedDates.delete(dateStr);
     }
   }
