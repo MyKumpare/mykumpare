@@ -75,19 +75,59 @@ function SectionBlock({ label, value, onChange, isEditing, type, options }) {
   );
 }
 
+function SubsectionBlock({ label, value, onChange, isEditing }) {
+  return (
+    <div className="space-y-2 pl-4 border-l-2 border-indigo-200">
+      <Label className="text-sm font-medium text-gray-700">{label}</Label>
+      {isEditing ? (
+        <Textarea
+          placeholder={`Enter ${label.toLowerCase()}...`}
+          value={value || ""}
+          onChange={(e) => onChange(e.target.value)}
+          className="min-h-[100px] text-sm leading-relaxed resize-none"
+        />
+      ) : (
+        <div className="px-3 py-2 rounded-md border border-gray-200 bg-white text-sm text-gray-700 min-h-[80px] whitespace-pre-wrap leading-relaxed">
+          {value || <span className="text-gray-400 italic">—</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ProductInvestmentDescriptionTab({ descriptions, onChange, isEditing }) {
   const set = (key, val) => onChange({ ...descriptions, [key]: val });
 
   return (
     <div className="space-y-6 py-2">
-      {SECTIONS.map(({ key, label }) => (
-        <SectionBlock
-          key={key}
-          label={label}
-          value={descriptions?.[key] || ""}
-          onChange={(val) => set(key, val)}
-          isEditing={isEditing}
-        />
+      {SECTIONS.map(({ key, label, type, hasSub }) => (
+        <div key={key}>
+          <SectionBlock
+            label={label}
+            value={descriptions?.[key] || (type === "multiselect" ? [] : "")}
+            onChange={(val) => set(key, val)}
+            isEditing={isEditing}
+            type={type}
+            options={type === "multiselect" ? MARKET_POSITIONING_OPTIONS : undefined}
+          />
+          
+          {hasSub && (
+            <div className="space-y-4 mt-4">
+              <SubsectionBlock
+                label="Buy Discipline"
+                value={descriptions?.investment_process_buy_discipline || ""}
+                onChange={(val) => set("investment_process_buy_discipline", val)}
+                isEditing={isEditing}
+              />
+              <SubsectionBlock
+                label="Sell Discipline"
+                value={descriptions?.investment_process_sell_discipline || ""}
+                onChange={(val) => set("investment_process_sell_discipline", val)}
+                isEditing={isEditing}
+              />
+            </div>
+          )}
+        </div>
       ))}
     </div>
   );
