@@ -161,10 +161,14 @@ export default function Home() {
     setProductDialogOpen(true);
   };
 
-  const handleEditProduct = (product) => {
+  const handleEditProduct = (product, fromContact = false) => {
     setEditingProduct(product);
     setPreselectedProductType(null);
     setPreselectedFirmId(null);
+    setReturnToContact(fromContact);
+    if (fromContact) {
+      setViewingContact(prev => prev); // keep viewingContact set so we can restore it
+    }
     setProductDialogOpen(true);
   };
 
