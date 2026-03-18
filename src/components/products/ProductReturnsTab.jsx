@@ -229,7 +229,10 @@ export default function ProductReturnsTab({ productId, isEditing }) {
 
   const handleEditReturnSeries = (series) => {
     setEditingReturnSeries(series);
-    setReturnType(series.return_type);
+    setReturnTypes(series.return_types || []);
+    setCompositeName(series.composite_name || "");
+    setPaperPortfolioName(series.paper_portfolio_name || "");
+    setBackTestName(series.back_test_name || "");
     setInceptionDate(series.inception_date);
     setGipsStatus(series.gips_status || "");
     setReturnFrequency(series.return_frequency);
