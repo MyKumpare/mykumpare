@@ -401,7 +401,7 @@ export default function ProductReturnsTab({ productId, isEditing }) {
             </div>
 
             {/* GIPS Status (Composite only) */}
-            {returnType === "Composite" && (
+            {returnTypes.includes("Composite") && (
               <div className="space-y-2">
                 <Label className="text-sm font-medium">GIPS Compliance *</Label>
                 <div className="space-y-2">
