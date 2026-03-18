@@ -450,6 +450,7 @@ export default function Home() {
         existingProducts={products}
         preselectedProductType={preselectedProductType}
         preselectedFirmId={preselectedFirmId}
+        onFirmClick={handleEdit}
       />
     </div>
   );
