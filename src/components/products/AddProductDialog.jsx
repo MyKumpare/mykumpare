@@ -259,15 +259,13 @@ export default function AddProductDialog({
 
         <div className="flex-1 overflow-y-auto pr-1">
           <Tabs defaultValue="details" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-1 w-fit">
+            <TabsList className="grid grid-cols-3 mb-4 w-fit">
               <TabsTrigger value="details">Details</TabsTrigger>
               <TabsTrigger value="classifications">Classifications</TabsTrigger>
-            </TabsList>
-            <TabsList className="grid w-full grid-cols-2 mb-4 w-fit">
               <TabsTrigger value="description">Inv. Description</TabsTrigger>
-              <TabsTrigger value="team" disabled={isAddMode}>Investment Team</TabsTrigger>
             </TabsList>
-            <TabsList className="mb-4 w-fit">
+            <TabsList className="grid grid-cols-2 mb-4 w-fit">
+              <TabsTrigger value="team" disabled={isAddMode}>Investment Team</TabsTrigger>
               <TabsTrigger value="returns" disabled={isAddMode}>Returns</TabsTrigger>
             </TabsList>
 
