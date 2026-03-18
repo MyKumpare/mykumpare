@@ -379,7 +379,7 @@ export default function OrgChartTab({ firmId, firmName = "" }) {
     saveMutation.mutate({ nodes: newNodes, rootIds: newRootIds });
   }, [saveMutation]);
 
-  const handleDrop = ({ type, parentId, contactId, nodeId }) => {
+  const handleDrop = ({ type, parentId, contactId, nodeId, targetId }) => {
     if (type === "new") {
       if (nodes.some(n => n.contact_id === contactId)) return;
       const newNode = { id: crypto.randomUUID(), contact_id: contactId, title_override: "", children: [] };
@@ -393,7 +393,48 @@ export default function OrgChartTab({ firmId, firmName = "" }) {
       }
       save(updatedNodes, updatedRootIds);
     } else if (type === "move") {
-      if (nodeId === parentId) return;
+      if (nodeId === targetId) return;
+
+      // Find the current parent of the dragged node
+      const currentParent = nodes.find(n => (n.children || []).includes(nodeId));
+      const targetParent = nodes.find(n => (n.children || []).includes(targetId));
+
+      // If dragged node and target node share the same parent → reorder siblings
+      const draggedInRoots = rootIds.includes(nodeId);
+      const targetInRoots = rootIds.includes(targetId);
+
+      if (
+        (currentParent && targetParent && currentParent.id === targetParent.id) ||
+        (draggedInRoots && targetInRoots)
+      ) {
+        // Reorder within the same parent
+        if (draggedInRoots) {
+          const newRootIds = [...rootIds];
+          const fromIdx = newRootIds.indexOf(nodeId);
+          const toIdx = newRootIds.indexOf(targetId);
+          newRootIds.splice(fromIdx, 1);
+          newRootIds.splice(toIdx, 0, nodeId);
+          save(nodes, newRootIds);
+        } else {
+          const updatedNodes = nodes.map(n => {
+            if (n.id !== currentParent.id) return n;
+            const siblings = [...(n.children || [])];
+            const fromIdx = siblings.indexOf(nodeId);
+            const toIdx = siblings.indexOf(targetId);
+            siblings.splice(fromIdx, 1);
+            siblings.splice(toIdx, 0, nodeId);
+            return { ...n, children: siblings };
+          });
+          save(updatedNodes, rootIds);
+        }
+        return;
+      }
+
+      // Otherwise → reparent: move nodeId under targetId's parent (drop onto target = become sibling before target)
+      // Actually keep existing behavior: drop onto a node = become its child
+      const descendants = getAllDescendants(nodes, nodeId);
+      if (descendants.includes(targetId)) return;
+
       const updatedNodes = nodes.map(n => ({
         ...n,
         children: (n.children || []).filter(cid => cid !== nodeId),
@@ -404,8 +445,6 @@ export default function OrgChartTab({ firmId, firmName = "" }) {
       } else {
         const idx = updatedNodes.findIndex(n => n.id === parentId);
         if (idx !== -1) {
-          const descendants = getAllDescendants(nodes, nodeId);
-          if (descendants.includes(parentId)) return;
           updatedNodes[idx] = { ...updatedNodes[idx], children: [...(updatedNodes[idx].children || []), nodeId] };
         }
       }
