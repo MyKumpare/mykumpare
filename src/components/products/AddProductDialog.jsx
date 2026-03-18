@@ -267,6 +267,9 @@ export default function AddProductDialog({
               <TabsTrigger value="description">Inv. Description</TabsTrigger>
               <TabsTrigger value="team" disabled={isAddMode}>Investment Team</TabsTrigger>
             </TabsList>
+            <TabsList className="grid w-full grid-cols-1 mb-4">
+              <TabsTrigger value="returns" disabled={isAddMode}>Returns</TabsTrigger>
+            </TabsList>
 
             {/* ── Details Tab ── */}
             <TabsContent value="details" className="space-y-4">
