@@ -638,6 +638,14 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
               </Button>
             </TabsContent>
 
+            {/* ── PRODUCTS TAB ── */}
+            <TabsContent value="products" className="mt-0">
+              <ContactProductsTab
+                contactId={editingContact?.id}
+                onProductClick={onProductClick}
+              />
+            </TabsContent>
+
             {/* ── EDUCATION TAB ── */}
             <TabsContent value="education" className="mt-0">
               <ContactEducationTab
