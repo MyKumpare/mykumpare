@@ -116,7 +116,10 @@ function validateAndParseCSV(csvText, startDate, endDate) {
 export default function ProductReturnsTab({ productId, isEditing }) {
   const [showSetupDialog, setShowSetupDialog] = useState(false);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
-  const [returnType, setReturnType] = useState("");
+  const [returnTypes, setReturnTypes] = useState([]);
+  const [compositeName, setCompositeName] = useState("");
+  const [paperPortfolioName, setPaperPortfolioName] = useState("");
+  const [backTestName, setBackTestName] = useState("");
   const [inceptionDate, setInceptionDate] = useState("");
   const [gipsStatus, setGipsStatus] = useState("");
   const [returnFrequency, setReturnFrequency] = useState("");
