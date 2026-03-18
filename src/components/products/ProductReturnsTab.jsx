@@ -122,7 +122,7 @@ export default function ProductReturnsTab({ productId, isEditing }) {
   const [backTestName, setBackTestName] = useState("");
   const [inceptionDate, setInceptionDate] = useState("");
   const [gipsStatus, setGipsStatus] = useState([]);
-  const [returnFrequency, setReturnFrequency] = useState("");
+  const [returnFrequency, setReturnFrequency] = useState([]);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [csvFile, setCsvFile] = useState(null);
@@ -177,7 +177,7 @@ export default function ProductReturnsTab({ productId, isEditing }) {
   };
 
   const handleSetupComplete = () => {
-    if (returnTypes.length === 0 || !inceptionDate || !returnFrequency) return;
+    if (returnTypes.length === 0 || !inceptionDate || returnFrequency.length === 0) return;
     if (returnTypes.includes("Composite") && gipsStatus.length === 0) return;
     if (returnTypes.includes("Composite") && !compositeName.trim()) return;
     if (returnTypes.includes("Paper Portfolio") && !paperPortfolioName.trim()) return;
@@ -189,7 +189,7 @@ export default function ProductReturnsTab({ productId, isEditing }) {
 
   const handleDownloadTemplate = () => {
     if (!startDate || !endDate) return;
-    generateExcelTemplate(startDate, endDate, returnFrequency);
+    generateExcelTemplate(startDate, endDate, returnFrequency.join("/"));
   };
 
   const handleFileSelect = (e) => {
@@ -217,7 +217,7 @@ export default function ProductReturnsTab({ productId, isEditing }) {
       back_test_name: backTestName || null,
       inception_date: inceptionDate,
       gips_status: returnTypes.includes("Composite") ? gipsStatus.join(", ") : null,
-      return_frequency: returnFrequency,
+      return_frequency: returnFrequency.join("/"),
       monthly_returns: uploadValidation.returns,
       start_date: startDate,
       end_date: endDate,
@@ -238,7 +238,7 @@ export default function ProductReturnsTab({ productId, isEditing }) {
     setBackTestName(series.back_test_name || "");
     setInceptionDate(series.inception_date);
     setGipsStatus(series.gips_status ? series.gips_status.split(", ") : []);
-    setReturnFrequency(series.return_frequency);
+    setReturnFrequency(series.return_frequency ? series.return_frequency.split("/") : []);
     setStartDate(series.start_date);
     setEndDate(series.end_date);
     setShowUploadDialog(true);
@@ -443,19 +443,29 @@ export default function ProductReturnsTab({ productId, isEditing }) {
               </div>
             )}
 
-            {/* Return Frequency */}
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Return Type (Gross/Net) *</Label>
-              <Select value={returnFrequency} onValueChange={setReturnFrequency}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Select frequency..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {RETURN_FREQUENCIES.map((freq) => (
-                    <SelectItem key={freq} value={freq}>{freq}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Return Type (Multi-select) */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Return Type *</Label>
+              <div className="space-y-2">
+                {RETURN_FREQUENCIES.map((freq) => (
+                  <div key={freq} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id={freq}
+                      checked={returnFrequency.includes(freq)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setReturnFrequency([...returnFrequency, freq]);
+                        } else {
+                          setReturnFrequency(returnFrequency.filter(f => f !== freq));
+                        }
+                      }}
+                      className="w-4 h-4 cursor-pointer"
+                    />
+                    <label htmlFor={freq} className="text-sm text-gray-700 cursor-pointer">{freq}</label>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -468,7 +478,7 @@ export default function ProductReturnsTab({ productId, isEditing }) {
               disabled={
                 returnTypes.length === 0 ||
                 !inceptionDate ||
-                !returnFrequency ||
+                returnFrequency.length === 0 ||
                 (returnTypes.includes("Composite") && gipsStatus.length === 0) ||
                 (returnTypes.includes("Composite") && !compositeName.trim()) ||
                 (returnTypes.includes("Paper Portfolio") && !paperPortfolioName.trim()) ||
@@ -528,7 +538,7 @@ export default function ProductReturnsTab({ productId, isEditing }) {
                 className="w-full h-9 gap-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
               >
                 <Download className="w-4 h-4" />
-                Download Template ({returnFrequency || "—"})
+                Download Template ({returnFrequency.length > 0 ? returnFrequency.join("/") : "—"})
               </Button>
             )}
 
