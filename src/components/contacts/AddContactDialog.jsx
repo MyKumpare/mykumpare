@@ -264,6 +264,28 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
     return result;
   }, [allOwnerships, editingContact]);
 
+  // Determine if any associated firm is Manager of Managers or Investment Manager
+  const CONTACT_ROLE_FIRM_TYPES = ["Manager of Managers", "Investment Manager"];
+  const DEFAULT_CONTACT_FIRM_ROLES = [
+    "Administration",
+    "Board Member",
+    "Compliance and Legal",
+    "Executive",
+    "Investments",
+    "Marketing and Client Services",
+    "Operations",
+    "Others",
+  ];
+  const associatedFirmTypes = firmIds.flatMap(fid => {
+    const firm = firms.find(f => f.id === fid);
+    return firm?.firm_types || (firm?.firm_type ? [firm.firm_type] : []);
+  });
+  const showContactFirmRoles = associatedFirmTypes.some(t => CONTACT_ROLE_FIRM_TYPES.includes(t));
+  const allContactFirmRoleOptions = [...new Set([
+    ...DEFAULT_CONTACT_FIRM_ROLES,
+    ...contactFirmRoles.filter(r => !DEFAULT_CONTACT_FIRM_ROLES.includes(r)),
+  ])].sort();
+
   const sortedFirms = [...firms].sort((a, b) => a.name.localeCompare(b.name));
   const filteredFirms = sortedFirms.filter(
     (f) => !firmIds.includes(f.id) && f.name.toLowerCase().includes(firmSearch.toLowerCase())
