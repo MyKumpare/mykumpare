@@ -487,7 +487,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
             <TabsContent value="contacts" className="space-y-3">
               {editingFirm ? (
-                <ContactsTab firmId={editingFirm.id} firms={existingFirms} onNavigateToOwnership={undefined} />
+                <ContactsTab firmId={editingFirm.id} firms={existingFirms} onNavigateToOwnership={undefined} onProductClick={onProductClick ? (product) => { handleClose(); onProductClick(product); } : undefined} />
               ) : (
                 <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
                   Save the firm first to add contacts
