@@ -23,7 +23,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Download, Upload, Trash2, Edit2, AlertCircle, CheckCircle2 } from "lucide-react";
 
 const RETURN_TYPES = ["Composite", "Paper Portfolio", "Back-Test"];
-const GIPS_OPTIONS = ["GIPS Calculated", "GIPS Verified", "Non-GIPS Compliant"];
+const GIPS_OPTIONS = ["GIPS Calculated", "GIPS Compliant", "GIPS Verified", "Non-GIPS Compliant"];
 const RETURN_FREQUENCIES = ["Gross", "Net"];
 
 const getReturnTypeName = (type) => {
@@ -410,9 +410,11 @@ export default function ProductReturnsTab({ productId, isEditing }) {
                 <div className="space-y-2">
                   {GIPS_OPTIONS.map((option) => {
                     const isGipsCalculated = gipsStatus.includes("GIPS Calculated");
+                    const isGipsCompliant = gipsStatus.includes("GIPS Compliant");
                     const isDisabled = 
-                      (option === "Non-GIPS Compliant" && isGipsCalculated) ||
-                      (option === "GIPS Verified" && !isGipsCalculated);
+                      (option === "GIPS Compliant" && !isGipsCalculated) ||
+                      (option === "GIPS Verified" && !isGipsCompliant) ||
+                      (option === "Non-GIPS Compliant" && isGipsCalculated);
                     
                     return (
                       <div key={option} className="flex items-center gap-2">
