@@ -44,6 +44,7 @@ export default function Home() {
   const [preselectedFirmId, setPreselectedFirmId] = useState(null);
   const [returnToProduct, setReturnToProduct] = useState(false); // track if firm was opened from product
   const [returnToContact, setReturnToContact] = useState(false); // track if product was opened from contact
+  const [returnToContactFromFirm, setReturnToContactFromFirm] = useState(false); // track if firm was opened from contact
 
   const queryClient = useQueryClient();
 
