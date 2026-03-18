@@ -446,10 +446,13 @@ export default function ProductReturnsTab({ productId, isEditing }) {
             <Button
               onClick={handleSetupComplete}
               disabled={
-                !returnType ||
+                returnTypes.length === 0 ||
                 !inceptionDate ||
                 !returnFrequency ||
-                (returnType === "Composite" && !gipsStatus)
+                (returnTypes.includes("Composite") && !gipsStatus) ||
+                (returnTypes.includes("Composite") && !compositeName.trim()) ||
+                (returnTypes.includes("Paper Portfolio") && !paperPortfolioName.trim()) ||
+                (returnTypes.includes("Back-Test") && !backTestName.trim())
               }
               className="bg-indigo-600 hover:bg-indigo-700 text-white"
             >
