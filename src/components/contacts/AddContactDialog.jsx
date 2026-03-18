@@ -340,6 +340,8 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                 <TabsTrigger value="ownership" className="flex-1 flex items-center gap-1.5">
                   <TrendingUp className="w-3.5 h-3.5" /> Ownership
                 </TabsTrigger>
+              </TabsList>
+              <TabsList className="w-full">
                 <TabsTrigger value="activities" className="flex-1 flex items-center gap-1.5">
                   <Activity className="w-3.5 h-3.5" /> Activities
                 </TabsTrigger>
