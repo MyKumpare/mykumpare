@@ -71,12 +71,13 @@ export default function StatsListModal({ open, onOpenChange, mode, firms = [], p
   };
 
   const renderProducts = () => {
+    const q = searchQuery.toLowerCase();
     return PRODUCT_TYPES.map((type) => {
       const group = products
-        .filter((p) => p.product_type === type && (
-          p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (p.firm_name || "").toLowerCase().includes(searchQuery.toLowerCase())
-        ))
+        .filter((p) => p.product_type === type && (!q || (
+          p.name.toLowerCase().includes(q) ||
+          (p.firm_name || "").toLowerCase().includes(q)
+        )))
         .sort((a, b) => {
           const firmCmp = (a.firm_name || "").localeCompare(b.firm_name || "");
           return firmCmp !== 0 ? firmCmp : a.name.localeCompare(b.name);
