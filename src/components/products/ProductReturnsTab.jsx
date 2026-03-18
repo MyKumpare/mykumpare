@@ -469,7 +469,7 @@ export default function ProductReturnsTab({ productId, isEditing }) {
                 returnTypes.length === 0 ||
                 !inceptionDate ||
                 !returnFrequency ||
-                (returnTypes.includes("Composite") && !gipsStatus) ||
+                (returnTypes.includes("Composite") && gipsStatus.length === 0) ||
                 (returnTypes.includes("Composite") && !compositeName.trim()) ||
                 (returnTypes.includes("Paper Portfolio") && !paperPortfolioName.trim()) ||
                 (returnTypes.includes("Back-Test") && !backTestName.trim())
