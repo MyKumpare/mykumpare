@@ -636,6 +636,21 @@ export default function OrgChartTab({ firmId, firmName = "" }) {
     <div className="flex flex-col gap-3">
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
+        {/* Search */}
+        <div className="relative w-48">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+          <Input
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search name or title…"
+            className="h-7 pl-7 pr-7 text-xs"
+          />
+          {searchQuery && (
+            <button type="button" onClick={() => setSearchQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <X className="w-3 h-3" />
+            </button>
+          )}
+        </div>
         <div className="flex items-center gap-1">
           <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" onClick={() => setZoom(z => Math.max(0.2, z - 0.1))}>
             <ZoomOut className="w-3.5 h-3.5" />
