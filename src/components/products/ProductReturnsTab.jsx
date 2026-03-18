@@ -531,7 +531,7 @@ export default function ProductReturnsTab({ productId, isEditing }) {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSetupDialog(false)}>
+            <Button variant="outline" onClick={() => { setShowSetupDialog(false); resetForm(); }}>
               Cancel
             </Button>
             <Button
@@ -547,7 +547,7 @@ export default function ProductReturnsTab({ productId, isEditing }) {
               }
               className="bg-indigo-600 hover:bg-indigo-700 text-white"
             >
-              Next
+              Save & Continue
             </Button>
           </DialogFooter>
         </DialogContent>
