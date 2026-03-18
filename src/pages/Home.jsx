@@ -138,14 +138,13 @@ export default function Home() {
     setDialogOpen(true);
   };
 
-  const handleEdit = (firm, fromProduct = false) => {
+  const handleEdit = (firm, fromProduct = false, fromContact = false) => {
     setEditingFirm(firm);
     setPreselectedType(null);
     setOwnershipNavTarget(null);
     setReturnToProduct(fromProduct);
-    if (fromProduct) {
-      setProductDialogOpen(false);
-    }
+    setReturnToContactFromFirm(fromContact);
+    if (fromProduct) setProductDialogOpen(false);
     setDialogOpen(true);
   };
 
