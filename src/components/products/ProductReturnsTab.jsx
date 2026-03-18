@@ -32,16 +32,24 @@ const getReturnTypeName = (type) => {
   return "Composite Name";
 };
 
-function generateExcelTemplate(startDate, endDate, returnFrequency) {
+function generateExcelTemplate(startDate, endDate, returnFrequency, performanceType, performanceName) {
   // Generate CSV content for Excel template
   const start = new Date(startDate);
   const end = new Date(endDate);
-  let csv = "Date (YYYY-MM-DD),Return (%)\n";
+  
+  // Create header with performance info
+  const headers = ["Date (YYYY-MM-DD)"];
+  if (returnFrequency.includes("Gross")) headers.push("Gross Return (%)");
+  if (returnFrequency.includes("Net")) headers.push("Net Return (%)");
+  
+  let csv = headers.join(",") + "\n";
 
   const current = new Date(start.getFullYear(), start.getMonth(), 1);
   while (current <= end) {
     const lastDay = new Date(current.getFullYear(), current.getMonth() + 1, 0);
-    csv += `${lastDay.toISOString().split("T")[0]},\n`;
+    const dateStr = lastDay.toISOString().split("T")[0];
+    const emptyCells = new Array(returnFrequency.length).fill("");
+    csv += [dateStr, ...emptyCells].join(",") + "\n";
     current.setMonth(current.getMonth() + 1);
   }
 
@@ -50,7 +58,7 @@ function generateExcelTemplate(startDate, endDate, returnFrequency) {
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `returns-template-${returnFrequency.toLowerCase()}-${startDate}-to-${endDate}.csv`;
+  link.download = `returns-template-${performanceName || performanceType}-${startDate}-to-${endDate}.csv`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -189,7 +197,12 @@ export default function ProductReturnsTab({ productId, isEditing }) {
 
   const handleDownloadTemplate = () => {
     if (!startDate || !endDate) return;
-    generateExcelTemplate(startDate, endDate, returnFrequency.join("/"));
+    const performanceType = returnTypes.find(t => t);
+    const performanceName = 
+      returnTypes.includes("Composite") ? compositeName :
+      returnTypes.includes("Paper Portfolio") ? paperPortfolioName :
+      returnTypes.includes("Back-Test") ? backTestName : "";
+    generateExcelTemplate(startDate, endDate, returnFrequency, performanceType, performanceName);
   };
 
   const handleFileSelect = (e) => {
