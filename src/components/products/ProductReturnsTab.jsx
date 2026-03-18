@@ -121,7 +121,7 @@ export default function ProductReturnsTab({ productId, isEditing }) {
   const [paperPortfolioName, setPaperPortfolioName] = useState("");
   const [backTestName, setBackTestName] = useState("");
   const [inceptionDate, setInceptionDate] = useState("");
-  const [gipsStatus, setGipsStatus] = useState("");
+  const [gipsStatus, setGipsStatus] = useState([]);
   const [returnFrequency, setReturnFrequency] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
