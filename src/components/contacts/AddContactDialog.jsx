@@ -21,6 +21,7 @@ import ContactEducationTab from "./ContactEducationTab";
 import ContactProfessionalExperienceTab from "./ContactProfessionalExperienceTab";
 import ContactActivitiesTab from "./ContactActivitiesTab";
 import ContactProductsTab from "./ContactProductsTab";
+import ContactRolePicker from "./ContactRolePicker";
 
 const SALUTATIONS = ["Mr.", "Ms.", "Mrs.", "Dr.", "Prof.", "Hon."];
 const SUFFIXES = ["Jr.", "Sr.", "II", "III", "IV", "Esq.", "CFA", "CPA", "MBA", "PhD", "MD"];
