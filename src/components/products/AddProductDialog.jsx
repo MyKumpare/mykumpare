@@ -197,17 +197,22 @@ export default function AddProductDialog({
             <DialogTitle className="text-xl font-semibold">
               {isAddMode ? "Add Product" : "Product Details"}
             </DialogTitle>
-            {!isAddMode && !isEditing && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1.5"
-                onClick={() => setIsEditing(true)}
-              >
-                <Pencil className="w-3.5 h-3.5" />
-                Edit
+            <div className="flex items-center gap-1">
+              {!isAddMode && !isEditing && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1.5"
+                  onClick={() => setIsEditing(true)}
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  Edit
+                </Button>
+              )}
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-400 hover:text-gray-600" onClick={handleClose}>
+                <X className="w-4 h-4" />
               </Button>
-            )}
+            </div>
           </div>
         </DialogHeader>
 
