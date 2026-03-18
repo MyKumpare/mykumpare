@@ -162,7 +162,10 @@ export default function ProductReturnsTab({ productId, isEditing }) {
   });
 
   const resetForm = () => {
-    setReturnType("");
+    setReturnTypes([]);
+    setCompositeName("");
+    setPaperPortfolioName("");
+    setBackTestName("");
     setInceptionDate("");
     setGipsStatus("");
     setReturnFrequency("");
