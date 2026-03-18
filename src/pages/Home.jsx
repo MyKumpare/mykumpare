@@ -433,6 +433,7 @@ export default function Home() {
         contacts={contacts}
         firms={firms}
         onNavigateToOwnership={handleNavigateToOwnership}
+        onProductClick={(product) => handleEditProduct(product, true)}
       />
 
       <AddContactDialog
