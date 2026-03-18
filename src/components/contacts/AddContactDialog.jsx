@@ -741,6 +741,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
             <TabsContent value="products" className="mt-0">
               <ContactProductsTab
                 contactId={editingContact?.id}
+                firmIds={firmIds}
                 onProductClick={onProductClick}
               />
             </TabsContent>
