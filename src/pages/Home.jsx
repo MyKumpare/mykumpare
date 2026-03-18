@@ -384,6 +384,7 @@ export default function Home() {
       </div>
 
       <AddFirmDialog
+        onProductClick={(product) => handleEditProduct(product, false)}
         open={dialogOpen}
         onOpenChange={(open) => {
           setDialogOpen(open);
