@@ -395,6 +395,10 @@ export default function Home() {
               setReturnToProduct(false);
               setProductDialogOpen(true);
             }
+            if (returnToContactFromFirm) {
+              setReturnToContactFromFirm(false);
+              // viewingContact is still set, dialog reopens automatically
+            }
           }
         }}
         onSubmit={handleSubmit}
