@@ -216,7 +216,7 @@ export default function ProductReturnsTab({ productId, isEditing }) {
       paper_portfolio_name: paperPortfolioName || null,
       back_test_name: backTestName || null,
       inception_date: inceptionDate,
-      gips_status: returnTypes.includes("Composite") ? gipsStatus : null,
+      gips_status: returnTypes.includes("Composite") ? gipsStatus.join(", ") : null,
       return_frequency: returnFrequency,
       monthly_returns: uploadValidation.returns,
       start_date: startDate,
