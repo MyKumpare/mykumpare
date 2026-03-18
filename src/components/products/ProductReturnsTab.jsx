@@ -178,7 +178,7 @@ export default function ProductReturnsTab({ productId, isEditing }) {
 
   const handleSetupComplete = () => {
     if (returnTypes.length === 0 || !inceptionDate || !returnFrequency) return;
-    if (returnTypes.includes("Composite") && !gipsStatus) return;
+    if (returnTypes.includes("Composite") && gipsStatus.length === 0) return;
     if (returnTypes.includes("Composite") && !compositeName.trim()) return;
     if (returnTypes.includes("Paper Portfolio") && !paperPortfolioName.trim()) return;
     if (returnTypes.includes("Back-Test") && !backTestName.trim()) return;
