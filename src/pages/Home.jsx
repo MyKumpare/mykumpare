@@ -141,6 +141,9 @@ export default function Home() {
     setPreselectedType(null);
     setOwnershipNavTarget(null);
     setReturnToProduct(fromProduct);
+    if (fromProduct) {
+      setProductDialogOpen(false);
+    }
     setDialogOpen(true);
   };
 
