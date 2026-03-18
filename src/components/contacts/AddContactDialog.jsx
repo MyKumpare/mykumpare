@@ -194,6 +194,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
       contact_status: contactStatus,
       contact_role: contactRole,
       contact_type: contactType,
+      contact_firm_roles: contactFirmRoles,
       gender,
       ethnicity,
       veteran_status: veteranStatus,
