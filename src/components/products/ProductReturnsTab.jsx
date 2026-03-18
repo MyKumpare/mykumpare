@@ -268,7 +268,8 @@ export default function ProductReturnsTab({ productId, isEditing }) {
       returnTypes.includes("Composite") ? compositeName :
       returnTypes.includes("Paper Portfolio") ? paperPortfolioName :
       returnTypes.includes("Back-Test") ? backTestName : "";
-    generateExcelTemplate(startDate, endDate, returnFrequency, performanceType, performanceName);
+    const gipsStatusStr = returnTypes.includes("Composite") ? gipsStatus.join(", ") : "";
+    generateExcelTemplate(startDate, endDate, returnFrequency, performanceType, performanceName, inceptionDate, gipsStatusStr);
   };
 
   const handleFileSelect = (e) => {
