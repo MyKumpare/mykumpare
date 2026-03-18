@@ -881,10 +881,28 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                   })}
                 </div>
               ) : (
-                <div className="flex flex-col items-center gap-2 py-8">
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500">Not an Equity Owner</span>
-                <p className="text-sm text-gray-400 italic">No ownership records found.</p>
-              </div>
+                <div className="flex flex-col items-center gap-3 py-8">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500">Not an Equity Owner</span>
+                  <p className="text-sm text-gray-400 italic">No ownership records found.</p>
+                  {onNavigateToOwnership && firmIds.length > 0 && (
+                    <div className="flex flex-col items-center gap-2 mt-1">
+                      <p className="text-xs text-gray-400">Add ownership via a firm's Ownership tab:</p>
+                      <div className="flex flex-wrap gap-1.5 justify-center">
+                        {firmIds.map((fid) => (
+                          <button
+                            key={fid}
+                            type="button"
+                            onClick={() => { onOpenChange(false); onNavigateToOwnership(fid, null); }}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-colors"
+                          >
+                            <Plus className="w-3 h-3" />
+                            {getFirmName(fid)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </TabsContent>
             {/* ── ACTIVITIES TAB ── */}
