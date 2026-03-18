@@ -129,6 +129,11 @@ function OrgNode({ node, contacts, onAddChild, onRemove, onDrop, onTitleChange, 
           cursor-grab active:cursor-grabbing`}
         style={{ width: 164, minHeight: 148 }}
       >
+        {/* Drag handle */}
+        <div className="absolute top-1.5 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-40 transition-opacity no-print">
+          <GripVertical className="w-3.5 h-3.5 text-gray-500 rotate-90" />
+        </div>
+
         <button
           type="button"
           onClick={() => onRemove(node.id)}
