@@ -1,10 +1,22 @@
 import React from "react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const SECTIONS = [
+  { key: "investment_edge", label: "Investment Edge" },
   { key: "investment_philosophy", label: "Investment Philosophy" },
-  { key: "investment_process", label: "Investment Process" },
+  { key: "investment_universe", label: "Investment Universe" },
+  { key: "investment_process", label: "Investment Process", hasSub: true },
+  { key: "market_positioning", label: "Market Positioning", type: "multiselect" },
+  { key: "portfolio_expectations", label: "Portfolio Expectations" },
+];
+
+const MARKET_POSITIONING_OPTIONS = [
+  "Recovery Cycle",
+  "Mid Cycle",
+  "Late Cycle",
+  "Recession Cycle",
 ];
 
 function SectionBlock({ label, value, onChange, isEditing }) {
