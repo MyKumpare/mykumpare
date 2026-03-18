@@ -132,14 +132,17 @@ export default function AddProductDialog({
       JSON.stringify(classifications) !== JSON.stringify(classificationsFromProduct(editingProduct))
     : false;
 
-  const isDuplicate =
-    productName.trim().length > 0 &&
-    existingProducts.some((p) => {
-      if (p.id === editingProduct?.id) return false;
-      const existing = p.name.toLowerCase();
-      const input = productName.trim().toLowerCase();
-      return existing.includes(input) || input.includes(existing);
-    });
+  const matchingProducts =
+    productName.trim().length >= 2
+      ? existingProducts.filter((p) => {
+          if (p.id === editingProduct?.id) return false;
+          const existing = p.name.toLowerCase();
+          const input = productName.trim().toLowerCase();
+          return existing.includes(input) || input.includes(existing);
+        })
+      : [];
+
+  const isDuplicate = matchingProducts.length > 0;
 
   const isValid = productType && firmId && productName.trim() && !isDuplicate;
 
