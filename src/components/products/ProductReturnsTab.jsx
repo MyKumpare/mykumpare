@@ -26,6 +26,12 @@ const RETURN_TYPES = ["Composite", "Paper Portfolio", "Back-Test"];
 const GIPS_OPTIONS = ["GIPS Calculated", "GIPS Verified", "Non-GIPS Compliant"];
 const RETURN_FREQUENCIES = ["Gross", "Net"];
 
+const getReturnTypeName = (type) => {
+  if (type === "Paper Portfolio") return "Paper Portfolio Name";
+  if (type === "Back-Test") return "Back-Test Name";
+  return "Composite Name";
+};
+
 function generateExcelTemplate(startDate, endDate, returnFrequency) {
   // Generate CSV content for Excel template
   const start = new Date(startDate);
