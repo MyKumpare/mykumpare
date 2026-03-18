@@ -269,8 +269,8 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
     return result;
   }, [allOwnerships, editingContact]);
 
-  // Determine if any associated firm is Manager of Managers or Investment Manager
-  const CONTACT_ROLE_FIRM_TYPES = ["Manager of Managers", "Investment Manager"];
+  // Firm types that show Contact Role and Contact Department
+  const CONTACT_ROLE_FIRM_TYPES = ["Manager of Managers", "Investment Manager", "Allocator", "Investment Consultant"];
   const DEFAULT_CONTACT_FIRM_ROLES = [
     "Administration",
     "Board Member",
