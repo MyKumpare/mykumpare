@@ -91,6 +91,10 @@ export default function ContactsListModal({ open, onOpenChange, contacts = [], f
           onOpenChange(false);
           onNavigateToOwnership(firmId, ownershipId);
         } : undefined}
+        onProductClick={onProductClick ? (product) => {
+          setViewingContact(null);
+          onProductClick(product);
+        } : undefined}
       />
     )}
     </>
