@@ -8,7 +8,10 @@ const FIRM_TYPE_TO_PRODUCT_TYPE = {
 };
 
 export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditProduct, products = [], forceExpand = false }) {
-  const productType = FIRM_TYPE_TO_PRODUCT_TYPE[firm.firm_type];
+  const ALLOWED_FIRM_TYPES = ["Investment Manager", "Manager of Managers"];
+  const effectiveTypes = firm.firm_types?.length > 0 ? firm.firm_types : (firm.firm_type ? [firm.firm_type] : []);
+  const allowedType = effectiveTypes.find(t => ALLOWED_FIRM_TYPES.includes(t));
+  const productType = allowedType ? FIRM_TYPE_TO_PRODUCT_TYPE[allowedType] : null;
   const [expanded, setExpanded] = useState(false);
   const isExpanded = forceExpand || expanded;
 
