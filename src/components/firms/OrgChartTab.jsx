@@ -73,6 +73,14 @@ function ConnectorLines({ childCount }) {
 function OrgNode({ node, contacts, onAddChild, onRemove, onDrop, onTitleChange, onViewContact, depth = 0, searchQuery = "" }) {
   const contact = contacts.find(c => c.id === node.contact_id);
   const [collapsed, setCollapsed] = useState(false);
+
+  const isMatch = searchQuery.trim() !== "" && (() => {
+    const q = searchQuery.toLowerCase();
+    const name = getContactName(contact).toLowerCase();
+    const title = (node.title_override || contact?.title || "").toLowerCase();
+    return name.includes(q) || title.includes(q);
+  })();
+  const isDimmed = searchQuery.trim() !== "" && !isMatch;
   const [dragOver, setDragOver] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleVal, setTitleVal] = useState(node.title_override || contact?.title || "");
