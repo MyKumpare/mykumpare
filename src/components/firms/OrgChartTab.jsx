@@ -273,7 +273,7 @@ function buildPrintTree(nodes, rootIds, contacts, depth = 0, photoCache = {}) {
 
     const cardHtml = `
       <div style="display:flex;flex-direction:column;align-items:center;min-width:160px;">
-        <div style="background:${bg};border:2px solid ${border};border-radius:12px;padding:12px;width:160px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+        <div style="background:${bg};border:2px solid ${border};border-radius:12px;padding:12px;width:160px;min-height:148px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
           <div style="display:flex;justify-content:center;margin-bottom:8px;">${photoHtml}</div>
           <div style="font-size:12px;font-weight:700;color:#1e293b;line-height:1.3;">${name}</div>
           ${title ? `<div style="font-size:11px;color:#64748b;margin-top:4px;line-height:1.3;">${title}</div>` : ""}
