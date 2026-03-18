@@ -65,6 +65,19 @@ function generateExcelTemplate(startDate, endDate, returnFrequency, performanceT
   window.URL.revokeObjectURL(url);
 }
 
+function getFirstMonthEndAfterDate(dateStr) {
+  const date = new Date(dateStr);
+  const nextMonth = new Date(date.getFullYear(), date.getMonth() + 1, 1);
+  const lastDay = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0);
+  return lastDay.toISOString().split("T")[0];
+}
+
+function getMostRecentMonthEnd() {
+  const today = new Date();
+  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  return lastDay.toISOString().split("T")[0];
+}
+
 function validateAndParseCSV(csvText, startDate, endDate) {
   const lines = csvText.trim().split("\n").filter(l => l.trim());
   if (lines.length < 2) return { valid: false, error: "CSV file is empty" };
@@ -191,6 +204,9 @@ export default function ProductReturnsTab({ productId, isEditing }) {
     if (returnTypes.includes("Paper Portfolio") && !paperPortfolioName.trim()) return;
     if (returnTypes.includes("Back-Test") && !backTestName.trim()) return;
 
+    // Set default start and end dates
+    setStartDate(getFirstMonthEndAfterDate(inceptionDate));
+    setEndDate(getMostRecentMonthEnd());
     setShowSetupDialog(false);
     setShowUploadDialog(true);
   };
