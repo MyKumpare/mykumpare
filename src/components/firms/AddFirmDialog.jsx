@@ -299,47 +299,43 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
           {/* Logo + Firm Name row */}
           <div className="flex items-end gap-4">
-            {/* Logo */}
-            <div className="flex-shrink-0 space-y-1.5">
-              <Label className="text-sm font-medium text-gray-700">Logo</Label>
-              <div
-                className={`w-16 h-16 rounded-xl border-2 border-dashed flex items-center justify-center overflow-hidden transition-colors ${activelyEditing ? "cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 border-gray-300" : "border-gray-200 bg-gray-50"}`}
-                onClick={() => activelyEditing && logoInputRef.current?.click()}
-              >
-                {uploadingLogo ? (
-                  <div className="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
-                ) : logoUrl ? (
-                  <img src={logoUrl} alt="logo" className="w-full h-full object-contain p-1" />
-                ) : (
-                  <div className="flex flex-col items-center gap-0.5">
-                    {activelyEditing ? (
-                      <Upload className="w-5 h-5 text-gray-400" />
-                    ) : (
-                      <Building2 className="w-5 h-5 text-gray-300" />
-                    )}
-                  </div>
-                )}
-              </div>
-              {activelyEditing && logoUrl && (
-                <button
-                  type="button"
-                  onClick={() => setLogoUrl("")}
-                  className="text-xs text-red-400 hover:text-red-600 flex items-center gap-0.5"
+            {/* Logo - only show in edit mode */}
+            {activelyEditing && (
+              <div className="flex-shrink-0 space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Logo</Label>
+                <div
+                  className={`w-16 h-16 rounded-xl border-2 border-dashed flex items-center justify-center overflow-hidden transition-colors cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 border-gray-300`}
+                  onClick={() => logoInputRef.current?.click()}
                 >
-                  <X className="w-3 h-3" /> Remove
-                </button>
-              )}
-              <input
-                ref={logoInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleLogoUpload}
-              />
-            </div>
+                  {uploadingLogo ? (
+                    <div className="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
+                  ) : logoUrl ? (
+                    <img src={logoUrl} alt="logo" className="w-full h-full object-contain p-1" />
+                  ) : (
+                    <Upload className="w-5 h-5 text-gray-400" />
+                  )}
+                </div>
+                {logoUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setLogoUrl("")}
+                    className="text-xs text-red-400 hover:text-red-600 flex items-center gap-0.5"
+                  >
+                    <X className="w-3 h-3" /> Remove
+                  </button>
+                )}
+                <input
+                  ref={logoInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleLogoUpload}
+                />
+              </div>
+            )}
 
             {/* Firm name + type */}
-            <div className="flex-1 space-y-3">
+            <div className={activelyEditing ? "flex-1 space-y-3" : "w-full space-y-3"}>
               {/* Firm Type */}
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-gray-700">Type of Firm</Label>
