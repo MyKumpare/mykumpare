@@ -456,6 +456,10 @@ export default function Home() {
             setEditingProduct(null);
             setPreselectedProductType(null);
             setPreselectedFirmId(null);
+            if (returnToContact) {
+              setReturnToContact(false);
+              // viewingContact is still set, so the dialog will re-open automatically
+            }
           }
         }}
         onSubmit={handleProductSubmit}
