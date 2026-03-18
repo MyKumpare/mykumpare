@@ -510,11 +510,16 @@ export default function OrgChartTab({ firmId, firmName = "" }) {
         <title>Org Chart – ${firmName}</title>
         <style>
           * { box-sizing: border-box; margin: 0; padding: 0; }
-          body { font-family: 'Segoe UI', Arial, sans-serif; background: white; padding: 32px; color: #1e293b; }
-          .header { margin-bottom: 28px; border-bottom: 2px solid #e2e8f0; padding-bottom: 16px; }
-          .firm-name { font-size: 22px; font-weight: 800; color: #1e293b; }
-          .report-meta { font-size: 12px; color: #64748b; margin-top: 4px; }
-          .chart-wrap { display: flex; justify-content: center; padding-top: 8px; }
+          body { font-family: 'Segoe UI', Arial, sans-serif; background: white; padding: 24px; color: #1e293b; }
+          .header { margin-bottom: 16px; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; }
+          .firm-name { font-size: 20px; font-weight: 800; color: #1e293b; }
+          .report-meta { font-size: 11px; color: #64748b; margin-top: 4px; }
+          .chart-outer { width: 100%; overflow: visible; display: flex; justify-content: center; }
+          .chart-wrap { display: inline-flex; justify-content: center; transform-origin: top center; }
+          @media print {
+            @page { margin: 0.3in; size: landscape; }
+            body { padding: 0; }
+          }
         </style>
       </head>
       <body>
@@ -522,13 +527,29 @@ export default function OrgChartTab({ firmId, firmName = "" }) {
           <div class="firm-name">${firmName || "Organization Chart"}</div>
           <div class="report-meta">Organizational Chart &nbsp;·&nbsp; Report Date: ${reportDate}</div>
         </div>
-        <div class="chart-wrap">${treeHtml}</div>
+        <div class="chart-outer">
+          <div class="chart-wrap" id="chart">${treeHtml}</div>
+        </div>
+        <script>
+          window.addEventListener('load', function() {
+            var chart = document.getElementById('chart');
+            var pageW = document.body.clientWidth;
+            var chartW = chart.scrollWidth;
+            if (chartW > pageW) {
+              var scale = pageW / chartW;
+              chart.style.transform = 'scale(' + scale + ')';
+              chart.style.transformOrigin = 'top center';
+              // Shrink container height to avoid blank space
+              chart.parentElement.style.height = (chart.scrollHeight * scale) + 'px';
+            }
+            setTimeout(function() { window.print(); }, 600);
+          });
+        <\/script>
       </body>
       </html>
     `);
     w.document.close();
     w.focus();
-    setTimeout(() => { w.print(); }, 800);
   };
 
   const handleExportPNG = async () => {
