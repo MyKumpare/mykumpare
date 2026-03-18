@@ -191,8 +191,14 @@ export default function AddProductDialog({
     setDescription(editingProduct.description || "");
     setClassifications(classificationsFromProduct(editingProduct));
     setInvestmentDescriptions({
+      investment_edge: editingProduct.inv_desc_edge || "",
       investment_philosophy: editingProduct.inv_desc_philosophy || "",
+      investment_universe: editingProduct.inv_desc_universe || "",
       investment_process: editingProduct.inv_desc_process || "",
+      investment_process_buy_discipline: editingProduct.inv_desc_process_buy_discipline || "",
+      investment_process_sell_discipline: editingProduct.inv_desc_process_sell_discipline || "",
+      market_positioning: editingProduct.inv_desc_market_positioning || [],
+      portfolio_expectations: editingProduct.inv_desc_portfolio_expectations || "",
     });
     setIsEditing(false);
   };
