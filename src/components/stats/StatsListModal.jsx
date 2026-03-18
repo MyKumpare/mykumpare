@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Building2, Package } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Building2, Package, Search, X } from "lucide-react";
 
 const FIRM_TYPES = [
   "Manager of Managers",
@@ -28,6 +29,7 @@ const TYPE_COLORS = {
 };
 
 export default function StatsListModal({ open, onOpenChange, mode, firms = [], products = [], onFirmClick, onProductClick }) {
+  const [searchQuery, setSearchQuery] = useState("");
   const isFirms = mode === "firms";
 
   const handleFirmClick = (firm) => {
@@ -71,7 +73,10 @@ export default function StatsListModal({ open, onOpenChange, mode, firms = [], p
   const renderProducts = () => {
     return PRODUCT_TYPES.map((type) => {
       const group = products
-        .filter((p) => p.product_type === type)
+        .filter((p) => p.product_type === type && (
+          p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (p.firm_name || "").toLowerCase().includes(searchQuery.toLowerCase())
+        ))
         .sort((a, b) => {
           const firmCmp = (a.firm_name || "").localeCompare(b.firm_name || "");
           return firmCmp !== 0 ? firmCmp : a.name.localeCompare(b.name);
@@ -111,6 +116,25 @@ export default function StatsListModal({ open, onOpenChange, mode, firms = [], p
             {isFirms ? `All Firms (${firms.length})` : `All Products (${products.length})`}
           </DialogTitle>
         </DialogHeader>
+        {!isFirms && (
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              placeholder="Search products..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 pr-9 h-9"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        )}
         <div className="overflow-y-auto flex-1 pr-1">
           {isFirms ? renderFirms() : renderProducts()}
         </div>
