@@ -133,7 +133,9 @@ function OrgNode({ node, contacts, onAddChild, onRemove, onDrop, onTitleChange, 
         onDrop={handleDrop}
         className={`relative group flex flex-col items-center p-3 rounded-xl border-2 bg-white shadow-sm transition-all select-none
           ${isDragging ? "opacity-40 scale-95" : ""}
-          ${dragOver ? "border-indigo-500 bg-indigo-50 scale-105 shadow-lg ring-2 ring-indigo-300" : `${depthColor} hover:shadow-md`}
+          ${isDimmed ? "opacity-25" : ""}
+          ${isMatch ? "ring-2 ring-yellow-400 border-yellow-400 shadow-yellow-100 shadow-md" : ""}
+          ${dragOver ? "border-indigo-500 bg-indigo-50 scale-105 shadow-lg ring-2 ring-indigo-300" : !isMatch ? `${depthColor} hover:shadow-md` : ""}
           cursor-grab active:cursor-grabbing`}
         style={{ width: 164, minHeight: 148 }}
       >
