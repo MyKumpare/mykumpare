@@ -167,7 +167,7 @@ export default function ProductReturnsTab({ productId, isEditing }) {
     setPaperPortfolioName("");
     setBackTestName("");
     setInceptionDate("");
-    setGipsStatus("");
+    setGipsStatus([]);
     setReturnFrequency("");
     setStartDate("");
     setEndDate("");
