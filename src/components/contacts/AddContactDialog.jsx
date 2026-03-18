@@ -293,7 +293,20 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                 </DialogTitle>
                 {firmIds.length > 0 && (
                   <p className="text-sm text-indigo-600 font-medium mt-0.5 truncate">
-                    {firmIds.map(id => getFirmName(id)).join(", ")}
+                    {firmIds.map((id, i) => (
+                      <span key={id}>
+                        {i > 0 && ", "}
+                        {onFirmClick ? (
+                          <button
+                            type="button"
+                            className="hover:underline"
+                            onClick={() => onFirmClick(firms.find(f => f.id === id))}
+                          >
+                            {getFirmName(id)}
+                          </button>
+                        ) : getFirmName(id)}
+                      </span>
+                    ))}
                   </p>
                 )}
               </div>
