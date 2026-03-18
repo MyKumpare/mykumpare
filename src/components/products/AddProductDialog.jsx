@@ -259,7 +259,7 @@ export default function AddProductDialog({
 
         <div className="flex-1 overflow-y-auto pr-1">
           <Tabs defaultValue="details" className="w-full">
-            <TabsList className="grid grid-cols-3 mb-4 w-fit">
+            <TabsList className="grid grid-cols-3 w-full mb-4">
               <TabsTrigger value="details">Details</TabsTrigger>
               <TabsTrigger value="classifications">Classifications</TabsTrigger>
               <TabsTrigger value="description">Inv. Description</TabsTrigger>
