@@ -209,6 +209,27 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
     }
   };
 
+  const { data: allContacts = [] } = useQuery({
+    queryKey: ["contacts"],
+    queryFn: () => base44.entities.Contact.list(),
+    enabled: !viewMode && !editingContact,
+  });
+
+  // Detect duplicate contacts in the same firm(s)
+  const duplicateContacts = useMemo(() => {
+    if (viewMode || editingContact) return [];
+    const fn = firstName.trim().toLowerCase();
+    const ln = lastName.trim().toLowerCase();
+    if (!fn || !ln) return [];
+    return allContacts.filter((c) => {
+      const sameName =
+        c.first_name?.toLowerCase() === fn && c.last_name?.toLowerCase() === ln;
+      if (!sameName) return false;
+      // check if shares any firm with the current form
+      return (c.firm_ids || []).some((fid) => firmIds.includes(fid));
+    });
+  }, [allContacts, firstName, lastName, firmIds, viewMode, editingContact]);
+
   const { data: allOwnerships = [] } = useQuery({
     queryKey: ["ownership"],
     queryFn: () => base44.entities.Ownership.list("-effective_date"),
