@@ -213,7 +213,7 @@ export default function AddProductDialog({
               return onFirmClick && firm ? (
                 <button
                   type="button"
-                  onClick={() => { handleClose(); onFirmClick(firm); }}
+                  onClick={() => { setProductDialogOpen(false); onFirmClick(firm); }}
                   className="text-xs text-indigo-500 hover:underline hover:text-indigo-700 truncate text-left"
                 >
                   {firmName}
