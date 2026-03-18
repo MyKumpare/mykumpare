@@ -671,14 +671,14 @@ export default function ProductReturnsTab({ productId, isEditing }) {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => { setShowUploadDialog(false); resetForm(); }}>
-              Cancel
+              Done
             </Button>
             <Button
               onClick={handleUploadReturns}
               disabled={!uploadValidation?.valid || !uploadValidation.returns.length}
               className="bg-indigo-600 hover:bg-indigo-700 text-white"
             >
-              {editingReturnSeries ? "Update Returns" : "Upload Returns"}
+              Save Returns
             </Button>
           </DialogFooter>
         </DialogContent>
