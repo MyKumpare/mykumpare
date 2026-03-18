@@ -460,7 +460,7 @@ export default function Home() {
         existingProducts={products}
         preselectedProductType={preselectedProductType}
         preselectedFirmId={preselectedFirmId}
-        onFirmClick={handleEdit}
+        onFirmClick={(firm) => handleEdit(firm, true)}
       />
     </div>
   );
