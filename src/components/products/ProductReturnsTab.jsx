@@ -313,7 +313,7 @@ export default function ProductReturnsTab({ productId, isEditing }) {
     const reader = new FileReader();
     reader.onload = (event) => {
       const csvText = event.target?.result;
-      const validation = validateAndParseCSV(csvText, startDate, endDate);
+      const validation = validateAndParseCSV(csvText, startDate, endDate, returnFrequency);
       setUploadValidation(validation);
       setCsvFile(file);
     };
