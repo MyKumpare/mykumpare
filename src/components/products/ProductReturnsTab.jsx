@@ -237,7 +237,7 @@ export default function ProductReturnsTab({ productId, isEditing }) {
     setPaperPortfolioName(series.paper_portfolio_name || "");
     setBackTestName(series.back_test_name || "");
     setInceptionDate(series.inception_date);
-    setGipsStatus(series.gips_status || "");
+    setGipsStatus(series.gips_status ? series.gips_status.split(", ") : []);
     setReturnFrequency(series.return_frequency);
     setStartDate(series.start_date);
     setEndDate(series.end_date);
