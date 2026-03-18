@@ -120,6 +120,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setContactStatus("Active");
         setContactRole("");
         setContactType("");
+        setContactFirmRoles([]);
         setGender("Undetermined");
         setEthnicity([]);
         setVeteranStatus("Undetermined");
