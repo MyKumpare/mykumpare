@@ -417,6 +417,16 @@ export default function AddProductDialog({
                 />
               )}
             </TabsContent>
+
+            {/* ── Returns Tab ── */}
+            <TabsContent value="returns">
+              {editingProduct && (
+                <ProductReturnsTab
+                  productId={editingProduct.id}
+                  isEditing={activelyEditing}
+                />
+              )}
+            </TabsContent>
           </Tabs>
         </div>
 
