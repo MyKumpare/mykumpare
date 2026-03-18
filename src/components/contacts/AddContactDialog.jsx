@@ -393,7 +393,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
               </TabsList>
               <TabsList className="w-full">
                 <TabsTrigger value="classification" className="flex-1 flex items-center gap-1.5">
-                  <Tag className="w-3.5 h-3.5" /> Classification
+                  <Tag className="w-3.5 h-3.5" /> Classifications
                 </TabsTrigger>
                 <TabsTrigger value="demographics" className="flex-1 flex items-center gap-1.5">
                   Demographics
