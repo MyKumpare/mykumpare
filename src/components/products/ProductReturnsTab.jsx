@@ -269,11 +269,16 @@ export default function ProductReturnsTab({ productId, isEditing }) {
             <div key={series.id} className="border rounded-lg p-3 bg-white space-y-2">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-gray-900">{series.return_type}</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-sm font-semibold text-gray-900">{series.return_types?.join(", ")}</p>
+                  <div className="text-xs text-gray-500 mt-0.5 space-y-0.5">
+                    {series.composite_name && <p>Composite: {series.composite_name}</p>}
+                    {series.paper_portfolio_name && <p>Portfolio: {series.paper_portfolio_name}</p>}
+                    {series.back_test_name && <p>Back-Test: {series.back_test_name}</p>}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
                     {series.monthly_returns?.length || 0} returns · {series.start_date} to {series.end_date}
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-gray-500 mt-0.5">
                     {series.return_frequency} · Inception: {series.inception_date}
                     {series.gips_status && ` · ${series.gips_status}`}
                   </p>
