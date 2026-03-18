@@ -32,17 +32,30 @@ const getReturnTypeName = (type) => {
   return "Composite Name";
 };
 
-function generateExcelTemplate(startDate, endDate, returnFrequency, performanceType, performanceName) {
+function generateExcelTemplate(startDate, endDate, returnFrequency, performanceType, performanceName, inceptionDate, gipsStatus) {
   // Generate CSV content for Excel template
   const start = new Date(startDate);
   const end = new Date(endDate);
   
-  // Create header with performance info
+  // Build metadata section
+  let csv = "METADATA\n";
+  csv += `Performance Type,${performanceType}\n`;
+  csv += `Performance Name,${performanceName}\n`;
+  csv += `Inception Date,${inceptionDate}\n`;
+  if (gipsStatus) {
+    csv += `GIPS Status,${gipsStatus}\n`;
+  }
+  csv += `Return Type,${returnFrequency.join("/")}\n`;
+  csv += `Date Range,${startDate} to ${endDate}\n`;
+  csv += "\n"; // Blank row separator
+  
+  // Create data headers
   const headers = ["Date (YYYY-MM-DD)"];
   if (returnFrequency.includes("Gross")) headers.push("Gross Return (%)");
   if (returnFrequency.includes("Net")) headers.push("Net Return (%)");
   
-  let csv = headers.join(",") + "\n";
+  csv += "DATA\n";
+  csv += headers.join(",") + "\n";
 
   const current = new Date(start.getFullYear(), start.getMonth(), 1);
   while (current <= end) {
