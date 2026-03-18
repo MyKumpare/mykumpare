@@ -430,7 +430,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                 <div className="space-y-1.5">
                   <Label className="text-xs font-medium text-gray-700">First Name *</Label>
                   {viewMode ? ro(firstName) : (
-                    <Input placeholder="First name" value={firstName} onChange={(e) => setFirstName(e.target.value)} className="h-9" />
+                    <Input placeholder="First name" value={firstName} onChange={(e) => setFirstName(e.target.value)} className={`h-9 ${duplicateContacts.length > 0 ? "border-amber-400 focus-visible:ring-amber-400" : ""}`} />
                   )}
                 </div>
                 <div className="space-y-1.5">
