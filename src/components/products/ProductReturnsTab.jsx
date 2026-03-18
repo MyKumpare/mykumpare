@@ -351,25 +351,25 @@ export default function ProductReturnsTab({ productId, isEditing }) {
                   </p>
                 </div>
                 {isEditing && (
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 text-xs gap-1 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
-                      onClick={() => handleEditReturnSeries(series)}
-                    >
-                      <Edit2 className="w-3 h-3" /> Edit
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 text-xs gap-1 text-red-600 border-red-200 hover:bg-red-50"
-                      onClick={() => deleteReturnSeriesMutation.mutate(series.id)}
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
-                  </div>
-                )}
+                   <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                     <Button
+                       size="sm"
+                       variant="outline"
+                       className="h-7 text-xs gap-1 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                       onClick={() => handleEditReturnSeries(series)}
+                     >
+                       <Edit2 className="w-3 h-3" /> Edit
+                     </Button>
+                     <Button
+                       size="sm"
+                       variant="outline"
+                       className="h-7 text-xs gap-1 text-red-600 border-red-200 hover:bg-red-50"
+                       onClick={() => deleteReturnSeriesMutation.mutate(series.id)}
+                     >
+                       <Trash2 className="w-3 h-3" />
+                     </Button>
+                   </div>
+                 )}
               </div>
             </div>
           ))}
