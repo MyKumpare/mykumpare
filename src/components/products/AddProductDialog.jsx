@@ -136,6 +136,7 @@ export default function AddProductDialog({
     productName.trim().length >= 2
       ? existingProducts.filter((p) => {
           if (p.id === editingProduct?.id) return false;
+          if (firmId && p.firm_id !== firmId) return false;
           const existing = p.name.toLowerCase();
           const input = productName.trim().toLowerCase();
           return existing.includes(input) || input.includes(existing);
