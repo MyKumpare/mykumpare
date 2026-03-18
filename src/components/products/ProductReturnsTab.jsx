@@ -357,23 +357,18 @@ export default function ProductReturnsTab({ productId, isEditing }) {
             <DialogTitle>Add Return Series</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            {/* Performance Type (Multi-select) */}
+            {/* Performance Type (Single select) */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">Performance Type *</Label>
               <div className="space-y-2">
                 {RETURN_TYPES.map((type) => (
                   <div key={type} className="flex items-center gap-2">
                     <input
-                      type="checkbox"
+                      type="radio"
                       id={type}
-                      checked={returnTypes.includes(type)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setReturnTypes([...returnTypes, type]);
-                        } else {
-                          setReturnTypes(returnTypes.filter(t => t !== type));
-                        }
-                      }}
+                      name="performanceType"
+                      checked={returnTypes[0] === type}
+                      onChange={() => setReturnTypes([type])}
                       className="w-4 h-4 cursor-pointer"
                     />
                     <label htmlFor={type} className="text-sm text-gray-700 cursor-pointer">{type}</label>
