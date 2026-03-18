@@ -88,9 +88,16 @@ function OrgNode({ node, contacts, onAddChild, onRemove, onDrop, onTitleChange, 
     if (nodeId && nodeId !== node.id) onDrop({ type: "move", parentId: node.id, nodeId });
   };
 
+  const [isDragging, setIsDragging] = useState(false);
+
   const handleDragStart = (e) => {
     e.dataTransfer.setData("node_id", node.id);
     e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
   };
 
   const handleTitleSave = () => {
