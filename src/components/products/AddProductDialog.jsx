@@ -163,8 +163,14 @@ export default function AddProductDialog({
       name: productName.trim(),
       description,
       ...classifications,
+      inv_desc_edge: investmentDescriptions.investment_edge || "",
       inv_desc_philosophy: investmentDescriptions.investment_philosophy || "",
+      inv_desc_universe: investmentDescriptions.investment_universe || "",
       inv_desc_process: investmentDescriptions.investment_process || "",
+      inv_desc_process_buy_discipline: investmentDescriptions.investment_process_buy_discipline || "",
+      inv_desc_process_sell_discipline: investmentDescriptions.investment_process_sell_discipline || "",
+      inv_desc_market_positioning: investmentDescriptions.market_positioning || [],
+      inv_desc_portfolio_expectations: investmentDescriptions.portfolio_expectations || "",
     });
     setProductType("");
     setFirmId("");
