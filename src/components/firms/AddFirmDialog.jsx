@@ -685,6 +685,22 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               )}
               </TabsContent>
 
+              <TabsContent value="advisor-portfolios" className="space-y-3">
+              {editingFirm ? (
+                <FirmPortfoliosTab
+                  firmId={editingFirm.id}
+                  firmName={editingFirm.name}
+                  advisorMode
+                  advisorType={firmTypes.includes("Manager of Managers") ? "Manager of Managers" : "Investment Manager"}
+                  onPortfolioClick={onPortfolioClick}
+                />
+              ) : (
+                <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
+                  Save the firm first to view portfolios
+                </div>
+              )}
+              </TabsContent>
+
               <TabsContent value="ownership" className="space-y-3">
               {editingFirm ? (
                 <OwnershipTab firmId={editingFirm.id} firmName={editingFirm.name} defaultOwnershipId={defaultOwnershipId} />
