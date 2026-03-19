@@ -65,7 +65,7 @@ export default function ProductClassificationsTab({ classifications, onChange, i
             value={assetClass}
             onChange={(v) => {
               // Reset equity-specific fields when asset class changes
-              onChange({ ...classifications, asset_class: v, geography: "", market_cap: "", style: "", investment_process: "", implementation_process: "", aapryl_style: "", vehicle_offerings: [] });
+              onChange({ ...classifications, asset_class: v, geography: "", market_cap: "", style: "", investment_process: "", implementation_process: "", diversification_classification: "", aapryl_style: "", vehicle_offerings: [] });
             }}
             options={ASSET_CLASSES}
             placeholder="Select asset class..."
