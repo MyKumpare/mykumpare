@@ -65,6 +65,7 @@ export default function FirmTypeSection({ type, firms, onEdit, onDelete, onAddTo
                     onDelete={onDelete}
                     onAddProduct={onAddProduct}
                     onEditProduct={onEditProduct}
+                    onAddPortfolio={onAddPortfolio}
                     products={products}
                     forceExpand={forceExpand}
                   />
