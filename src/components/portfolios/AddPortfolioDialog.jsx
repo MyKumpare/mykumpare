@@ -293,6 +293,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
   // Reset advisor fields when advisor type changes
   useEffect(() => {
     setAdvisorFirmId("");
+    setAdvisorInceptionDate(null);
     setSubManagers([]);
   }, [advisorType]);
 
