@@ -53,6 +53,13 @@ export default function SearchResults({ query, firms, products, contacts, portfo
   // --- Match products ---
   const matchedProducts = products.filter((p) => p.name.toLowerCase().includes(q));
 
+  // --- Match portfolios ---
+  const matchedPortfolios = portfolios.filter((p) =>
+    (p.portfolio_name || "").toLowerCase().includes(q) ||
+    (p.allocator_name || "").toLowerCase().includes(q) ||
+    (p.advisor_firm_name || "").toLowerCase().includes(q)
+  );
+
   // For a firm result, gather its contacts
   const firmContacts = (firmId) => contacts.filter(c => (c.firm_ids || []).includes(firmId));
 
