@@ -287,70 +287,31 @@ export default function Home() {
 
       {/* Main content — overlaps the header */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 -mt-8">
-        {/* Action bar */}
+        {/* Search bar */}
         <div className="bg-white rounded-2xl shadow-lg shadow-gray-200/50 border border-gray-100 p-4 sm:p-5 mb-8">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                placeholder="Search firms, products or contacts..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={() => setSearchFocused(true)}
-                onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
-                className="pl-10 h-11 bg-gray-50 border-gray-200"
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              placeholder="Search firms, products or contacts..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
+              className="pl-10 h-11 bg-gray-50 border-gray-200"
+            />
+            {searchFocused && searchQuery.trim() && (
+              <SearchResults
+                query={searchQuery}
+                firms={firms}
+                products={products}
+                contacts={contacts}
+                portfolios={portfolios}
+                onFirmClick={(firm) => { setSearchQuery(""); handleEdit(firm); }}
+                onContactClick={(contact) => { setSearchQuery(""); setViewingContact(contact); }}
+                onProductClick={(product) => { setSearchQuery(""); handleEditProduct(product); }}
+                onPortfolioClick={(portfolio) => { setSearchQuery(""); setPreselectedAllocatorId(portfolio.firm_id); setPortfolioDialogOpen(true); }}
               />
-              {searchFocused && searchQuery.trim() && (
-                <SearchResults
-                  query={searchQuery}
-                  firms={firms}
-                  products={products}
-                  contacts={contacts}
-                  portfolios={portfolios}
-                  onFirmClick={(firm) => { setSearchQuery(""); handleEdit(firm); }}
-                  onContactClick={(contact) => { setSearchQuery(""); setViewingContact(contact); }}
-                  onProductClick={(product) => { setSearchQuery(""); handleEditProduct(product); }}
-                  onPortfolioClick={(portfolio) => { setSearchQuery(""); setPreselectedAllocatorId(portfolio.firm_id); setPortfolioDialogOpen(true); }}
-                />
-              )}
-            </div>
-            <Button
-              onClick={() => {
-                setEditingFirm(null);
-                setPreselectedType(null);
-                setDialogOpen(true);
-              }}
-              className="h-11 px-5 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Firm
-            </Button>
-            <Button
-              onClick={() => {
-                setEditingProduct(null);
-                setPreselectedProductType(null);
-                setPreselectedFirmId(null);
-                setProductDialogOpen(true);
-              }}
-              className="h-11 px-5 bg-violet-600 hover:bg-violet-700 text-white shadow-sm"
-            >
-              <Package className="w-4 h-4 mr-2" />
-              Add Product
-            </Button>
-            <Button
-              onClick={() => setAddContactOpen(true)}
-              className="h-11 px-5 bg-pink-600 hover:bg-pink-700 text-white shadow-sm"
-            >
-              <User className="w-4 h-4 mr-2" />
-              Add Contact
-            </Button>
-            <Button
-              onClick={() => { setPreselectedAllocatorId(null); setPortfolioDialogOpen(true); }}
-              className="h-11 px-5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
-            >
-              <LayoutList className="w-4 h-4 mr-2" />
-              Add Portfolio
-            </Button>
+            )}
           </div>
         </div>
 
