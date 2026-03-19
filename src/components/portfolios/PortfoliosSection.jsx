@@ -43,6 +43,10 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
     setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const toggleAdvisorType = (advisorType) => {
+    setExpandedAdvisorTypes((prev) => ({ ...prev, [advisorType]: !prev[advisorType] }));
+  };
+
   return (
     <div className="mb-6">
       {/* Section header */}
