@@ -53,6 +53,7 @@ export default function Home() {
   const [portfolioDialogOpen, setPortfolioDialogOpen] = useState(false);
   const [preselectedAllocatorId, setPreselectedAllocatorId] = useState(null);
   const [editingPortfolio, setEditingPortfolio] = useState(null);
+  const [deletedRecordsOpen, setDeletedRecordsOpen] = useState(false);
 
   const queryClient = useQueryClient();
 
