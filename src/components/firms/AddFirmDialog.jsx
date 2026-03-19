@@ -663,6 +663,16 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               )}
               </TabsContent>
 
+              <TabsContent value="portfolios" className="space-y-3">
+              {editingFirm ? (
+                <FirmPortfoliosTab firmId={editingFirm.id} firmName={editingFirm.name} />
+              ) : (
+                <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
+                  Save the firm first to add portfolios
+                </div>
+              )}
+              </TabsContent>
+
               <TabsContent value="products" className="space-y-3">
               {editingFirm ? (
                 <FirmProductsTab firmId={editingFirm.id} firmName={editingFirm.name} firms={existingFirms} />
