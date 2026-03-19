@@ -472,10 +472,6 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               </div>
 
           {/* Contacts, Addresses, Phones & Ownership Tabs */}
-           {(() => {
-             const NON_PRODUCT_TYPES = ["Allocator", "Trade Organizations"];
-             const hideProductTabs = firmTypes.length > 0 && firmTypes.every(t => NON_PRODUCT_TYPES.includes(t));
-             return (
            <Tabs defaultValue={defaultTab || "contacts"} className="w-full">
              <TabsList className="grid w-full grid-cols-3">
                <TabsTrigger value="contacts">Contacts</TabsTrigger>
