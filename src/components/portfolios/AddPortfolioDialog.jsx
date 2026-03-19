@@ -415,7 +415,13 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
 
   const subManagersValid =
     advisorType !== "Manager of Managers" ||
-    (subManagers.every((s) => s.inception_date && (!momInceptionDate || parseISO(s.inception_date) >= momInceptionDate)));
+    subManagers.every((s) => {
+      if (!s.inception_date) return false;
+      const d = parseISO(s.inception_date);
+      if (momInceptionDate && d < momInceptionDate) return false;
+      if (inceptionDate && d < inceptionDate) return false;
+      return true;
+    });
 
   const isValid =
     allocatorId &&
