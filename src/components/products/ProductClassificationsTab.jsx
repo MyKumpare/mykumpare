@@ -15,6 +15,7 @@ const MARKET_CAPS = ["All Cap", "Large Cap", "Mid-Large Cap", "Mid Cap", "Small-
 const STYLES = ["Value", "Core", "Growth"];
 const INVESTMENT_PROCESSES = ["Quantitative", "Fundamental", "Hybrid"];
 const IMPLEMENTATION_PROCESSES = ["Active", "Passive"];
+const DIVERSIFICATION_CLASSIFICATIONS = ["Concentrated", "Diversified"];
 const AAPRYL_STYLES = ["Aggressive Value", "Relative Value", "High Quality Blend", "GARP", "Core Growth", "Aggressive Growth"];
 const VEHICLE_OFFERINGS = ["Separate Account", "Integrated Managed Portfolio", "ETF", "Mutual Fund"];
 
@@ -123,6 +124,14 @@ export default function ProductClassificationsTab({ classifications, onChange, i
               </Select>
             ) : (
               <ReadOnlyValue value={classifications?.implementation_process} />
+            )}
+          </FieldRow>
+
+          <FieldRow label="Diversification Classification">
+            {isEditing ? (
+              <CreatableSelect value={classifications?.diversification_classification || ""} onChange={(v) => set("diversification_classification", v)} options={DIVERSIFICATION_CLASSIFICATIONS} placeholder="Select diversification classification..." />
+            ) : (
+              <ReadOnlyValue value={classifications?.diversification_classification} />
             )}
           </FieldRow>
 
