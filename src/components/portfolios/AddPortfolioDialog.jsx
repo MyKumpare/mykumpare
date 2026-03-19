@@ -471,10 +471,10 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button
               onClick={handleSave}
-              disabled={!isValid || createMutation.isPending}
+              disabled={!isValid || createMutation.isPending || updateMutation.isPending}
               className="bg-indigo-600 hover:bg-indigo-700 text-white"
             >
-              Save Portfolio
+              {editingPortfolio ? "Save Changes" : "Save Portfolio"}
             </Button>
           </DialogFooter>
         </DialogContent>
