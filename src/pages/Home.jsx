@@ -241,47 +241,7 @@ export default function Home() {
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">MyKumpare</h1>
           </div>
 
-          <div className="mt-6 grid grid-cols-3 sm:flex sm:items-center gap-4 sm:gap-6">
-            <button
-              onClick={() => setStatsModal("firms")}
-              className="flex items-center gap-3 group hover:opacity-80 transition-opacity"
-            >
-              <div className="text-3xl sm:text-4xl font-bold underline decoration-dotted underline-offset-4 decoration-indigo-300">{totalFirms}</div>
-              <div className="text-indigo-200 text-sm leading-tight text-left group-hover:text-white transition-colors">
-                Total<br />Firms
-              </div>
-            </button>
-            <div className="hidden sm:block w-px h-10 bg-white/20" />
-            <button
-              onClick={() => setStatsModal("products")}
-              className="flex items-center gap-3 group hover:opacity-80 transition-opacity"
-            >
-              <div className="text-3xl sm:text-4xl font-bold underline decoration-dotted underline-offset-4 decoration-violet-300">{totalProducts}</div>
-              <div className="text-indigo-200 text-sm leading-tight text-left group-hover:text-white transition-colors">
-                Total<br />Products
-              </div>
-            </button>
-            <div className="hidden sm:block w-px h-10 bg-white/20" />
-            <button
-              onClick={() => setContactsModalOpen(true)}
-              className="flex items-center gap-3 group hover:opacity-80 transition-opacity"
-            >
-              <div className="text-3xl sm:text-4xl font-bold underline decoration-dotted underline-offset-4 decoration-pink-300">{totalContacts}</div>
-              <div className="text-indigo-200 text-sm leading-tight text-left group-hover:text-white transition-colors">
-                Total<br />Contacts
-              </div>
-            </button>
-            <div className="hidden sm:block w-px h-10 bg-white/20" />
-            <button
-              onClick={() => setStatsModal("portfolios")}
-              className="flex items-center gap-3 group hover:opacity-80 transition-opacity"
-            >
-              <div className="text-3xl sm:text-4xl font-bold underline decoration-dotted underline-offset-4 decoration-emerald-300">{totalPortfolios}</div>
-              <div className="text-indigo-200 text-sm leading-tight text-left group-hover:text-white transition-colors">
-                Total<br />Portfolios
-              </div>
-            </button>
-          </div>
+
         </div>
       </div>
 
