@@ -387,6 +387,14 @@ export default function Home() {
           />
         )}
 
+        {/* Products section */}
+        <ProductsSection
+          products={products}
+          firms={firms}
+          onProductClick={handleEditProduct}
+          onAddProduct={() => { setEditingProduct(null); setPreselectedProductType(null); setPreselectedFirmId(null); setProductDialogOpen(true); }}
+        />
+
         <div className="h-12" />
       </div>
 
