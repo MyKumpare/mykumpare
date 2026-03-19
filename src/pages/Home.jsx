@@ -485,14 +485,24 @@ export default function Home() {
         onSubmit={handleProductSubmit}
         onDelete={(product) => {
           setDeletingProduct(product);
-          deleteProductMutation.mutate(product.id);
+          // Soft delete
+          updateProductMutation.mutate({ 
+            id: product.id, 
+            data: { deleted_at: new Date().toISOString() } 
+          });
         }}
         editingProduct={editingProduct}
-        firms={firms}
-        existingProducts={products}
+        firms={activeFirms}
+        existingProducts={activeProducts}
         preselectedProductType={preselectedProductType}
         preselectedFirmId={preselectedFirmId}
         onFirmClick={(firm) => handleEdit(firm, true)}
+      />
+
+      <DeletedRecordsModal
+        open={deletedRecordsOpen}
+        onOpenChange={setDeletedRecordsOpen}
+        deletedRecords={deletedRecords}
       />
     </div>
   );
