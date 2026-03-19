@@ -166,7 +166,8 @@ export default function AddProductDialog({
       firmId !== editingProduct.firm_id ||
       description !== (editingProduct.description || "") ||
       JSON.stringify(classifications) !== JSON.stringify(classificationsFromProduct(editingProduct)) ||
-      JSON.stringify(investmentDescriptions) !== JSON.stringify(originalDescriptions)
+      JSON.stringify({ ...investmentDescriptions, product_biases: undefined }) !== JSON.stringify({ ...originalDescriptions, product_biases: undefined }) ||
+      JSON.stringify(investmentDescriptions.product_biases ?? {}) !== JSON.stringify(editingProduct.inv_desc_product_biases ?? {})
     : false;
 
   const matchingProducts =
