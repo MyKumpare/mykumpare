@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format, parseISO } from "date-fns";
-import { CalendarIcon, Plus, X, ChevronDown, Check } from "lucide-react";
+import { CalendarIcon, Plus, X, ChevronDown, Check, Pencil, LayoutList } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AddFirmDialog from "@/components/firms/AddFirmDialog";
 
