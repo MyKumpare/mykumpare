@@ -423,11 +423,16 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
       return true;
     });
 
+  const advisorDateValid = !advisorType || (
+    advisorInceptionDate &&
+    (!inceptionDate || advisorInceptionDate >= inceptionDate)
+  );
+
   const isValid =
     allocatorId &&
     portfolioName.trim() &&
     inceptionDate &&
-    (!advisorType || advisorInceptionDate) &&
+    advisorDateValid &&
     subManagersValid;
 
   return (
