@@ -483,8 +483,9 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                {showPortfolioTab && <TabsTrigger value="portfolios">Portfolio</TabsTrigger>}
              </TabsList>
              {!hideProductTabs && (
-             <TabsList className="grid w-full grid-cols-3 mt-1">
+             <TabsList className={`grid w-full mt-1 ${showAdvisorPortfolioTab ? "grid-cols-4" : "grid-cols-3"}`}>
                <TabsTrigger value="products">Products</TabsTrigger>
+               {showAdvisorPortfolioTab && <TabsTrigger value="advisor-portfolios">Portfolios</TabsTrigger>}
                <TabsTrigger value="ownership">Ownership</TabsTrigger>
                <TabsTrigger value="orgchart">Org Chart</TabsTrigger>
              </TabsList>
