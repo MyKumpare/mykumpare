@@ -9,7 +9,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { format, parseISO } from "date-fns";
 import { Plus, CalendarIcon, Trash2, Pencil, X, Check } from "lucide-react";
 
-export default function FirmPortfoliosTab({ firmId, firmName }) {
+export default function FirmPortfoliosTab({ firmId, firmName, onPortfolioClick }) {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
