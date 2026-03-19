@@ -96,6 +96,55 @@ function SubsectionBlock({ label, value, onChange, isEditing }) {
   );
 }
 
+function RangeSubsectionBlock({ label, minKey, maxKey, unit, isInteger, descriptions, onChange, isEditing }) {
+  const minVal = descriptions?.[minKey] ?? "";
+  const maxVal = descriptions?.[maxKey] ?? "";
+  const inputType = "number";
+
+  return (
+    <div className="space-y-1.5 pl-4 border-l-2 border-indigo-200">
+      <Label className="text-sm font-medium text-gray-700">{label}</Label>
+      <div className="flex items-center gap-2">
+        <div className="flex-1 space-y-0.5">
+          <Label className="text-xs text-gray-500">Min {unit}</Label>
+          {isEditing ? (
+            <Input
+              type={inputType}
+              step={isInteger ? "1" : "0.01"}
+              placeholder="Min"
+              value={minVal}
+              onChange={(e) => onChange({ ...descriptions, [minKey]: e.target.value })}
+              className="h-8 text-sm"
+            />
+          ) : (
+            <div className="h-8 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-700">
+              {minVal !== "" && minVal !== null ? minVal : <span className="text-gray-400 italic">—</span>}
+            </div>
+          )}
+        </div>
+        <span className="text-gray-400 mt-5">–</span>
+        <div className="flex-1 space-y-0.5">
+          <Label className="text-xs text-gray-500">Max {unit}</Label>
+          {isEditing ? (
+            <Input
+              type={inputType}
+              step={isInteger ? "1" : "0.01"}
+              placeholder="Max"
+              value={maxVal}
+              onChange={(e) => onChange({ ...descriptions, [maxKey]: e.target.value })}
+              className="h-8 text-sm"
+            />
+          ) : (
+            <div className="h-8 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-700">
+              {maxVal !== "" && maxVal !== null ? maxVal : <span className="text-gray-400 italic">—</span>}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ProductInvestmentDescriptionTab({ descriptions, onChange, isEditing }) {
   const set = (key, val) => onChange({ ...descriptions, [key]: val });
 
