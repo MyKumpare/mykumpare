@@ -15,6 +15,7 @@ import ContactsListModal from "../components/contacts/ContactsListModal";
 import AddContactDialog from "../components/contacts/AddContactDialog";
 import SearchResults from "../components/search/SearchResults";
 import AddPortfolioDialog from "../components/portfolios/AddPortfolioDialog";
+import PortfoliosSection from "../components/portfolios/PortfoliosSection";
 
 const FIRM_TYPES = [
   "Manager of Managers",
