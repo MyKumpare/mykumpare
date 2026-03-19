@@ -186,7 +186,7 @@ function BiasSubsection({ label, allOptions, items, onChange, isEditing, isMulti
 function CashLevelBlock({ value, onChange, isEditing }) {
   return (
     <div className="space-y-1.5 pl-4 border-l-2 border-indigo-200">
-      <Label className="text-sm font-medium text-gray-700">Cash Level</Label>
+      <Label className="text-sm font-medium text-gray-700">Cash Level Max %</Label>
       {isEditing ? (
         <div className="flex items-center gap-1.5">
           <span className="text-sm text-gray-500">±</span>
