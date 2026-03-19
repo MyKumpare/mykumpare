@@ -249,6 +249,13 @@ export default function ProductInvestmentDescriptionTab({ descriptions, onChange
           )}
         </div>
       ))}
+
+      {/* Product Biases */}
+      <ProductBiasesSection
+        biases={descriptions?.product_biases || {}}
+        onChange={(val) => set("product_biases", val)}
+        isEditing={isEditing}
+      />
     </div>
   );
 }
