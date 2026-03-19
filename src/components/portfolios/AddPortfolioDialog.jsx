@@ -242,7 +242,6 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
   const [allocatorId, setAllocatorId] = useState("");
   const [portfolioName, setPortfolioName] = useState("");
   const [inceptionDate, setInceptionDate] = useState(null);
-  const [calendarOpen, setCalendarOpen] = useState(false);
   const [advisorType, setAdvisorType] = useState("");
   const [advisorFirmId, setAdvisorFirmId] = useState("");
   const [advisorInceptionDate, setAdvisorInceptionDate] = useState(null);
