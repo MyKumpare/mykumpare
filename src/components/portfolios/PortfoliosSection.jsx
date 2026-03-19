@@ -84,15 +84,26 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
               No portfolios yet — click "Add Portfolio" to create one
             </div>
           ) : (
-            Object.entries(grouped).map(([advisorType, allocatorGroups]) => (
+            Object.entries(grouped).map(([advisorType, allocatorGroups]) => {
+              const isAdvisorTypeOpen = expandedAdvisorTypes[advisorType] !== false;
+              return (
               <div key={advisorType} className="space-y-2">
                 {/* Advisor Type Header */}
-                <div className="bg-emerald-50 rounded-lg px-3 py-2 flex items-center gap-2">
+                <button
+                  onClick={() => toggleAdvisorType(advisorType)}
+                  className="w-full bg-emerald-50 rounded-lg px-3 py-2 flex items-center gap-2 hover:bg-emerald-100 transition-colors"
+                >
+                  {isAdvisorTypeOpen ? (
+                    <ChevronDown className="w-4 h-4 text-emerald-700" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4 text-emerald-700" />
+                  )}
                   <span className="text-xs font-semibold text-emerald-700 uppercase">{advisorType}</span>
                   <span className="text-xs text-emerald-600">{Object.values(allocatorGroups).flat().length}</span>
-                </div>
+                </button>
 
                 {/* Allocator Groups */}
+                {isAdvisorTypeOpen && (
                 <div className="ml-2 space-y-2">
                   {Object.entries(allocatorGroups).map(([allocator, portfolioList]) => {
                     const groupKey = `${advisorType}/${allocator}`;
