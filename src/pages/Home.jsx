@@ -470,7 +470,8 @@ export default function Home() {
 
       <AddPortfolioDialog
         open={portfolioDialogOpen}
-        onOpenChange={setPortfolioDialogOpen}
+        onOpenChange={(o) => { setPortfolioDialogOpen(o); if (!o) setPreselectedAllocatorId(null); }}
+        preselectedAllocatorId={preselectedAllocatorId}
       />
 
       <AddProductDialog
