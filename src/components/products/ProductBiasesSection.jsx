@@ -48,7 +48,7 @@ function BiasRow({ item, onChange, onRemove, isEditing }) {
         <div className="flex items-center gap-3">
           {item.weight && <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 font-medium">{item.weight}</span>}
           {item.pct !== "" && item.pct !== undefined && item.pct !== null && (
-            <span className="text-xs text-gray-600">±{item.pct}%</span>
+            <span className="text-xs text-gray-600">±{parseFloat(item.pct).toFixed(2)}%</span>
           )}
         </div>
       )}
