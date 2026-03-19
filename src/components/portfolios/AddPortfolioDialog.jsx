@@ -289,10 +289,19 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Portfolio.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["portfolios"] });
+      onOpenChange(false);
+      if (onSuccess) onSuccess();
+    },
+  });
+
   const handleSave = () => {
     const allocatorFirm = firms.find((f) => f.id === allocatorId);
     const advisorFirm = firms.find((f) => f.id === advisorFirmId);
-    createMutation.mutate({
+    const payload = {
       firm_id: allocatorId,
       allocator_name: allocatorFirm?.name || "",
       portfolio_name: portfolioName.trim(),
@@ -301,7 +310,12 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
       advisor_firm_id: advisorFirmId || undefined,
       advisor_firm_name: advisorFirm?.name || undefined,
       sub_managers: advisorType === "Manager of Managers" ? subManagers : undefined,
-    });
+    };
+    if (editingPortfolio) {
+      updateMutation.mutate({ id: editingPortfolio.id, data: payload });
+    } else {
+      createMutation.mutate(payload);
+    }
   };
 
   // Open AddFirmDialog for allocator
