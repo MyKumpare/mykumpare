@@ -180,6 +180,14 @@ export default function AddProductDialog({
       inv_desc_process_sell_discipline: investmentDescriptions.investment_process_sell_discipline || "",
       inv_desc_market_positioning: investmentDescriptions.market_positioning || [],
       inv_desc_portfolio_expectations: investmentDescriptions.portfolio_expectations || "",
+      inv_desc_tracking_error_min: investmentDescriptions.tracking_error_min !== "" ? Number(investmentDescriptions.tracking_error_min) : null,
+      inv_desc_tracking_error_max: investmentDescriptions.tracking_error_max !== "" ? Number(investmentDescriptions.tracking_error_max) : null,
+      inv_desc_excess_return_min: investmentDescriptions.excess_return_min !== "" ? Number(investmentDescriptions.excess_return_min) : null,
+      inv_desc_excess_return_max: investmentDescriptions.excess_return_max !== "" ? Number(investmentDescriptions.excess_return_max) : null,
+      inv_desc_information_ratio_min: investmentDescriptions.information_ratio_min !== "" ? Number(investmentDescriptions.information_ratio_min) : null,
+      inv_desc_information_ratio_max: investmentDescriptions.information_ratio_max !== "" ? Number(investmentDescriptions.information_ratio_max) : null,
+      inv_desc_holdings_min: investmentDescriptions.holdings_min !== "" ? Number(investmentDescriptions.holdings_min) : null,
+      inv_desc_holdings_max: investmentDescriptions.holdings_max !== "" ? Number(investmentDescriptions.holdings_max) : null,
     });
     setProductType("");
     setFirmId("");
