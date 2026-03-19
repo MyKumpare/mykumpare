@@ -1,5 +1,5 @@
 import React from "react";
-import { Building2, User, Package } from "lucide-react";
+import { Building2, User, Package, LayoutList } from "lucide-react";
 
 function getContactFullName(c) {
   return [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix]
