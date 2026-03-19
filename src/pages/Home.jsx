@@ -268,7 +268,7 @@ export default function Home() {
                 Total<br />Contacts
               </div>
             </button>
-            <div className="w-px h-10 bg-white/20" />
+            <div className="hidden sm:block w-px h-10 bg-white/20" />
             <button
               onClick={() => setStatsModal("portfolios")}
               className="flex items-center gap-3 group hover:opacity-80 transition-opacity"
