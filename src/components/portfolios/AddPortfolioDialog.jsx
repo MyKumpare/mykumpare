@@ -499,6 +499,19 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
               </div>
             )}
 
+            {/* Advisor Inception Date (conditional) */}
+            {advisorType && (
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-gray-700">
+                  {advisorType === "Manager of Managers" ? "MoM" : "Investment Manager"} Inception Date <span className="text-red-400">*</span>
+                </Label>
+                <DatePicker
+                  value={advisorInceptionDate}
+                  onChange={setAdvisorInceptionDate}
+                />
+              </div>
+            )}
+
             {/* Sub-managers (only for MoM) */}
             {advisorType === "Manager of Managers" && (
               <div className="space-y-1.5">
@@ -508,6 +521,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                   value={subManagers}
                   onChange={setSubManagers}
                   onAddNew={() => setAddProductOpen(true)}
+                  momInceptionDate={advisorInceptionDate}
                 />
               </div>
             )}
