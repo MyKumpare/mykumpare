@@ -367,6 +367,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
       advisor_type: advisorType || undefined,
       advisor_firm_id: advisorFirmId || undefined,
       advisor_firm_name: advisorFirm?.name || undefined,
+      advisor_inception_date: advisorType && advisorInceptionDate ? format(advisorInceptionDate, "yyyy-MM-dd") : undefined,
       sub_managers: advisorType === "Manager of Managers" ? subManagers : undefined,
     };
     if (editingPortfolio) {
