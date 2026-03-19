@@ -158,8 +158,10 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
                     );
                   })}
                 </div>
+                )}
               </div>
-            ))
+            );
+            })
           )}
         </div>
       )}
