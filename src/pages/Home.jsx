@@ -360,7 +360,7 @@ export default function Home() {
           onAddPortfolio={() => { setEditingPortfolio(null); setPreselectedAllocatorId(null); setPortfolioDialogOpen(true); }}
         />
 
-        {/* Firms list */}
+        {/* Firms section */}
         {isLoading ? (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
@@ -371,52 +371,20 @@ export default function Home() {
               </div>
             ))}
           </div>
-        ) : hasResults ? (
-          <div>
-            {FIRM_TYPES.map((type) =>
-              groupedFirms[type] ? (
-                <FirmTypeSection
-                  key={type}
-                  type={type}
-                  firms={groupedFirms[type]}
-                  onEdit={handleEdit}
-                  onDelete={setDeletingFirm}
-                  onAddToType={handleAddToType}
-                  onAddProduct={handleAddProductFromFirm}
-                  onEditProduct={handleEditProduct}
-                  onAddPortfolio={(firm) => { setPreselectedAllocatorId(firm.id); setPortfolioDialogOpen(true); }}
-                  forceExpand={!!searchQuery}
-                  products={products}
-                />
-              ) : null
-            )}
-          </div>
         ) : (
-          <div className="text-center py-20">
-            <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-              <Building className="w-7 h-7 text-gray-400" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-1">
-              {searchQuery ? "No firms found" : "No firms yet"}
-            </h3>
-            <p className="text-sm text-gray-500 mb-6">
-              {searchQuery
-                ? "Try a different search term"
-                : 'Click "Add Firm" to create your first firm'}
-            </p>
-            {!searchQuery && (
-              <Button
-                onClick={() => {
-                  setEditingFirm(null);
-                  setDialogOpen(true);
-                }}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Firm
-              </Button>
-            )}
-          </div>
+          <FirmsSection
+            groupedFirms={groupedFirms}
+            totalFirms={totalFirms}
+            products={products}
+            searchQuery={searchQuery}
+            onEdit={handleEdit}
+            onDelete={setDeletingFirm}
+            onAddToType={handleAddToType}
+            onAddFirm={() => { setEditingFirm(null); setPreselectedType(null); setDialogOpen(true); }}
+            onAddProduct={handleAddProductFromFirm}
+            onEditProduct={handleEditProduct}
+            onAddPortfolio={(firm) => { setPreselectedAllocatorId(firm.id); setPortfolioDialogOpen(true); }}
+          />
         )}
 
         <div className="h-12" />
