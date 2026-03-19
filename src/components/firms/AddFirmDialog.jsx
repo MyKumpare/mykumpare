@@ -233,6 +233,9 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
   const isValid = firmTypes.length > 0 && firmName.trim() && !isDuplicate && phonesValid;
 
+  const NON_PRODUCT_TYPES = ["Allocator", "Trade Organizations"];
+  const hideProductTabs = firmTypes.length > 0 && firmTypes.every(t => NON_PRODUCT_TYPES.includes(t));
+
   const handleSubmit = () => {
     if (!isValid) return;
     onSubmit({ firm_type: firmTypes[0] || "", firm_types: firmTypes, name: firmName.trim(), logo_url: logoUrl, website, linkedin_url: linkedinUrl, year_founded: yearFounded ? parseInt(yearFounded) : null, description, addresses, phones });
