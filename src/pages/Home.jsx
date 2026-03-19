@@ -346,7 +346,7 @@ export default function Home() {
           <FirmsSection
             groupedFirms={groupedFirms}
             totalFirms={totalFirms}
-            products={products}
+            products={activeProducts}
             searchQuery={searchQuery}
             onEdit={handleEdit}
             onDelete={setDeletingFirm}
