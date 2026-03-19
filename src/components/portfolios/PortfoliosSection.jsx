@@ -104,60 +104,60 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
 
                 {/* Allocator Groups */}
                 {isAdvisorTypeOpen && (
-                <div className="ml-2 space-y-2">
-                  {Object.entries(allocatorGroups).map(([allocator, portfolioList]) => {
-                    const groupKey = `${advisorType}/${allocator}`;
-                    const isOpen = expandedGroups[groupKey];
+                  <div className="ml-2 space-y-2">
+                    {Object.entries(allocatorGroups).map(([allocator, portfolioList]) => {
+                      const groupKey = `${advisorType}/${allocator}`;
+                      const isOpen = expandedGroups[groupKey];
 
-                    return (
-                      <div key={groupKey} className="space-y-1.5">
-                        {/* Allocator Header */}
-                        <button
-                          onClick={() => toggleGroup(groupKey)}
-                          className="flex items-center gap-2 w-full px-2 py-1.5 text-xs font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded transition-colors"
-                        >
-                          {isOpen ? (
-                            <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
-                          ) : (
-                            <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
-                          )}
-                          <span>{allocator}</span>
-                          <span className="text-gray-400 ml-auto">{portfolioList.length}</span>
-                        </button>
+                      return (
+                        <div key={groupKey} className="space-y-1.5">
+                          {/* Allocator Header */}
+                          <button
+                            onClick={() => toggleGroup(groupKey)}
+                            className="flex items-center gap-2 w-full px-2 py-1.5 text-xs font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded transition-colors"
+                          >
+                            {isOpen ? (
+                              <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+                            ) : (
+                              <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
+                            )}
+                            <span>{allocator}</span>
+                            <span className="text-gray-400 ml-auto">{portfolioList.length}</span>
+                          </button>
 
-                        {/* Portfolio List */}
-                        {isOpen && (
-                          <div className="ml-3 space-y-1.5">
-                            {portfolioList.map((portfolio) => (
-                              <button
-                                key={portfolio.id}
-                                onClick={() => onPortfolioClick(portfolio)}
-                                className="w-full text-left bg-white rounded-lg border border-gray-100 px-3 py-2 hover:border-emerald-200 hover:shadow-sm transition-all group"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <div className="w-6 h-6 rounded-md bg-emerald-50 flex items-center justify-center flex-shrink-0">
-                                    <LayoutList className="w-3 h-3 text-emerald-500" />
-                                  </div>
-                                  <div className="min-w-0 flex-1">
-                                    <div className="text-sm font-medium text-gray-900 truncate group-hover:text-emerald-700">
-                                      {portfolio.portfolio_name}
+                          {/* Portfolio List */}
+                          {isOpen && (
+                            <div className="ml-3 space-y-1.5">
+                              {portfolioList.map((portfolio) => (
+                                <button
+                                  key={portfolio.id}
+                                  onClick={() => onPortfolioClick(portfolio)}
+                                  className="w-full text-left bg-white rounded-lg border border-gray-100 px-3 py-2 hover:border-emerald-200 hover:shadow-sm transition-all group"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded-md bg-emerald-50 flex items-center justify-center flex-shrink-0">
+                                      <LayoutList className="w-3 h-3 text-emerald-500" />
                                     </div>
-                                    {portfolio.advisor_firm_name && (
-                                      <div className="text-xs text-gray-400 truncate">
-                                        {portfolio.advisor_firm_name}
-                                        {portfolio.inception_date ? ` · ${format(parseISO(portfolio.inception_date), "MM/dd/yyyy")}` : ""}
+                                    <div className="min-w-0 flex-1">
+                                      <div className="text-sm font-medium text-gray-900 truncate group-hover:text-emerald-700">
+                                        {portfolio.portfolio_name}
                                       </div>
-                                    )}
+                                      {portfolio.advisor_firm_name && (
+                                        <div className="text-xs text-gray-400 truncate">
+                                          {portfolio.advisor_firm_name}
+                                          {portfolio.inception_date ? ` · ${format(parseISO(portfolio.inception_date), "MM/dd/yyyy")}` : ""}
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             );
