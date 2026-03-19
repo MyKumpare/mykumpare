@@ -83,8 +83,39 @@ function SearchableSelect({ options, value, onChange, placeholder, onAddNew, add
   );
 }
 
+// ── Date picker helper ─────────────────────────────────────────────────────────
+function DatePicker({ value, onChange, minDate, placeholder = "Select date...", error }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className={cn("w-full h-9 text-sm justify-start font-normal", error && "border-red-400")}
+            type="button"
+          >
+            <CalendarIcon className="w-3.5 h-3.5 mr-2 text-gray-400" />
+            {value ? format(value, "MMM d, yyyy") : <span className="text-gray-400">{placeholder}</span>}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={value}
+            onSelect={(d) => { onChange(d); setOpen(false); }}
+            disabled={minDate ? (d) => d < minDate : undefined}
+            initialFocus
+          />
+        </PopoverContent>
+      </Popover>
+      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+    </div>
+  );
+}
+
 // ── Multi-select product picker ────────────────────────────────────────────────
-function ProductMultiSelect({ options, value = [], onChange, onAddNew }) {
+function ProductMultiSelect({ options, value = [], onChange, onAddNew, momInceptionDate }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -98,8 +129,12 @@ function ProductMultiSelect({ options, value = [], onChange, onAddNew }) {
     if (exists) {
       onChange(value.filter((v) => v.product_id !== opt.value));
     } else {
-      onChange([...value, { product_id: opt.value, product_name: opt.label, firm_name: opt.firm_name }]);
+      onChange([...value, { product_id: opt.value, product_name: opt.label, firm_name: opt.firm_name, inception_date: "" }]);
     }
+  };
+
+  const updateInceptionDate = (productId, date) => {
+    onChange(value.map((v) => v.product_id === productId ? { ...v, inception_date: date ? format(date, "yyyy-MM-dd") : "" } : v));
   };
 
   return (
@@ -162,18 +197,37 @@ function ProductMultiSelect({ options, value = [], onChange, onAddNew }) {
         </PopoverContent>
       </Popover>
 
-      {/* Selected chips */}
+      {/* Selected items with inception date inputs */}
       {value.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {value.map((v) => (
-            <span key={v.product_id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-xs">
-              {v.product_name}
-              {v.firm_name && <span className="text-indigo-400">· {v.firm_name}</span>}
-              <button type="button" onClick={() => onChange(value.filter((x) => x.product_id !== v.product_id))} className="hover:text-red-500">
-                <X className="w-3 h-3" />
-              </button>
-            </span>
-          ))}
+        <div className="space-y-2">
+          {value.map((v) => {
+            const subDate = v.inception_date ? parseISO(v.inception_date) : null;
+            const isBeforeMoM = momInceptionDate && subDate && subDate < momInceptionDate;
+            return (
+              <div key={v.product_id} className="rounded-lg border border-gray-200 bg-gray-50 p-2.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0">
+                    <span className="text-sm font-medium text-gray-800 truncate block">{v.product_name}</span>
+                    {v.firm_name && <span className="text-xs text-gray-400">{v.firm_name}</span>}
+                  </div>
+                  <button type="button" onClick={() => onChange(value.filter((x) => x.product_id !== v.product_id))} className="text-gray-400 hover:text-red-500 ml-2 flex-shrink-0">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <div>
+                  <Label className="text-xs font-medium text-gray-600">Inception Date <span className="text-red-400">*</span></Label>
+                  <div className="mt-1">
+                    <DatePicker
+                      value={subDate}
+                      onChange={(d) => updateInceptionDate(v.product_id, d)}
+                      minDate={momInceptionDate || undefined}
+                      error={isBeforeMoM ? "Cannot be before MoM inception date" : undefined}
+                    />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
