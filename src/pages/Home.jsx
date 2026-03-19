@@ -48,6 +48,7 @@ export default function Home() {
   const [returnToContactFromFirm, setReturnToContactFromFirm] = useState(false); // track if firm was opened from contact
   const [portfolioDialogOpen, setPortfolioDialogOpen] = useState(false);
   const [preselectedAllocatorId, setPreselectedAllocatorId] = useState(null);
+  const [editingPortfolio, setEditingPortfolio] = useState(null);
 
   const queryClient = useQueryClient();
 
