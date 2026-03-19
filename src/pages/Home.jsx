@@ -238,7 +238,7 @@ export default function Home() {
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">MyKumpare</h1>
           </div>
 
-          <div className="mt-6 flex items-center gap-6">
+          <div className="mt-6 grid grid-cols-3 sm:flex sm:items-center gap-4 sm:gap-6">
             <button
               onClick={() => setStatsModal("firms")}
               className="flex items-center gap-3 group hover:opacity-80 transition-opacity"
