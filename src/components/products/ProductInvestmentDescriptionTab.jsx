@@ -197,15 +197,7 @@ export default function ProductInvestmentDescriptionTab({ descriptions, onChange
                 onChange={onChange}
                 isEditing={isEditing}
               />
-              <RangeSubsectionBlock
-                label="Target Information Ratio Range"
-                minKey="information_ratio_min"
-                maxKey="information_ratio_max"
-                unit=""
-                descriptions={descriptions}
-                onChange={onChange}
-                isEditing={isEditing}
-              />
+              <InformationRatioBlock descriptions={descriptions} />
               <RangeSubsectionBlock
                 label="Number of Holdings Range"
                 minKey="holdings_min"
