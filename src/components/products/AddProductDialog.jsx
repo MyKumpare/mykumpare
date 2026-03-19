@@ -209,6 +209,7 @@ export default function AddProductDialog({
       inv_desc_information_ratio_max: investmentDescriptions.information_ratio_max !== "" ? Number(investmentDescriptions.information_ratio_max) : null,
       inv_desc_holdings_min: investmentDescriptions.holdings_min !== "" ? Number(investmentDescriptions.holdings_min) : null,
       inv_desc_holdings_max: investmentDescriptions.holdings_max !== "" ? Number(investmentDescriptions.holdings_max) : null,
+      inv_desc_product_biases: investmentDescriptions.product_biases || {},
     });
     setProductType("");
     setFirmId("");
