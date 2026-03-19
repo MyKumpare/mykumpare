@@ -104,41 +104,54 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
 
                 {isGroupExpanded && (
                   <div className="space-y-3 pl-1">
-                    {firmGroups.map(({ firm, products: firmProducts }) => (
-                      <div key={firm.id}>
-                        {/* Firm sub-header */}
-                        <div className="flex items-center gap-2 mb-1.5">
-                          {firm.logo_url ? (
-                            <img src={firm.logo_url} alt={firm.name} className="w-4 h-4 object-contain rounded" />
-                          ) : null}
-                          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                            {firm.name}
-                          </span>
-                          <div className="h-px flex-1 bg-gray-100" />
-                          <span className="text-xs text-gray-400">{firmProducts.length}</span>
-                        </div>
-                        {/* Products list */}
-                        <div className="space-y-1">
-                          {firmProducts.map((product) => (
-                            <button
-                              key={product.id}
-                              onClick={() => onProductClick(product)}
-                              className="w-full text-left px-3 py-2 rounded-lg border border-gray-100 bg-white hover:bg-violet-50 hover:border-violet-200 transition-colors flex items-center gap-2 group"
-                            >
-                              <Package className="w-3.5 h-3.5 text-gray-300 group-hover:text-violet-400 flex-shrink-0" />
-                              <span className="text-sm text-gray-800 group-hover:text-violet-700 font-medium truncate">
-                                {product.name}
-                              </span>
-                              {product.asset_class && (
-                                <span className="ml-auto text-xs text-gray-400 flex-shrink-0">
-                                  {product.asset_class}
-                                </span>
-                              )}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
+                    {firmGroups.map(({ firm, products: firmProducts }) => {
+                       const isFirmExpanded = expandedFirms[firm.id] !== false; // default open
+                       return (
+                       <div key={firm.id}>
+                         {/* Firm sub-header */}
+                         <button
+                           onClick={() => toggleFirm(firm.id)}
+                           className="w-full flex items-center gap-2 mb-1.5 group cursor-pointer"
+                         >
+                           {firm.logo_url ? (
+                             <img src={firm.logo_url} alt={firm.name} className="w-4 h-4 object-contain rounded" />
+                           ) : null}
+                           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide group-hover:text-gray-700">
+                             {firm.name}
+                           </span>
+                           <div className="h-px flex-1 bg-gray-100" />
+                           <span className="text-xs text-gray-400">{firmProducts.length}</span>
+                           {isFirmExpanded ? (
+                             <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+                           ) : (
+                             <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
+                           )}
+                         </button>
+                         {/* Products list */}
+                         {isFirmExpanded && (
+                         <div className="space-y-1">
+                           {firmProducts.map((product) => (
+                             <button
+                               key={product.id}
+                               onClick={() => onProductClick(product)}
+                               className="w-full text-left px-3 py-2 rounded-lg border border-gray-100 bg-white hover:bg-violet-50 hover:border-violet-200 transition-colors flex items-center gap-2 group"
+                             >
+                               <Package className="w-3.5 h-3.5 text-gray-300 group-hover:text-violet-400 flex-shrink-0" />
+                               <span className="text-sm text-gray-800 group-hover:text-violet-700 font-medium truncate">
+                                 {product.name}
+                               </span>
+                               {product.asset_class && (
+                                 <span className="ml-auto text-xs text-gray-400 flex-shrink-0">
+                                   {product.asset_class}
+                                 </span>
+                               )}
+                             </button>
+                           ))}
+                         </div>
+                         )}
+                       </div>
+                     );
+                     })}
                   </div>
                 )}
               </div>
