@@ -215,14 +215,14 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
   // Reset on open
   useEffect(() => {
     if (open) {
-      setAllocatorId("");
+      setAllocatorId(preselectedAllocatorId || "");
       setPortfolioName("");
       setInceptionDate(null);
       setAdvisorType("");
       setAdvisorFirmId("");
       setSubManagers([]);
     }
-  }, [open]);
+  }, [open, preselectedAllocatorId]);
 
   // Reset advisor fields when advisor type changes
   useEffect(() => {
