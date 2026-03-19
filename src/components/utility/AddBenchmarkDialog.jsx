@@ -224,7 +224,22 @@ export default function AddBenchmarkDialog({
                       value={newRegion}
                       onChange={(e) => setNewRegion(e.target.value)}
                       className="h-9"
+                      autoFocus
                     />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-9 bg-green-50 border-green-200 hover:bg-green-100 text-green-700"
+                      disabled={!newRegion.trim()}
+                      onClick={() => {
+                        setRegion(newRegion.trim());
+                        setShowNewRegion(false);
+                        setNewRegion("");
+                      }}
+                    >
+                      ✓
+                    </Button>
                     <Button
                       type="button"
                       variant="outline"
@@ -280,7 +295,22 @@ export default function AddBenchmarkDialog({
                       value={newMarketCap}
                       onChange={(e) => setNewMarketCap(e.target.value)}
                       className="h-9"
+                      autoFocus
                     />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-9 bg-green-50 border-green-200 hover:bg-green-100 text-green-700"
+                      disabled={!newMarketCap.trim()}
+                      onClick={() => {
+                        setMarketCap(newMarketCap.trim());
+                        setShowNewMarketCap(false);
+                        setNewMarketCap("");
+                      }}
+                    >
+                      ✓
+                    </Button>
                     <Button
                       type="button"
                       variant="outline"
@@ -333,7 +363,22 @@ export default function AddBenchmarkDialog({
                       value={newStyle}
                       onChange={(e) => setNewStyle(e.target.value)}
                       className="h-9"
+                      autoFocus
                     />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-9 bg-green-50 border-green-200 hover:bg-green-100 text-green-700"
+                      disabled={!newStyle.trim()}
+                      onClick={() => {
+                        setStyle(newStyle.trim());
+                        setShowNewStyle(false);
+                        setNewStyle("");
+                      }}
+                    >
+                      ✓
+                    </Button>
                     <Button
                       type="button"
                       variant="outline"
