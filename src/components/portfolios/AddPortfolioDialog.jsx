@@ -525,6 +525,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                   onChange={setSubManagers}
                   onAddNew={() => setAddProductOpen(true)}
                   momInceptionDate={advisorInceptionDate}
+                  portfolioInceptionDate={inceptionDate}
                 />
               </div>
             )}
