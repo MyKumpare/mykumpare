@@ -161,7 +161,7 @@ export default function ProductInvestmentDescriptionTab({ descriptions, onChange
             options={type === "multiselect" ? MARKET_POSITIONING_OPTIONS : undefined}
           />
           
-          {hasSub && (
+          {hasSub && key === "investment_process" && (
             <div className="space-y-4 mt-4">
               <SubsectionBlock
                 label="Buy Discipline"
@@ -173,6 +173,47 @@ export default function ProductInvestmentDescriptionTab({ descriptions, onChange
                 label="Sell Discipline"
                 value={descriptions?.investment_process_sell_discipline || ""}
                 onChange={(val) => set("investment_process_sell_discipline", val)}
+                isEditing={isEditing}
+              />
+            </div>
+          )}
+          {key === "portfolio_expectations" && (
+            <div className="space-y-3 mt-4">
+              <RangeSubsectionBlock
+                label="Target Tracking Error Range"
+                minKey="tracking_error_min"
+                maxKey="tracking_error_max"
+                unit="%"
+                descriptions={descriptions}
+                onChange={onChange}
+                isEditing={isEditing}
+              />
+              <RangeSubsectionBlock
+                label="Target Excess Return Range"
+                minKey="excess_return_min"
+                maxKey="excess_return_max"
+                unit="%"
+                descriptions={descriptions}
+                onChange={onChange}
+                isEditing={isEditing}
+              />
+              <RangeSubsectionBlock
+                label="Target Information Ratio Range"
+                minKey="information_ratio_min"
+                maxKey="information_ratio_max"
+                unit=""
+                descriptions={descriptions}
+                onChange={onChange}
+                isEditing={isEditing}
+              />
+              <RangeSubsectionBlock
+                label="Number of Holdings Range"
+                minKey="holdings_min"
+                maxKey="holdings_max"
+                unit="No."
+                isInteger
+                descriptions={descriptions}
+                onChange={onChange}
                 isEditing={isEditing}
               />
             </div>
