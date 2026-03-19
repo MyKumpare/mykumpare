@@ -291,8 +291,8 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
         setAllocatorId(preselectedAllocatorId || "");
         setPortfolioName("");
         setInceptionDate(null);
-        setAdvisorType("");
-        setAdvisorFirmId("");
+        setAdvisorType(preselectedAdvisorType || "");
+        setAdvisorFirmId(preselectedAdvisorFirmId || "");
         setAdvisorInceptionDate(null);
         setSubManagers([]);
       }
