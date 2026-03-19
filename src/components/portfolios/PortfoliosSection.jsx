@@ -6,6 +6,7 @@ import { format, parseISO } from "date-fns";
 export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddPortfolio }) {
   const [expanded, setExpanded] = useState(true);
   const [expandedGroups, setExpandedGroups] = useState({});
+  const [expandedAdvisorTypes, setExpandedAdvisorTypes] = useState({});
 
   // Group portfolios by advisor type → allocator → portfolio name
   const grouped = useMemo(() => {
