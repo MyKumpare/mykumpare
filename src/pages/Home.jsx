@@ -466,6 +466,11 @@ export default function Home() {
         onFirmClick={(firm) => firm && handleEdit(firm, false, true)}
       />
 
+      <AddPortfolioDialog
+        open={portfolioDialogOpen}
+        onOpenChange={setPortfolioDialogOpen}
+      />
+
       <AddProductDialog
         open={productDialogOpen}
         onOpenChange={(open) => {
