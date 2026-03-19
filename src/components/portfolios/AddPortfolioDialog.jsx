@@ -507,6 +507,10 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                 <DatePicker
                   value={advisorInceptionDate}
                   onChange={setAdvisorInceptionDate}
+                  minDate={inceptionDate || undefined}
+                  error={advisorInceptionDate && inceptionDate && advisorInceptionDate < inceptionDate
+                    ? "Cannot be before portfolio inception date"
+                    : undefined}
                 />
               </div>
             )}
