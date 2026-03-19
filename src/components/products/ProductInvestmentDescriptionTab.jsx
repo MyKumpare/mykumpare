@@ -10,7 +10,7 @@ const SECTIONS = [
   { key: "investment_universe", label: "Investment Universe" },
   { key: "investment_process", label: "Investment Process", hasSub: true },
   { key: "market_positioning", label: "Market Positioning", type: "multiselect" },
-  { key: "portfolio_expectations", label: "Portfolio Expectations" },
+  { key: "portfolio_expectations", label: "Product Expectations" },
 ];
 
 const MARKET_POSITIONING_OPTIONS = [
