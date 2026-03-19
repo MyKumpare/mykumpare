@@ -482,13 +482,18 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                <TabsTrigger value="addresses">Addresses</TabsTrigger>
                <TabsTrigger value="phones">Phones</TabsTrigger>
              </TabsList>
-             {/* Row 2: Products, Portfolios/Advisor Portfolios, Ownership, Org Chart */}
+             {/* Row 2: Products, Portfolios/Advisor Portfolios, Ownership */}
              {!hideProductTabs && (
-               <TabsList className={`grid w-full mt-1 ${showAdvisorPortfolioTab ? "grid-cols-4" : showPortfolioTab ? "grid-cols-4" : "grid-cols-3"}`}>
+               <TabsList className="grid w-full mt-1 grid-cols-3">
                  <TabsTrigger value="products">Products</TabsTrigger>
                  {showPortfolioTab && <TabsTrigger value="portfolios">Portfolios</TabsTrigger>}
                  {showAdvisorPortfolioTab && <TabsTrigger value="advisor-portfolios">Portfolios</TabsTrigger>}
                  <TabsTrigger value="ownership">Ownership</TabsTrigger>
+               </TabsList>
+             )}
+             {/* Row 3: Org Chart (if products tab exists) */}
+             {!hideProductTabs && (
+               <TabsList className="grid w-full mt-1 grid-cols-1">
                  <TabsTrigger value="orgchart">Org Chart</TabsTrigger>
                </TabsList>
              )}
