@@ -139,12 +139,32 @@ export default function AddProductDialog({
         .sort((a, b) => a.name.localeCompare(b.name))
     : [];
 
+  const originalDescriptions = editingProduct ? {
+    investment_edge: editingProduct.inv_desc_edge || "",
+    investment_philosophy: editingProduct.inv_desc_philosophy || "",
+    investment_universe: editingProduct.inv_desc_universe || "",
+    investment_process: editingProduct.inv_desc_process || "",
+    investment_process_buy_discipline: editingProduct.inv_desc_process_buy_discipline || "",
+    investment_process_sell_discipline: editingProduct.inv_desc_process_sell_discipline || "",
+    market_positioning: editingProduct.inv_desc_market_positioning || [],
+    portfolio_expectations: editingProduct.inv_desc_portfolio_expectations || "",
+    tracking_error_min: editingProduct.inv_desc_tracking_error_min ?? "",
+    tracking_error_max: editingProduct.inv_desc_tracking_error_max ?? "",
+    excess_return_min: editingProduct.inv_desc_excess_return_min ?? "",
+    excess_return_max: editingProduct.inv_desc_excess_return_max ?? "",
+    information_ratio_min: editingProduct.inv_desc_information_ratio_min ?? "",
+    information_ratio_max: editingProduct.inv_desc_information_ratio_max ?? "",
+    holdings_min: editingProduct.inv_desc_holdings_min ?? "",
+    holdings_max: editingProduct.inv_desc_holdings_max ?? "",
+  } : {};
+
   const hasChanges = editingProduct
     ? productName.trim() !== editingProduct.name ||
       productType !== editingProduct.product_type ||
       firmId !== editingProduct.firm_id ||
       description !== (editingProduct.description || "") ||
-      JSON.stringify(classifications) !== JSON.stringify(classificationsFromProduct(editingProduct))
+      JSON.stringify(classifications) !== JSON.stringify(classificationsFromProduct(editingProduct)) ||
+      JSON.stringify(investmentDescriptions) !== JSON.stringify(originalDescriptions)
     : false;
 
   const matchingProducts =
