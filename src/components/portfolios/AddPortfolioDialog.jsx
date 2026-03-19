@@ -457,28 +457,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
               <Label className="text-xs font-medium text-gray-700">
                 Inception Date <span className="text-red-400">*</span>
               </Label>
-              <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full h-9 text-sm justify-start font-normal"
-                    type="button"
-                  >
-                    <CalendarIcon className="w-3.5 h-3.5 mr-2 text-gray-400" />
-                    {inceptionDate
-                      ? format(inceptionDate, "MMM d, yyyy")
-                      : <span className="text-gray-400">Select date...</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={inceptionDate}
-                    onSelect={(d) => { setInceptionDate(d); setCalendarOpen(false); }}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <DatePicker value={inceptionDate} onChange={setInceptionDate} />
             </div>
 
             {/* Advisor Type */}
