@@ -352,6 +352,13 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Portfolios section */}
+        <PortfoliosSection
+          portfolios={portfolios}
+          onPortfolioClick={(portfolio) => { setEditingPortfolio(portfolio); setPreselectedAllocatorId(null); setPortfolioDialogOpen(true); }}
+          onAddPortfolio={() => { setEditingPortfolio(null); setPreselectedAllocatorId(null); setPortfolioDialogOpen(true); }}
+        />
+
         {/* Firms list */}
         {isLoading ? (
           <div className="space-y-4">
