@@ -9,6 +9,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { AlertCircle } from "lucide-react";
 
 export default function DeleteConfirmDialog({ open, onOpenChange, firm, onConfirm }) {
   if (!firm) return null;
@@ -17,9 +18,15 @@ export default function DeleteConfirmDialog({ open, onOpenChange, firm, onConfir
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete Firm</AlertDialogTitle>
-          <AlertDialogDescription>
-            Are you sure you want to delete <span className="font-semibold text-gray-900">"{firm.name}"</span>? This action cannot be undone.
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+            <AlertDialogTitle>Delete Firm</AlertDialogTitle>
+          </div>
+          <AlertDialogDescription className="mt-2 text-base">
+            Are you sure you want to delete <span className="font-semibold text-foreground">"{firm.name}"</span>?
+            <p className="mt-3 text-sm text-amber-700 bg-amber-50 p-3 rounded-md">
+              This record will be moved to trash and can be restored later from Deleted Records. You can permanently delete it afterwards.
+            </p>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
