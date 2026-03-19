@@ -106,6 +106,7 @@ export default function AddProductDialog({
           information_ratio_max: editingProduct.inv_desc_information_ratio_max ?? "",
           holdings_min: editingProduct.inv_desc_holdings_min ?? "",
           holdings_max: editingProduct.inv_desc_holdings_max ?? "",
+          product_biases: editingProduct.inv_desc_product_biases || {},
         });
         setIsEditing(false);
       } else {
