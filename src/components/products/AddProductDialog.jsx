@@ -185,15 +185,14 @@ export default function AddProductDialog({
 
   const isDuplicate = matchingProducts.length > 0;
 
-  const hasAtLeastOneField = productType || firmId || productName.trim() || description;
-  const isValid = hasAtLeastOneField && !isDuplicate;
+  const isValid = productType && firmId && productName.trim() && !isDuplicate;
 
   const handleSubmit = () => {
     if (!isValid) return;
     const selectedFirm = firms.find((f) => f.id === firmId);
     onSubmit({
-      product_type: productType || "",
-      firm_id: firmId || "",
+      product_type: productType,
+      firm_id: firmId,
       firm_name: selectedFirm?.name || "",
       name: productName.trim(),
       description,

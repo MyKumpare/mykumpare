@@ -232,8 +232,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
   const phonesValid = phones.length === 0 || phones.every(p => p.address_id && p.phone_type && p.country_code && p.area_code && p.number_mid && p.number_last);
 
-  const hasAtLeastOneField = firmTypes.length > 0 || firmName.trim() || logoUrl || website || linkedinUrl || yearFounded || description || addresses.length > 0 || phones.length > 0;
-  const isValid = hasAtLeastOneField && !isDuplicate && phonesValid;
+  const isValid = firmTypes.length > 0 && firmName.trim() && !isDuplicate && phonesValid;
 
   const NON_PRODUCT_TYPES = ["Allocator", "Trade Organizations"];
   const hideProductTabs = firmTypes.length > 0 && firmTypes.every(t => NON_PRODUCT_TYPES.includes(t));
@@ -242,7 +241,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
   const handleSubmit = () => {
     if (!isValid) return;
-    onSubmit({ firm_type: firmTypes.length > 0 ? firmTypes[0] : "", firm_types: firmTypes, name: firmName.trim(), logo_url: logoUrl, website, linkedin_url: linkedinUrl, year_founded: yearFounded ? parseInt(yearFounded) : null, description, addresses, phones });
+    onSubmit({ firm_type: firmTypes[0] || "", firm_types: firmTypes, name: firmName.trim(), logo_url: logoUrl, website, linkedin_url: linkedinUrl, year_founded: yearFounded ? parseInt(yearFounded) : null, description, addresses, phones });
     setFirmTypes([]); setFirmName(""); setLogoUrl(""); setWebsite(""); setLinkedinUrl(""); setYearFounded(""); setDescription(""); setAddresses([]); setPhones([]);
   };
 
