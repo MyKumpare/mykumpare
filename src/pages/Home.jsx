@@ -18,6 +18,7 @@ import PortfoliosSection from "../components/portfolios/PortfoliosSection";
 import FirmsSection from "../components/firms/FirmsSection";
 import ProductsSection from "../components/products/ProductsSection";
 import ContactsSection from "../components/contacts/ContactsSection";
+import DeletedRecordsModal from "../components/deleted/DeletedRecordsModal";
 
 const FIRM_TYPES = [
   "Manager of Managers",
