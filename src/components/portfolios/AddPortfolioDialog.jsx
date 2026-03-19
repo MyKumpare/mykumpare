@@ -353,7 +353,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Add Portfolio</DialogTitle>
+            <DialogTitle>{editingPortfolio ? "Edit Portfolio" : "Add Portfolio"}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
