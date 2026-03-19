@@ -181,7 +181,7 @@ function ProductMultiSelect({ options, value = [], onChange, onAddNew }) {
 }
 
 // ── Main dialog ────────────────────────────────────────────────────────────────
-export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, preselectedAllocatorId }) {
+export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, preselectedAllocatorId, editingPortfolio }) {
   const queryClient = useQueryClient();
 
   // Form state
@@ -215,14 +215,23 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
   // Reset on open
   useEffect(() => {
     if (open) {
-      setAllocatorId(preselectedAllocatorId || "");
-      setPortfolioName("");
-      setInceptionDate(null);
-      setAdvisorType("");
-      setAdvisorFirmId("");
-      setSubManagers([]);
+      if (editingPortfolio) {
+        setAllocatorId(editingPortfolio.firm_id || "");
+        setPortfolioName(editingPortfolio.portfolio_name || "");
+        setInceptionDate(editingPortfolio.inception_date ? parseISO(editingPortfolio.inception_date) : null);
+        setAdvisorType(editingPortfolio.advisor_type || "");
+        setAdvisorFirmId(editingPortfolio.advisor_firm_id || "");
+        setSubManagers(editingPortfolio.sub_managers || []);
+      } else {
+        setAllocatorId(preselectedAllocatorId || "");
+        setPortfolioName("");
+        setInceptionDate(null);
+        setAdvisorType("");
+        setAdvisorFirmId("");
+        setSubManagers([]);
+      }
     }
-  }, [open, preselectedAllocatorId]);
+  }, [open, preselectedAllocatorId, editingPortfolio]);
 
   // Reset advisor fields when advisor type changes
   useEffect(() => {
