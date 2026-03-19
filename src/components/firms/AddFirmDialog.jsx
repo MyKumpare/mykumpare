@@ -693,6 +693,18 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               )}
               </TabsContent>
 
+              <TabsContent value="due-diligence" className="space-y-3">
+              {editingFirm ? (
+                <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
+                  Due Diligence content coming soon
+                </div>
+              ) : (
+                <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
+                  Save the firm first to add due diligence information
+                </div>
+              )}
+              </TabsContent>
+
               <TabsContent value="advisor-portfolios" className="space-y-3">
               {editingFirm ? (
                 <FirmPortfoliosTab
