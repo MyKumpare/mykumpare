@@ -245,6 +245,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [advisorType, setAdvisorType] = useState("");
   const [advisorFirmId, setAdvisorFirmId] = useState("");
+  const [advisorInceptionDate, setAdvisorInceptionDate] = useState(null);
   const [subManagers, setSubManagers] = useState([]);
 
   // Inline add-firm dialog state
