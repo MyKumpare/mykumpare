@@ -404,7 +404,7 @@ export default function Home() {
 
       <AddFirmDialog
         onProductClick={(product) => handleEditProduct(product, false)}
-        onPortfolioClick={(portfolio) => { setDialogOpen(false); setPreselectedAllocatorId(portfolio.firm_id); setPortfolioDialogOpen(true); }}
+        onPortfolioClick={(portfolio) => { setDialogOpen(false); setEditingPortfolio(portfolio); setPreselectedAllocatorId(null); setPortfolioDialogOpen(true); }}
         open={dialogOpen}
         onOpenChange={(open) => {
           setDialogOpen(open);
