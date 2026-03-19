@@ -29,9 +29,10 @@ const TYPE_COLORS = {
   "Multi-Manager Product": "bg-violet-100 text-violet-700",
 };
 
-export default function StatsListModal({ open, onOpenChange, mode, firms = [], products = [], onFirmClick, onProductClick }) {
+export default function StatsListModal({ open, onOpenChange, mode, firms = [], products = [], portfolios = [], onFirmClick, onProductClick, onPortfolioClick }) {
   const [searchQuery, setSearchQuery] = useState("");
   const isFirms = mode === "firms";
+  const isPortfolios = mode === "portfolios";
 
   const handleFirmClick = (firm) => {
     onOpenChange(false);
