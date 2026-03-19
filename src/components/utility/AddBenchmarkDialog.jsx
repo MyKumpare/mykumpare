@@ -68,6 +68,14 @@ export default function AddBenchmarkDialog({
   const [showNewRegion, setShowNewRegion] = useState(false);
   const [showNewMarketCap, setShowNewMarketCap] = useState(false);
   const [showNewStyle, setShowNewStyle] = useState(false);
+  const [customRegions, setCustomRegions] = useState([]);
+  const [customMarketCaps, setCustomMarketCaps] = useState([]);
+  const [customStyles, setCustomStyles] = useState([]);
+
+  // Merge predefined with custom options
+  const allRegions = [...new Set([...EQUITY_REGIONS, ...customRegions])];
+  const allMarketCaps = [...new Set([...EQUITY_MARKET_CAPS, ...customMarketCaps])];
+  const allStyles = [...new Set([...EQUITY_STYLES, ...customStyles])];
 
   useEffect(() => {
     if (!open) {
@@ -200,7 +208,7 @@ export default function AddBenchmarkDialog({
                         <SelectValue placeholder="Select region..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {EQUITY_REGIONS.map((r) => (
+                        {allRegions.map((r) => (
                           <SelectItem key={r} value={r}>
                             {r}
                           </SelectItem>
@@ -233,7 +241,11 @@ export default function AddBenchmarkDialog({
                       className="h-9 bg-green-50 border-green-200 hover:bg-green-100 text-green-700"
                       disabled={!newRegion.trim()}
                       onClick={() => {
-                        setRegion(newRegion.trim());
+                        const trimmed = newRegion.trim();
+                        setRegion(trimmed);
+                        if (!customRegions.includes(trimmed)) {
+                          setCustomRegions([...customRegions, trimmed]);
+                        }
                         setShowNewRegion(false);
                         setNewRegion("");
                       }}
@@ -271,7 +283,7 @@ export default function AddBenchmarkDialog({
                         <SelectValue placeholder="Select market cap..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {EQUITY_MARKET_CAPS.map((mc) => (
+                        {allMarketCaps.map((mc) => (
                           <SelectItem key={mc} value={mc}>
                             {mc}
                           </SelectItem>
@@ -304,7 +316,11 @@ export default function AddBenchmarkDialog({
                       className="h-9 bg-green-50 border-green-200 hover:bg-green-100 text-green-700"
                       disabled={!newMarketCap.trim()}
                       onClick={() => {
-                        setMarketCap(newMarketCap.trim());
+                        const trimmed = newMarketCap.trim();
+                        setMarketCap(trimmed);
+                        if (!customMarketCaps.includes(trimmed)) {
+                          setCustomMarketCaps([...customMarketCaps, trimmed]);
+                        }
                         setShowNewMarketCap(false);
                         setNewMarketCap("");
                       }}
@@ -339,7 +355,7 @@ export default function AddBenchmarkDialog({
                         <SelectValue placeholder="Select style..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {EQUITY_STYLES.map((s) => (
+                        {allStyles.map((s) => (
                           <SelectItem key={s} value={s}>
                             {s}
                           </SelectItem>
@@ -372,7 +388,11 @@ export default function AddBenchmarkDialog({
                       className="h-9 bg-green-50 border-green-200 hover:bg-green-100 text-green-700"
                       disabled={!newStyle.trim()}
                       onClick={() => {
-                        setStyle(newStyle.trim());
+                        const trimmed = newStyle.trim();
+                        setStyle(trimmed);
+                        if (!customStyles.includes(trimmed)) {
+                          setCustomStyles([...customStyles, trimmed]);
+                        }
                         setShowNewStyle(false);
                         setNewStyle("");
                       }}
