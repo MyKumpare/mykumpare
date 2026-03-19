@@ -442,10 +442,9 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
     (!inceptionDate || advisorInceptionDate >= inceptionDate)
   );
 
+  const hasAtLeastOneField = allocatorId || portfolioName.trim() || inceptionDate || advisorType;
   const isValid =
-    allocatorId &&
-    portfolioName.trim() &&
-    inceptionDate &&
+    hasAtLeastOneField &&
     advisorDateValid &&
     subManagersValid;
 
