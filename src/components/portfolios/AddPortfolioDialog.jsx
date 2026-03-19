@@ -493,7 +493,16 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <p className="text-xs font-medium text-gray-500 mb-1">Allocator</p>
-                  <p className="text-sm text-gray-900 px-3 py-2 rounded-md border bg-gray-50">{viewAllocatorName || <span className="text-gray-400">—</span>}</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const firm = firms.find((f) => f.id === allocatorId);
+                      if (firm && onFirmClick) { onOpenChange(false); onFirmClick(firm); }
+                    }}
+                    className="w-full text-left text-sm text-indigo-600 hover:text-indigo-700 px-3 py-2 rounded-md border bg-gray-50 hover:bg-indigo-50 transition-colors"
+                  >
+                    {viewAllocatorName || <span className="text-gray-400">—</span>}
+                  </button>
                 </div>
                 <div>
                   <p className="text-xs font-medium text-gray-500 mb-1">Inception Date</p>
@@ -510,7 +519,16 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                   </div>
                   <div>
                     <p className="text-xs font-medium text-gray-500 mb-1">Advisor Firm</p>
-                    <p className="text-sm text-gray-900 px-3 py-2 rounded-md border bg-gray-50">{viewAdvisorFirmName || <span className="text-gray-400">—</span>}</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const firm = firms.find((f) => f.id === advisorFirmId);
+                        if (firm && onFirmClick) { onOpenChange(false); onFirmClick(firm); }
+                      }}
+                      className="w-full text-left text-sm text-indigo-600 hover:text-indigo-700 px-3 py-2 rounded-md border bg-gray-50 hover:bg-indigo-50 transition-colors"
+                    >
+                      {viewAdvisorFirmName || <span className="text-gray-400">—</span>}
+                    </button>
                   </div>
                 </div>
               )}
@@ -524,13 +542,23 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                 <div>
                   <p className="text-xs font-medium text-gray-500 mb-1">Sub-Managers</p>
                   <div className="space-y-1.5">
-                    {subManagers.map((sm) => (
-                      <div key={sm.product_id} className="px-3 py-2 rounded-md border bg-gray-50 text-sm">
-                        <span className="font-medium text-gray-800">{sm.product_name}</span>
-                        {sm.firm_name && <span className="text-gray-400 ml-1">· {sm.firm_name}</span>}
-                        {sm.inception_date && <span className="text-gray-400 ml-1">· {format(parseISO(sm.inception_date), "MMM d, yyyy")}</span>}
-                      </div>
-                    ))}
+                    {subManagers.map((sm) => {
+                      const product = products.find((p) => p.id === sm.product_id);
+                      return (
+                        <button
+                          key={sm.product_id}
+                          type="button"
+                          onClick={() => {
+                            if (product && onProductClick) { onOpenChange(false); onProductClick(product); }
+                          }}
+                          className="w-full text-left px-3 py-2 rounded-md border bg-gray-50 hover:bg-indigo-50 transition-colors text-sm"
+                        >
+                          <span className="font-medium text-indigo-600 hover:text-indigo-700">{sm.product_name}</span>
+                          {sm.firm_name && <span className="text-gray-400 ml-1">· {sm.firm_name}</span>}
+                          {sm.inception_date && <span className="text-gray-400 ml-1">· {format(parseISO(sm.inception_date), "MMM d, yyyy")}</span>}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
