@@ -145,15 +145,15 @@ export default function StatsListModal({ open, onOpenChange, mode, firms = [], p
       <DialogContent className="max-w-md max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            {isFirms ? <Building2 className="w-4 h-4 text-indigo-500" /> : <Package className="w-4 h-4 text-violet-500" />}
-            {isFirms ? `All Firms (${firms.length})` : `All Products (${products.length})`}
+            {isFirms ? <Building2 className="w-4 h-4 text-indigo-500" /> : isPortfolios ? <LayoutList className="w-4 h-4 text-emerald-500" /> : <Package className="w-4 h-4 text-violet-500" />}
+            {isFirms ? `All Firms (${firms.length})` : isPortfolios ? `All Portfolios (${portfolios.length})` : `All Products (${products.length})`}
           </DialogTitle>
         </DialogHeader>
         {!isFirms && (
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
-              placeholder="Search products..."
+              placeholder={isPortfolios ? "Search portfolios..." : "Search products..."}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 pr-9 h-9"
@@ -169,7 +169,7 @@ export default function StatsListModal({ open, onOpenChange, mode, firms = [], p
           </div>
         )}
         <div className="overflow-y-auto flex-1 pr-1">
-          {isFirms ? renderFirms() : renderProducts()}
+          {isFirms ? renderFirms() : isPortfolios ? renderPortfolios() : renderProducts()}
         </div>
       </DialogContent>
     </Dialog>
