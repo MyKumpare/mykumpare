@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, LayoutList, ChevronDown, ChevronRight } from "lucide-react";
+import { format, parseISO } from "date-fns";
 
 export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddPortfolio }) {
   const [expanded, setExpanded] = useState(true);
@@ -63,7 +64,7 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
                     <div className="text-xs text-gray-400 truncate">
                       {portfolio.allocator_name || ""}
                       {portfolio.advisor_firm_name ? ` · ${portfolio.advisor_firm_name}` : ""}
-                      {portfolio.inception_date ? ` · ${portfolio.inception_date}` : ""}
+                      {portfolio.inception_date ? ` · ${format(parseISO(portfolio.inception_date), "MM/dd/yyyy")}` : ""}
                     </div>
                   </div>
                 </div>
