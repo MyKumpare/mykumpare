@@ -202,7 +202,17 @@ function ProductMultiSelect({ options, value = [], onChange, onAddNew, momIncept
         <div className="space-y-2">
           {value.map((v) => {
             const subDate = v.inception_date ? parseISO(v.inception_date) : null;
+            // The effective minimum is the later of portfolio inception date and MoM inception date
+            const effectiveMin = momInceptionDate && portfolioInceptionDate
+              ? (momInceptionDate > portfolioInceptionDate ? momInceptionDate : portfolioInceptionDate)
+              : momInceptionDate || portfolioInceptionDate || undefined;
             const isBeforeMoM = momInceptionDate && subDate && subDate < momInceptionDate;
+            const isBeforePortfolio = portfolioInceptionDate && subDate && subDate < portfolioInceptionDate;
+            const subError = isBeforeMoM
+              ? "Cannot be before MoM inception date"
+              : isBeforePortfolio
+              ? "Cannot be before portfolio inception date"
+              : undefined;
             return (
               <div key={v.product_id} className="rounded-lg border border-gray-200 bg-gray-50 p-2.5 space-y-2">
                 <div className="flex items-center justify-between">
@@ -220,8 +230,8 @@ function ProductMultiSelect({ options, value = [], onChange, onAddNew, momIncept
                     <DatePicker
                       value={subDate}
                       onChange={(d) => updateInceptionDate(v.product_id, d)}
-                      minDate={momInceptionDate || undefined}
-                      error={isBeforeMoM ? "Cannot be before MoM inception date" : undefined}
+                      minDate={effectiveMin}
+                      error={subError}
                     />
                   </div>
                 </div>
