@@ -77,6 +77,16 @@ export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditP
               <span className="text-xs font-medium whitespace-nowrap">Add Product</span>
             </button>
           )}
+          {isAllocator && onAddPortfolio && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onAddPortfolio(firm); }}
+              className="flex items-center gap-1 px-2 h-7 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-600 transition-colors opacity-0 group-hover:opacity-100"
+              title="Add Portfolio"
+            >
+              <LayoutList className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="text-xs font-medium whitespace-nowrap">Add Portfolio</span>
+            </button>
+          )}
         </div>
       </div>
 
