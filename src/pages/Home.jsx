@@ -18,7 +18,7 @@ import PortfoliosSection from "../components/portfolios/PortfoliosSection";
 import FirmsSection from "../components/firms/FirmsSection";
 import ProductsSection from "../components/products/ProductsSection";
 import ContactsSection from "../components/contacts/ContactsSection";
-import { Link } from "react-router-dom";
+import UtilitySection from "../components/utility/UtilitySection";
 
 const FIRM_TYPES = [
   "Manager of Managers",
@@ -75,6 +75,28 @@ export default function Home() {
     queryKey: ["portfolios"],
     queryFn: () => base44.entities.Portfolio.list("-created_date"),
   });
+
+  const { data: deletedFirms = [] } = useQuery({
+    queryKey: ["deletedFirms"],
+    queryFn: () => base44.entities.Firm.filter({ deleted_at: { $exists: true } }),
+  });
+
+  const { data: deletedProducts = [] } = useQuery({
+    queryKey: ["deletedProducts"],
+    queryFn: () => base44.entities.Product.filter({ deleted_at: { $exists: true } }),
+  });
+
+  const { data: deletedContacts = [] } = useQuery({
+    queryKey: ["deletedContacts"],
+    queryFn: () => base44.entities.Contact.filter({ deleted_at: { $exists: true } }),
+  });
+
+  const { data: deletedPortfolios = [] } = useQuery({
+    queryKey: ["deletedPortfolios"],
+    queryFn: () => base44.entities.Portfolio.filter({ deleted_at: { $exists: true } }),
+  });
+
+  const deletedCount = deletedFirms.length + deletedProducts.length + deletedContacts.length + deletedPortfolios.length;
 
 
 
@@ -337,6 +359,9 @@ export default function Home() {
           onAddContact={() => setAddContactOpen(true)}
         />
 
+        {/* Utility section */}
+        <UtilitySection deletedCount={deletedCount} />
+
         <div className="h-12" />
       </div>
 
@@ -462,14 +487,6 @@ export default function Home() {
         onFirmClick={(firm) => handleEdit(firm, true)}
       />
 
-      <div className="fixed bottom-4 right-4">
-        <Link
-          to="/DeletedRecords"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg shadow-lg transition-colors"
-        >
-          🗑️ Deleted Records
-        </Link>
-      </div>
     </div>
   );
 }
