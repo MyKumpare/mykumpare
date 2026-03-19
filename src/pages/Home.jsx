@@ -415,6 +415,8 @@ export default function Home() {
             queryClient.invalidateQueries({ queryKey: ["portfolios"] });
           });
         }}
+        onFirmClick={handleEdit}
+        onProductClick={handleEditProduct}
       />
 
       <AddProductDialog
