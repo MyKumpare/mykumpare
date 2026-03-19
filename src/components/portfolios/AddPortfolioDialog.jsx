@@ -282,6 +282,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
   // Reset on open
   useEffect(() => {
     if (open) {
+      setIsEditing(!editingPortfolio); // view mode when editing, edit mode when adding
       if (editingPortfolio) {
         setAllocatorId(editingPortfolio.firm_id || "");
         setPortfolioName(editingPortfolio.portfolio_name || "");
