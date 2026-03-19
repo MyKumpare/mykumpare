@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Building2, Plus, Package, ChevronDown, ChevronRight } from "lucide-react";
+import { Building2, Plus, Package, ChevronDown, ChevronRight, LayoutList } from "lucide-react";
 
 const FIRM_TYPE_TO_PRODUCT_TYPE = {
   "Investment Manager": "Investment Manager Product",
