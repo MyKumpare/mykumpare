@@ -396,6 +396,14 @@ export default function Home() {
           onAddProduct={() => { setEditingProduct(null); setPreselectedProductType(null); setPreselectedFirmId(null); setProductDialogOpen(true); }}
         />
 
+        {/* Contacts section */}
+        <ContactsSection
+          contacts={contacts}
+          firms={firms}
+          onContactClick={(contact) => setViewingContact(contact)}
+          onAddContact={() => setAddContactOpen(true)}
+        />
+
         <div className="h-12" />
       </div>
 
