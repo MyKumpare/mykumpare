@@ -13,7 +13,7 @@ const TYPE_COLORS = {
   "Trade Organizations": "bg-cyan-100 text-cyan-700",
 };
 
-export default function FirmTypeSection({ type, firms, onEdit, onDelete, onAddToType, onAddProduct, onEditProduct, forceExpand, products = [] }) {
+export default function FirmTypeSection({ type, firms, onEdit, onDelete, onAddToType, onAddProduct, onEditProduct, onAddPortfolio, forceExpand, products = [] }) {
   const [expanded, setExpanded] = useState(false);
   const isExpanded = forceExpand || expanded;
   const colorClass = TYPE_COLORS[type] || "bg-gray-100 text-gray-700";
