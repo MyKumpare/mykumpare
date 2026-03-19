@@ -7,11 +7,12 @@ const FIRM_TYPE_TO_PRODUCT_TYPE = {
   "Manager of Managers": "Multi-Manager Product",
 };
 
-export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditProduct, products = [], forceExpand = false }) {
+export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditProduct, onAddPortfolio, products = [], forceExpand = false }) {
   const ALLOWED_FIRM_TYPES = ["Investment Manager", "Manager of Managers"];
   const effectiveTypes = firm.firm_types?.length > 0 ? firm.firm_types : (firm.firm_type ? [firm.firm_type] : []);
   const allowedType = effectiveTypes.find(t => ALLOWED_FIRM_TYPES.includes(t));
   const productType = allowedType ? FIRM_TYPE_TO_PRODUCT_TYPE[allowedType] : null;
+  const isAllocator = effectiveTypes.includes("Allocator");
   const [expanded, setExpanded] = useState(false);
   const isExpanded = forceExpand || expanded;
 
