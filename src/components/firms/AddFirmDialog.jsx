@@ -665,7 +665,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
               <TabsContent value="portfolios" className="space-y-3">
               {editingFirm ? (
-                <FirmPortfoliosTab firmId={editingFirm.id} firmName={editingFirm.name} />
+                <FirmPortfoliosTab firmId={editingFirm.id} firmName={editingFirm.name} onPortfolioClick={onPortfolioClick} />
               ) : (
                 <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
                   Save the firm first to add portfolios

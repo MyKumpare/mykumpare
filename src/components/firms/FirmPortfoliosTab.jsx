@@ -207,7 +207,11 @@ export default function FirmPortfoliosTab({ firmId, firmName, onPortfolioClick }
               </div>
             </div>
           ) : (
-            <div key={p.id} className="flex items-center justify-between px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 group">
+            <div
+              key={p.id}
+              className="flex items-center justify-between px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 group cursor-pointer hover:border-indigo-300 hover:bg-indigo-50/40 transition-colors"
+              onClick={() => onPortfolioClick && onPortfolioClick(p)}
+            >
               <div>
                 <p className="text-sm font-medium text-gray-800">{p.portfolio_name}</p>
                 <p className="text-xs text-gray-500">
@@ -215,10 +219,10 @@ export default function FirmPortfoliosTab({ firmId, firmName, onPortfolioClick }
                 </p>
               </div>
               <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-400 hover:text-indigo-600" onClick={() => handleStartEdit(p)}>
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-400 hover:text-indigo-600" onClick={(e) => { e.stopPropagation(); handleStartEdit(p); }}>
                   <Pencil className="w-3.5 h-3.5" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-400 hover:text-red-500" onClick={() => deleteMutation.mutate(p.id)}>
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-400 hover:text-red-500" onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(p.id); }}>
                   <Trash2 className="w-3.5 h-3.5" />
                 </Button>
               </div>
