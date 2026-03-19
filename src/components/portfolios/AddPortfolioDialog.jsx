@@ -257,6 +257,9 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
   const [advisorInceptionDate, setAdvisorInceptionDate] = useState(null);
   const [subManagers, setSubManagers] = useState([]);
 
+  // View mode: when opening an existing portfolio, start in view mode
+  const [isEditing, setIsEditing] = useState(false);
+
   // Inline add-firm dialog state
   const [addFirmOpen, setAddFirmOpen] = useState(false);
   const [addFirmPreselectedType, setAddFirmPreselectedType] = useState(null);
