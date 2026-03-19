@@ -226,13 +226,18 @@ export default function Home() {
   const q = searchQuery.toLowerCase();
 
   // Firms that match by name, OR have a matching product, OR have a matching contact
+  // Exclude soft-deleted firms
+  const activeFirms = firms.filter(f => !f.deleted_at);
+  const activeProducts = products.filter(p => !p.deleted_at);
+  const activeContacts = contacts.filter(c => !c.deleted_at);
+  
   const matchingProductFirmIds = q
-    ? new Set(products.filter((p) => p.name.toLowerCase().includes(q)).map((p) => p.firm_id))
+    ? new Set(activeProducts.filter((p) => p.name.toLowerCase().includes(q)).map((p) => p.firm_id))
     : new Set();
 
   const matchingContactFirmIds = q
     ? new Set(
-        contacts
+        activeContacts
           .filter(c => {
             const fullName = [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ").toLowerCase();
             return fullName.includes(q) || (c.email || "").toLowerCase().includes(q) || (c.title || "").toLowerCase().includes(q);
@@ -241,7 +246,7 @@ export default function Home() {
       )
     : new Set();
 
-  const filteredFirms = firms.filter((f) =>
+  const filteredFirms = activeFirms.filter((f) =>
     f.name.toLowerCase().includes(q) || matchingProductFirmIds.has(f.id) || matchingContactFirmIds.has(f.id)
   );
 
