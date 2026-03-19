@@ -291,9 +291,11 @@ export default function Home() {
                   firms={firms}
                   products={products}
                   contacts={contacts}
+                  portfolios={portfolios}
                   onFirmClick={(firm) => { setSearchQuery(""); handleEdit(firm); }}
                   onContactClick={(contact) => { setSearchQuery(""); setViewingContact(contact); }}
                   onProductClick={(product) => { setSearchQuery(""); handleEditProduct(product); }}
+                  onPortfolioClick={(portfolio) => { setSearchQuery(""); setPreselectedAllocatorId(portfolio.firm_id); setPortfolioDialogOpen(true); }}
                 />
               )}
             </div>

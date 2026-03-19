@@ -32,7 +32,7 @@ function FirmLogo({ firm }) {
   );
 }
 
-export default function SearchResults({ query, firms, products, contacts, onFirmClick, onContactClick, onProductClick }) {
+export default function SearchResults({ query, firms, products, contacts, portfolios = [], onFirmClick, onContactClick, onProductClick, onPortfolioClick }) {
   const q = query.toLowerCase().trim();
   if (!q) return null;
 
