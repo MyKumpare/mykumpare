@@ -146,6 +146,13 @@ function RangeSubsectionBlock({ label, minKey, maxKey, unit, isInteger, descript
   );
 }
 
+function formatNum(val) {
+  if (val === "" || val === null || val === undefined) return null;
+  const n = parseFloat(val);
+  if (isNaN(n)) return null;
+  return Number.isInteger(n) ? n.toString() : n.toFixed(2);
+}
+
 function calcRatio(excess, tracking) {
   const e = parseFloat(excess);
   const t = parseFloat(tracking);
