@@ -321,6 +321,13 @@ export default function Home() {
               <User className="w-4 h-4 mr-2" />
               Add Contact
             </Button>
+            <Button
+              onClick={() => setPortfolioDialogOpen(true)}
+              className="h-11 px-5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+            >
+              <LayoutList className="w-4 h-4 mr-2" />
+              Add Portfolio
+            </Button>
           </div>
         </div>
 
