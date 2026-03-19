@@ -493,12 +493,12 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
              )}
              {/* Row 3: Org Chart (if products tab exists) */}
              {!hideProductTabs && (
-               <TabsList className="flex mt-1">
+               <TabsList className="grid w-full mt-1 grid-cols-1">
                  <TabsTrigger value="orgchart">Org Chart</TabsTrigger>
                </TabsList>
              )}
              {hideProductTabs && (
-               <TabsList className="flex mt-1">
+               <TabsList className="grid w-full grid-cols-1 mt-1">
                  <TabsTrigger value="orgchart">Org Chart</TabsTrigger>
                </TabsList>
              )}
