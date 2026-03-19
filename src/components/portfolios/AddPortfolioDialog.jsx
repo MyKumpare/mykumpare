@@ -299,12 +299,22 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
     }
   }, [open, preselectedAllocatorId, editingPortfolio]);
 
-  // Reset advisor fields when advisor type changes
+  // Reset advisor fields when advisor type changes (but not on initial mount/open)
+  const isFirstAdvisorTypeChange = React.useRef(true);
   useEffect(() => {
+    if (isFirstAdvisorTypeChange.current) {
+      isFirstAdvisorTypeChange.current = false;
+      return;
+    }
     setAdvisorFirmId("");
     setAdvisorInceptionDate(null);
     setSubManagers([]);
   }, [advisorType]);
+
+  // Reset the ref when dialog opens/closes
+  useEffect(() => {
+    isFirstAdvisorTypeChange.current = true;
+  }, [open]);
 
   const getFirmTypes = (f) =>
     f.firm_types?.length ? f.firm_types : f.firm_type ? [f.firm_type] : [];
