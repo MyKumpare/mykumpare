@@ -356,6 +356,7 @@ export default function Home() {
                   onAddToType={handleAddToType}
                   onAddProduct={handleAddProductFromFirm}
                   onEditProduct={handleEditProduct}
+                  onAddPortfolio={(firm) => { setPreselectedAllocatorId(firm.id); setPortfolioDialogOpen(true); }}
                   forceExpand={!!searchQuery}
                   products={products}
                 />
