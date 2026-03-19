@@ -145,6 +145,42 @@ function RangeSubsectionBlock({ label, minKey, maxKey, unit, isInteger, descript
   );
 }
 
+function calcRatio(excess, tracking) {
+  const e = parseFloat(excess);
+  const t = parseFloat(tracking);
+  if (!isNaN(e) && !isNaN(t) && t !== 0) return (e / t).toFixed(2);
+  return null;
+}
+
+function InformationRatioBlock({ descriptions }) {
+  const irMin = calcRatio(descriptions?.excess_return_min, descriptions?.tracking_error_min);
+  const irMax = calcRatio(descriptions?.excess_return_max, descriptions?.tracking_error_max);
+
+  return (
+    <div className="space-y-1.5 pl-4 border-l-2 border-indigo-200">
+      <div className="flex items-center gap-2">
+        <Label className="text-sm font-medium text-gray-700">Target Information Ratio Range</Label>
+        <span className="text-xs text-gray-400 italic">(auto-calculated)</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="flex-1 space-y-0.5">
+          <Label className="text-xs text-gray-500">Min</Label>
+          <div className="h-8 px-3 flex items-center rounded-md border bg-gray-100 text-sm text-gray-600">
+            {irMin !== null ? irMin : <span className="text-gray-400 italic">—</span>}
+          </div>
+        </div>
+        <span className="text-gray-400 mt-5">–</span>
+        <div className="flex-1 space-y-0.5">
+          <Label className="text-xs text-gray-500">Max</Label>
+          <div className="h-8 px-3 flex items-center rounded-md border bg-gray-100 text-sm text-gray-600">
+            {irMax !== null ? irMax : <span className="text-gray-400 italic">—</span>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ProductInvestmentDescriptionTab({ descriptions, onChange, isEditing }) {
   const set = (key, val) => onChange({ ...descriptions, [key]: val });
 
