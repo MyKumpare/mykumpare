@@ -261,11 +261,12 @@ export default function Home() {
     return acc;
   }, {});
 
-  const totalFirms = firms.length;
-  const totalProducts = products.length;
-  const totalContacts = contacts.length;
-  const totalPortfolios = portfolios.length;
+  const totalFirms = activeFirms.length;
+  const totalProducts = activeProducts.length;
+  const totalContacts = activeContacts.length;
+  const totalPortfolios = portfolios.filter(p => !p.deleted_at).length;
   const hasResults = Object.keys(groupedFirms).length > 0;
+  const hasDeletedRecords = Object.values(deletedRecords).some(arr => arr && arr.length > 0);
 
   return (
     <div className="min-h-screen bg-gray-50/80">
