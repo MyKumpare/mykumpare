@@ -268,6 +268,16 @@ export default function Home() {
                 Total<br />Contacts
               </div>
             </button>
+            <div className="w-px h-10 bg-white/20" />
+            <button
+              onClick={() => setStatsModal("portfolios")}
+              className="flex items-center gap-3 group hover:opacity-80 transition-opacity"
+            >
+              <div className="text-3xl sm:text-4xl font-bold underline decoration-dotted underline-offset-4 decoration-emerald-300">{totalPortfolios}</div>
+              <div className="text-indigo-200 text-sm leading-tight text-left group-hover:text-white transition-colors">
+                Total<br />Portfolios
+              </div>
+            </button>
           </div>
         </div>
       </div>
