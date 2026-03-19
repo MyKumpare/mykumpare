@@ -300,7 +300,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
   }, [open, preselectedAllocatorId, editingPortfolio]);
 
   // Reset advisor fields when advisor type changes (but not on initial mount/open)
-  const isFirstAdvisorTypeChange = React.useRef(true);
+  const isFirstAdvisorTypeChange = useRef(true);
   useEffect(() => {
     if (isFirstAdvisorTypeChange.current) {
       isFirstAdvisorTypeChange.current = false;
