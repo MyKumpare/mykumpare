@@ -475,10 +475,11 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
           {/* Contacts, Addresses, Phones & Ownership Tabs */}
            <Tabs defaultValue={defaultTab || "contacts"} className="w-full">
-             <TabsList className="grid w-full grid-cols-3">
+             <TabsList className={`grid w-full mt-0 ${showPortfolioTab ? "grid-cols-4" : "grid-cols-3"}`}>
                <TabsTrigger value="contacts">Contacts</TabsTrigger>
                <TabsTrigger value="addresses">Addresses</TabsTrigger>
                <TabsTrigger value="phones">Phones</TabsTrigger>
+               {showPortfolioTab && <TabsTrigger value="portfolios">Portfolio</TabsTrigger>}
              </TabsList>
              {!hideProductTabs && (
              <TabsList className="grid w-full grid-cols-3 mt-1">
