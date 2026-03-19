@@ -273,11 +273,21 @@ export default function Home() {
       {/* Hero header */}
       <div className="bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-10 pb-16 sm:pt-14 sm:pb-20">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
-              <Building className="w-5 h-5 text-white" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+                <Building className="w-5 h-5 text-white" />
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">MyKumpare</h1>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">MyKumpare</h1>
+            {hasDeletedRecords && (
+              <button
+                onClick={() => setDeletedRecordsOpen(true)}
+                className="text-white hover:bg-white/20 px-3 py-1.5 rounded-lg text-sm transition-colors"
+              >
+                🗑️ Deleted Records
+              </button>
+            )}
           </div>
 
 
