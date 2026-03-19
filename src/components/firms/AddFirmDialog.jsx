@@ -19,6 +19,7 @@ import ContactsTab from "../contacts/ContactsTab";
 import OwnershipTab from "./OwnershipTab";
 import OrgChartTab from "./OrgChartTab";
 import FirmProductsTab from "./FirmProductsTab";
+import FirmPortfoliosTab from "./FirmPortfoliosTab";
 
 function getCountryCodeFromCountryName(countryName) {
   if (!countryName) return "";
