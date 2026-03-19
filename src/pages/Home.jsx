@@ -360,16 +360,16 @@ export default function Home() {
 
         {/* Products section */}
         <ProductsSection
-          products={products}
-          firms={firms}
+          products={activeProducts}
+          firms={activeFirms}
           onProductClick={handleEditProduct}
           onAddProduct={() => { setEditingProduct(null); setPreselectedProductType(null); setPreselectedFirmId(null); setProductDialogOpen(true); }}
         />
 
         {/* Contacts section */}
         <ContactsSection
-          contacts={contacts}
-          firms={firms}
+          contacts={activeContacts}
+          firms={activeFirms}
           onContactClick={(contact) => setViewingContact(contact)}
           onAddContact={() => setAddContactOpen(true)}
         />
