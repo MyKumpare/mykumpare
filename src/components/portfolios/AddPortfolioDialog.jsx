@@ -115,7 +115,7 @@ function DatePicker({ value, onChange, minDate, placeholder = "Select date...", 
 }
 
 // ── Multi-select product picker ────────────────────────────────────────────────
-function ProductMultiSelect({ options, value = [], onChange, onAddNew, momInceptionDate }) {
+function ProductMultiSelect({ options, value = [], onChange, onAddNew, momInceptionDate, portfolioInceptionDate }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
