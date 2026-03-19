@@ -158,8 +158,8 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["contacts"] }); onOpenChange(false); },
   });
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Contact.delete(id),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["contacts"] }); onOpenChange(false); },
+    mutationFn: (id) => base44.entities.Contact.update(id, { deleted_at: new Date().toISOString() }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["contacts"] }); queryClient.invalidateQueries({ queryKey: ["deletedContacts"] }); onOpenChange(false); },
   });
 
   const handlePhotoUpload = async (e) => {
