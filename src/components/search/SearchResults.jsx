@@ -73,7 +73,7 @@ export default function SearchResults({ query, firms, products, contacts, portfo
     return firm ? firmContacts(firm.id) : [];
   };
 
-  const hasAny = matchedContacts.length > 0 || matchedFirms.length > 0 || matchedProducts.length > 0;
+  const hasAny = matchedContacts.length > 0 || matchedFirms.length > 0 || matchedProducts.length > 0 || matchedPortfolios.length > 0;
   if (!hasAny) return (
     <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 p-4 text-sm text-gray-400 text-center">
       No results for "{query}"
