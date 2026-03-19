@@ -12,9 +12,13 @@ const GROUP_COLORS = {
 export default function ProductsSection({ products, firms, onProductClick, onAddProduct }) {
   const [expanded, setExpanded] = useState(true);
   const [expandedGroups, setExpandedGroups] = useState({});
+  const [expandedFirms, setExpandedFirms] = useState({});
 
   const toggleGroup = (type) =>
     setExpandedGroups((prev) => ({ ...prev, [type]: !prev[type] }));
+
+  const toggleFirm = (firmId) =>
+    setExpandedFirms((prev) => ({ ...prev, [firmId]: !prev[firmId] }));
 
   // Build a firmId -> firm map for quick lookup
   const firmMap = Object.fromEntries(firms.map((f) => [f.id, f]));
