@@ -119,7 +119,7 @@ function RangeSubsectionBlock({ label, minKey, maxKey, unit, isInteger, descript
             />
           ) : (
             <div className="h-8 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-700">
-              {minVal !== "" && minVal !== null ? minVal : <span className="text-gray-400 italic">—</span>}
+              {formatNum(minVal) !== null ? formatNum(minVal) : <span className="text-gray-400 italic">—</span>}
             </div>
           )}
         </div>
@@ -137,7 +137,7 @@ function RangeSubsectionBlock({ label, minKey, maxKey, unit, isInteger, descript
             />
           ) : (
             <div className="h-8 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-700">
-              {maxVal !== "" && maxVal !== null ? maxVal : <span className="text-gray-400 italic">—</span>}
+              {formatNum(maxVal) !== null ? formatNum(maxVal) : <span className="text-gray-400 italic">—</span>}
             </div>
           )}
         </div>
