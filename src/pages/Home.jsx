@@ -18,7 +18,7 @@ import PortfoliosSection from "../components/portfolios/PortfoliosSection";
 import FirmsSection from "../components/firms/FirmsSection";
 import ProductsSection from "../components/products/ProductsSection";
 import ContactsSection from "../components/contacts/ContactsSection";
-import DeletedRecordsModal from "../components/deleted/DeletedRecordsModal";
+import { Link } from "react-router-dom";
 
 const FIRM_TYPES = [
   "Manager of Managers",
@@ -53,7 +53,6 @@ export default function Home() {
   const [portfolioDialogOpen, setPortfolioDialogOpen] = useState(false);
   const [preselectedAllocatorId, setPreselectedAllocatorId] = useState(null);
   const [editingPortfolio, setEditingPortfolio] = useState(null);
-  const [deletedRecordsOpen, setDeletedRecordsOpen] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -77,32 +76,7 @@ export default function Home() {
     queryFn: () => base44.entities.Portfolio.list("-created_date"),
   });
 
-  const { data: deletedFirms = [] } = useQuery({
-    queryKey: ["deletedFirms"],
-    queryFn: () => base44.entities.Firm.filter({ deleted_at: { $exists: true } }),
-  });
 
-  const { data: deletedProducts = [] } = useQuery({
-    queryKey: ["deletedProducts"],
-    queryFn: () => base44.entities.Product.filter({ deleted_at: { $exists: true } }),
-  });
-
-  const { data: deletedContacts = [] } = useQuery({
-    queryKey: ["deletedContacts"],
-    queryFn: () => base44.entities.Contact.filter({ deleted_at: { $exists: true } }),
-  });
-
-  const { data: deletedPortfolios = [] } = useQuery({
-    queryKey: ["deletedPortfolios"],
-    queryFn: () => base44.entities.Portfolio.filter({ deleted_at: { $exists: true } }),
-  });
-
-  const deletedRecords = {
-    firms: deletedFirms,
-    products: deletedProducts,
-    contacts: deletedContacts,
-    portfolios: deletedPortfolios,
-  };
 
   const createProductMutation = useMutation({
     mutationFn: (data) => base44.entities.Product.create(data),
@@ -266,28 +240,17 @@ export default function Home() {
   const totalContacts = activeContacts.length;
   const totalPortfolios = portfolios.filter(p => !p.deleted_at).length;
   const hasResults = Object.keys(groupedFirms).length > 0;
-  const hasDeletedRecords = Object.values(deletedRecords).some(arr => arr && arr.length > 0);
 
   return (
     <div className="min-h-screen bg-gray-50/80">
       {/* Hero header */}
       <div className="bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-10 pb-16 sm:pt-14 sm:pb-20">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
-                <Building className="w-5 h-5 text-white" />
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">MyKumpare</h1>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+              <Building className="w-5 h-5 text-white" />
             </div>
-            {hasDeletedRecords && (
-              <button
-                onClick={() => setDeletedRecordsOpen(true)}
-                className="text-white hover:bg-white/20 px-3 py-1.5 rounded-lg text-sm transition-colors"
-              >
-                🗑️ Deleted Records
-              </button>
-            )}
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">MyKumpare</h1>
           </div>
 
 
@@ -499,11 +462,14 @@ export default function Home() {
         onFirmClick={(firm) => handleEdit(firm, true)}
       />
 
-      <DeletedRecordsModal
-        open={deletedRecordsOpen}
-        onOpenChange={setDeletedRecordsOpen}
-        deletedRecords={deletedRecords}
-      />
+      <div className="fixed bottom-4 right-4">
+        <Link
+          to="/DeletedRecords"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg shadow-lg transition-colors"
+        >
+          🗑️ Deleted Records
+        </Link>
+      </div>
     </div>
   );
 }
