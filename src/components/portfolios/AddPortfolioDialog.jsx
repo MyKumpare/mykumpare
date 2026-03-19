@@ -449,132 +449,243 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
     advisorDateValid &&
     subManagersValid;
 
+  const viewAllocatorName = firms.find((f) => f.id === allocatorId)?.name || allocatorId;
+  const viewAdvisorFirmName = firms.find((f) => f.id === advisorFirmId)?.name || advisorFirmId;
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingPortfolio ? "Edit Portfolio" : "Add Portfolio"}</DialogTitle>
+            <div className="flex items-center justify-between pr-6">
+              {editingPortfolio && !isEditing ? (
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center flex-shrink-0">
+                    <LayoutList className="w-5 h-5 text-gray-300" />
+                  </div>
+                  <div className="min-w-0">
+                    <DialogTitle className="text-base font-semibold leading-tight">Portfolio Details</DialogTitle>
+                    <p className="text-sm text-indigo-600 font-medium mt-0.5 truncate">{portfolioName}</p>
+                  </div>
+                </div>
+              ) : (
+                <DialogTitle className="text-xl font-semibold">
+                  {editingPortfolio ? "Edit Portfolio" : "Add Portfolio"}
+                </DialogTitle>
+              )}
+              {editingPortfolio && !isEditing && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1.5"
+                  onClick={() => setIsEditing(true)}
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  Edit
+                </Button>
+              )}
+            </div>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
-            {/* Allocator Name */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-gray-700">
-                Allocator Name <span className="text-red-400">*</span>
-              </Label>
-              <SearchableSelect
-                options={allocatorOptions}
-                value={allocatorId}
-                onChange={setAllocatorId}
-                placeholder="Select allocator..."
-                onAddNew={handleAddAllocator}
-                addNewLabel="Add new Allocator..."
-              />
-            </div>
-
-            {/* Portfolio Name */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-gray-700">
-                Portfolio Name <span className="text-red-400">*</span>
-              </Label>
-              <Input
-                placeholder="Enter portfolio name..."
-                value={portfolioName}
-                onChange={(e) => setPortfolioName(e.target.value)}
-                className="h-9 text-sm"
-              />
-            </div>
-
-            {/* Inception Date */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-gray-700">
-                Inception Date <span className="text-red-400">*</span>
-              </Label>
-              <DatePicker value={inceptionDate} onChange={setInceptionDate} />
-            </div>
-
-            {/* Advisor Type */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-gray-700">Advisor Type</Label>
-              <div className="flex gap-2">
-                {["Manager of Managers", "Investment Manager"].map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setAdvisorType(advisorType === t ? "" : t)}
-                    className={cn(
-                      "flex-1 h-9 rounded-md border text-sm font-medium transition-colors",
-                      advisorType === t
-                        ? "bg-indigo-600 border-indigo-600 text-white"
-                        : "border-gray-200 text-gray-600 hover:border-indigo-300 hover:text-indigo-600"
-                    )}
-                  >
-                    {t}
-                  </button>
-                ))}
+          {/* View mode */}
+          {editingPortfolio && !isEditing ? (
+            <div className="space-y-3 py-2">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">Allocator</p>
+                  <p className="text-sm text-gray-900 px-3 py-2 rounded-md border bg-gray-50">{viewAllocatorName || <span className="text-gray-400">—</span>}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">Inception Date</p>
+                  <p className="text-sm text-gray-900 px-3 py-2 rounded-md border bg-gray-50">
+                    {inceptionDate ? format(inceptionDate, "MMM d, yyyy") : <span className="text-gray-400">—</span>}
+                  </p>
+                </div>
               </div>
+              {advisorType && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 mb-1">Advisor Type</p>
+                    <p className="text-sm text-gray-900 px-3 py-2 rounded-md border bg-gray-50">{advisorType}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 mb-1">Advisor Firm</p>
+                    <p className="text-sm text-gray-900 px-3 py-2 rounded-md border bg-gray-50">{viewAdvisorFirmName || <span className="text-gray-400">—</span>}</p>
+                  </div>
+                </div>
+              )}
+              {advisorType && advisorInceptionDate && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">{advisorType === "Manager of Managers" ? "MoM" : "Investment Manager"} Inception Date</p>
+                  <p className="text-sm text-gray-900 px-3 py-2 rounded-md border bg-gray-50">{format(advisorInceptionDate, "MMM d, yyyy")}</p>
+                </div>
+              )}
+              {subManagers.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">Sub-Managers</p>
+                  <div className="space-y-1.5">
+                    {subManagers.map((sm) => (
+                      <div key={sm.product_id} className="px-3 py-2 rounded-md border bg-gray-50 text-sm">
+                        <span className="font-medium text-gray-800">{sm.product_name}</span>
+                        {sm.firm_name && <span className="text-gray-400 ml-1">· {sm.firm_name}</span>}
+                        {sm.inception_date && <span className="text-gray-400 ml-1">· {format(parseISO(sm.inception_date), "MMM d, yyyy")}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-
-            {/* Advisor Firm (conditional) */}
-            {advisorType && (
+          ) : (
+            /* Edit / Add mode */
+            <div className="space-y-4 py-2">
+              {/* Allocator Name */}
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium text-gray-700">
-                  {advisorType === "Manager of Managers" ? "Manager of Managers Firm" : "Investment Manager Firm"}
+                  Allocator Name <span className="text-red-400">*</span>
                 </Label>
                 <SearchableSelect
-                  options={advisorFirmOptions}
-                  value={advisorFirmId}
-                  onChange={setAdvisorFirmId}
-                  placeholder={`Select ${advisorType}...`}
-                  onAddNew={handleAddAdvisorFirm}
-                  addNewLabel={`Add new ${advisorType}...`}
+                  options={allocatorOptions}
+                  value={allocatorId}
+                  onChange={setAllocatorId}
+                  placeholder="Select allocator..."
+                  onAddNew={handleAddAllocator}
+                  addNewLabel="Add new Allocator..."
                 />
               </div>
-            )}
 
-            {/* Advisor Inception Date (conditional) */}
-            {advisorType && (
+              {/* Portfolio Name */}
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium text-gray-700">
-                  {advisorType === "Manager of Managers" ? "MoM" : "Investment Manager"} Inception Date <span className="text-red-400">*</span>
+                  Portfolio Name <span className="text-red-400">*</span>
                 </Label>
-                <DatePicker
-                  value={advisorInceptionDate}
-                  onChange={setAdvisorInceptionDate}
-                  minDate={inceptionDate || undefined}
-                  error={advisorInceptionDate && inceptionDate && advisorInceptionDate < inceptionDate
-                    ? "Cannot be before portfolio inception date"
-                    : undefined}
+                <Input
+                  placeholder="Enter portfolio name..."
+                  value={portfolioName}
+                  onChange={(e) => setPortfolioName(e.target.value)}
+                  className="h-9 text-sm"
                 />
               </div>
-            )}
 
-            {/* Sub-managers (only for MoM) */}
-            {advisorType === "Manager of Managers" && (
+              {/* Inception Date */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-gray-700">Sub-Managers (IM Products)</Label>
-                <ProductMultiSelect
-                  options={imProductOptions}
-                  value={subManagers}
-                  onChange={setSubManagers}
-                  onAddNew={() => setAddProductOpen(true)}
-                  momInceptionDate={advisorInceptionDate}
-                  portfolioInceptionDate={inceptionDate}
-                />
+                <Label className="text-xs font-medium text-gray-700">
+                  Inception Date <span className="text-red-400">*</span>
+                </Label>
+                <DatePicker value={inceptionDate} onChange={setInceptionDate} />
               </div>
-            )}
-          </div>
 
-          <DialogFooter className="gap-2 pt-2 border-t">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button
-              onClick={handleSave}
-              disabled={!isValid || createMutation.isPending || updateMutation.isPending}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white"
-            >
-              {editingPortfolio ? "Save Changes" : "Save Portfolio"}
-            </Button>
+              {/* Advisor Type */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-gray-700">Advisor Type</Label>
+                <div className="flex gap-2">
+                  {["Manager of Managers", "Investment Manager"].map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setAdvisorType(advisorType === t ? "" : t)}
+                      className={cn(
+                        "flex-1 h-9 rounded-md border text-sm font-medium transition-colors",
+                        advisorType === t
+                          ? "bg-indigo-600 border-indigo-600 text-white"
+                          : "border-gray-200 text-gray-600 hover:border-indigo-300 hover:text-indigo-600"
+                      )}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Advisor Firm (conditional) */}
+              {advisorType && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-gray-700">
+                    {advisorType === "Manager of Managers" ? "Manager of Managers Firm" : "Investment Manager Firm"}
+                  </Label>
+                  <SearchableSelect
+                    options={advisorFirmOptions}
+                    value={advisorFirmId}
+                    onChange={setAdvisorFirmId}
+                    placeholder={`Select ${advisorType}...`}
+                    onAddNew={handleAddAdvisorFirm}
+                    addNewLabel={`Add new ${advisorType}...`}
+                  />
+                </div>
+              )}
+
+              {/* Advisor Inception Date (conditional) */}
+              {advisorType && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-gray-700">
+                    {advisorType === "Manager of Managers" ? "MoM" : "Investment Manager"} Inception Date <span className="text-red-400">*</span>
+                  </Label>
+                  <DatePicker
+                    value={advisorInceptionDate}
+                    onChange={setAdvisorInceptionDate}
+                    minDate={inceptionDate || undefined}
+                    error={advisorInceptionDate && inceptionDate && advisorInceptionDate < inceptionDate
+                      ? "Cannot be before portfolio inception date"
+                      : undefined}
+                  />
+                </div>
+              )}
+
+              {/* Sub-managers (only for MoM) */}
+              {advisorType === "Manager of Managers" && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-gray-700">Sub-Managers (IM Products)</Label>
+                  <ProductMultiSelect
+                    options={imProductOptions}
+                    value={subManagers}
+                    onChange={setSubManagers}
+                    onAddNew={() => setAddProductOpen(true)}
+                    momInceptionDate={advisorInceptionDate}
+                    portfolioInceptionDate={inceptionDate}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-between gap-2 pt-2 border-t">
+            <div>
+              {editingPortfolio && onDelete && (
+                <Button
+                  variant="ghost"
+                  className="text-red-500 hover:text-red-600 hover:bg-red-50 w-full sm:w-auto"
+                  onClick={() => { onOpenChange(false); onDelete(editingPortfolio); }}
+                >
+                  Delete Portfolio
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2 justify-end">
+              {editingPortfolio && !isEditing ? (
+                <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+              ) : editingPortfolio && isEditing ? (
+                <>
+                  <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
+                  <Button
+                    onClick={handleSave}
+                    disabled={!isValid || updateMutation.isPending}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                  >
+                    Save Changes
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+                  <Button
+                    onClick={handleSave}
+                    disabled={!isValid || createMutation.isPending}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                  >
+                    Save Portfolio
+                  </Button>
+                </>
+              )}
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
