@@ -690,8 +690,6 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               )}
               </TabsContent>
               </Tabs>
-             );
-           })()}
               </div>
 
         <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-between gap-2 pt-2 border-t">
