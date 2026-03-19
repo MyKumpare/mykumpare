@@ -77,6 +77,33 @@ export default function Home() {
     queryFn: () => base44.entities.Portfolio.list("-created_date"),
   });
 
+  const { data: deletedFirms = [] } = useQuery({
+    queryKey: ["deletedFirms"],
+    queryFn: () => base44.entities.Firm.filter({ deleted_at: { $exists: true } }),
+  });
+
+  const { data: deletedProducts = [] } = useQuery({
+    queryKey: ["deletedProducts"],
+    queryFn: () => base44.entities.Product.filter({ deleted_at: { $exists: true } }),
+  });
+
+  const { data: deletedContacts = [] } = useQuery({
+    queryKey: ["deletedContacts"],
+    queryFn: () => base44.entities.Contact.filter({ deleted_at: { $exists: true } }),
+  });
+
+  const { data: deletedPortfolios = [] } = useQuery({
+    queryKey: ["deletedPortfolios"],
+    queryFn: () => base44.entities.Portfolio.filter({ deleted_at: { $exists: true } }),
+  });
+
+  const deletedRecords = {
+    firms: deletedFirms,
+    products: deletedProducts,
+    contacts: deletedContacts,
+    portfolios: deletedPortfolios,
+  };
+
   const createProductMutation = useMutation({
     mutationFn: (data) => base44.entities.Product.create(data),
     onSuccess: () => {
