@@ -204,7 +204,7 @@ function CashLevelBlock({ value, onChange, isEditing }) {
       ) : (
         <div className="h-8 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-700 w-32">
           {value !== "" && value !== null && value !== undefined
-            ? `±${value}%`
+            ? `±${parseFloat(value).toFixed(2)}%`
             : <span className="text-gray-400 italic">—</span>}
         </div>
       )}
