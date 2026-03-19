@@ -44,6 +44,36 @@ export default function StatsListModal({ open, onOpenChange, mode, firms = [], p
     onProductClick?.(product);
   };
 
+  const handlePortfolioClick = (portfolio) => {
+    onOpenChange(false);
+    onPortfolioClick?.(portfolio);
+  };
+
+  const renderPortfolios = () => {
+    const q = searchQuery.toLowerCase();
+    const filtered = portfolios
+      .filter((p) => !q || (p.portfolio_name || "").toLowerCase().includes(q) || (p.allocator_name || "").toLowerCase().includes(q))
+      .sort((a, b) => (a.portfolio_name || "").localeCompare(b.portfolio_name || ""));
+    if (filtered.length === 0) return <p className="text-sm text-gray-400 italic text-center py-4">No portfolios found</p>;
+    return (
+      <div className="space-y-1">
+        {filtered.map((p) => (
+          <button
+            key={p.id}
+            onClick={() => handlePortfolioClick(p)}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 hover:bg-emerald-50 hover:text-emerald-700 text-sm text-gray-800 transition-colors text-left"
+          >
+            <LayoutList className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+            <span className="truncate">{p.portfolio_name}</span>
+            {p.allocator_name && (
+              <span className="ml-auto text-xs text-gray-400 flex-shrink-0 pl-2">{p.allocator_name}</span>
+            )}
+          </button>
+        ))}
+      </div>
+    );
+  };
+
   const renderFirms = () => {
     return FIRM_TYPES.map((type) => {
       const group = firms
