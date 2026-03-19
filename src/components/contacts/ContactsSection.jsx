@@ -41,9 +41,13 @@ function ContactAvatar({ contact }) {
 export default function ContactsSection({ contacts, firms, onContactClick, onAddContact }) {
   const [expanded, setExpanded] = useState(true);
   const [expandedGroups, setExpandedGroups] = useState({});
+  const [expandedFirms, setExpandedFirms] = useState({});
 
   const toggleGroup = (type) =>
     setExpandedGroups((prev) => ({ ...prev, [type]: !prev[type] }));
+
+  const toggleFirm = (firmId) =>
+    setExpandedFirms((prev) => ({ ...prev, [firmId]: !prev[firmId] }));
 
   // Build firmId -> firm map
   const firmMap = Object.fromEntries(firms.map((f) => [f.id, f]));
