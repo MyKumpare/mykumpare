@@ -276,6 +276,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
         setInceptionDate(editingPortfolio.inception_date ? parseISO(editingPortfolio.inception_date) : null);
         setAdvisorType(editingPortfolio.advisor_type || "");
         setAdvisorFirmId(editingPortfolio.advisor_firm_id || "");
+        setAdvisorInceptionDate(editingPortfolio.advisor_inception_date ? parseISO(editingPortfolio.advisor_inception_date) : null);
         setSubManagers(editingPortfolio.sub_managers || []);
       } else {
         setAllocatorId(preselectedAllocatorId || "");
@@ -283,6 +284,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
         setInceptionDate(null);
         setAdvisorType("");
         setAdvisorFirmId("");
+        setAdvisorInceptionDate(null);
         setSubManagers([]);
       }
     }
