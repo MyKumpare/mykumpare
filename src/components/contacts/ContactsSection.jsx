@@ -143,9 +143,9 @@ export default function ContactsSection({ contacts, firms, onContactClick, onAdd
                 {isGroupExpanded && (
                   <div className="space-y-3 pl-1">
                     {firmGroups.map(({ firm, contacts: firmContacts }) => {
-                      const isFirmExpanded = expandedFirms[firm.id] !== false; // default open
-                      return (
-                        <div key={firm.id}>
+                       const isFirmExpanded = expandedFirms[firm.id] !== false; // default open
+                       return (
+                       <div key={firm.id}>
                          {/* Firm sub-header */}
                          <button
                            onClick={() => toggleFirm(firm.id)}
@@ -188,8 +188,8 @@ export default function ContactsSection({ contacts, firms, onContactClick, onAdd
                          </div>
                          )}
                        </div>
-                       );
-                       })}
+                     );
+                     })}
                   </div>
                 )}
               </div>

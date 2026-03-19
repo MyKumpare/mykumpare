@@ -25,7 +25,7 @@ export default function FirmsSection({
   onEditProduct,
   onAddPortfolio,
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
 
   return (
     <div className="mb-6">

@@ -4,7 +4,7 @@ import { Plus, LayoutList, ChevronDown, ChevronRight } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
 export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddPortfolio }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const [expandedGroups, setExpandedGroups] = useState({});
   const [expandedAdvisorTypes, setExpandedAdvisorTypes] = useState({});
 

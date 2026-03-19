@@ -10,7 +10,7 @@ const GROUP_COLORS = {
 };
 
 export default function ProductsSection({ products, firms, onProductClick, onAddProduct }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const [expandedGroups, setExpandedGroups] = useState({});
   const [expandedFirms, setExpandedFirms] = useState({});
 
