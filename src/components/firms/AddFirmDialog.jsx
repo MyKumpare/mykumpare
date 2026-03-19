@@ -476,24 +476,31 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
           {/* Contacts, Addresses, Phones & Ownership Tabs */}
            <Tabs defaultValue={defaultTab || "contacts"} className="w-full">
-             <TabsList className={`grid w-full mt-0 ${showPortfolioTab ? "grid-cols-4" : "grid-cols-3"}`}>
+             {/* Row 1: Contacts, Addresses, Phones */}
+             <TabsList className="grid w-full mt-0 grid-cols-3">
                <TabsTrigger value="contacts">Contacts</TabsTrigger>
                <TabsTrigger value="addresses">Addresses</TabsTrigger>
                <TabsTrigger value="phones">Phones</TabsTrigger>
-               {showPortfolioTab && <TabsTrigger value="portfolios">Portfolio</TabsTrigger>}
              </TabsList>
+             {/* Row 2: Products, Portfolios/Advisor Portfolios, Ownership, Org Chart */}
              {!hideProductTabs && (
-             <TabsList className={`grid w-full mt-1 ${showAdvisorPortfolioTab ? "grid-cols-4" : "grid-cols-3"}`}>
-               <TabsTrigger value="products">Products</TabsTrigger>
-               {showAdvisorPortfolioTab && <TabsTrigger value="advisor-portfolios">Portfolios</TabsTrigger>}
-               <TabsTrigger value="ownership">Ownership</TabsTrigger>
-               <TabsTrigger value="orgchart">Org Chart</TabsTrigger>
-             </TabsList>
+               <TabsList className={`grid w-full mt-1 ${showAdvisorPortfolioTab ? "grid-cols-4" : "grid-cols-3"}`}>
+                 <TabsTrigger value="products">Products</TabsTrigger>
+                 {showAdvisorPortfolioTab && <TabsTrigger value="advisor-portfolios">Portfolios</TabsTrigger>}
+                 <TabsTrigger value="ownership">Ownership</TabsTrigger>
+                 <TabsTrigger value="orgchart">Org Chart</TabsTrigger>
+               </TabsList>
              )}
              {hideProductTabs && (
-             <TabsList className="grid w-full grid-cols-1 mt-1">
-               <TabsTrigger value="orgchart">Org Chart</TabsTrigger>
-             </TabsList>
+               <TabsList className="grid w-full grid-cols-1 mt-1">
+                 <TabsTrigger value="orgchart">Org Chart</TabsTrigger>
+               </TabsList>
+             )}
+             {/* Portfolio tab for allocators - appears in row 1 */}
+             {showPortfolioTab && (
+               <div className="mt-1 text-xs text-gray-500 px-3 py-2 border border-dashed border-gray-200 rounded-lg bg-gray-50">
+                 <div className="mb-1 font-medium">Portfolio</div>
+               </div>
              )}
 
             <TabsContent value="contacts" className="space-y-3">
