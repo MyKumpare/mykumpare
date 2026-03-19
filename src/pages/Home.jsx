@@ -326,7 +326,7 @@ export default function Home() {
 
         {/* Portfolios section */}
         <PortfoliosSection
-          portfolios={portfolios}
+          portfolios={portfolios.filter(p => !p.deleted_at)}
           onPortfolioClick={(portfolio) => { setEditingPortfolio(portfolio); setPreselectedAllocatorId(null); setPortfolioDialogOpen(true); }}
           onAddPortfolio={() => { setEditingPortfolio(null); setPreselectedAllocatorId(null); setPortfolioDialogOpen(true); }}
         />
