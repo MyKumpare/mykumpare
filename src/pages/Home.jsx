@@ -480,6 +480,11 @@ export default function Home() {
         onOpenChange={(o) => { setPortfolioDialogOpen(o); if (!o) { setPreselectedAllocatorId(null); setEditingPortfolio(null); } }}
         preselectedAllocatorId={preselectedAllocatorId}
         editingPortfolio={editingPortfolio}
+        onDelete={(portfolio) => {
+          base44.entities.Portfolio.delete(portfolio.id).then(() => {
+            queryClient.invalidateQueries({ queryKey: ["portfolios"] });
+          });
+        }}
       />
 
       <AddProductDialog
