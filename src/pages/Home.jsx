@@ -215,7 +215,11 @@ export default function Home() {
 
   const handleDeleteConfirm = () => {
     if (deletingFirm) {
-      deleteMutation.mutate(deletingFirm.id);
+      // Soft delete: set deleted_at timestamp
+      updateMutation.mutate({ 
+        id: deletingFirm.id, 
+        data: { deleted_at: new Date().toISOString() } 
+      });
     }
   };
 
