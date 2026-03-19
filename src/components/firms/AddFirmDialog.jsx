@@ -236,6 +236,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
   const NON_PRODUCT_TYPES = ["Allocator", "Trade Organizations"];
   const hideProductTabs = firmTypes.length > 0 && firmTypes.every(t => NON_PRODUCT_TYPES.includes(t));
+  const showPortfolioTab = firmTypes.includes("Allocator");
 
   const handleSubmit = () => {
     if (!isValid) return;
