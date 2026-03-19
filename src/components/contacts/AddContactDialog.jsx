@@ -171,7 +171,8 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
     setUploadingPhoto(false);
   };
 
-  const isValid = firstName.trim() && lastName.trim();
+  const hasAtLeastOneField = firstName.trim() || lastName.trim() || title.trim() || email.trim() || linkedinUrl.trim() || biography.trim() || notes.trim();
+  const isValid = hasAtLeastOneField;
 
   const hasUndetermined = gender === "Undetermined" || ethnicity.length === 0 || veteranStatus === "Undetermined" || disabilityStatus === "Undetermined";
 
