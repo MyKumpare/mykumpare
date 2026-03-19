@@ -245,7 +245,7 @@ function ProductMultiSelect({ options, value = [], onChange, onAddNew, momIncept
 }
 
 // ── Main dialog ────────────────────────────────────────────────────────────────
-export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, preselectedAllocatorId, editingPortfolio, preselectedAdvisorFirmId, preselectedAdvisorType }) {
+export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, preselectedAllocatorId, editingPortfolio, preselectedAdvisorFirmId, preselectedAdvisorType, onDelete }) {
   const queryClient = useQueryClient();
 
   // Form state
