@@ -455,8 +455,10 @@ export default function Home() {
         mode={statsModal}
         firms={firms}
         products={products}
+        portfolios={portfolios}
         onFirmClick={handleEdit}
         onProductClick={handleEditProduct}
+        onPortfolioClick={(portfolio) => { setEditingPortfolio(portfolio); setPreselectedAllocatorId(null); setPortfolioDialogOpen(true); }}
       />
 
       <ContactsListModal
