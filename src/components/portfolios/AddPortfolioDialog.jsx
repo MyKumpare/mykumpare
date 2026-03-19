@@ -96,7 +96,7 @@ function DatePicker({ value, onChange, minDate, placeholder = "Select date...", 
             type="button"
           >
             <CalendarIcon className="w-3.5 h-3.5 mr-2 text-gray-400" />
-            {value ? format(value, "MMM d, yyyy") : <span className="text-gray-400">{placeholder}</span>}
+              {value ? format(value, "MM/dd/yyyy") : <span className="text-gray-400">{placeholder}</span>}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
@@ -507,7 +507,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                 <div>
                   <p className="text-xs font-medium text-gray-500 mb-1">Inception Date</p>
                   <p className="text-sm text-gray-900 px-3 py-2 rounded-md border bg-gray-50">
-                    {inceptionDate ? format(inceptionDate, "MMM d, yyyy") : <span className="text-gray-400">—</span>}
+                    {inceptionDate ? format(inceptionDate, "MM/dd/yyyy") : <span className="text-gray-400">—</span>}
                   </p>
                 </div>
               </div>
@@ -535,7 +535,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
               {advisorType && advisorInceptionDate && (
                 <div>
                   <p className="text-xs font-medium text-gray-500 mb-1">{advisorType === "Manager of Managers" ? "MoM" : "Investment Manager"} Inception Date</p>
-                  <p className="text-sm text-gray-900 px-3 py-2 rounded-md border bg-gray-50">{format(advisorInceptionDate, "MMM d, yyyy")}</p>
+                  <p className="text-sm text-gray-900 px-3 py-2 rounded-md border bg-gray-50">{format(advisorInceptionDate, "MM/dd/yyyy")}</p>
                 </div>
               )}
               {subManagers.length > 0 && (
@@ -555,7 +555,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                         >
                           <span className="font-medium text-indigo-600 hover:text-indigo-700">{sm.product_name}</span>
                           {sm.firm_name && <span className="text-gray-400 ml-1">· {sm.firm_name}</span>}
-                          {sm.inception_date && <span className="text-gray-400 ml-1">· {format(parseISO(sm.inception_date), "MMM d, yyyy")}</span>}
+                          {sm.inception_date && <span className="text-gray-400 ml-1">· {format(parseISO(sm.inception_date), "MM/dd/yyyy")}</span>}
                         </button>
                       );
                     })}
