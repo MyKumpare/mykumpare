@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Plus, Trash2, AlertCircle, Download, Upload, ClipboardPaste } from "lucide-react";
+import { CalendarIcon, Plus, Trash2, AlertCircle, Download, Upload, ClipboardPaste, Trash } from "lucide-react";
 import { format, parseISO, addMonths, endOfMonth, startOfMonth, subMonths } from "date-fns";
 import ImportConflictReview from "./ImportConflictReview";
 
@@ -100,6 +100,7 @@ export default function BenchmarkReturnsTab({ returns = [], onChange, isEditing,
   const [showPaste, setShowPaste] = useState(false);
   const [parseErrors, setParseErrors] = useState([]);
   const [conflictState, setConflictState] = useState(null); // { conflicts, newRows, errors }
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
   const [showTemplateOptions, setShowTemplateOptions] = useState(false);
   const [showDownloadOptions, setShowDownloadOptions] = useState(false);
   const [downloadStartCalOpen, setDownloadStartCalOpen] = useState(false);
@@ -286,63 +287,97 @@ export default function BenchmarkReturnsTab({ returns = [], onChange, isEditing,
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <p className="text-sm text-gray-500">Monthly gross returns stored as a percentage (e.g. 1.5000 = 1.5%).</p>
-
-        <div className="flex items-center gap-2">
+      {/* Toolbar */}
+      <div className="rounded-lg border bg-gray-50 p-3 space-y-2.5">
+        <p className="text-xs text-gray-500">Monthly gross returns stored as a percentage (e.g. 1.5000 = 1.5%).</p>
+        <div className="flex items-center gap-2 flex-wrap">
           {returns.length > 0 && (
             <Button
               type="button"
               variant="outline"
               size="sm"
-              className="gap-1.5 text-xs h-8"
+              className="gap-1.5 text-xs h-8 bg-white"
               onClick={handleOpenDownload}
             >
               <Download className="w-3.5 h-3.5" />
               Download Data
             </Button>
           )}
-        {isEditing && (
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="gap-1.5 text-xs h-8"
-              onClick={handleOpenTemplate}
-            >
-              <Download className="w-3.5 h-3.5" />
-              Template
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="gap-1.5 text-xs h-8"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Upload className="w-3.5 h-3.5" />
-              Upload CSV
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="gap-1.5 text-xs h-8"
-              onClick={() => setShowPaste(!showPaste)}
-            >
-              <ClipboardPaste className="w-3.5 h-3.5" />
-              Paste CSV
-            </Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv"
-              className="hidden"
-              onChange={handleFileUpload}
-            />
-          </>
-        )}
+          {isEditing && (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-xs h-8 bg-white"
+                onClick={handleOpenTemplate}
+              >
+                <Download className="w-3.5 h-3.5" />
+                Template
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-xs h-8 bg-white"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="w-3.5 h-3.5" />
+                Upload CSV
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-xs h-8 bg-white"
+                onClick={() => setShowPaste(!showPaste)}
+              >
+                <ClipboardPaste className="w-3.5 h-3.5" />
+                Paste CSV
+              </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv"
+                className="hidden"
+                onChange={handleFileUpload}
+              />
+              {returns.length > 0 && !confirmDeleteAll && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-xs h-8 bg-white text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600 ml-auto"
+                  onClick={() => setConfirmDeleteAll(true)}
+                >
+                  <Trash className="w-3.5 h-3.5" />
+                  Delete All
+                </Button>
+              )}
+              {confirmDeleteAll && (
+                <div className="ml-auto flex items-center gap-2">
+                  <span className="text-xs text-red-600 font-medium">Delete all {returns.length} records?</span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-7 text-xs bg-red-600 hover:bg-red-700 text-white px-3"
+                    onClick={() => { onChange([]); setConfirmDeleteAll(false); }}
+                  >
+                    Confirm
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs px-3"
+                    onClick={() => setConfirmDeleteAll(false)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
 
