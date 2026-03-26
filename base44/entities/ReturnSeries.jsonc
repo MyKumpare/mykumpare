@@ -1,0 +1,100 @@
+{
+  "name": "ReturnSeries",
+  "type": "object",
+  "properties": {
+    "product_id": {
+      "type": "string",
+      "description": "ID of the associated product"
+    },
+    "return_types": {
+      "type": "array",
+      "description": "Selected return type classifications",
+      "items": {
+        "type": "string",
+        "enum": [
+          "Composite",
+          "Representative Portfolio",
+          "Paper Portfolio",
+          "Back-Test"
+        ]
+      }
+    },
+    "composite_name": {
+      "type": "string",
+      "description": "Name of the composite (if Composite type is selected)"
+    },
+    "representative_portfolio_name": {
+      "type": "string",
+      "description": "Name of the representative portfolio (if Representative Portfolio type is selected)"
+    },
+    "paper_portfolio_name": {
+      "type": "string",
+      "description": "Name of the paper portfolio (if Paper Portfolio type is selected)"
+    },
+    "back_test_name": {
+      "type": "string",
+      "description": "Name of the back-test (if Back-Test type is selected)"
+    },
+    "inception_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Inception date of the return series"
+    },
+    "gips_status": {
+      "type": "string",
+      "enum": [
+        "GIPS Calculated",
+        "GIPS Verified",
+        "Non-GIPS Compliant"
+      ],
+      "description": "GIPS compliance status (only applicable for Composite type)"
+    },
+    "return_frequency": {
+      "type": "string",
+      "enum": [
+        "Gross",
+        "Net"
+      ],
+      "description": "Whether returns are gross or net of fees"
+    },
+    "monthly_returns": {
+      "type": "array",
+      "description": "Array of monthly return data points",
+      "items": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "End of month date (YYYY-MM-DD format, last day of month)"
+          },
+          "return_value": {
+            "type": "number",
+            "description": "Monthly return as a percentage (e.g., 1.5 for 1.5%)"
+          }
+        },
+        "required": [
+          "date",
+          "return_value"
+        ]
+      }
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Start date of the uploaded monthly returns"
+    },
+    "end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "End date of the uploaded monthly returns"
+    }
+  },
+  "required": [
+    "product_id",
+    "return_types",
+    "inception_date",
+    "return_frequency",
+    "monthly_returns"
+  ]
+}

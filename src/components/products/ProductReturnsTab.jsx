@@ -24,11 +24,12 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Plus, Download, Upload, Trash2, Edit2, AlertCircle, CheckCircle2, ClipboardPaste } from "lucide-react";
 import ReturnSeriesDetailDialog from "./ReturnSeriesDetailDialog";
 
-const RETURN_TYPES = ["Composite", "Paper Portfolio", "Back-Test"];
+const RETURN_TYPES = ["Composite", "Representative Portfolio", "Paper Portfolio", "Back-Test"];
 const GIPS_OPTIONS = ["GIPS Calculated", "GIPS Compliant", "GIPS Verified", "Non-GIPS Compliant"];
 const RETURN_FREQUENCIES = ["Gross", "Net"];
 
 const getReturnTypeName = (type) => {
+  if (type === "Representative Portfolio") return "Representative Portfolio Name";
   if (type === "Paper Portfolio") return "Paper Portfolio Name";
   if (type === "Back-Test") return "Back-Test Name";
   return "Composite Name";
@@ -225,6 +226,7 @@ export default function ProductReturnsTab({ productId, productName, isEditing })
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [returnTypes, setReturnTypes] = useState([]);
   const [compositeName, setCompositeName] = useState("");
+  const [representativePortfolioName, setRepresentativePortfolioName] = useState("");
   const [paperPortfolioName, setPaperPortfolioName] = useState("");
   const [backTestName, setBackTestName] = useState("");
   const [inceptionDate, setInceptionDate] = useState("");
@@ -281,6 +283,7 @@ export default function ProductReturnsTab({ productId, productName, isEditing })
   const resetForm = () => {
     setReturnTypes([]);
     setCompositeName("");
+    setRepresentativePortfolioName("");
     setPaperPortfolioName("");
     setBackTestName("");
     setInceptionDate("");
@@ -299,6 +302,7 @@ export default function ProductReturnsTab({ productId, productName, isEditing })
     if (returnTypes.length === 0 || !inceptionDate || returnFrequency.length === 0) return;
     if (returnTypes.includes("Composite") && gipsStatus.length === 0) return;
     if (returnTypes.includes("Composite") && !compositeName.trim()) return;
+    if (returnTypes.includes("Representative Portfolio") && !representativePortfolioName.trim()) return;
     if (returnTypes.includes("Paper Portfolio") && !paperPortfolioName.trim()) return;
     if (returnTypes.includes("Back-Test") && !backTestName.trim()) return;
 
@@ -314,6 +318,7 @@ export default function ProductReturnsTab({ productId, productName, isEditing })
       product_id: productId,
       return_types: returnTypes,
       composite_name: compositeName || null,
+      representative_portfolio_name: representativePortfolioName || null,
       paper_portfolio_name: paperPortfolioName || null,
       back_test_name: backTestName || null,
       inception_date: inceptionDate,
@@ -351,6 +356,7 @@ export default function ProductReturnsTab({ productId, productName, isEditing })
     const performanceType = returnTypes.find(t => t);
     const performanceName = 
       returnTypes.includes("Composite") ? compositeName :
+      returnTypes.includes("Representative Portfolio") ? representativePortfolioName :
       returnTypes.includes("Paper Portfolio") ? paperPortfolioName :
       returnTypes.includes("Back-Test") ? backTestName : "";
     const gipsStatusStr = returnTypes.includes("Composite") ? gipsStatus.join(", ") : "";
@@ -393,31 +399,33 @@ export default function ProductReturnsTab({ productId, productName, isEditing })
   };
 
   const handleUploadReturns = async () => {
-    if (!uploadValidation?.valid || !uploadValidation.returns.length) return;
+     if (!uploadValidation?.valid || !uploadValidation.returns.length) return;
 
-    const data = {
-      product_id: productId,
-      return_types: returnTypes,
-      composite_name: compositeName || null,
-      paper_portfolio_name: paperPortfolioName || null,
-      back_test_name: backTestName || null,
-      inception_date: inceptionDate,
-      gips_status: returnTypes.includes("Composite") ? gipsStatus.join(", ") : null,
-      return_frequency: returnFrequency.join("/"),
-      monthly_returns: uploadValidation.returns,
-      start_date: startDate,
-      end_date: endDate,
-    };
+     const data = {
+       product_id: productId,
+       return_types: returnTypes,
+       composite_name: compositeName || null,
+       representative_portfolio_name: representativePortfolioName || null,
+       paper_portfolio_name: paperPortfolioName || null,
+       back_test_name: backTestName || null,
+       inception_date: inceptionDate,
+       gips_status: returnTypes.includes("Composite") ? gipsStatus.join(", ") : null,
+       return_frequency: returnFrequency.join("/"),
+       monthly_returns: uploadValidation.returns,
+       start_date: startDate,
+       end_date: endDate,
+     };
 
-    if (editingReturnSeries) {
-      updateReturnSeriesMutation.mutate({ id: editingReturnSeries.id, data });
-    }
-  };
+     if (editingReturnSeries) {
+       updateReturnSeriesMutation.mutate({ id: editingReturnSeries.id, data });
+     }
+   };
 
   const handleEditReturnSeries = (series) => {
     setEditingReturnSeries(series);
     setReturnTypes(series.return_types || []);
     setCompositeName(series.composite_name || "");
+    setRepresentativePortfolioName(series.representative_portfolio_name || "");
     setPaperPortfolioName(series.paper_portfolio_name || "");
     setBackTestName(series.back_test_name || "");
     setInceptionDate(series.inception_date);
@@ -458,10 +466,11 @@ export default function ProductReturnsTab({ productId, productName, isEditing })
                 <div>
                   <p className="text-sm font-semibold text-gray-900">{series.return_types?.join(", ")}</p>
                   <div className="text-xs text-gray-500 mt-0.5 space-y-0.5">
-                    {series.composite_name && <p>Composite: {series.composite_name}</p>}
-                    {series.paper_portfolio_name && <p>Portfolio: {series.paper_portfolio_name}</p>}
-                    {series.back_test_name && <p>Back-Test: {series.back_test_name}</p>}
-                  </div>
+                     {series.composite_name && <p>Composite: {series.composite_name}</p>}
+                     {series.representative_portfolio_name && <p>Representative Portfolio: {series.representative_portfolio_name}</p>}
+                     {series.paper_portfolio_name && <p>Portfolio: {series.paper_portfolio_name}</p>}
+                     {series.back_test_name && <p>Back-Test: {series.back_test_name}</p>}
+                   </div>
                   <p className="text-xs text-gray-500 mt-1">
                     {series.monthly_returns?.length || 0} returns · {series.start_date} to {series.end_date}
                   </p>
@@ -525,18 +534,31 @@ export default function ProductReturnsTab({ productId, productName, isEditing })
               </div>
             )}
 
+            {/* Representative Portfolio Name */}
+             {returnTypes.includes("Representative Portfolio") && (
+               <div className="space-y-1.5">
+                 <Label className="text-sm font-medium">Representative Portfolio Name *</Label>
+                 <Input
+                   placeholder="Enter representative portfolio name..."
+                   value={representativePortfolioName}
+                   onChange={(e) => setRepresentativePortfolioName(e.target.value)}
+                   className="h-9"
+                 />
+               </div>
+             )}
+
             {/* Paper Portfolio Name */}
-            {returnTypes.includes("Paper Portfolio") && (
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium">Paper Portfolio Name *</Label>
-                <Input
-                  placeholder="Enter paper portfolio name..."
-                  value={paperPortfolioName}
-                  onChange={(e) => setPaperPortfolioName(e.target.value)}
-                  className="h-9"
-                />
-              </div>
-            )}
+             {returnTypes.includes("Paper Portfolio") && (
+               <div className="space-y-1.5">
+                 <Label className="text-sm font-medium">Paper Portfolio Name *</Label>
+                 <Input
+                   placeholder="Enter paper portfolio name..."
+                   value={paperPortfolioName}
+                   onChange={(e) => setPaperPortfolioName(e.target.value)}
+                   className="h-9"
+                 />
+               </div>
+             )}
 
             {/* Back-Test Name */}
             {returnTypes.includes("Back-Test") && (
@@ -642,6 +664,7 @@ export default function ProductReturnsTab({ productId, productName, isEditing })
                 returnFrequency.length === 0 ||
                 (returnTypes.includes("Composite") && gipsStatus.length === 0) ||
                 (returnTypes.includes("Composite") && !compositeName.trim()) ||
+                (returnTypes.includes("Representative Portfolio") && !representativePortfolioName.trim()) ||
                 (returnTypes.includes("Paper Portfolio") && !paperPortfolioName.trim()) ||
                 (returnTypes.includes("Back-Test") && !backTestName.trim())
               }
@@ -667,6 +690,7 @@ export default function ProductReturnsTab({ productId, productName, isEditing })
                   <p className="text-xs text-gray-500">
                     {editingReturnSeries.return_types?.join(", ")}
                     {editingReturnSeries.composite_name && ` · ${editingReturnSeries.composite_name}`}
+                    {editingReturnSeries.representative_portfolio_name && ` · ${editingReturnSeries.representative_portfolio_name}`}
                     {editingReturnSeries.paper_portfolio_name && ` · ${editingReturnSeries.paper_portfolio_name}`}
                     {editingReturnSeries.back_test_name && ` · ${editingReturnSeries.back_test_name}`}
                     {editingReturnSeries.return_frequency && ` · ${editingReturnSeries.return_frequency}`}
@@ -844,6 +868,7 @@ export default function ProductReturnsTab({ productId, productName, isEditing })
             product_id: productId,
             return_types: viewingReturnSeries.return_types,
             composite_name: viewingReturnSeries.composite_name || null,
+            representative_portfolio_name: viewingReturnSeries.representative_portfolio_name || null,
             paper_portfolio_name: viewingReturnSeries.paper_portfolio_name || null,
             back_test_name: viewingReturnSeries.back_test_name || null,
             inception_date: viewingReturnSeries.inception_date,
