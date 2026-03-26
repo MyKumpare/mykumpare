@@ -1,10 +1,21 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import { ChevronDown, ChevronRight, Trash2, Plus, Gauge } from "lucide-react";
+import React, { useState, useMemo } from "react";
+import { ChevronDown, ChevronRight, Plus, Gauge } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import AddBenchmarkDialog from "./AddBenchmarkDialog";
+
+function BenchmarkItem({ b, onClick }) {
+  return (
+    <div
+      className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-100 bg-white hover:bg-gray-50 text-sm cursor-pointer"
+      onClick={onClick}
+    >
+      <Gauge className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+      <p className="font-medium text-gray-800 truncate">{b.name}</p>
+    </div>
+  );
+}
 
 export default function UtilitySection({ deletedCount }) {
   const [expanded, setExpanded] = useState(true);
@@ -15,6 +26,44 @@ export default function UtilitySection({ deletedCount }) {
     queryKey: ["benchmarks"],
     queryFn: () => base44.entities.Benchmark.list("-created_date"),
   });
+
+  // Group benchmarks: Equity → by region → by market_cap → by style (all ascending)
+  // Non-equity → by asset_class → by name
+  const groupedBenchmarks = useMemo(() => {
+    const equityBenchmarks = benchmarks
+      .filter(b => b.asset_class === "Equity")
+      .sort((a, b) =>
+        (a.region || "").localeCompare(b.region || "") ||
+        (a.market_capitalization || "").localeCompare(b.market_capitalization || "") ||
+        (a.style || "").localeCompare(b.style || "") ||
+        a.name.localeCompare(b.name)
+      );
+
+    // Group equity by region → market_cap → style
+    const equityGroups = {};
+    for (const b of equityBenchmarks) {
+      const r = b.region || "—";
+      const mc = b.market_capitalization || "—";
+      const s = b.style || "—";
+      if (!equityGroups[r]) equityGroups[r] = {};
+      if (!equityGroups[r][mc]) equityGroups[r][mc] = {};
+      if (!equityGroups[r][mc][s]) equityGroups[r][mc][s] = [];
+      equityGroups[r][mc][s].push(b);
+    }
+
+    const nonEquity = benchmarks
+      .filter(b => b.asset_class !== "Equity")
+      .sort((a, b) => (a.asset_class || "").localeCompare(b.asset_class || "") || a.name.localeCompare(b.name));
+
+    const nonEquityGroups = {};
+    for (const b of nonEquity) {
+      const ac = b.asset_class || "Other";
+      if (!nonEquityGroups[ac]) nonEquityGroups[ac] = [];
+      nonEquityGroups[ac].push(b);
+    }
+
+    return { equityGroups, nonEquityGroups, hasEquity: equityBenchmarks.length > 0, hasNonEquity: nonEquity.length > 0 };
+  }, [benchmarks]);
 
   return (
     <div className="mb-6">
@@ -60,25 +109,44 @@ export default function UtilitySection({ deletedCount }) {
                 No benchmarks yet
               </div>
             ) : (
-              <div className="space-y-1">
-                {benchmarks.map((b) => (
-                  <div
-                    key={b.id}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-100 bg-white hover:bg-gray-50 text-sm cursor-pointer"
-                    onClick={() => { setSelectedBenchmark(b); setBenchmarkDialogOpen(true); }}
-                  >
-                    <Gauge className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-800 truncate">
-                        {b.name}
-                      </p>
-                      <p className="text-xs text-gray-500 truncate">
-                        {b.asset_class}
-                        {b.region && ` • ${b.region}`}
-                      </p>
-                    </div>
+              <div className="space-y-3">
+                {/* Equity benchmarks grouped by Region → Market Cap → Style */}
+                {groupedBenchmarks.hasEquity && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">Equity</p>
+                    {Object.keys(groupedBenchmarks.equityGroups).sort().map(region => (
+                      <div key={region} className="space-y-1.5">
+                        <p className="text-xs font-medium text-gray-500 pl-1">{region}</p>
+                        {Object.keys(groupedBenchmarks.equityGroups[region]).sort().map(mc => (
+                          <div key={mc} className="space-y-1">
+                            <p className="text-xs text-gray-400 pl-2 italic">{mc}</p>
+                            {Object.keys(groupedBenchmarks.equityGroups[region][mc]).sort().map(style => (
+                              <div key={style} className="space-y-1 pl-3">
+                                <p className="text-xs text-gray-400 italic">{style}</p>
+                                {groupedBenchmarks.equityGroups[region][mc][style].map(b => (
+                                  <BenchmarkItem key={b.id} b={b} onClick={() => { setSelectedBenchmark(b); setBenchmarkDialogOpen(true); }} />
+                                ))}
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
+                {/* Non-equity benchmarks grouped by Asset Class */}
+                {groupedBenchmarks.hasNonEquity && (
+                  <div className="space-y-2">
+                    {Object.keys(groupedBenchmarks.nonEquityGroups).sort().map(ac => (
+                      <div key={ac} className="space-y-1">
+                        <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">{ac}</p>
+                        {groupedBenchmarks.nonEquityGroups[ac].map(b => (
+                          <BenchmarkItem key={b.id} b={b} onClick={() => { setSelectedBenchmark(b); setBenchmarkDialogOpen(true); }} />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
