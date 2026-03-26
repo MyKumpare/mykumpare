@@ -707,19 +707,17 @@ export default function ProductReturnsManager({ returns = [], onChange, isEditin
             />
           </div>
 
-          {showNetReturn && (
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs font-medium text-gray-600">Net Return (%)</Label>
-              <Input
-                type="number"
-                step="0.0001"
-                placeholder="e.g. 1.0500"
-                value={newNetReturn}
-                onChange={(e) => setNewNetReturn(e.target.value)}
-                className="h-9 w-36 text-sm"
-              />
-            </div>
-          )}
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs font-medium text-gray-600">Net Return (%)</Label>
+            <Input
+              type="number"
+              step="0.0001"
+              placeholder="e.g. 1.0500"
+              value={newNetReturn}
+              onChange={(e) => setNewNetReturn(e.target.value)}
+              className="h-9 w-36 text-sm"
+            />
+          </div>
 
           <Button
             type="button"
