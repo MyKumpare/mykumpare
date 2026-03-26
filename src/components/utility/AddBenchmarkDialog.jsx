@@ -228,7 +228,12 @@ export default function AddBenchmarkDialog({
       <DialogContent className="sm:max-w-lg flex flex-col max-h-[90vh]">
         <DialogHeader>
           <div className="flex items-center justify-between pr-6">
-            <DialogTitle>{titleMap[mode]}</DialogTitle>
+            <div>
+              <DialogTitle>{titleMap[mode]}</DialogTitle>
+              {editingBenchmark && name && (
+                <p className="text-sm font-medium text-indigo-600 mt-0.5">{name}</p>
+              )}
+            </div>
             {mode === "view" && (
               <Button
                 variant="ghost"
