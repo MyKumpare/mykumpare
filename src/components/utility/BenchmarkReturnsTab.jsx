@@ -101,6 +101,12 @@ export default function BenchmarkReturnsTab({ returns = [], onChange, isEditing,
   const [parseErrors, setParseErrors] = useState([]);
   const [conflictState, setConflictState] = useState(null); // { conflicts, newRows, errors }
   const [showTemplateOptions, setShowTemplateOptions] = useState(false);
+  const [showDownloadOptions, setShowDownloadOptions] = useState(false);
+  const [downloadStartCalOpen, setDownloadStartCalOpen] = useState(false);
+  const [downloadEndCalOpen, setDownloadEndCalOpen] = useState(false);
+  const [downloadStart, setDownloadStart] = useState(null);
+  const [downloadEnd, setDownloadEnd] = useState(null);
+  const [downloadFormat, setDownloadFormat] = useState("percentage"); // "percentage" | "decimal"
   const [templateStartCalOpen, setTemplateStartCalOpen] = useState(false);
   const [templateEndCalOpen, setTemplateEndCalOpen] = useState(false);
   const fileInputRef = useRef(null);
@@ -121,11 +127,52 @@ export default function BenchmarkReturnsTab({ returns = [], onChange, isEditing,
   const effectiveTemplateStart = templateStart ?? defaultTemplateStart();
   const effectiveTemplateEnd = templateEnd ?? defaultTemplateEnd();
 
+  // Derive default download range from existing data
+  const dataDatesSorted = [...returns].map(r => r.date).sort();
+  const firstDataDate = dataDatesSorted.length > 0 ? parseISO(dataDatesSorted[0]) : null;
+  const lastDataDate = dataDatesSorted.length > 0 ? parseISO(dataDatesSorted[dataDatesSorted.length - 1]) : null;
+
+  const effectiveDownloadStart = downloadStart ?? firstDataDate;
+  const effectiveDownloadEnd = downloadEnd ?? lastDataDate;
+
+  const handleOpenDownload = () => {
+    setDownloadStart(null);
+    setDownloadEnd(null);
+    setDownloadFormat("percentage");
+    setShowDownloadOptions(true);
+    setShowTemplateOptions(false);
+  };
+
+  const handleDownloadData = () => {
+    if (!effectiveDownloadStart || !effectiveDownloadEnd) return;
+    const startStr = format(effectiveDownloadStart, "yyyy-MM-dd");
+    const endStr = format(effectiveDownloadEnd, "yyyy-MM-dd");
+    const filtered = [...returns]
+      .filter(r => r.date >= startStr && r.date <= endStr)
+      .sort((a, b) => a.date < b.date ? -1 : 1);
+
+    const header = downloadFormat === "percentage" ? "Date,Return (%)" : "Date,Return (decimal)";
+    const rows = filtered.map(r => {
+      const val = downloadFormat === "percentage" ? r.return_value : (r.return_value / 100);
+      return `${r.date},${val.toFixed(6)}`;
+    });
+    const csv = [header, ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "benchmark_returns.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+    setShowDownloadOptions(false);
+  };
+
   const handleOpenTemplate = () => {
     // Reset to defaults each time
     setTemplateStart(defaultTemplateStart());
     setTemplateEnd(defaultTemplateEnd());
     setShowTemplateOptions(true);
+    setShowDownloadOptions(false);
   };
 
   // Returns true if a date string (YYYY-MM-DD) is on or before the inception date
@@ -242,8 +289,21 @@ export default function BenchmarkReturnsTab({ returns = [], onChange, isEditing,
       <div className="flex items-center justify-between flex-wrap gap-2">
         <p className="text-sm text-gray-500">Monthly gross returns stored as a percentage (e.g. 1.5000 = 1.5%).</p>
 
+        <div className="flex items-center gap-2">
+          {returns.length > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs h-8"
+              onClick={handleOpenDownload}
+            >
+              <Download className="w-3.5 h-3.5" />
+              Download Data
+            </Button>
+          )}
         {isEditing && (
-          <div className="flex items-center gap-2">
+          <>
             <Button
               type="button"
               variant="outline"
@@ -281,9 +341,115 @@ export default function BenchmarkReturnsTab({ returns = [], onChange, isEditing,
               className="hidden"
               onChange={handleFileUpload}
             />
-          </div>
+          </>
         )}
+        </div>
       </div>
+
+      {/* Download data panel */}
+      {showDownloadOptions && (() => {
+        const isInvalid = !effectiveDownloadStart || !effectiveDownloadEnd || effectiveDownloadStart > effectiveDownloadEnd;
+        const startStr = effectiveDownloadStart ? format(effectiveDownloadStart, "yyyy-MM-dd") : null;
+        const endStr = effectiveDownloadEnd ? format(effectiveDownloadEnd, "yyyy-MM-dd") : null;
+        const count = (!isInvalid && startStr && endStr)
+          ? returns.filter(r => r.date >= startStr && r.date <= endStr).length
+          : 0;
+        return (
+          <div className="space-y-3 p-3 bg-gray-50 border rounded-lg">
+            <p className="text-xs font-medium text-gray-600">Download returns data</p>
+
+            {/* Date range */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs text-gray-500">Start</Label>
+                <Popover open={downloadStartCalOpen} onOpenChange={setDownloadStartCalOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="h-8 w-40 justify-start text-left font-normal text-xs">
+                      <CalendarIcon className="mr-1.5 h-3 w-3 text-gray-400" />
+                      {effectiveDownloadStart ? format(effectiveDownloadStart, "MM/dd/yyyy") : "Pick date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={effectiveDownloadStart}
+                      onSelect={(d) => { if (d) setDownloadStart(endOfMonth(d)); setDownloadStartCalOpen(false); }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs text-gray-500">End</Label>
+                <Popover open={downloadEndCalOpen} onOpenChange={setDownloadEndCalOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="h-8 w-40 justify-start text-left font-normal text-xs">
+                      <CalendarIcon className="mr-1.5 h-3 w-3 text-gray-400" />
+                      {effectiveDownloadEnd ? format(effectiveDownloadEnd, "MM/dd/yyyy") : "Pick date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={effectiveDownloadEnd}
+                      onSelect={(d) => { if (d) setDownloadEnd(endOfMonth(d)); setDownloadEndCalOpen(false); }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            {/* Format toggle */}
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs text-gray-500">Format</Label>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => setDownloadFormat("percentage")}
+                  className={`px-3 py-1 text-xs rounded border transition-colors ${downloadFormat === "percentage" ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"}`}
+                >
+                  Percentage (e.g. 1.5000)
+                </button>
+                <button
+                  onClick={() => setDownloadFormat("decimal")}
+                  className={`px-3 py-1 text-xs rounded border transition-colors ${downloadFormat === "decimal" ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"}`}
+                >
+                  Decimal (e.g. 0.015000)
+                </button>
+              </div>
+            </div>
+
+            {isInvalid && effectiveDownloadStart && effectiveDownloadEnd && (
+              <p className="text-xs text-red-500">Start date must be before end date.</p>
+            )}
+            {!isInvalid && (
+              <p className="text-xs text-gray-500">{count} month{count !== 1 ? "s" : ""} will be exported.</p>
+            )}
+
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                size="sm"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 text-xs h-8"
+                disabled={isInvalid || count === 0}
+                onClick={handleDownloadData}
+              >
+                <Download className="w-3.5 h-3.5" />
+                Download
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-xs h-8"
+                onClick={() => setShowDownloadOptions(false)}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Template date range picker */}
       {isEditing && showTemplateOptions && (() => {
