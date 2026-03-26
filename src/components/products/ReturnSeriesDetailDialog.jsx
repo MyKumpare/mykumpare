@@ -39,6 +39,8 @@ export default function ReturnSeriesDetailDialog({
   const [newReturn, setNewReturn] = useState("");
   const [returnType, setReturnType] = useState("gross");
   const [error, setError] = useState("");
+  const [editingReturnId, setEditingReturnId] = useState(null);
+  const [editingReturnData, setEditingReturnData] = useState({});
 
   const handleAddReturn = () => {
     setError("");
@@ -260,46 +262,187 @@ export default function ReturnSeriesDetailDialog({
                         <th className="text-right px-4 py-2.5 font-medium text-gray-600 text-xs uppercase tracking-wide">
                           Net Return (%)
                         </th>
+                        <th className="text-center px-4 py-2.5 font-medium text-gray-600 text-xs uppercase tracking-wide">
+                          Actions
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {sortedReturns.map((r) => (
-                        <tr key={r.date} className="hover:bg-gray-50">
-                          <td className="px-4 py-2.5 text-gray-800 font-medium">
-                            {toMMDDYYYY(r.date)}
-                          </td>
-                          <td className="px-4 py-2.5 text-right">
-                            {r.gross_return !== undefined ? (
-                              <span
-                                className={`font-mono text-sm ${
-                                  r.gross_return >= 0
-                                    ? "text-green-700"
-                                    : "text-red-600"
-                                }`}
+                        <tr
+                          key={r.date}
+                          className={editingReturnId === r.date ? "bg-blue-50" : "hover:bg-gray-50"}
+                        >
+                          {editingReturnId === r.date ? (
+                            <>
+                              <td className="px-4 py-2.5">
+                                <Input
+                                  type="text"
+                                  value={editingReturnData.date || ""}
+                                  onChange={(e) =>
+                                    setEditingReturnData({
+                                      ...editingReturnData,
+                                      date: e.target.value,
+                                    })
+                                  }
+                                  placeholder="MM/DD/YYYY"
+                                  className="h-8 text-sm"
+                                  autoFocus
+                                />
+                              </td>
+                              <td className="px-4 py-2.5 text-right">
+                                <Input
+                                  type="number"
+                                  value={editingReturnData.gross_return ?? ""}
+                                  onChange={(e) =>
+                                    setEditingReturnData({
+                                      ...editingReturnData,
+                                      gross_return: e.target.value ? parseFloat(e.target.value) : undefined,
+                                    })
+                                  }
+                                  placeholder="—"
+                                  step="0.0001"
+                                  className="h-8 text-sm text-right"
+                                />
+                              </td>
+                              <td className="px-4 py-2.5 text-right">
+                                <Input
+                                  type="number"
+                                  value={editingReturnData.net_return ?? ""}
+                                  onChange={(e) =>
+                                    setEditingReturnData({
+                                      ...editingReturnData,
+                                      net_return: e.target.value ? parseFloat(e.target.value) : undefined,
+                                    })
+                                  }
+                                  placeholder="—"
+                                  step="0.0001"
+                                  className="h-8 text-sm text-right"
+                                />
+                              </td>
+                              <td className="px-4 py-2.5 text-center space-x-1">
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    const isoDate = parseMMDDYYYY(editingReturnData.date);
+                                    if (!isoDate) {
+                                      setError("Invalid date format");
+                                      return;
+                                    }
+                                    const updatedReturns = series.monthly_returns.map((ret) =>
+                                      ret.date === r.date
+                                        ? {
+                                            date: isoDate,
+                                            gross_return: editingReturnData.gross_return,
+                                            net_return: editingReturnData.net_return,
+                                          }
+                                        : ret
+                                    );
+                                    onEdit({
+                                      ...series,
+                                      monthly_returns: updatedReturns,
+                                    });
+                                    setEditingReturnId(null);
+                                    setEditingReturnData({});
+                                    setError("");
+                                  }}
+                                  className="h-6 w-6 text-green-600 hover:bg-green-50"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    setEditingReturnId(null);
+                                    setEditingReturnData({});
+                                    setError("");
+                                  }}
+                                  className="h-6 w-6 text-gray-400 hover:bg-gray-100"
+                                >
+                                  <AlertCircle className="w-3.5 h-3.5" />
+                                </Button>
+                              </td>
+                            </>
+                          ) : (
+                            <>
+                              <td
+                                className="px-4 py-2.5 text-gray-800 font-medium cursor-pointer hover:text-indigo-600"
+                                onClick={() => {
+                                  setEditingReturnId(r.date);
+                                  setEditingReturnData(r);
+                                  setError("");
+                                }}
                               >
-                                {r.gross_return >= 0 ? "+" : ""}
-                                {Number(r.gross_return).toFixed(4)}%
-                              </span>
-                            ) : (
-                              <span className="text-gray-300">—</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-2.5 text-right">
-                            {r.net_return !== undefined ? (
-                              <span
-                                className={`font-mono text-sm ${
-                                  r.net_return >= 0
-                                    ? "text-green-700"
-                                    : "text-red-600"
-                                }`}
+                                {toMMDDYYYY(r.date)}
+                              </td>
+                              <td
+                                className="px-4 py-2.5 text-right cursor-pointer hover:text-indigo-600"
+                                onClick={() => {
+                                  setEditingReturnId(r.date);
+                                  setEditingReturnData(r);
+                                  setError("");
+                                }}
                               >
-                                {r.net_return >= 0 ? "+" : ""}
-                                {Number(r.net_return).toFixed(4)}%
-                              </span>
-                            ) : (
-                              <span className="text-gray-300">—</span>
-                            )}
-                          </td>
+                                {r.gross_return !== undefined ? (
+                                  <span
+                                    className={`font-mono text-sm ${
+                                      r.gross_return >= 0
+                                        ? "text-green-700"
+                                        : "text-red-600"
+                                    }`}
+                                  >
+                                    {r.gross_return >= 0 ? "+" : ""}
+                                    {Number(r.gross_return).toFixed(4)}%
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-300">—</span>
+                                )}
+                              </td>
+                              <td
+                                className="px-4 py-2.5 text-right cursor-pointer hover:text-indigo-600"
+                                onClick={() => {
+                                  setEditingReturnId(r.date);
+                                  setEditingReturnData(r);
+                                  setError("");
+                                }}
+                              >
+                                {r.net_return !== undefined ? (
+                                  <span
+                                    className={`font-mono text-sm ${
+                                      r.net_return >= 0
+                                        ? "text-green-700"
+                                        : "text-red-600"
+                                    }`}
+                                  >
+                                    {r.net_return >= 0 ? "+" : ""}
+                                    {Number(r.net_return).toFixed(4)}%
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-300">—</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-2.5 text-center">
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    const updatedReturns = series.monthly_returns.filter(
+                                      (ret) => ret.date !== r.date
+                                    );
+                                    onEdit({
+                                      ...series,
+                                      monthly_returns: updatedReturns,
+                                    });
+                                  }}
+                                  className="h-6 w-6 text-red-600 hover:bg-red-50"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+                              </td>
+                            </>
+                          )}
                         </tr>
                       ))}
                     </tbody>
