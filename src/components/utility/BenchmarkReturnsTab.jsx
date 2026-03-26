@@ -91,7 +91,7 @@ function downloadTemplate(startDate, endDate, existingReturns = []) {
   URL.revokeObjectURL(url);
 }
 
-export default function BenchmarkReturnsTab({ returns = [], onChange, isEditing, inceptionDate = null }) {
+export default function BenchmarkReturnsTab({ returns = [], onChange, isEditing, inceptionDate = null, benchmarkName = "" }) {
   const [newDate, setNewDate] = useState(null);
   const [newReturn, setNewReturn] = useState("");
   const [calOpen, setCalOpen] = useState(false);
@@ -157,12 +157,14 @@ export default function BenchmarkReturnsTab({ returns = [], onChange, isEditing,
       const val = downloadFormat === "percentage" ? r.return_value : (r.return_value / 100);
       return `${r.date},${val.toFixed(6)}`;
     });
-    const csv = [header, ...rows].join("\n");
+    const nameComment = benchmarkName ? `# ${benchmarkName}\n` : "";
+    const csv = nameComment + [header, ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "benchmark_returns.csv";
+    const safeName = benchmarkName ? benchmarkName.replace(/[^a-z0-9]/gi, "_").toLowerCase() : "benchmark";
+    a.download = `${safeName}_returns.csv`;
     a.click();
     URL.revokeObjectURL(url);
     setShowDownloadOptions(false);
