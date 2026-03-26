@@ -61,20 +61,25 @@ function getMonthEnd(date) {
   return endOfMonth(date);
 }
 
-function generateTemplateRows(startDate, endDate) {
-  const rows = [];
+function generateTemplateMonths(startDate, endDate) {
+  const months = [];
   let cur = startOfMonth(startDate);
   const end = startOfMonth(endDate);
   while (cur <= end) {
-    rows.push(`${format(getMonthEnd(cur), "yyyy-MM-dd")},`);
+    months.push(format(getMonthEnd(cur), "yyyy-MM-dd"));
     cur = addMonths(cur, 1);
   }
-  return rows;
+  return months;
 }
 
-function downloadTemplate(startDate, endDate) {
+function downloadTemplate(startDate, endDate, existingReturns = []) {
+  const existingMap = Object.fromEntries(existingReturns.map(r => [r.date, r.return_value]));
+  const months = generateTemplateMonths(startDate, endDate);
   const header = "Date,Return (%)";
-  const rows = generateTemplateRows(startDate, endDate);
+  const rows = months.map(dateStr => {
+    const val = existingMap[dateStr];
+    return val !== undefined ? `${dateStr},${val}` : `${dateStr},`;
+  });
   const csv = [header, ...rows].join("\n");
   const blob = new Blob([csv], { type: "text/csv" });
   const url = URL.createObjectURL(blob);
@@ -244,75 +249,108 @@ export default function BenchmarkReturnsTab({ returns = [], onChange, isEditing,
       </div>
 
       {/* Template date range picker */}
-      {isEditing && showTemplateOptions && (
-        <div className="space-y-3 p-3 bg-gray-50 border rounded-lg">
-          <p className="text-xs font-medium text-gray-600">Select date range for template</p>
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs text-gray-500">Start (first month end)</Label>
-              <Popover open={templateStartCalOpen} onOpenChange={setTemplateStartCalOpen}>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="h-8 w-40 justify-start text-left font-normal text-xs">
-                    <CalendarIcon className="mr-1.5 h-3 w-3 text-gray-400" />
-                    {effectiveTemplateStart ? format(effectiveTemplateStart, "MM/dd/yyyy") : "Pick date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={effectiveTemplateStart}
-                    onSelect={(d) => { if (d) setTemplateStart(endOfMonth(d)); setTemplateStartCalOpen(false); }}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+      {isEditing && showTemplateOptions && (() => {
+        const isInvalid = effectiveTemplateStart > effectiveTemplateEnd;
+        const existingMap = Object.fromEntries(returns.map(r => [r.date, r.return_value]));
+        const months = isInvalid ? [] : generateTemplateMonths(effectiveTemplateStart, effectiveTemplateEnd);
+        const missingCount = months.filter(d => existingMap[d] === undefined).length;
+        const filledCount = months.length - missingCount;
+        return (
+          <div className="space-y-3 p-3 bg-gray-50 border rounded-lg">
+            <p className="text-xs font-medium text-gray-600">Select date range for template</p>
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs text-gray-500">Start (first month end)</Label>
+                <Popover open={templateStartCalOpen} onOpenChange={setTemplateStartCalOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="h-8 w-40 justify-start text-left font-normal text-xs">
+                      <CalendarIcon className="mr-1.5 h-3 w-3 text-gray-400" />
+                      {effectiveTemplateStart ? format(effectiveTemplateStart, "MM/dd/yyyy") : "Pick date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={effectiveTemplateStart}
+                      onSelect={(d) => { if (d) setTemplateStart(endOfMonth(d)); setTemplateStartCalOpen(false); }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs text-gray-500">End (last month end)</Label>
+                <Popover open={templateEndCalOpen} onOpenChange={setTemplateEndCalOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="h-8 w-40 justify-start text-left font-normal text-xs">
+                      <CalendarIcon className="mr-1.5 h-3 w-3 text-gray-400" />
+                      {effectiveTemplateEnd ? format(effectiveTemplateEnd, "MM/dd/yyyy") : "Pick date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={effectiveTemplateEnd}
+                      onSelect={(d) => { if (d) setTemplateEnd(endOfMonth(d)); setTemplateEndCalOpen(false); }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs text-gray-500">End (last month end)</Label>
-              <Popover open={templateEndCalOpen} onOpenChange={setTemplateEndCalOpen}>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="h-8 w-40 justify-start text-left font-normal text-xs">
-                    <CalendarIcon className="mr-1.5 h-3 w-3 text-gray-400" />
-                    {effectiveTemplateEnd ? format(effectiveTemplateEnd, "MM/dd/yyyy") : "Pick date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={effectiveTemplateEnd}
-                    onSelect={(d) => { if (d) setTemplateEnd(endOfMonth(d)); setTemplateEndCalOpen(false); }}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+
+            {isInvalid && <p className="text-xs text-red-500">Start date must be before end date.</p>}
+
+            {/* Preview */}
+            {!isInvalid && months.length > 0 && (
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-3 text-xs text-gray-500">
+                  <span>{months.length} month{months.length !== 1 ? "s" : ""} total</span>
+                  {filledCount > 0 && <span className="text-green-700 font-medium">· {filledCount} already in system</span>}
+                  {missingCount > 0 && <span className="text-amber-600 font-medium">· {missingCount} missing</span>}
+                </div>
+                <div className="max-h-40 overflow-y-auto border rounded bg-white divide-y divide-gray-100">
+                  {months.map(dateStr => {
+                    const val = existingMap[dateStr];
+                    const hasDat = val !== undefined;
+                    return (
+                      <div key={dateStr} className={`flex items-center justify-between px-3 py-1.5 text-xs ${hasDat ? "text-gray-700" : "text-amber-700 bg-amber-50"}`}>
+                        <span className="font-mono">{format(parseISO(dateStr), "MMM yyyy")}</span>
+                        {hasDat
+                          ? <span className={`font-mono ${val >= 0 ? "text-green-700" : "text-red-600"}`}>{val >= 0 ? "+" : ""}{Number(val).toFixed(4)}%</span>
+                          : <span className="text-amber-500 italic">missing</span>
+                        }
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                size="sm"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 text-xs h-8"
+                disabled={isInvalid || months.length === 0}
+                onClick={() => { downloadTemplate(effectiveTemplateStart, effectiveTemplateEnd, returns); setShowTemplateOptions(false); }}
+              >
+                <Download className="w-3.5 h-3.5" />
+                Download
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-xs h-8"
+                onClick={() => setShowTemplateOptions(false)}
+              >
+                Cancel
+              </Button>
             </div>
           </div>
-          {effectiveTemplateStart > effectiveTemplateEnd && (
-            <p className="text-xs text-red-500">Start date must be before end date.</p>
-          )}
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              size="sm"
-              className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 text-xs h-8"
-              disabled={effectiveTemplateStart > effectiveTemplateEnd}
-              onClick={() => { downloadTemplate(effectiveTemplateStart, effectiveTemplateEnd); setShowTemplateOptions(false); }}
-            >
-              <Download className="w-3.5 h-3.5" />
-              Download
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="text-xs h-8"
-              onClick={() => setShowTemplateOptions(false)}
-            >
-              Cancel
-            </Button>
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Paste area */}
       {isEditing && showPaste && (
