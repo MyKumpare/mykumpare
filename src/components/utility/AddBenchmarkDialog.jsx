@@ -6,6 +6,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +21,7 @@ import {
 import { X, Pencil } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import BenchmarkReturnsTab from "./BenchmarkReturnsTab";
 
 const ASSET_CLASSES = [
   "Equity",
@@ -54,13 +56,11 @@ export default function AddBenchmarkDialog({
   open,
   onOpenChange,
   benchmarks = [],
-  editingBenchmark = null, // if set, opens in view mode for that benchmark
+  editingBenchmark = null,
 }) {
   const queryClient = useQueryClient();
 
-  // mode: "add" | "view" | "edit"
   const [mode, setMode] = useState("add");
-
   const [assetClass, setAssetClass] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -76,6 +76,7 @@ export default function AddBenchmarkDialog({
   const [customRegions, setCustomRegions] = useState([]);
   const [customMarketCaps, setCustomMarketCaps] = useState([]);
   const [customStyles, setCustomStyles] = useState([]);
+  const [monthlyReturns, setMonthlyReturns] = useState([]);
 
   const allRegions = [...new Set([...EQUITY_REGIONS, ...customRegions])];
   const allMarketCaps = [...new Set([...EQUITY_MARKET_CAPS, ...customMarketCaps])];
@@ -88,6 +89,7 @@ export default function AddBenchmarkDialog({
     setRegion(b.region || "");
     setMarketCap(b.market_capitalization || "");
     setStyle(b.style || "");
+    setMonthlyReturns(b.monthly_returns || []);
   };
 
   useEffect(() => {
@@ -97,12 +99,12 @@ export default function AddBenchmarkDialog({
       setRegion(""); setMarketCap(""); setStyle("");
       setNewRegion(""); setNewMarketCap(""); setNewStyle("");
       setShowNewRegion(false); setShowNewMarketCap(false); setShowNewStyle(false);
+      setMonthlyReturns([]);
       return;
     }
     if (editingBenchmark) {
       setMode("view");
       populateFromBenchmark(editingBenchmark);
-      // Seed custom options from existing values not in predefined lists
       if (editingBenchmark.region && !EQUITY_REGIONS.includes(editingBenchmark.region)) {
         setCustomRegions([editingBenchmark.region]);
       }
@@ -161,6 +163,7 @@ export default function AddBenchmarkDialog({
       asset_class: assetClass,
       name: name.trim(),
       description: description.trim(),
+      monthly_returns: monthlyReturns,
     };
     if (assetClass === "Equity") {
       data.region = region;
@@ -201,7 +204,7 @@ export default function AddBenchmarkDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <div className="flex items-center justify-between pr-6">
             <DialogTitle>{titleMap[mode]}</DialogTitle>
@@ -219,167 +222,186 @@ export default function AddBenchmarkDialog({
           </div>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          {/* Asset Class */}
-          {renderField(
-            "Asset Class *",
-            assetClass,
-            <Select value={assetClass} onValueChange={setAssetClass}>
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="Select asset class..." />
-              </SelectTrigger>
-              <SelectContent>
-                {ASSET_CLASSES.map((ac) => (
-                  <SelectItem key={ac} value={ac}>{ac}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
+        <Tabs defaultValue="details">
+          <TabsList className="w-full">
+            <TabsTrigger value="details" className="flex-1">Details</TabsTrigger>
+            <TabsTrigger value="returns" className="flex-1">Returns</TabsTrigger>
+          </TabsList>
 
-          {/* Name */}
-          <div className="space-y-1.5">
-            <Label className="text-sm font-medium text-gray-700">Benchmark Name *</Label>
-            {!isEditable ? (
-              <div className="h-9 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-800 font-medium">
-                {name}
-              </div>
-            ) : (
-              <>
-                <Input
-                  placeholder="e.g. S&P 500"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className={`h-9 ${isDuplicate ? "border-red-400 focus-visible:ring-red-400" : ""}`}
-                />
-                {isDuplicate && <p className="text-xs text-red-500">This benchmark already exists.</p>}
-              </>
-            )}
-          </div>
+          {/* ── Details Tab ── */}
+          <TabsContent value="details">
+            <div className="space-y-4 py-4">
+              {/* Asset Class */}
+              {renderField(
+                "Asset Class *",
+                assetClass,
+                <Select value={assetClass} onValueChange={setAssetClass}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Select asset class..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ASSET_CLASSES.map((ac) => (
+                      <SelectItem key={ac} value={ac}>{ac}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
 
-          {/* Description */}
-          <div className="space-y-1.5">
-            <Label className="text-sm font-medium text-gray-700">Description</Label>
-            {!isEditable ? (
-              <div className="min-h-9 px-3 py-2 rounded-md border bg-gray-50 text-sm text-gray-700 whitespace-pre-wrap">
-                {description || <span className="text-gray-400">—</span>}
-              </div>
-            ) : (
-              <Textarea
-                placeholder="Brief description..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="min-h-16 text-sm"
-              />
-            )}
-          </div>
-
-          {/* Equity-specific fields */}
-          {assetClass === "Equity" && (
-            <>
-              {/* Region */}
+              {/* Name */}
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-gray-700">Region *</Label>
+                <Label className="text-sm font-medium text-gray-700">Benchmark Name *</Label>
                 {!isEditable ? (
-                  <div className="h-9 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-800">
-                    {region || <span className="text-gray-400">—</span>}
-                  </div>
-                ) : !showNewRegion ? (
-                  <div className="flex gap-2">
-                    <Select value={region} onValueChange={setRegion}>
-                      <SelectTrigger className="h-9 flex-1">
-                        <SelectValue placeholder="Select region..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {allRegions.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => setShowNewRegion(true)}>+</Button>
+                  <div className="h-9 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-800 font-medium">
+                    {name}
                   </div>
                 ) : (
-                  <div className="flex gap-2">
-                    <Input placeholder="Enter new region..." value={newRegion} onChange={(e) => setNewRegion(e.target.value)} className="h-9" autoFocus />
-                    <Button type="button" variant="outline" size="sm" className="h-9 bg-green-50 border-green-200 hover:bg-green-100 text-green-700" disabled={!newRegion.trim()}
-                      onClick={() => {
-                        const trimmed = newRegion.trim();
-                        setRegion(trimmed);
-                        if (!customRegions.includes(trimmed)) setCustomRegions([...customRegions, trimmed]);
-                        setShowNewRegion(false); setNewRegion("");
-                      }}>✓</Button>
-                    <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => { setShowNewRegion(false); setNewRegion(""); }}><X className="w-4 h-4" /></Button>
-                  </div>
+                  <>
+                    <Input
+                      placeholder="e.g. S&P 500"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className={`h-9 ${isDuplicate ? "border-red-400 focus-visible:ring-red-400" : ""}`}
+                    />
+                    {isDuplicate && <p className="text-xs text-red-500">This benchmark already exists.</p>}
+                  </>
                 )}
               </div>
 
-              {/* Market Capitalization */}
+              {/* Description */}
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-gray-700">Market Capitalization *</Label>
+                <Label className="text-sm font-medium text-gray-700">Description</Label>
                 {!isEditable ? (
-                  <div className="h-9 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-800">
-                    {marketCap || <span className="text-gray-400">—</span>}
-                  </div>
-                ) : !showNewMarketCap ? (
-                  <div className="flex gap-2">
-                    <Select value={marketCap} onValueChange={setMarketCap}>
-                      <SelectTrigger className="h-9 flex-1">
-                        <SelectValue placeholder="Select market cap..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {allMarketCaps.map((mc) => <SelectItem key={mc} value={mc}>{mc}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => setShowNewMarketCap(true)}>+</Button>
+                  <div className="min-h-9 px-3 py-2 rounded-md border bg-gray-50 text-sm text-gray-700 whitespace-pre-wrap">
+                    {description || <span className="text-gray-400">—</span>}
                   </div>
                 ) : (
-                  <div className="flex gap-2">
-                    <Input placeholder="Enter new market cap..." value={newMarketCap} onChange={(e) => setNewMarketCap(e.target.value)} className="h-9" autoFocus />
-                    <Button type="button" variant="outline" size="sm" className="h-9 bg-green-50 border-green-200 hover:bg-green-100 text-green-700" disabled={!newMarketCap.trim()}
-                      onClick={() => {
-                        const trimmed = newMarketCap.trim();
-                        setMarketCap(trimmed);
-                        if (!customMarketCaps.includes(trimmed)) setCustomMarketCaps([...customMarketCaps, trimmed]);
-                        setShowNewMarketCap(false); setNewMarketCap("");
-                      }}>✓</Button>
-                    <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => { setShowNewMarketCap(false); setNewMarketCap(""); }}><X className="w-4 h-4" /></Button>
-                  </div>
+                  <Textarea
+                    placeholder="Brief description..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="min-h-16 text-sm"
+                  />
                 )}
               </div>
 
-              {/* Style */}
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-gray-700">Style *</Label>
-                {!isEditable ? (
-                  <div className="h-9 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-800">
-                    {style || <span className="text-gray-400">—</span>}
+              {/* Equity-specific fields */}
+              {assetClass === "Equity" && (
+                <>
+                  {/* Region */}
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium text-gray-700">Region *</Label>
+                    {!isEditable ? (
+                      <div className="h-9 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-800">
+                        {region || <span className="text-gray-400">—</span>}
+                      </div>
+                    ) : !showNewRegion ? (
+                      <div className="flex gap-2">
+                        <Select value={region} onValueChange={setRegion}>
+                          <SelectTrigger className="h-9 flex-1">
+                            <SelectValue placeholder="Select region..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {allRegions.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => setShowNewRegion(true)}>+</Button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Input placeholder="Enter new region..." value={newRegion} onChange={(e) => setNewRegion(e.target.value)} className="h-9" autoFocus />
+                        <Button type="button" variant="outline" size="sm" className="h-9 bg-green-50 border-green-200 hover:bg-green-100 text-green-700" disabled={!newRegion.trim()}
+                          onClick={() => {
+                            const trimmed = newRegion.trim();
+                            setRegion(trimmed);
+                            if (!customRegions.includes(trimmed)) setCustomRegions([...customRegions, trimmed]);
+                            setShowNewRegion(false); setNewRegion("");
+                          }}>✓</Button>
+                        <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => { setShowNewRegion(false); setNewRegion(""); }}><X className="w-4 h-4" /></Button>
+                      </div>
+                    )}
                   </div>
-                ) : !showNewStyle ? (
-                  <div className="flex gap-2">
-                    <Select value={style} onValueChange={setStyle}>
-                      <SelectTrigger className="h-9 flex-1">
-                        <SelectValue placeholder="Select style..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {allStyles.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => setShowNewStyle(true)}>+</Button>
+
+                  {/* Market Capitalization */}
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium text-gray-700">Market Capitalization *</Label>
+                    {!isEditable ? (
+                      <div className="h-9 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-800">
+                        {marketCap || <span className="text-gray-400">—</span>}
+                      </div>
+                    ) : !showNewMarketCap ? (
+                      <div className="flex gap-2">
+                        <Select value={marketCap} onValueChange={setMarketCap}>
+                          <SelectTrigger className="h-9 flex-1">
+                            <SelectValue placeholder="Select market cap..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {allMarketCaps.map((mc) => <SelectItem key={mc} value={mc}>{mc}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => setShowNewMarketCap(true)}>+</Button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Input placeholder="Enter new market cap..." value={newMarketCap} onChange={(e) => setNewMarketCap(e.target.value)} className="h-9" autoFocus />
+                        <Button type="button" variant="outline" size="sm" className="h-9 bg-green-50 border-green-200 hover:bg-green-100 text-green-700" disabled={!newMarketCap.trim()}
+                          onClick={() => {
+                            const trimmed = newMarketCap.trim();
+                            setMarketCap(trimmed);
+                            if (!customMarketCaps.includes(trimmed)) setCustomMarketCaps([...customMarketCaps, trimmed]);
+                            setShowNewMarketCap(false); setNewMarketCap("");
+                          }}>✓</Button>
+                        <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => { setShowNewMarketCap(false); setNewMarketCap(""); }}><X className="w-4 h-4" /></Button>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <Input placeholder="Enter new style..." value={newStyle} onChange={(e) => setNewStyle(e.target.value)} className="h-9" autoFocus />
-                    <Button type="button" variant="outline" size="sm" className="h-9 bg-green-50 border-green-200 hover:bg-green-100 text-green-700" disabled={!newStyle.trim()}
-                      onClick={() => {
-                        const trimmed = newStyle.trim();
-                        setStyle(trimmed);
-                        if (!customStyles.includes(trimmed)) setCustomStyles([...customStyles, trimmed]);
-                        setShowNewStyle(false); setNewStyle("");
-                      }}>✓</Button>
-                    <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => { setShowNewStyle(false); setNewStyle(""); }}><X className="w-4 h-4" /></Button>
+
+                  {/* Style */}
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium text-gray-700">Style *</Label>
+                    {!isEditable ? (
+                      <div className="h-9 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-800">
+                        {style || <span className="text-gray-400">—</span>}
+                      </div>
+                    ) : !showNewStyle ? (
+                      <div className="flex gap-2">
+                        <Select value={style} onValueChange={setStyle}>
+                          <SelectTrigger className="h-9 flex-1">
+                            <SelectValue placeholder="Select style..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {allStyles.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => setShowNewStyle(true)}>+</Button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Input placeholder="Enter new style..." value={newStyle} onChange={(e) => setNewStyle(e.target.value)} className="h-9" autoFocus />
+                        <Button type="button" variant="outline" size="sm" className="h-9 bg-green-50 border-green-200 hover:bg-green-100 text-green-700" disabled={!newStyle.trim()}
+                          onClick={() => {
+                            const trimmed = newStyle.trim();
+                            setStyle(trimmed);
+                            if (!customStyles.includes(trimmed)) setCustomStyles([...customStyles, trimmed]);
+                            setShowNewStyle(false); setNewStyle("");
+                          }}>✓</Button>
+                        <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => { setShowNewStyle(false); setNewStyle(""); }}><X className="w-4 h-4" /></Button>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </>
-          )}
-        </div>
+                </>
+              )}
+            </div>
+          </TabsContent>
+
+          {/* ── Returns Tab ── */}
+          <TabsContent value="returns" className="py-4">
+            <BenchmarkReturnsTab
+              returns={monthlyReturns}
+              onChange={setMonthlyReturns}
+              isEditing={isEditable}
+            />
+          </TabsContent>
+        </Tabs>
 
         <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-between gap-2 pt-2 border-t">
           <div>
