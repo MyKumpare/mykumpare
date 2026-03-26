@@ -4,6 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import ProductBiasesSection from "./ProductBiasesSection";
+import BenchmarkMultiSelect from "./BenchmarkMultiSelect";
 
 const SECTIONS = [
   { key: "investment_edge", label: "Investment Edge" },
@@ -192,6 +193,7 @@ function InformationRatioBlock({ descriptions }) {
 export default function ProductInvestmentDescriptionTab({ descriptions, onChange, isEditing }) {
   const set = (key, val) => onChange({ ...descriptions, [key]: val });
 
+
   return (
     <div className="space-y-6 py-2">
       {SECTIONS.map(({ key, label, type, hasSub }) => (
@@ -222,37 +224,46 @@ export default function ProductInvestmentDescriptionTab({ descriptions, onChange
             </div>
           )}
           {key === "portfolio_expectations" && (
-            <div className="space-y-3 mt-4">
-              <RangeSubsectionBlock
-                label="Target Tracking Error Range"
-                minKey="tracking_error_min"
-                maxKey="tracking_error_max"
-                unit="%"
-                descriptions={descriptions}
-                onChange={onChange}
-                isEditing={isEditing}
-              />
-              <RangeSubsectionBlock
-                label="Target Excess Return Range"
-                minKey="excess_return_min"
-                maxKey="excess_return_max"
-                unit="%"
-                descriptions={descriptions}
-                onChange={onChange}
-                isEditing={isEditing}
-              />
-              <InformationRatioBlock descriptions={descriptions} />
-              <RangeSubsectionBlock
-                label="Number of Holdings Range"
-                minKey="holdings_min"
-                maxKey="holdings_max"
-                unit="No."
-                isInteger
-                descriptions={descriptions}
-                onChange={onChange}
-                isEditing={isEditing}
-              />
-            </div>
+            <>
+              <div className="mt-4 mb-2">
+                <BenchmarkMultiSelect
+                  value={descriptions?.benchmarks || []}
+                  onChange={(val) => set("benchmarks", val)}
+                  isEditing={isEditing}
+                />
+              </div>
+              <div className="space-y-3 mt-4">
+                <RangeSubsectionBlock
+                  label="Target Tracking Error Range"
+                  minKey="tracking_error_min"
+                  maxKey="tracking_error_max"
+                  unit="%"
+                  descriptions={descriptions}
+                  onChange={onChange}
+                  isEditing={isEditing}
+                />
+                <RangeSubsectionBlock
+                  label="Target Excess Return Range"
+                  minKey="excess_return_min"
+                  maxKey="excess_return_max"
+                  unit="%"
+                  descriptions={descriptions}
+                  onChange={onChange}
+                  isEditing={isEditing}
+                />
+                <InformationRatioBlock descriptions={descriptions} />
+                <RangeSubsectionBlock
+                  label="Number of Holdings Range"
+                  minKey="holdings_min"
+                  maxKey="holdings_max"
+                  unit="No."
+                  isInteger
+                  descriptions={descriptions}
+                  onChange={onChange}
+                  isEditing={isEditing}
+                />
+              </div>
+            </>
           )}
         </div>
       ))}
