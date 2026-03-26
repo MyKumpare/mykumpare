@@ -20,7 +20,8 @@ import {
 } from "@/components/ui/dialog";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Download, Upload, Trash2, Edit2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Plus, Download, Upload, Trash2, Edit2, AlertCircle, CheckCircle2, ClipboardPaste } from "lucide-react";
 
 const RETURN_TYPES = ["Composite", "Paper Portfolio", "Back-Test"];
 const GIPS_OPTIONS = ["GIPS Calculated", "GIPS Compliant", "GIPS Verified", "Non-GIPS Compliant"];
@@ -32,27 +33,41 @@ const getReturnTypeName = (type) => {
   return "Composite Name";
 };
 
-function generateExcelTemplate(startDate, endDate, returnFrequency, performanceType, performanceName, inceptionDate, gipsStatus) {
-  // Generate CSV content for Excel template
+// Format a YYYY-MM-DD date string to MM/DD/YYYY
+function toMMDDYYYY(isoDate) {
+  const [y, m, d] = isoDate.split("-");
+  return `${m}/${d}/${y}`;
+}
+
+// Parse MM/DD/YYYY → YYYY-MM-DD (returns null if invalid)
+function parseMMDDYYYY(str) {
+  const trimmed = str.trim();
+  const match = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!match) return null;
+  const [, m, d, y] = match;
+  return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+}
+
+function generateExcelTemplate(startDate, endDate, returnFrequency, performanceType, performanceName, productId, productName, inceptionDate, gipsStatus) {
   const start = new Date(startDate);
   const end = new Date(endDate);
   
   // Build metadata section
   let csv = "METADATA\n";
+  csv += `Product ID,${productId}\n`;
+  csv += `Product Name,${productName}\n`;
   csv += `Performance Type,${performanceType}\n`;
   csv += `Performance Name,${performanceName}\n`;
-  csv += `Inception Date,${inceptionDate}\n`;
-  if (gipsStatus) {
-    csv += `GIPS Status,${gipsStatus}\n`;
-  }
+  csv += `Inception Date,${toMMDDYYYY(inceptionDate)}\n`;
+  if (gipsStatus) csv += `GIPS Status,${gipsStatus}\n`;
   csv += `Return Type,${returnFrequency.join("/")}\n`;
-  csv += `Date Range,${startDate} to ${endDate}\n`;
-  csv += "\n"; // Blank row separator
+  csv += `Date Range,${toMMDDYYYY(startDate)} to ${toMMDDYYYY(endDate)}\n`;
+  csv += "\n";
   
-  // Create data headers
-  const headers = ["Date (YYYY-MM-DD)"];
-  if (returnFrequency.includes("Gross")) headers.push("Gross Return (%)");
-  if (returnFrequency.includes("Net")) headers.push("Net Return (%)");
+  // Create data headers — date in MM/DD/YYYY, return value as plain number (2.00 = 2%)
+  const headers = ["Date (MM/DD/YYYY)"];
+  if (returnFrequency.includes("Gross")) headers.push("Gross Return (2.00 = 2%)");
+  if (returnFrequency.includes("Net")) headers.push("Net Return (2.00 = 2%)");
   
   csv += "DATA\n";
   csv += headers.join(",") + "\n";
@@ -60,18 +75,17 @@ function generateExcelTemplate(startDate, endDate, returnFrequency, performanceT
   const current = new Date(start.getFullYear(), start.getMonth(), 1);
   while (current <= end) {
     const lastDay = new Date(current.getFullYear(), current.getMonth() + 1, 0);
-    const dateStr = lastDay.toISOString().split("T")[0];
+    const dateStr = toMMDDYYYY(lastDay.toISOString().split("T")[0]);
     const emptyCells = new Array(returnFrequency.length).fill("");
     csv += [dateStr, ...emptyCells].join(",") + "\n";
     current.setMonth(current.getMonth() + 1);
   }
 
-  // Create blob and trigger download
   const blob = new Blob([csv], { type: "text/csv" });
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `returns-template-${performanceName || performanceType}-${startDate}-to-${endDate}.csv`;
+  link.download = `returns-template-${(productName || "product").replace(/\s+/g, "-")}-${performanceName || performanceType}.csv`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -91,97 +105,121 @@ function getMostRecentMonthEnd() {
   return lastDay.toISOString().split("T")[0];
 }
 
-function validateAndParseCSV(csvText, startDate, endDate, returnFrequency) {
-  const lines = csvText.trim().split("\n").filter(l => l.trim());
-  if (lines.length < 2) return { valid: false, error: "CSV file is empty" };
+// Parse pasted or CSV text into return data rows.
+// Accepts date in MM/DD/YYYY or YYYY-MM-DD format.
+// Returns: { valid, returns, duplicates, missingMonths, error }
+function parseReturnsText(text, startDate, endDate) {
+  const lines = text.trim().split("\n").map(l => l.trim()).filter(l => l);
+  if (lines.length === 0) return { valid: false, error: "No data found" };
+
+  // Skip METADATA and DATA section headers
+  const dataLines = [];
+  let inData = false;
+  for (const line of lines) {
+    if (line.toUpperCase() === "METADATA") continue;
+    if (line.toUpperCase() === "DATA") { inData = true; continue; }
+    if (!inData && line.startsWith("Product ID,")) continue;
+    if (!inData && line.startsWith("Product Name,")) continue;
+    if (!inData && line.startsWith("Performance")) continue;
+    if (!inData && line.startsWith("Inception")) continue;
+    if (!inData && line.startsWith("GIPS")) continue;
+    if (!inData && line.startsWith("Return Type")) continue;
+    if (!inData && line.startsWith("Date Range")) continue;
+    if (!inData && line.trim() === "") continue;
+    dataLines.push(line);
+  }
+
+  if (dataLines.length === 0) return { valid: false, error: "No data rows found" };
+
+  // Detect header row (first row containing "Date")
+  let headerIdx = dataLines.findIndex(l => /date/i.test(l));
+  let dataStart = headerIdx >= 0 ? headerIdx + 1 : 0;
+  const headerLine = headerIdx >= 0 ? dataLines[headerIdx].split(",").map(h => h.trim()) : null;
+
+  // Resolve column indices from header if present
+  let dateIdx = 0, grossIdx = -1, netIdx = -1;
+  if (headerLine) {
+    dateIdx = headerLine.findIndex(h => /date/i.test(h));
+    grossIdx = headerLine.findIndex(h => /gross/i.test(h));
+    netIdx = headerLine.findIndex(h => /net/i.test(h));
+    if (dateIdx === -1) return { valid: false, error: "Date column not found in header" };
+    // If only one return column and no label, assume column 1 is the return
+    if (grossIdx === -1 && netIdx === -1 && headerLine.length >= 2) {
+      grossIdx = 1;
+    }
+  } else {
+    // No header — assume col 0 = date, col 1 = return value
+    grossIdx = 1;
+  }
 
   const returns = [];
   const duplicates = [];
-  const missingMonths = [];
 
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  // Build expected date set
   const expectedDates = new Set();
-
-  // Generate expected dates
-  const current = new Date(start.getFullYear(), start.getMonth(), 1);
-  while (current <= end) {
-    const lastDay = new Date(current.getFullYear(), current.getMonth() + 1, 0);
-    expectedDates.add(lastDay.toISOString().split("T")[0]);
-    current.setMonth(current.getMonth() + 1);
+  if (startDate && endDate) {
+    const current = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth(), 1);
+    const end = new Date(endDate);
+    while (current <= end) {
+      const lastDay = new Date(current.getFullYear(), current.getMonth() + 1, 0);
+      expectedDates.add(lastDay.toISOString().split("T")[0]);
+      current.setMonth(current.getMonth() + 1);
+    }
   }
 
-  // Parse header to find column indices
-  const headerLine = lines[0].split(",").map(h => h.trim());
-  const dateIdx = headerLine.findIndex(h => h.includes("Date"));
-  const grossIdx = headerLine.findIndex(h => h.includes("Gross"));
-  const netIdx = headerLine.findIndex(h => h.includes("Net"));
+  for (let i = dataStart; i < dataLines.length; i++) {
+    const cols = dataLines[i].split(",").map(s => s.trim());
+    const rawDate = cols[dateIdx];
+    if (!rawDate) continue;
 
-  if (dateIdx === -1) {
-    return { valid: false, error: "Date column not found" };
-  }
-
-  // Skip header and parse data rows
-  for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(",").map(s => s.trim());
-    const dateStr = cols[dateIdx];
-    
-    if (!dateStr) continue;
-
-    // Check if date is within range
-    if (dateStr < startDate || dateStr > endDate) {
-      return { valid: false, error: `Date ${dateStr} is outside the specified range` };
+    // Parse date — try MM/DD/YYYY first, then YYYY-MM-DD
+    let isoDate = parseMMDDYYYY(rawDate);
+    if (!isoDate) {
+      // Try YYYY-MM-DD
+      if (/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) isoDate = rawDate;
+      else return { valid: false, error: `Unrecognized date format at row ${i + 1}: "${rawDate}". Use MM/DD/YYYY.` };
     }
 
-    // Parse gross and net returns
     const grossStr = grossIdx >= 0 ? cols[grossIdx] : "";
     const netStr = netIdx >= 0 ? cols[netIdx] : "";
 
-    if (!grossStr && !netStr) continue; // Skip if both are empty
+    if (!grossStr && !netStr) continue;
 
-    const returnData = { date: dateStr };
-
+    const returnData = { date: isoDate };
     if (grossStr) {
-      const grossVal = parseFloat(grossStr);
-      if (isNaN(grossVal)) {
-        return { valid: false, error: `Invalid gross return at row ${i + 1}: ${grossStr}` };
-      }
-      returnData.gross_return = grossVal;
+      const v = parseFloat(grossStr);
+      if (isNaN(v)) return { valid: false, error: `Invalid return value at row ${i + 1}: "${grossStr}"` };
+      returnData.gross_return = v;
+      returnData.return_value = v;
     }
-
     if (netStr) {
-      const netVal = parseFloat(netStr);
-      if (isNaN(netVal)) {
-        return { valid: false, error: `Invalid net return at row ${i + 1}: ${netStr}` };
-      }
-      returnData.net_return = netVal;
+      const v = parseFloat(netStr);
+      if (isNaN(v)) return { valid: false, error: `Invalid return value at row ${i + 1}: "${netStr}"` };
+      returnData.net_return = v;
+      if (returnData.return_value === undefined) returnData.return_value = v;
     }
 
-    // Set return_value to whichever is present (for backwards compatibility)
-    returnData.return_value = returnData.gross_return || returnData.net_return;
-
-    if (returns.some(r => r.date === dateStr)) {
-      duplicates.push(dateStr);
+    if (returns.some(r => r.date === isoDate)) {
+      duplicates.push(isoDate);
     } else {
       returns.push(returnData);
-      expectedDates.delete(dateStr);
+      expectedDates.delete(isoDate);
     }
   }
 
-  // Check for missing months
-  if (expectedDates.size > 0) {
-    missingMonths.push(...Array.from(expectedDates));
-  }
+  if (returns.length === 0) return { valid: false, error: "No valid return rows found" };
 
-  return {
-    valid: true,
-    returns,
-    duplicates,
-    missingMonths,
-  };
+  const missingMonths = Array.from(expectedDates);
+
+  return { valid: true, returns, duplicates, missingMonths };
 }
 
-export default function ProductReturnsTab({ productId, isEditing }) {
+// Legacy wrapper for file-based CSV upload
+function validateAndParseCSV(csvText, startDate, endDate) {
+  return parseReturnsText(csvText, startDate, endDate);
+}
+
+export default function ProductReturnsTab({ productId, productName, isEditing }) {
   const [showSetupDialog, setShowSetupDialog] = useState(false);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [returnTypes, setReturnTypes] = useState([]);
@@ -194,6 +232,8 @@ export default function ProductReturnsTab({ productId, isEditing }) {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [csvFile, setCsvFile] = useState(null);
+  const [pasteText, setPasteText] = useState("");
+  const [uploadMode, setUploadMode] = useState("file"); // "file" | "paste"
   const [uploadValidation, setUploadValidation] = useState(null);
   const [editingReturnSeries, setEditingReturnSeries] = useState(null);
 
@@ -236,10 +276,12 @@ export default function ProductReturnsTab({ productId, isEditing }) {
     setBackTestName("");
     setInceptionDate("");
     setGipsStatus([]);
-    setReturnFrequency("");
+    setReturnFrequency([]);
     setStartDate("");
     setEndDate("");
     setCsvFile(null);
+    setPasteText("");
+    setUploadMode("file");
     setUploadValidation(null);
     setEditingReturnSeries(null);
   };
@@ -303,21 +345,26 @@ export default function ProductReturnsTab({ productId, isEditing }) {
       returnTypes.includes("Paper Portfolio") ? paperPortfolioName :
       returnTypes.includes("Back-Test") ? backTestName : "";
     const gipsStatusStr = returnTypes.includes("Composite") ? gipsStatus.join(", ") : "";
-    generateExcelTemplate(startDate, endDate, returnFrequency, performanceType, performanceName, inceptionDate, gipsStatusStr);
+    generateExcelTemplate(startDate, endDate, returnFrequency, performanceType, performanceName, productId, productName || "", inceptionDate, gipsStatusStr);
   };
 
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = (event) => {
       const csvText = event.target?.result;
-      const validation = validateAndParseCSV(csvText, startDate, endDate, returnFrequency);
+      const validation = validateAndParseCSV(csvText, startDate, endDate);
       setUploadValidation(validation);
       setCsvFile(file);
     };
     reader.readAsText(file);
+  };
+
+  const handlePasteValidate = () => {
+    if (!pasteText.trim()) return;
+    const validation = parseReturnsText(pasteText, startDate, endDate);
+    setUploadValidation(validation);
   };
 
   const handleUploadReturns = async () => {
@@ -651,29 +698,51 @@ export default function ProductReturnsTab({ productId, isEditing }) {
               </Button>
             )}
 
-            {/* File Upload */}
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Upload CSV File *</Label>
-              <label className="block">
-                <input
-                  type="file"
-                  accept=".csv"
-                  onChange={handleFileSelect}
-                  className="hidden"
+            {/* Input Mode Tabs */}
+            <Tabs value={uploadMode} onValueChange={(v) => { setUploadMode(v); setUploadValidation(null); setCsvFile(null); setPasteText(""); }}>
+              <TabsList className="w-full">
+                <TabsTrigger value="file" className="flex-1 gap-1.5"><Upload className="w-3.5 h-3.5" /> Upload CSV</TabsTrigger>
+                <TabsTrigger value="paste" className="flex-1 gap-1.5"><ClipboardPaste className="w-3.5 h-3.5" /> Paste Data</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="file" className="mt-3">
+                <label className="block">
+                  <input type="file" accept=".csv" onChange={handleFileSelect} className="hidden" />
+                  <div className="px-4 py-4 border border-dashed border-indigo-300 rounded-lg bg-indigo-50 text-center cursor-pointer hover:bg-indigo-100 transition-colors">
+                    {csvFile ? (
+                      <p className="text-sm text-indigo-700 font-medium">{csvFile.name}</p>
+                    ) : (
+                      <>
+                        <Upload className="w-5 h-5 text-indigo-600 mx-auto mb-1" />
+                        <p className="text-sm text-indigo-600 font-medium">Click to upload CSV</p>
+                        <p className="text-xs text-indigo-500 mt-0.5">Download the template above, fill it in, then upload</p>
+                      </>
+                    )}
+                  </div>
+                </label>
+              </TabsContent>
+
+              <TabsContent value="paste" className="mt-3 space-y-2">
+                <p className="text-xs text-gray-500">
+                  Paste two columns: <strong>Date (MM/DD/YYYY)</strong> and <strong>Return</strong> (e.g. 2.00 = 2%). One row per month, comma or tab separated.
+                </p>
+                <Textarea
+                  placeholder={"01/31/2023, 1.25\n02/28/2023, -0.50\n03/31/2023, 2.10"}
+                  value={pasteText}
+                  onChange={(e) => { setPasteText(e.target.value); setUploadValidation(null); }}
+                  className="min-h-32 font-mono text-xs"
                 />
-                <div className="px-4 py-2 border border-dashed border-indigo-300 rounded-lg bg-indigo-50 text-center cursor-pointer hover:bg-indigo-100 transition-colors">
-                  {csvFile ? (
-                    <p className="text-sm text-indigo-700 font-medium">{csvFile.name}</p>
-                  ) : (
-                    <>
-                      <Upload className="w-5 h-5 text-indigo-600 mx-auto mb-1" />
-                      <p className="text-sm text-indigo-600 font-medium">Click to upload CSV</p>
-                      <p className="text-xs text-indigo-500">or drag and drop</p>
-                    </>
-                  )}
-                </div>
-              </label>
-            </div>
+                <Button
+                  onClick={handlePasteValidate}
+                  disabled={!pasteText.trim()}
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                >
+                  Validate Data
+                </Button>
+              </TabsContent>
+            </Tabs>
 
             {/* Validation Messages */}
             {uploadValidation && (

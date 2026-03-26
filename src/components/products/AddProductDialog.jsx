@@ -476,6 +476,7 @@ export default function AddProductDialog({
               {editingProduct && (
                 <ProductReturnsTab
                   productId={editingProduct.id}
+                  productName={editingProduct.name}
                   isEditing={activelyEditing}
                 />
               )}
