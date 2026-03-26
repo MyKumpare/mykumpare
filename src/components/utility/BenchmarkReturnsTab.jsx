@@ -229,8 +229,8 @@ export default function BenchmarkReturnsTab({ returns = [], onChange, isEditing 
 
       {/* Manual add row */}
       {isEditing && (
-        <div className="flex items-end gap-2 p-3 bg-gray-50 rounded-lg border flex-wrap">
-          <div className="space-y-1">
+        <div className="flex items-end gap-2 p-3 bg-gray-50 rounded-lg border flex-wrap mt-2">
+          <div className="flex flex-col gap-1">
             <Label className="text-xs font-medium text-gray-600">Date</Label>
             <Popover open={calOpen} onOpenChange={setCalOpen}>
               <PopoverTrigger asChild>
@@ -253,7 +253,7 @@ export default function BenchmarkReturnsTab({ returns = [], onChange, isEditing 
             </Popover>
           </div>
 
-          <div className="space-y-1">
+          <div className="flex flex-col gap-1">
             <Label className="text-xs font-medium text-gray-600">Return (%)</Label>
             <Input
               type="number"
