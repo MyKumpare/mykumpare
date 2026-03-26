@@ -6,6 +6,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon, Plus, Trash2, AlertCircle, Download, Upload, ClipboardPaste } from "lucide-react";
 import { format, parseISO, addMonths, endOfMonth, startOfMonth, subMonths } from "date-fns";
+import ImportConflictReview from "./ImportConflictReview";
 
 function formatReturn(val) {
   if (val === null || val === undefined || val === "") return "";
@@ -98,6 +99,7 @@ export default function BenchmarkReturnsTab({ returns = [], onChange, isEditing,
   const [pasteText, setPasteText] = useState("");
   const [showPaste, setShowPaste] = useState(false);
   const [parseErrors, setParseErrors] = useState([]);
+  const [conflictState, setConflictState] = useState(null); // { conflicts, newRows, errors }
   const [showTemplateOptions, setShowTemplateOptions] = useState(false);
   const [templateStartCalOpen, setTemplateStartCalOpen] = useState(false);
   const [templateEndCalOpen, setTemplateEndCalOpen] = useState(false);
@@ -162,6 +164,20 @@ export default function BenchmarkReturnsTab({ returns = [], onChange, isEditing,
     onChange(returns.map(r => r.date === date ? { ...r, return_value: parseFloat(val) } : r));
   };
 
+  const applyImport = (allowed, acceptedDates) => {
+    const existingMap = Object.fromEntries(returns.map(r => [r.date, r]));
+    allowed.forEach(r => {
+      const isConflict = existingMap[r.date] !== undefined;
+      if (!isConflict || acceptedDates.has(r.date)) {
+        existingMap[r.date] = r;
+      }
+    });
+    onChange(Object.values(existingMap));
+    setPasteText("");
+    setShowPaste(false);
+    setConflictState(null);
+  };
+
   const handleImportCSV = (text) => {
     const { results, errors } = parseCSVText(text);
 
@@ -176,15 +192,36 @@ export default function BenchmarkReturnsTab({ returns = [], onChange, isEditing,
       }
     });
 
-    setParseErrors([...errors, ...blocked]);
-    if (allowed.length === 0) return;
+    const allErrors = [...errors, ...blocked];
+    if (allowed.length === 0) {
+      setParseErrors(allErrors);
+      return;
+    }
 
-    // Merge: new rows override existing rows with same date
-    const existingMap = Object.fromEntries(returns.map(r => [r.date, r]));
-    allowed.forEach(r => { existingMap[r.date] = r; });
-    onChange(Object.values(existingMap));
-    setPasteText("");
-    setShowPaste(false);
+    // Detect conflicts
+    const existingMap = Object.fromEntries(returns.map(r => [r.date, r.return_value]));
+    const conflicts = [];
+    const newRows = [];
+    allowed.forEach(r => {
+      if (existingMap[r.date] !== undefined) {
+        conflicts.push({ date: r.date, existing_value: existingMap[r.date], incoming_value: r.return_value });
+      } else {
+        newRows.push(r);
+      }
+    });
+
+    if (conflicts.length > 0) {
+      // Store pending state and show conflict UI
+      setConflictState({ conflicts, newRows, allowed, errors: allErrors });
+      setParseErrors([]);
+    } else {
+      setParseErrors(allErrors);
+      applyImport(allowed, new Set());
+    }
+  };
+
+  const handleConflictConfirm = (acceptedDates) => {
+    applyImport(conflictState.allowed, acceptedDates);
   };
 
   const handlePasteSubmit = () => {
@@ -383,6 +420,17 @@ export default function BenchmarkReturnsTab({ returns = [], onChange, isEditing,
             </Button>
           </div>
         </div>
+      )}
+
+      {/* Conflict review */}
+      {conflictState && (
+        <ImportConflictReview
+          conflicts={conflictState.conflicts}
+          newRows={conflictState.newRows}
+          errors={conflictState.errors}
+          onConfirm={handleConflictConfirm}
+          onCancel={() => setConflictState(null)}
+        />
       )}
 
       {/* Parse errors */}
