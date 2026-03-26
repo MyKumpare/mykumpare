@@ -9,6 +9,7 @@ import AddBenchmarkDialog from "../utility/AddBenchmarkDialog";
 export default function BenchmarkMultiSelect({ value = [], onChange, isEditing }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [addBenchmarkOpen, setAddBenchmarkOpen] = useState(false);
+  const [viewingBenchmark, setViewingBenchmark] = useState(null);
 
   const { data: allBenchmarks = [] } = useQuery({
     queryKey: ["benchmarks"],
@@ -51,7 +52,13 @@ export default function BenchmarkMultiSelect({ value = [], onChange, isEditing }
                   key={b.id}
                   className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-indigo-50 border border-indigo-200 text-xs text-indigo-700 font-medium"
                 >
-                  {b.name}
+                  <button
+                    type="button"
+                    onClick={() => setViewingBenchmark(b)}
+                    className="hover:underline"
+                  >
+                    {b.name}
+                  </button>
                   <button
                     type="button"
                     onClick={() => handleRemove(b.id)}
@@ -114,12 +121,14 @@ export default function BenchmarkMultiSelect({ value = [], onChange, isEditing }
           ) : (
             <div className="flex flex-wrap gap-1.5">
               {selectedBenchmarks.map(b => (
-                <span
+                <button
                   key={b.id}
-                  className="inline-flex items-center px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-200 text-xs text-indigo-700 font-medium"
+                  type="button"
+                  onClick={() => setViewingBenchmark(b)}
+                  className="inline-flex items-center px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-200 text-xs text-indigo-700 font-medium hover:bg-indigo-100 transition-colors cursor-pointer"
                 >
                   {b.name}
-                </span>
+                </button>
               ))}
             </div>
           )}
@@ -136,6 +145,13 @@ export default function BenchmarkMultiSelect({ value = [], onChange, isEditing }
         onOpenChange={setAddBenchmarkOpen}
         benchmarks={allBenchmarks}
         editingBenchmark={null}
+      />
+
+      <AddBenchmarkDialog
+        open={!!viewingBenchmark}
+        onOpenChange={(o) => { if (!o) setViewingBenchmark(null); }}
+        benchmarks={allBenchmarks}
+        editingBenchmark={viewingBenchmark}
       />
     </div>
   );
