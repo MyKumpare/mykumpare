@@ -751,7 +751,7 @@ export default function ProductReturnsManager({ returns = [], onChange, isEditin
               <tr>
                 <th className="text-left px-4 py-2.5 font-medium text-gray-600 text-xs uppercase tracking-wide">Date</th>
                 <th className="text-right px-4 py-2.5 font-medium text-gray-600 text-xs uppercase tracking-wide">Gross Return (%)</th>
-                {showNetReturn && <th className="text-right px-4 py-2.5 font-medium text-gray-600 text-xs uppercase tracking-wide">Net Return (%)</th>}
+                <th className="text-right px-4 py-2.5 font-medium text-gray-600 text-xs uppercase tracking-wide">Net Return (%)</th>
                 {isEditing && <th className="w-10" />}
               </tr>
             </thead>
@@ -776,23 +776,21 @@ export default function ProductReturnsManager({ returns = [], onChange, isEditin
                       </span>
                     )}
                   </td>
-                  {showNetReturn && (
-                    <td className="px-4 py-2.5 text-right">
-                      {isEditing ? (
-                        <input
-                          type="number"
-                          step="0.0001"
-                          defaultValue={r.net_return !== undefined ? formatReturn(r.net_return) : ""}
-                          onBlur={(e) => handleReturnEdit(r.date, e.target.value, true)}
-                          className="w-28 text-right border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400"
-                        />
-                      ) : (
-                        <span className={`font-mono ${r.net_return >= 0 ? "text-green-700" : "text-red-600"}`}>
-                          {r.net_return !== undefined ? `${r.net_return >= 0 ? "+" : ""}${formatReturn(r.net_return)}%` : "—"}
-                        </span>
-                      )}
-                    </td>
-                  )}
+                  <td className="px-4 py-2.5 text-right">
+                    {isEditing ? (
+                      <input
+                        type="number"
+                        step="0.0001"
+                        defaultValue={r.net_return !== undefined ? formatReturn(r.net_return) : ""}
+                        onBlur={(e) => handleReturnEdit(r.date, e.target.value, true)}
+                        className="w-28 text-right border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                      />
+                    ) : (
+                      <span className={`font-mono ${r.net_return >= 0 ? "text-green-700" : "text-red-600"}`}>
+                        {r.net_return !== undefined ? `${r.net_return >= 0 ? "+" : ""}${formatReturn(r.net_return)}%` : "—"}
+                      </span>
+                    )}
+                  </td>
                   {isEditing && (
                     <td className="px-2 py-2.5 text-right">
                       <button
