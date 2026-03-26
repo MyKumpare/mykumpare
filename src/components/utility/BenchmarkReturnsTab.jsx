@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Plus, Trash2 } from "lucide-react";
+import { CalendarIcon, Plus, Trash2, AlertCircle } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
 function formatReturn(val) {
@@ -16,15 +16,19 @@ export default function BenchmarkReturnsTab({ returns = [], onChange, isEditing 
   const [newDate, setNewDate] = useState(null);
   const [newReturn, setNewReturn] = useState("");
   const [calOpen, setCalOpen] = useState(false);
+  const [duplicateWarning, setDuplicateWarning] = useState(null);
 
   const sorted = [...returns].sort((a, b) => a.date < b.date ? 1 : -1);
 
   const handleAdd = () => {
     if (!newDate || newReturn === "") return;
     const dateStr = format(newDate, "yyyy-MM-dd");
-    // Replace if same date exists
-    const filtered = returns.filter(r => r.date !== dateStr);
-    onChange([...filtered, { date: dateStr, return_value: parseFloat(newReturn) }]);
+    if (returns.some(r => r.date === dateStr)) {
+      setDuplicateWarning(`A return for ${format(newDate, "MM/dd/yyyy")} already exists. Delete the existing entry first, then add a new value.`);
+      return;
+    }
+    setDuplicateWarning(null);
+    onChange([...returns, { date: dateStr, return_value: parseFloat(newReturn) }]);
     setNewDate(null);
     setNewReturn("");
   };
@@ -90,6 +94,14 @@ export default function BenchmarkReturnsTab({ returns = [], onChange, isEditing 
             <Plus className="w-3.5 h-3.5" />
             Add
           </Button>
+        </div>
+      )}
+
+      {/* Duplicate warning */}
+      {duplicateWarning && (
+        <div className="flex gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <AlertCircle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-yellow-700">{duplicateWarning}</p>
         </div>
       )}
 

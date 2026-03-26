@@ -348,13 +348,29 @@ export default function ProductReturnsTab({ productId, productName, isEditing })
     generateExcelTemplate(startDate, endDate, returnFrequency, performanceType, performanceName, productId, productName || "", inceptionDate, gipsStatusStr);
   };
 
+  const checkExistingDuplicates = (validation) => {
+    if (!validation?.valid || !editingReturnSeries?.monthly_returns?.length) return validation;
+    const existingDates = new Set(editingReturnSeries.monthly_returns.map(r => r.date));
+    const existingDuplicates = validation.returns
+      .map(r => r.date)
+      .filter(d => existingDates.has(d));
+    if (existingDuplicates.length > 0) {
+      return {
+        ...validation,
+        valid: false,
+        error: `The following months already have saved returns and cannot be overwritten: ${existingDuplicates.map(d => toMMDDYYYY(d)).join(", ")}. Remove those entries from your data and re-upload, or delete the existing series and re-upload all data.`,
+      };
+    }
+    return validation;
+  };
+
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (event) => {
       const csvText = event.target?.result;
-      const validation = validateAndParseCSV(csvText, startDate, endDate);
+      const validation = checkExistingDuplicates(validateAndParseCSV(csvText, startDate, endDate));
       setUploadValidation(validation);
       setCsvFile(file);
     };
@@ -363,7 +379,7 @@ export default function ProductReturnsTab({ productId, productName, isEditing })
 
   const handlePasteValidate = () => {
     if (!pasteText.trim()) return;
-    const validation = parseReturnsText(pasteText, startDate, endDate);
+    const validation = checkExistingDuplicates(parseReturnsText(pasteText, startDate, endDate));
     setUploadValidation(validation);
   };
 
