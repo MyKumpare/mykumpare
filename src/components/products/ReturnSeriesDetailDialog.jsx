@@ -348,8 +348,29 @@ export default function ReturnSeriesDetailDialog({
                                     setError("");
                                   }}
                                   className="h-6 w-6 text-green-600 hover:bg-green-50"
+                                  title="Save changes"
                                 >
                                   <Edit2 className="w-3.5 h-3.5" />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    const updatedReturns = series.monthly_returns.filter(
+                                      (ret) => ret.date !== r.date
+                                    );
+                                    onEdit({
+                                      ...series,
+                                      monthly_returns: updatedReturns,
+                                    });
+                                    setEditingReturnId(null);
+                                    setEditingReturnData({});
+                                    setError("");
+                                  }}
+                                  className="h-6 w-6 text-red-600 hover:bg-red-50"
+                                  title="Delete this return"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
                                 </Button>
                                 <Button
                                   size="icon"
@@ -360,6 +381,7 @@ export default function ReturnSeriesDetailDialog({
                                     setError("");
                                   }}
                                   className="h-6 w-6 text-gray-400 hover:bg-gray-100"
+                                  title="Cancel"
                                 >
                                   <AlertCircle className="w-3.5 h-3.5" />
                                 </Button>
