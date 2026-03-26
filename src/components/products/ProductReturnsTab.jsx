@@ -668,9 +668,25 @@ export default function ProductReturnsTab({ productId, productName, isEditing })
       <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>
-              Upload or Load Returns
-            </DialogTitle>
+            <DialogTitle>Upload or Load Returns</DialogTitle>
+            {(productName || editingReturnSeries) && (
+              <div className="space-y-0.5 pt-1">
+                {productName && (
+                  <p className="text-sm font-medium text-indigo-700">{productName}</p>
+                )}
+                {editingReturnSeries && (
+                  <p className="text-xs text-gray-500">
+                    {editingReturnSeries.return_types?.join(", ")}
+                    {editingReturnSeries.composite_name && ` · ${editingReturnSeries.composite_name}`}
+                    {editingReturnSeries.paper_portfolio_name && ` · ${editingReturnSeries.paper_portfolio_name}`}
+                    {editingReturnSeries.back_test_name && ` · ${editingReturnSeries.back_test_name}`}
+                    {editingReturnSeries.return_frequency && ` · ${editingReturnSeries.return_frequency}`}
+                    {editingReturnSeries.inception_date && ` · Inception: ${toMMDDYYYY(editingReturnSeries.inception_date)}`}
+                    {editingReturnSeries.monthly_returns?.length > 0 && ` · ${editingReturnSeries.monthly_returns.length} returns in system`}
+                  </p>
+                )}
+              </div>
+            )}
           </DialogHeader>
 
           <div className="space-y-4">
