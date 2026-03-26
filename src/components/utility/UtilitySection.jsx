@@ -17,6 +17,25 @@ function BenchmarkItem({ b, onClick }) {
   );
 }
 
+function CollapsibleGroup({ label, labelClass = "text-xs font-semibold text-indigo-600 uppercase tracking-wide", indent = 0, children }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div style={{ paddingLeft: indent * 8 }}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-1 w-full text-left mb-1 group"
+      >
+        {open
+          ? <ChevronDown className="w-3 h-3 text-gray-400 group-hover:text-gray-600 flex-shrink-0" />
+          : <ChevronRight className="w-3 h-3 text-gray-400 group-hover:text-gray-600 flex-shrink-0" />
+        }
+        <span className={labelClass}>{label}</span>
+      </button>
+      {open && children}
+    </div>
+  );
+}
+
 export default function UtilitySection({ deletedCount }) {
   const [expanded, setExpanded] = useState(true);
   const [benchmarkDialogOpen, setBenchmarkDialogOpen] = useState(false);
@@ -109,41 +128,46 @@ export default function UtilitySection({ deletedCount }) {
                 No benchmarks yet
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {/* Equity benchmarks grouped by Region → Market Cap → Style */}
                 {groupedBenchmarks.hasEquity && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">Equity</p>
-                    {Object.keys(groupedBenchmarks.equityGroups).sort().map(region => (
-                      <div key={region} className="space-y-1.5">
-                        <p className="text-xs font-medium text-gray-500 pl-1">{region}</p>
-                        {Object.keys(groupedBenchmarks.equityGroups[region]).sort().map(mc => (
-                          <div key={mc} className="space-y-1">
-                            <p className="text-xs text-gray-400 pl-2 italic">{mc}</p>
-                            {Object.keys(groupedBenchmarks.equityGroups[region][mc]).sort().map(style => (
-                              <div key={style} className="space-y-1 pl-3">
-                                <p className="text-xs text-gray-400 italic">{style}</p>
-                                {groupedBenchmarks.equityGroups[region][mc][style].map(b => (
-                                  <BenchmarkItem key={b.id} b={b} onClick={() => { setSelectedBenchmark(b); setBenchmarkDialogOpen(true); }} />
-                                ))}
-                              </div>
+                  <CollapsibleGroup label="Equity">
+                    <div className="space-y-1 ml-1">
+                      {Object.keys(groupedBenchmarks.equityGroups).sort().map(region => (
+                        <CollapsibleGroup key={region} label={region} labelClass="text-xs font-medium text-gray-600" indent={1}>
+                          <div className="space-y-1 ml-1">
+                            {Object.keys(groupedBenchmarks.equityGroups[region]).sort().map(mc => (
+                              <CollapsibleGroup key={mc} label={mc} labelClass="text-xs text-gray-500 italic" indent={2}>
+                                <div className="space-y-1 ml-1">
+                                  {Object.keys(groupedBenchmarks.equityGroups[region][mc]).sort().map(style => (
+                                    <CollapsibleGroup key={style} label={style} labelClass="text-xs text-gray-400 italic" indent={3}>
+                                      <div className="space-y-1 ml-2">
+                                        {groupedBenchmarks.equityGroups[region][mc][style].map(b => (
+                                          <BenchmarkItem key={b.id} b={b} onClick={() => { setSelectedBenchmark(b); setBenchmarkDialogOpen(true); }} />
+                                        ))}
+                                      </div>
+                                    </CollapsibleGroup>
+                                  ))}
+                                </div>
+                              </CollapsibleGroup>
                             ))}
                           </div>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
+                        </CollapsibleGroup>
+                      ))}
+                    </div>
+                  </CollapsibleGroup>
                 )}
                 {/* Non-equity benchmarks grouped by Asset Class */}
                 {groupedBenchmarks.hasNonEquity && (
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     {Object.keys(groupedBenchmarks.nonEquityGroups).sort().map(ac => (
-                      <div key={ac} className="space-y-1">
-                        <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">{ac}</p>
-                        {groupedBenchmarks.nonEquityGroups[ac].map(b => (
-                          <BenchmarkItem key={b.id} b={b} onClick={() => { setSelectedBenchmark(b); setBenchmarkDialogOpen(true); }} />
-                        ))}
-                      </div>
+                      <CollapsibleGroup key={ac} label={ac}>
+                        <div className="space-y-1 ml-1">
+                          {groupedBenchmarks.nonEquityGroups[ac].map(b => (
+                            <BenchmarkItem key={b.id} b={b} onClick={() => { setSelectedBenchmark(b); setBenchmarkDialogOpen(true); }} />
+                          ))}
+                        </div>
+                      </CollapsibleGroup>
                     ))}
                   </div>
                 )}
