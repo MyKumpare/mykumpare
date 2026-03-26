@@ -86,7 +86,7 @@ export default function ReturnSeriesDetailDialog({
                   </div>
                   <div>
                     <p className="text-xs font-medium text-gray-500 uppercase">
-                      Return Frequency
+                      Return Type
                     </p>
                     <p className="text-sm text-gray-900 mt-1">
                       {series.return_frequency}
