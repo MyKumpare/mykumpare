@@ -213,7 +213,7 @@ export default function AddBenchmarkDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg flex flex-col max-h-[90vh]">
         <DialogHeader>
           <div className="flex items-center justify-between pr-6">
             <DialogTitle>{titleMap[mode]}</DialogTitle>
@@ -231,14 +231,14 @@ export default function AddBenchmarkDialog({
           </div>
         </DialogHeader>
 
-        <Tabs defaultValue="details">
-          <TabsList className="w-full">
+        <Tabs defaultValue="details" className="flex flex-col flex-1 min-h-0">
+          <TabsList className="w-full shrink-0">
             <TabsTrigger value="details" className="flex-1">Details</TabsTrigger>
             <TabsTrigger value="returns" className="flex-1">Returns</TabsTrigger>
           </TabsList>
 
           {/* ── Details Tab ── */}
-          <TabsContent value="details">
+          <TabsContent value="details" className="flex-1 overflow-y-auto">
             <div className="space-y-4 py-4">
               {/* Asset Class */}
               {renderField(
@@ -430,7 +430,7 @@ export default function AddBenchmarkDialog({
           </TabsContent>
 
           {/* ── Returns Tab ── */}
-          <TabsContent value="returns" className="py-4">
+          <TabsContent value="returns" className="flex-1 overflow-y-auto py-4">
             <BenchmarkReturnsTab
               returns={monthlyReturns}
               onChange={setMonthlyReturns}
