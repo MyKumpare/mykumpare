@@ -22,6 +22,7 @@ import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Plus, Download, Upload, Trash2, Edit2, AlertCircle, CheckCircle2, ClipboardPaste } from "lucide-react";
+import ReturnSeriesDetailDialog from "./ReturnSeriesDetailDialog";
 
 const RETURN_TYPES = ["Composite", "Paper Portfolio", "Back-Test"];
 const GIPS_OPTIONS = ["GIPS Calculated", "GIPS Compliant", "GIPS Verified", "Non-GIPS Compliant"];
@@ -236,6 +237,7 @@ export default function ProductReturnsTab({ productId, productName, isEditing })
   const [uploadMode, setUploadMode] = useState("file"); // "file" | "paste"
   const [uploadValidation, setUploadValidation] = useState(null);
   const [editingReturnSeries, setEditingReturnSeries] = useState(null);
+  const [viewingReturnSeries, setViewingReturnSeries] = useState(null);
 
   const queryClient = useQueryClient();
 
@@ -261,6 +263,13 @@ export default function ProductReturnsTab({ productId, productName, isEditing })
       queryClient.invalidateQueries({ queryKey: ["returnSeries", productId] });
       resetForm();
       setShowUploadDialog(false);
+      // Refresh viewing series if it was updated
+      if (viewingReturnSeries) {
+        base44.entities.ReturnSeries.list().then(series => {
+          const updated = series.find(s => s.id === viewingReturnSeries.id);
+          if (updated) setViewingReturnSeries(updated);
+        });
+      }
     },
   });
 
@@ -444,7 +453,7 @@ export default function ProductReturnsTab({ productId, productName, isEditing })
       ) : (
         <div className="space-y-3">
           {[...returnSeries].sort((a, b) => new Date(a.inception_date) - new Date(b.inception_date)).map((series) => (
-            <div key={series.id} className="border rounded-lg p-3 bg-white space-y-2 cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => handleEditReturnSeries(series)}>
+            <div key={series.id} className="border rounded-lg p-3 bg-white space-y-2 cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => setViewingReturnSeries(series)}>
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-sm font-semibold text-gray-900">{series.return_types?.join(", ")}</p>
@@ -461,26 +470,6 @@ export default function ProductReturnsTab({ productId, productName, isEditing })
                     {series.gips_status && ` · ${series.gips_status}`}
                   </p>
                 </div>
-                {isEditing && (
-                   <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                     <Button
-                       size="sm"
-                       variant="outline"
-                       className="h-7 text-xs gap-1 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
-                       onClick={() => handleEditReturnSeries(series)}
-                     >
-                       <Edit2 className="w-3 h-3" /> Edit
-                     </Button>
-                     <Button
-                       size="sm"
-                       variant="outline"
-                       className="h-7 text-xs gap-1 text-red-600 border-red-200 hover:bg-red-50"
-                       onClick={() => deleteReturnSeriesMutation.mutate(series.id)}
-                     >
-                       <Trash2 className="w-3 h-3" />
-                     </Button>
-                   </div>
-                 )}
               </div>
             </div>
           ))}
@@ -832,6 +821,49 @@ export default function ProductReturnsTab({ productId, productName, isEditing })
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ReturnSeriesDetailDialog
+        open={!!viewingReturnSeries}
+        onOpenChange={(open) => {
+          if (!open) setViewingReturnSeries(null);
+        }}
+        series={viewingReturnSeries}
+        productName={productName}
+        onEdit={handleEditReturnSeries}
+        onDelete={(id) => {
+          deleteReturnSeriesMutation.mutate(id);
+          setViewingReturnSeries(null);
+        }}
+        onAddReturn={async (returnData) => {
+          if (!viewingReturnSeries) return;
+          const updatedReturns = [
+            ...(viewingReturnSeries.monthly_returns || []),
+            returnData,
+          ];
+          const data = {
+            product_id: productId,
+            return_types: viewingReturnSeries.return_types,
+            composite_name: viewingReturnSeries.composite_name || null,
+            paper_portfolio_name: viewingReturnSeries.paper_portfolio_name || null,
+            back_test_name: viewingReturnSeries.back_test_name || null,
+            inception_date: viewingReturnSeries.inception_date,
+            gips_status: viewingReturnSeries.gips_status || null,
+            return_frequency: viewingReturnSeries.return_frequency,
+            monthly_returns: updatedReturns,
+            start_date: viewingReturnSeries.start_date,
+            end_date: viewingReturnSeries.end_date,
+          };
+          updateReturnSeriesMutation.mutate({
+            id: viewingReturnSeries.id,
+            data,
+          });
+          // Update local state optimistically
+          setViewingReturnSeries({
+            ...viewingReturnSeries,
+            monthly_returns: updatedReturns,
+          });
+        }}
+      />
     </div>
   );
 }
