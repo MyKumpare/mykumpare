@@ -77,6 +77,18 @@ export default function AddBenchmarkDialog({
   const [showNewRegion, setShowNewRegion] = useState(false);
   const [showNewMarketCap, setShowNewMarketCap] = useState(false);
   const [showNewStyle, setShowNewStyle] = useState(false);
+
+  const getOptionWarning = (value, allOptions) => {
+    if (!value.trim()) return null;
+    const lower = value.trim().toLowerCase();
+    const exact = allOptions.find(o => o.toLowerCase() === lower);
+    if (exact) return { type: "duplicate", msg: `"${exact}" already exists.` };
+    const partial = allOptions.filter(o =>
+      o.toLowerCase().includes(lower) || lower.includes(o.toLowerCase())
+    );
+    if (partial.length > 0) return { type: "partial", msg: `Similar option(s) exist: ${partial.join(", ")}` };
+    return null;
+  };
   const [customRegions, addCustomRegion] = usePersistedOptions("benchmark_region");
   const [customMarketCaps, addCustomMarketCap] = usePersistedOptions("benchmark_market_cap");
   const [customStyles, addCustomStyle] = usePersistedOptions("benchmark_style");
@@ -316,16 +328,22 @@ export default function AddBenchmarkDialog({
                         <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => setShowNewRegion(true)}>+</Button>
                       </div>
                     ) : (
-                      <div className="flex gap-2">
-                        <Input placeholder="Enter new region..." value={newRegion} onChange={(e) => setNewRegion(e.target.value)} className="h-9" autoFocus />
-                        <Button type="button" variant="outline" size="sm" className="h-9 bg-green-50 border-green-200 hover:bg-green-100 text-green-700" disabled={!newRegion.trim()}
-                          onClick={() => {
-                            const trimmed = newRegion.trim();
-                            setRegion(trimmed);
-                            addCustomRegion(trimmed);
-                            setShowNewRegion(false); setNewRegion("");
-                          }}>✓</Button>
-                        <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => { setShowNewRegion(false); setNewRegion(""); }}><X className="w-4 h-4" /></Button>
+                      <div className="space-y-1">
+                        <div className="flex gap-2">
+                          <Input placeholder="Enter new region..." value={newRegion} onChange={(e) => setNewRegion(e.target.value)} className="h-9" autoFocus />
+                          <Button type="button" variant="outline" size="sm" className="h-9 bg-green-50 border-green-200 hover:bg-green-100 text-green-700"
+                            disabled={!newRegion.trim() || getOptionWarning(newRegion, allRegions)?.type === "duplicate"}
+                            onClick={() => {
+                              const trimmed = newRegion.trim();
+                              setRegion(trimmed);
+                              addCustomRegion(trimmed);
+                              setShowNewRegion(false); setNewRegion("");
+                            }}>✓</Button>
+                          <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => { setShowNewRegion(false); setNewRegion(""); }}><X className="w-4 h-4" /></Button>
+                        </div>
+                        {(() => { const w = getOptionWarning(newRegion, allRegions); return w ? (
+                          <p className={`text-xs ${w.type === "duplicate" ? "text-red-500" : "text-amber-600"}`}>{w.msg}</p>
+                        ) : null; })()}
                       </div>
                     )}
                   </div>
@@ -350,16 +368,22 @@ export default function AddBenchmarkDialog({
                         <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => setShowNewMarketCap(true)}>+</Button>
                       </div>
                     ) : (
-                      <div className="flex gap-2">
-                        <Input placeholder="Enter new market cap..." value={newMarketCap} onChange={(e) => setNewMarketCap(e.target.value)} className="h-9" autoFocus />
-                        <Button type="button" variant="outline" size="sm" className="h-9 bg-green-50 border-green-200 hover:bg-green-100 text-green-700" disabled={!newMarketCap.trim()}
-                          onClick={() => {
-                            const trimmed = newMarketCap.trim();
-                            setMarketCap(trimmed);
-                            addCustomMarketCap(trimmed);
-                            setShowNewMarketCap(false); setNewMarketCap("");
-                          }}>✓</Button>
-                        <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => { setShowNewMarketCap(false); setNewMarketCap(""); }}><X className="w-4 h-4" /></Button>
+                      <div className="space-y-1">
+                        <div className="flex gap-2">
+                          <Input placeholder="Enter new market cap..." value={newMarketCap} onChange={(e) => setNewMarketCap(e.target.value)} className="h-9" autoFocus />
+                          <Button type="button" variant="outline" size="sm" className="h-9 bg-green-50 border-green-200 hover:bg-green-100 text-green-700"
+                            disabled={!newMarketCap.trim() || getOptionWarning(newMarketCap, allMarketCaps)?.type === "duplicate"}
+                            onClick={() => {
+                              const trimmed = newMarketCap.trim();
+                              setMarketCap(trimmed);
+                              addCustomMarketCap(trimmed);
+                              setShowNewMarketCap(false); setNewMarketCap("");
+                            }}>✓</Button>
+                          <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => { setShowNewMarketCap(false); setNewMarketCap(""); }}><X className="w-4 h-4" /></Button>
+                        </div>
+                        {(() => { const w = getOptionWarning(newMarketCap, allMarketCaps); return w ? (
+                          <p className={`text-xs ${w.type === "duplicate" ? "text-red-500" : "text-amber-600"}`}>{w.msg}</p>
+                        ) : null; })()}
                       </div>
                     )}
                   </div>
@@ -384,16 +408,22 @@ export default function AddBenchmarkDialog({
                         <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => setShowNewStyle(true)}>+</Button>
                       </div>
                     ) : (
-                      <div className="flex gap-2">
-                        <Input placeholder="Enter new style..." value={newStyle} onChange={(e) => setNewStyle(e.target.value)} className="h-9" autoFocus />
-                        <Button type="button" variant="outline" size="sm" className="h-9 bg-green-50 border-green-200 hover:bg-green-100 text-green-700" disabled={!newStyle.trim()}
-                          onClick={() => {
-                            const trimmed = newStyle.trim();
-                            setStyle(trimmed);
-                            addCustomStyle(trimmed);
-                            setShowNewStyle(false); setNewStyle("");
-                          }}>✓</Button>
-                        <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => { setShowNewStyle(false); setNewStyle(""); }}><X className="w-4 h-4" /></Button>
+                      <div className="space-y-1">
+                        <div className="flex gap-2">
+                          <Input placeholder="Enter new style..." value={newStyle} onChange={(e) => setNewStyle(e.target.value)} className="h-9" autoFocus />
+                          <Button type="button" variant="outline" size="sm" className="h-9 bg-green-50 border-green-200 hover:bg-green-100 text-green-700"
+                            disabled={!newStyle.trim() || getOptionWarning(newStyle, allStyles)?.type === "duplicate"}
+                            onClick={() => {
+                              const trimmed = newStyle.trim();
+                              setStyle(trimmed);
+                              addCustomStyle(trimmed);
+                              setShowNewStyle(false); setNewStyle("");
+                            }}>✓</Button>
+                          <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => { setShowNewStyle(false); setNewStyle(""); }}><X className="w-4 h-4" /></Button>
+                        </div>
+                        {(() => { const w = getOptionWarning(newStyle, allStyles); return w ? (
+                          <p className={`text-xs ${w.type === "duplicate" ? "text-red-500" : "text-amber-600"}`}>{w.msg}</p>
+                        ) : null; })()}
                       </div>
                     )}
                   </div>
