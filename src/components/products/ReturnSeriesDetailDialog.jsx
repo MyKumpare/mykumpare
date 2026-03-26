@@ -10,7 +10,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Plus, Trash2, Edit2, AlertCircle } from "lucide-react";
+import { Plus, Trash2, Edit2, AlertCircle, X } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
 function toMMDDYYYY(isoDate) {
@@ -39,6 +39,8 @@ export default function ReturnSeriesDetailDialog({
   const [newReturn, setNewReturn] = useState("");
   const [returnType, setReturnType] = useState("gross");
   const [error, setError] = useState("");
+  const [editingOverview, setEditingOverview] = useState(false);
+  const [overviewData, setOverviewData] = useState(series || {});
 
   const handleAddReturn = () => {
     setError("");
@@ -87,13 +89,20 @@ export default function ReturnSeriesDetailDialog({
   const sortedReturns = [...(series?.monthly_returns || [])]
     .sort((a, b) => new Date(b.date) - new Date(a.date));
 
+  const getSeriesName = () => {
+    return series?.composite_name || series?.paper_portfolio_name || series?.back_test_name || "Unnamed Series";
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Return Series Details</DialogTitle>
           {productName && (
-            <p className="text-sm text-gray-500 pt-1">{productName}</p>
+            <div className="pt-1 space-y-1">
+              <p className="text-sm text-gray-500">{productName}</p>
+              <p className="text-sm font-semibold text-gray-900">{getSeriesName()}</p>
+            </div>
           )}
         </DialogHeader>
 
@@ -110,64 +119,198 @@ export default function ReturnSeriesDetailDialog({
 
             {/* Overview Tab */}
             <TabsContent value="overview" className="space-y-4">
-              <div className="space-y-3 bg-gray-50 p-4 rounded-lg">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 uppercase">
-                      Type
-                    </p>
-                    <p className="text-sm font-semibold text-gray-900 mt-1">
-                      {series.return_types?.join(", ")}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 uppercase">
-                      Name
-                    </p>
-                    <p className="text-sm font-semibold text-gray-900 mt-1">
-                      {series.composite_name ||
-                        series.paper_portfolio_name ||
-                        series.back_test_name ||
-                        "—"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 uppercase">
-                      Inception Date
-                    </p>
-                    <p className="text-sm text-gray-900 mt-1">
-                      {toMMDDYYYY(series.inception_date)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 uppercase">
-                      Return Frequency
-                    </p>
-                    <p className="text-sm text-gray-900 mt-1">
-                      {series.return_frequency}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 uppercase">
-                      Data Range
-                    </p>
-                    <p className="text-sm text-gray-900 mt-1">
-                      {toMMDDYYYY(series.start_date)} to{" "}
-                      {toMMDDYYYY(series.end_date)}
-                    </p>
-                  </div>
-                  {series.gips_status && (
+              {!editingOverview ? (
+                <div className="space-y-3 bg-gray-50 p-4 rounded-lg">
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-xs font-medium text-gray-500 uppercase">
-                        GIPS Status
+                        Type
                       </p>
-                      <p className="text-sm text-gray-900 mt-1">
-                        {series.gips_status}
+                      <p className="text-sm font-semibold text-gray-900 mt-1">
+                        {series.return_types?.join(", ")}
                       </p>
                     </div>
-                  )}
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 uppercase">
+                        Name
+                      </p>
+                      <p className="text-sm font-semibold text-gray-900 mt-1">
+                        {series.composite_name ||
+                          series.paper_portfolio_name ||
+                          series.back_test_name ||
+                          "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 uppercase">
+                        Inception Date
+                      </p>
+                      <p className="text-sm text-gray-900 mt-1">
+                        {toMMDDYYYY(series.inception_date)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 uppercase">
+                        Return Frequency
+                      </p>
+                      <p className="text-sm text-gray-900 mt-1">
+                        {series.return_frequency}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 uppercase">
+                        Data Range
+                      </p>
+                      <p className="text-sm text-gray-900 mt-1">
+                        {toMMDDYYYY(series.start_date)} to{" "}
+                        {toMMDDYYYY(series.end_date)}
+                      </p>
+                    </div>
+                    {series.gips_status && (
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 uppercase">
+                          GIPS Status
+                        </p>
+                        <p className="text-sm text-gray-900 mt-1">
+                          {series.gips_status}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="space-y-3 bg-gray-50 p-4 rounded-lg border border-indigo-200">
+                  <div className="space-y-3">
+                    <div>
+                      <Label className="text-xs font-medium text-gray-600">Type</Label>
+                      <Input
+                        value={overviewData.return_types?.join(", ") || ""}
+                        onChange={(e) =>
+                          setOverviewData({
+                            ...overviewData,
+                            return_types: e.target.value.split(",").map(t => t.trim()),
+                          })
+                        }
+                        className="mt-1 h-8 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-600">Name</Label>
+                      <Input
+                        value={
+                          overviewData.composite_name ||
+                          overviewData.paper_portfolio_name ||
+                          overviewData.back_test_name ||
+                          ""
+                        }
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setOverviewData({
+                            ...overviewData,
+                            composite_name: overviewData.return_types?.includes("Composite") ? val : null,
+                            paper_portfolio_name: overviewData.return_types?.includes("Paper Portfolio") ? val : null,
+                            back_test_name: overviewData.return_types?.includes("Back-Test") ? val : null,
+                          });
+                        }}
+                        className="mt-1 h-8 text-sm"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-xs font-medium text-gray-600">Inception Date</Label>
+                        <Input
+                          value={toMMDDYYYY(overviewData.inception_date || "")}
+                          onChange={(e) => {
+                            const isoDate = parseMMDDYYYY(e.target.value);
+                            if (isoDate) {
+                              setOverviewData({
+                                ...overviewData,
+                                inception_date: isoDate,
+                              });
+                            }
+                          }}
+                          placeholder="MM/DD/YYYY"
+                          className="mt-1 h-8 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs font-medium text-gray-600">Return Frequency</Label>
+                        <select
+                          value={overviewData.return_frequency || ""}
+                          onChange={(e) =>
+                            setOverviewData({
+                              ...overviewData,
+                              return_frequency: e.target.value,
+                            })
+                          }
+                          className="mt-1 h-8 text-sm border border-input rounded px-2 w-full"
+                        >
+                          <option value="">Select...</option>
+                          <option value="Gross">Gross</option>
+                          <option value="Net">Net</option>
+                          <option value="Gross/Net">Gross/Net</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-xs font-medium text-gray-600">Start Date</Label>
+                        <Input
+                          value={toMMDDYYYY(overviewData.start_date || "")}
+                          onChange={(e) => {
+                            const isoDate = parseMMDDYYYY(e.target.value);
+                            if (isoDate) {
+                              setOverviewData({
+                                ...overviewData,
+                                start_date: isoDate,
+                              });
+                            }
+                          }}
+                          placeholder="MM/DD/YYYY"
+                          className="mt-1 h-8 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs font-medium text-gray-600">End Date</Label>
+                        <Input
+                          value={toMMDDYYYY(overviewData.end_date || "")}
+                          onChange={(e) => {
+                            const isoDate = parseMMDDYYYY(e.target.value);
+                            if (isoDate) {
+                              setOverviewData({
+                                ...overviewData,
+                                end_date: isoDate,
+                              });
+                            }
+                          }}
+                          placeholder="MM/DD/YYYY"
+                          className="mt-1 h-8 text-sm"
+                        />
+                      </div>
+                    </div>
+                    {series.gips_status && (
+                      <div>
+                        <Label className="text-xs font-medium text-gray-600">GIPS Status</Label>
+                        <select
+                          value={overviewData.gips_status || ""}
+                          onChange={(e) =>
+                            setOverviewData({
+                              ...overviewData,
+                              gips_status: e.target.value,
+                            })
+                          }
+                          className="mt-1 h-8 text-sm border border-input rounded px-2 w-full"
+                        >
+                          <option value="">Select...</option>
+                          <option value="GIPS Calculated">GIPS Calculated</option>
+                          <option value="GIPS Verified">GIPS Verified</option>
+                          <option value="Non-GIPS Compliant">Non-GIPS Compliant</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </TabsContent>
 
             {/* Returns Tab */}
@@ -307,35 +450,71 @@ export default function ReturnSeriesDetailDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Close
           </Button>
-          {onEdit && (
-            <Button
-              onClick={() => {
-                onEdit(series);
-                onOpenChange(false);
-              }}
-              className="gap-1.5 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
-              variant="outline"
-            >
-              <Edit2 className="w-3.5 h-3.5" /> Edit
-            </Button>
-          )}
-          {onDelete && (
-            <Button
-              onClick={() => {
-                if (
-                  window.confirm(
-                    "Are you sure you want to delete this return series?"
-                  )
-                ) {
-                  onDelete(series.id);
-                  onOpenChange(false);
-                }
-              }}
-              variant="outline"
-              className="gap-1.5 text-red-600 border-red-200 hover:bg-red-50"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </Button>
+          {!editingOverview ? (
+            <>
+              {onEdit && (
+                <Button
+                  onClick={() => {
+                    onEdit(series);
+                    onOpenChange(false);
+                  }}
+                  className="gap-1.5 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                  variant="outline"
+                >
+                  <Edit2 className="w-3.5 h-3.5" /> Edit
+                </Button>
+              )}
+              <Button
+                onClick={() => setEditingOverview(true)}
+                className="gap-1.5 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                variant="outline"
+              >
+                <Edit2 className="w-3.5 h-3.5" /> Edit Overview
+              </Button>
+              {onDelete && (
+                <Button
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        "Are you sure you want to delete this return series?"
+                      )
+                    ) {
+                      onDelete(series.id);
+                      onOpenChange(false);
+                    }
+                  }}
+                  variant="outline"
+                  className="gap-1.5 text-red-600 border-red-200 hover:bg-red-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              )}
+            </>
+          ) : (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setEditingOverview(false);
+                  setOverviewData(series);
+                }}
+                className="gap-1.5"
+              >
+                <X className="w-3.5 h-3.5" /> Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  onEdit({
+                    ...series,
+                    ...overviewData,
+                  });
+                  setEditingOverview(false);
+                }}
+                className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                Save Overview
+              </Button>
+            </>
           )}
         </DialogFooter>
       </DialogContent>
