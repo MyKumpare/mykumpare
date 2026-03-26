@@ -3,7 +3,8 @@ import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { User, Plus, X, ChevronDown, ChevronRight, GripVertical, Edit2, Check, Printer, Download, ZoomIn, ZoomOut, Maximize2, CheckCircle2, Loader2, Users, Layers, UserMinus, Search } from "lucide-react";
+import { User, Plus, X, ChevronDown, ChevronRight, GripVertical, Edit2, Check, Printer, Download, ZoomIn, ZoomOut, Maximize2, CheckCircle2, Loader2, Users, Layers, UserMinus, Search, Expand } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import AddContactDialog from "@/components/contacts/AddContactDialog";
 
 function getMaxDepth(nodes, rootIds) {
@@ -337,6 +338,10 @@ export default function OrgChartTab({ firmId, firmName = "" }) {
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null); // null | "saving" | "saved"
   const [searchQuery, setSearchQuery] = useState("");
+  const [fullscreenOpen, setFullscreenOpen] = useState(false);
+  const fullscreenChartRef = useRef(null);
+  const fullscreenContainerRef = useRef(null);
+  const [fullscreenZoom, setFullscreenZoom] = useState(1);
 
   const handleViewContact = (contact) => {
     if (!contact) return;
@@ -647,6 +652,17 @@ export default function OrgChartTab({ firmId, firmName = "" }) {
     setZoom(Math.max(0.2, parseFloat(fitZoom.toFixed(2))));
   };
 
+  const handleFullscreenFit = () => {
+    if (!fullscreenChartRef.current || !fullscreenContainerRef.current) { setFullscreenZoom(1); return; }
+    const containerW = fullscreenContainerRef.current.clientWidth - 32;
+    const containerH = fullscreenContainerRef.current.clientHeight - 32;
+    const contentW = fullscreenChartRef.current.scrollWidth;
+    const contentH = fullscreenChartRef.current.scrollHeight;
+    if (contentW === 0 || contentH === 0) { setFullscreenZoom(1); return; }
+    const fitZoom = Math.min(containerW / contentW, containerH / contentH, 1.5);
+    setFullscreenZoom(Math.max(0.2, parseFloat(fitZoom.toFixed(2))));
+  };
+
   const tree = buildTree(nodes, rootIds);
   const usedContactIds = new Set(nodes.map(n => n.contact_id));
   const availableContacts = firmContacts.filter(c => !usedContactIds.has(c.id));
@@ -701,6 +717,9 @@ export default function OrgChartTab({ firmId, firmName = "" }) {
 
         {nodes.length > 0 && (
           <div className="flex items-center gap-1.5">
+            <Button variant="outline" size="sm" className="h-7 px-2.5 text-xs gap-1.5" onClick={() => setFullscreenOpen(true)}>
+              <Expand className="w-3.5 h-3.5" /> Fullscreen
+            </Button>
             <Button variant="outline" size="sm" className="h-7 px-2.5 text-xs gap-1.5" onClick={handlePrint}>
               <Printer className="w-3.5 h-3.5" /> Print
             </Button>
@@ -809,6 +828,61 @@ export default function OrgChartTab({ firmId, firmName = "" }) {
           firms={[]}
         />
       )}
+
+      {/* Fullscreen modal */}
+      <Dialog open={fullscreenOpen} onOpenChange={setFullscreenOpen}>
+        <DialogContent className="max-w-full h-screen p-0 flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between gap-2 p-4 border-b bg-white">
+            <h2 className="text-lg font-semibold text-gray-900">{firmName} – Organization Chart</h2>
+            <div className="flex items-center gap-1">
+              <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" onClick={() => setFullscreenZoom(z => Math.max(0.2, z - 0.1))}>
+                <ZoomOut className="w-3.5 h-3.5" />
+              </Button>
+              <span className="text-xs text-gray-500 w-10 text-center">{Math.round(fullscreenZoom * 100)}%</span>
+              <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" onClick={() => setFullscreenZoom(z => Math.min(2, z + 0.1))}>
+                <ZoomIn className="w-3.5 h-3.5" />
+              </Button>
+              <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1 ml-1" onClick={handleFullscreenFit}>
+                <Maximize2 className="w-3.5 h-3.5" /> Fit
+              </Button>
+              <button
+                onClick={() => setFullscreenOpen(false)}
+                className="ml-2 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Chart container with horizontal/vertical scroll */}
+          <div ref={fullscreenContainerRef} className="flex-1 overflow-auto bg-gray-50/50 p-4">
+            <div
+              ref={fullscreenChartRef}
+              style={{ transform: `scale(${fullscreenZoom})`, transformOrigin: "top center", transition: "transform 0.15s ease" }}
+            >
+              <div className="flex flex-col items-center">
+                <div className="flex gap-10 items-start justify-center flex-wrap">
+                  {tree.map(node => (
+                    <OrgNode
+                      key={node.id}
+                      node={node}
+                      contacts={firmContacts}
+                      onAddChild={handleAddChild}
+                      onRemove={handleRemove}
+                      onDrop={handleDrop}
+                      onTitleChange={handleTitleChange}
+                      onViewContact={handleViewContact}
+                      searchQuery={searchQuery}
+                    />
+                  ))}
+                </div>
+                <RootDropZone onDrop={handleDrop} hasNodes={true} />
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
