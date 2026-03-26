@@ -288,26 +288,24 @@ export default function ReturnSeriesDetailDialog({
                         />
                       </div>
                     </div>
-                    {series.gips_status && (
-                      <div>
-                        <Label className="text-xs font-medium text-gray-600">GIPS Status</Label>
-                        <select
-                          value={overviewData.gips_status || ""}
-                          onChange={(e) =>
-                            setOverviewData({
-                              ...overviewData,
-                              gips_status: e.target.value,
-                            })
-                          }
-                          className="mt-1 h-8 text-sm border border-input rounded px-2 w-full"
-                        >
-                          <option value="">Select...</option>
-                          <option value="GIPS Calculated">GIPS Calculated</option>
-                          <option value="GIPS Verified">GIPS Verified</option>
-                          <option value="Non-GIPS Compliant">Non-GIPS Compliant</option>
-                        </select>
-                      </div>
-                    )}
+                    <div>
+                      <Label className="text-xs font-medium text-gray-600">GIPS Status</Label>
+                      <select
+                        value={overviewData.gips_status || ""}
+                        onChange={(e) =>
+                          setOverviewData({
+                            ...overviewData,
+                            gips_status: e.target.value || null,
+                          })
+                        }
+                        className="mt-1 h-8 text-sm border border-input rounded px-2 w-full"
+                      >
+                        <option value="">Select...</option>
+                        <option value="GIPS Calculated">GIPS Calculated</option>
+                        <option value="GIPS Verified">GIPS Verified</option>
+                        <option value="Non-GIPS Compliant">Non-GIPS Compliant</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
               )}
