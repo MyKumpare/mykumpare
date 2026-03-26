@@ -371,7 +371,10 @@ export default function ReturnSeriesDetailDialog({
                                 className="px-4 py-2.5 text-gray-800 font-medium cursor-pointer hover:text-indigo-600"
                                 onClick={() => {
                                   setEditingReturnId(r.date);
-                                  setEditingReturnData(r);
+                                  setEditingReturnData({
+                                    ...r,
+                                    date: toMMDDYYYY(r.date),
+                                  });
                                   setError("");
                                 }}
                               >
