@@ -74,7 +74,7 @@ function downloadTemplate() {
   URL.revokeObjectURL(url);
 }
 
-export default function BenchmarkReturnsTab({ returns = [], onChange, isEditing }) {
+export default function BenchmarkReturnsTab({ returns = [], onChange, isEditing, inceptionDate = null }) {
   const [newDate, setNewDate] = useState(null);
   const [newReturn, setNewReturn] = useState("");
   const [calOpen, setCalOpen] = useState(false);
@@ -84,11 +84,24 @@ export default function BenchmarkReturnsTab({ returns = [], onChange, isEditing 
   const [parseErrors, setParseErrors] = useState([]);
   const fileInputRef = useRef(null);
 
+  // Returns true if a date string (YYYY-MM-DD) is on or before the inception date
+  const isBeforeOrOnInception = (dateStr) => {
+    if (!inceptionDate) return false;
+    const inceptionStr = typeof inceptionDate === "string"
+      ? inceptionDate
+      : format(inceptionDate, "yyyy-MM-dd");
+    return dateStr <= inceptionStr;
+  };
+
   const sorted = [...returns].sort((a, b) => a.date < b.date ? 1 : -1);
 
   const handleAdd = () => {
     if (!newDate || newReturn === "") return;
     const dateStr = format(newDate, "yyyy-MM-dd");
+    if (isBeforeOrOnInception(dateStr)) {
+      setDuplicateWarning(`Returns on or before the inception date (${format(parseISO(typeof inceptionDate === "string" ? inceptionDate : format(inceptionDate, "yyyy-MM-dd")), "MM/dd/yyyy")}) are not allowed.`);
+      return;
+    }
     if (returns.some(r => r.date === dateStr)) {
       setDuplicateWarning(`A return for ${format(newDate, "MM/dd/yyyy")} already exists.`);
       return;
@@ -109,12 +122,24 @@ export default function BenchmarkReturnsTab({ returns = [], onChange, isEditing 
 
   const handleImportCSV = (text) => {
     const { results, errors } = parseCSVText(text);
-    setParseErrors(errors);
-    if (results.length === 0) return;
+
+    // Filter out rows on or before inception date
+    const blocked = [];
+    const allowed = [];
+    results.forEach(r => {
+      if (isBeforeOrOnInception(r.date)) {
+        blocked.push(`Row with date ${r.date}: on or before inception date — skipped.`);
+      } else {
+        allowed.push(r);
+      }
+    });
+
+    setParseErrors([...errors, ...blocked]);
+    if (allowed.length === 0) return;
 
     // Merge: new rows override existing rows with same date
     const existingMap = Object.fromEntries(returns.map(r => [r.date, r]));
-    results.forEach(r => { existingMap[r.date] = r; });
+    allowed.forEach(r => { existingMap[r.date] = r; });
     onChange(Object.values(existingMap));
     setPasteText("");
     setShowPaste(false);

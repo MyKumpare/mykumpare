@@ -465,6 +465,7 @@ export default function AddBenchmarkDialog({
               returns={monthlyReturns}
               onChange={setMonthlyReturns}
               isEditing={isEditable}
+              inceptionDate={inceptionDate}
             />
           </TabsContent>
         </Tabs>
