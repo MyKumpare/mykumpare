@@ -18,7 +18,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { X, Pencil } from "lucide-react";
+import { X, Pencil, CalendarIcon } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format, parseISO } from "date-fns";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import BenchmarkReturnsTab from "./BenchmarkReturnsTab";
@@ -77,6 +80,8 @@ export default function AddBenchmarkDialog({
   const [customRegions, addCustomRegion] = usePersistedOptions("benchmark_region");
   const [customMarketCaps, addCustomMarketCap] = usePersistedOptions("benchmark_market_cap");
   const [customStyles, addCustomStyle] = usePersistedOptions("benchmark_style");
+  const [inceptionDate, setInceptionDate] = useState(null);
+  const [inceptionCalOpen, setInceptionCalOpen] = useState(false);
   const [monthlyReturns, setMonthlyReturns] = useState([]);
 
   const allRegions = [...new Set([...EQUITY_REGIONS, ...customRegions])];
@@ -90,6 +95,7 @@ export default function AddBenchmarkDialog({
     setRegion(b.region || "");
     setMarketCap(b.market_capitalization || "");
     setStyle(b.style || "");
+    setInceptionDate(b.inception_date ? parseISO(b.inception_date) : null);
     setMonthlyReturns(b.monthly_returns || []);
   };
 
@@ -100,6 +106,7 @@ export default function AddBenchmarkDialog({
       setRegion(""); setMarketCap(""); setStyle("");
       setNewRegion(""); setNewMarketCap(""); setNewStyle("");
       setShowNewRegion(false); setShowNewMarketCap(false); setShowNewStyle(false);
+      setInceptionDate(null);
       setMonthlyReturns([]);
       return;
     }
@@ -171,6 +178,7 @@ export default function AddBenchmarkDialog({
       data.market_capitalization = marketCap;
       data.style = style;
     }
+    if (inceptionDate) data.inception_date = format(inceptionDate, "yyyy-MM-dd");
     return data;
   };
 
@@ -387,6 +395,33 @@ export default function AddBenchmarkDialog({
                           }}>✓</Button>
                         <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => { setShowNewStyle(false); setNewStyle(""); }}><X className="w-4 h-4" /></Button>
                       </div>
+                    )}
+                  </div>
+
+                  {/* Inception Date */}
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium text-gray-700">Inception Date</Label>
+                    {!isEditable ? (
+                      <div className="h-9 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-800">
+                        {inceptionDate ? format(inceptionDate, "MM/dd/yyyy") : <span className="text-gray-400">—</span>}
+                      </div>
+                    ) : (
+                      <Popover open={inceptionCalOpen} onOpenChange={setInceptionCalOpen}>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="h-9 w-full justify-start text-left font-normal text-sm">
+                            <CalendarIcon className="mr-2 h-3.5 w-3.5 text-gray-400" />
+                            {inceptionDate ? format(inceptionDate, "MM/dd/yyyy") : <span className="text-gray-400">Pick a date</span>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={inceptionDate}
+                            onSelect={(d) => { setInceptionDate(d); setInceptionCalOpen(false); }}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
                     )}
                   </div>
                 </>
