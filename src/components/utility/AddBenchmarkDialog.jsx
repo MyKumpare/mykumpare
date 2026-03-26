@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { X } from "lucide-react";
+import { X, Pencil } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -54,8 +54,13 @@ export default function AddBenchmarkDialog({
   open,
   onOpenChange,
   benchmarks = [],
+  editingBenchmark = null, // if set, opens in view mode for that benchmark
 }) {
   const queryClient = useQueryClient();
+
+  // mode: "add" | "view" | "edit"
+  const [mode, setMode] = useState("add");
+
   const [assetClass, setAssetClass] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -72,30 +77,64 @@ export default function AddBenchmarkDialog({
   const [customMarketCaps, setCustomMarketCaps] = useState([]);
   const [customStyles, setCustomStyles] = useState([]);
 
-  // Merge predefined with custom options
   const allRegions = [...new Set([...EQUITY_REGIONS, ...customRegions])];
   const allMarketCaps = [...new Set([...EQUITY_MARKET_CAPS, ...customMarketCaps])];
   const allStyles = [...new Set([...EQUITY_STYLES, ...customStyles])];
 
+  const populateFromBenchmark = (b) => {
+    setAssetClass(b.asset_class || "");
+    setName(b.name || "");
+    setDescription(b.description || "");
+    setRegion(b.region || "");
+    setMarketCap(b.market_capitalization || "");
+    setStyle(b.style || "");
+  };
+
   useEffect(() => {
     if (!open) {
-      setAssetClass("");
-      setName("");
-      setDescription("");
-      setRegion("");
-      setMarketCap("");
-      setStyle("");
-      setNewRegion("");
-      setNewMarketCap("");
-      setNewStyle("");
-      setShowNewRegion(false);
-      setShowNewMarketCap(false);
-      setShowNewStyle(false);
+      setMode("add");
+      setAssetClass(""); setName(""); setDescription("");
+      setRegion(""); setMarketCap(""); setStyle("");
+      setNewRegion(""); setNewMarketCap(""); setNewStyle("");
+      setShowNewRegion(false); setShowNewMarketCap(false); setShowNewStyle(false);
+      return;
     }
-  }, [open]);
+    if (editingBenchmark) {
+      setMode("view");
+      populateFromBenchmark(editingBenchmark);
+      // Seed custom options from existing values not in predefined lists
+      if (editingBenchmark.region && !EQUITY_REGIONS.includes(editingBenchmark.region)) {
+        setCustomRegions([editingBenchmark.region]);
+      }
+      if (editingBenchmark.market_capitalization && !EQUITY_MARKET_CAPS.includes(editingBenchmark.market_capitalization)) {
+        setCustomMarketCaps([editingBenchmark.market_capitalization]);
+      }
+      if (editingBenchmark.style && !EQUITY_STYLES.includes(editingBenchmark.style)) {
+        setCustomStyles([editingBenchmark.style]);
+      }
+    } else {
+      setMode("add");
+    }
+  }, [open, editingBenchmark]);
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Benchmark.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["benchmarks"] });
+      onOpenChange(false);
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Benchmark.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["benchmarks"] });
+      onOpenChange(false);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.Benchmark.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["benchmarks"] });
       onOpenChange(false);
@@ -107,90 +146,131 @@ export default function AddBenchmarkDialog({
     benchmarks.some(
       (b) =>
         b.name.toLowerCase() === name.trim().toLowerCase() &&
-        b.asset_class === assetClass
+        b.asset_class === assetClass &&
+        b.id !== editingBenchmark?.id
     );
 
   const isValid =
     assetClass &&
     name.trim() &&
     !isDuplicate &&
-    (assetClass !== "Equity" ||
-      (region && marketCap && style));
+    (assetClass !== "Equity" || (region && marketCap && style));
 
-  const handleSubmit = () => {
-    if (!isValid) return;
-
+  const buildData = () => {
     const data = {
       asset_class: assetClass,
       name: name.trim(),
       description: description.trim(),
     };
-
     if (assetClass === "Equity") {
-      data.region = showNewRegion ? newRegion : region;
-      data.market_capitalization = showNewMarketCap ? newMarketCap : marketCap;
-      data.style = showNewStyle ? newStyle : style;
+      data.region = region;
+      data.market_capitalization = marketCap;
+      data.style = style;
     }
-
-    createMutation.mutate(data);
+    return data;
   };
+
+  const handleSubmit = () => {
+    if (!isValid) return;
+    if (mode === "edit" && editingBenchmark) {
+      updateMutation.mutate({ id: editingBenchmark.id, data: buildData() });
+    } else {
+      createMutation.mutate(buildData());
+    }
+  };
+
+  const handleCancelEdit = () => {
+    populateFromBenchmark(editingBenchmark);
+    setMode("view");
+  };
+
+  const isEditable = mode === "add" || mode === "edit";
+
+  const renderField = (label, value, editContent) => (
+    <div className="space-y-1.5">
+      <Label className="text-sm font-medium text-gray-700">{label}</Label>
+      {!isEditable ? (
+        <div className="h-9 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-800">
+          {value || <span className="text-gray-400">—</span>}
+        </div>
+      ) : editContent}
+    </div>
+  );
+
+  const titleMap = { add: "Add Benchmark", view: "Benchmark Details", edit: "Edit Benchmark" };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Benchmark</DialogTitle>
+          <div className="flex items-center justify-between pr-6">
+            <DialogTitle>{titleMap[mode]}</DialogTitle>
+            {mode === "view" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1.5"
+                onClick={() => setMode("edit")}
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                Edit
+              </Button>
+            )}
+          </div>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           {/* Asset Class */}
-          <div className="space-y-1.5">
-            <Label className="text-sm font-medium text-gray-700">
-              Asset Class *
-            </Label>
+          {renderField(
+            "Asset Class *",
+            assetClass,
             <Select value={assetClass} onValueChange={setAssetClass}>
               <SelectTrigger className="h-9">
                 <SelectValue placeholder="Select asset class..." />
               </SelectTrigger>
               <SelectContent>
                 {ASSET_CLASSES.map((ac) => (
-                  <SelectItem key={ac} value={ac}>
-                    {ac}
-                  </SelectItem>
+                  <SelectItem key={ac} value={ac}>{ac}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          )}
 
           {/* Name */}
           <div className="space-y-1.5">
-            <Label className="text-sm font-medium text-gray-700">
-              Benchmark Name *
-            </Label>
-            <Input
-              placeholder="e.g. S&P 500"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className={`h-9 ${isDuplicate ? "border-red-400 focus-visible:ring-red-400" : ""}`}
-            />
-            {isDuplicate && (
-              <p className="text-xs text-red-500">
-                This benchmark already exists.
-              </p>
+            <Label className="text-sm font-medium text-gray-700">Benchmark Name *</Label>
+            {!isEditable ? (
+              <div className="h-9 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-800 font-medium">
+                {name}
+              </div>
+            ) : (
+              <>
+                <Input
+                  placeholder="e.g. S&P 500"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className={`h-9 ${isDuplicate ? "border-red-400 focus-visible:ring-red-400" : ""}`}
+                />
+                {isDuplicate && <p className="text-xs text-red-500">This benchmark already exists.</p>}
+              </>
             )}
           </div>
 
           {/* Description */}
           <div className="space-y-1.5">
-            <Label className="text-sm font-medium text-gray-700">
-              Description
-            </Label>
-            <Textarea
-              placeholder="Brief description..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="min-h-16 text-sm"
-            />
+            <Label className="text-sm font-medium text-gray-700">Description</Label>
+            {!isEditable ? (
+              <div className="min-h-9 px-3 py-2 rounded-md border bg-gray-50 text-sm text-gray-700 whitespace-pre-wrap">
+                {description || <span className="text-gray-400">—</span>}
+              </div>
+            ) : (
+              <Textarea
+                placeholder="Brief description..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="min-h-16 text-sm"
+              />
+            )}
           </div>
 
           {/* Equity-specific fields */}
@@ -198,219 +278,102 @@ export default function AddBenchmarkDialog({
             <>
               {/* Region */}
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-gray-700">
-                  Region *
-                </Label>
-                {!showNewRegion ? (
+                <Label className="text-sm font-medium text-gray-700">Region *</Label>
+                {!isEditable ? (
+                  <div className="h-9 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-800">
+                    {region || <span className="text-gray-400">—</span>}
+                  </div>
+                ) : !showNewRegion ? (
                   <div className="flex gap-2">
                     <Select value={region} onValueChange={setRegion}>
                       <SelectTrigger className="h-9 flex-1">
                         <SelectValue placeholder="Select region..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {allRegions.map((r) => (
-                          <SelectItem key={r} value={r}>
-                            {r}
-                          </SelectItem>
-                        ))}
+                        {allRegions.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                       </SelectContent>
                     </Select>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-9"
-                      onClick={() => setShowNewRegion(true)}
-                    >
-                      +
-                    </Button>
+                    <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => setShowNewRegion(true)}>+</Button>
                   </div>
                 ) : (
                   <div className="flex gap-2">
-                    <Input
-                      placeholder="Enter new region..."
-                      value={newRegion}
-                      onChange={(e) => setNewRegion(e.target.value)}
-                      className="h-9"
-                      autoFocus
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-9 bg-green-50 border-green-200 hover:bg-green-100 text-green-700"
-                      disabled={!newRegion.trim()}
+                    <Input placeholder="Enter new region..." value={newRegion} onChange={(e) => setNewRegion(e.target.value)} className="h-9" autoFocus />
+                    <Button type="button" variant="outline" size="sm" className="h-9 bg-green-50 border-green-200 hover:bg-green-100 text-green-700" disabled={!newRegion.trim()}
                       onClick={() => {
                         const trimmed = newRegion.trim();
                         setRegion(trimmed);
-                        if (!customRegions.includes(trimmed)) {
-                          setCustomRegions([...customRegions, trimmed]);
-                        }
-                        setShowNewRegion(false);
-                        setNewRegion("");
-                      }}
-                    >
-                      ✓
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-9"
-                      onClick={() => {
-                        setShowNewRegion(false);
-                        setNewRegion("");
-                      }}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
+                        if (!customRegions.includes(trimmed)) setCustomRegions([...customRegions, trimmed]);
+                        setShowNewRegion(false); setNewRegion("");
+                      }}>✓</Button>
+                    <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => { setShowNewRegion(false); setNewRegion(""); }}><X className="w-4 h-4" /></Button>
                   </div>
                 )}
               </div>
 
               {/* Market Capitalization */}
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-gray-700">
-                  Market Capitalization *
-                </Label>
-                {!showNewMarketCap ? (
+                <Label className="text-sm font-medium text-gray-700">Market Capitalization *</Label>
+                {!isEditable ? (
+                  <div className="h-9 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-800">
+                    {marketCap || <span className="text-gray-400">—</span>}
+                  </div>
+                ) : !showNewMarketCap ? (
                   <div className="flex gap-2">
-                    <Select
-                      value={marketCap}
-                      onValueChange={setMarketCap}
-                    >
+                    <Select value={marketCap} onValueChange={setMarketCap}>
                       <SelectTrigger className="h-9 flex-1">
                         <SelectValue placeholder="Select market cap..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {allMarketCaps.map((mc) => (
-                          <SelectItem key={mc} value={mc}>
-                            {mc}
-                          </SelectItem>
-                        ))}
+                        {allMarketCaps.map((mc) => <SelectItem key={mc} value={mc}>{mc}</SelectItem>)}
                       </SelectContent>
                     </Select>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-9"
-                      onClick={() => setShowNewMarketCap(true)}
-                    >
-                      +
-                    </Button>
+                    <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => setShowNewMarketCap(true)}>+</Button>
                   </div>
                 ) : (
                   <div className="flex gap-2">
-                    <Input
-                      placeholder="Enter new market cap..."
-                      value={newMarketCap}
-                      onChange={(e) => setNewMarketCap(e.target.value)}
-                      className="h-9"
-                      autoFocus
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-9 bg-green-50 border-green-200 hover:bg-green-100 text-green-700"
-                      disabled={!newMarketCap.trim()}
+                    <Input placeholder="Enter new market cap..." value={newMarketCap} onChange={(e) => setNewMarketCap(e.target.value)} className="h-9" autoFocus />
+                    <Button type="button" variant="outline" size="sm" className="h-9 bg-green-50 border-green-200 hover:bg-green-100 text-green-700" disabled={!newMarketCap.trim()}
                       onClick={() => {
                         const trimmed = newMarketCap.trim();
                         setMarketCap(trimmed);
-                        if (!customMarketCaps.includes(trimmed)) {
-                          setCustomMarketCaps([...customMarketCaps, trimmed]);
-                        }
-                        setShowNewMarketCap(false);
-                        setNewMarketCap("");
-                      }}
-                    >
-                      ✓
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-9"
-                      onClick={() => {
-                        setShowNewMarketCap(false);
-                        setNewMarketCap("");
-                      }}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
+                        if (!customMarketCaps.includes(trimmed)) setCustomMarketCaps([...customMarketCaps, trimmed]);
+                        setShowNewMarketCap(false); setNewMarketCap("");
+                      }}>✓</Button>
+                    <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => { setShowNewMarketCap(false); setNewMarketCap(""); }}><X className="w-4 h-4" /></Button>
                   </div>
                 )}
               </div>
 
               {/* Style */}
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-gray-700">
-                  Style *
-                </Label>
-                {!showNewStyle ? (
+                <Label className="text-sm font-medium text-gray-700">Style *</Label>
+                {!isEditable ? (
+                  <div className="h-9 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-800">
+                    {style || <span className="text-gray-400">—</span>}
+                  </div>
+                ) : !showNewStyle ? (
                   <div className="flex gap-2">
                     <Select value={style} onValueChange={setStyle}>
                       <SelectTrigger className="h-9 flex-1">
                         <SelectValue placeholder="Select style..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {allStyles.map((s) => (
-                          <SelectItem key={s} value={s}>
-                            {s}
-                          </SelectItem>
-                        ))}
+                        {allStyles.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                       </SelectContent>
                     </Select>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-9"
-                      onClick={() => setShowNewStyle(true)}
-                    >
-                      +
-                    </Button>
+                    <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => setShowNewStyle(true)}>+</Button>
                   </div>
                 ) : (
                   <div className="flex gap-2">
-                    <Input
-                      placeholder="Enter new style..."
-                      value={newStyle}
-                      onChange={(e) => setNewStyle(e.target.value)}
-                      className="h-9"
-                      autoFocus
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-9 bg-green-50 border-green-200 hover:bg-green-100 text-green-700"
-                      disabled={!newStyle.trim()}
+                    <Input placeholder="Enter new style..." value={newStyle} onChange={(e) => setNewStyle(e.target.value)} className="h-9" autoFocus />
+                    <Button type="button" variant="outline" size="sm" className="h-9 bg-green-50 border-green-200 hover:bg-green-100 text-green-700" disabled={!newStyle.trim()}
                       onClick={() => {
                         const trimmed = newStyle.trim();
                         setStyle(trimmed);
-                        if (!customStyles.includes(trimmed)) {
-                          setCustomStyles([...customStyles, trimmed]);
-                        }
-                        setShowNewStyle(false);
-                        setNewStyle("");
-                      }}
-                    >
-                      ✓
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-9"
-                      onClick={() => {
-                        setShowNewStyle(false);
-                        setNewStyle("");
-                      }}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
+                        if (!customStyles.includes(trimmed)) setCustomStyles([...customStyles, trimmed]);
+                        setShowNewStyle(false); setNewStyle("");
+                      }}>✓</Button>
+                    <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => { setShowNewStyle(false); setNewStyle(""); }}><X className="w-4 h-4" /></Button>
                   </div>
                 )}
               </div>
@@ -418,17 +381,38 @@ export default function AddBenchmarkDialog({
           )}
         </div>
 
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={!isValid || createMutation.isPending}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white"
-          >
-            {createMutation.isPending ? "Adding..." : "Add Benchmark"}
-          </Button>
+        <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-between gap-2 pt-2 border-t">
+          <div>
+            {mode === "view" && editingBenchmark && (
+              <Button
+                variant="ghost"
+                className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                onClick={() => deleteMutation.mutate(editingBenchmark.id)}
+                disabled={deleteMutation.isPending}
+              >
+                Delete
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-2 justify-end">
+            {mode === "view" ? (
+              <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+            ) : mode === "edit" ? (
+              <>
+                <Button variant="outline" onClick={handleCancelEdit}>Cancel</Button>
+                <Button onClick={handleSubmit} disabled={!isValid || updateMutation.isPending} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                  {updateMutation.isPending ? "Saving..." : "Save Changes"}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+                <Button onClick={handleSubmit} disabled={!isValid || createMutation.isPending} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                  {createMutation.isPending ? "Adding..." : "Add Benchmark"}
+                </Button>
+              </>
+            )}
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
