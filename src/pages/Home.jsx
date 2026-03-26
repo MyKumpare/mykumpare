@@ -285,7 +285,7 @@ export default function Home() {
               </div>
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">MyKumpare</h1>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="grid grid-cols-3 gap-1">
               {[
                 { label: "Portfolios", icon: BarChart3, ref: portfoliosRef },
                 { label: "Firms", icon: Building, ref: firmsRef },
