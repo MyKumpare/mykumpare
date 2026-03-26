@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus, Building, Search, Package, User, LayoutList } from "lucide-react";
+import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -53,6 +53,16 @@ export default function Home() {
   const [portfolioDialogOpen, setPortfolioDialogOpen] = useState(false);
   const [preselectedAllocatorId, setPreselectedAllocatorId] = useState(null);
   const [editingPortfolio, setEditingPortfolio] = useState(null);
+
+  const portfoliosRef = useRef(null);
+  const firmsRef = useRef(null);
+  const productsRef = useRef(null);
+  const contactsRef = useRef(null);
+  const utilityRef = useRef(null);
+
+  const scrollTo = (ref) => {
+    ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   const queryClient = useQueryClient();
 
@@ -268,14 +278,33 @@ export default function Home() {
       {/* Hero header */}
       <div className="bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-10 pb-16 sm:pt-14 sm:pb-20">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
-              <Building className="w-5 h-5 text-white" />
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+                <Building className="w-5 h-5 text-white" />
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">MyKumpare</h1>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">MyKumpare</h1>
+            <div className="flex items-center gap-1">
+              {[
+                { label: "Portfolios", icon: BarChart3, ref: portfoliosRef },
+                { label: "Firms", icon: Building, ref: firmsRef },
+                { label: "Products", icon: Package, ref: productsRef },
+                { label: "Contacts", icon: User, ref: contactsRef },
+                { label: "Utilities", icon: Wrench, ref: utilityRef },
+              ].map(({ label, icon: Icon, ref }) => (
+                <button
+                  key={label}
+                  onClick={() => scrollTo(ref)}
+                  title={label}
+                  className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg hover:bg-white/15 transition-colors group"
+                >
+                  <Icon className="w-4 h-4 text-white/80 group-hover:text-white" />
+                  <span className="text-[10px] text-white/70 group-hover:text-white font-medium">{label}</span>
+                </button>
+              ))}
+            </div>
           </div>
-
-
         </div>
       </div>
 
@@ -310,6 +339,7 @@ export default function Home() {
         </div>
 
         {/* Portfolios section */}
+        <div ref={portfoliosRef} />
         <PortfoliosSection
           portfolios={portfolios.filter(p => !p.deleted_at)}
           onPortfolioClick={(portfolio) => { setEditingPortfolio(portfolio); setPreselectedAllocatorId(null); setPortfolioDialogOpen(true); }}
@@ -317,6 +347,7 @@ export default function Home() {
         />
 
         {/* Firms section */}
+        <div ref={firmsRef} />
         {isLoading ? (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
@@ -344,6 +375,7 @@ export default function Home() {
         )}
 
         {/* Products section */}
+        <div ref={productsRef} />
         <ProductsSection
           products={activeProducts}
           firms={activeFirms}
@@ -352,6 +384,7 @@ export default function Home() {
         />
 
         {/* Contacts section */}
+        <div ref={contactsRef} />
         <ContactsSection
           contacts={activeContacts}
           firms={activeFirms}
@@ -360,6 +393,7 @@ export default function Home() {
         />
 
         {/* Utility section */}
+        <div ref={utilityRef} />
         <UtilitySection deletedCount={deletedCount} />
 
         <div className="h-12" />
