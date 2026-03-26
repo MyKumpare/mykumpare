@@ -22,6 +22,7 @@ import { X, Pencil } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import BenchmarkReturnsTab from "./BenchmarkReturnsTab";
+import { usePersistedOptions } from "@/hooks/usePersistedOptions";
 
 const ASSET_CLASSES = [
   "Equity",
@@ -73,9 +74,9 @@ export default function AddBenchmarkDialog({
   const [showNewRegion, setShowNewRegion] = useState(false);
   const [showNewMarketCap, setShowNewMarketCap] = useState(false);
   const [showNewStyle, setShowNewStyle] = useState(false);
-  const [customRegions, setCustomRegions] = useState([]);
-  const [customMarketCaps, setCustomMarketCaps] = useState([]);
-  const [customStyles, setCustomStyles] = useState([]);
+  const [customRegions, addCustomRegion] = usePersistedOptions("benchmark_region");
+  const [customMarketCaps, addCustomMarketCap] = usePersistedOptions("benchmark_market_cap");
+  const [customStyles, addCustomStyle] = usePersistedOptions("benchmark_style");
   const [monthlyReturns, setMonthlyReturns] = useState([]);
 
   const allRegions = [...new Set([...EQUITY_REGIONS, ...customRegions])];
@@ -106,13 +107,13 @@ export default function AddBenchmarkDialog({
       setMode("view");
       populateFromBenchmark(editingBenchmark);
       if (editingBenchmark.region && !EQUITY_REGIONS.includes(editingBenchmark.region)) {
-        setCustomRegions([editingBenchmark.region]);
+        addCustomRegion(editingBenchmark.region);
       }
       if (editingBenchmark.market_capitalization && !EQUITY_MARKET_CAPS.includes(editingBenchmark.market_capitalization)) {
-        setCustomMarketCaps([editingBenchmark.market_capitalization]);
+        addCustomMarketCap(editingBenchmark.market_capitalization);
       }
       if (editingBenchmark.style && !EQUITY_STYLES.includes(editingBenchmark.style)) {
-        setCustomStyles([editingBenchmark.style]);
+        addCustomStyle(editingBenchmark.style);
       }
     } else {
       setMode("add");
@@ -313,7 +314,7 @@ export default function AddBenchmarkDialog({
                           onClick={() => {
                             const trimmed = newRegion.trim();
                             setRegion(trimmed);
-                            if (!customRegions.includes(trimmed)) setCustomRegions([...customRegions, trimmed]);
+                            addCustomRegion(trimmed);
                             setShowNewRegion(false); setNewRegion("");
                           }}>✓</Button>
                         <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => { setShowNewRegion(false); setNewRegion(""); }}><X className="w-4 h-4" /></Button>
@@ -347,7 +348,7 @@ export default function AddBenchmarkDialog({
                           onClick={() => {
                             const trimmed = newMarketCap.trim();
                             setMarketCap(trimmed);
-                            if (!customMarketCaps.includes(trimmed)) setCustomMarketCaps([...customMarketCaps, trimmed]);
+                            addCustomMarketCap(trimmed);
                             setShowNewMarketCap(false); setNewMarketCap("");
                           }}>✓</Button>
                         <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => { setShowNewMarketCap(false); setNewMarketCap(""); }}><X className="w-4 h-4" /></Button>
@@ -381,7 +382,7 @@ export default function AddBenchmarkDialog({
                           onClick={() => {
                             const trimmed = newStyle.trim();
                             setStyle(trimmed);
-                            if (!customStyles.includes(trimmed)) setCustomStyles([...customStyles, trimmed]);
+                            addCustomStyle(trimmed);
                             setShowNewStyle(false); setNewStyle("");
                           }}>✓</Button>
                         <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => { setShowNewStyle(false); setNewStyle(""); }}><X className="w-4 h-4" /></Button>

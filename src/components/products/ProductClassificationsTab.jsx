@@ -80,7 +80,7 @@ export default function ProductClassificationsTab({ classifications, onChange, i
         <>
           <FieldRow label="Geography">
             {isEditing ? (
-              <CreatableSelect value={classifications?.geography || ""} onChange={(v) => set("geography", v)} options={GEOGRAPHIES} placeholder="Select geography..." />
+              <CreatableSelect value={classifications?.geography || ""} onChange={(v) => set("geography", v)} options={GEOGRAPHIES} placeholder="Select geography..." storageKey="product_geography" />
             ) : (
               <ReadOnlyValue value={classifications?.geography} />
             )}
@@ -88,7 +88,7 @@ export default function ProductClassificationsTab({ classifications, onChange, i
 
           <FieldRow label="Market Capitalization">
             {isEditing ? (
-              <CreatableSelect value={classifications?.market_cap || ""} onChange={(v) => set("market_cap", v)} options={MARKET_CAPS} placeholder="Select market cap..." />
+              <CreatableSelect value={classifications?.market_cap || ""} onChange={(v) => set("market_cap", v)} options={MARKET_CAPS} placeholder="Select market cap..." storageKey="product_market_cap" />
             ) : (
               <ReadOnlyValue value={classifications?.market_cap} />
             )}
@@ -96,7 +96,7 @@ export default function ProductClassificationsTab({ classifications, onChange, i
 
           <FieldRow label="Style">
             {isEditing ? (
-              <CreatableSelect value={classifications?.style || ""} onChange={(v) => set("style", v)} options={STYLES} placeholder="Select style..." />
+              <CreatableSelect value={classifications?.style || ""} onChange={(v) => set("style", v)} options={STYLES} placeholder="Select style..." storageKey="product_style" />
             ) : (
               <ReadOnlyValue value={classifications?.style} />
             )}

@@ -1,14 +1,15 @@
 import React, { useState, useRef, useEffect } from "react";
 import { ChevronDown, Plus, X, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { usePersistedOptions } from "@/hooks/usePersistedOptions";
 
 /**
  * A single-select dropdown that also allows the user to type and add a custom option.
  */
-export function CreatableSelect({ value, onChange, options, placeholder = "Select...", disabled = false, className }) {
+export function CreatableSelect({ value, onChange, options, placeholder = "Select...", disabled = false, className, storageKey }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [customOptions, setCustomOptions] = useState([]);
+  const [customOptions, addCustomOption] = usePersistedOptions(storageKey || placeholder);
   const ref = useRef(null);
 
   useEffect(() => {
@@ -24,7 +25,7 @@ export function CreatableSelect({ value, onChange, options, placeholder = "Selec
   const select = (opt) => { onChange(opt); setSearch(""); setOpen(false); };
   const addAndSelect = () => {
     const v = search.trim();
-    setCustomOptions((p) => [...p, v]);
+    addCustomOption(v);
     select(v);
   };
 
@@ -93,10 +94,10 @@ export function CreatableSelect({ value, onChange, options, placeholder = "Selec
 /**
  * A multi-select dropdown with creatable options.
  */
-export function CreatableMultiSelect({ value = [], onChange, options, placeholder = "Select...", disabled = false, className }) {
+export function CreatableMultiSelect({ value = [], onChange, options, placeholder = "Select...", disabled = false, className, storageKey }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [customOptions, setCustomOptions] = useState([]);
+  const [customOptions, addCustomOption] = usePersistedOptions(storageKey || placeholder);
   const ref = useRef(null);
 
   useEffect(() => {
@@ -114,7 +115,7 @@ export function CreatableMultiSelect({ value = [], onChange, options, placeholde
   };
   const addAndToggle = () => {
     const v = search.trim();
-    setCustomOptions((p) => [...p, v]);
+    addCustomOption(v);
     onChange([...value, v]);
     setSearch("");
   };
