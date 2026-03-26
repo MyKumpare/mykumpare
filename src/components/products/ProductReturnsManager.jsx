@@ -13,7 +13,7 @@ function formatReturn(val) {
   return Number(val).toFixed(4);
 }
 
-function parseCSVText(text) {
+function parseCSVText(text, expectNetReturn = false) {
   const lines = text.trim().split(/\r?\n/);
   const results = [];
   const errors = [];
@@ -32,6 +32,7 @@ function parseCSVText(text) {
 
     const dateRaw = parts[0].trim();
     const returnRaw = parts[1].trim();
+    const netReturnRaw = parts[2]?.trim();
 
     let dateStr = null;
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateRaw)) {
@@ -50,7 +51,15 @@ function parseCSVText(text) {
       continue;
     }
 
-    results.push({ date: dateStr, return_value: returnVal });
+    const entry = { date: dateStr, return_value: returnVal };
+    if (expectNetReturn && netReturnRaw) {
+      const netVal = parseFloat(netReturnRaw);
+      if (!isNaN(netVal)) {
+        entry.net_return = netVal;
+      }
+    }
+
+    results.push(entry);
   }
 
   return { results, errors };
@@ -85,7 +94,7 @@ function downloadTemplate(startDate, endDate, existingReturns = []) {
   URL.revokeObjectURL(url);
 }
 
-export default function ProductReturnsManager({ returns = [], onChange, isEditing, inceptionDate = null, seriesName = "" }) {
+export default function ProductReturnsManager({ returns = [], onChange, isEditing, inceptionDate = null, seriesName = "", showNetReturn = false }) {
   const [newDate, setNewDate] = useState(null);
   const [newReturn, setNewReturn] = useState("");
   const [calOpen, setCalOpen] = useState(false);
@@ -144,11 +153,22 @@ export default function ProductReturnsManager({ returns = [], onChange, isEditin
       .filter(r => r.date >= startStr && r.date <= endStr)
       .sort((a, b) => a.date < b.date ? -1 : 1);
 
-    const header = downloadFormat === "percentage" ? "Date,Return (%)" : "Date,Return (decimal)";
+    let headerParts = ["Date", downloadFormat === "percentage" ? "Gross Return (%)" : "Gross Return (decimal)"];
+    if (showNetReturn) {
+      headerParts.push(downloadFormat === "percentage" ? "Net Return (%)" : "Net Return (decimal)");
+    }
+    const header = headerParts.join(",");
+
     const rows = filtered.map(r => {
-      const val = downloadFormat === "percentage" ? r.return_value : (r.return_value / 100);
-      return `${r.date},${val.toFixed(6)}`;
+      const grossVal = downloadFormat === "percentage" ? r.return_value : (r.return_value / 100);
+      let row = `${r.date},${grossVal.toFixed(6)}`;
+      if (showNetReturn) {
+        const netVal = r.net_return !== undefined ? (downloadFormat === "percentage" ? r.net_return : (r.net_return / 100)) : "";
+        row += `,${netVal ? netVal.toFixed(6) : ""}`;
+      }
+      return row;
     });
+
     const nameComment = seriesName ? `# ${seriesName}\n` : "";
     const csv = nameComment + [header, ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -179,6 +199,8 @@ export default function ProductReturnsManager({ returns = [], onChange, isEditin
 
   const sorted = [...returns].sort((a, b) => a.date < b.date ? 1 : -1);
 
+  const [newNetReturn, setNewNetReturn] = useState("");
+
   const handleAdd = () => {
     if (!newDate || newReturn === "") return;
     const dateStr = format(newDate, "yyyy-MM-dd");
@@ -191,17 +213,31 @@ export default function ProductReturnsManager({ returns = [], onChange, isEditin
       return;
     }
     setDuplicateWarning(null);
-    onChange([...returns, { date: dateStr, return_value: parseFloat(newReturn) }]);
+    const newEntry = { date: dateStr, return_value: parseFloat(newReturn) };
+    if (showNetReturn && newNetReturn !== "") {
+      newEntry.net_return = parseFloat(newNetReturn);
+    }
+    onChange([...returns, newEntry]);
     setNewDate(null);
     setNewReturn("");
+    setNewNetReturn("");
   };
 
   const handleDelete = (date) => {
     onChange(returns.filter(r => r.date !== date));
   };
 
-  const handleReturnEdit = (date, val) => {
-    onChange(returns.map(r => r.date === date ? { ...r, return_value: parseFloat(val) } : r));
+  const handleReturnEdit = (date, val, isNetReturn = false) => {
+    onChange(returns.map(r => {
+      if (r.date === date) {
+        if (isNetReturn) {
+          return { ...r, net_return: val ? parseFloat(val) : undefined };
+        } else {
+          return { ...r, return_value: parseFloat(val) };
+        }
+      }
+      return r;
+    }));
   };
 
   const applyImport = (allowed, acceptedDates) => {
@@ -219,7 +255,7 @@ export default function ProductReturnsManager({ returns = [], onChange, isEditin
   };
 
   const handleImportCSV = (text) => {
-    const { results, errors } = parseCSVText(text);
+    const { results, errors } = parseCSVText(text, showNetReturn);
 
     const blocked = [];
     const allowed = [];
@@ -660,7 +696,7 @@ export default function ProductReturnsManager({ returns = [], onChange, isEditin
           </div>
 
           <div className="flex flex-col gap-1">
-            <Label className="text-xs font-medium text-gray-600">Return (%)</Label>
+            <Label className="text-xs font-medium text-gray-600">Gross Return (%)</Label>
             <Input
               type="number"
               step="0.0001"
@@ -670,6 +706,20 @@ export default function ProductReturnsManager({ returns = [], onChange, isEditin
               className="h-9 w-36 text-sm"
             />
           </div>
+
+          {showNetReturn && (
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs font-medium text-gray-600">Net Return (%)</Label>
+              <Input
+                type="number"
+                step="0.0001"
+                placeholder="e.g. 1.0500"
+                value={newNetReturn}
+                onChange={(e) => setNewNetReturn(e.target.value)}
+                className="h-9 w-36 text-sm"
+              />
+            </div>
+          )}
 
           <Button
             type="button"
@@ -703,6 +753,7 @@ export default function ProductReturnsManager({ returns = [], onChange, isEditin
               <tr>
                 <th className="text-left px-4 py-2.5 font-medium text-gray-600 text-xs uppercase tracking-wide">Date</th>
                 <th className="text-right px-4 py-2.5 font-medium text-gray-600 text-xs uppercase tracking-wide">Gross Return (%)</th>
+                {showNetReturn && <th className="text-right px-4 py-2.5 font-medium text-gray-600 text-xs uppercase tracking-wide">Net Return (%)</th>}
                 {isEditing && <th className="w-10" />}
               </tr>
             </thead>
@@ -718,7 +769,7 @@ export default function ProductReturnsManager({ returns = [], onChange, isEditin
                         type="number"
                         step="0.0001"
                         defaultValue={formatReturn(r.return_value)}
-                        onBlur={(e) => handleReturnEdit(r.date, e.target.value)}
+                        onBlur={(e) => handleReturnEdit(r.date, e.target.value, false)}
                         className="w-28 text-right border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400"
                       />
                     ) : (
@@ -727,6 +778,23 @@ export default function ProductReturnsManager({ returns = [], onChange, isEditin
                       </span>
                     )}
                   </td>
+                  {showNetReturn && (
+                    <td className="px-4 py-2.5 text-right">
+                      {isEditing ? (
+                        <input
+                          type="number"
+                          step="0.0001"
+                          defaultValue={r.net_return !== undefined ? formatReturn(r.net_return) : ""}
+                          onBlur={(e) => handleReturnEdit(r.date, e.target.value, true)}
+                          className="w-28 text-right border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                        />
+                      ) : (
+                        <span className={`font-mono ${r.net_return >= 0 ? "text-green-700" : "text-red-600"}`}>
+                          {r.net_return !== undefined ? `${r.net_return >= 0 ? "+" : ""}${formatReturn(r.net_return)}%` : "—"}
+                        </span>
+                      )}
+                    </td>
+                  )}
                   {isEditing && (
                     <td className="px-2 py-2.5 text-right">
                       <button
