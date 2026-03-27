@@ -42,20 +42,11 @@
     },
     "gips_status": {
       "type": "string",
-      "enum": [
-        "GIPS Calculated",
-        "GIPS Verified",
-        "Non-GIPS Compliant"
-      ],
       "description": "GIPS compliance status (only applicable for Composite type)"
     },
     "return_frequency": {
       "type": "string",
-      "enum": [
-        "Gross",
-        "Net"
-      ],
-      "description": "Whether returns are gross or net of fees"
+      "description": "Whether returns are gross, net, or both"
     },
     "monthly_returns": {
       "type": "array",
@@ -70,7 +61,11 @@
           },
           "return_value": {
             "type": "number",
-            "description": "Monthly return as a percentage (e.g., 1.5 for 1.5%)"
+            "description": "Monthly gross return as a percentage (e.g., 1.5 for 1.5%)"
+          },
+          "net_return": {
+            "type": "number",
+            "description": "Monthly net return as a percentage (e.g., 1.2 for 1.2%)"
           }
         },
         "required": [
