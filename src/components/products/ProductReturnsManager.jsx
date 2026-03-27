@@ -345,7 +345,7 @@ export default function ProductReturnsManager({ returns = [], onChange, isEditin
       {/* Toolbar */}
       <div className="rounded-lg border bg-gray-50 p-3 space-y-2.5">
         <p className="text-xs text-gray-500">Monthly gross returns stored as a percentage (e.g. 1.5000 = 1.5%).</p>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="grid grid-cols-3 gap-2">
           {returns.length > 0 && (
             <Button
               type="button"
@@ -402,7 +402,7 @@ export default function ProductReturnsManager({ returns = [], onChange, isEditin
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="gap-1.5 text-xs h-8 bg-white text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600 ml-auto"
+                  className="gap-1.5 text-xs h-8 bg-white text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600"
                   onClick={() => setConfirmDeleteAll(true)}
                 >
                   <Trash className="w-3.5 h-3.5" />
@@ -410,7 +410,7 @@ export default function ProductReturnsManager({ returns = [], onChange, isEditin
                 </Button>
               )}
               {confirmDeleteAll && (
-                <div className="ml-auto flex items-center gap-2">
+                <div className="col-span-3 flex items-center gap-2">
                   <span className="text-xs text-red-600 font-medium">Delete all {returns.length} records?</span>
                   <Button
                     type="button"
