@@ -76,13 +76,18 @@ function generateTemplateMonths(startDate, endDate) {
   return months;
 }
 
-function downloadTemplate(startDate, endDate, existingReturns = []) {
-  const existingMap = Object.fromEntries(existingReturns.map(r => [r.date, r.return_value]));
+function downloadTemplate(startDate, endDate, existingReturns = [], includeNetReturn = false) {
+  const existingMap = Object.fromEntries(existingReturns.map(r => [r.date, r]));
   const months = generateTemplateMonths(startDate, endDate);
-  const header = "Date,Return (%)";
+  const header = includeNetReturn ? "Date,Gross Return (%),Net Return (%)" : "Date,Gross Return (%)";
   const rows = months.map(dateStr => {
-    const val = existingMap[dateStr];
-    return val !== undefined ? `${dateStr},${val}` : `${dateStr},`;
+    const entry = existingMap[dateStr];
+    const gross = entry ? entry.return_value : "";
+    if (includeNetReturn) {
+      const net = entry?.net_return !== undefined ? entry.net_return : "";
+      return `${dateStr},${gross},${net}`;
+    }
+    return `${dateStr},${gross}`;
   });
   const csv = [header, ...rows].join("\n");
   const blob = new Blob([csv], { type: "text/csv" });
@@ -593,7 +598,7 @@ export default function ProductReturnsManager({ returns = [], onChange, isEditin
                 size="sm"
                 className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 text-xs h-8"
                 disabled={isInvalid || months.length === 0}
-                onClick={() => { downloadTemplate(effectiveTemplateStart, effectiveTemplateEnd, returns); setShowTemplateOptions(false); }}
+                onClick={() => { downloadTemplate(effectiveTemplateStart, effectiveTemplateEnd, returns, showNetReturn); setShowTemplateOptions(false); }}
               >
                 <Download className="w-3.5 h-3.5" />
                 Download
