@@ -643,10 +643,10 @@ export default function ProductReturnsManager({ returns = [], onChange, isEditin
       {/* Paste area */}
       {isEditing && showPaste && (
         <div className="space-y-2 p-3 bg-gray-50 border rounded-lg">
-          <Label className="text-xs font-medium text-gray-600">Paste CSV data (Date, Return %)</Label>
+          <Label className="text-xs font-medium text-gray-600">Paste CSV data (Date, Gross Return %, Net Return %)</Label>
           <textarea
             className="w-full h-32 text-sm border rounded px-3 py-2 font-mono focus:outline-none focus:ring-1 focus:ring-indigo-400 resize-none"
-            placeholder={"Date,Return (%)\n2024-12-31,1.2500\n2024-11-30,-0.4800"}
+            placeholder={"Date,Gross Return (%),Net Return (%)\n12/31/2024,1.2500,1.0500\n11/30/2024,-0.4800,-0.6200"}
             value={pasteText}
             onChange={(e) => setPasteText(e.target.value)}
           />
