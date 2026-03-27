@@ -13,16 +13,31 @@ function formatReturn(val) {
   return Number(val).toFixed(4);
 }
 
-function parseCSVText(text, expectNetReturn = false) {
+function parseCSVText(text) {
   const lines = text.trim().split(/\r?\n/);
   const results = [];
   const errors = [];
 
-  for (let i = 0; i < lines.length; i++) {
+  // Detect header row
+  let dataStartIdx = 0;
+  let netColIdx = -1;
+  let grossColIdx = 1;
+  let dateColIdx = 0;
+
+  const firstLine = lines[0]?.trim() || "";
+  if (/date/i.test(firstLine)) {
+    dataStartIdx = 1;
+    const headers = firstLine.split(",").map(h => h.trim().toLowerCase());
+    dateColIdx = headers.findIndex(h => /date/i.test(h));
+    grossColIdx = headers.findIndex(h => /gross/i.test(h));
+    netColIdx = headers.findIndex(h => /net/i.test(h));
+    // fallback: if no gross header found, assume col 1
+    if (grossColIdx === -1) grossColIdx = 1;
+  }
+
+  for (let i = dataStartIdx; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
-
-    if (i === 0 && /date/i.test(line)) continue;
 
     const parts = line.split(",");
     if (parts.length < 2) {
@@ -30,9 +45,11 @@ function parseCSVText(text, expectNetReturn = false) {
       continue;
     }
 
-    const dateRaw = parts[0].trim();
-    const returnRaw = parts[1].trim();
-    const netReturnRaw = parts[2]?.trim();
+    const dateRaw = parts[dateColIdx]?.trim();
+    const returnRaw = grossColIdx >= 0 ? parts[grossColIdx]?.trim() : "";
+    const netReturnRaw = netColIdx >= 0 ? parts[netColIdx]?.trim() : "";
+
+    if (!dateRaw) continue;
 
     let dateStr = null;
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateRaw)) {
@@ -52,7 +69,7 @@ function parseCSVText(text, expectNetReturn = false) {
     }
 
     const entry = { date: dateStr, return_value: returnVal };
-    if (expectNetReturn && netReturnRaw) {
+    if (netReturnRaw) {
       const netVal = parseFloat(netReturnRaw);
       if (!isNaN(netVal)) {
         entry.net_return = netVal;
@@ -264,7 +281,7 @@ export default function ProductReturnsManager({ returns = [], onChange, isEditin
   };
 
   const handleImportCSV = (text) => {
-    const { results, errors } = parseCSVText(text, showNetReturn);
+    const { results, errors } = parseCSVText(text);
 
     const blocked = [];
     const allowed = [];
