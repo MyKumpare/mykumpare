@@ -117,6 +117,7 @@ function downloadTemplate(startDate, endDate, existingReturns = [], includeNetRe
 }
 
 export default function ProductReturnsManager({ returns = [], onChange, isEditing, inceptionDate = null, seriesName = "", showNetReturn = false }) {
+  const [importKey, setImportKey] = useState(0);
   const [newDate, setNewDate] = useState(null);
   const [newReturn, setNewReturn] = useState("");
   const [calOpen, setCalOpen] = useState(false);
@@ -278,6 +279,7 @@ export default function ProductReturnsManager({ returns = [], onChange, isEditin
     setPasteText("");
     setShowPaste(false);
     setConflictState(null);
+    setImportKey(k => k + 1); // force table re-render to show updated values
   };
 
   const handleImportCSV = (text) => {
@@ -783,7 +785,7 @@ export default function ProductReturnsManager({ returns = [], onChange, isEditin
             </thead>
             <tbody className="divide-y divide-gray-100">
               {sorted.map((r) => (
-                <tr key={r.date} className="hover:bg-gray-50">
+                <tr key={`${r.date}-${importKey}`} className="hover:bg-gray-50">
                   <td className="px-4 py-2.5 text-gray-800 font-medium">
                     {format(parseISO(r.date), "MM/dd/yyyy")}
                   </td>
