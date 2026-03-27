@@ -13,10 +13,14 @@ function formatReturn(val) {
   return Number(val).toFixed(4);
 }
 
-function parseCSVText(text) {
+function parseExcelText(text) {
   const lines = text.trim().split(/\r?\n/);
   const results = [];
   const errors = [];
+
+  // Detect separator: tab (Excel paste) or comma (CSV)
+  const firstLine = lines[0]?.trim() || "";
+  const sep = firstLine.includes("\t") ? "\t" : ",";
 
   // Detect header row
   let dataStartIdx = 0;
@@ -24,14 +28,12 @@ function parseCSVText(text) {
   let grossColIdx = 1;
   let dateColIdx = 0;
 
-  const firstLine = lines[0]?.trim() || "";
   if (/date/i.test(firstLine)) {
     dataStartIdx = 1;
-    const headers = firstLine.split(",").map(h => h.trim().toLowerCase());
+    const headers = firstLine.split(sep).map(h => h.trim().toLowerCase());
     dateColIdx = headers.findIndex(h => /date/i.test(h));
     grossColIdx = headers.findIndex(h => /gross/i.test(h));
     netColIdx = headers.findIndex(h => /net/i.test(h));
-    // fallback: if no gross header found, assume col 1
     if (grossColIdx === -1) grossColIdx = 1;
   }
 
@@ -39,7 +41,7 @@ function parseCSVText(text) {
     const line = lines[i].trim();
     if (!line) continue;
 
-    const parts = line.split(",");
+    const parts = line.split(sep);
     if (parts.length < 2) {
       errors.push(`Row ${i + 1}: invalid format`);
       continue;
@@ -283,7 +285,7 @@ export default function ProductReturnsManager({ returns = [], onChange, isEditin
   };
 
   const handleImportCSV = (text) => {
-    const { results, errors } = parseCSVText(text);
+    const { results, errors } = parseExcelText(text);
 
     const blocked = [];
     const allowed = [];
@@ -386,7 +388,7 @@ export default function ProductReturnsManager({ returns = [], onChange, isEditin
                 onClick={() => setShowPaste(!showPaste)}
               >
                 <ClipboardPaste className="w-3.5 h-3.5" />
-                Paste CSV
+                Paste Excel
               </Button>
               <input
                 ref={fileInputRef}
@@ -643,10 +645,10 @@ export default function ProductReturnsManager({ returns = [], onChange, isEditin
       {/* Paste area */}
       {isEditing && showPaste && (
         <div className="space-y-2 p-3 bg-gray-50 border rounded-lg">
-          <Label className="text-xs font-medium text-gray-600">Paste CSV data (Date, Gross Return %, Net Return %)</Label>
+          <Label className="text-xs font-medium text-gray-600">Paste Excel data (Col 1: Date mm/dd/yyyy, Col 2: Gross Return %, Col 3: Net Return %)</Label>
           <textarea
             className="w-full h-32 text-sm border rounded px-3 py-2 font-mono focus:outline-none focus:ring-1 focus:ring-indigo-400 resize-none"
-            placeholder={"Date,Gross Return (%),Net Return (%)\n12/31/2024,1.2500,1.0500\n11/30/2024,-0.4800,-0.6200"}
+            placeholder={"Date\tGross Return (%)\tNet Return (%)\n12/31/2024\t1.2500\t1.0500\n11/30/2024\t-0.4800\t-0.6200"}
             value={pasteText}
             onChange={(e) => setPasteText(e.target.value)}
           />
