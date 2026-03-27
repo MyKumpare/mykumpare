@@ -18,6 +18,10 @@ function parseCSVText(text) {
   const results = [];
   const errors = [];
 
+  // Detect separator: tab (Excel paste) or comma (CSV)
+  const firstLine = lines[0]?.trim() || "";
+  const sep = firstLine.includes("\t") ? "\t" : ",";
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
@@ -25,7 +29,7 @@ function parseCSVText(text) {
     // Skip header row if present
     if (i === 0 && /date/i.test(line)) continue;
 
-    const parts = line.split(",");
+    const parts = line.split(sep);
     if (parts.length < 2) {
       errors.push(`Row ${i + 1}: invalid format`);
       continue;
@@ -335,7 +339,7 @@ export default function BenchmarkReturnsTab({ returns = [], onChange, isEditing,
                 onClick={() => setShowPaste(!showPaste)}
               >
                 <ClipboardPaste className="w-3.5 h-3.5" />
-                Paste CSV
+                Paste Excel
               </Button>
               <input
                 ref={fileInputRef}
@@ -595,10 +599,10 @@ export default function BenchmarkReturnsTab({ returns = [], onChange, isEditing,
       {/* Paste area */}
       {isEditing && showPaste && (
         <div className="space-y-2 p-3 bg-gray-50 border rounded-lg">
-          <Label className="text-xs font-medium text-gray-600">Paste CSV data (Date, Return %)</Label>
+          <Label className="text-xs font-medium text-gray-600">Paste Excel data (Col 1: Date mm/dd/yyyy, Col 2: Gross Return %)</Label>
           <textarea
             className="w-full h-32 text-sm border rounded px-3 py-2 font-mono focus:outline-none focus:ring-1 focus:ring-indigo-400 resize-none"
-            placeholder={"Date,Return (%)\n2024-12-31,1.2500\n2024-11-30,-0.4800"}
+            placeholder={"Date\tGross Return (%)\n12/31/2024\t1.2500\n11/30/2024\t-0.4800"}
             value={pasteText}
             onChange={(e) => setPasteText(e.target.value)}
           />
