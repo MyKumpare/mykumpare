@@ -168,8 +168,9 @@ export default function ProductReturnsManager({ returns = [], onChange, isEditin
       const grossVal = downloadFormat === "percentage" ? r.return_value : (r.return_value / 100);
       let row = `${r.date},${grossVal.toFixed(6)}`;
       if (showNetReturn) {
-        const netVal = r.net_return !== undefined ? (downloadFormat === "percentage" ? r.net_return : (r.net_return / 100)) : "";
-        row += `,${netVal ? netVal.toFixed(6) : ""}`;
+        const netRaw = r.net_return !== undefined && r.net_return !== null ? r.net_return : null;
+        const netVal = netRaw !== null ? (downloadFormat === "percentage" ? netRaw : (netRaw / 100)) : null;
+        row += `,${netVal !== null ? netVal.toFixed(6) : ""}`;
       }
       return row;
     });
