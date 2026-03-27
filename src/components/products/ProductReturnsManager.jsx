@@ -158,8 +158,11 @@ export default function ProductReturnsManager({ returns = [], onChange, isEditin
       .filter(r => r.date >= startStr && r.date <= endStr)
       .sort((a, b) => a.date < b.date ? -1 : 1);
 
+    // Include net return column if prop says so OR if any row actually has net_return data
+    const hasNetData = showNetReturn || filtered.some(r => r.net_return !== undefined && r.net_return !== null);
+
     let headerParts = ["Date", downloadFormat === "percentage" ? "Gross Return (%)" : "Gross Return (decimal)"];
-    if (showNetReturn) {
+    if (hasNetData) {
       headerParts.push(downloadFormat === "percentage" ? "Net Return (%)" : "Net Return (decimal)");
     }
     const header = headerParts.join(",");
@@ -167,7 +170,7 @@ export default function ProductReturnsManager({ returns = [], onChange, isEditin
     const rows = filtered.map(r => {
       const grossVal = downloadFormat === "percentage" ? r.return_value : (r.return_value / 100);
       let row = `${r.date},${grossVal.toFixed(6)}`;
-      if (showNetReturn) {
+      if (hasNetData) {
         const netRaw = r.net_return !== undefined && r.net_return !== null ? r.net_return : null;
         const netVal = netRaw !== null ? (downloadFormat === "percentage" ? netRaw : (netRaw / 100)) : null;
         row += `,${netVal !== null ? netVal.toFixed(6) : ""}`;
