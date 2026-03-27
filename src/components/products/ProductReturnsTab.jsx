@@ -867,8 +867,12 @@ export default function ProductReturnsTab({ productId, productName, isEditing })
           updateReturnSeriesMutation.mutate(
             { id: updatedSeries.id, data: updatedSeries },
             {
-              onSuccess: () => {
-                setViewingReturnSeries(updatedSeries);
+              onSuccess: async () => {
+                await queryClient.invalidateQueries({ queryKey: ["returnSeries", productId] });
+                const refreshed = await base44.entities.ReturnSeries.filter({ product_id: productId });
+                const latest = refreshed.find(s => s.id === updatedSeries.id);
+                if (latest) setViewingReturnSeries(latest);
+                else setViewingReturnSeries(updatedSeries);
               },
             }
           );
