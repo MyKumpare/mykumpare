@@ -21,6 +21,7 @@ export default function ReturnSeriesDetailDialog({
   onOpenChange,
   series,
   onEdit,
+  onSaveReturns,
   onDelete,
   onAddReturn,
   productName,
@@ -120,10 +121,9 @@ export default function ReturnSeriesDetailDialog({
                <ProductReturnsManager
                  returns={series.monthly_returns || []}
                  onChange={(updatedReturns) => {
-                   onEdit({
-                     ...series,
-                     monthly_returns: updatedReturns,
-                   });
+                   if (onSaveReturns) {
+                     onSaveReturns({ ...series, monthly_returns: updatedReturns });
+                   }
                  }}
                  isEditing={true}
                  inceptionDate={series.inception_date}

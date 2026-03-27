@@ -854,6 +854,16 @@ export default function ProductReturnsTab({ productId, productName, isEditing })
         series={viewingReturnSeries}
         productName={productName}
         onEdit={handleEditReturnSeries}
+        onSaveReturns={(updatedSeries) => {
+          updateReturnSeriesMutation.mutate(
+            { id: updatedSeries.id, data: updatedSeries },
+            {
+              onSuccess: () => {
+                setViewingReturnSeries(updatedSeries);
+              },
+            }
+          );
+        }}
         onDelete={(id) => {
           deleteReturnSeriesMutation.mutate(id);
           setViewingReturnSeries(null);
