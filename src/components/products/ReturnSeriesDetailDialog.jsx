@@ -128,7 +128,7 @@ export default function ReturnSeriesDetailDialog({
                  isEditing={true}
                  inceptionDate={series.inception_date}
                  seriesName={getSeriesName()}
-                 showNetReturn={series.return_frequency === "Gross and Net" || (Array.isArray(series.return_frequency) && series.return_frequency.includes("Net"))}
+                 showNetReturn={typeof series.return_frequency === "string" && series.return_frequency.includes("Net")}
                />
              </TabsContent>
           </Tabs>

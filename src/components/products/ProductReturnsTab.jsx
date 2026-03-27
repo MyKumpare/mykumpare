@@ -768,11 +768,20 @@ export default function ProductReturnsTab({ productId, productName, isEditing })
               </TabsContent>
 
               <TabsContent value="paste" className="mt-3 space-y-2">
-                <p className="text-xs text-gray-500">
-                  Paste two columns: <strong>Date (MM/DD/YYYY)</strong> and <strong>Return</strong> (e.g. 2.00 = 2%). One row per month, comma or tab separated.
-                </p>
-                <Textarea
-                  placeholder={"01/31/2023, 1.25\n02/28/2023, -0.50\n03/31/2023, 2.10"}
+               <p className="text-xs text-gray-500">
+                 Paste columns: <strong>Date (MM/DD/YYYY)</strong>
+                 {returnFrequency.includes("Gross") && <>, <strong>Gross Return</strong></>}
+                 {returnFrequency.includes("Net") && <>, <strong>Net Return</strong></>}
+                 {" "}(e.g. 2.00 = 2%). One row per month, comma separated.
+               </p>
+               <Textarea
+                 placeholder={
+                   returnFrequency.includes("Gross") && returnFrequency.includes("Net")
+                     ? "Date (MM/DD/YYYY),Gross Return (%),Net Return (%)\n01/31/2023,1.25,1.10\n02/28/2023,-0.50,-0.60\n03/31/2023,2.10,1.90"
+                     : returnFrequency.includes("Net") && !returnFrequency.includes("Gross")
+                     ? "Date (MM/DD/YYYY),Net Return (%)\n01/31/2023,1.10\n02/28/2023,-0.60\n03/31/2023,1.90"
+                     : "Date (MM/DD/YYYY),Gross Return (%)\n01/31/2023,1.25\n02/28/2023,-0.50\n03/31/2023,2.10"
+                 }
                   value={pasteText}
                   onChange={(e) => { setPasteText(e.target.value); setUploadValidation(null); }}
                   className="min-h-32 font-mono text-xs"
