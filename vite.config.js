@@ -4,6 +4,9 @@ import { defineConfig } from 'vite'
 
 // https://vite.dev/config/
 export default defineConfig({
+  // When deploying to GitHub Pages the app lives under /<repo-name>/.
+  // Set VITE_BASE_PATH=/mykumpare/ in CI; leave unset for local dev (defaults to /).
+  base: process.env.VITE_BASE_PATH || '/',
   logLevel: 'error', // Suppress warnings, only show errors
   plugins: [
     base44({
