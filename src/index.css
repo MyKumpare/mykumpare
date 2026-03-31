@@ -2,6 +2,44 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Mobile / PWA global optimizations ─── */
+html {
+  scroll-behavior: smooth;
+  /* Prevent font scaling on orientation change in iOS */
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  /* Smooth font rendering */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Treat all taps as "fast" (no 300ms delay) */
+  touch-action: manipulation;
+  /* Prevent pull-to-refresh and over-scroll bounce on mobile */
+  overscroll-behavior-y: none;
+}
+
+/* Remove tap highlight flash on interactive elements (iOS/Android) */
+button,
+a,
+[role="button"],
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Utility: apply iOS safe-area bottom inset (used by bottom nav) */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Ensure dialogs/sheets scroll smoothly on mobile WebKit */
+[data-radix-dialog-content],
+[data-radix-sheet-content] {
+  -webkit-overflow-scrolling: touch;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

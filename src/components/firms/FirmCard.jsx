@@ -70,21 +70,21 @@ export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditP
           {showProducts && onAddProduct && (
             <button
               onClick={(e) => { e.stopPropagation(); onAddProduct(firm, productType); }}
-              className="flex items-center gap-1 px-2 h-7 rounded-lg bg-violet-50 hover:bg-violet-100 text-violet-600 transition-colors opacity-0 group-hover:opacity-100"
+              className="flex items-center gap-1 px-2 h-8 rounded-lg bg-violet-50 hover:bg-violet-100 text-violet-600 transition-colors sm:opacity-0 sm:group-hover:opacity-100"
               title={`Add ${productType}`}
             >
               <Plus className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="text-xs font-medium whitespace-nowrap">Add Product</span>
+              <span className="hidden sm:inline text-xs font-medium whitespace-nowrap">Add Product</span>
             </button>
           )}
           {isAllocator && onAddPortfolio && (
             <button
               onClick={(e) => { e.stopPropagation(); onAddPortfolio(firm); }}
-              className="flex items-center gap-1 px-2 h-7 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-600 transition-colors opacity-0 group-hover:opacity-100"
+              className="flex items-center gap-1 px-2 h-8 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-600 transition-colors sm:opacity-0 sm:group-hover:opacity-100"
               title="Add Portfolio"
             >
               <LayoutList className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="text-xs font-medium whitespace-nowrap">Add Portfolio</span>
+              <span className="hidden sm:inline text-xs font-medium whitespace-nowrap">Add Portfolio</span>
             </button>
           )}
         </div>

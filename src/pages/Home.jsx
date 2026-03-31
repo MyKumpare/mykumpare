@@ -273,6 +273,14 @@ export default function Home() {
   const totalPortfolios = portfolios.filter(p => !p.deleted_at).length;
   const hasResults = Object.keys(groupedFirms).length > 0;
 
+  const mobileNavItems = [
+    { label: "Portfolios", icon: BarChart3, ref: portfoliosRef, color: "text-emerald-600", activeBg: "bg-emerald-50" },
+    { label: "Firms", icon: Building, ref: firmsRef, color: "text-indigo-600", activeBg: "bg-indigo-50" },
+    { label: "Products", icon: Package, ref: productsRef, color: "text-violet-600", activeBg: "bg-violet-50" },
+    { label: "Contacts", icon: User, ref: contactsRef, color: "text-pink-600", activeBg: "bg-pink-50" },
+    { label: "Utilities", icon: Wrench, ref: utilityRef, color: "text-gray-600", activeBg: "bg-gray-100" },
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50/80">
       {/* Hero header */}
@@ -285,14 +293,9 @@ export default function Home() {
               </div>
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">MyKumpare</h1>
             </div>
-            <div className="grid grid-cols-3 gap-1">
-              {[
-                { label: "Portfolios", icon: BarChart3, ref: portfoliosRef },
-                { label: "Firms", icon: Building, ref: firmsRef },
-                { label: "Products", icon: Package, ref: productsRef },
-                { label: "Contacts", icon: User, ref: contactsRef },
-                { label: "Utilities", icon: Wrench, ref: utilityRef },
-              ].map(({ label, icon: Icon, ref }) => (
+            {/* Desktop-only section nav (bottom nav covers mobile) */}
+            <div className="hidden sm:grid grid-cols-3 gap-1">
+              {mobileNavItems.map(({ label, icon: Icon, ref }) => (
                 <button
                   key={label}
                   onClick={() => scrollTo(ref)}
@@ -309,7 +312,8 @@ export default function Home() {
       </div>
 
       {/* Main content — overlaps the header */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 -mt-8">
+      {/* pb-24 on mobile to clear the fixed bottom nav; sm:pb-0 on desktop */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 -mt-8 pb-24 sm:pb-0">
         {/* Search bar */}
         <div className="bg-white rounded-2xl shadow-lg shadow-gray-200/50 border border-gray-100 p-4 sm:p-5 mb-8">
           <div className="relative">
@@ -396,8 +400,27 @@ export default function Home() {
         <div ref={utilityRef} />
         <UtilitySection deletedCount={deletedCount} />
 
-        <div className="h-12" />
+        <div className="h-4" />
       </div>
+
+      {/* ── Mobile bottom navigation (hidden on sm+ screens) ── */}
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-white/95 backdrop-blur border-t border-gray-200 shadow-lg pb-safe"
+        style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}
+      >
+        <div className="grid grid-cols-5">
+          {mobileNavItems.map(({ label, icon: Icon, color, activeBg, ref }) => (
+            <button
+              key={label}
+              onClick={() => scrollTo(ref)}
+              className={`flex flex-col items-center gap-1 py-2.5 px-1 active:${activeBg} transition-colors`}
+            >
+              <Icon className={`w-5 h-5 ${color}`} />
+              <span className={`text-[10px] font-medium ${color}`}>{label}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
 
       <AddFirmDialog
         onProductClick={(product) => handleEditProduct(product, false)}
