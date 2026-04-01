@@ -2,7 +2,8 @@ import React, { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench } from "lucide-react";
+import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut } from "lucide-react";
+import { useAuth } from "@/lib/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -30,6 +31,7 @@ const FIRM_TYPES = [
 ];
 
 export default function Home() {
+  const { isAuthenticated, user, navigateToLogin, logout } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingFirm, setEditingFirm] = useState(null);
   const [preselectedType, setPreselectedType] = useState(null);
@@ -291,10 +293,34 @@ export default function Home() {
               <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
                 <Building className="w-5 h-5 text-white" />
               </div>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">MyKumpare</h1>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">MyKumpare</h1>
+                {isAuthenticated && user?.email && (
+                  <p className="text-xs text-white/60 mt-0.5">{user.email}</p>
+                )}
+              </div>
             </div>
-            {/* Desktop-only section nav (bottom nav covers mobile) */}
-            <div className="hidden sm:grid grid-cols-3 gap-1">
+            <div className="flex items-center gap-2">
+              {/* Login / Logout button */}
+              {isAuthenticated ? (
+                <button
+                  onClick={() => logout()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 transition-colors text-white text-xs font-medium"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Sign out</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => navigateToLogin()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 transition-colors text-white text-xs font-medium"
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>Sign in</span>
+                </button>
+              )}
+              {/* Desktop-only section nav (bottom nav covers mobile) */}
+              <div className="hidden sm:grid grid-cols-3 gap-1">
               {mobileNavItems.map(({ label, icon: Icon, ref }) => (
                 <button
                   key={label}
@@ -306,6 +332,7 @@ export default function Home() {
                   <span className="text-[10px] text-white/70 group-hover:text-white font-medium">{label}</span>
                 </button>
               ))}
+              </div>
             </div>
           </div>
         </div>
@@ -314,6 +341,19 @@ export default function Home() {
       {/* Main content — overlaps the header */}
       {/* pb-24 on mobile to clear the fixed bottom nav; sm:pb-0 on desktop */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 -mt-8 pb-24 sm:pb-0">
+        {/* Sign-in prompt for unauthenticated users */}
+        {!isAuthenticated && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4 flex items-center justify-between gap-3">
+            <p className="text-sm text-amber-800">Sign in to view and manage your data.</p>
+            <button
+              onClick={() => navigateToLogin()}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium whitespace-nowrap"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              Sign in
+            </button>
+          </div>
+        )}
         {/* Search bar */}
         <div className="bg-white rounded-2xl shadow-lg shadow-gray-200/50 border border-gray-100 p-4 sm:p-5 mb-8">
           <div className="relative">
