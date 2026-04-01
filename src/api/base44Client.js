@@ -8,7 +8,9 @@ export const base44 = createClient({
   appId,
   token,
   functionsVersion,
-  serverUrl: '',
+  // Use the absolute API URL so calls work on GitHub Pages (no Vite proxy).
+  // Falls back to '' for local dev where the Vite proxy handles /api/* routing.
+  serverUrl: appBaseUrl || '',
   requiresAuth: false,
   appBaseUrl
 });
