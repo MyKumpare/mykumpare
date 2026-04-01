@@ -1,0 +1,8 @@
+[build]
+  command   = "npm run build"
+  publish   = "dist"
+
+[build.environment]
+  VITE_BASE44_APP_ID      = "69b183b0e43025f25a074625"
+  VITE_BASE44_APP_BASE_URL = ""
+  NODE_VERSION            = "20"
