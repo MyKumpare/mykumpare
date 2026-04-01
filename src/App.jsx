@@ -66,11 +66,14 @@ const AuthenticatedApp = () => {
 
 
 function App() {
+  // Use the Vite base URL as the router basename so the app works
+  // both at / (local dev) and at /mykumpare/ (GitHub Pages).
+  const basename = import.meta.env.BASE_URL.replace(/\/$/, '') || '/';
 
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
-        <Router basename={import.meta.env.BASE_URL}>
+        <Router basename={basename}>
           <AuthenticatedApp />
         </Router>
         <Toaster />
