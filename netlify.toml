@@ -4,5 +4,5 @@
 
 [build.environment]
   VITE_BASE44_APP_ID      = "69b183b0e43025f25a074625"
-  VITE_BASE44_APP_BASE_URL = ""
+  VITE_BASE44_APP_BASE_URL = "https://api.base44.com"
   NODE_VERSION            = "20"
