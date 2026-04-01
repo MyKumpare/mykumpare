@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { pagesConfig } from './pages.config'
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { HashRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
@@ -66,14 +66,10 @@ const AuthenticatedApp = () => {
 
 
 function App() {
-  // Use the Vite base URL as the router basename so the app works
-  // both at / (local dev) and at /mykumpare/ (GitHub Pages).
-  const basename = import.meta.env.BASE_URL.replace(/\/$/, '') || '/';
-
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
-        <Router basename={basename}>
+        <Router>
           <AuthenticatedApp />
         </Router>
         <Toaster />
