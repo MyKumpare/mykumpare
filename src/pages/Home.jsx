@@ -285,28 +285,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50/80">
-      {/* Fixed sign out / sign in button in top-right corner */}
-      <div className="fixed top-3 right-3 z-50">
-        {isAuthenticated ? (
-          <button
-            onClick={() => logout()}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white shadow border border-gray-200 hover:bg-gray-50 transition-colors text-gray-700 text-xs font-medium"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>Sign out</span>
-          </button>
-        ) : (
-          <button
-            onClick={() => navigateToLogin()}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white shadow border border-gray-200 hover:bg-gray-50 transition-colors text-gray-700 text-xs font-medium"
-          >
-            <LogIn className="w-3.5 h-3.5" />
-            <span>Sign in</span>
-          </button>
-        )}
-      </div>
-
-      {/* Hero header */
+      {/* Hero header */}
       <div className="bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-10 pb-16 sm:pt-14 sm:pb-20">
           <div className="flex items-center justify-between mb-2">
@@ -322,6 +301,24 @@ export default function Home() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {/* Login / Logout button */}
+              {isAuthenticated ? (
+                <button
+                  onClick={() => logout()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 transition-colors text-white text-xs font-medium"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Sign out</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => navigateToLogin()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 transition-colors text-white text-xs font-medium"
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>Sign in</span>
+                </button>
+              )}
               {/* Desktop-only section nav (bottom nav covers mobile) */}
               <div className="hidden sm:grid grid-cols-3 gap-1">
               {mobileNavItems.map(({ label, icon: Icon, ref }) => (
