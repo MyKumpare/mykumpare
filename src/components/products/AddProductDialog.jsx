@@ -526,7 +526,7 @@ export default function AddProductDialog({
             {/* ── Analytics Tab ── */}
             <TabsContent value="analytics">
               {editingProduct && (
-                <ProductAnalyticsTab productId={editingProduct.id} />
+                <ProductAnalyticsTab productId={editingProduct.id} editingProduct={editingProduct} />
               )}
             </TabsContent>
           </Tabs>
