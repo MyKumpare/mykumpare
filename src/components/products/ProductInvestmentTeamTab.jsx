@@ -1,4 +1,5 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import ReactDOM from "react-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,8 @@ import AddContactDialog from "@/components/contacts/AddContactDialog";
 function ContactPicker({ firmId, existingMemberIds, onAdd }) {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
-  const containerRef = useRef(null);
+  const [dropdownStyle, setDropdownStyle] = useState({});
+  const inputRef = useRef(null);
 
   const { data: contacts = [] } = useQuery({
     queryKey: ["contacts-all"],
@@ -19,23 +21,34 @@ function ContactPicker({ firmId, existingMemberIds, onAdd }) {
 
   const activeContacts = contacts.filter((c) => !c.deleted_at);
 
-  const fullName = (c) => [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ");
+  const getFullName = (c) => [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ");
   const searchLower = search.toLowerCase();
 
   const firmContacts = activeContacts
     .filter((c) => firmId && Array.isArray(c.firm_ids) && c.firm_ids.some((id) => String(id) === String(firmId)))
     .filter((c) => !existingMemberIds.includes(c.id))
-    .filter((c) => !search || fullName(c).toLowerCase().includes(searchLower))
+    .filter((c) => !search || getFullName(c).toLowerCase().includes(searchLower))
     .sort((a, b) => (a.last_name || "").localeCompare(b.last_name || ""));
 
   const firmContactIds = new Set(firmContacts.map((c) => c.id));
   const otherContacts = activeContacts
     .filter((c) => !firmContactIds.has(c.id) && !existingMemberIds.includes(c.id))
-    .filter((c) => {
-      if (!search) return false;
-      return fullName(c).toLowerCase().includes(searchLower);
-    })
+    .filter((c) => !!search && getFullName(c).toLowerCase().includes(searchLower))
     .sort((a, b) => (a.last_name || "").localeCompare(b.last_name || ""));
+
+  const handleOpen = () => {
+    if (inputRef.current) {
+      const rect = inputRef.current.getBoundingClientRect();
+      setDropdownStyle({
+        position: "fixed",
+        top: rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 9999,
+      });
+    }
+    setOpen(true);
+  };
 
   const renderContact = (c) => (
     <button
@@ -45,50 +58,50 @@ function ContactPicker({ firmId, existingMemberIds, onAdd }) {
       onMouseDown={(e) => { e.preventDefault(); onAdd(c); setSearch(""); setOpen(false); }}
     >
       <span className="font-medium text-gray-800">
-        {fullName(c)}{c.designations?.length > 0 ? `, ${c.designations.join(", ")}` : ""}
+        {getFullName(c)}{c.designations?.length > 0 ? `, ${c.designations.join(", ")}` : ""}
       </span>
       {c.title && <span className="text-xs text-gray-400">{c.title}</span>}
     </button>
   );
 
+  const dropdown = open ? ReactDOM.createPortal(
+    <div style={dropdownStyle} className="rounded-md border bg-white shadow-lg max-h-56 overflow-y-auto">
+      {firmContacts.length === 0 && otherContacts.length === 0 ? (
+        <div className="px-3 py-2 text-sm text-gray-400 italic">
+          {search ? "No matching contacts found" : "No contacts linked to this firm"}
+        </div>
+      ) : (
+        <>
+          {firmContacts.length > 0 && (
+            <>
+              {firmId && <div className="px-3 py-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider bg-gray-50">Firm Contacts</div>}
+              {firmContacts.map(renderContact)}
+            </>
+          )}
+          {otherContacts.length > 0 && (
+            <>
+              <div className="px-3 py-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider bg-gray-50">Other Contacts</div>
+              {otherContacts.map(renderContact)}
+            </>
+          )}
+        </>
+      )}
+    </div>,
+    document.body
+  ) : null;
+
   return (
-    <div className="relative" ref={containerRef}>
+    <div className="relative">
       <input
+        ref={inputRef}
         className="w-full h-8 px-3 text-sm rounded-md border border-input bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         placeholder="Search contacts by name..."
         value={search}
-        onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
-        onFocus={() => setOpen(true)}
-        onBlur={(e) => {
-          // Don't close if clicking inside the dropdown
-          if (containerRef.current && containerRef.current.contains(e.relatedTarget)) return;
-          setTimeout(() => setOpen(false), 200);
-        }}
+        onChange={(e) => { setSearch(e.target.value); handleOpen(); }}
+        onFocus={handleOpen}
+        onBlur={() => setTimeout(() => setOpen(false), 200)}
       />
-      {open && (
-        <div className="absolute z-50 mt-1 w-full rounded-md border bg-white shadow-lg max-h-56 overflow-y-auto">
-          {firmContacts.length === 0 && otherContacts.length === 0 ? (
-            <div className="px-3 py-2 text-sm text-gray-400 italic">
-              {search ? "No matching contacts found" : "No contacts linked to this firm"}
-            </div>
-          ) : (
-            <>
-              {firmContacts.length > 0 && (
-                <>
-                  {firmId && <div className="px-3 py-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider bg-gray-50">Firm Contacts</div>}
-                  {firmContacts.map(renderContact)}
-                </>
-              )}
-              {otherContacts.length > 0 && (
-                <>
-                  <div className="px-3 py-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider bg-gray-50">Other Contacts</div>
-                  {otherContacts.map(renderContact)}
-                </>
-              )}
-            </>
-          )}
-        </div>
-      )}
+      {dropdown}
     </div>
   );
 }
