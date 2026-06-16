@@ -13,7 +13,7 @@ function ContactPicker({ firmId, existingMemberIds, onAdd }) {
 
   const { data: contacts = [] } = useQuery({
     queryKey: ["contacts-all"],
-    queryFn: () => base44.entities.Contact.filter({ deleted_at: null }, "last_name", 500),
+    queryFn: () => base44.entities.Contact.list("last_name", 500),
   });
 
   const activeContacts = contacts.filter((c) => !c.deleted_at);
@@ -111,7 +111,7 @@ export default function ProductInvestmentTeamTab({ productId, firmId, isEditing 
 
   const { data: allContacts = [] } = useQuery({
     queryKey: ["contacts-all"],
-    queryFn: () => base44.entities.Contact.filter({ deleted_at: null }, "last_name", 500),
+    queryFn: () => base44.entities.Contact.list("last_name", 500),
   });
 
   const team = product?.investment_team || [];
