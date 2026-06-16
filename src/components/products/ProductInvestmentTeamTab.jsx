@@ -132,7 +132,6 @@ export default function ProductInvestmentTeamTab({ productId, firmId, isEditing 
       base44.entities.Product.update(productId, { investment_team: newTeam }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["product", productId] });
-      queryClient.invalidateQueries({ queryKey: ["products"] });
     },
   });
 
