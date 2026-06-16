@@ -23,6 +23,7 @@ import ProductClassificationsTab from "./ProductClassificationsTab";
 import ProductInvestmentTeamTab from "./ProductInvestmentTeamTab";
 import ProductInvestmentDescriptionTab from "./ProductInvestmentDescriptionTab";
 import ProductReturnsTab from "./ProductReturnsTab";
+import ProductAnalyticsTab from "./ProductAnalyticsTab";
 
 // Map product type -> firm type(s) that can be associated
 const PRODUCT_TYPE_TO_FIRM_TYPE = {
@@ -359,9 +360,10 @@ export default function AddProductDialog({
               <TabsTrigger value="classifications">Classifications</TabsTrigger>
               <TabsTrigger value="description">Inv. Description</TabsTrigger>
             </TabsList>
-            <TabsList className="grid grid-cols-2 mb-4 w-fit">
+            <TabsList className="grid grid-cols-3 mb-4 w-fit">
               <TabsTrigger value="team" disabled={isAddMode}>Investment Team</TabsTrigger>
               <TabsTrigger value="returns" disabled={isAddMode}>Returns</TabsTrigger>
+              <TabsTrigger value="analytics" disabled={isAddMode}>Analytics</TabsTrigger>
             </TabsList>
 
             {/* ── Details Tab ── */}
@@ -518,6 +520,13 @@ export default function AddProductDialog({
                   productName={editingProduct.name}
                   isEditing={activelyEditing}
                 />
+              )}
+            </TabsContent>
+
+            {/* ── Analytics Tab ── */}
+            <TabsContent value="analytics">
+              {editingProduct && (
+                <ProductAnalyticsTab productId={editingProduct.id} />
               )}
             </TabsContent>
           </Tabs>
