@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import AddContactDialog from "@/components/contacts/AddContactDialog";
 function ContactPicker({ firmId, existingMemberIds, onAdd }) {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
+  const containerRef = useRef(null);
 
   const { data: contacts = [] } = useQuery({
     queryKey: ["contacts-all"],
@@ -18,74 +19,70 @@ function ContactPicker({ firmId, existingMemberIds, onAdd }) {
 
   const activeContacts = contacts.filter((c) => !c.deleted_at);
 
-  // Contacts associated with the firm (not already on team)
-  // firm_ids can be an array of strings; do a loose comparison just in case
+  const fullName = (c) => [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ");
+  const searchLower = search.toLowerCase();
+
   const firmContacts = activeContacts
     .filter((c) => firmId && Array.isArray(c.firm_ids) && c.firm_ids.some((id) => String(id) === String(firmId)))
     .filter((c) => !existingMemberIds.includes(c.id))
-    .filter((c) => {
-      const fullName = `${c.first_name} ${c.last_name}`.toLowerCase();
-      return fullName.includes(search.toLowerCase());
-    })
-    .sort((a, b) => a.last_name.localeCompare(b.last_name));
+    .filter((c) => !search || fullName(c).toLowerCase().includes(searchLower))
+    .sort((a, b) => (a.last_name || "").localeCompare(b.last_name || ""));
 
-  // All other active contacts not on team and not already in firmContacts
   const firmContactIds = new Set(firmContacts.map((c) => c.id));
   const otherContacts = activeContacts
     .filter((c) => !firmContactIds.has(c.id) && !existingMemberIds.includes(c.id))
     .filter((c) => {
-      if (!search) return false; // only show others when searching
-      const fullName = `${c.first_name} ${c.last_name}`.toLowerCase();
-      return fullName.includes(search.toLowerCase());
+      if (!search) return false;
+      return fullName(c).toLowerCase().includes(searchLower);
     })
-    .sort((a, b) => a.last_name.localeCompare(b.last_name));
+    .sort((a, b) => (a.last_name || "").localeCompare(b.last_name || ""));
+
+  const renderContact = (c) => (
+    <button
+      key={c.id}
+      type="button"
+      className="w-full text-left px-3 py-2 text-sm hover:bg-indigo-50 flex flex-col"
+      onMouseDown={(e) => { e.preventDefault(); onAdd(c); setSearch(""); setOpen(false); }}
+    >
+      <span className="font-medium text-gray-800">
+        {fullName(c)}{c.designations?.length > 0 ? `, ${c.designations.join(", ")}` : ""}
+      </span>
+      {c.title && <span className="text-xs text-gray-400">{c.title}</span>}
+    </button>
+  );
 
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
       <input
         className="w-full h-8 px-3 text-sm rounded-md border border-input bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         placeholder="Search contacts by name..."
         value={search}
         onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
         onFocus={() => setOpen(true)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        onBlur={(e) => {
+          // Don't close if clicking inside the dropdown
+          if (containerRef.current && containerRef.current.contains(e.relatedTarget)) return;
+          setTimeout(() => setOpen(false), 200);
+        }}
       />
       {open && (
         <div className="absolute z-50 mt-1 w-full rounded-md border bg-white shadow-lg max-h-56 overflow-y-auto">
           {firmContacts.length === 0 && otherContacts.length === 0 ? (
-            <div className="px-3 py-2 text-sm text-gray-400 italic">No matching contacts found</div>
+            <div className="px-3 py-2 text-sm text-gray-400 italic">
+              {search ? "No matching contacts found" : "No contacts linked to this firm"}
+            </div>
           ) : (
             <>
               {firmContacts.length > 0 && (
                 <>
                   {firmId && <div className="px-3 py-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider bg-gray-50">Firm Contacts</div>}
-                  {firmContacts.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-indigo-50 flex flex-col"
-                      onMouseDown={() => { onAdd(c); setSearch(""); setOpen(false); }}
-                    >
-                      <span className="font-medium text-gray-800">{[c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ")}{c.designations?.length > 0 ? `, ${c.designations.join(", ")}` : ""}</span>
-                      {c.title && <span className="text-xs text-gray-400">{c.title}</span>}
-                    </button>
-                  ))}
+                  {firmContacts.map(renderContact)}
                 </>
               )}
               {otherContacts.length > 0 && (
                 <>
                   <div className="px-3 py-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider bg-gray-50">Other Contacts</div>
-                  {otherContacts.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-indigo-50 flex flex-col"
-                      onMouseDown={() => { onAdd(c); setSearch(""); setOpen(false); }}
-                    >
-                      <span className="font-medium text-gray-800">{[c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ")}{c.designations?.length > 0 ? `, ${c.designations.join(", ")}` : ""}</span>
-                      {c.title && <span className="text-xs text-gray-400">{c.title}</span>}
-                    </button>
-                  ))}
+                  {otherContacts.map(renderContact)}
                 </>
               )}
             </>
