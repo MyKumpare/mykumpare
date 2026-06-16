@@ -180,7 +180,7 @@ export default function AddProductDialog({
     investment_process_buy_discipline: editingProduct.inv_desc_process_buy_discipline || "",
     investment_process_sell_discipline: editingProduct.inv_desc_process_sell_discipline || "",
     market_positioning: editingProduct.inv_desc_market_positioning || [],
-    benchmarks: editingProduct.inv_desc_benchmarks || [],
+    benchmarks: (editingProduct.inv_desc_benchmarks || []).map(b => typeof b === "string" ? { id: b, role: "" } : b),
     portfolio_expectations: editingProduct.inv_desc_portfolio_expectations || "",
     tracking_error_min: editingProduct.inv_desc_tracking_error_min ?? "",
     tracking_error_max: editingProduct.inv_desc_tracking_error_max ?? "",
@@ -200,8 +200,9 @@ export default function AddProductDialog({
       description !== (editingProduct.description || "") ||
       JSON.stringify(classifications) !== JSON.stringify(classificationsFromProduct(editingProduct)) ||
       JSON.stringify(investmentDescriptions.product_biases ?? {}) !== JSON.stringify(editingProduct.inv_desc_product_biases ?? {}) ||
+      JSON.stringify(investmentDescriptions.benchmarks ?? []) !== JSON.stringify(originalDescriptions.benchmarks ?? []) ||
       Object.keys({ ...originalDescriptions, ...investmentDescriptions }).some(
-        (k) => k !== "product_biases" && String(investmentDescriptions[k] ?? "") !== String(originalDescriptions[k] ?? "")
+        (k) => k !== "product_biases" && k !== "benchmarks" && String(investmentDescriptions[k] ?? "") !== String(originalDescriptions[k] ?? "")
       )
     : false;
 
@@ -275,7 +276,7 @@ export default function AddProductDialog({
       investment_process_buy_discipline: editingProduct.inv_desc_process_buy_discipline || "",
       investment_process_sell_discipline: editingProduct.inv_desc_process_sell_discipline || "",
       market_positioning: editingProduct.inv_desc_market_positioning || [],
-      benchmarks: editingProduct.inv_desc_benchmarks || [],
+      benchmarks: (editingProduct.inv_desc_benchmarks || []).map(b => typeof b === "string" ? { id: b, role: "" } : b),
       portfolio_expectations: editingProduct.inv_desc_portfolio_expectations || "",
       tracking_error_min: editingProduct.inv_desc_tracking_error_min ?? "",
       tracking_error_max: editingProduct.inv_desc_tracking_error_max ?? "",
