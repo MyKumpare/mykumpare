@@ -79,19 +79,26 @@ export default function AddProductDialog({
   const [classifications, setClassifications] = useState(EMPTY_CLASSIFICATIONS);
   const [investmentDescriptions, setInvestmentDescriptions] = useState({});
   const nameInputRef = useRef(null);
+  // Snapshot of original values captured when the dialog opens — prevents stale prop re-renders from resetting the form
+  const originalSnapshotRef = useRef(null);
 
   const isAddMode = !editingProduct;
   const activelyEditing = isAddMode || isEditing;
 
+  const prevOpenRef = useRef(false);
   useEffect(() => {
-    if (open) {
-      if (editingProduct) {
-        setProductType(editingProduct.product_type);
-        setFirmId(editingProduct.firm_id);
-        setProductName(editingProduct.name);
-        setDescription(editingProduct.description || "");
-        setClassifications(classificationsFromProduct(editingProduct));
-        setInvestmentDescriptions({
+    const justOpened = open && !prevOpenRef.current;
+    prevOpenRef.current = open;
+    if (!justOpened) return;
+
+    if (editingProduct) {
+      const snapshot = {
+        product_type: editingProduct.product_type,
+        firm_id: editingProduct.firm_id,
+        name: editingProduct.name,
+        description: editingProduct.description || "",
+        classifications: classificationsFromProduct(editingProduct),
+        descriptions: {
           investment_edge: editingProduct.inv_desc_edge || "",
           investment_philosophy: editingProduct.inv_desc_philosophy || "",
           investment_universe: editingProduct.inv_desc_universe || "",
@@ -110,19 +117,27 @@ export default function AddProductDialog({
           holdings_min: editingProduct.inv_desc_holdings_min ?? "",
           holdings_max: editingProduct.inv_desc_holdings_max ?? "",
           product_biases: editingProduct.inv_desc_product_biases || {},
-        });
-        setIsEditing(false);
-      } else {
-        setProductType(preselectedProductType || "");
-        setFirmId(preselectedFirmId || "");
-        setProductName("");
-        setDescription("");
-        setClassifications(EMPTY_CLASSIFICATIONS);
-        setInvestmentDescriptions({});
-        setIsEditing(true);
-      }
+        },
+      };
+      originalSnapshotRef.current = snapshot;
+      setProductType(snapshot.product_type);
+      setFirmId(snapshot.firm_id);
+      setProductName(snapshot.name);
+      setDescription(snapshot.description);
+      setClassifications(snapshot.classifications);
+      setInvestmentDescriptions(snapshot.descriptions);
+      setIsEditing(false);
+    } else {
+      originalSnapshotRef.current = null;
+      setProductType(preselectedProductType || "");
+      setFirmId(preselectedFirmId || "");
+      setProductName("");
+      setDescription("");
+      setClassifications(EMPTY_CLASSIFICATIONS);
+      setInvestmentDescriptions({});
+      setIsEditing(true);
     }
-  }, [editingProduct, open, preselectedProductType, preselectedFirmId]);
+  }, [open]);
 
   useEffect(() => {
     if (isEditing && editingProduct) {
@@ -172,34 +187,15 @@ export default function AddProductDialog({
         .sort((a, b) => a.name.localeCompare(b.name))
     : [];
 
-  const originalDescriptions = editingProduct ? {
-    investment_edge: editingProduct.inv_desc_edge || "",
-    investment_philosophy: editingProduct.inv_desc_philosophy || "",
-    investment_universe: editingProduct.inv_desc_universe || "",
-    investment_process: editingProduct.inv_desc_process || "",
-    investment_process_buy_discipline: editingProduct.inv_desc_process_buy_discipline || "",
-    investment_process_sell_discipline: editingProduct.inv_desc_process_sell_discipline || "",
-    market_positioning: editingProduct.inv_desc_market_positioning || [],
-    benchmarks: (editingProduct.inv_desc_benchmarks || []).map(b => typeof b === "string" ? { id: b, role: "" } : b),
-    portfolio_expectations: editingProduct.inv_desc_portfolio_expectations || "",
-    tracking_error_min: editingProduct.inv_desc_tracking_error_min ?? "",
-    tracking_error_max: editingProduct.inv_desc_tracking_error_max ?? "",
-    excess_return_min: editingProduct.inv_desc_excess_return_min ?? "",
-    excess_return_max: editingProduct.inv_desc_excess_return_max ?? "",
-    information_ratio_min: editingProduct.inv_desc_information_ratio_min ?? "",
-    information_ratio_max: editingProduct.inv_desc_information_ratio_max ?? "",
-    holdings_min: editingProduct.inv_desc_holdings_min ?? "",
-    holdings_max: editingProduct.inv_desc_holdings_max ?? "",
-    product_biases: editingProduct.inv_desc_product_biases || {},
-  } : {};
+  const originalDescriptions = originalSnapshotRef.current?.descriptions ?? {};
 
-  const hasChanges = editingProduct
-    ? productName.trim() !== editingProduct.name ||
-      productType !== editingProduct.product_type ||
-      firmId !== editingProduct.firm_id ||
-      description !== (editingProduct.description || "") ||
-      JSON.stringify(classifications) !== JSON.stringify(classificationsFromProduct(editingProduct)) ||
-      JSON.stringify(investmentDescriptions.product_biases ?? {}) !== JSON.stringify(editingProduct.inv_desc_product_biases ?? {}) ||
+  const hasChanges = originalSnapshotRef.current
+    ? productName.trim() !== originalSnapshotRef.current.name ||
+      productType !== originalSnapshotRef.current.product_type ||
+      firmId !== originalSnapshotRef.current.firm_id ||
+      description !== originalSnapshotRef.current.description ||
+      JSON.stringify(classifications) !== JSON.stringify(originalSnapshotRef.current.classifications) ||
+      JSON.stringify(investmentDescriptions.product_biases ?? {}) !== JSON.stringify(originalDescriptions.product_biases ?? {}) ||
       JSON.stringify(investmentDescriptions.benchmarks ?? []) !== JSON.stringify(originalDescriptions.benchmarks ?? []) ||
       Object.keys({ ...originalDescriptions, ...investmentDescriptions }).some(
         (k) => k !== "product_biases" && k !== "benchmarks" && String(investmentDescriptions[k] ?? "") !== String(originalDescriptions[k] ?? "")
@@ -263,33 +259,16 @@ export default function AddProductDialog({
   };
 
   const handleCancelEdit = () => {
-    setProductType(editingProduct.product_type);
-    setFirmId(editingProduct.firm_id);
-    setProductName(editingProduct.name);
-    setDescription(editingProduct.description || "");
-    setClassifications(classificationsFromProduct(editingProduct));
-    setInvestmentDescriptions({
-      investment_edge: editingProduct.inv_desc_edge || "",
-      investment_philosophy: editingProduct.inv_desc_philosophy || "",
-      investment_universe: editingProduct.inv_desc_universe || "",
-      investment_process: editingProduct.inv_desc_process || "",
-      investment_process_buy_discipline: editingProduct.inv_desc_process_buy_discipline || "",
-      investment_process_sell_discipline: editingProduct.inv_desc_process_sell_discipline || "",
-      market_positioning: editingProduct.inv_desc_market_positioning || [],
-      benchmarks: (editingProduct.inv_desc_benchmarks || []).map(b => typeof b === "string" ? { id: b, role: "" } : b),
-      portfolio_expectations: editingProduct.inv_desc_portfolio_expectations || "",
-      tracking_error_min: editingProduct.inv_desc_tracking_error_min ?? "",
-      tracking_error_max: editingProduct.inv_desc_tracking_error_max ?? "",
-      excess_return_min: editingProduct.inv_desc_excess_return_min ?? "",
-      excess_return_max: editingProduct.inv_desc_excess_return_max ?? "",
-      information_ratio_min: editingProduct.inv_desc_information_ratio_min ?? "",
-      information_ratio_max: editingProduct.inv_desc_information_ratio_max ?? "",
-      holdings_min: editingProduct.inv_desc_holdings_min ?? "",
-      holdings_max: editingProduct.inv_desc_holdings_max ?? "",
-      product_biases: editingProduct.inv_desc_product_biases || {},
-      });
-      setIsEditing(false);
-      };
+    const snap = originalSnapshotRef.current;
+    if (!snap) return;
+    setProductType(snap.product_type);
+    setFirmId(snap.firm_id);
+    setProductName(snap.name);
+    setDescription(snap.description);
+    setClassifications(snap.classifications);
+    setInvestmentDescriptions(snap.descriptions);
+    setIsEditing(false);
+  };
 
   return (
     <>
