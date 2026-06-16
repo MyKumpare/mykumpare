@@ -70,6 +70,7 @@ export default function AddProductDialog({
   preselectedProductType = null,
   preselectedFirmId = null,
   onFirmClick = null,
+  isSaving = false,
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [productType, setProductType] = useState("");
@@ -215,6 +216,7 @@ export default function AddProductDialog({
 
   const isDuplicate = matchingProducts.length > 0;
 
+  // For existing products being edited, firmId from the snapshot is always valid even if eligibleFirms is empty
   const isValid = productType && firmId && productName.trim() && !isDuplicate;
 
   const handleSubmit = () => {
@@ -539,10 +541,10 @@ export default function AddProductDialog({
                 <Button variant="outline" onClick={handleCancelEdit}>Cancel</Button>
                 <Button
                   onClick={handleSubmit}
-                  disabled={!isValid || !hasChanges}
+                  disabled={!isValid || !hasChanges || isSaving}
                   className={`text-white transition-all ${hasChanges && isValid ? "bg-indigo-600 hover:bg-indigo-700 shadow-md" : "bg-indigo-300"}`}
                 >
-                  Save Changes
+                  {isSaving ? "Saving..." : "Save Changes"}
                 </Button>
               </>
             ) : isAddMode ? (

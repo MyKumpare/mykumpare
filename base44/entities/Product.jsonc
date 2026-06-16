@@ -113,9 +113,17 @@
     },
     "inv_desc_benchmarks": {
       "type": "array",
-      "description": "IDs of benchmarks associated with this product",
+      "description": "Benchmarks associated with this product, each with an optional role tag",
       "items": {
-        "type": "string"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          }
+        }
       }
     },
     "inv_desc_portfolio_expectations": {

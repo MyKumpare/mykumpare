@@ -128,6 +128,9 @@ export default function Home() {
       setProductDialogOpen(false);
       setEditingProduct(null);
     },
+    onError: (err) => {
+      console.error("Product update failed:", err);
+    },
   });
 
   const deleteProductMutation = useMutation({
@@ -574,6 +577,7 @@ export default function Home() {
       />
 
       <AddProductDialog
+        isSaving={updateProductMutation.isPending || createProductMutation.isPending}
         open={productDialogOpen}
         onOpenChange={(open) => {
           setProductDialogOpen(open);
