@@ -424,6 +424,7 @@ export default function Home() {
           products={activeProducts}
           firms={activeFirms}
           onProductClick={handleEditProduct}
+          onFirmClick={(firm) => handleEdit(firm)}
           onAddProduct={() => { setEditingProduct(null); setPreselectedProductType(null); setPreselectedFirmId(null); setProductDialogOpen(true); }}
         />
 

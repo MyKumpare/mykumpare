@@ -9,7 +9,7 @@ const GROUP_COLORS = {
   "Investment Manager": "bg-blue-100 text-blue-700",
 };
 
-export default function ProductsSection({ products, firms, onProductClick, onAddProduct }) {
+export default function ProductsSection({ products, firms, onProductClick, onAddProduct, onFirmClick }) {
   const [expanded, setExpanded] = useState(true);
   const [expandedGroups, setExpandedGroups] = useState({});
   const [expandedFirms, setExpandedFirms] = useState({});
@@ -113,24 +113,26 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
                       return (
                         <div key={firm.id}>
                           {/* Firm sub-header */}
-                          <button
-                            onClick={() => toggleFirm(firm.id)}
-                            className="w-full flex items-center gap-2 mb-1.5 group cursor-pointer"
-                          >
+                          <div className="w-full flex items-center gap-2 mb-1.5 group">
                             {firm.logo_url ? (
-                              <img src={firm.logo_url} alt={firm.name} className="w-4 h-4 object-contain rounded" />
+                              <img src={firm.logo_url} alt={firm.name} className="w-4 h-4 object-contain rounded flex-shrink-0" />
                             ) : null}
-                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide group-hover:text-gray-700">
+                            <button
+                              onClick={() => onFirmClick && onFirmClick(firm)}
+                              className="text-xs font-semibold text-gray-500 uppercase tracking-wide hover:text-indigo-600 hover:underline cursor-pointer text-left"
+                            >
                               {firm.name}
-                            </span>
+                            </button>
                             <div className="h-px flex-1 bg-gray-100" />
                             <span className="text-xs text-gray-400">{firmProducts.length}</span>
-                            {isFirmExpanded ? (
-                              <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
-                            ) : (
-                              <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
-                            )}
-                          </button>
+                            <button onClick={() => toggleFirm(firm.id)} className="cursor-pointer">
+                              {isFirmExpanded ? (
+                                <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+                              ) : (
+                                <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
+                              )}
+                            </button>
+                          </div>
                           {/* Products list */}
                           {isFirmExpanded && (
                             <div className="space-y-1">
