@@ -1,10 +1,19 @@
 import React, { useState } from "react";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { X, Plus, ChevronDown } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import AddBenchmarkDialog from "../utility/AddBenchmarkDialog";
+
+// value = [{ id, role }]  where role is "Primary" | "Secondary" | ""
+// Legacy support: if value contains plain strings, treat them as { id: str, role: "" }
+
+function normalize(value) {
+  if (!Array.isArray(value)) return [];
+  return value.map(v => typeof v === "string" ? { id: v, role: "" } : v);
+}
+
+const ROLES = ["Primary", "Secondary"];
 
 export default function BenchmarkMultiSelect({ value = [], onChange, isEditing }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -16,23 +25,42 @@ export default function BenchmarkMultiSelect({ value = [], onChange, isEditing }
     queryFn: () => base44.entities.Benchmark.list("-created_date"),
   });
 
-  const selectedIds = Array.isArray(value) ? value : [];
-  const selectedBenchmarks = selectedIds
-    .map(id => allBenchmarks.find(b => b.id === id))
-    .filter(Boolean);
+  const entries = normalize(value);
+  const selectedIds = entries.map(e => e.id);
+
+  const selectedBenchmarks = entries
+    .map(e => ({ ...e, benchmark: allBenchmarks.find(b => b.id === e.id) }))
+    .filter(e => e.benchmark);
+
   const unselected = allBenchmarks
     .filter(b => !selectedIds.includes(b.id))
     .sort((a, b) => (a.asset_class || "").localeCompare(b.asset_class || "") || a.name.localeCompare(b.name));
 
   const handleAdd = (id) => {
     if (!selectedIds.includes(id)) {
-      onChange([...selectedIds, id]);
+      onChange([...entries, { id, role: "" }]);
     }
     setDropdownOpen(false);
   };
 
   const handleRemove = (id) => {
-    onChange(selectedIds.filter(i => i !== id));
+    onChange(entries.filter(e => e.id !== id));
+  };
+
+  const handleRoleChange = (id, role) => {
+    onChange(entries.map(e => e.id === id ? { ...e, role } : e));
+  };
+
+  const roleColor = (role) => {
+    if (role === "Primary") return "bg-indigo-600 text-white border-indigo-600";
+    if (role === "Secondary") return "bg-indigo-100 text-indigo-700 border-indigo-300";
+    return "bg-gray-100 text-gray-500 border-gray-200";
+  };
+
+  const roleBadge = (role) => {
+    if (role === "Primary") return "bg-indigo-600 text-white";
+    if (role === "Secondary") return "bg-indigo-100 text-indigo-700";
+    return null;
   };
 
   return (
@@ -44,32 +72,40 @@ export default function BenchmarkMultiSelect({ value = [], onChange, isEditing }
 
       {isEditing ? (
         <div className="space-y-2">
-          {/* Selected badges */}
-          {selectedBenchmarks.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {selectedBenchmarks.map(b => (
-                <span
-                  key={b.id}
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-indigo-50 border border-indigo-200 text-xs text-indigo-700 font-medium"
-                >
+          {/* Selected benchmarks with role selector */}
+          {selectedBenchmarks.map(({ id, role, benchmark }) => (
+            <div key={id} className="flex items-center gap-2 px-2 py-1.5 rounded-md border border-gray-200 bg-white">
+              <button
+                type="button"
+                onClick={() => setViewingBenchmark(benchmark)}
+                className="flex-1 text-left text-sm font-medium text-indigo-700 hover:underline truncate"
+              >
+                {benchmark.name}
+              </button>
+              {/* Role toggle buttons */}
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {ROLES.map(r => (
                   <button
+                    key={r}
                     type="button"
-                    onClick={() => setViewingBenchmark(b)}
-                    className="hover:underline"
+                    onClick={() => handleRoleChange(id, role === r ? "" : r)}
+                    className={`text-xs px-2 py-0.5 rounded-full border font-medium transition-colors ${
+                      role === r ? roleColor(r) : "bg-white text-gray-400 border-gray-200 hover:border-gray-300"
+                    }`}
                   >
-                    {b.name}
+                    {r}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => handleRemove(b.id)}
-                    className="hover:text-red-500 transition-colors"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              ))}
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => handleRemove(id)}
+                className="text-gray-300 hover:text-red-400 transition-colors flex-shrink-0"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
             </div>
-          )}
+          ))}
 
           {/* Dropdown trigger */}
           <div className="relative">
@@ -120,14 +156,19 @@ export default function BenchmarkMultiSelect({ value = [], onChange, isEditing }
             <span className="text-sm text-gray-400 italic">—</span>
           ) : (
             <div className="flex flex-wrap gap-1.5">
-              {selectedBenchmarks.map(b => (
+              {selectedBenchmarks.map(({ id, role, benchmark }) => (
                 <button
-                  key={b.id}
+                  key={id}
                   type="button"
-                  onClick={() => setViewingBenchmark(b)}
-                  className="inline-flex items-center px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-200 text-xs text-indigo-700 font-medium hover:bg-indigo-100 transition-colors cursor-pointer"
+                  onClick={() => setViewingBenchmark(benchmark)}
+                  className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-200 text-xs text-indigo-700 font-medium hover:bg-indigo-100 transition-colors"
                 >
-                  {b.name}
+                  {benchmark.name}
+                  {role && (
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${roleBadge(role)}`}>
+                      {role}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
