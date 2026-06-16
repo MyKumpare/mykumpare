@@ -12,15 +12,16 @@ function ContactPicker({ firmId, existingMemberIds, onAdd }) {
   const [open, setOpen] = useState(false);
 
   const { data: contacts = [] } = useQuery({
-    queryKey: ["contacts"],
-    queryFn: () => base44.entities.Contact.list(),
+    queryKey: ["contacts-all"],
+    queryFn: () => base44.entities.Contact.filter({ deleted_at: null }, "last_name", 500),
   });
 
   const activeContacts = contacts.filter((c) => !c.deleted_at);
 
   // Contacts associated with the firm (not already on team)
+  // firm_ids can be an array of strings; do a loose comparison just in case
   const firmContacts = activeContacts
-    .filter((c) => firmId && c.firm_ids?.includes(firmId))
+    .filter((c) => firmId && Array.isArray(c.firm_ids) && c.firm_ids.some((id) => String(id) === String(firmId)))
     .filter((c) => !existingMemberIds.includes(c.id))
     .filter((c) => {
       const fullName = `${c.first_name} ${c.last_name}`.toLowerCase();
@@ -109,8 +110,8 @@ export default function ProductInvestmentTeamTab({ productId, firmId, isEditing 
   });
 
   const { data: allContacts = [] } = useQuery({
-    queryKey: ["contacts"],
-    queryFn: () => base44.entities.Contact.list(),
+    queryKey: ["contacts-all"],
+    queryFn: () => base44.entities.Contact.filter({ deleted_at: null }, "last_name", 500),
   });
 
   const team = product?.investment_team || [];
