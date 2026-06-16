@@ -106,11 +106,12 @@ function ContactPicker({ firmId, existingMemberIds, onAdd }) {
   );
 }
 
-export default function ProductInvestmentTeamTab({ productId, firmId, isEditing }) {
+export default function ProductInvestmentTeamTab({ productId, firmId }) {
   const queryClient = useQueryClient();
   const [showPicker, setShowPicker] = useState(false);
   const [showAddContact, setShowAddContact] = useState(false);
   const [viewingContact, setViewingContact] = useState(null);
+  const [savedFlash, setSavedFlash] = useState(false);
 
   // investment_team stored as array of { contact_id, is_key }
   const { data: product, isLoading } = useQuery({
@@ -132,6 +133,8 @@ export default function ProductInvestmentTeamTab({ productId, firmId, isEditing 
       base44.entities.Product.update(productId, { investment_team: newTeam }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["product", productId] });
+      setSavedFlash(true);
+      setTimeout(() => setSavedFlash(false), 2000);
     },
   });
 
@@ -162,6 +165,8 @@ export default function ProductInvestmentTeamTab({ productId, firmId, isEditing 
     return <div className="text-xs text-gray-400 italic py-4 text-center">Loading...</div>;
   }
 
+  const isSaving = updateTeam.isPending;
+
   // Sort: key members first, then alphabetically
   const sortedTeam = [...team].sort((a, b) => {
     if (a.is_key !== b.is_key) return a.is_key ? -1 : 1;
@@ -172,6 +177,12 @@ export default function ProductInvestmentTeamTab({ productId, firmId, isEditing 
 
   return (
     <div className="space-y-3">
+      {/* Auto-save status */}
+      {(isSaving || savedFlash) && (
+        <div className={`text-xs px-2 py-1 rounded text-center transition-all ${isSaving ? "bg-indigo-50 text-indigo-500" : "bg-green-50 text-green-600"}`}>
+          {isSaving ? "Saving…" : "✓ Saved"}
+        </div>
+      )}
       {/* Member list */}
       {sortedTeam.length === 0 ? (
         <div className="text-sm text-gray-400 italic py-6 text-center border border-dashed border-gray-200 rounded-xl">

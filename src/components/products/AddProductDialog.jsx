@@ -522,7 +522,6 @@ export default function AddProductDialog({
                 <ProductInvestmentTeamTab
                   productId={editingProduct.id}
                   firmId={editingProduct.firm_id}
-                  isEditing={activelyEditing}
                 />
               )}
             </TabsContent>
