@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import AddFirmDialog from "../components/firms/AddFirmDialog";
 import DeleteConfirmDialog from "../components/firms/DeleteConfirmDialog";
+import DeleteProductConfirmDialog from "../components/products/DeleteProductConfirmDialog";
 import AddProductDialog from "../components/products/AddProductDialog";
 import StatsListModal from "../components/stats/StatsListModal";
 import ContactsListModal from "../components/contacts/ContactsListModal";
@@ -228,6 +229,16 @@ export default function Home() {
         id: deletingFirm.id, 
         data: { deleted_at: new Date().toISOString() } 
       });
+    }
+  };
+
+  const handleDeleteProductConfirm = () => {
+    if (deletingProduct) {
+      updateProductMutation.mutate({
+        id: deletingProduct.id,
+        data: { deleted_at: new Date().toISOString() },
+      });
+      setDeletingProduct(null);
     }
   };
 
@@ -499,6 +510,13 @@ export default function Home() {
         onConfirm={handleDeleteConfirm}
       />
 
+      <DeleteProductConfirmDialog
+        open={!!deletingProduct}
+        onOpenChange={(open) => !open && setDeletingProduct(null)}
+        product={deletingProduct}
+        onConfirm={handleDeleteProductConfirm}
+      />
+
       <StatsListModal
         open={!!statsModal}
         onOpenChange={(open) => !open && setStatsModal(null)}
@@ -571,11 +589,6 @@ export default function Home() {
         onSubmit={handleProductSubmit}
         onDelete={(product) => {
           setDeletingProduct(product);
-          // Soft delete
-          updateProductMutation.mutate({ 
-            id: product.id, 
-            data: { deleted_at: new Date().toISOString() } 
-          });
         }}
         editingProduct={editingProduct}
         firms={activeFirms}
