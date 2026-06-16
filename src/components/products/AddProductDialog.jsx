@@ -128,9 +128,9 @@ export default function AddProductDialog({
     }
   }, [isEditing]);
 
-  // Reset firm selection when product type changes (but not when it's preselected)
+  // Reset firm selection when product type changes (but not when it's preselected or editing an existing product)
   useEffect(() => {
-    if (!preselectedFirmId) {
+    if (!preselectedFirmId && !editingProduct) {
       setFirmId("");
     }
   }, [productType]);

@@ -1,0 +1,309 @@
+{
+  "name": "Contact",
+  "type": "object",
+  "properties": {
+    "photo_url": {
+      "type": "string",
+      "description": "URL of the contact's photo"
+    },
+    "salutation": {
+      "type": "string",
+      "enum": [
+        "Mr.",
+        "Ms.",
+        "Mrs.",
+        "Dr.",
+        "Prof.",
+        "Hon."
+      ],
+      "description": "Salutation/title prefix"
+    },
+    "first_name": {
+      "type": "string",
+      "description": "First name of the contact"
+    },
+    "middle_name": {
+      "type": "string",
+      "description": "Middle name of the contact"
+    },
+    "last_name": {
+      "type": "string",
+      "description": "Last name of the contact"
+    },
+    "suffix": {
+      "type": "string",
+      "enum": [
+        "Jr.",
+        "Sr.",
+        "II",
+        "III",
+        "IV",
+        "Esq.",
+        "CFA",
+        "CPA",
+        "MBA",
+        "PhD",
+        "MD"
+      ],
+      "description": "Name suffix"
+    },
+    "title": {
+      "type": "string",
+      "description": "Job title of the contact"
+    },
+    "designations": {
+      "type": "array",
+      "description": "Professional designations",
+      "items": {
+        "type": "string"
+      }
+    },
+    "email": {
+      "type": "string",
+      "description": "Email address of the contact"
+    },
+    "linkedin_url": {
+      "type": "string",
+      "description": "LinkedIn profile URL of the contact"
+    },
+    "employee_status": {
+      "type": "string",
+      "enum": [
+        "Employee",
+        "Non-Employee"
+      ],
+      "description": "Whether the contact is an employee or non-employee"
+    },
+    "contact_status": {
+      "type": "string",
+      "enum": [
+        "Active",
+        "Inactive"
+      ],
+      "default": "Active",
+      "description": "Whether the contact is active or inactive"
+    },
+    "contact_role": {
+      "type": "string",
+      "enum": [
+        "Primary",
+        "Secondary"
+      ],
+      "description": "Whether this is a primary or secondary contact"
+    },
+    "contact_type": {
+      "type": "string",
+      "enum": [
+        "Allocator",
+        "Investment Consultant",
+        "Investment Manager",
+        "Securities Broker",
+        "Trade Organization Representative"
+      ],
+      "description": "Classification type of the contact"
+    },
+    "contact_roles": {
+      "type": "array",
+      "description": "Roles the contact holds (e.g. CIO, Portfolio Manager)",
+      "items": {
+        "type": "string"
+      }
+    },
+    "contact_firm_roles": {
+      "type": "array",
+      "description": "Department roles the contact holds within the firm (for IM/MoM firms)",
+      "items": {
+        "type": "string"
+      }
+    },
+    "gender": {
+      "type": "string",
+      "enum": [
+        "Male",
+        "Female",
+        "Undetermined"
+      ],
+      "default": "Undetermined",
+      "description": "Gender of the contact"
+    },
+    "ethnicity": {
+      "type": "array",
+      "description": "Ethnicity of the contact (multi-select)",
+      "items": {
+        "type": "string",
+        "enum": [
+          "African American",
+          "Asian American",
+          "Caucasian",
+          "Latino American",
+          "Native American Indian",
+          "Native Alaskan Indian"
+        ]
+      }
+    },
+    "veteran_status": {
+      "type": "string",
+      "enum": [
+        "Veteran Owned",
+        "Non-Veteran Owned",
+        "Undetermined"
+      ],
+      "default": "Undetermined",
+      "description": "Veteran ownership status"
+    },
+    "disability_status": {
+      "type": "string",
+      "enum": [
+        "Disabled",
+        "Non-Disabled",
+        "Undetermined"
+      ],
+      "default": "Undetermined",
+      "description": "Disability status"
+    },
+    "biography": {
+      "type": "string",
+      "description": "Biography of the contact"
+    },
+    "education": {
+      "type": "array",
+      "description": "Education history of the contact",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "graduation_year": {
+            "type": "string"
+          },
+          "degree": {
+            "type": "string"
+          },
+          "area_of_specialization": {
+            "type": "string"
+          },
+          "majors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "minors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "professional_experience": {
+      "type": "array",
+      "description": "Professional experience history of the contact",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "company_name": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "start_year": {
+            "type": "string"
+          },
+          "end_year": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "firm_ids": {
+      "type": "array",
+      "description": "IDs of the associated firms",
+      "items": {
+        "type": "string"
+      }
+    },
+    "phones": {
+      "type": "array",
+      "description": "List of phone numbers for the contact",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "phone_type": {
+            "type": "string"
+          },
+          "country_code": {
+            "type": "string"
+          },
+          "area_code": {
+            "type": "string"
+          },
+          "number_mid": {
+            "type": "string"
+          },
+          "number_last": {
+            "type": "string"
+          },
+          "is_default": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "addresses": {
+      "type": "array",
+      "description": "List of addresses for the contact",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "is_primary": {
+            "type": "boolean"
+          },
+          "country": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "postal_code": {
+            "type": "string"
+          },
+          "address_line1": {
+            "type": "string"
+          },
+          "address_line2": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "notes": {
+      "type": "string",
+      "description": "Additional notes about the contact"
+    },
+    "deleted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the contact was soft-deleted"
+    }
+  },
+  "required": [
+    "first_name",
+    "last_name"
+  ]
+}

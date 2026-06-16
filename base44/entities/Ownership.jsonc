@@ -1,0 +1,50 @@
+{
+  "name": "Ownership",
+  "type": "object",
+  "properties": {
+    "firm_id": {
+      "type": "string",
+      "description": "ID of the associated firm"
+    },
+    "effective_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date when this ownership breakdown became effective"
+    },
+    "owners": {
+      "type": "array",
+      "description": "List of owners in this breakdown",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "contact_id": {
+            "type": "string"
+          },
+          "owner_type": {
+            "type": "string",
+            "enum": [
+              "Employee",
+              "Non-Employee"
+            ]
+          },
+          "ownership_percentage": {
+            "type": "number"
+          },
+          "contact_photo_url": {
+            "type": "string"
+          },
+          "contact_full_name": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "firm_id",
+    "effective_date"
+  ]
+}

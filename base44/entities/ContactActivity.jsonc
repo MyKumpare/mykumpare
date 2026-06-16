@@ -1,0 +1,39 @@
+{
+  "name": "ContactActivity",
+  "type": "object",
+  "properties": {
+    "contact_id": {
+      "type": "string",
+      "description": "ID of the associated contact"
+    },
+    "activity_type": {
+      "type": "string",
+      "enum": [
+        "Call",
+        "Email",
+        "Meeting",
+        "Note",
+        "Other"
+      ],
+      "description": "Type of activity"
+    },
+    "activity_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the activity took place"
+    },
+    "subject": {
+      "type": "string",
+      "description": "Short subject or title of the activity"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Detailed notes about the activity"
+    }
+  },
+  "required": [
+    "contact_id",
+    "activity_type",
+    "activity_date"
+  ]
+}

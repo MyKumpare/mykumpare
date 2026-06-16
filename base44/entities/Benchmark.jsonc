@@ -1,0 +1,68 @@
+{
+  "name": "Benchmark",
+  "type": "object",
+  "properties": {
+    "asset_class": {
+      "type": "string",
+      "enum": [
+        "Equity",
+        "Fixed Income",
+        "Commodities",
+        "Real Estate",
+        "Alternatives"
+      ],
+      "description": "Benchmark asset class"
+    },
+    "name": {
+      "type": "string",
+      "description": "Name of the benchmark"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of the benchmark"
+    },
+    "region": {
+      "type": "string",
+      "description": "Benchmark region (for Equity)"
+    },
+    "market_capitalization": {
+      "type": "string",
+      "description": "Market cap focus (for Equity)"
+    },
+    "style": {
+      "type": "string",
+      "description": "Investment style (for Equity)"
+    },
+    "inception_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Inception date of the benchmark"
+    },
+    "monthly_returns": {
+      "type": "array",
+      "description": "Monthly gross return data points",
+      "items": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "End of month date (YYYY-MM-DD)"
+          },
+          "return_value": {
+            "type": "number",
+            "description": "Monthly gross return as a percentage (e.g. 1.5 for 1.5%)"
+          }
+        },
+        "required": [
+          "date",
+          "return_value"
+        ]
+      }
+    }
+  },
+  "required": [
+    "asset_class",
+    "name"
+  ]
+}

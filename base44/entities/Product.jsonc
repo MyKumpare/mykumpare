@@ -1,0 +1,201 @@
+{
+  "name": "Product",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the product"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of the product"
+    },
+    "product_type": {
+      "type": "string",
+      "enum": [
+        "Investment Manager Product",
+        "Multi-Manager Product"
+      ],
+      "description": "Type of product"
+    },
+    "firm_id": {
+      "type": "string",
+      "description": "ID of the associated firm"
+    },
+    "firm_name": {
+      "type": "string",
+      "description": "Name of the associated firm (denormalized)"
+    },
+    "asset_class": {
+      "type": "string",
+      "description": "Asset class classification"
+    },
+    "geography": {
+      "type": "string",
+      "description": "Geographic focus (for Equity)"
+    },
+    "market_cap": {
+      "type": "string",
+      "description": "Market capitalization focus (for Equity)"
+    },
+    "style": {
+      "type": "string",
+      "description": "Investment style (for Equity)"
+    },
+    "investment_process": {
+      "type": "string",
+      "description": "Investment approach type (for Equity)"
+    },
+    "implementation_process": {
+      "type": "string",
+      "description": "Implementation approach (Active/Passive, for Equity)"
+    },
+    "diversification_classification": {
+      "type": "string",
+      "description": "Diversification classification (Concentrated/Diversified, for Equity)"
+    },
+    "aapryl_style": {
+      "type": "string",
+      "description": "Aapryl Style Classification (for Equity)"
+    },
+    "vehicle_offerings": {
+      "type": "array",
+      "description": "Vehicle offering types (for Equity)",
+      "items": {
+        "type": "string"
+      }
+    },
+    "investment_team": {
+      "type": "array",
+      "description": "Investment team members associated with this product",
+      "items": {
+        "type": "object",
+        "properties": {
+          "contact_id": {
+            "type": "string"
+          },
+          "is_key": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "inv_desc_edge": {
+      "type": "string",
+      "description": "Investment Edge narrative"
+    },
+    "inv_desc_philosophy": {
+      "type": "string",
+      "description": "Investment Philosophy narrative"
+    },
+    "inv_desc_universe": {
+      "type": "string",
+      "description": "Investment Universe narrative"
+    },
+    "inv_desc_process": {
+      "type": "string",
+      "description": "Investment Process narrative"
+    },
+    "inv_desc_process_buy_discipline": {
+      "type": "string",
+      "description": "Buy Discipline sub-section of Investment Process"
+    },
+    "inv_desc_process_sell_discipline": {
+      "type": "string",
+      "description": "Sell Discipline sub-section of Investment Process"
+    },
+    "inv_desc_market_positioning": {
+      "type": "array",
+      "description": "Market Positioning options selected",
+      "items": {
+        "type": "string"
+      }
+    },
+    "inv_desc_benchmarks": {
+      "type": "array",
+      "description": "IDs of benchmarks associated with this product",
+      "items": {
+        "type": "string"
+      }
+    },
+    "inv_desc_portfolio_expectations": {
+      "type": "string",
+      "description": "Product Expectations narrative"
+    },
+    "inv_desc_tracking_error_min": {
+      "type": "number",
+      "description": "Target Tracking Error Range - Min %"
+    },
+    "inv_desc_tracking_error_max": {
+      "type": "number",
+      "description": "Target Tracking Error Range - Max %"
+    },
+    "inv_desc_excess_return_min": {
+      "type": "number",
+      "description": "Target Excess Return Range - Min %"
+    },
+    "inv_desc_excess_return_max": {
+      "type": "number",
+      "description": "Target Excess Return Range - Max %"
+    },
+    "inv_desc_information_ratio_min": {
+      "type": "number",
+      "description": "Target Information Ratio Range - Min"
+    },
+    "inv_desc_information_ratio_max": {
+      "type": "number",
+      "description": "Target Information Ratio Range - Max"
+    },
+    "inv_desc_holdings_min": {
+      "type": "number",
+      "description": "Number of Holdings Range - Min"
+    },
+    "inv_desc_holdings_max": {
+      "type": "number",
+      "description": "Number of Holdings Range - Max"
+    },
+    "inv_desc_product_biases": {
+      "type": "object",
+      "description": "Product Biases - regional, country, sector, industry, cash level",
+      "properties": {
+        "regional": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "country": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "sector": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "industry": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "cash_level": {
+          "type": "number"
+        }
+      }
+    },
+    "deleted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the product was soft-deleted"
+    }
+  },
+  "required": [
+    "name",
+    "product_type",
+    "firm_id"
+  ]
+}

@@ -1,0 +1,132 @@
+{
+  "name": "Firm",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the firm"
+    },
+    "firm_type": {
+      "type": "string",
+      "enum": [
+        "Manager of Managers",
+        "Investment Manager",
+        "Allocator",
+        "Investment Consultant",
+        "Securities Brokerage",
+        "Trade Organizations"
+      ],
+      "description": "Primary type of firm (legacy single value)"
+    },
+    "firm_types": {
+      "type": "array",
+      "description": "Types of firm (multi-select)",
+      "items": {
+        "type": "string",
+        "enum": [
+          "Manager of Managers",
+          "Investment Manager",
+          "Allocator",
+          "Investment Consultant",
+          "Securities Brokerage",
+          "Trade Organizations"
+        ]
+      }
+    },
+    "logo_url": {
+      "type": "string",
+      "description": "URL of the firm's logo"
+    },
+    "website": {
+      "type": "string",
+      "description": "Website URL of the firm"
+    },
+    "linkedin_url": {
+      "type": "string",
+      "description": "LinkedIn profile URL of the firm"
+    },
+    "year_founded": {
+      "type": "integer",
+      "description": "Year the firm was founded"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of the firm"
+    },
+    "addresses": {
+      "type": "array",
+      "description": "List of addresses for the firm",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "is_headquarters": {
+            "type": "boolean"
+          },
+          "country": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "postal_code": {
+            "type": "string"
+          },
+          "address_line1": {
+            "type": "string"
+          },
+          "address_line2": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "phones": {
+      "type": "array",
+      "description": "List of phone numbers for the firm",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "address_id": {
+            "type": "string",
+            "description": "ID of the associated address"
+          },
+          "phone_type": {
+            "type": "string"
+          },
+          "country_code": {
+            "type": "string"
+          },
+          "area_code": {
+            "type": "string"
+          },
+          "number_mid": {
+            "type": "string"
+          },
+          "number_last": {
+            "type": "string"
+          },
+          "is_default": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "deleted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the firm was soft-deleted"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

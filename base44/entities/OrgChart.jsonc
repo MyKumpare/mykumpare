@@ -1,0 +1,44 @@
+{
+  "name": "OrgChart",
+  "type": "object",
+  "properties": {
+    "firm_id": {
+      "type": "string",
+      "description": "ID of the associated firm"
+    },
+    "root_ids": {
+      "type": "array",
+      "description": "IDs of root-level nodes in the chart",
+      "items": {
+        "type": "string"
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "description": "All nodes in the org chart (flat list)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "contact_id": {
+            "type": "string"
+          },
+          "title_override": {
+            "type": "string"
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "firm_id"
+  ]
+}

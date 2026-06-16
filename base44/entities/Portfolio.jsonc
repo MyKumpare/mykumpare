@@ -1,0 +1,77 @@
+{
+  "name": "Portfolio",
+  "type": "object",
+  "properties": {
+    "firm_id": {
+      "type": "string",
+      "description": "ID of the associated allocator firm"
+    },
+    "allocator_name": {
+      "type": "string",
+      "description": "Name of the allocator firm (denormalized)"
+    },
+    "portfolio_name": {
+      "type": "string",
+      "description": "Name of the portfolio"
+    },
+    "inception_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Inception date of the portfolio"
+    },
+    "advisor_type": {
+      "type": "string",
+      "enum": [
+        "Manager of Managers",
+        "Investment Manager"
+      ],
+      "description": "Type of advisor managing this portfolio"
+    },
+    "advisor_firm_id": {
+      "type": "string",
+      "description": "ID of the advisor firm (MoM or IM)"
+    },
+    "advisor_firm_name": {
+      "type": "string",
+      "description": "Name of the advisor firm (denormalized)"
+    },
+    "advisor_inception_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Inception date of the advisor (MoM or IM) for this portfolio"
+    },
+    "sub_managers": {
+      "type": "array",
+      "description": "Sub-manager products (only for Manager of Managers advisor type)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "product_id": {
+            "type": "string"
+          },
+          "product_name": {
+            "type": "string"
+          },
+          "firm_name": {
+            "type": "string"
+          },
+          "inception_date": {
+            "type": "string",
+            "format": "date",
+            "description": "Inception date of this sub-manager in the portfolio"
+          }
+        }
+      }
+    },
+    "deleted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the portfolio was soft-deleted"
+    }
+  },
+  "required": [
+    "firm_id",
+    "portfolio_name",
+    "inception_date"
+  ]
+}
