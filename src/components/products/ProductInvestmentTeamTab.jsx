@@ -66,7 +66,7 @@ function ContactPicker({ firmId, existingMemberIds, onAdd }) {
                       className="w-full text-left px-3 py-2 text-sm hover:bg-indigo-50 flex flex-col"
                       onMouseDown={() => { onAdd(c); setSearch(""); setOpen(false); }}
                     >
-                      <span className="font-medium text-gray-800">{[c.salutation, c.first_name, c.middle_name, c.last_name].filter(Boolean).join(" ")}</span>
+                      <span className="font-medium text-gray-800">{[c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ")}{c.designations?.length > 0 ? `, ${c.designations.join(", ")}` : ""}</span>
                       {c.title && <span className="text-xs text-gray-400">{c.title}</span>}
                     </button>
                   ))}
@@ -82,7 +82,7 @@ function ContactPicker({ firmId, existingMemberIds, onAdd }) {
                       className="w-full text-left px-3 py-2 text-sm hover:bg-indigo-50 flex flex-col"
                       onMouseDown={() => { onAdd(c); setSearch(""); setOpen(false); }}
                     >
-                      <span className="font-medium text-gray-800">{[c.salutation, c.first_name, c.middle_name, c.last_name].filter(Boolean).join(" ")}</span>
+                      <span className="font-medium text-gray-800">{[c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ")}{c.designations?.length > 0 ? `, ${c.designations.join(", ")}` : ""}</span>
                       {c.title && <span className="text-xs text-gray-400">{c.title}</span>}
                     </button>
                   ))}
