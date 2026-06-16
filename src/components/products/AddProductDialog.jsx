@@ -39,6 +39,7 @@ const EMPTY_CLASSIFICATIONS = {
   style: "",
   investment_process: "",
   implementation_process: "",
+  diversification_classification: "",
   aapryl_style: "",
   vehicle_offerings: [],
 };
@@ -52,6 +53,7 @@ function classificationsFromProduct(p) {
     style: p.style || "",
     investment_process: p.investment_process || "",
     implementation_process: p.implementation_process || "",
+    diversification_classification: p.diversification_classification || "",
     aapryl_style: p.aapryl_style || "",
     vehicle_offerings: p.vehicle_offerings || [],
   };
