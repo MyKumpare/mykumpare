@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import {
@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format, parseISO } from "date-fns";
-import { CalendarIcon, Plus, X, ChevronDown, Check, Pencil, LayoutList } from "lucide-react";
+import { CalendarIcon, Plus, X, ChevronDown, Check, Pencil, LayoutList, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AddFirmDialog from "@/components/firms/AddFirmDialog";
 
@@ -303,22 +303,64 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
     }
   }, [open, preselectedAllocatorId, editingPortfolio]);
 
-  // Reset advisor fields when advisor type changes (but not on initial mount/open)
-  const isFirstAdvisorTypeChange = useRef(true);
-  useEffect(() => {
-    if (isFirstAdvisorTypeChange.current) {
-      isFirstAdvisorTypeChange.current = false;
-      return;
+  const [pendingAdvisorType, setPendingAdvisorType] = useState(null);
+  const [showAdvisorTypeWarning, setShowAdvisorTypeWarning] = useState(false);
+  const [showAllocatorChangeWarning, setShowAllocatorChangeWarning] = useState(false);
+  const [pendingAllocatorId, setPendingAllocatorId] = useState(null);
+  const [showAdvisorFirmChangeWarning, setShowAdvisorFirmChangeWarning] = useState(false);
+  const [pendingAdvisorFirmId, setPendingAdvisorFirmId] = useState(null);
+
+  const handleAdvisorTypeChange = (newType) => {
+    const next = advisorType === newType ? "" : newType;
+    if (editingPortfolio && isEditing && (advisorFirmId || subManagers.length > 0)) {
+      setPendingAdvisorType(next);
+      setShowAdvisorTypeWarning(true);
+    } else {
+      setAdvisorType(next);
+      setAdvisorFirmId("");
+      setAdvisorInceptionDate(null);
+      setSubManagers([]);
     }
+  };
+
+  const confirmAdvisorTypeChange = () => {
+    setAdvisorType(pendingAdvisorType);
     setAdvisorFirmId("");
     setAdvisorInceptionDate(null);
     setSubManagers([]);
-  }, [advisorType]);
+    setPendingAdvisorType(null);
+    setShowAdvisorTypeWarning(false);
+  };
 
-  // Reset the ref when dialog opens/closes
-  useEffect(() => {
-    isFirstAdvisorTypeChange.current = true;
-  }, [open]);
+  const handleAllocatorChange = (newId) => {
+    if (editingPortfolio && isEditing && allocatorId && newId !== allocatorId) {
+      setPendingAllocatorId(newId);
+      setShowAllocatorChangeWarning(true);
+    } else {
+      setAllocatorId(newId);
+    }
+  };
+
+  const confirmAllocatorChange = () => {
+    setAllocatorId(pendingAllocatorId);
+    setPendingAllocatorId(null);
+    setShowAllocatorChangeWarning(false);
+  };
+
+  const handleAdvisorFirmChange = (newId) => {
+    if (editingPortfolio && isEditing && advisorFirmId && newId !== advisorFirmId) {
+      setPendingAdvisorFirmId(newId);
+      setShowAdvisorFirmChangeWarning(true);
+    } else {
+      setAdvisorFirmId(newId);
+    }
+  };
+
+  const confirmAdvisorFirmChange = () => {
+    setAdvisorFirmId(pendingAdvisorFirmId);
+    setPendingAdvisorFirmId(null);
+    setShowAdvisorFirmChangeWarning(false);
+  };
 
   const getFirmTypes = (f) =>
     f.firm_types?.length ? f.firm_types : f.firm_type ? [f.firm_type] : [];
@@ -454,6 +496,45 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
 
   return (
     <>
+      {/* Advisor type change warning */}
+      {showAdvisorTypeWarning && (
+        <Dialog open={showAdvisorTypeWarning} onOpenChange={() => setShowAdvisorTypeWarning(false)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader><DialogTitle className="flex items-center gap-2"><AlertTriangle className="w-5 h-5 text-amber-500" />Change Advisor Type?</DialogTitle></DialogHeader>
+            <p className="text-sm text-gray-600">Changing the advisor type will clear the currently selected advisor firm and related data. Do you want to proceed?</p>
+            <DialogFooter className="gap-2 pt-2">
+              <Button variant="outline" onClick={() => setShowAdvisorTypeWarning(false)}>Cancel</Button>
+              <Button className="bg-amber-500 hover:bg-amber-600 text-white" onClick={confirmAdvisorTypeChange}>Yes, Change It</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+      {/* Allocator change warning */}
+      {showAllocatorChangeWarning && (
+        <Dialog open={showAllocatorChangeWarning} onOpenChange={() => setShowAllocatorChangeWarning(false)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader><DialogTitle className="flex items-center gap-2"><AlertTriangle className="w-5 h-5 text-amber-500" />Change Allocator?</DialogTitle></DialogHeader>
+            <p className="text-sm text-gray-600">You are about to change the allocator firm for this portfolio. Do you want to proceed?</p>
+            <DialogFooter className="gap-2 pt-2">
+              <Button variant="outline" onClick={() => setShowAllocatorChangeWarning(false)}>Cancel</Button>
+              <Button className="bg-amber-500 hover:bg-amber-600 text-white" onClick={confirmAllocatorChange}>Yes, Change It</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+      {/* Advisor firm change warning */}
+      {showAdvisorFirmChangeWarning && (
+        <Dialog open={showAdvisorFirmChangeWarning} onOpenChange={() => setShowAdvisorFirmChangeWarning(false)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader><DialogTitle className="flex items-center gap-2"><AlertTriangle className="w-5 h-5 text-amber-500" />Change Advisor Firm?</DialogTitle></DialogHeader>
+            <p className="text-sm text-gray-600">You are about to change the associated advisor firm. Do you want to proceed?</p>
+            <DialogFooter className="gap-2 pt-2">
+              <Button variant="outline" onClick={() => setShowAdvisorFirmChangeWarning(false)}>Cancel</Button>
+              <Button className="bg-amber-500 hover:bg-amber-600 text-white" onClick={confirmAdvisorFirmChange}>Yes, Change It</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -574,7 +655,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                 <SearchableSelect
                   options={allocatorOptions}
                   value={allocatorId}
-                  onChange={setAllocatorId}
+                  onChange={handleAllocatorChange}
                   placeholder="Select allocator..."
                   onAddNew={handleAddAllocator}
                   addNewLabel="Add new Allocator..."
@@ -610,7 +691,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                     <button
                       key={t}
                       type="button"
-                      onClick={() => setAdvisorType(advisorType === t ? "" : t)}
+                      onClick={() => handleAdvisorTypeChange(t)}
                       className={cn(
                         "flex-1 h-9 rounded-md border text-sm font-medium transition-colors",
                         advisorType === t
@@ -633,7 +714,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                   <SearchableSelect
                     options={advisorFirmOptions}
                     value={advisorFirmId}
-                    onChange={setAdvisorFirmId}
+                    onChange={handleAdvisorFirmChange}
                     placeholder={`Select ${advisorType}...`}
                     onAddNew={handleAddAdvisorFirm}
                     addNewLabel={`Add new ${advisorType}...`}

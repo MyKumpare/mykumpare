@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Pencil, X } from "lucide-react";
+import { Pencil, X, AlertTriangle } from "lucide-react";
 import ProductClassificationsTab from "./ProductClassificationsTab";
 import ProductInvestmentTeamTab from "./ProductInvestmentTeamTab";
 import ProductInvestmentDescriptionTab from "./ProductInvestmentDescriptionTab";
@@ -128,12 +128,41 @@ export default function AddProductDialog({
     }
   }, [isEditing]);
 
-  // Reset firm selection when product type changes (but not when it's preselected or editing an existing product)
-  useEffect(() => {
-    if (!preselectedFirmId && !editingProduct) {
+  const [pendingProductTypeChange, setPendingProductTypeChange] = useState(null);
+  const [showFirmChangeWarning, setShowFirmChangeWarning] = useState(false);
+  const [pendingFirmId, setPendingFirmId] = useState(null);
+
+  const handleProductTypeChange = (newType) => {
+    if (isEditing && editingProduct && newType !== productType) {
+      setPendingProductTypeChange(newType);
+    } else if (!preselectedFirmId && !editingProduct) {
+      setProductType(newType);
       setFirmId("");
+    } else {
+      setProductType(newType);
     }
-  }, [productType]);
+  };
+
+  const confirmProductTypeChange = () => {
+    setProductType(pendingProductTypeChange);
+    setFirmId("");
+    setPendingProductTypeChange(null);
+  };
+
+  const handleFirmChange = (newFirmId) => {
+    if (isEditing && editingProduct && newFirmId !== firmId) {
+      setPendingFirmId(newFirmId);
+      setShowFirmChangeWarning(true);
+    } else {
+      setFirmId(newFirmId);
+    }
+  };
+
+  const confirmFirmChange = () => {
+    setFirmId(pendingFirmId);
+    setPendingFirmId(null);
+    setShowFirmChangeWarning(false);
+  };
 
   const eligibleFirms = productType
     ? firms
@@ -260,6 +289,33 @@ export default function AddProductDialog({
       };
 
   return (
+    <>
+    {/* Product type change warning */}
+    {pendingProductTypeChange && (
+      <Dialog open={!!pendingProductTypeChange} onOpenChange={() => setPendingProductTypeChange(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><AlertTriangle className="w-5 h-5 text-amber-500" />Change Product Type?</DialogTitle></DialogHeader>
+          <p className="text-sm text-gray-600">Changing the product type will clear the currently associated firm. Do you want to proceed?</p>
+          <DialogFooter className="gap-2 pt-2">
+            <Button variant="outline" onClick={() => setPendingProductTypeChange(null)}>Cancel</Button>
+            <Button className="bg-amber-500 hover:bg-amber-600 text-white" onClick={confirmProductTypeChange}>Yes, Change It</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    )}
+    {/* Firm change warning */}
+    {showFirmChangeWarning && (
+      <Dialog open={showFirmChangeWarning} onOpenChange={() => setShowFirmChangeWarning(false)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><AlertTriangle className="w-5 h-5 text-amber-500" />Change Associated Firm?</DialogTitle></DialogHeader>
+          <p className="text-sm text-gray-600">You are about to change the associated firm for this product. Do you want to proceed?</p>
+          <DialogFooter className="gap-2 pt-2">
+            <Button variant="outline" onClick={() => setShowFirmChangeWarning(false)}>Cancel</Button>
+            <Button className="bg-amber-500 hover:bg-amber-600 text-white" onClick={confirmFirmChange}>Yes, Change It</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    )}
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
       <DialogContent
         className="sm:max-w-lg max-h-[90vh] flex flex-col"
@@ -334,7 +390,7 @@ export default function AddProductDialog({
                     {productType}
                   </div>
                 ) : (
-                  <Select value={productType} onValueChange={setProductType}>
+                  <Select value={productType} onValueChange={handleProductTypeChange}>
                     <SelectTrigger className="h-9">
                       <SelectValue placeholder="Select product type..." />
                     </SelectTrigger>
@@ -356,7 +412,7 @@ export default function AddProductDialog({
                   </div>
                 ) : (
                   <>
-                    <Select value={firmId} onValueChange={setFirmId} disabled={!productType}>
+                    <Select value={firmId} onValueChange={handleFirmChange} disabled={!productType}>
                       <SelectTrigger className="h-9">
                         <SelectValue
                           placeholder={
@@ -526,5 +582,6 @@ export default function AddProductDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
+    </>
+    );
+    }

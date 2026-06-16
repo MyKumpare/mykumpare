@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload, TrendingUp, Tag, GraduationCap, Briefcase, Activity, Package } from "lucide-react";
+import { X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload, TrendingUp, Tag, GraduationCap, Briefcase, Activity, Package, AlertTriangle } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import QuickAddFirmForm from "./QuickAddFirmForm";
@@ -291,12 +291,24 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
     ...contactFirmRoles.filter(r => !DEFAULT_CONTACT_FIRM_ROLES.includes(r)),
   ])].sort();
 
+  const [firmRemoveWarning, setFirmRemoveWarning] = useState(null); // firmId pending removal
+
   const sortedFirms = [...firms].sort((a, b) => a.name.localeCompare(b.name));
   const filteredFirms = sortedFirms.filter(
     (f) => !firmIds.includes(f.id) && f.name.toLowerCase().includes(firmSearch.toLowerCase())
   );
   const addFirm = (id) => { setFirmIds([...firmIds, id]); setFirmSearch(""); setShowFirmPicker(false); };
-  const removeFirm = (id) => setFirmIds(firmIds.filter((fid) => fid !== id));
+  const removeFirm = (id) => {
+    if (editingContact) {
+      setFirmRemoveWarning(id);
+    } else {
+      setFirmIds(firmIds.filter((fid) => fid !== id));
+    }
+  };
+  const confirmRemoveFirm = () => {
+    setFirmIds(firmIds.filter((fid) => fid !== firmRemoveWarning));
+    setFirmRemoveWarning(null);
+  };
   const getFirmName = (id) => firms.find((f) => f.id === id)?.name || id;
 
   // Phone handlers
@@ -327,6 +339,20 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   );
 
   return (
+    <>
+    {/* Firm remove warning */}
+    {firmRemoveWarning && (
+      <Dialog open={!!firmRemoveWarning} onOpenChange={() => setFirmRemoveWarning(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><AlertTriangle className="w-5 h-5 text-amber-500" />Remove Associated Firm?</DialogTitle></DialogHeader>
+          <p className="text-sm text-gray-600">You are about to remove <strong>{getFirmName(firmRemoveWarning)}</strong> from this contact's associated firms. Do you want to proceed?</p>
+          <DialogFooter className="gap-2 pt-2">
+            <Button variant="outline" onClick={() => setFirmRemoveWarning(null)}>Cancel</Button>
+            <Button className="bg-amber-500 hover:bg-amber-600 text-white" onClick={confirmRemoveFirm}>Yes, Remove It</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    )}
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
         <DialogHeader>
@@ -1123,5 +1149,6 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    </>
   );
 }
