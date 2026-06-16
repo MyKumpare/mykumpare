@@ -445,6 +445,7 @@ export default function Home() {
           contacts={activeContacts}
           firms={activeFirms}
           onContactClick={(contact) => setViewingContact(contact)}
+          onFirmClick={(firm) => handleEdit(firm, false, false)}
           onAddContact={() => setAddContactOpen(true)}
         />
 
