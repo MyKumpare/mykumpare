@@ -118,13 +118,23 @@ function ProductSearchDropdown({ products, selectedIds, onToggle, multi, allSeri
       {/* Selected product display (single mode) */}
       {!multi && selectedIds.length === 1 && selectedProduct && (
         <div className="px-3 py-2.5 border-b border-gray-100 bg-white">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-sm font-semibold text-gray-800">{selectedProduct.name}</p>
-            {selectedProductPeriod && (
-              <span className="text-[10px] text-gray-400 whitespace-nowrap">
-                {formatMDY(selectedProductPeriod.start)} – {formatMDY(selectedProductPeriod.end)}
-              </span>
-            )}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 flex-wrap min-w-0">
+              <p className="text-sm font-semibold text-gray-800 truncate">{selectedProduct.name}</p>
+              {selectedProductPeriod && (
+                <span className="text-[10px] text-gray-400 whitespace-nowrap">
+                  {formatMDY(selectedProductPeriod.start)} – {formatMDY(selectedProductPeriod.end)}
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onToggle(selectedProduct.id); }}
+              className="text-gray-400 hover:text-red-500 flex-shrink-0"
+              title="Remove product"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
           {selectedProduct.firm_name && <p className="text-xs text-gray-500 mt-0.5">{selectedProduct.firm_name}</p>}
         </div>
