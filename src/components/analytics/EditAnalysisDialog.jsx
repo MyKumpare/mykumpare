@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
-import { CalendarDays, RefreshCw, Link2, Trash2 } from "lucide-react";
+import { CalendarDays, RefreshCw, Link2, Trash2, BarChart2 } from "lucide-react";
 import BenchmarkMultiSelect from "./BenchmarkMultiSelect";
 import MeasurementPeriodsSection from "./MeasurementPeriodsSection";
 import MeasurementTypeSection from "./MeasurementTypeSection";
+import AnalysisResults from "./AnalysisResults";
 
 const ym = (d) => (d ? d.slice(0, 7) : "");
 // Clean and validate MM/DD/YYYY dates
@@ -77,6 +79,8 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [activeTab, setActiveTab] = useState("details");
+  const [showResults, setShowResults] = useState(false);
 
   // Form state
   const [analysisName, setAnalysisName] = useState("");
@@ -182,7 +186,8 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
     mutationFn: (data) => base44.entities.Analysis.update(analysis.id, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["analyses"] });
-      onOpenChange(false);
+      setShowResults(true);
+      setActiveTab("results");
     },
   });
 
@@ -232,7 +237,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-base font-bold text-gray-800 flex items-center gap-2">
             Edit Analysis
@@ -242,7 +247,18 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-5 mt-1">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="details" className="flex items-center gap-2">
+              <span>Details</span>
+            </TabsTrigger>
+            <TabsTrigger value="results" className="flex items-center gap-2" disabled={!showResults}>
+              <BarChart2 className="w-4 h-4" />
+              <span>Results</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="details" className="space-y-5 mt-1">
           {/* Name */}
           <div>
             <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Analysis Name</label>
@@ -446,7 +462,19 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
               </button>
             </div>
           </div>
-        </div>
+          </TabsContent>
+
+          <TabsContent value="results" className="mt-1">
+            {showResults && (
+              <AnalysisResults
+                analysis={analysis}
+                products={activeProducts}
+                benchmarks={benchmarks}
+                returnSeries={allSeries}
+              />
+            )}
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
