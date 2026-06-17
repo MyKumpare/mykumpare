@@ -405,18 +405,19 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
     <div className="space-y-5 pb-4">
 
       {/* ── Product name + Return selector ── */}
-      <div>
-        <div className="flex items-start justify-between gap-2">
-          <p className="text-base font-bold text-gray-900">{editingProduct?.name}</p>
-          <div className="flex items-center gap-1 flex-shrink-0">
+      <div className="space-y-1.5">
+        <p className="text-base font-bold text-gray-900">{editingProduct?.name}</p>
+        {editingProduct?.firm_name && (
+          <p className="text-xs text-gray-500">{editingProduct.firm_name}</p>
+        )}
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-gray-500 font-medium">Return Type:</span>
+          <div className="flex gap-1">
             <ToggleButton active={returnType === "gross"} onClick={() => setReturnType("gross")}>Gross</ToggleButton>
             {hasNet && <ToggleButton active={returnType === "net"} onClick={() => setReturnType("net")}>Net</ToggleButton>}
             {hasNet && <ToggleButton active={returnType === "both"} onClick={() => setReturnType("both")}>Both</ToggleButton>}
           </div>
         </div>
-        {editingProduct?.firm_name && (
-          <p className="text-xs text-gray-500">{editingProduct.firm_name}</p>
-        )}
       </div>
 
       {/* ── Controls row ── */}
