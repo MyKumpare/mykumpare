@@ -330,9 +330,49 @@ export function isRatioMetric(attribute) {
 // ── Main analysis compute entry point ────────────────────────────────────────
 
 export function runAnalysis({ analysis, allSeries, allBenchmarks }) {
-  const categoriesConfig = analysis?.measurement_type?.categories_config ?? [];
   const periodStart = analysis?.period_start;
   const periodEnd = analysis?.period_end;
+
+  // Support both new (categories_config) and legacy (selected_types + attributes + measurement_periods) formats
+  let categoriesConfig = analysis?.measurement_type?.categories_config ?? [];
+  if (!categoriesConfig.length) {
+    // Build a synthetic category from legacy fields
+    const mp = analysis?.measurement_periods ?? {};
+    const legacyPeriodConfig = {
+      trailing: mp.trailing_periods ?? [],
+      trailing_custom_start: mp.trailing_custom_start ?? "",
+      trailing_custom_end: mp.trailing_custom_end ?? "",
+      rolling: mp.rolling_periods ?? [],
+      rolling_custom_start: mp.rolling_custom_start ?? "",
+      rolling_custom_end: mp.rolling_custom_end ?? "",
+      cumulative: mp.include_cumulative ?? false,
+      calendar_years: mp.calendar_years ?? [],
+      historical: mp.historical_periods ?? [],
+    };
+    const attrs = analysis?.measurement_type?.attributes ?? [];
+    const types = analysis?.measurement_type?.selected_types ?? [];
+    // If no periods selected at all, default to a full-period cumulative window
+    const hasPeriod = legacyPeriodConfig.trailing.length || legacyPeriodConfig.rolling.length ||
+      legacyPeriodConfig.cumulative || legacyPeriodConfig.calendar_years.length || legacyPeriodConfig.historical.length;
+    if (!hasPeriod) legacyPeriodConfig.cumulative = true;
+
+    if (attrs.length > 0 || types.length > 0) {
+      categoriesConfig = [{
+        category: types[0] ?? "performance",
+        attributes: attrs.length ? attrs : ["Return", "Cumulative Return", "Standard Deviation", "Sharpe Ratio"],
+        periodConfig: legacyPeriodConfig,
+        benchmarkConfig: { show_default: true, secondary_benchmark_ids: [] },
+      }];
+    } else {
+      // Absolute fallback: show basic performance stats over the full analysis period
+      categoriesConfig = [{
+        category: "performance",
+        attributes: ["Return", "Cumulative Return", "Standard Deviation", "Sharpe Ratio", "Maximum Drawdown"],
+        periodConfig: { cumulative: true, trailing: [], rolling: [], calendar_years: [], historical: [] },
+        benchmarkConfig: { show_default: true, secondary_benchmark_ids: [] },
+      }];
+    }
+  }
 
   const results = [];
 

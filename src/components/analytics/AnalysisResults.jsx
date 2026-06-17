@@ -215,8 +215,14 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
     return runAnalysis({ analysis, allSeries: returnSeries, allBenchmarks: benchmarks });
   }, [analysis, returnSeries, benchmarks]);
 
-  if (!results.length) {
-    return <div className="p-8 text-center text-gray-400 text-sm">No results — ensure products have return data.</div>;
+  const hasAnyData = results.some(r => r.categories?.some(c => c.periodResults?.length > 0));
+  if (!results.length || !hasAnyData) {
+    return (
+      <div className="p-8 text-center text-gray-400 text-sm space-y-1">
+        <p className="font-medium text-gray-600">No results to display</p>
+        <p className="text-xs">Make sure the selected product has return data imported and the analysis period overlaps with that data.</p>
+      </div>
+    );
   }
 
   const getChartType = (key) => chartTypes[key] || "bar";
