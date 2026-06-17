@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import {
-  Search, X, ChevronDown, BarChart2, LayoutList, Link2, CalendarDays, RefreshCw, Play, CheckCircle
+  Search, X, ChevronDown, BarChart2, LayoutList, Link2, CalendarDays, RefreshCw, Play, CheckCircle, Pencil, Trash2
 } from "lucide-react";
 import BenchmarkMultiSelect from "./BenchmarkMultiSelect";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -236,8 +236,8 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
 
   // Steps: "meta" → "products" → "period" → "measurement_type" → "measurement_periods" → "review" → "saved"
   const [step, setStep] = useState("meta");
-  const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0);
-  const [measurementCategories, setMeasurementCategories] = useState([]); // [{ category, periods, attributes }]
+  const [measurementCategories, setMeasurementCategories] = useState([]);
+  const [editingCategoryIndex, setEditingCategoryIndex] = useState(null);
 
   // Meta
   const [analysisName, setAnalysisName] = useState("");
@@ -353,8 +353,8 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
 
   const resetForm = () => {
     setStep("meta");
-    setCurrentCategoryIndex(0);
     setMeasurementCategories([]);
+    setEditingCategoryIndex(null);
     setAnalysisName("");
     setIsTemplate(false);
     setVisibility("personal");
@@ -415,13 +415,29 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
   };
 
   const addMeasurementCategory = () => {
-    setMeasurementCategories((prev) => [
-      ...prev,
-      { category: selectedCategory, attributes: selectedAttributes, periods: selectedPeriods },
-    ]);
+    const entry = { category: selectedCategory, attributes: selectedAttributes, periods: selectedPeriods };
+    if (editingCategoryIndex !== null) {
+      setMeasurementCategories((prev) => prev.map((c, i) => i === editingCategoryIndex ? entry : c));
+      setEditingCategoryIndex(null);
+    } else {
+      setMeasurementCategories((prev) => [...prev, entry]);
+    }
     setSelectedCategory("");
     setSelectedAttributes([]);
     setSelectedPeriods([]);
+  };
+
+  const startEditCategory = (idx) => {
+    const cat = measurementCategories[idx];
+    setEditingCategoryIndex(idx);
+    setSelectedCategory(cat.category);
+    setSelectedAttributes(cat.attributes ?? []);
+    setSelectedPeriods(cat.periods ?? []);
+    setStep("measurement_attributes");
+  };
+
+  const deleteCategory = (idx) => {
+    setMeasurementCategories((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const canProceedMeta = analysisName.trim() && analysisType;
@@ -637,9 +653,14 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
                   <SelectValue placeholder="Choose a measurement category..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {MEASUREMENT_CATEGORIES.map((cat) => (
-                    <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
-                  ))}
+                  {MEASUREMENT_CATEGORIES.map((cat) => {
+                    const alreadyAdded = measurementCategories.some((c, i) => c.category === cat.value && i !== editingCategoryIndex);
+                    return (
+                      <SelectItem key={cat.value} value={cat.value} disabled={alreadyAdded}>
+                        {cat.label}{alreadyAdded ? " (added)" : ""}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
@@ -648,9 +669,25 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Selected Categories</label>
                 {measurementCategories.map((cat, idx) => (
                   <div key={idx} className="flex items-center gap-2 text-sm text-gray-700 bg-gray-50 px-3 py-2 rounded-lg">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span>{MEASUREMENT_CATEGORIES.find(c => c.value === cat.category)?.label}</span>
-                    <span className="text-gray-400">({cat.attributes?.length ?? 0} attrs · {cat.periods.length} periods)</span>
+                    <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                    <span className="flex-1">{MEASUREMENT_CATEGORIES.find(c => c.value === cat.category)?.label}</span>
+                    <span className="text-gray-400 text-xs">({cat.attributes?.length ?? 0} attrs · {cat.periods.length} periods)</span>
+                    <button
+                      type="button"
+                      onClick={() => startEditCategory(idx)}
+                      className="p-1 text-gray-400 hover:text-indigo-600 transition-colors"
+                      title="Edit"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteCategory(idx)}
+                      className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                      title="Delete"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 ))}
               </div>
@@ -689,7 +726,7 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                    Select Attributes for {cat?.label}
+                    {editingCategoryIndex !== null ? "Edit Attributes for" : "Select Attributes for"} {cat?.label}
                   </label>
                   <div className="flex gap-3">
                     <button type="button" onClick={() => setSelectedAttributes(cat?.attributes ?? [])} className="text-xs text-indigo-600 hover:underline">Select All</button>
@@ -765,7 +802,7 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
                 disabled={!canProceedMeasurementPeriods}
                 className="px-5 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg disabled:opacity-40 hover:bg-indigo-700 transition-colors"
               >
-                {measurementCategories.length > 0 ? "Add Another Category" : "Continue"}
+                {editingCategoryIndex !== null ? "Update Category" : measurementCategories.length > 0 ? "Add Another Category" : "Continue"}
               </button>
             </div>
           </div>
