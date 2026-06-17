@@ -4,15 +4,13 @@ import { Button } from "@/components/ui/button";
 import AnalysisLaunchModal from "./AnalysisLaunchModal";
 import NewAnalysisDialog from "./NewAnalysisDialog";
 import ExistingAnalysesDialog from "./ExistingAnalysesDialog";
-import EditAnalysisDialog from "./EditAnalysisDialog";
 
-export default function AnalyticsSection({ openLaunch, onLaunchOpenChange, totalAnalyses = 0, forceExpanded }) {
+export default function AnalyticsSection({ openLaunch, onLaunchOpenChange, totalAnalyses = 0, forceExpanded, editingAnalysis, onEditAnalysisChange }) {
   const [expanded, setExpanded] = useState(false);
   const launchOpen = openLaunch ?? false;
   const setLaunchOpen = onLaunchOpenChange ?? (() => {});
   const [newOpen, setNewOpen] = useState(false);
   const [existingOpen, setExistingOpen] = useState(false);
-  const [editingAnalysis, setEditingAnalysis] = useState(null);
 
   useEffect(() => {
     if (forceExpanded !== undefined) setExpanded(forceExpanded);
@@ -83,15 +81,8 @@ export default function AnalyticsSection({ openLaunch, onLaunchOpenChange, total
         onOpenChange={setExistingOpen}
         onSelect={(analysis) => {
           setExistingOpen(false);
-          setEditingAnalysis(analysis);
+          if (onEditAnalysisChange) onEditAnalysisChange(analysis);
         }}
-      />
-
-      {/* Edit/view/delete analysis dialog */}
-      <EditAnalysisDialog
-        open={!!editingAnalysis}
-        onOpenChange={(o) => { if (!o) setEditingAnalysis(null); }}
-        analysis={editingAnalysis}
       />
     </div>
   );

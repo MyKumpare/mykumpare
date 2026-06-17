@@ -23,6 +23,7 @@ import ProductsSection from "../components/products/ProductsSection";
 import ContactsSection from "../components/contacts/ContactsSection";
 import UtilitySection from "../components/utility/UtilitySection";
 import AnalyticsSection from "../components/analytics/AnalyticsSection";
+import EditAnalysisDialog from "../components/analytics/EditAnalysisDialog";
 
 const FIRM_TYPES = [
   "Manager of Managers",
@@ -61,6 +62,7 @@ export default function Home() {
 
   const [analyticsLaunchOpen, setAnalyticsLaunchOpen] = useState(false);
   const [allExpanded, setAllExpanded] = useState(false);
+  const [editingAnalysis, setEditingAnalysis] = useState(null);
 
   const portfoliosRef = useRef(null);
   const firmsRef = useRef(null);
@@ -396,7 +398,7 @@ export default function Home() {
                 onContactClick={(contact) => { setSearchQuery(""); setViewingContact(contact); }}
                 onProductClick={(product) => { setSearchQuery(""); handleEditProduct(product); }}
                 onPortfolioClick={(portfolio) => { setSearchQuery(""); setPreselectedAllocatorId(portfolio.firm_id); setPortfolioDialogOpen(true); }}
-                onAnalysisClick={(analysis) => { setSearchQuery(""); setAnalyticsLaunchOpen(true); }}
+                onAnalysisClick={(analysis) => { setSearchQuery(""); setEditingAnalysis(analysis); }}
               />
             )}
           </div>
@@ -469,6 +471,8 @@ export default function Home() {
           onLaunchOpenChange={setAnalyticsLaunchOpen}
           totalAnalyses={totalAnalyses}
           forceExpanded={allExpanded}
+          editingAnalysis={editingAnalysis}
+          onEditAnalysisChange={setEditingAnalysis}
         />
 
         {/* Utility section */}
@@ -627,6 +631,13 @@ export default function Home() {
         preselectedProductType={preselectedProductType}
         preselectedFirmId={preselectedFirmId}
         onFirmClick={(firm) => handleEdit(firm, true)}
+      />
+
+      {/* Edit/view/delete analysis dialog */}
+      <EditAnalysisDialog
+        open={!!editingAnalysis}
+        onOpenChange={(o) => { if (!o) setEditingAnalysis(null); }}
+        analysis={editingAnalysis}
       />
 
     </div>
