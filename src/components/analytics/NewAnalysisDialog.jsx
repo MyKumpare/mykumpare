@@ -527,7 +527,7 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
                       </div>
 
                       {/* Benchmarks */}
-                      <div className="grid grid-cols-[auto_1fr] items-start gap-2">
+                      <div className="grid grid-cols-[auto_1fr_auto] items-start gap-2">
                         <label className="text-xs text-gray-500 font-medium whitespace-nowrap mt-1.5">Benchmarks</label>
                         <BenchmarkMultiSelect
                           benchmarks={benchmarks}
@@ -535,6 +535,23 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
                           onChange={(ids) => updateConfig(id, "benchmark_ids", ids)}
                           productBenchmarks={product?.inv_desc_benchmarks ?? []}
                         />
+                        {(() => {
+                          const bmIds = cfg.benchmark_ids ?? [];
+                          if (bmIds.length === 0) return null;
+                          const bmPeriods = bmIds.map(bmId => {
+                            const bm = benchmarks.find(b => b.id === bmId);
+                            const mr = (bm?.monthly_returns ?? []).sort((a, b) => a.date.localeCompare(b.date));
+                            return mr.length ? { start: ym(mr[0].date), end: ym(mr[mr.length - 1].date) } : null;
+                          }).filter(Boolean);
+                          if (bmPeriods.length === 0) return null;
+                          const earliest = bmPeriods.map(p => p.start).sort().pop();
+                          const latest = bmPeriods.map(p => p.end).sort()[0];
+                          return (
+                            <span className="text-[10px] text-gray-400 whitespace-nowrap mt-1.5">
+                              {earliest} – {latest}
+                            </span>
+                          );
+                        })()}
                       </div>
 
                       {/* Return type */}
@@ -551,7 +568,7 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
 
                       {/* Clone returns — only relevant for gross or net, not "both" */}
                       {cfg.return_type !== "both" && (
-                        <div className="flex flex-wrap gap-4">
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                           <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
                             <input
                               type="checkbox"
@@ -561,16 +578,44 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
                             />
                             <span>Include clone return (product)</span>
                           </label>
+                          {(() => {
+                            const series = allSeries.filter((s) => s.product_id === id);
+                            const mr = series.flatMap((s) => s.monthly_returns ?? []).sort((a, b) => a.date.localeCompare(b.date));
+                            const period = mr.length ? { start: ym(mr[0].date), end: ym(mr[mr.length - 1].date) } : null;
+                            return period ? (
+                              <span className="text-[10px] text-gray-400 whitespace-nowrap">
+                                {period.start} – {period.end}
+                              </span>
+                            ) : null;
+                          })()}
                           {(cfg.benchmark_ids ?? []).length > 0 && (
-                            <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={cfg.include_clone_benchmark ?? false}
-                                onChange={(e) => updateConfig(id, "include_clone_benchmark", e.target.checked)}
-                                className="rounded border-gray-300 text-indigo-600"
-                              />
-                              <span>Include clone return (benchmark)</span>
-                            </label>
+                            <>
+                              <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={cfg.include_clone_benchmark ?? false}
+                                  onChange={(e) => updateConfig(id, "include_clone_benchmark", e.target.checked)}
+                                  className="rounded border-gray-300 text-indigo-600"
+                                />
+                                <span>Include clone return (benchmark)</span>
+                              </label>
+                              {(() => {
+                                const bmIds = cfg.benchmark_ids ?? [];
+                                const bmPeriods = bmIds.map(bmId => {
+                                  const bm = benchmarks.find(b => b.id === bmId);
+                                  const mr = (bm?.monthly_returns ?? []).sort((a, b) => a.date.localeCompare(b.date));
+                                  return mr.length ? { start: ym(mr[0].date), end: ym(mr[mr.length - 1].date) } : null;
+                                }).filter(Boolean);
+                                if (bmPeriods.length === 0) return null;
+                                const earliest = bmPeriods.map(p => p.start).sort().pop();
+                                const latest = bmPeriods.map(p => p.end).sort()[0];
+                                return (
+                                  <span className="text-[10px] text-gray-400 whitespace-nowrap">
+                                    {earliest} – {latest}
+                                  </span>
+                                );
+                              })()}
+                            </>
                           )}
                         </div>
                       )}

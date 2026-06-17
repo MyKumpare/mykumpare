@@ -126,10 +126,10 @@ export default function BenchmarkMultiSelect({ benchmarks, selectedIds = [], onC
                         </svg>
                       )}
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 flex items-center gap-2">
                       <span className={`truncate ${checked ? "text-indigo-700 font-medium" : "text-gray-700"}`}>{b.name}</span>
                       {period && (
-                        <span className="block text-[10px] text-gray-400 mt-0.5">
+                        <span className="text-[10px] text-gray-400 whitespace-nowrap flex-shrink-0">
                           {period.start} – {period.end}
                         </span>
                       )}
