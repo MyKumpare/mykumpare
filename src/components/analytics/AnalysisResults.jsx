@@ -16,37 +16,21 @@ const formatPercent = (num) => {
   return num.toFixed(2) + "%";
 };
 
-// Mock calculation functions - these would be replaced with actual calculations
-const calculateMetrics = (product, benchmark, periodStart, periodEnd, selectedAttributes) => {
-  // This is a placeholder - actual calculations would use the return data
-  const metrics = {};
-  
-  selectedAttributes.forEach(attr => {
-    // Generate mock values for demonstration
-    const mockValue = Math.random() * 20 - 5; // Random between -5 and 15
-    metrics[attr] = mockValue;
-  });
-  
-  return metrics;
+// Calculate metrics for a specific attribute and period configuration
+const calculateAttributeMetrics = (product, benchmark, periodStart, periodEnd, attribute, measurementPeriods) => {
+  // This would use actual return series data and calculate based on measurement periods
+  // For now, generating mock values that would come from real calculations
+  const mockValue = Math.random() * 20 - 5;
+  return mockValue;
 };
 
-const calculateBenchmarkMetrics = (benchmark, periodStart, periodEnd, selectedAttributes) => {
-  const metrics = {};
-  selectedAttributes.forEach(attr => {
-    const mockValue = Math.random() * 15 - 3; // Random between -3 and 12
-    metrics[attr] = mockValue;
-  });
-  return metrics;
+const calculateBenchmarkAttributeMetrics = (benchmark, periodStart, periodEnd, attribute, measurementPeriods) => {
+  const mockValue = Math.random() * 15 - 3;
+  return mockValue;
 };
 
-const calculateExcessReturn = (productMetrics, benchmarkMetrics) => {
-  const excess = {};
-  Object.keys(productMetrics).forEach(attr => {
-    const productValue = productMetrics[attr] || 0;
-    const benchmarkValue = benchmarkMetrics[attr] || 0;
-    excess[attr] = productValue - benchmarkValue;
-  });
-  return excess;
+const calculateExcessReturn = (productValue, benchmarkValue) => {
+  return productValue - benchmarkValue;
 };
 
 export default function AnalysisResults({ analysis, products, benchmarks, returnSeries }) {
@@ -80,7 +64,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
     return dateStr;
   };
 
-  // Calculate results for each product
+  // Calculate results for each product and each attribute separately
   const results = useMemo(() => {
     if (!analysis?.product_configs) return [];
 
@@ -92,22 +76,36 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
       
       const series = returnSeries?.filter((s) => s.product_id === config.product_id) || [];
       
-      // Calculate metrics for this product
-      const productMetrics = calculateMetrics(
-        product,
-        benchmarks_data[0],
-        analysis.period_start,
-        analysis.period_end,
-        selectedAttributes
-      );
+      // Calculate metrics for each attribute separately based on measurement periods
+      const productMetrics = {};
+      const benchmarkMetrics = {};
+      const excessMetrics = {};
       
-      // Calculate benchmark metrics if benchmarks exist
-      const benchmarkMetrics = benchmarks_data.length > 0 
-        ? calculateBenchmarkMetrics(benchmarks_data[0], analysis.period_start, analysis.period_end, selectedAttributes)
-        : null;
-      
-      // Calculate excess return (product - benchmark)
-      const excessMetrics = benchmarkMetrics ? calculateExcessReturn(productMetrics, benchmarkMetrics) : null;
+      selectedAttributes.forEach(attr => {
+        // Calculate product metric for this specific attribute
+        productMetrics[attr] = calculateAttributeMetrics(
+          product,
+          benchmarks_data[0],
+          analysis.period_start,
+          analysis.period_end,
+          attr,
+          measurementPeriods
+        );
+        
+        // Calculate benchmark metric if benchmarks exist
+        if (benchmarks_data.length > 0) {
+          benchmarkMetrics[attr] = calculateBenchmarkAttributeMetrics(
+            benchmarks_data[0],
+            analysis.period_start,
+            analysis.period_end,
+            attr,
+            measurementPeriods
+          );
+          
+          // Calculate excess return for this attribute
+          excessMetrics[attr] = calculateExcessReturn(productMetrics[attr], benchmarkMetrics[attr]);
+        }
+      });
 
       return {
         productName: config.product_name,
@@ -115,12 +113,12 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
         benchmarkNames: config.benchmark_names || [],
         returnType: config.return_type,
         metrics: productMetrics,
-        benchmarkMetrics,
-        excessMetrics,
+        benchmarkMetrics: benchmarks_data.length > 0 ? benchmarkMetrics : null,
+        excessMetrics: benchmarks_data.length > 0 ? excessMetrics : null,
         showBenchmark: showBenchmarks[index] || false,
       };
     });
-  }, [analysis, products, benchmarks, returnSeries, selectedAttributes, showBenchmarks]);
+  }, [analysis, products, benchmarks, returnSeries, selectedAttributes, measurementPeriods, showBenchmarks]);
 
   if (!analysis || results.length === 0) {
     return (
@@ -319,6 +317,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
       {/* Chart View */}
       {(viewMode === "chart" || viewMode === "both") && (
         <div className="space-y-6">
+          {/* Separate chart for each attribute */}
           {selectedAttributes.map((attr) => {
             const chartType = chartTypes[attr] || 'bar';
             const showBenchmarkInChart = results.some(r => r.showBenchmark);
@@ -362,7 +361,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                         labelFormatter={(label) => `Product: ${label}`}
                       />
                       <Legend />
-                      <Bar dataKey={(data) => data.metrics[attr]} name="Product Return" fill="#4F46E5">
+                      <Bar dataKey={(data) => data.metrics[attr]} name={`${attr} - Product`} fill="#4F46E5">
                         {results.map((entry, index) => (
                           <Cell
                             key={`cell-${index}`}
@@ -371,7 +370,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                         ))}
                       </Bar>
                       {showBenchmarkInChart && (
-                        <Bar dataKey={(data) => data.showBenchmark ? (data.benchmarkMetrics?.[attr] || 0) : null} name="Benchmark Return" fill="#F59E0B">
+                        <Bar dataKey={(data) => data.showBenchmark ? (data.benchmarkMetrics?.[attr] || 0) : null} name={`${attr} - Benchmark`} fill="#F59E0B">
                           {results.map((entry, index) => (
                             <Cell
                               key={`bench-cell-${index}`}
@@ -394,7 +393,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                       <Line
                         type="monotone"
                         dataKey={(data) => data.metrics[attr]}
-                        name="Product Return"
+                        name={`${attr} - Product`}
                         stroke="#4F46E5"
                         strokeWidth={2}
                         dot={{ fill: '#4F46E5', strokeWidth: 2 }}
@@ -403,7 +402,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                         <Line
                           type="monotone"
                           dataKey={(data) => data.showBenchmark ? (data.benchmarkMetrics?.[attr] || 0) : null}
-                          name="Benchmark Return"
+                          name={`${attr} - Benchmark`}
                           stroke="#F59E0B"
                           strokeWidth={2}
                           dot={{ fill: '#F59E0B', strokeWidth: 2 }}
