@@ -369,7 +369,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                           {getChartType(chartKey, pr) === "bar" ? <><TrendingUp className="w-3.5 h-3.5" /> Line</> : <><BarChart2 className="w-3.5 h-3.5" /> Bar</>}
                         </button>
                       </div>
-                      {(viewMode === "table" || viewMode === "both") && tableOrientation === "vertical" && (
+                      {(viewMode === "table" || viewMode === "both") && (
                         <HistoricalTable periodResult={pr} productName={productResult.productName} bmNames={productResult.benchmarkNames} />
                       )}
                       {(viewMode === "chart" || viewMode === "both") && (
@@ -406,22 +406,30 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                   );
                 }
 
-                // Standard period — vertical mode only (horizontal is handled above)
+                // Standard period
                 const attributes = Object.keys(pr.attributeValues || {});
+
+                // In horizontal table mode with no chart, skip rendering individual period blocks
+                // (the horizontal table above already shows all periods consolidated)
+                if (tableOrientation === "horizontal" && viewMode === "table") return null;
+
                 return (
                   <div key={pri} className="mb-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg">{pr.window.label}</span>
-                        <span className="text-[10px] text-gray-400 capitalize">{pr.window.type}</span>
+                    {/* Only show period label/header when vertical table or chart is visible */}
+                    {(tableOrientation === "vertical" || viewMode === "chart" || viewMode === "both") && (
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg">{pr.window.label}</span>
+                          <span className="text-[10px] text-gray-400 capitalize">{pr.window.type}</span>
+                        </div>
+                        {(viewMode === "chart" || viewMode === "both") && (
+                          <button onClick={() => toggleChartType(chartKey, pr)} title={getChartType(chartKey, pr) === "bar" ? "Switch to Line" : "Switch to Bar"}
+                            className="flex items-center gap-1 px-2 py-1 rounded border border-gray-200 text-gray-400 hover:border-indigo-400 hover:text-indigo-600 transition-colors text-xs">
+                            {getChartType(chartKey, pr) === "bar" ? <><TrendingUp className="w-3.5 h-3.5" /> Line</> : <><BarChart2 className="w-3.5 h-3.5" /> Bar</>}
+                          </button>
+                        )}
                       </div>
-                      {(viewMode === "chart" || viewMode === "both") && (
-                        <button onClick={() => toggleChartType(chartKey, pr)} title={getChartType(chartKey, pr) === "bar" ? "Switch to Line" : "Switch to Bar"}
-                          className="flex items-center gap-1 px-2 py-1 rounded border border-gray-200 text-gray-400 hover:border-indigo-400 hover:text-indigo-600 transition-colors text-xs">
-                          {getChartType(chartKey, pr) === "bar" ? <><TrendingUp className="w-3.5 h-3.5" /> Line</> : <><BarChart2 className="w-3.5 h-3.5" /> Bar</>}
-                        </button>
-                      )}
-                    </div>
+                    )}
                     {(viewMode === "table" || viewMode === "both") && tableOrientation === "vertical" && (
                       <PeriodResultTable
                         periodResult={pr}
