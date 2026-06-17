@@ -319,24 +319,6 @@ export default function Home() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {/* Login / Logout button */}
-              {isAuthenticated ? (
-                <button
-                  onClick={() => logout()}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 transition-colors text-white text-xs font-medium"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Sign out</span>
-                </button>
-              ) : (
-                <button
-                  onClick={() => navigateToLogin()}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 transition-colors text-white text-xs font-medium"
-                >
-                  <LogIn className="w-3.5 h-3.5" />
-                  <span>Sign in</span>
-                </button>
-              )}
               {/* Desktop-only section nav (bottom nav covers mobile) */}
               <div className="hidden sm:grid grid-cols-3 gap-1">
               {mobileNavItems.map(({ label, icon: Icon, ref }) => (
