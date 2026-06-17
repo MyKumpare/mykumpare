@@ -73,9 +73,11 @@ function ProductSearchDropdown({ products, selectedIds, onToggle, multi, allSeri
       (p.firm_name || "").toLowerCase().includes(search.toLowerCase())
   );
 
+  const selectedProduct = products.find((p) => p.id === selectedIds[0]);
+  const selectedProductPeriod = selectedProduct ? getProductPeriod(selectedProduct.id) : null;
   const label = multi
     ? selectedIds.length === 0 ? "Choose products…" : `${selectedIds.length} product${selectedIds.length > 1 ? "s" : ""} selected`
-    : selectedIds.length === 0 ? "Choose a product…" : (products.find((p) => p.id === selectedIds[0])?.name ?? "");
+    : selectedIds.length === 0 ? "Choose a product…" : (selectedProduct?.name ?? "");
 
   // Helper to get period for a product
   const getProductPeriod = (productId) => {
@@ -87,6 +89,20 @@ function ProductSearchDropdown({ products, selectedIds, onToggle, multi, allSeri
 
   return (
     <div className="border border-gray-200 rounded-xl overflow-hidden">
+      {/* Selected product display (single mode) */}
+      {!multi && selectedIds.length === 1 && selectedProduct && (
+        <div className="px-3 py-2.5 border-b border-gray-100 bg-white">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-sm font-semibold text-gray-800">{selectedProduct.name}</p>
+            {selectedProductPeriod && (
+              <span className="text-[10px] text-gray-400 whitespace-nowrap">
+                {formatMDY(selectedProductPeriod.start)} – {formatMDY(selectedProductPeriod.end)}
+              </span>
+            )}
+          </div>
+          {selectedProduct.firm_name && <p className="text-xs text-gray-500 mt-0.5">{selectedProduct.firm_name}</p>}
+        </div>
+      )}
       {/* Search box always visible */}
       <div className="p-2 border-b border-gray-100 bg-gray-50">
         <div className="relative">
