@@ -16,14 +16,16 @@ const isMDYFormat = (str) => str && typeof str === "string" && /^\d{2}\/\d{2}\/\
 const formatMDY = (ymStr) => {
   if (!ymStr) return "";
   if (isMDYFormat(ymStr)) return ymStr;
-  const [year, month] = ymStr.split("-");
-  return `${month}/${String(Math.min(28, new Date(year, month, 0).getDate())).padStart(2, "0")}/${year}`;
+  const [year, month] = ymStr.split("-").map(Number);
+  const lastDay = new Date(year, month, 0).getDate();
+  return `${String(month).padStart(2, "0")}/${String(lastDay).padStart(2, "0")}/${year}`;
 };
-const toMDY = (ymStr) => {
+const toMonthEnd = (ymStr) => {
   if (!ymStr) return "";
   if (isMDYFormat(ymStr)) return ymStr;
-  const [year, month] = ymStr.split("-");
-  return `${month}/01/${year}`;
+  const [year, month] = ymStr.split("-").map(Number);
+  const lastDay = new Date(year, month, 0).getDate();
+  return `${String(month).padStart(2, "0")}/${String(lastDay).padStart(2, "0")}/${year}`;
 };
 const fromMDY = (mdyStr) => {
   if (!mdyStr) return "";
@@ -390,7 +392,7 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
       );
       if (start && end) {
         setPeriodStart(getPriorMonthEnd(start));
-        setPeriodEnd(toMDY(end));
+        setPeriodEnd(toMonthEnd(end));
       }
     }
   }, [selectedProductIds, productConfigs, benchmarks, allSeries]);
@@ -401,7 +403,7 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
       activeProducts, benchmarks, allSeries
     );
     setPeriodStart(getPriorMonthEnd(start));
-    setPeriodEnd(toMDY(end));
+    setPeriodEnd(toMonthEnd(end));
   };
 
   const saveMutation = useMutation({

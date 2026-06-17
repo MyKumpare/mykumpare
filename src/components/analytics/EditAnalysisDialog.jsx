@@ -20,12 +20,13 @@ const cleanDate = (dateStr) => {
   }
   return dateStr;
 };
-const toMDY = (ymStr) => {
+const toMonthEnd = (ymStr) => {
   if (!ymStr) return "";
   // If already in MM/DD/YYYY format, return as-is
   if (ymStr.includes("/")) return ymStr;
-  const [year, month] = ymStr.split("-");
-  return `${month}/01/${year}`;
+  const [year, month] = ymStr.split("-").map(Number);
+  const lastDay = new Date(year, month, 0).getDate();
+  return `${String(month).padStart(2, "0")}/${String(lastDay).padStart(2, "0")}/${year}`;
 };
 // Get prior month-end date from a YYYY-MM string
 const getPriorMonthEnd = (ymStr) => {
@@ -136,7 +137,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
       activeProducts, benchmarks, allSeries
     );
     setPeriodStart(getPriorMonthEnd(start));
-    setPeriodEnd(toMDY(end));
+    setPeriodEnd(toMonthEnd(end));
   };
 
   const saveMutation = useMutation({
