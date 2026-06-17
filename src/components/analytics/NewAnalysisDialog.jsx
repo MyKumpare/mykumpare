@@ -520,6 +520,8 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
   const [periodConfig, setPeriodConfig] = useState(emptyPeriodConfig());
   const [benchmarkConfig, setBenchmarkConfig] = useState(emptyBenchmarkConfig());
 
+  useEffect(() => { if (open) resetForm(); }, [open]);
+
   const { data: products = [] } = useQuery({
     queryKey: ["products"],
     queryFn: () => base44.entities.Product.list("-created_date"),
