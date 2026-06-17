@@ -428,8 +428,8 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
           include_clone_benchmark: cfg.include_clone_benchmark ?? false,
         };
       }),
-      period_start: periodStart ? toMDY(periodStart) : "",
-      period_end: periodEnd ? toMDY(periodEnd) : "",
+      period_start: periodStart || "",
+      period_end: periodEnd || "",
       use_common_period: false,
       created_by_id: user?.id ?? "",
     };

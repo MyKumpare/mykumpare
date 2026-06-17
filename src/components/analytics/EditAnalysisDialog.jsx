@@ -75,6 +75,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
     setAnalysisName(analysis.name ?? "");
     setIsTemplate(analysis.is_template ?? false);
     setVisibility(analysis.visibility ?? "personal");
+    // Period dates are already stored in MM/DD/YYYY format
     setPeriodStart(analysis.period_start || "");
     setPeriodEnd(analysis.period_end || "");
     const configs = {};

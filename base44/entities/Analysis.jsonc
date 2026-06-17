@@ -86,13 +86,11 @@
     },
     "period_start": {
       "type": "string",
-      "format": "date",
-      "description": "Analysis period start (YYYY-MM)"
+      "description": "Analysis period start (MM/DD/YYYY format)"
     },
     "period_end": {
       "type": "string",
-      "format": "date",
-      "description": "Analysis period end (YYYY-MM)"
+      "description": "Analysis period end (MM/DD/YYYY format)"
     },
     "use_common_period": {
       "type": "boolean",
