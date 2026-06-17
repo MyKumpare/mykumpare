@@ -5,9 +5,13 @@ import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { Search, Lock, Building2, BarChart2, LayoutList } from "lucide-react";
 
-const formatPeriodMDY = (ymStr) => {
-  if (!ymStr) return "";
-  const [year, month] = ymStr.split("-");
+const formatPeriodMDY = (dateStr) => {
+  if (!dateStr) return "";
+  // Already MM/DD/YYYY — return as-is
+  if (dateStr.includes("/")) return dateStr;
+  // YYYY-MM format fallback
+  const [year, month] = dateStr.split("-");
+  if (!year || !month) return dateStr;
   return `${month}/01/${year}`;
 };
 
