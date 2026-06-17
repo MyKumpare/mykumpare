@@ -11,13 +11,17 @@ import BenchmarkMultiSelect from "./BenchmarkMultiSelect";
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 const ym = (d) => (d ? d.slice(0, 7) : "");
+// Check if date is already in MM/DD/YYYY format
+const isMDYFormat = (str) => str && typeof str === "string" && /^\d{2}\/\d{2}\/\d{4}$/.test(str);
 const formatMDY = (ymStr) => {
   if (!ymStr) return "";
+  if (isMDYFormat(ymStr)) return ymStr;
   const [year, month] = ymStr.split("-");
-  return `${month}/01/${year}`;
+  return `${month}/${String(Math.min(28, new Date(year, month, 0).getDate())).padStart(2, "0")}/${year}`;
 };
 const toMDY = (ymStr) => {
   if (!ymStr) return "";
+  if (isMDYFormat(ymStr)) return ymStr;
   const [year, month] = ymStr.split("-");
   return `${month}/01/${year}`;
 };
@@ -29,6 +33,7 @@ const fromMDY = (mdyStr) => {
 // Get prior month-end date from a YYYY-MM string
 const getPriorMonthEnd = (ymStr) => {
   if (!ymStr) return "";
+  if (isMDYFormat(ymStr)) return ymStr;
   const [year, month] = ymStr.split("-").map(Number);
   let priorYear = year;
   let priorMonth = month - 1;

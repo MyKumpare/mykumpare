@@ -7,6 +7,19 @@ import { CalendarDays, RefreshCw, Link2, Trash2 } from "lucide-react";
 import BenchmarkMultiSelect from "./BenchmarkMultiSelect";
 
 const ym = (d) => (d ? d.slice(0, 7) : "");
+// Clean and validate MM/DD/YYYY dates
+const cleanDate = (dateStr) => {
+  if (!dateStr) return "";
+  // Fix corrupted dates like "undefined/01/09/30/2008"
+  if (dateStr.includes("undefined")) {
+    const parts = dateStr.split("/").filter(p => p !== "undefined" && p !== "");
+    if (parts.length === 3) {
+      return parts.join("/");
+    }
+    return "";
+  }
+  return dateStr;
+};
 const toMDY = (ymStr) => {
   if (!ymStr) return "";
   // If already in MM/DD/YYYY format, return as-is
@@ -77,9 +90,9 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
     setAnalysisName(analysis.name ?? "");
     setIsTemplate(analysis.is_template ?? false);
     setVisibility(analysis.visibility ?? "personal");
-    // Period dates are already stored in MM/DD/YYYY format
-    const startDate = analysis.period_start || "";
-    const endDate = analysis.period_end || "";
+    // Clean and validate period dates (handle corrupted "undefined" dates)
+    const startDate = cleanDate(analysis.period_start || "");
+    const endDate = cleanDate(analysis.period_end || "");
     setPeriodStart(startDate);
     setPeriodEnd(endDate);
     const configs = {};
@@ -150,8 +163,8 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
           include_clone_benchmark: cfg.include_clone_benchmark ?? false,
         };
       }),
-      period_start: periodStart,
-      period_end: periodEnd,
+      period_start: cleanDate(periodStart),
+      period_end: cleanDate(periodEnd),
       use_common_period: false,
       created_by_id: analysis.created_by_id,
     };
