@@ -38,12 +38,19 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
 
   const selectedTypes = analysis?.measurement_type?.selected_types || [];
   const selectedAttributes = analysis?.measurement_type?.attributes || [];
+  const measurementPeriods = analysis?.measurement_periods || {};
 
   const toggleChartType = (attr) => {
     setChartTypes((prev) => ({
       ...prev,
       [attr]: prev[attr] === 'line' ? 'bar' : 'line',
     }));
+  };
+
+  // Format analysis period display
+  const formatPeriod = (dateStr) => {
+    if (!dateStr) return 'N/A';
+    return dateStr;
   };
 
   // Calculate results for each product
@@ -89,7 +96,14 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
     <div className="space-y-6">
       {/* View Mode Toggle */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-800">Analysis Results</h3>
+        <div>
+          <h3 className="text-lg font-semibold text-gray-800">Analysis Results</h3>
+          {analysis?.period_start || analysis?.period_end ? (
+            <p className="text-xs text-gray-500 mt-1">
+              {formatPeriod(analysis.period_start)} to {formatPeriod(analysis.period_end)}
+            </p>
+          ) : null}
+        </div>
         <div className="flex gap-2">
           <button
             onClick={() => setViewMode("table")}
@@ -113,8 +127,60 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
             <BarChart2 className="w-4 h-4" />
             Chart
           </button>
+          <button
+            onClick={() => setViewMode("both")}
+            className={`flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+              viewMode === "both"
+                ? "bg-indigo-600 text-white border-indigo-600"
+                : "bg-white text-gray-600 border-gray-300 hover:border-indigo-400"
+            }`}
+          >
+            <span className="text-xs font-medium">Both</span>
+          </button>
         </div>
       </div>
+
+      {/* Measurement Periods Summary */}
+      {(measurementPeriods?.trailing_periods?.length > 0 ||
+        measurementPeriods?.rolling_periods?.length > 0 ||
+        measurementPeriods?.calendar_years?.length > 0 ||
+        measurementPeriods?.historical_periods?.length > 0 ||
+        measurementPeriods?.include_cumulative) && (
+        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+          <h4 className="text-xs font-semibold text-gray-600 mb-2">Measurement Periods</h4>
+          <div className="flex flex-wrap gap-2">
+            {measurementPeriods.trailing_periods?.length > 0 && (
+              <div className="text-xs">
+                <span className="font-medium text-gray-700">Trailing:</span>
+                <span className="text-gray-600 ml-1">{measurementPeriods.trailing_periods.join(', ')}</span>
+              </div>
+            )}
+            {measurementPeriods.rolling_periods?.length > 0 && (
+              <div className="text-xs">
+                <span className="font-medium text-gray-700">Rolling:</span>
+                <span className="text-gray-600 ml-1">{measurementPeriods.rolling_periods.join(', ')}</span>
+              </div>
+            )}
+            {measurementPeriods.calendar_years?.length > 0 && (
+              <div className="text-xs">
+                <span className="font-medium text-gray-700">Calendar Years:</span>
+                <span className="text-gray-600 ml-1">{measurementPeriods.calendar_years.join(', ')}</span>
+              </div>
+            )}
+            {measurementPeriods.historical_periods?.length > 0 && (
+              <div className="text-xs">
+                <span className="font-medium text-gray-700">Historical:</span>
+                <span className="text-gray-600 ml-1">{measurementPeriods.historical_periods.join(', ')}</span>
+              </div>
+            )}
+            {measurementPeriods.include_cumulative && (
+              <div className="text-xs">
+                <span className="font-medium text-gray-700">Cumulative</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Table View */}
       {(viewMode === "table" || viewMode === "both") && (
