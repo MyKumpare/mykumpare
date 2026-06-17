@@ -40,6 +40,19 @@ const getPriorMonthEnd = (ymStr) => {
   return `${String(priorMonth).padStart(2, "0")}/${String(lastDay).padStart(2, "0")}/${priorYear}`;
 };
 
+// Tooltip component for date range
+const DateRangeTooltip = ({ period, children }) => {
+  if (!period) return children;
+  return (
+    <div className="group relative inline-block">
+      {children}
+      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-gray-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+        {formatMDY(period.start)} – {formatMDY(period.end)}
+      </div>
+    </div>
+  );
+};
+
 function commonPeriod(productConfigs, allProducts, allBenchmarks, allSeries) {
   const starts = [];
   const ends = [];
@@ -151,7 +164,9 @@ function ProductSearchDropdown({ products, selectedIds, onToggle, multi, allSeri
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium text-gray-800 truncate">{p.name}</p>
+                  <DateRangeTooltip period={period}>
+                    <p className="font-medium text-gray-800 truncate">{p.name}</p>
+                  </DateRangeTooltip>
                   {p.firm_name && <p className="text-gray-400 truncate">{p.firm_name}</p>}
                 </div>
                 {period && (
@@ -551,7 +566,16 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-sm font-semibold text-gray-800">{product?.name}</p>
+                            {(() => {
+                              const series = allSeries.filter((s) => s.product_id === id);
+                              const mr = series.flatMap((s) => s.monthly_returns ?? []).sort((a, b) => a.date.localeCompare(b.date));
+                              const period = mr.length ? { start: ym(mr[0].date), end: ym(mr[mr.length - 1].date) } : null;
+                              return (
+                                <DateRangeTooltip period={period}>
+                                  <p className="text-sm font-semibold text-gray-800">{product?.name}</p>
+                                </DateRangeTooltip>
+                              );
+                            })()}
                             {(() => {
                               const series = allSeries.filter((s) => s.product_id === id);
                               const mr = series.flatMap((s) => s.monthly_returns ?? []).sort((a, b) => a.date.localeCompare(b.date));
@@ -592,10 +616,13 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
                           if (bmPeriods.length === 0) return null;
                           const earliest = bmPeriods.map(p => p.start).sort().pop();
                           const latest = bmPeriods.map(p => p.end).sort()[0];
+                          const combinedPeriod = { start: earliest, end: latest };
                           return (
-                            <span className="text-[10px] text-gray-400 whitespace-nowrap mt-1.5">
-                              {formatMDY(earliest)} – {formatMDY(latest)}
-                            </span>
+                            <DateRangeTooltip period={combinedPeriod}>
+                              <span className="text-[10px] text-gray-400 whitespace-nowrap mt-1.5 cursor-help">
+                                {formatMDY(earliest)} – {formatMDY(latest)}
+                              </span>
+                            </DateRangeTooltip>
                           );
                         })()}
                       </div>
@@ -622,7 +649,16 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
                               onChange={(e) => updateConfig(id, "include_clone_product", e.target.checked)}
                               className="rounded border-gray-300 text-indigo-600"
                             />
-                            <span>Include clone return (product)</span>
+                            {(() => {
+                              const series = allSeries.filter((s) => s.product_id === id);
+                              const mr = series.flatMap((s) => s.monthly_returns ?? []).sort((a, b) => a.date.localeCompare(b.date));
+                              const period = mr.length ? { start: ym(mr[0].date), end: ym(mr[mr.length - 1].date) } : null;
+                              return (
+                                <DateRangeTooltip period={period}>
+                                  <span className="cursor-help">Include clone return (product)</span>
+                                </DateRangeTooltip>
+                              );
+                            })()}
                           </label>
                           {(() => {
                             const series = allSeries.filter((s) => s.product_id === id);
@@ -643,7 +679,23 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
                                   onChange={(e) => updateConfig(id, "include_clone_benchmark", e.target.checked)}
                                   className="rounded border-gray-300 text-indigo-600"
                                 />
-                                <span>Include clone return (benchmark)</span>
+                                {(() => {
+                                  const bmIds = cfg.benchmark_ids ?? [];
+                                  const bmPeriods = bmIds.map(bmId => {
+                                    const bm = benchmarks.find(b => b.id === bmId);
+                                    const mr = (bm?.monthly_returns ?? []).sort((a, b) => a.date.localeCompare(b.date));
+                                    return mr.length ? { start: ym(mr[0].date), end: ym(mr[mr.length - 1].date) } : null;
+                                  }).filter(Boolean);
+                                  if (bmPeriods.length === 0) return null;
+                                  const earliest = bmPeriods.map(p => p.start).sort().pop();
+                                  const latest = bmPeriods.map(p => p.end).sort()[0];
+                                  const combinedPeriod = { start: earliest, end: latest };
+                                  return (
+                                    <DateRangeTooltip period={combinedPeriod}>
+                                      <span className="cursor-help">Include clone return (benchmark)</span>
+                                    </DateRangeTooltip>
+                                  );
+                                })()}
                               </label>
                               {(() => {
                                 const bmIds = cfg.benchmark_ids ?? [];
