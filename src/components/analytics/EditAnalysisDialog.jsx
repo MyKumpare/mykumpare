@@ -27,6 +27,20 @@ const toMDY = (ymStr) => {
   const [year, month] = ymStr.split("-");
   return `${month}/01/${year}`;
 };
+// Get prior month-end date from a YYYY-MM string
+const getPriorMonthEnd = (ymStr) => {
+  if (!ymStr) return "";
+  if (ymStr.includes("/")) return ymStr;
+  const [year, month] = ymStr.split("-").map(Number);
+  let priorYear = year;
+  let priorMonth = month - 1;
+  if (priorMonth === 0) {
+    priorMonth = 12;
+    priorYear = year - 1;
+  }
+  const lastDay = new Date(priorYear, priorMonth, 0).getDate();
+  return `${String(priorMonth).padStart(2, "0")}/${String(lastDay).padStart(2, "0")}/${priorYear}`;
+};
 
 function commonPeriod(productConfigs, allProducts, allBenchmarks, allSeries) {
   const starts = [], ends = [];
@@ -121,7 +135,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
       selectedProductIds.map((id) => ({ product_id: id, ...productConfigs[id] })),
       activeProducts, benchmarks, allSeries
     );
-    setPeriodStart(toMDY(start));
+    setPeriodStart(getPriorMonthEnd(start));
     setPeriodEnd(toMDY(end));
   };
 

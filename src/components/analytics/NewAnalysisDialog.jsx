@@ -45,6 +45,20 @@ const getPriorMonthEnd = (ymStr) => {
   return `${String(priorMonth).padStart(2, "0")}/${String(lastDay).padStart(2, "0")}/${priorYear}`;
 };
 
+// Clean and validate MM/DD/YYYY dates
+const cleanDate = (dateStr) => {
+  if (!dateStr) return "";
+  // Fix corrupted dates like "undefined/01/09/30/2008"
+  if (dateStr.includes("undefined")) {
+    const parts = dateStr.split("/").filter(p => p !== "undefined" && p !== "");
+    if (parts.length === 3) {
+      return parts.join("/");
+    }
+    return "";
+  }
+  return dateStr;
+};
+
 // Tooltip component for date range
 const DateRangeTooltip = ({ period, children }) => {
   if (!period) return children;
@@ -386,7 +400,7 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
       selectedProductIds.map((id) => ({ product_id: id, ...productConfigs[id] })),
       activeProducts, benchmarks, allSeries
     );
-    setPeriodStart(toMDY(start));
+    setPeriodStart(getPriorMonthEnd(start));
     setPeriodEnd(toMDY(end));
   };
 
@@ -433,8 +447,8 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
           include_clone_benchmark: cfg.include_clone_benchmark ?? false,
         };
       }),
-      period_start: periodStart || "",
-      period_end: periodEnd || "",
+      period_start: cleanDate(periodStart) || "",
+      period_end: cleanDate(periodEnd) || "",
       use_common_period: false,
       created_by_id: user?.id ?? "",
     };
