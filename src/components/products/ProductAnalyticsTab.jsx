@@ -102,17 +102,37 @@ const TRAILING_PERIODS = [
   { label: "SI", months: null, si: true },
 ];
 
+// ─── Metric definitions ────────────────────────────────────────────────────────
+
+const METRICS = [
+  { key: "ann_return",    label: "Ann. Return",         needsBm: false },
+  { key: "ann_vol",       label: "Ann. Volatility",     needsBm: false },
+  { key: "sharpe",        label: "Sharpe Ratio",        needsBm: false },
+  { key: "max_dd",        label: "Max Drawdown",        needsBm: false },
+  { key: "excess_return", label: "Excess Return",       needsBm: true },
+  { key: "tracking_err",  label: "Tracking Error",      needsBm: true },
+  { key: "info_ratio",    label: "Information Ratio",   needsBm: true },
+  { key: "hit_rate",      label: "Hit Rate (vs Bm)",    needsBm: true },
+];
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function StatCard({ label, value, sub, positive }) {
+function StatCard({ label, value, sub, positive, active, onClick }) {
   const color =
     positive === true ? "text-emerald-600" :
     positive === false ? "text-red-500" : "text-gray-800";
   return (
-    <div className="bg-white border rounded-lg p-3 flex flex-col gap-0.5 shadow-sm min-w-0">
-      <p className="text-xs text-gray-500 font-medium truncate">{label}</p>
-      <p className={`text-sm font-bold ${color} truncate`}>{value}</p>
-      {sub != null && <p className="text-xs text-gray-400 truncate">Bm: {sub}</p>}
+    <div
+      onClick={onClick}
+      className={`border rounded-lg p-3 flex flex-col gap-0.5 shadow-sm min-w-0 cursor-pointer transition-all ${
+        active
+          ? "bg-indigo-600 border-indigo-600 shadow-md"
+          : "bg-white hover:border-indigo-300 hover:shadow"
+      }`}
+    >
+      <p className={`text-xs font-medium truncate ${active ? "text-indigo-200" : "text-gray-500"}`}>{label}</p>
+      <p className={`text-sm font-bold truncate ${active ? "text-white" : color}`}>{value}</p>
+      {sub != null && <p className={`text-xs truncate ${active ? "text-indigo-200" : "text-gray-400"}`}>Bm: {sub}</p>}
     </div>
   );
 }
@@ -166,12 +186,10 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
   const [startYM, setStartYM] = useState("");
   const [endYM, setEndYM] = useState("");
   const [returnType, setReturnType] = useState("gross"); // "gross" | "net" | "both"
-  const [chartMode, setChartMode] = useState("cumulative"); // "cumulative" | "excess"
-  const [rollingEnabled, setRollingEnabled] = useState(false);
-  const [rollingMonths, setRollingMonths] = useState(12); // default 1Y
   const [rollingCustom, setRollingCustom] = useState(24);
   const [rollingPeriod, setRollingPeriod] = useState("12"); // "1","3","12","36","60","custom"
   const [selectedTrailing, setSelectedTrailing] = useState(new Set(["1Y", "3Y", "5Y", "SI"]));
+  const [selectedMetric, setSelectedMetric] = useState("ann_return");
 
   // Close benchmark dropdown on outside click
   useEffect(() => {
@@ -343,17 +361,16 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
     });
   }, [filteredGross, filteredNet, filteredBm]);
 
-  // ── Rolling chart data ──
   const effectiveRollingMonths = rollingPeriod === "custom" ? rollingCustom : parseInt(rollingPeriod);
 
-  const rollingChartData = useMemo(() => {
-    if (!rollingEnabled) return [];
+  // ── Rolling metric chart data (drives the main chart when a metric is selected) ──
+  const rollingMetricData = useMemo(() => {
+    const W = effectiveRollingMonths;
     const gMap = {}, nMap = {}, bMap = {};
     filteredGross.forEach((m) => { gMap[ym(m.date)] = m.return_value; });
     filteredNet.forEach((m) => { nMap[ym(m.date)] = m.return_value; });
     filteredBm.forEach((m) => { bMap[ym(m.date)] = m.return_value; });
     const dates = [...new Set([...Object.keys(gMap), ...Object.keys(bMap)])].sort();
-    const W = effectiveRollingMonths;
 
     return dates.map((d, i) => {
       if (i < W - 1) return null;
@@ -361,20 +378,42 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
       const gRets = window.map((x) => gMap[x]).filter((v) => v != null);
       const nRets = window.map((x) => nMap[x]).filter((v) => v != null);
       const bRets = window.map((x) => bMap[x]).filter((v) => v != null);
-      const calcCum = (rets) => rets.length === W ? parseFloat((compound(rets) * 100).toFixed(2)) : null;
-      const cg = calcCum(gRets);
-      const cn = calcCum(nRets);
-      const cb = calcCum(bRets);
-      return {
-        date: d,
-        cumGross: cg,
-        cumNet: cn,
-        cumBm: cb,
-        excessGross: cg != null && cb != null ? parseFloat((cg - cb).toFixed(2)) : null,
-        excessNet: cn != null && cb != null ? parseFloat((cn - cb).toFixed(2)) : null,
+      if (!gRets.length) return null;
+
+      const calcMetric = (pRets, bmRets, metric) => {
+        if (!pRets.length) return null;
+        const tot = compound(pRets);
+        const ann = annualize(tot, pRets.length);
+        const mStd = stdDev(pRets);
+        const vol = mStd != null ? mStd * Math.sqrt(12) : null;
+        const bmTot = bmRets.length ? compound(bmRets) : null;
+        const bmAnn = bmTot != null ? annualize(bmTot, bmRets.length) : null;
+        const exRets = pRets.map((r, idx) => bmRets[idx] != null ? r - bmRets[idx] : null).filter(v => v != null);
+        const teSd = exRets.length >= 2 ? stdDev(exRets) : null;
+        const te = teSd != null ? teSd * Math.sqrt(12) : null;
+        const exAnn = ann != null && bmAnn != null ? ann - bmAnn : null;
+        const ir = exAnn != null && te ? exAnn / te : null;
+        const hitRate = bmRets.length ? (pRets.filter((r, idx) => bmRets[idx] != null && r > bmRets[idx]).length / Math.min(pRets.length, bmRets.length)) * 100 : null;
+        switch (metric) {
+          case "ann_return":    return ann;
+          case "ann_vol":       return vol;
+          case "sharpe":        return ann != null && vol ? ann / vol : null;
+          case "max_dd":        return maxDrawdown(pRets);
+          case "excess_return": return exAnn;
+          case "tracking_err":  return te;
+          case "info_ratio":    return ir;
+          case "hit_rate":      return hitRate;
+          default:              return null;
+        }
       };
+
+      const gVal = calcMetric(gRets, bRets, selectedMetric);
+      const nVal = nRets.length === W ? calcMetric(nRets, bRets, selectedMetric) : null;
+      const bVal = bRets.length === W ? calcMetric(bRets, [], selectedMetric) : null;
+
+      return { date: d, gross: gVal != null ? parseFloat(gVal.toFixed(2)) : null, net: nVal != null ? parseFloat(nVal.toFixed(2)) : null, bm: bVal != null ? parseFloat(bVal.toFixed(2)) : null };
     }).filter(Boolean);
-  }, [rollingEnabled, effectiveRollingMonths, filteredGross, filteredNet, filteredBm]);
+  }, [selectedMetric, effectiveRollingMonths, filteredGross, filteredNet, filteredBm]);
 
   const isLoading = loadingSeries || loadingBm;
 
@@ -395,11 +434,6 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
   const xFmt = (t) => t?.slice(0, 7) ?? "";
   const showGross = returnType === "gross" || returnType === "both";
   const showNet = (returnType === "net" || returnType === "both") && hasNet;
-
-  // Cumulative line chart keys
-  const cumChartKey = chartMode === "cumulative"
-    ? { gross: "cumGross", net: "cumNet", bm: "cumBm" }
-    : { gross: "excessGross", net: "excessNet", bm: null };
 
   return (
     <div className="space-y-5 pb-4">
@@ -507,101 +541,96 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
       {/* ── Stat cards ── */}
       {activeStats && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <StatCard label="Ann. Return" value={fmt(activeStats.ann)} sub={bmStats ? fmt(bmStats.ann) : null} positive={activeStats.ann > 0 ? true : activeStats.ann < 0 ? false : undefined} />
-          <StatCard label="Ann. Volatility" value={fmt(activeStats.vol)} sub={bmStats ? fmt(bmStats.vol) : null} />
-          <StatCard label="Sharpe Ratio" value={fmtNum(activeStats.sharpe)} sub={bmStats ? fmtNum(bmStats.sharpe) : null} positive={activeStats.sharpe > 1 ? true : activeStats.sharpe < 0 ? false : undefined} />
-          <StatCard label="Max Drawdown" value={fmt(activeStats.dd)} sub={bmStats ? fmt(bmStats.dd) : null} positive={false} />
+          <StatCard label="Ann. Return" value={fmt(activeStats.ann)} sub={bmStats ? fmt(bmStats.ann) : null} positive={activeStats.ann > 0 ? true : activeStats.ann < 0 ? false : undefined} active={selectedMetric === "ann_return"} onClick={() => setSelectedMetric("ann_return")} />
+          <StatCard label="Ann. Volatility" value={fmt(activeStats.vol)} sub={bmStats ? fmt(bmStats.vol) : null} active={selectedMetric === "ann_vol"} onClick={() => setSelectedMetric("ann_vol")} />
+          <StatCard label="Sharpe Ratio" value={fmtNum(activeStats.sharpe)} sub={bmStats ? fmtNum(bmStats.sharpe) : null} positive={activeStats.sharpe > 1 ? true : activeStats.sharpe < 0 ? false : undefined} active={selectedMetric === "sharpe"} onClick={() => setSelectedMetric("sharpe")} />
+          <StatCard label="Max Drawdown" value={fmt(activeStats.dd)} sub={bmStats ? fmt(bmStats.dd) : null} positive={false} active={selectedMetric === "max_dd"} onClick={() => setSelectedMetric("max_dd")} />
           {activeBm && (
             <>
-              <StatCard label="Excess Return (Ann.)" value={fmt(excessAnn)} positive={excessAnn > 0 ? true : excessAnn < 0 ? false : undefined} />
-              <StatCard label="Tracking Error (Ann.)" value={fmt(trackingErr)} />
-              <StatCard label="Information Ratio" value={fmtNum(infoRatio)} positive={infoRatio > 0.5 ? true : infoRatio < 0 ? false : undefined} />
-              <StatCard label="Hit Rate (vs Bm)" value={hitRateVsBm != null ? hitRateVsBm.toFixed(1) + "%" : "—"} positive={hitRateVsBm >= 50} />
+              <StatCard label="Excess Return (Ann.)" value={fmt(excessAnn)} positive={excessAnn > 0 ? true : excessAnn < 0 ? false : undefined} active={selectedMetric === "excess_return"} onClick={() => setSelectedMetric("excess_return")} />
+              <StatCard label="Tracking Error (Ann.)" value={fmt(trackingErr)} active={selectedMetric === "tracking_err"} onClick={() => setSelectedMetric("tracking_err")} />
+              <StatCard label="Information Ratio" value={fmtNum(infoRatio)} positive={infoRatio > 0.5 ? true : infoRatio < 0 ? false : undefined} active={selectedMetric === "info_ratio"} onClick={() => setSelectedMetric("info_ratio")} />
+              <StatCard label="Hit Rate (vs Bm)" value={hitRateVsBm != null ? hitRateVsBm.toFixed(1) + "%" : "—"} positive={hitRateVsBm >= 50} active={selectedMetric === "hit_rate"} onClick={() => setSelectedMetric("hit_rate")} />
             </>
           )}
         </div>
       )}
 
-      {/* ── Cumulative chart with toggle ── */}
-      <div>
-        <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-            {rollingEnabled
-              ? `Rolling ${effectiveRollingMonths}M Cumulative ${chartMode === "cumulative" ? "Return" : "Excess Return"}`
-              : chartMode === "cumulative" ? "Cumulative Return" : "Cumulative Excess Return"}
-          </p>
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {activeBm && (
-              <div className="flex gap-1">
-                <ToggleButton active={chartMode === "cumulative"} onClick={() => setChartMode("cumulative")}>Cumulative</ToggleButton>
-                <ToggleButton active={chartMode === "excess"} onClick={() => setChartMode("excess")}>Excess</ToggleButton>
-              </div>
-            )}
-            <div className="flex gap-1 items-center ml-1 pl-1 border-l border-gray-200">
-              <ToggleButton active={rollingEnabled} onClick={() => setRollingEnabled((v) => !v)}>Rolling</ToggleButton>
+      {/* ── Rolling metric chart ── */}
+      {(() => {
+        const metricDef = METRICS.find((m) => m.key === selectedMetric);
+        const metricLabel = metricDef?.label ?? "Ann. Return";
+        const isRatioMetric = ["sharpe", "info_ratio"].includes(selectedMetric);
+        const isHitRate = selectedMetric === "hit_rate";
+        const needsBm = metricDef?.needsBm && activeBm;
+        const isPercentMetric = !isRatioMetric;
+        const chartTooltipFmt = isRatioMetric ? (v) => fmtNum(v) : isHitRate ? (v) => v + "%" : (v) => v + "%";
+
+        // Custom tooltip for ratio metrics
+        const MetricTooltip = ({ active, payload, label }) => {
+          if (!active || !payload?.length) return null;
+          return (
+            <div className="bg-white border border-gray-200 rounded-md px-3 py-2 shadow-md text-xs space-y-0.5">
+              <p className="font-semibold text-gray-700 mb-1">{label}</p>
+              {payload.map((p) => (
+                <p key={p.dataKey} style={{ color: p.color }}>
+                  {p.name}: {isRatioMetric ? fmtNum(p.value, 2).replace("+", "") : p.value + "%"}
+                </p>
+              ))}
             </div>
-          </div>
-        </div>
+          );
+        };
 
-        {/* Rolling period selector */}
-        {rollingEnabled && (
-          <div className="flex items-center gap-1.5 flex-wrap mb-2">
-            <span className="text-xs text-gray-500 font-medium">Window:</span>
-            {[
-              { label: "1M", value: "1" },
-              { label: "1Q", value: "3" },
-              { label: "1Y", value: "12" },
-              { label: "3Y", value: "36" },
-              { label: "5Y", value: "60" },
-              { label: "Custom", value: "custom" },
-            ].map((opt) => (
-              <ToggleButton
-                key={opt.value}
-                active={rollingPeriod === opt.value}
-                onClick={() => setRollingPeriod(opt.value)}
-              >
-                {opt.label}
-              </ToggleButton>
-            ))}
-            {rollingPeriod === "custom" && (
-              <div className="flex items-center gap-1">
-                <input
-                  type="number"
-                  min={1}
-                  max={filteredGross.length}
-                  value={rollingCustom}
-                  onChange={(e) => setRollingCustom(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="text-xs border border-gray-300 rounded px-2 py-0.5 w-16 focus:outline-none focus:ring-1 focus:ring-indigo-400"
-                />
-                <span className="text-xs text-gray-400">months</span>
+        return (
+          <div>
+            <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                Rolling {effectiveRollingMonths}M — {metricLabel}
+              </p>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs text-gray-400 font-medium">Window:</span>
+                {[
+                  { label: "1M", value: "1" },
+                  { label: "1Q", value: "3" },
+                  { label: "1Y", value: "12" },
+                  { label: "3Y", value: "36" },
+                  { label: "5Y", value: "60" },
+                  { label: "Custom", value: "custom" },
+                ].map((opt) => (
+                  <ToggleButton key={opt.value} active={rollingPeriod === opt.value} onClick={() => setRollingPeriod(opt.value)}>
+                    {opt.label}
+                  </ToggleButton>
+                ))}
+                {rollingPeriod === "custom" && (
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number" min={1} max={filteredGross.length} value={rollingCustom}
+                      onChange={(e) => setRollingCustom(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="text-xs border border-gray-300 rounded px-2 py-0.5 w-16 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                    />
+                    <span className="text-xs text-gray-400">months</span>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
+            <ResponsiveContainer width="100%" height={170}>
+              <LineChart data={rollingMetricData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="date" tickFormatter={xFmt} tick={{ fontSize: 9 }} interval="preserveStartEnd" />
+                <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => isRatioMetric ? v : v + "%"} width={46} />
+                <Tooltip content={<MetricTooltip />} />
+                <ReferenceLine y={0} stroke="#ccc" />
+                <Legend iconType="line" wrapperStyle={{ fontSize: 10 }} />
+                {showGross && <Line type="monotone" dataKey="gross" stroke="#6366f1" strokeWidth={2} dot={false} name="Gross" connectNulls />}
+                {showNet && <Line type="monotone" dataKey="net" stroke="#10b981" strokeWidth={2} dot={false} name="Net" strokeDasharray="5 3" connectNulls />}
+                {needsBm && !["excess_return", "tracking_err", "info_ratio", "hit_rate"].includes(selectedMetric) && (
+                  <Line type="monotone" dataKey="bm" stroke="#f59e0b" strokeWidth={2} dot={false} name={activeBm.name} strokeDasharray="4 3" connectNulls />
+                )}
+              </LineChart>
+            </ResponsiveContainer>
           </div>
-        )}
-
-        <ResponsiveContainer width="100%" height={170}>
-          <LineChart data={rollingEnabled ? rollingChartData : chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis dataKey="date" tickFormatter={xFmt} tick={{ fontSize: 9 }} interval="preserveStartEnd" />
-            <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => v + "%"} width={46} />
-            <Tooltip content={<ChartTooltip />} />
-            <ReferenceLine y={0} stroke="#ccc" />
-            <Legend iconType="line" wrapperStyle={{ fontSize: 10 }} />
-            {showGross && (
-              <Line type="monotone" dataKey={cumChartKey.gross} stroke="#6366f1" strokeWidth={2} dot={false} name="Gross" connectNulls />
-            )}
-            {showNet && (
-              <Line type="monotone" dataKey={cumChartKey.net} stroke="#10b981" strokeWidth={2} dot={false} name="Net" strokeDasharray="5 3" connectNulls />
-            )}
-            {activeBm && chartMode === "cumulative" && !rollingEnabled && (
-              <Line type="monotone" dataKey={cumChartKey.bm} stroke="#f59e0b" strokeWidth={2} dot={false} name={activeBm.name} strokeDasharray="4 3" connectNulls />
-            )}
-            {activeBm && chartMode === "cumulative" && rollingEnabled && (
-              <Line type="monotone" dataKey="cumBm" stroke="#f59e0b" strokeWidth={2} dot={false} name={activeBm.name} strokeDasharray="4 3" connectNulls />
-            )}
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+        );
+      })()}
 
       {/* ── Monthly excess return chart ── */}
       {activeBm && (
