@@ -497,6 +497,14 @@ export default function Home() {
               setBenchmarkDialogOpen(true);
             }
           }}
+          onProductClick={(product) => {
+            setAnalyticsReturnState({ type: 'product', product });
+            handleEditProduct(product);
+          }}
+          onFirmClick={(firm) => {
+            setAnalyticsReturnState({ type: 'firm', firm });
+            handleEdit(firm);
+          }}
         />
 
         {/* Utility section */}
