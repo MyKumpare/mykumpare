@@ -59,6 +59,8 @@ export default function Home() {
   const [preselectedAllocatorId, setPreselectedAllocatorId] = useState(null);
   const [editingPortfolio, setEditingPortfolio] = useState(null);
 
+  const [analyticsLaunchOpen, setAnalyticsLaunchOpen] = useState(false);
+
   const portfoliosRef = useRef(null);
   const firmsRef = useRef(null);
   const productsRef = useRef(null);
@@ -297,7 +299,7 @@ export default function Home() {
     { label: "Firms", icon: Building, ref: firmsRef, color: "text-indigo-600", activeBg: "bg-indigo-50" },
     { label: "Products", icon: Package, ref: productsRef, color: "text-violet-600", activeBg: "bg-violet-50" },
     { label: "Contacts", icon: User, ref: contactsRef, color: "text-pink-600", activeBg: "bg-pink-50" },
-    { label: "Analytics", icon: LineChart, ref: analyticsRef, color: "text-cyan-600", activeBg: "bg-cyan-50" },
+    { label: "Analytics", icon: LineChart, ref: analyticsRef, color: "text-cyan-600", activeBg: "bg-cyan-50", onClick: () => setAnalyticsLaunchOpen(true) },
     { label: "Utilities", icon: Wrench, ref: utilityRef, color: "text-gray-600", activeBg: "bg-gray-100" },
   ];
 
@@ -321,8 +323,8 @@ export default function Home() {
             <div className="flex items-center gap-2">
               {/* Desktop-only section nav (bottom nav covers mobile) */}
               <div className="hidden sm:grid grid-cols-3 gap-1">
-              {mobileNavItems.map(({ label, icon: Icon, ref }) => (
-                <button key={label} onClick={() => scrollTo(ref)} title={label}
+              {mobileNavItems.map(({ label, icon: Icon, ref, onClick }) => (
+                <button key={label} onClick={() => onClick ? onClick() : scrollTo(ref)} title={label}
                   className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg hover:bg-white/15 transition-colors group">
                   <Icon className="w-4 h-4 text-white/80 group-hover:text-white" />
                   <span className="text-[10px] text-white/70 group-hover:text-white font-medium">{label}</span>
@@ -436,7 +438,7 @@ export default function Home() {
 
         {/* Analytics section */}
         <div ref={analyticsRef} />
-        <AnalyticsSection />
+        <AnalyticsSection openLaunch={analyticsLaunchOpen} onLaunchOpenChange={setAnalyticsLaunchOpen} />
 
         {/* Utility section */}
         <div ref={utilityRef} />
@@ -451,8 +453,8 @@ export default function Home() {
         style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}
       >
         <div className="grid grid-cols-6">
-          {mobileNavItems.map(({ label, icon: Icon, color, ref }) => (
-            <button key={label} onClick={() => scrollTo(ref)}
+          {mobileNavItems.map(({ label, icon: Icon, color, ref, onClick }) => (
+            <button key={label} onClick={() => onClick ? onClick() : scrollTo(ref)}
               className="flex flex-col items-center gap-1 py-2.5 px-1 transition-colors">
               <Icon className={`w-5 h-5 ${color}`} />
               <span className={`text-[10px] font-medium ${color}`}>{label}</span>

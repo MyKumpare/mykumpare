@@ -4,9 +4,10 @@ import AnalysisLaunchModal from "./AnalysisLaunchModal";
 import NewAnalysisDialog from "./NewAnalysisDialog";
 import ExistingAnalysesDialog from "./ExistingAnalysesDialog";
 
-export default function AnalyticsSection() {
+export default function AnalyticsSection({ openLaunch, onLaunchOpenChange }) {
   const [expanded, setExpanded] = useState(false);
-  const [launchOpen, setLaunchOpen] = useState(false);
+  const launchOpen = openLaunch ?? false;
+  const setLaunchOpen = onLaunchOpenChange ?? (() => {});
   const [newOpen, setNewOpen] = useState(false);
   const [existingOpen, setExistingOpen] = useState(false);
 
