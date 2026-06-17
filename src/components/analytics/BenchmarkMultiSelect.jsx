@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { ChevronDown, X } from "lucide-react";
 
+const ym = (d) => (d ? d.slice(0, 7) : "");
+
 /**
  * Multi-select benchmark dropdown.
  * Props:
@@ -49,6 +51,13 @@ export default function BenchmarkMultiSelect({ benchmarks, selectedIds = [], onC
         {role}
       </span>
     );
+  };
+
+  // Get period for a benchmark
+  const getBenchmarkPeriod = (bm) => {
+    const mr = (bm?.monthly_returns ?? []).sort((a, b) => a.date.localeCompare(b.date));
+    if (mr.length === 0) return null;
+    return { start: ym(mr[0].date), end: ym(mr[mr.length - 1].date) };
   };
 
   return (
@@ -101,6 +110,7 @@ export default function BenchmarkMultiSelect({ benchmarks, selectedIds = [], onC
               filtered.map((b) => {
                 const checked = selectedIds.includes(b.id);
                 const role = roleMap[b.id];
+                const period = getBenchmarkPeriod(b);
                 return (
                   <button
                     key={b.id}
@@ -116,7 +126,14 @@ export default function BenchmarkMultiSelect({ benchmarks, selectedIds = [], onC
                         </svg>
                       )}
                     </div>
-                    <span className={`flex-1 text-left truncate ${checked ? "text-indigo-700 font-medium" : "text-gray-700"}`}>{b.name}</span>
+                    <div className="flex-1 min-w-0">
+                      <span className={`truncate ${checked ? "text-indigo-700 font-medium" : "text-gray-700"}`}>{b.name}</span>
+                      {period && (
+                        <span className="block text-[10px] text-gray-400 mt-0.5">
+                          {period.start} – {period.end}
+                        </span>
+                      )}
+                    </div>
                     {role && (
                       <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border flex-shrink-0 ${role === "Primary" ? "bg-indigo-100 text-indigo-700 border-indigo-200" : "bg-gray-100 text-gray-500 border-gray-200"}`}>
                         {role}

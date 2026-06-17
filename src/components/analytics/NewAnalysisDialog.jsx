@@ -32,7 +32,7 @@ function commonPeriod(productConfigs, allProducts, allBenchmarks, allSeries) {
 
 // ── ProductSearchDropdown ─────────────────────────────────────────────────────
 
-function ProductSearchDropdown({ products, selectedIds, onToggle, multi }) {
+function ProductSearchDropdown({ products, selectedIds, onToggle, multi, allSeries }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const ref = useRef(null);
@@ -62,6 +62,14 @@ function ProductSearchDropdown({ products, selectedIds, onToggle, multi }) {
     ? selectedIds.length === 0 ? "Choose products…" : `${selectedIds.length} product${selectedIds.length > 1 ? "s" : ""} selected`
     : selectedIds.length === 0 ? "Choose a product…" : (products.find((p) => p.id === selectedIds[0])?.name ?? "");
 
+  // Helper to get period for a product
+  const getProductPeriod = (productId) => {
+    const series = allSeries.filter((s) => s.product_id === productId);
+    const mr = series.flatMap((s) => s.monthly_returns ?? []).sort((a, b) => a.date.localeCompare(b.date));
+    if (mr.length === 0) return null;
+    return { start: ym(mr[0].date), end: ym(mr[mr.length - 1].date) };
+  };
+
   return (
     <div className="border border-gray-200 rounded-xl overflow-hidden">
       {/* Search box always visible */}
@@ -83,6 +91,7 @@ function ProductSearchDropdown({ products, selectedIds, onToggle, multi }) {
         ) : (
           filtered.map((p) => {
             const checked = selectedIds.includes(p.id);
+            const period = getProductPeriod(p.id);
             return (
               <button
                 key={p.id}
@@ -97,10 +106,15 @@ function ProductSearchDropdown({ products, selectedIds, onToggle, multi }) {
                     </svg>
                   )}
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="font-medium text-gray-800 truncate">{p.name}</p>
                   {p.firm_name && <p className="text-gray-400 truncate">{p.firm_name}</p>}
                 </div>
+                {period && (
+                  <span className="text-[10px] text-gray-400 whitespace-nowrap flex-shrink-0">
+                    {period.start} – {period.end}
+                  </span>
+                )}
               </button>
             );
           })
@@ -478,6 +492,7 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
                   ? (id) => { setSelectedProductIds([]); setProductConfigs({}); setTimeout(() => addProduct(id), 0); }
                   : toggleProduct}
                 multi={analysisType === "multiple"}
+                allSeries={allSeries}
               />
             </div>
 
@@ -490,10 +505,20 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
                   return (
                     <div key={id} className="border border-gray-200 rounded-xl p-4 space-y-3">
                       <div className="flex items-start justify-between gap-2">
-                        <div>
+                        <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-gray-800">{product?.name}</p>
                           {product?.firm_name && <p className="text-xs text-gray-500">{product.firm_name}</p>}
                         </div>
+                        {(() => {
+                          const series = allSeries.filter((s) => s.product_id === id);
+                          const mr = series.flatMap((s) => s.monthly_returns ?? []).sort((a, b) => a.date.localeCompare(b.date));
+                          const period = mr.length ? { start: ym(mr[0].date), end: ym(mr[mr.length - 1].date) } : null;
+                          return period ? (
+                            <span className="text-[10px] text-gray-400 whitespace-nowrap flex-shrink-0 mt-0.5">
+                              {period.start} – {period.end}
+                            </span>
+                          ) : null;
+                        })()}
                         {analysisType === "multiple" && (
                           <button type="button" onClick={() => removeProduct(id)} className="text-gray-400 hover:text-red-500">
                             <X className="w-4 h-4" />
