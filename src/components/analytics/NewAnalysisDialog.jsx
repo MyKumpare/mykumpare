@@ -7,8 +7,8 @@ import {
   Search, X, ChevronDown, ChevronUp, BarChart2, LayoutList, Link2, CalendarDays, RefreshCw,
   Play, CheckCircle, Pencil, Trash2, Eye, EyeOff, Plus
 } from "lucide-react";
-import BenchmarkMultiSelect from "./BenchmarkMultiSelect";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import AnalysisResults from "./AnalysisResults";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -467,6 +467,28 @@ function BenchmarkConfigPanel({ benchmarkConfig, setBenchmarkConfig, benchmarks,
   );
 }
 
+// ── AnalysisResultsStep ───────────────────────────────────────────────────────
+
+function AnalysisResultsStep({ analysis, benchmarks, allSeries, onClose }) {
+  return (
+    <div className="space-y-4 mt-1">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <CheckCircle className="w-4 h-4 text-green-600" />
+          <span className="text-sm font-semibold text-green-700">Analysis saved — showing results</span>
+        </div>
+        <button type="button" onClick={onClose} className="text-xs text-gray-400 hover:text-gray-600">Close</button>
+      </div>
+      <AnalysisResults
+        analysis={analysis}
+        products={[]}
+        benchmarks={benchmarks}
+        returnSeries={allSeries}
+      />
+    </div>
+  );
+}
+
 // ── Main Dialog ───────────────────────────────────────────────────────────────
 
 export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProductClick, onBenchmarkClick }) {
@@ -476,6 +498,7 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
   const [step, setStep] = useState("meta");
   const [measurementCategories, setMeasurementCategories] = useState([]);
   const [editingCategoryIndex, setEditingCategoryIndex] = useState(null);
+  const [savedAnalysis, setSavedAnalysis] = useState(null);
 
   // Meta
   const [analysisName, setAnalysisName] = useState("");
@@ -569,6 +592,7 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
     onSuccess: (saved) => {
       qc.invalidateQueries({ queryKey: ["analyses"] });
       if (onSaved) onSaved(saved);
+      setSavedAnalysis(saved);
       setStep("saved");
     },
   });
@@ -577,6 +601,7 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
     setStep("meta");
     setMeasurementCategories([]);
     setEditingCategoryIndex(null);
+    setSavedAnalysis(null);
     setAnalysisName("");
     setIsTemplate(false);
     setVisibility("personal");
@@ -1037,23 +1062,14 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
           </div>
         )}
 
-        {/* ── Saved ── */}
-        {step === "saved" && (
-          <div className="space-y-6 mt-1 text-center py-8">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-              <CheckCircle className="w-8 h-8 text-green-600" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-800">Analysis Saved Successfully!</h3>
-            <p className="text-sm text-gray-600">Click the process button below to begin the analysis.</p>
-            <div className="flex justify-center gap-2 pt-4">
-              <button type="button" onClick={() => onOpenChange(false)} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">Close</button>
-              <button type="button" onClick={() => onOpenChange(false)}
-                className="px-5 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2">
-                <Play className="w-4 h-4" />
-                Process Analysis
-              </button>
-            </div>
-          </div>
+        {/* ── Saved / Results ── */}
+        {step === "saved" && savedAnalysis && (
+          <AnalysisResultsStep
+            analysis={savedAnalysis}
+            benchmarks={benchmarks}
+            allSeries={allSeries}
+            onClose={() => onOpenChange(false)}
+          />
         )}
       </DialogContent>
     </Dialog>

@@ -465,13 +465,23 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
           </TabsContent>
 
           <TabsContent value="results" className="mt-1">
-            {showResults && (
+            {showResults ? (
               <AnalysisResults
                 analysis={analysis}
                 products={activeProducts}
                 benchmarks={benchmarks}
                 returnSeries={allSeries}
               />
+            ) : (
+              <div className="py-16 text-center space-y-4">
+                <p className="text-sm text-gray-500">Save your changes, then click Process to run the analysis.</p>
+                <button type="button" onClick={() => { handleSave(); }}
+                  className="px-6 py-2.5 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 mx-auto"
+                  disabled={!analysisName.trim() || saveMutation.isPending}>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                  {saveMutation.isPending ? "Processing…" : "Save & Process"}
+                </button>
+              </div>
             )}
           </TabsContent>
         </Tabs>
