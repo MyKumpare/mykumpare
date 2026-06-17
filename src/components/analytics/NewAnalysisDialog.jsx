@@ -61,64 +61,49 @@ function ProductSearchDropdown({ products, selectedIds, onToggle, multi }) {
     : selectedIds.length === 0 ? "Choose a product…" : (products.find((p) => p.id === selectedIds[0])?.name ?? "");
 
   return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => { setOpen((v) => !v); setSearch(""); }}
-        className="w-full flex items-center justify-between gap-2 px-3 py-2.5 border border-gray-300 rounded-lg text-sm hover:border-indigo-400 bg-white transition-colors"
-      >
-        <span className={selectedIds.length === 0 ? "text-gray-400" : "text-gray-800"}>{label}</span>
-        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`} />
-      </button>
-      {open && (
-        <div className="absolute z-[9999] top-full mt-1 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden">
-          <div className="p-2 border-b border-gray-100">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-              <input
-                autoFocus
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by product or firm…"
-                className="w-full pl-8 pr-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-400"
-              />
-            </div>
-          </div>
-          <div className="max-h-60 overflow-y-auto">
-            {filtered.length === 0 ? (
-              <p className="px-3 py-3 text-xs text-gray-400 text-center">No products found</p>
-            ) : (
-              filtered.map((p) => {
-                const checked = selectedIds.includes(p.id);
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => {
-                      onToggle(p.id);
-                      if (!multi) setOpen(false);
-                    }}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 text-left text-xs hover:bg-gray-50 transition-colors ${checked ? "bg-indigo-50" : ""}`}
-                  >
-                    <div className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center ${checked ? "bg-indigo-600 border-indigo-600" : "border-gray-300"}`}>
-                      {checked && (
-                        <svg viewBox="0 0 10 8" className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" strokeWidth={2}>
-                          <path d="M1 4l3 3 5-6" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-medium text-gray-800 truncate">{p.name}</p>
-                      {p.firm_name && <p className="text-gray-400 truncate">{p.firm_name}</p>}
-                    </div>
-                  </button>
-                );
-              })
-            )}
-          </div>
+    <div className="border border-gray-200 rounded-xl overflow-hidden">
+      {/* Search box always visible */}
+      <div className="p-2 border-b border-gray-100 bg-gray-50">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by product or firm…"
+            className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-400 bg-white"
+          />
         </div>
-      )}
+      </div>
+      {/* Product list — no max-height cap, shows everything */}
+      <div className="divide-y divide-gray-100">
+        {filtered.length === 0 ? (
+          <p className="px-3 py-4 text-xs text-gray-400 text-center">No products found</p>
+        ) : (
+          filtered.map((p) => {
+            const checked = selectedIds.includes(p.id);
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => onToggle(p.id)}
+                className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-left text-xs hover:bg-gray-50 transition-colors ${checked ? "bg-indigo-50" : ""}`}
+              >
+                <div className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center ${checked ? "bg-indigo-600 border-indigo-600" : "border-gray-300"}`}>
+                  {checked && (
+                    <svg viewBox="0 0 10 8" className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" strokeWidth={2}>
+                      <path d="M1 4l3 3 5-6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="font-medium text-gray-800 truncate">{p.name}</p>
+                  {p.firm_name && <p className="text-gray-400 truncate">{p.firm_name}</p>}
+                </div>
+              </button>
+            );
+          })
+        )}
+      </div>
     </div>
   );
 }
