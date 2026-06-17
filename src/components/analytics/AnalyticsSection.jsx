@@ -1,11 +1,12 @@
-import React, { useState } from "react";
-import { LineChart, ChevronDown, ChevronUp, Plus } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { LineChart, ChevronDown, ChevronRight, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import AnalysisLaunchModal from "./AnalysisLaunchModal";
 import NewAnalysisDialog from "./NewAnalysisDialog";
 import ExistingAnalysesDialog from "./ExistingAnalysesDialog";
 import EditAnalysisDialog from "./EditAnalysisDialog";
 
-export default function AnalyticsSection({ openLaunch, onLaunchOpenChange }) {
+export default function AnalyticsSection({ openLaunch, onLaunchOpenChange, totalAnalyses = 0, forceExpanded }) {
   const [expanded, setExpanded] = useState(false);
   const launchOpen = openLaunch ?? false;
   const setLaunchOpen = onLaunchOpenChange ?? (() => {});
@@ -13,36 +14,42 @@ export default function AnalyticsSection({ openLaunch, onLaunchOpenChange }) {
   const [existingOpen, setExistingOpen] = useState(false);
   const [editingAnalysis, setEditingAnalysis] = useState(null);
 
+  useEffect(() => {
+    if (forceExpanded !== undefined) setExpanded(forceExpanded);
+  }, [forceExpanded]);
+
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-6">
-      {/* Header row */}
-      <div className="flex items-center justify-between gap-2">
+    <div className="mb-6">
+      {/* Section header - uniform layout */}
+      <div className="flex items-center justify-between mb-2 px-1">
         <button
           onClick={() => setExpanded((v) => !v)}
-          className="flex items-center gap-2 flex-1 min-w-0"
+          className="flex items-center gap-2 group"
         >
-          <div className="w-8 h-8 rounded-lg bg-cyan-50 flex items-center justify-center flex-shrink-0">
-            <LineChart className="w-4 h-4 text-cyan-600" />
-          </div>
-          <h2 className="text-sm font-bold text-gray-800 tracking-tight">Analytics</h2>
           {expanded ? (
-            <ChevronUp className="w-4 h-4 text-gray-400 ml-1" />
+            <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
           ) : (
-            <ChevronDown className="w-4 h-4 text-gray-400 ml-1" />
+            <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
           )}
+          <span className="text-sm font-semibold text-gray-700 group-hover:text-gray-900">
+            Analytics
+          </span>
+          <span className="text-xs text-gray-400 font-normal">({totalAnalyses})</span>
         </button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-cyan-600 hover:text-cyan-700 hover:bg-cyan-50 gap-1 text-xs"
+          onClick={() => setNewOpen(true)}
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Add Analysis
+        </Button>
       </div>
 
       {/* Expanded content */}
       {expanded && (
-        <div className="mt-4 space-y-2">
-          <button
-            onClick={() => setNewOpen(true)}
-            className="w-full flex items-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-cyan-200 text-cyan-700 hover:bg-cyan-50 hover:border-cyan-400 transition-colors text-sm font-medium"
-          >
-            <Plus className="w-4 h-4" />
-            Add Analysis
-          </button>
+        <div className="pl-2 border-l-2 border-gray-100">
           <button
             onClick={() => setExistingOpen(true)}
             className="w-full flex items-center gap-2 px-4 py-3 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors text-sm font-medium"

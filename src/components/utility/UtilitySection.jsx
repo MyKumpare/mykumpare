@@ -37,7 +37,7 @@ function CollapsibleGroup({ label, labelClass = "text-xs font-semibold text-indi
 }
 
 export default function UtilitySection({ deletedCount }) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const [benchmarkDialogOpen, setBenchmarkDialogOpen] = useState(false);
   const [selectedBenchmark, setSelectedBenchmark] = useState(null);
 

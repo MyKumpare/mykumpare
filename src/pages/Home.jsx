@@ -298,6 +298,7 @@ export default function Home() {
   const totalProducts = activeProducts.length;
   const totalContacts = activeContacts.length;
   const totalPortfolios = portfolios.filter(p => !p.deleted_at).length;
+  const totalAnalyses = analyses.length;
   const hasResults = Object.keys(groupedFirms).length > 0;
 
   const mobileNavItems = [
@@ -463,7 +464,12 @@ export default function Home() {
 
         {/* Analytics section */}
         <div ref={analyticsRef} />
-        <AnalyticsSection openLaunch={analyticsLaunchOpen} onLaunchOpenChange={setAnalyticsLaunchOpen} />
+        <AnalyticsSection
+          openLaunch={analyticsLaunchOpen}
+          onLaunchOpenChange={setAnalyticsLaunchOpen}
+          totalAnalyses={totalAnalyses}
+          forceExpanded={allExpanded}
+        />
 
         {/* Utility section */}
         <div ref={utilityRef} />
