@@ -184,7 +184,10 @@ function AttributeBarChart({ periodResults, attribute, productNames, bmNames }) 
   if (!comparablePeriods.length) return null;
   const data = comparablePeriods.map(pr => {
     const entry = { period: pr.window.label, product: pr.attributeValues?.[attribute] ?? null };
-    if (pr.bmValues) entry.benchmark = pr.bmValues?.[attribute] ?? null;
+    if (pr.bmValues) {
+      entry.benchmark = pr.bmValues?.[attribute] ?? null;
+      entry.excess = (entry.product != null && entry.benchmark != null) ? entry.product - entry.benchmark : null;
+    }
     return entry;
   });
   const hasBm = data.some(d => d.benchmark !== undefined);
@@ -201,6 +204,9 @@ function AttributeBarChart({ periodResults, attribute, productNames, bmNames }) 
           {data.map((d, i) => <Cell key={i} fill={(d.product ?? 0) >= 0 ? PRODUCT_COLORS[0] : "#EF4444"} />)}
         </Bar>
         {hasBm && <Bar dataKey="benchmark" name={bmNames?.[0] || "Benchmark"} fill={BM_COLOR} />}
+        {hasBm && <Bar dataKey="excess" name="Excess Return" fill="#F97316">
+          {data.map((d, i) => <Cell key={i} fill={(d.excess ?? 0) >= 0 ? "#F97316" : "#EF4444"} />)}
+        </Bar>}
       </BarChart>
     </ResponsiveContainer>
   );
