@@ -99,12 +99,6 @@ function ProductSearchDropdown({ products, selectedIds, onToggle, multi, allSeri
       (p.firm_name || "").toLowerCase().includes(search.toLowerCase())
   );
 
-  const selectedProduct = products.find((p) => p.id === selectedIds[0]);
-  const selectedProductPeriod = selectedProduct ? getProductPeriod(selectedProduct.id) : null;
-  const label = multi
-    ? selectedIds.length === 0 ? "Choose products…" : `${selectedIds.length} product${selectedIds.length > 1 ? "s" : ""} selected`
-    : selectedIds.length === 0 ? "Choose a product…" : (selectedProduct?.name ?? "");
-
   // Helper to get period for a product
   const getProductPeriod = (productId) => {
     const series = allSeries.filter((s) => s.product_id === productId);
@@ -112,6 +106,12 @@ function ProductSearchDropdown({ products, selectedIds, onToggle, multi, allSeri
     if (mr.length === 0) return null;
     return { start: ym(mr[0].date), end: ym(mr[mr.length - 1].date) };
   };
+
+  const selectedProduct = products.find((p) => p.id === selectedIds[0]);
+  const selectedProductPeriod = selectedProduct ? getProductPeriod(selectedProduct.id) : null;
+  const label = multi
+    ? selectedIds.length === 0 ? "Choose products…" : `${selectedIds.length} product${selectedIds.length > 1 ? "s" : ""} selected`
+    : selectedIds.length === 0 ? "Choose a product…" : (selectedProduct?.name ?? "");
 
   return (
     <div className="border border-gray-200 rounded-xl overflow-hidden">
