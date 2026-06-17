@@ -206,6 +206,13 @@ function AttributeBarChart({ periodResults, attribute, productNames, bmNames }) 
   );
 }
 
+// Determine the best default chart type for a given period result
+function defaultChartType(pr) {
+  if (pr.isRolling) return "line";        // rolling time-series → line
+  if (pr.isHistorical) return "bar";      // period-over-period → bar
+  return "bar";                           // trailing/calendar/cumulative → bar
+}
+
 export default function AnalysisResults({ analysis, products, benchmarks, returnSeries }) {
   const [viewMode, setViewMode] = useState("table");
   const [chartTypes, setChartTypes] = useState({});
@@ -225,8 +232,12 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
     );
   }
 
-  const getChartType = (key) => chartTypes[key] || "bar";
-  const toggleChartType = (key) => setChartTypes(prev => ({ ...prev, [key]: prev[key] === "line" ? "bar" : "line" }));
+  // Use smart default based on result type, allow user override
+  const getChartType = (key, pr) => chartTypes[key] ?? defaultChartType(pr);
+  const toggleChartType = (key, pr) => setChartTypes(prev => {
+    const current = prev[key] ?? defaultChartType(pr);
+    return { ...prev, [key]: current === "line" ? "bar" : "line" };
+  });
 
   return (
     <div className="space-y-5">
@@ -278,9 +289,9 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                     <div key={pri} className="mb-4">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">{pr.window.label} Returns</span>
-                        <button onClick={() => toggleChartType(chartKey)}
-                          className="p-1 rounded border border-gray-200 text-gray-400 hover:border-indigo-400 hover:text-indigo-600 transition-colors">
-                          {getChartType(chartKey) === "bar" ? <TrendingUp className="w-3.5 h-3.5" /> : <BarChart2 className="w-3.5 h-3.5" />}
+                        <button onClick={() => toggleChartType(chartKey, pr)} title={getChartType(chartKey, pr) === "bar" ? "Switch to Line" : "Switch to Bar"}
+                          className="flex items-center gap-1 px-2 py-1 rounded border border-gray-200 text-gray-400 hover:border-indigo-400 hover:text-indigo-600 transition-colors text-xs">
+                          {getChartType(chartKey, pr) === "bar" ? <><TrendingUp className="w-3.5 h-3.5" /> Line</> : <><BarChart2 className="w-3.5 h-3.5" /> Bar</>}
                         </button>
                       </div>
                       {(viewMode === "table" || viewMode === "both") && (
@@ -288,14 +299,14 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                       )}
                       {(viewMode === "chart" || viewMode === "both") && (
                         <div className="mt-3">
-                          <HistoricalChart periodResult={pr} productName={productResult.productName} bmNames={productResult.benchmarkNames} chartType={getChartType(chartKey)} />
+                          <HistoricalChart periodResult={pr} productName={productResult.productName} bmNames={productResult.benchmarkNames} chartType={getChartType(chartKey, pr)} />
                         </div>
                       )}
                     </div>
                   );
                 }
 
-                // Rolling per attribute
+                // Rolling per attribute — defaults to line
                 if (pr.isRolling) {
                   const attrs = catResult.periodResults.find(p => !p.isRolling && !p.isHistorical)
                     ? Object.keys(catResult.periodResults.find(p => !p.isRolling && !p.isHistorical)?.attributeValues || {})
@@ -304,15 +315,15 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                     <div key={pri} className="mb-4">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">{pr.window.label}</span>
-                        <button onClick={() => toggleChartType(chartKey)}
-                          className="p-1 rounded border border-gray-200 text-gray-400 hover:border-indigo-400 hover:text-indigo-600 transition-colors">
-                          {getChartType(chartKey) === "bar" ? <TrendingUp className="w-3.5 h-3.5" /> : <BarChart2 className="w-3.5 h-3.5" />}
+                        <button onClick={() => toggleChartType(chartKey, pr)} title={getChartType(chartKey, pr) === "line" ? "Switch to Bar" : "Switch to Line"}
+                          className="flex items-center gap-1 px-2 py-1 rounded border border-gray-200 text-gray-400 hover:border-indigo-400 hover:text-indigo-600 transition-colors text-xs">
+                          {getChartType(chartKey, pr) === "line" ? <><BarChart2 className="w-3.5 h-3.5" /> Bar</> : <><TrendingUp className="w-3.5 h-3.5" /> Line</>}
                         </button>
                       </div>
                       {attrs.slice(0, 4).map(attr => (
                         <div key={attr} className="mb-3">
                           <p className="text-xs text-gray-500 mb-1 font-medium">{attr}</p>
-                          <RollingChart periodResult={pr} attribute={attr} productName={productResult.productName} bmNames={productResult.benchmarkNames} chartType={getChartType(chartKey)} />
+                          <RollingChart periodResult={pr} attribute={attr} productName={productResult.productName} bmNames={productResult.benchmarkNames} chartType={getChartType(chartKey, pr)} />
                         </div>
                       ))}
                       {attrs.length > 4 && <p className="text-xs text-gray-400 mt-1">+{attrs.length - 4} more attributes in table view</p>}
@@ -330,9 +341,9 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                         <span className="text-[10px] text-gray-400 capitalize">{pr.window.type}</span>
                       </div>
                       {(viewMode === "chart" || viewMode === "both") && (
-                        <button onClick={() => toggleChartType(chartKey)}
-                          className="p-1 rounded border border-gray-200 text-gray-400 hover:border-indigo-400 hover:text-indigo-600 transition-colors">
-                          {getChartType(chartKey) === "bar" ? <TrendingUp className="w-3.5 h-3.5" /> : <BarChart2 className="w-3.5 h-3.5" />}
+                        <button onClick={() => toggleChartType(chartKey, pr)} title={getChartType(chartKey, pr) === "bar" ? "Switch to Line" : "Switch to Bar"}
+                          className="flex items-center gap-1 px-2 py-1 rounded border border-gray-200 text-gray-400 hover:border-indigo-400 hover:text-indigo-600 transition-colors text-xs">
+                          {getChartType(chartKey, pr) === "bar" ? <><TrendingUp className="w-3.5 h-3.5" /> Line</> : <><BarChart2 className="w-3.5 h-3.5" /> Bar</>}
                         </button>
                       )}
                     </div>
@@ -346,23 +357,27 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                     )}
                     {(viewMode === "chart" || viewMode === "both") && attributes.length > 0 && (
                       <div className="mt-3">
-                        {attributes.length > 1 ? (
-                          // Multi-attribute bar chart per period
-                          <ResponsiveContainer width="100%" height={220}>
-                            <BarChart data={attributes.map(attr => ({ attr, product: pr.attributeValues?.[attr] ?? null, benchmark: pr.bmValues?.[attr] ?? null }))} layout="vertical">
-                              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
-                              <XAxis type="number" tickFormatter={v => isRatioMetric(attributes[0]) ? v?.toFixed(1) : `${v?.toFixed(1)}%`} tick={{ fontSize: 9 }} />
-                              <YAxis type="category" dataKey="attr" tick={{ fontSize: 9 }} width={120} />
-                              <Tooltip formatter={(v, name) => [fmt(v, "Return"), name]} />
-                              <Legend />
-                              <ReferenceLine x={0} stroke="#e5e7eb" />
-                              <Bar dataKey="product" name={productResult.productName} fill={PRODUCT_COLORS[pi % PRODUCT_COLORS.length]}>
-                                {attributes.map((attr, i) => <Cell key={i} fill={(pr.attributeValues?.[attr] ?? 0) >= 0 ? PRODUCT_COLORS[pi % PRODUCT_COLORS.length] : "#EF4444"} />)}
-                              </Bar>
-                              {pr.bmValues && <Bar dataKey="benchmark" name={productResult.benchmarkNames?.[0] || "Benchmark"} fill={BM_COLOR} />}
-                            </BarChart>
-                          </ResponsiveContainer>
-                        ) : (
+                        {attributes.length > 1 ? (() => {
+                          const chartData = attributes.map(attr => ({ attr, product: pr.attributeValues?.[attr] ?? null, benchmark: pr.bmValues?.[attr] ?? null }));
+                          const ct = getChartType(chartKey, pr);
+                          // Horizontal bar is best for multi-attribute single-period; line doesn't apply well here so treat "line" as grouped bar
+                          return (
+                            <ResponsiveContainer width="100%" height={Math.max(180, attributes.length * 28)}>
+                              <BarChart data={chartData} layout="vertical">
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
+                                <XAxis type="number" tickFormatter={v => isRatioMetric(attributes[0]) ? v?.toFixed(1) : `${v?.toFixed(1)}%`} tick={{ fontSize: 9 }} />
+                                <YAxis type="category" dataKey="attr" tick={{ fontSize: 9 }} width={130} />
+                                <Tooltip formatter={(v, name) => [fmt(v, "Return"), name]} />
+                                <Legend />
+                                <ReferenceLine x={0} stroke="#e5e7eb" />
+                                <Bar dataKey="product" name={productResult.productName} fill={PRODUCT_COLORS[pi % PRODUCT_COLORS.length]}>
+                                  {chartData.map((d, i) => <Cell key={i} fill={(d.product ?? 0) >= 0 ? PRODUCT_COLORS[pi % PRODUCT_COLORS.length] : "#EF4444"} />)}
+                                </Bar>
+                                {pr.bmValues && <Bar dataKey="benchmark" name={productResult.benchmarkNames?.[0] || "Benchmark"} fill={BM_COLOR} />}
+                              </BarChart>
+                            </ResponsiveContainer>
+                          );
+                        })() : (
                           <div className="text-center py-4">
                             <p className="text-2xl font-bold" style={{ color: (pr.attributeValues?.[attributes[0]] ?? 0) >= 0 ? "#10B981" : "#EF4444" }}>
                               {fmt(pr.attributeValues?.[attributes[0]], attributes[0])}
