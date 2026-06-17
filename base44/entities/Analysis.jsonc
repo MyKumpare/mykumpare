@@ -6,6 +6,10 @@
       "type": "string",
       "description": "Name of the analysis"
     },
+    "is_template": {
+      "type": "boolean",
+      "description": "If true, this analysis acts as a reusable template (product, benchmark and period can be overridden when reusing)"
+    },
     "visibility": {
       "type": "string",
       "enum": [

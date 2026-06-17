@@ -200,6 +200,7 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
 
   // ── Meta
   const [analysisName, setAnalysisName] = useState("");
+  const [isTemplate, setIsTemplate] = useState(false);
   const [visibility, setVisibility] = useState("personal");
   const [analysisType, setAnalysisType] = useState(null); // "single" | "multiple"
 
@@ -300,6 +301,7 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
   const resetForm = () => {
     setStep("meta");
     setAnalysisName("");
+    setIsTemplate(false);
     setVisibility("personal");
     setAnalysisType(null);
     setSelectedProductIds([]);
@@ -311,6 +313,7 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
   const handleSave = () => {
     const data = {
       name: analysisName,
+      is_template: isTemplate,
       visibility,
       analysis_type: analysisType,
       product_configs: selectedProductIds.map((id) => {
@@ -343,7 +346,12 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
     <Dialog open={open} onOpenChange={(o) => { if (!o) resetForm(); onOpenChange(o); }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-base font-bold text-gray-800">New Analysis</DialogTitle>
+          <DialogTitle className="text-base font-bold text-gray-800 flex items-center gap-2">
+            New Analysis
+            {isTemplate && (
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">Template</span>
+            )}
+          </DialogTitle>
         </DialogHeader>
 
         {step === "meta" && (
@@ -358,6 +366,27 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
                 placeholder="e.g. Q2 2026 Manager Review"
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
               />
+            </div>
+
+            {/* Template */}
+            <div>
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-2">Analysis Mode</label>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { key: false, label: "Standard Analysis", desc: "A one-time analysis with fixed product, benchmark & period" },
+                  { key: true, label: "Template", desc: "Reusable — product, benchmark & period can be changed each time" },
+                ].map(({ key, label, desc }) => (
+                  <button
+                    key={String(key)}
+                    type="button"
+                    onClick={() => setIsTemplate(key)}
+                    className={`text-left p-3 rounded-xl border-2 transition-colors ${isTemplate === key ? "border-indigo-500 bg-indigo-50" : "border-gray-200 hover:border-gray-300"}`}
+                  >
+                    <p className={`text-sm font-semibold ${isTemplate === key ? "text-indigo-700" : "text-gray-700"}`}>{label}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Visibility */}
@@ -566,7 +595,7 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
                 disabled={!canSave || saveMutation.isPending}
                 className="px-5 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg disabled:opacity-40 hover:bg-indigo-700 transition-colors"
               >
-                {saveMutation.isPending ? "Saving…" : "Save Analysis"}
+                {saveMutation.isPending ? "Saving…" : isTemplate ? "Save Template" : "Save Analysis"}
               </button>
             </div>
           </div>
