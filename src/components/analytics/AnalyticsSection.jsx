@@ -3,6 +3,7 @@ import { LineChart, ChevronDown, ChevronUp, Plus } from "lucide-react";
 import AnalysisLaunchModal from "./AnalysisLaunchModal";
 import NewAnalysisDialog from "./NewAnalysisDialog";
 import ExistingAnalysesDialog from "./ExistingAnalysesDialog";
+import EditAnalysisDialog from "./EditAnalysisDialog";
 
 export default function AnalyticsSection({ openLaunch, onLaunchOpenChange }) {
   const [expanded, setExpanded] = useState(false);
@@ -10,6 +11,7 @@ export default function AnalyticsSection({ openLaunch, onLaunchOpenChange }) {
   const setLaunchOpen = onLaunchOpenChange ?? (() => {});
   const [newOpen, setNewOpen] = useState(false);
   const [existingOpen, setExistingOpen] = useState(false);
+  const [editingAnalysis, setEditingAnalysis] = useState(null);
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-6">
@@ -73,8 +75,16 @@ export default function AnalyticsSection({ openLaunch, onLaunchOpenChange }) {
         open={existingOpen}
         onOpenChange={setExistingOpen}
         onSelect={(analysis) => {
-          console.log("Selected analysis:", analysis);
+          setExistingOpen(false);
+          setEditingAnalysis(analysis);
         }}
+      />
+
+      {/* Edit/view/delete analysis dialog */}
+      <EditAnalysisDialog
+        open={!!editingAnalysis}
+        onOpenChange={(o) => { if (!o) setEditingAnalysis(null); }}
+        analysis={editingAnalysis}
       />
     </div>
   );
