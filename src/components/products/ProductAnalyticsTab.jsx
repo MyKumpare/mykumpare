@@ -167,6 +167,10 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
   const [endYM, setEndYM] = useState("");
   const [returnType, setReturnType] = useState("gross"); // "gross" | "net" | "both"
   const [chartMode, setChartMode] = useState("cumulative"); // "cumulative" | "excess"
+  const [rollingEnabled, setRollingEnabled] = useState(false);
+  const [rollingMonths, setRollingMonths] = useState(12); // default 1Y
+  const [rollingCustom, setRollingCustom] = useState(24);
+  const [rollingPeriod, setRollingPeriod] = useState("12"); // "1","3","12","36","60","custom"
   const [selectedTrailing, setSelectedTrailing] = useState(new Set(["1Y", "3Y", "5Y", "SI"]));
 
   // Close benchmark dropdown on outside click
@@ -339,6 +343,39 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
     });
   }, [filteredGross, filteredNet, filteredBm]);
 
+  // ── Rolling chart data ──
+  const effectiveRollingMonths = rollingPeriod === "custom" ? rollingCustom : parseInt(rollingPeriod);
+
+  const rollingChartData = useMemo(() => {
+    if (!rollingEnabled) return [];
+    const gMap = {}, nMap = {}, bMap = {};
+    filteredGross.forEach((m) => { gMap[ym(m.date)] = m.return_value; });
+    filteredNet.forEach((m) => { nMap[ym(m.date)] = m.return_value; });
+    filteredBm.forEach((m) => { bMap[ym(m.date)] = m.return_value; });
+    const dates = [...new Set([...Object.keys(gMap), ...Object.keys(bMap)])].sort();
+    const W = effectiveRollingMonths;
+
+    return dates.map((d, i) => {
+      if (i < W - 1) return null;
+      const window = dates.slice(i - W + 1, i + 1);
+      const gRets = window.map((x) => gMap[x]).filter((v) => v != null);
+      const nRets = window.map((x) => nMap[x]).filter((v) => v != null);
+      const bRets = window.map((x) => bMap[x]).filter((v) => v != null);
+      const calcCum = (rets) => rets.length === W ? parseFloat((compound(rets) * 100).toFixed(2)) : null;
+      const cg = calcCum(gRets);
+      const cn = calcCum(nRets);
+      const cb = calcCum(bRets);
+      return {
+        date: d,
+        cumGross: cg,
+        cumNet: cn,
+        cumBm: cb,
+        excessGross: cg != null && cb != null ? parseFloat((cg - cb).toFixed(2)) : null,
+        excessNet: cn != null && cb != null ? parseFloat((cn - cb).toFixed(2)) : null,
+      };
+    }).filter(Boolean);
+  }, [rollingEnabled, effectiveRollingMonths, filteredGross, filteredNet, filteredBm]);
+
   const isLoading = loadingSeries || loadingBm;
 
   if (isLoading) {
@@ -488,19 +525,63 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
 
       {/* ── Cumulative chart with toggle ── */}
       <div>
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-            {chartMode === "cumulative" ? "Cumulative Return" : "Cumulative Excess Return"}
+            {rollingEnabled
+              ? `Rolling ${effectiveRollingMonths}M ${chartMode === "cumulative" ? "Return" : "Excess Return"}`
+              : chartMode === "cumulative" ? "Cumulative Return" : "Cumulative Excess Return"}
           </p>
-          {activeBm && (
-            <div className="flex gap-1">
-              <ToggleButton active={chartMode === "cumulative"} onClick={() => setChartMode("cumulative")}>Cumulative</ToggleButton>
-              <ToggleButton active={chartMode === "excess"} onClick={() => setChartMode("excess")}>Excess</ToggleButton>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {activeBm && (
+              <div className="flex gap-1">
+                <ToggleButton active={chartMode === "cumulative"} onClick={() => setChartMode("cumulative")}>Cumulative</ToggleButton>
+                <ToggleButton active={chartMode === "excess"} onClick={() => setChartMode("excess")}>Excess</ToggleButton>
+              </div>
+            )}
+            <div className="flex gap-1 items-center ml-1 pl-1 border-l border-gray-200">
+              <ToggleButton active={rollingEnabled} onClick={() => setRollingEnabled((v) => !v)}>Rolling</ToggleButton>
             </div>
-          )}
+          </div>
         </div>
+
+        {/* Rolling period selector */}
+        {rollingEnabled && (
+          <div className="flex items-center gap-1.5 flex-wrap mb-2">
+            <span className="text-xs text-gray-500 font-medium">Window:</span>
+            {[
+              { label: "1M", value: "1" },
+              { label: "1Q", value: "3" },
+              { label: "1Y", value: "12" },
+              { label: "3Y", value: "36" },
+              { label: "5Y", value: "60" },
+              { label: "Custom", value: "custom" },
+            ].map((opt) => (
+              <ToggleButton
+                key={opt.value}
+                active={rollingPeriod === opt.value}
+                onClick={() => setRollingPeriod(opt.value)}
+              >
+                {opt.label}
+              </ToggleButton>
+            ))}
+            {rollingPeriod === "custom" && (
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  min={1}
+                  max={filteredGross.length}
+                  value={rollingCustom}
+                  onChange={(e) => setRollingCustom(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="text-xs border border-gray-300 rounded px-2 py-0.5 w-16 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                />
+                <span className="text-xs text-gray-400">months</span>
+              </div>
+            )}
+          </div>
+        )}
+
         <ResponsiveContainer width="100%" height={170}>
-          <LineChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+          <LineChart data={rollingEnabled ? rollingChartData : chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis dataKey="date" tickFormatter={xFmt} tick={{ fontSize: 9 }} interval="preserveStartEnd" />
             <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => v + "%"} width={46} />
@@ -513,8 +594,11 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
             {showNet && (
               <Line type="monotone" dataKey={cumChartKey.net} stroke="#10b981" strokeWidth={2} dot={false} name="Net" strokeDasharray="5 3" connectNulls />
             )}
-            {activeBm && chartMode === "cumulative" && (
+            {activeBm && chartMode === "cumulative" && !rollingEnabled && (
               <Line type="monotone" dataKey={cumChartKey.bm} stroke="#f59e0b" strokeWidth={2} dot={false} name={activeBm.name} strokeDasharray="4 3" connectNulls />
+            )}
+            {activeBm && chartMode === "cumulative" && rollingEnabled && (
+              <Line type="monotone" dataKey="cumBm" stroke="#f59e0b" strokeWidth={2} dot={false} name={activeBm.name} strokeDasharray="4 3" connectNulls />
             )}
           </LineChart>
         </ResponsiveContainer>
