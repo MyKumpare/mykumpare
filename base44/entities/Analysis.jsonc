@@ -8,7 +8,7 @@
     },
     "is_template": {
       "type": "boolean",
-      "description": "If true, this analysis acts as a reusable template (product, benchmark and period can be overridden when reusing)"
+      "description": "If true, this analysis acts as a reusable template"
     },
     "visibility": {
       "type": "string",
@@ -45,11 +45,27 @@
           "firm_name": {
             "type": "string"
           },
+          "benchmark_ids": {
+            "type": "array",
+            "description": "Selected benchmark IDs (multi-select)",
+            "items": {
+              "type": "string"
+            }
+          },
+          "benchmark_names": {
+            "type": "array",
+            "description": "Denormalized benchmark names",
+            "items": {
+              "type": "string"
+            }
+          },
           "benchmark_id": {
-            "type": "string"
+            "type": "string",
+            "description": "Legacy single benchmark ID (kept for backwards compatibility)"
           },
           "benchmark_name": {
-            "type": "string"
+            "type": "string",
+            "description": "Legacy single benchmark name"
           },
           "return_type": {
             "type": "string",

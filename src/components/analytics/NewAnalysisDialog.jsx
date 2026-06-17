@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/AuthContext";
 import {
   Search, X, ChevronDown, BarChart2, LayoutList, Link2, CalendarDays, RefreshCw
 } from "lucide-react";
+import BenchmarkMultiSelect from "./BenchmarkMultiSelect";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -18,8 +19,9 @@ function commonPeriod(productConfigs, allProducts, allBenchmarks, allSeries) {
     const series = allSeries.filter((s) => s.product_id === cfg.product_id);
     const mr = series.flatMap((s) => s.monthly_returns ?? []).sort((a, b) => a.date.localeCompare(b.date));
     if (mr.length) { starts.push(ym(mr[0].date)); ends.push(ym(mr[mr.length - 1].date)); }
-    if (cfg.benchmark_id) {
-      const bm = allBenchmarks.find((b) => b.id === cfg.benchmark_id);
+    const bmIds = cfg.benchmark_ids ?? (cfg.benchmark_id ? [cfg.benchmark_id] : []);
+    for (const bmId of bmIds) {
+      const bm = allBenchmarks.find((b) => b.id === bmId);
       const bmr = (bm?.monthly_returns ?? []).sort((a, b) => a.date.localeCompare(b.date));
       if (bmr.length) { starts.push(ym(bmr[0].date)); ends.push(ym(bmr[bmr.length - 1].date)); }
     }
@@ -226,20 +228,20 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
 
   const activeProducts = products.filter((p) => !p.deleted_at);
 
-  // When a product is selected, seed its config with its primary benchmark
+  // When a product is selected, seed its config with benchmarks from product setup
   const addProduct = (id) => {
     setSelectedProductIds((prev) => {
       if (prev.includes(id)) return prev;
       const product = activeProducts.find((p) => p.id === id);
-      const primaryBmId = product?.inv_desc_benchmarks?.find((b) => (typeof b === "object" ? b.role === "Primary" : false))?.id
-        ?? product?.inv_desc_benchmarks?.[0]?.id
-        ?? null;
-      const primaryBm = benchmarks.find((b) => b.id === primaryBmId);
+      const productBms = product?.inv_desc_benchmarks ?? [];
+      // Default: pre-select all benchmarks defined on the product
+      const defaultBmIds = productBms
+        .map((b) => (typeof b === "object" ? b.id : b))
+        .filter(Boolean);
       setProductConfigs((prev2) => ({
         ...prev2,
         [id]: {
-          benchmark_id: primaryBmId ?? null,
-          benchmark_name: primaryBm?.name ?? "",
+          benchmark_ids: defaultBmIds,
           return_type: "gross",
           include_clone_product: false,
           include_clone_benchmark: false,
@@ -266,14 +268,12 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
   // Also seed when benchmarks load after product is added
   useEffect(() => {
     selectedProductIds.forEach((id) => {
-      if (!productConfigs[id]?.benchmark_id) {
+      if (!productConfigs[id]?.benchmark_ids?.length) {
         const product = activeProducts.find((p) => p.id === id);
-        const primaryBmId = product?.inv_desc_benchmarks?.find((b) => typeof b === "object" && b.role === "Primary")?.id
-          ?? product?.inv_desc_benchmarks?.[0]?.id ?? null;
-        if (primaryBmId) {
-          const bm = benchmarks.find((b) => b.id === primaryBmId);
-          updateConfig(id, "benchmark_id", primaryBmId);
-          updateConfig(id, "benchmark_name", bm?.name ?? "");
+        const productBms = product?.inv_desc_benchmarks ?? [];
+        const defaultBmIds = productBms.map((b) => (typeof b === "object" ? b.id : b)).filter(Boolean);
+        if (defaultBmIds.length) {
+          updateConfig(id, "benchmark_ids", defaultBmIds);
         }
       }
     });
@@ -319,13 +319,13 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
       product_configs: selectedProductIds.map((id) => {
         const cfg = productConfigs[id] ?? {};
         const product = activeProducts.find((p) => p.id === id);
-        const bm = benchmarks.find((b) => b.id === cfg.benchmark_id);
+        const bmIds = cfg.benchmark_ids ?? [];
         return {
           product_id: id,
           product_name: product?.name ?? "",
           firm_name: product?.firm_name ?? "",
-          benchmark_id: cfg.benchmark_id ?? null,
-          benchmark_name: bm?.name ?? "",
+          benchmark_ids: bmIds,
+          benchmark_names: bmIds.map((bmId) => benchmarks.find((b) => b.id === bmId)?.name ?? ""),
           return_type: cfg.return_type ?? "gross",
           include_clone_product: cfg.include_clone_product ?? false,
           include_clone_benchmark: cfg.include_clone_benchmark ?? false,
@@ -487,17 +487,14 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
                         )}
                       </div>
 
-                      {/* Benchmark */}
-                      <div className="grid grid-cols-[auto_1fr] items-center gap-2">
-                        <label className="text-xs text-gray-500 font-medium whitespace-nowrap">Benchmark</label>
-                        <BenchmarkDropdown
+                      {/* Benchmarks */}
+                      <div className="grid grid-cols-[auto_1fr] items-start gap-2">
+                        <label className="text-xs text-gray-500 font-medium whitespace-nowrap mt-1.5">Benchmarks</label>
+                        <BenchmarkMultiSelect
                           benchmarks={benchmarks}
-                          value={cfg.benchmark_id ?? null}
-                          onChange={(bmId) => {
-                            const bm = benchmarks.find((b) => b.id === bmId);
-                            updateConfig(id, "benchmark_id", bmId);
-                            updateConfig(id, "benchmark_name", bm?.name ?? "");
-                          }}
+                          selectedIds={cfg.benchmark_ids ?? []}
+                          onChange={(ids) => updateConfig(id, "benchmark_ids", ids)}
+                          productBenchmarks={product?.inv_desc_benchmarks ?? []}
                         />
                       </div>
 
@@ -525,7 +522,7 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
                             />
                             <span>Include clone return (product)</span>
                           </label>
-                          {cfg.benchmark_id && (
+                          {(cfg.benchmark_ids ?? []).length > 0 && (
                             <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
                               <input
                                 type="checkbox"

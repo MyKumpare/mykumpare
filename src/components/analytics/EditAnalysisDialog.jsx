@@ -1,9 +1,10 @@
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
-import { Search, X, ChevronDown, CalendarDays, RefreshCw, Link2, Trash2 } from "lucide-react";
+import { CalendarDays, RefreshCw, Link2, Trash2 } from "lucide-react";
+import BenchmarkMultiSelect from "./BenchmarkMultiSelect";
 
 const ym = (d) => (d ? d.slice(0, 7) : "");
 
@@ -13,8 +14,9 @@ function commonPeriod(productConfigs, allProducts, allBenchmarks, allSeries) {
     const series = allSeries.filter((s) => s.product_id === cfg.product_id);
     const mr = series.flatMap((s) => s.monthly_returns ?? []).sort((a, b) => a.date.localeCompare(b.date));
     if (mr.length) { starts.push(ym(mr[0].date)); ends.push(ym(mr[mr.length - 1].date)); }
-    if (cfg.benchmark_id) {
-      const bm = allBenchmarks.find((b) => b.id === cfg.benchmark_id);
+    const bmIds = cfg.benchmark_ids ?? (cfg.benchmark_id ? [cfg.benchmark_id] : []);
+    for (const bmId of bmIds) {
+      const bm = allBenchmarks.find((b) => b.id === bmId);
       const bmr = (bm?.monthly_returns ?? []).sort((a, b) => a.date.localeCompare(b.date));
       if (bmr.length) { starts.push(ym(bmr[0].date)); ends.push(ym(bmr[bmr.length - 1].date)); }
     }
@@ -23,54 +25,7 @@ function commonPeriod(productConfigs, allProducts, allBenchmarks, allSeries) {
   return { start: starts.sort().pop(), end: ends.sort()[0] };
 }
 
-function BenchmarkDropdown({ benchmarks, value, onChange }) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const ref = useRef(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, [open]);
-
-  const filtered = benchmarks.filter((b) => b.name.toLowerCase().includes(search.toLowerCase()));
-  const selected = benchmarks.find((b) => b.id === value);
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => { setOpen((v) => !v); setSearch(""); }}
-        className="w-full flex items-center justify-between gap-2 px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs hover:border-indigo-400 bg-white transition-colors"
-      >
-        <span className={!selected ? "text-gray-400" : "text-gray-800 truncate"}>{selected ? selected.name : "None"}</span>
-        <ChevronDown className={`w-3 h-3 text-gray-400 flex-shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
-      </button>
-      {open && (
-        <div className="absolute z-[9999] top-full mt-1 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden min-w-[200px]">
-          <div className="p-2 border-b border-gray-100">
-            <input autoFocus value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search benchmarks…"
-              className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-400" />
-          </div>
-          <div className="max-h-52 overflow-y-auto">
-            <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { onChange(null); setOpen(false); }}
-              className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 ${!value ? "text-indigo-600 font-semibold bg-indigo-50" : "text-gray-500"}`}>
-              None
-            </button>
-            {filtered.map((b) => (
-              <button key={b.id} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { onChange(b.id); setOpen(false); }}
-                className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 ${b.id === value ? "text-indigo-600 font-semibold bg-indigo-50" : "text-gray-700"}`}>
-                {b.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 function TogBtn({ active, onClick, children }) {
   return (
@@ -119,9 +74,10 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
     setPeriodEnd(analysis.period_end ?? "");
     const configs = {};
     (analysis.product_configs ?? []).forEach((cfg) => {
+      // Support both old single benchmark_id and new benchmark_ids array
+      const bmIds = cfg.benchmark_ids ?? (cfg.benchmark_id ? [cfg.benchmark_id] : []);
       configs[cfg.product_id] = {
-        benchmark_id: cfg.benchmark_id ?? null,
-        benchmark_name: cfg.benchmark_name ?? "",
+        benchmark_ids: bmIds,
         return_type: cfg.return_type ?? "gross",
         include_clone_product: cfg.include_clone_product ?? false,
         include_clone_benchmark: cfg.include_clone_benchmark ?? false,
@@ -171,13 +127,14 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
       product_configs: selectedProductIds.map((id) => {
         const cfg = productConfigs[id] ?? {};
         const product = activeProducts.find((p) => p.id === id);
-        const bm = benchmarks.find((b) => b.id === cfg.benchmark_id);
+        const savedCfg = (analysis.product_configs ?? []).find((c) => c.product_id === id) ?? {};
+        const bmIds = cfg.benchmark_ids ?? [];
         return {
           product_id: id,
-          product_name: product?.name ?? cfg.product_name ?? "",
-          firm_name: product?.firm_name ?? cfg.firm_name ?? "",
-          benchmark_id: cfg.benchmark_id ?? null,
-          benchmark_name: bm?.name ?? cfg.benchmark_name ?? "",
+          product_name: product?.name ?? savedCfg.product_name ?? "",
+          firm_name: product?.firm_name ?? savedCfg.firm_name ?? "",
+          benchmark_ids: bmIds,
+          benchmark_names: bmIds.map((bmId) => benchmarks.find((b) => b.id === bmId)?.name ?? ""),
           return_type: cfg.return_type ?? "gross",
           include_clone_product: cfg.include_clone_product ?? false,
           include_clone_benchmark: cfg.include_clone_benchmark ?? false,
@@ -271,14 +228,14 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
                       {displayFirm && <p className="text-xs text-gray-500">{displayFirm}</p>}
                     </div>
 
-                    <div className="grid grid-cols-[auto_1fr] items-center gap-2">
-                      <label className="text-xs text-gray-500 font-medium whitespace-nowrap">Benchmark</label>
-                      <BenchmarkDropdown benchmarks={benchmarks} value={cfg.benchmark_id ?? null}
-                        onChange={(bmId) => {
-                          const bm = benchmarks.find((b) => b.id === bmId);
-                          updateConfig(id, "benchmark_id", bmId);
-                          updateConfig(id, "benchmark_name", bm?.name ?? "");
-                        }} />
+                    <div className="grid grid-cols-[auto_1fr] items-start gap-2">
+                      <label className="text-xs text-gray-500 font-medium whitespace-nowrap mt-1.5">Benchmarks</label>
+                      <BenchmarkMultiSelect
+                        benchmarks={benchmarks}
+                        selectedIds={cfg.benchmark_ids ?? []}
+                        onChange={(ids) => updateConfig(id, "benchmark_ids", ids)}
+                        productBenchmarks={activeProducts.find((p) => p.id === id)?.inv_desc_benchmarks ?? []}
+                      />
                     </div>
 
                     <div className="grid grid-cols-[auto_1fr] items-center gap-2">
@@ -300,7 +257,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
                             className="rounded border-gray-300 text-indigo-600" />
                           <span>Include clone return (product)</span>
                         </label>
-                        {cfg.benchmark_id && (
+                        {(cfg.benchmark_ids ?? []).length > 0 && (
                           <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
                             <input type="checkbox" checked={cfg.include_clone_benchmark ?? false}
                               onChange={(e) => updateConfig(id, "include_clone_benchmark", e.target.checked)}
