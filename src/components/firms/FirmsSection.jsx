@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, ChevronDown, ChevronRight } from "lucide-react";
 import FirmTypeSection from "./FirmTypeSection";
@@ -24,8 +24,13 @@ export default function FirmsSection({
   onAddProduct,
   onEditProduct,
   onAddPortfolio,
+  forceExpanded,
 }) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    if (forceExpanded !== undefined) setExpanded(forceExpanded);
+  }, [forceExpanded]);
 
   return (
     <div className="mb-6">

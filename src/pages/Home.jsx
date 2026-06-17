@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart } from "lucide-react";
+import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
 import { Input } from "@/components/ui/input";
@@ -60,6 +60,7 @@ export default function Home() {
   const [editingPortfolio, setEditingPortfolio] = useState(null);
 
   const [analyticsLaunchOpen, setAnalyticsLaunchOpen] = useState(false);
+  const [allExpanded, setAllExpanded] = useState(false);
 
   const portfoliosRef = useRef(null);
   const firmsRef = useRef(null);
@@ -323,14 +324,27 @@ export default function Home() {
             <div className="flex items-center gap-2">
               {/* Desktop-only section nav (bottom nav covers mobile) */}
               <div className="hidden sm:grid grid-cols-3 gap-1">
-              {mobileNavItems.map(({ label, icon: Icon, ref, onClick }) => (
+              {mobileNavItems.map(({ label, icon: NavIcon, ref, onClick }) => (
                 <button key={label} onClick={() => onClick ? onClick() : scrollTo(ref)} title={label}
                   className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg hover:bg-white/15 transition-colors group">
-                  <Icon className="w-4 h-4 text-white/80 group-hover:text-white" />
+                  <NavIcon className="w-4 h-4 text-white/80 group-hover:text-white" />
                   <span className="text-[10px] text-white/70 group-hover:text-white font-medium">{label}</span>
                 </button>
               ))}
               </div>
+              <button
+                onClick={() => setAllExpanded(v => !v)}
+                title={allExpanded ? "Collapse all" : "Expand all"}
+                className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg hover:bg-white/15 transition-colors group"
+              >
+                {allExpanded
+                  ? <ChevronsDownUp className="w-4 h-4 text-white/80 group-hover:text-white" />
+                  : <ChevronsUpDown className="w-4 h-4 text-white/80 group-hover:text-white" />
+                }
+                <span className="text-[10px] text-white/70 group-hover:text-white font-medium">
+                  {allExpanded ? "Collapse" : "Expand"}
+                </span>
+              </button>
             </div>
           </div>
         </div>
@@ -386,6 +400,7 @@ export default function Home() {
           portfolios={portfolios.filter(p => !p.deleted_at)}
           onPortfolioClick={(portfolio) => { setEditingPortfolio(portfolio); setPreselectedAllocatorId(null); setPortfolioDialogOpen(true); }}
           onAddPortfolio={() => { setEditingPortfolio(null); setPreselectedAllocatorId(null); setPortfolioDialogOpen(true); }}
+          forceExpanded={allExpanded}
         />
 
         {/* Firms section */}
@@ -413,6 +428,7 @@ export default function Home() {
             onAddProduct={handleAddProductFromFirm}
             onEditProduct={handleEditProduct}
             onAddPortfolio={(firm) => { setPreselectedAllocatorId(firm.id); setPortfolioDialogOpen(true); }}
+            forceExpanded={allExpanded}
           />
         )}
 
@@ -424,6 +440,7 @@ export default function Home() {
           onProductClick={handleEditProduct}
           onFirmClick={(firm) => handleEdit(firm)}
           onAddProduct={() => { setEditingProduct(null); setPreselectedProductType(null); setPreselectedFirmId(null); setProductDialogOpen(true); }}
+          forceExpanded={allExpanded}
         />
 
         {/* Contacts section */}
@@ -434,6 +451,7 @@ export default function Home() {
           onContactClick={(contact) => setViewingContact(contact)}
           onFirmClick={(firm) => handleEdit(firm, false, false)}
           onAddContact={() => setAddContactOpen(true)}
+          forceExpanded={allExpanded}
         />
 
         {/* Analytics section */}
@@ -452,14 +470,24 @@ export default function Home() {
         className="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-white/95 backdrop-blur border-t border-gray-200 shadow-lg pb-safe"
         style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}
       >
-        <div className="grid grid-cols-6">
-          {mobileNavItems.map(({ label, icon: Icon, color, ref, onClick }) => (
+        <div className="grid grid-cols-7">
+          {mobileNavItems.map(({ label, icon: MobileIcon, color, ref, onClick }) => (
             <button key={label} onClick={() => onClick ? onClick() : scrollTo(ref)}
               className="flex flex-col items-center gap-1 py-2.5 px-1 transition-colors">
-              <Icon className={`w-5 h-5 ${color}`} />
+              <MobileIcon className={`w-5 h-5 ${color}`} />
               <span className={`text-[10px] font-medium ${color}`}>{label}</span>
             </button>
           ))}
+          <button onClick={() => setAllExpanded(v => !v)}
+            className="flex flex-col items-center gap-1 py-2.5 px-1 transition-colors">
+            {allExpanded
+              ? <ChevronsDownUp className="w-5 h-5 text-gray-500" />
+              : <ChevronsUpDown className="w-5 h-5 text-gray-500" />
+            }
+            <span className="text-[10px] font-medium text-gray-500">
+              {allExpanded ? "Collapse" : "Expand"}
+            </span>
+          </button>
         </div>
       </nav>
 

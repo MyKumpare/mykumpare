@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, ChevronDown, ChevronRight, User } from "lucide-react";
 
@@ -38,10 +38,14 @@ function ContactAvatar({ contact }) {
   );
 }
 
-export default function ContactsSection({ contacts, firms, onContactClick, onAddContact, onFirmClick }) {
-  const [expanded, setExpanded] = useState(true);
+export default function ContactsSection({ contacts, firms, onContactClick, onAddContact, onFirmClick, forceExpanded }) {
+  const [expanded, setExpanded] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState({});
   const [expandedFirms, setExpandedFirms] = useState({});
+
+  useEffect(() => {
+    if (forceExpanded !== undefined) setExpanded(forceExpanded);
+  }, [forceExpanded]);
 
   const toggleGroup = (type) =>
     setExpandedGroups((prev) => ({ ...prev, [type]: !prev[type] }));

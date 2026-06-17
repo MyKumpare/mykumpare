@@ -1,12 +1,16 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, LayoutList, ChevronDown, ChevronRight } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
-export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddPortfolio }) {
-  const [expanded, setExpanded] = useState(true);
+export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddPortfolio, forceExpanded }) {
+  const [expanded, setExpanded] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState({});
   const [expandedAdvisorTypes, setExpandedAdvisorTypes] = useState({});
+
+  useEffect(() => {
+    if (forceExpanded !== undefined) setExpanded(forceExpanded);
+  }, [forceExpanded]);
 
   // Group portfolios by advisor type → allocator → portfolio name
   const grouped = useMemo(() => {

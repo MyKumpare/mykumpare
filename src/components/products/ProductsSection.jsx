@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, ChevronDown, ChevronRight, Package } from "lucide-react";
 
@@ -9,10 +9,14 @@ const GROUP_COLORS = {
   "Investment Manager": "bg-blue-100 text-blue-700",
 };
 
-export default function ProductsSection({ products, firms, onProductClick, onAddProduct, onFirmClick }) {
-  const [expanded, setExpanded] = useState(true);
+export default function ProductsSection({ products, firms, onProductClick, onAddProduct, onFirmClick, forceExpanded }) {
+  const [expanded, setExpanded] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState({});
   const [expandedFirms, setExpandedFirms] = useState({});
+
+  useEffect(() => {
+    if (forceExpanded !== undefined) setExpanded(forceExpanded);
+  }, [forceExpanded]);
 
   const toggleGroup = (type) =>
     setExpandedGroups((prev) => ({ ...prev, [type]: !prev[type] }));
