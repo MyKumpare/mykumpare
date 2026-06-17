@@ -4,7 +4,7 @@ import {
   ResponsiveContainer, Cell, ReferenceLine,
 } from "recharts";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { BarChart2, TrendingUp, LayoutList, ChevronDown, ChevronUp, Download } from "lucide-react";
+import { BarChart2, TrendingUp, LayoutList, ChevronDown, ChevronUp, Download, AlignVerticalJustifyStart, AlignHorizontalJustifyStart } from "lucide-react";
 import { runAnalysis, isRatioMetric } from "./analyticsCalculations";
 
 const CATEGORY_LABELS = {
@@ -206,6 +206,55 @@ function AttributeBarChart({ periodResults, attribute, productNames, bmNames }) 
   );
 }
 
+// Horizontal table: attributes as rows, periods as columns
+function PeriodResultTableHorizontal({ periodResults, productName, bmNames }) {
+  const standardPeriods = periodResults.filter(pr => !pr.isRolling && !pr.isHistorical);
+  if (standardPeriods.length === 0) return null;
+  const attributes = Object.keys(standardPeriods[0]?.attributeValues || {});
+  const hasBm = standardPeriods.some(pr => !!pr.bmValues);
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="border-b border-gray-200 bg-gray-50">
+            <th className="text-left px-3 py-2 font-semibold text-gray-500 sticky left-0 bg-gray-50 min-w-[140px]">Attribute</th>
+            {standardPeriods.map((pr, i) => (
+              <th key={i} className="px-3 py-2 font-semibold text-center min-w-[90px]">
+                <span className="text-indigo-700 block">{pr.window.label}</span>
+                {hasBm && <span className="text-gray-400 font-normal text-[10px] block">{productName} / {bmNames?.[0] || "BM"} / Excess</span>}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {attributes.map((attr, ai) => (
+            <tr key={attr} className={`border-b border-gray-100 ${ai % 2 === 0 ? "" : "bg-gray-50/50"}`}>
+              <td className="px-3 py-2 text-gray-600 font-medium sticky left-0 bg-inherit">{attr}</td>
+              {standardPeriods.map((pr, pi) => {
+                const pVal = pr.attributeValues?.[attr];
+                const bVal = pr.bmValues?.[attr];
+                const excess = (pVal != null && bVal != null) ? pVal - bVal : null;
+                return (
+                  <td key={pi} className="px-3 py-2 text-center">
+                    <span className={`font-semibold block ${colorClass(pVal, attr)}`}>{fmt(pVal, attr)}</span>
+                    {hasBm && (
+                      <>
+                        <span className={`block ${colorClass(bVal, attr)}`}>{fmt(bVal, attr)}</span>
+                        <span className={`block font-semibold ${colorClass(excess, attr)}`}>{fmt(excess, attr)}</span>
+                      </>
+                    )}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 // Determine the best default chart type for a given period result
 function defaultChartType(pr) {
   if (pr.isRolling) return "line";        // rolling time-series → line
@@ -216,6 +265,7 @@ function defaultChartType(pr) {
 export default function AnalysisResults({ analysis, products, benchmarks, returnSeries }) {
   const [viewMode, setViewMode] = useState("table");
   const [chartTypes, setChartTypes] = useState({});
+  const [tableOrientation, setTableOrientation] = useState("vertical"); // "vertical" | "horizontal"
 
   const results = useMemo(() => {
     if (!analysis || !returnSeries || !benchmarks) return [];
@@ -249,17 +299,31 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
             <p className="text-xs text-gray-500 mt-0.5">{analysis.period_start} → {analysis.period_end}</p>
           )}
         </div>
-        <div className="flex gap-1.5">
-          {[
-            { key: "table", icon: <LayoutList className="w-3.5 h-3.5" />, label: "Table" },
-            { key: "chart", icon: <BarChart2 className="w-3.5 h-3.5" />, label: "Chart" },
-            { key: "both", icon: <TrendingUp className="w-3.5 h-3.5" />, label: "Both" },
-          ].map(({ key, icon, label }) => (
-            <button key={key} onClick={() => setViewMode(key)}
-              className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg border transition-colors ${viewMode === key ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-gray-600 border-gray-300 hover:border-indigo-400"}`}>
-              {icon} {label}
-            </button>
-          ))}
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          {(viewMode === "table" || viewMode === "both") && (
+            <div className="flex gap-1">
+              <button onClick={() => setTableOrientation("vertical")} title="Periods stacked vertically"
+                className={`flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-lg border transition-colors ${tableOrientation === "vertical" ? "bg-slate-700 text-white border-slate-700" : "bg-white text-gray-500 border-gray-300 hover:border-slate-400"}`}>
+                <AlignVerticalJustifyStart className="w-3.5 h-3.5" /> Vertical
+              </button>
+              <button onClick={() => setTableOrientation("horizontal")} title="Periods as columns"
+                className={`flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-lg border transition-colors ${tableOrientation === "horizontal" ? "bg-slate-700 text-white border-slate-700" : "bg-white text-gray-500 border-gray-300 hover:border-slate-400"}`}>
+                <AlignHorizontalJustifyStart className="w-3.5 h-3.5" /> Horizontal
+              </button>
+            </div>
+          )}
+          <div className="flex gap-1.5">
+            {[
+              { key: "table", icon: <LayoutList className="w-3.5 h-3.5" />, label: "Table" },
+              { key: "chart", icon: <BarChart2 className="w-3.5 h-3.5" />, label: "Chart" },
+              { key: "both", icon: <TrendingUp className="w-3.5 h-3.5" />, label: "Both" },
+            ].map(({ key, icon, label }) => (
+              <button key={key} onClick={() => setViewMode(key)}
+                className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg border transition-colors ${viewMode === key ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-gray-600 border-gray-300 hover:border-indigo-400"}`}>
+                {icon} {label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -280,6 +344,17 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
               label={CATEGORY_LABELS[catResult.category] || catResult.category}
               badge={`${catResult.periodResults.length} period${catResult.periodResults.length !== 1 ? "s" : ""}`}>
 
+              {/* Horizontal table mode: one consolidated table, periods as columns */}
+              {(viewMode === "table" || viewMode === "both") && tableOrientation === "horizontal" && (
+                <div className="mb-4">
+                  <PeriodResultTableHorizontal
+                    periodResults={catResult.periodResults}
+                    productName={productResult.productName}
+                    bmNames={productResult.benchmarkNames}
+                  />
+                </div>
+              )}
+
               {catResult.periodResults.map((pr, pri) => {
                 const chartKey = `${pi}-${ci}-${pri}`;
 
@@ -294,7 +369,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                           {getChartType(chartKey, pr) === "bar" ? <><TrendingUp className="w-3.5 h-3.5" /> Line</> : <><BarChart2 className="w-3.5 h-3.5" /> Bar</>}
                         </button>
                       </div>
-                      {(viewMode === "table" || viewMode === "both") && (
+                      {(viewMode === "table" || viewMode === "both") && tableOrientation === "vertical" && (
                         <HistoricalTable periodResult={pr} productName={productResult.productName} bmNames={productResult.benchmarkNames} />
                       )}
                       {(viewMode === "chart" || viewMode === "both") && (
@@ -331,7 +406,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                   );
                 }
 
-                // Standard period
+                // Standard period — vertical mode only (horizontal is handled above)
                 const attributes = Object.keys(pr.attributeValues || {});
                 return (
                   <div key={pri} className="mb-4">
@@ -347,7 +422,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                         </button>
                       )}
                     </div>
-                    {(viewMode === "table" || viewMode === "both") && (
+                    {(viewMode === "table" || viewMode === "both") && tableOrientation === "vertical" && (
                       <PeriodResultTable
                         periodResult={pr}
                         attributes={attributes}
@@ -359,8 +434,6 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                       <div className="mt-3">
                         {attributes.length > 1 ? (() => {
                           const chartData = attributes.map(attr => ({ attr, product: pr.attributeValues?.[attr] ?? null, benchmark: pr.bmValues?.[attr] ?? null }));
-                          const ct = getChartType(chartKey, pr);
-                          // Horizontal bar is best for multi-attribute single-period; line doesn't apply well here so treat "line" as grouped bar
                           return (
                             <ResponsiveContainer width="100%" height={Math.max(180, attributes.length * 28)}>
                               <BarChart data={chartData} layout="vertical">
