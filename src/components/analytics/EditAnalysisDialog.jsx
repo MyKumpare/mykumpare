@@ -93,6 +93,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
     rolling_custom_end: "",
     include_cumulative: false,
     calendar_years: [],
+    historical_periods: [],
   });
 
   const { data: benchmarks = [] } = useQuery({
@@ -144,6 +145,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
       rolling_custom_end: mp.rolling_custom_end || "",
       include_cumulative: mp.include_cumulative || false,
       calendar_years: mp.calendar_years || [],
+      historical_periods: mp.historical_periods || [],
     });
     setConfirmDelete(false);
   }, [analysis]);

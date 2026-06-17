@@ -40,6 +40,7 @@ export default function MeasurementPeriodsSection({
     rolling: false,
     cumulative: false,
     calendar: false,
+    historical: false,
   });
 
   const [trailingCustomStart, setTrailingCustomStart] = useState("");
@@ -56,6 +57,14 @@ export default function MeasurementPeriodsSection({
       setRollingCustomEnd(measurementPeriods.rolling_custom_end || "");
     }
   }, [measurementPeriods]);
+
+  const toggleHistoricalPeriod = (period) => {
+    const current = measurementPeriods?.historical_periods || [];
+    const updated = current.includes(period)
+      ? current.filter((p) => p !== period)
+      : [...current, period];
+    setMeasurementPeriods((prev) => ({ ...prev, historical_periods: updated }));
+  };
 
   // Calculate available calendar years based on common period
   const availableCalendarYears = React.useMemo(() => {
@@ -388,6 +397,49 @@ export default function MeasurementPeriodsSection({
             ) : (
               <p className="text-xs text-gray-400">Set analysis period first to see available calendar years</p>
             )}
+          </div>
+        )}
+      </div>
+
+      {/* Historical Return Period */}
+      <div className="border border-gray-200 rounded-xl overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setExpanded((prev) => ({ ...prev, historical: !prev.historical }))}
+          className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-gray-700">Historical Return Period</span>
+            {(measurementPeriods?.historical_periods || []).length > 0 && (
+              <span className="text-xs text-gray-500 bg-gray-200 px-2 py-0.5 rounded-full">
+                {(measurementPeriods?.historical_periods || []).length} selected
+              </span>
+            )}
+          </div>
+          {expanded.historical ? (
+            <ChevronUp className="w-4 h-4 text-gray-400" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-gray-400" />
+          )}
+        </button>
+        {expanded.historical && (
+          <div className="p-4 border-t border-gray-200">
+            <div className="flex flex-wrap gap-2">
+              {["monthly", "quarterly", "annually"].map((period) => (
+                <button
+                  key={period}
+                  type="button"
+                  onClick={() => toggleHistoricalPeriod(period)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+                    (measurementPeriods?.historical_periods || []).includes(period)
+                      ? "bg-indigo-600 text-white border-indigo-600"
+                      : "bg-white text-gray-600 border-gray-300 hover:border-indigo-400"
+                  }`}
+                >
+                  {period.charAt(0).toUpperCase() + period.slice(1)}
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>

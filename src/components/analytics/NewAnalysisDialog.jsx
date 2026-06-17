@@ -325,6 +325,7 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
     rolling_custom_end: "",
     include_cumulative: false,
     calendar_years: [],
+    historical_periods: [],
   });
 
   const { data: products = [] } = useQuery({
@@ -446,6 +447,7 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
       rolling_custom_end: "",
       include_cumulative: false,
       calendar_years: [],
+      historical_periods: [],
     });
   };
 

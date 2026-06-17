@@ -161,6 +161,18 @@
           "items": {
             "type": "integer"
           }
+        },
+        "historical_periods": {
+          "type": "array",
+          "description": "Selected historical return periods",
+          "items": {
+            "type": "string",
+            "enum": [
+              "monthly",
+              "quarterly",
+              "annually"
+            ]
+          }
         }
       }
     }
