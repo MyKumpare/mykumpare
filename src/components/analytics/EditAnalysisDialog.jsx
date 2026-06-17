@@ -80,8 +80,9 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
   const qc = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
-  const [showResults, setShowResults] = useState(false);
+  const [showResults, setShowResults] = useState(true); // Show existing results immediately
   const [savedAnalysis, setSavedAnalysis] = useState(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false); // Track if user has edited anything
 
   // Form state
   const [analysisName, setAnalysisName] = useState("");
@@ -166,12 +167,15 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
       view_mode: mt.view_mode || "table",
     });
     setConfirmDelete(false);
+    setHasUnsavedChanges(false);
+    setShowResults(true);
   }, [analysis]);
 
   const selectedProductIds = (analysis?.product_configs ?? []).map((c) => c.product_id);
 
   const updateConfig = (productId, key, value) => {
     setProductConfigs((prev) => ({ ...prev, [productId]: { ...prev[productId], [key]: value } }));
+    setHasUnsavedChanges(true);
   };
 
   const handleCommonPeriod = () => {
@@ -187,6 +191,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
     mutationFn: (data) => base44.entities.Analysis.update(analysis.id, data),
     onSuccess: (updated) => {
       qc.invalidateQueries({ queryKey: ["analyses"] });
+      setHasUnsavedChanges(false);
       setSavedAnalysis(updated);
       setShowResults(true);
       setActiveTab("results");
@@ -268,7 +273,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
             <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Analysis Name</label>
             <input
               value={analysisName}
-              onChange={(e) => setAnalysisName(e.target.value)}
+              onChange={(e) => { setAnalysisName(e.target.value); setHasUnsavedChanges(true); }}
               className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
             />
           </div>
@@ -281,7 +286,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
                 { key: false, label: "Standard Analysis", desc: "A one-time analysis with fixed product, benchmark & period" },
                 { key: true, label: "Template", desc: "Reusable — product, benchmark & period can be changed each time" },
               ].map(({ key, label, desc }) => (
-                <button key={String(key)} type="button" onClick={() => setIsTemplate(key)}
+                <button key={String(key)} type="button" onClick={() => { setIsTemplate(key); setHasUnsavedChanges(true); }}
                   className={`text-left p-3 rounded-xl border-2 transition-colors ${isTemplate === key ? "border-indigo-500 bg-indigo-50" : "border-gray-200 hover:border-gray-300"}`}>
                   <p className={`text-sm font-semibold ${isTemplate === key ? "text-indigo-700" : "text-gray-700"}`}>{label}</p>
                   <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
@@ -298,7 +303,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
                 { key: "personal", label: "Personal", desc: "Only you can view, edit, or delete" },
                 { key: "firm", label: "Firm", desc: "Anyone can view & edit; only you can delete" },
               ].map(({ key, label, desc }) => (
-                <button key={key} type="button" onClick={() => setVisibility(key)}
+                <button key={key} type="button" onClick={() => { setVisibility(key); setHasUnsavedChanges(true); }}
                   className={`text-left p-3 rounded-xl border-2 transition-colors ${visibility === key ? "border-indigo-500 bg-indigo-50" : "border-gray-200 hover:border-gray-300"}`}>
                   <p className={`text-sm font-semibold ${visibility === key ? "text-indigo-700" : "text-gray-700"}`}>{label}</p>
                   <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
@@ -389,6 +394,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
                   const val = e.target.value;
                   if (/^(\d{2})\/(\d{2})\/(\d{4})$/.test(val) || val === "") {
                     setPeriodStart(val);
+                    setHasUnsavedChanges(true);
                   }
                 }}
                 placeholder="MM/DD/YYYY"
@@ -402,6 +408,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
                   const val = e.target.value;
                   if (/^(\d{2})\/(\d{2})\/(\d{4})$/.test(val) || val === "") {
                     setPeriodEnd(val);
+                    setHasUnsavedChanges(true);
                   }
                 }}
                 placeholder="MM/DD/YYYY"
@@ -469,23 +476,23 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
           </TabsContent>
 
           <TabsContent value="results" className="mt-1">
-            {showResults ? (
-              <AnalysisResults
-                analysis={savedAnalysis ?? analysis}
-                products={activeProducts}
-                benchmarks={benchmarks}
-                returnSeries={allSeries}
-              />
-            ) : (
+            {hasUnsavedChanges ? (
               <div className="py-16 text-center space-y-4">
-                <p className="text-sm text-gray-500">Save your changes, then click Process to run the analysis.</p>
+                <p className="text-sm text-gray-500">Save your changes to update the analysis results.</p>
                 <button type="button" onClick={() => { handleSave(); }}
                   className="px-6 py-2.5 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 mx-auto"
                   disabled={!analysisName.trim() || saveMutation.isPending}>
                   <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                  {saveMutation.isPending ? "Processing…" : "Save & Process"}
+                  {saveMutation.isPending ? "Processing…" : "Save & Re-Process"}
                 </button>
               </div>
+            ) : (
+              <AnalysisResults
+                analysis={analysis}
+                products={activeProducts}
+                benchmarks={benchmarks}
+                returnSeries={allSeries}
+              />
             )}
           </TabsContent>
         </Tabs>
