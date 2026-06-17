@@ -528,7 +528,7 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
         <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
             {rollingEnabled
-              ? `Rolling ${effectiveRollingMonths}M ${chartMode === "cumulative" ? "Return" : "Excess Return"}`
+              ? `Rolling ${effectiveRollingMonths}M Cumulative ${chartMode === "cumulative" ? "Return" : "Excess Return"}`
               : chartMode === "cumulative" ? "Cumulative Return" : "Cumulative Excess Return"}
           </p>
           <div className="flex items-center gap-1.5 flex-wrap">
