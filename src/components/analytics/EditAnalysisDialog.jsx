@@ -9,6 +9,8 @@ import BenchmarkMultiSelect from "./BenchmarkMultiSelect";
 const ym = (d) => (d ? d.slice(0, 7) : "");
 const toMDY = (ymStr) => {
   if (!ymStr) return "";
+  // If already in MM/DD/YYYY format, return as-is
+  if (ymStr.includes("/")) return ymStr;
   const [year, month] = ymStr.split("-");
   return `${month}/01/${year}`;
 };
@@ -76,8 +78,10 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
     setIsTemplate(analysis.is_template ?? false);
     setVisibility(analysis.visibility ?? "personal");
     // Period dates are already stored in MM/DD/YYYY format
-    setPeriodStart(analysis.period_start || "");
-    setPeriodEnd(analysis.period_end || "");
+    const startDate = analysis.period_start || "";
+    const endDate = analysis.period_end || "";
+    setPeriodStart(startDate);
+    setPeriodEnd(endDate);
     const configs = {};
     (analysis.product_configs ?? []).forEach((cfg) => {
       // Support both old single benchmark_id and new benchmark_ids array
