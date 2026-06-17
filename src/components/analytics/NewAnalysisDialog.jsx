@@ -648,17 +648,37 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <input
-                    type="month"
-                    value={periodStart}
-                    onChange={(e) => setPeriodStart(e.target.value)}
-                    className="text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                    type="text"
+                    value={periodStart ? formatMDY(periodStart) : ""}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const match = val.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+                      if (match) {
+                        const [, month, , year] = match;
+                        setPeriodStart(`${year}-${month}`);
+                      } else if (!val) {
+                        setPeriodStart("");
+                      }
+                    }}
+                    placeholder="MM/DD/YYYY"
+                    className="text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-400 w-28"
                   />
                   <span className="text-xs text-gray-400">to</span>
                   <input
-                    type="month"
-                    value={periodEnd}
-                    onChange={(e) => setPeriodEnd(e.target.value)}
-                    className="text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                    type="text"
+                    value={periodEnd ? formatMDY(periodEnd) : ""}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const match = val.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+                      if (match) {
+                        const [, month, , year] = match;
+                        setPeriodEnd(`${year}-${month}`);
+                      } else if (!val) {
+                        setPeriodEnd("");
+                      }
+                    }}
+                    placeholder="MM/DD/YYYY"
+                    className="text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-400 w-28"
                   />
                   {(periodStart || periodEnd) && (
                     <button type="button" onClick={() => { setPeriodStart(""); setPeriodEnd(""); }} className="text-xs text-gray-400 hover:text-indigo-600 hover:underline">Clear</button>
