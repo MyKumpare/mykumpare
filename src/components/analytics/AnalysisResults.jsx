@@ -30,11 +30,31 @@ const calculateMetrics = (product, benchmark, periodStart, periodEnd, selectedAt
   return metrics;
 };
 
+const calculateBenchmarkMetrics = (benchmark, periodStart, periodEnd, selectedAttributes) => {
+  const metrics = {};
+  selectedAttributes.forEach(attr => {
+    const mockValue = Math.random() * 15 - 3; // Random between -3 and 12
+    metrics[attr] = mockValue;
+  });
+  return metrics;
+};
+
+const calculateExcessReturn = (productMetrics, benchmarkMetrics) => {
+  const excess = {};
+  Object.keys(productMetrics).forEach(attr => {
+    const productValue = productMetrics[attr] || 0;
+    const benchmarkValue = benchmarkMetrics[attr] || 0;
+    excess[attr] = productValue - benchmarkValue;
+  });
+  return excess;
+};
+
 export default function AnalysisResults({ analysis, products, benchmarks, returnSeries }) {
   const [viewMode, setViewMode] = useState(
     analysis?.measurement_type?.view_mode || "table"
   );
   const [chartTypes, setChartTypes] = useState({}); // { [attr]: 'bar' | 'line' }
+  const [showBenchmarks, setShowBenchmarks] = useState({}); // { [productIndex]: boolean }
 
   const selectedTypes = analysis?.measurement_type?.selected_types || [];
   const selectedAttributes = analysis?.measurement_type?.attributes || [];
@@ -44,6 +64,13 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
     setChartTypes((prev) => ({
       ...prev,
       [attr]: prev[attr] === 'line' ? 'bar' : 'line',
+    }));
+  };
+
+  const toggleBenchmarkVisibility = (index) => {
+    setShowBenchmarks((prev) => ({
+      ...prev,
+      [index]: !prev[index],
     }));
   };
 
@@ -57,7 +84,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
   const results = useMemo(() => {
     if (!analysis?.product_configs) return [];
 
-    return analysis.product_configs.map((config) => {
+    return analysis.product_configs.map((config, index) => {
       const product = products?.find((p) => p.id === config.product_id);
       const benchmarks_data = config.benchmark_ids?.map((id) =>
         benchmarks?.find((b) => b.id === id)
@@ -66,23 +93,34 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
       const series = returnSeries?.filter((s) => s.product_id === config.product_id) || [];
       
       // Calculate metrics for this product
-      const metrics = calculateMetrics(
+      const productMetrics = calculateMetrics(
         product,
         benchmarks_data[0],
         analysis.period_start,
         analysis.period_end,
         selectedAttributes
       );
+      
+      // Calculate benchmark metrics if benchmarks exist
+      const benchmarkMetrics = benchmarks_data.length > 0 
+        ? calculateBenchmarkMetrics(benchmarks_data[0], analysis.period_start, analysis.period_end, selectedAttributes)
+        : null;
+      
+      // Calculate excess return (product - benchmark)
+      const excessMetrics = benchmarkMetrics ? calculateExcessReturn(productMetrics, benchmarkMetrics) : null;
 
       return {
         productName: config.product_name,
         firmName: config.firm_name,
         benchmarkNames: config.benchmark_names || [],
         returnType: config.return_type,
-        metrics,
+        metrics: productMetrics,
+        benchmarkMetrics,
+        excessMetrics,
+        showBenchmark: showBenchmarks[index] || false,
       };
     });
-  }, [analysis, products, benchmarks, returnSeries, selectedAttributes]);
+  }, [analysis, products, benchmarks, returnSeries, selectedAttributes, showBenchmarks]);
 
   if (!analysis || results.length === 0) {
     return (
@@ -196,17 +234,38 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                       {attr}
                     </TableHead>
                   ))}
+                  {results.some(r => r.showBenchmark) && (
+                    <>
+                      <TableHead className="font-semibold text-gray-700 text-right">Benchmark Return</TableHead>
+                      <TableHead className="font-semibold text-gray-700 text-right">Excess Return</TableHead>
+                    </>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {results.map((result, idx) => (
                   <TableRow key={idx} className="hover:bg-gray-50">
                     <TableCell className="font-medium">
-                      <div>
-                        <div className="text-gray-800">{result.productName}</div>
-                        {result.firmName && (
-                          <div className="text-xs text-gray-500">{result.firmName}</div>
-                        )}
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => toggleBenchmarkVisibility(idx)}
+                          className={`w-4 h-4 rounded border flex items-center justify-center ${
+                            result.showBenchmark ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300'
+                          }`}
+                          title={result.showBenchmark ? "Hide benchmark" : "Show benchmark"}
+                        >
+                          {result.showBenchmark && (
+                            <svg viewBox="0 0 10 8" className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" strokeWidth={2}>
+                              <path d="M1 4l3 3 5-6" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                        </button>
+                        <div>
+                          <div className="text-gray-800">{result.productName}</div>
+                          {result.firmName && (
+                            <div className="text-xs text-gray-500">{result.firmName}</div>
+                          )}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell className="text-sm text-gray-600">
@@ -223,6 +282,32 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                         </span>
                       </TableCell>
                     ))}
+                    {result.showBenchmark && (
+                      <>
+                        <TableCell className="text-right">
+                          {result.benchmarkMetrics ? (
+                            <span className={`font-medium ${
+                              result.benchmarkMetrics[selectedAttributes[0]] < 0 ? "text-red-600" : "text-green-600"
+                            }`}>
+                              {formatPercent(result.benchmarkMetrics[selectedAttributes[0]] || 0)}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">N/A</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {result.excessMetrics ? (
+                            <span className={`font-medium ${
+                              result.excessMetrics[selectedAttributes[0]] < 0 ? "text-red-600" : "text-green-600"
+                            }`}>
+                              {formatPercent(result.excessMetrics[selectedAttributes[0]] || 0)}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">N/A</span>
+                          )}
+                        </TableCell>
+                      </>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
@@ -236,6 +321,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
         <div className="space-y-6">
           {selectedAttributes.map((attr) => {
             const chartType = chartTypes[attr] || 'bar';
+            const showBenchmarkInChart = results.some(r => r.showBenchmark);
             return (
               <div key={attr} className="border border-gray-200 rounded-xl p-4">
                 <div className="flex items-center justify-between mb-4">
@@ -276,7 +362,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                         labelFormatter={(label) => `Product: ${label}`}
                       />
                       <Legend />
-                      <Bar dataKey={(data) => data.metrics[attr]} fill="#4F46E5">
+                      <Bar dataKey={(data) => data.metrics[attr]} name="Product Return" fill="#4F46E5">
                         {results.map((entry, index) => (
                           <Cell
                             key={`cell-${index}`}
@@ -284,6 +370,16 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                           />
                         ))}
                       </Bar>
+                      {showBenchmarkInChart && (
+                        <Bar dataKey={(data) => data.showBenchmark ? (data.benchmarkMetrics?.[attr] || 0) : null} name="Benchmark Return" fill="#F59E0B">
+                          {results.map((entry, index) => (
+                            <Cell
+                              key={`bench-cell-${index}`}
+                              fill={entry.showBenchmark ? (entry.benchmarkMetrics?.[attr] < 0 ? "#DC2626" : "#10B981") : "transparent"}
+                            />
+                          ))}
+                        </Bar>
+                      )}
                     </BarChart>
                   ) : (
                     <LineChart data={results}>
@@ -298,10 +394,21 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                       <Line
                         type="monotone"
                         dataKey={(data) => data.metrics[attr]}
+                        name="Product Return"
                         stroke="#4F46E5"
                         strokeWidth={2}
                         dot={{ fill: '#4F46E5', strokeWidth: 2 }}
                       />
+                      {showBenchmarkInChart && (
+                        <Line
+                          type="monotone"
+                          dataKey={(data) => data.showBenchmark ? (data.benchmarkMetrics?.[attr] || 0) : null}
+                          name="Benchmark Return"
+                          stroke="#F59E0B"
+                          strokeWidth={2}
+                          dot={{ fill: '#F59E0B', strokeWidth: 2 }}
+                        />
+                      )}
                     </LineChart>
                   )}
                 </ResponsiveContainer>
