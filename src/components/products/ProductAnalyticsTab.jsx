@@ -556,6 +556,45 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
         </div>
       )}
 
+      {/* ── Cumulative Return chart ── */}
+      <div>
+        <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Cumulative Return</p>
+        </div>
+        <ResponsiveContainer width="100%" height={170}>
+          <LineChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <XAxis dataKey="date" tickFormatter={xFmt} tick={{ fontSize: 9 }} interval="preserveStartEnd" />
+            <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => v + "%"} width={46} />
+            <Tooltip content={<ChartTooltip />} />
+            <ReferenceLine y={0} stroke="#ccc" />
+            <Legend iconType="line" wrapperStyle={{ fontSize: 10 }} />
+            {showGross && <Line type="monotone" dataKey="cumGross" stroke="#6366f1" strokeWidth={2} dot={false} name="Gross" connectNulls />}
+            {showNet && <Line type="monotone" dataKey="cumNet" stroke="#10b981" strokeWidth={2} dot={false} name="Net" strokeDasharray="5 3" connectNulls />}
+            {activeBm && <Line type="monotone" dataKey="cumBm" stroke="#f59e0b" strokeWidth={2} dot={false} name={activeBm.name} strokeDasharray="4 3" connectNulls />}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* ── Cumulative Excess Return chart ── */}
+      {activeBm && (
+        <div>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Cumulative Excess Return</p>
+          <ResponsiveContainer width="100%" height={140}>
+            <LineChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="date" tickFormatter={xFmt} tick={{ fontSize: 9 }} interval="preserveStartEnd" />
+              <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => v + "%"} width={46} />
+              <Tooltip content={<ChartTooltip />} />
+              <ReferenceLine y={0} stroke="#ccc" />
+              <Legend iconType="line" wrapperStyle={{ fontSize: 10 }} />
+              {showGross && <Line type="monotone" dataKey="excessGross" stroke="#6366f1" strokeWidth={2} dot={false} name="Gross Excess" connectNulls />}
+              {showNet && <Line type="monotone" dataKey="excessNet" stroke="#10b981" strokeWidth={2} dot={false} name="Net Excess" strokeDasharray="5 3" connectNulls />}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
       {/* ── Rolling metric chart ── */}
       {(() => {
         const metricDef = METRICS.find((m) => m.key === selectedMetric);
