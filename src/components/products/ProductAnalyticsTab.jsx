@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import {
-  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, ReferenceLine, Legend,
 } from "recharts";
 import { BarChart2, ChevronDown, Table2, LineChart as LineChartIcon, LayoutList } from "lucide-react";
@@ -115,6 +115,32 @@ const METRICS = [
   { key: "info_ratio",        label: "Information Ratio",        needsBm: true },
   { key: "hit_rate",          label: "Hit Rate (vs Bm)",         needsBm: true },
 ];
+
+// ─── Zero-crossing gradient helper ────────────────────────────────────────────
+// Returns the % offset (0–1) where value=0 sits within [min, max] of data
+function zeroOffset(data, key) {
+  const vals = data.map((d) => d[key]).filter((v) => v != null);
+  if (!vals.length) return 0.5;
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  if (max <= 0) return 0;   // all negative → all red
+  if (min >= 0) return 1;   // all positive → all indigo
+  return max / (max - min); // fraction from top where 0 sits
+}
+
+// SVG gradient that transitions indigo→red at the zero line
+function ExcessGradientDef({ id, offset }) {
+  return (
+    <defs>
+      <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+        <stop offset={0} stopColor="#6366f1" stopOpacity={1} />
+        <stop offset={offset} stopColor="#6366f1" stopOpacity={1} />
+        <stop offset={offset} stopColor="#ef4444" stopOpacity={1} />
+        <stop offset={1} stopColor="#ef4444" stopOpacity={1} />
+      </linearGradient>
+    </defs>
+  );
+}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -708,14 +734,16 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
             <ResponsiveContainer width="100%" height={150}>
               {cumChartType === "line" ? (
                 <LineChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                  <ExcessGradientDef id="gradExcessGross" offset={zeroOffset(chartData, "excessGross")} />
+                  {showNet && <ExcessGradientDef id="gradExcessNet" offset={zeroOffset(chartData, "excessNet")} />}
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis dataKey="date" tickFormatter={xFmt} tick={{ fontSize: 9 }} interval="preserveStartEnd" />
                   <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => v + "%"} width={46} />
                   <Tooltip content={<ChartTooltip />} />
-                  <ReferenceLine y={0} stroke="#ccc" />
+                  <ReferenceLine y={0} stroke="#aaa" strokeDasharray="3 3" />
                   <Legend iconType="line" wrapperStyle={{ fontSize: 10 }} />
-                  {showGross && <Line type="monotone" dataKey="excessGross" stroke="#6366f1" strokeWidth={2} dot={false} name="Gross Excess" connectNulls />}
-                  {showNet && <Line type="monotone" dataKey="excessNet" stroke="#10b981" strokeWidth={2} dot={false} name="Net Excess" strokeDasharray="5 3" connectNulls />}
+                  {showGross && <Line type="monotone" dataKey="excessGross" stroke="url(#gradExcessGross)" strokeWidth={2} dot={false} name="Gross Excess" connectNulls />}
+                  {showNet && <Line type="monotone" dataKey="excessNet" stroke="url(#gradExcessNet)" strokeWidth={2} dot={false} name="Net Excess" strokeDasharray="5 3" connectNulls />}
                 </LineChart>
               ) : (
                 <BarChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
@@ -725,8 +753,12 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
                   <Tooltip content={<ChartTooltip />} />
                   <ReferenceLine y={0} stroke="#ccc" />
                   <Legend iconType="square" wrapperStyle={{ fontSize: 10 }} />
-                  {showGross && <Bar dataKey="excessGross" fill="#6366f1" name="Gross Excess" isAnimationActive={false} radius={[2, 2, 0, 0]} />}
-                  {showNet && <Bar dataKey="excessNet" fill="#10b981" name="Net Excess" isAnimationActive={false} radius={[2, 2, 0, 0]} />}
+                  {showGross && <Bar dataKey="excessGross" name="Gross Excess" isAnimationActive={false} radius={[2, 2, 0, 0]} fill="#6366f1">
+                    {chartData.map((entry, index) => (
+                      <Cell key={index} fill={entry.excessGross < 0 ? "#ef4444" : "#6366f1"} />
+                    ))}
+                  </Bar>}
+                  {showNet && <Bar dataKey="excessNet" name="Net Excess" isAnimationActive={false} radius={[2, 2, 0, 0]} fill="#10b981" />}
                 </BarChart>
               )}
             </ResponsiveContainer>
@@ -919,13 +951,15 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
             <ResponsiveContainer width="100%" height={120}>
               {monthlyChartType === "line" ? (
                 <LineChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                  <ExcessGradientDef id="gradMthExGross" offset={zeroOffset(chartData, "monthlyExcessGross")} />
+                  {showNet && <ExcessGradientDef id="gradMthExNet" offset={zeroOffset(chartData, "monthlyExcessNet")} />}
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis dataKey="date" tickFormatter={xFmt} tick={{ fontSize: 9 }} interval="preserveStartEnd" />
                   <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => v + "%"} width={46} />
                   <Tooltip content={<ChartTooltip />} />
-                  <ReferenceLine y={0} stroke="#999" />
-                  {showGross && <Line type="monotone" dataKey="monthlyExcessGross" stroke="#6366f1" strokeWidth={2} dot={false} name="Gross Excess" connectNulls />}
-                  {showNet && <Line type="monotone" dataKey="monthlyExcessNet" stroke="#10b981" strokeWidth={2} dot={false} name="Net Excess" strokeDasharray="5 3" connectNulls />}
+                  <ReferenceLine y={0} stroke="#aaa" strokeDasharray="3 3" />
+                  {showGross && <Line type="monotone" dataKey="monthlyExcessGross" stroke="url(#gradMthExGross)" strokeWidth={2} dot={false} name="Gross Excess" connectNulls />}
+                  {showNet && <Line type="monotone" dataKey="monthlyExcessNet" stroke="url(#gradMthExNet)" strokeWidth={2} dot={false} name="Net Excess" strokeDasharray="5 3" connectNulls />}
                 </LineChart>
               ) : (
                 <BarChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
@@ -934,8 +968,16 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
                   <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => v + "%"} width={46} />
                   <Tooltip content={<ChartTooltip />} />
                   <ReferenceLine y={0} stroke="#999" />
-                  {showGross && <Bar dataKey="monthlyExcessGross" name="Gross Excess" fill="#6366f1" isAnimationActive={false} radius={[2, 2, 0, 0]} />}
-                  {showNet && <Bar dataKey="monthlyExcessNet" name="Net Excess" fill="#10b981" isAnimationActive={false} radius={[2, 2, 0, 0]} />}
+                  {showGross && <Bar dataKey="monthlyExcessGross" name="Gross Excess" isAnimationActive={false} radius={[2, 2, 0, 0]} fill="#6366f1">
+                    {chartData.map((entry, index) => (
+                      <Cell key={index} fill={entry.monthlyExcessGross < 0 ? "#ef4444" : "#6366f1"} />
+                    ))}
+                  </Bar>}
+                  {showNet && <Bar dataKey="monthlyExcessNet" name="Net Excess" isAnimationActive={false} radius={[2, 2, 0, 0]} fill="#10b981">
+                    {chartData.map((entry, index) => (
+                      <Cell key={index} fill={entry.monthlyExcessNet < 0 ? "#ef4444" : "#10b981"} />
+                    ))}
+                  </Bar>}
                 </BarChart>
               )}
             </ResponsiveContainer>
