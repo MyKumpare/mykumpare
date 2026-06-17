@@ -415,28 +415,40 @@ export function runAnalysis({ analysis, allSeries, allBenchmarks }) {
 
       // Trailing periods
       for (const code of (pc.trailing ?? [])) {
-        if (code === "custom") {
-          if (pc.trailing_custom_start && pc.trailing_custom_end) {
-            windows.push({ label: "Custom Trailing", start: pc.trailing_custom_start, end: pc.trailing_custom_end, type: "trailing" });
-          }
-        } else {
-          const start = getTrailingStartDate(code, periodEnd || formatDateToMDY(new Date()), inceptionDate);
-          if (start) {
-            const labels = { "1M": "1 Month", "3M": "3 Months", "QTD": "QTD", "YTD": "YTD", "1Y": "1 Year", "2Y": "2 Years", "3Y": "3 Years", "4Y": "4 Years", "5Y": "5 Years", "7Y": "7 Years", "10Y": "10 Years", "since_inception": "Since Inception" };
-            windows.push({ label: labels[code] || code, start, end: periodEnd || formatDateToMDY(new Date()), type: "trailing" });
-          }
+        const start = getTrailingStartDate(code, periodEnd || formatDateToMDY(new Date()), inceptionDate);
+        if (start) {
+          const labels = { "1M": "1 Month", "3M": "3 Months", "QTD": "QTD", "YTD": "YTD", "1Y": "1 Year", "2Y": "2 Years", "3Y": "3 Years", "4Y": "4 Years", "5Y": "5 Years", "7Y": "7 Years", "10Y": "10 Years", "since_inception": "Since Inception" };
+          windows.push({ label: labels[code] || code, start, end: periodEnd || formatDateToMDY(new Date()), type: "trailing" });
+        }
+      }
+      // Legacy single custom trailing (backwards compat)
+      if (pc.trailing_custom_start && pc.trailing_custom_end) {
+        windows.push({ label: "Custom Trailing", start: pc.trailing_custom_start, end: pc.trailing_custom_end, type: "trailing" });
+      }
+      // Multiple custom trailing periods
+      for (const cp of (pc.trailing_custom_periods ?? [])) {
+        if (cp.start && cp.end) {
+          windows.push({ label: cp.label || `${cp.start} – ${cp.end}`, start: cp.start, end: cp.end, type: "trailing" });
         }
       }
 
       // Rolling periods: compute a rolling series (one data point per month)
+      const rollMonths = { "1M": 1, "2M": 2, "3M": 3, "6M": 6, "1Y": 12, "3Y": 36, "5Y": 60, "10Y": 120 };
       for (const code of (pc.rolling ?? [])) {
-        const rollMonths = { "1M": 1, "2M": 2, "3M": 3, "6M": 6, "1Y": 12, "3Y": 36, "5Y": 60, "10Y": 120, "custom": null };
-        const months = code === "custom" ? null : rollMonths[code];
-        if (code === "custom" && pc.rolling_custom_start && pc.rolling_custom_end) {
-          windows.push({ label: "Custom Rolling", start: pc.rolling_custom_start, end: pc.rolling_custom_end, type: "rolling_single" });
-        } else if (months) {
+        const months = rollMonths[code];
+        if (months) {
           const labels = { "1M": "Rolling 1M", "2M": "Rolling 2M", "3M": "Rolling 3M", "6M": "Rolling 6M", "1Y": "Rolling 1Y", "3Y": "Rolling 3Y", "5Y": "Rolling 5Y", "10Y": "Rolling 10Y" };
           windows.push({ label: labels[code] || code, windowMonths: months, type: "rolling", start: periodStart, end: periodEnd });
+        }
+      }
+      // Legacy single custom rolling (backwards compat)
+      if (pc.rolling_custom_start && pc.rolling_custom_end) {
+        windows.push({ label: "Custom Rolling", start: pc.rolling_custom_start, end: pc.rolling_custom_end, type: "rolling_single" });
+      }
+      // Multiple custom rolling periods (treated as fixed-range, not a rolling window)
+      for (const cp of (pc.rolling_custom_periods ?? [])) {
+        if (cp.start && cp.end) {
+          windows.push({ label: cp.label || `${cp.start} – ${cp.end}`, start: cp.start, end: cp.end, type: "trailing" });
         }
       }
 

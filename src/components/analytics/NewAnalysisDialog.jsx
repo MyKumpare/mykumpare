@@ -130,11 +130,9 @@ const PERIOD_TYPES = [
 
 const emptyPeriodConfig = () => ({
   trailing: [],
-  trailing_custom_start: "",
-  trailing_custom_end: "",
+  trailing_custom_periods: [],  // array of { start, end, label }
   rolling: [],
-  rolling_custom_start: "",
-  rolling_custom_end: "",
+  rolling_custom_periods: [],   // array of { start, end, label }
   cumulative: false,
   calendar_years: [],
   calendar_include_ctd: false,
@@ -239,26 +237,53 @@ function TogBtn({ active, onClick, children }) {
   );
 }
 
-function DateInputPair({ startVal, endVal, onStartChange, onEndChange }) {
-  const handleChange = (setter) => (e) => {
-    const val = e.target.value;
-    // Allow typing freely, only validate complete dates
-    setter(val);
+// Multi-custom period list for trailing/rolling
+function CustomPeriodsEditor({ periods, onChange }) {
+  const [newStart, setNewStart] = useState("");
+  const [newEnd, setNewEnd] = useState("");
+
+  const addPeriod = () => {
+    if (!newStart || !newEnd) return;
+    const label = `${newStart} – ${newEnd}`;
+    onChange([...periods, { start: newStart, end: newEnd, label }]);
+    setNewStart("");
+    setNewEnd("");
   };
+
+  const removePeriod = (idx) => onChange(periods.filter((_, i) => i !== idx));
+
   return (
-    <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg mt-2">
-      <div>
-        <input type="text" value={startVal} onChange={handleChange(onStartChange)}
-          placeholder="MM/DD/YYYY"
-          className="text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-400 w-28" />
-        <p className="text-[10px] text-gray-500 mt-0.5 font-medium">Start Date</p>
-      </div>
-      <span className="text-xs text-gray-400">to</span>
-      <div>
-        <input type="text" value={endVal} onChange={handleChange(onEndChange)}
-          placeholder="MM/DD/YYYY"
-          className="text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-400 w-28" />
-        <p className="text-[10px] text-gray-500 mt-0.5 font-medium">End Date</p>
+    <div className="mt-2 space-y-2">
+      {periods.length > 0 && (
+        <div className="space-y-1">
+          {periods.map((p, idx) => (
+            <div key={idx} className="flex items-center justify-between px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg text-xs">
+              <span className="text-indigo-700 font-medium">{p.start} – {p.end}</span>
+              <button type="button" onClick={() => removePeriod(idx)} className="text-gray-400 hover:text-red-500 ml-2">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="flex items-end gap-2 p-3 bg-gray-50 rounded-lg flex-wrap">
+        <div>
+          <input type="text" value={newStart} onChange={e => setNewStart(e.target.value)}
+            placeholder="MM/DD/YYYY"
+            className="text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-400 w-28" />
+          <p className="text-[10px] text-gray-500 mt-0.5 font-medium">Start Date</p>
+        </div>
+        <span className="text-xs text-gray-400 pb-4">to</span>
+        <div>
+          <input type="text" value={newEnd} onChange={e => setNewEnd(e.target.value)}
+            placeholder="MM/DD/YYYY"
+            className="text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-400 w-28" />
+          <p className="text-[10px] text-gray-500 mt-0.5 font-medium">End Date</p>
+        </div>
+        <button type="button" onClick={addPeriod} disabled={!newStart || !newEnd}
+          className="flex items-center gap-1 px-3 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg disabled:opacity-40 hover:bg-indigo-700 transition-colors mb-0.5">
+          <Plus className="w-3.5 h-3.5" /> Add
+        </button>
       </div>
     </div>
   );
@@ -302,19 +327,18 @@ function PeriodConfigPanel({ periodConfig, setPeriodConfig, periodStart, periodE
         {expanded.trailing && (
           <div className="p-4 border-t border-gray-200 space-y-3">
             <div className="flex flex-wrap gap-2">
-              {TRAILING_OPTIONS.map(({ value, label }) => (
+              {TRAILING_OPTIONS.filter(o => o.value !== "custom").map(({ value, label }) => (
                 <TogBtn key={value} active={(periodConfig.trailing || []).includes(value)}
                   onClick={() => toggleArr("trailing", value)}>{label}</TogBtn>
               ))}
             </div>
-            {(periodConfig.trailing || []).includes("custom") && (
-              <DateInputPair
-                startVal={periodConfig.trailing_custom_start || ""}
-                endVal={periodConfig.trailing_custom_end || ""}
-                onStartChange={(v) => setPeriodConfig(prev => ({ ...prev, trailing_custom_start: v }))}
-                onEndChange={(v) => setPeriodConfig(prev => ({ ...prev, trailing_custom_end: v }))}
+            <div>
+              <p className="text-xs font-semibold text-gray-500 mb-1">Custom Periods</p>
+              <CustomPeriodsEditor
+                periods={periodConfig.trailing_custom_periods || []}
+                onChange={(val) => setPeriodConfig(prev => ({ ...prev, trailing_custom_periods: val }))}
               />
-            )}
+            </div>
           </div>
         )}
       </div>
@@ -325,19 +349,18 @@ function PeriodConfigPanel({ periodConfig, setPeriodConfig, periodStart, periodE
         {expanded.rolling && (
           <div className="p-4 border-t border-gray-200 space-y-3">
             <div className="flex flex-wrap gap-2">
-              {ROLLING_OPTIONS.map(({ value, label }) => (
+              {ROLLING_OPTIONS.filter(o => o.value !== "custom").map(({ value, label }) => (
                 <TogBtn key={value} active={(periodConfig.rolling || []).includes(value)}
                   onClick={() => toggleArr("rolling", value)}>{label}</TogBtn>
               ))}
             </div>
-            {(periodConfig.rolling || []).includes("custom") && (
-              <DateInputPair
-                startVal={periodConfig.rolling_custom_start || ""}
-                endVal={periodConfig.rolling_custom_end || ""}
-                onStartChange={(v) => setPeriodConfig(prev => ({ ...prev, rolling_custom_start: v }))}
-                onEndChange={(v) => setPeriodConfig(prev => ({ ...prev, rolling_custom_end: v }))}
+            <div>
+              <p className="text-xs font-semibold text-gray-500 mb-1">Custom Periods</p>
+              <CustomPeriodsEditor
+                periods={periodConfig.rolling_custom_periods || []}
+                onChange={(val) => setPeriodConfig(prev => ({ ...prev, rolling_custom_periods: val }))}
               />
-            )}
+            </div>
           </div>
         )}
       </div>
@@ -670,8 +693,8 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
       benchmarkConfig,
       // Summarize periods for display
       periods: [
-        ...(periodConfig.trailing?.length ? ["trailing"] : []),
-        ...(periodConfig.rolling?.length ? ["rolling"] : []),
+        ...(periodConfig.trailing?.length || periodConfig.trailing_custom_periods?.length ? ["trailing"] : []),
+        ...(periodConfig.rolling?.length || periodConfig.rolling_custom_periods?.length ? ["rolling"] : []),
         ...(periodConfig.cumulative ? ["cumulative"] : []),
         ...(periodConfig.calendar_years?.length ? ["calendar"] : []),
         ...(periodConfig.historical?.length ? ["historical"] : []),
@@ -705,7 +728,9 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
 
   // Period config validity: at least one period type selected
   const hasPeriodSelected = (periodConfig.trailing?.length > 0) ||
+    (periodConfig.trailing_custom_periods?.length > 0) ||
     (periodConfig.rolling?.length > 0) ||
+    (periodConfig.rolling_custom_periods?.length > 0) ||
     periodConfig.cumulative ||
     (periodConfig.calendar_years?.length > 0) ||
     (periodConfig.historical?.length > 0);
@@ -1030,8 +1055,8 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
                 {measurementCategories.map((cat, idx) => {
                   const label = MEASUREMENT_CATEGORIES.find(c => c.value === cat.category)?.label;
                   const pc = cat.periodConfig || {};
-                  const trailingCount = (pc.trailing || []).length;
-                  const rollingCount = (pc.rolling || []).length;
+                  const trailingCount = (pc.trailing || []).length + (pc.trailing_custom_periods || []).length;
+                  const rollingCount = (pc.rolling || []).length + (pc.rolling_custom_periods || []).length;
                   const historicalCount = (pc.historical || []).length;
                   const calCount = (pc.calendar_years || []).length;
                   const parts = [
