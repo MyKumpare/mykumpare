@@ -63,7 +63,7 @@ export default function AnalyticsSection() {
 
         {/* Selected chips */}
         {selectedProducts.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-1">
+          <div className="flex flex-wrap gap-1.5 mb-1 items-start">
             {selectedProducts.map((p) => (
               <span
                 key={p.id}
@@ -75,6 +75,12 @@ export default function AnalyticsSection() {
                 </button>
               </span>
             ))}
+            <button
+              onClick={() => setSelectedProductIds([])}
+              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-gray-400 hover:text-red-500 hover:bg-red-50 border border-dashed border-gray-300 hover:border-red-300 rounded-full transition-colors"
+            >
+              <X className="w-3 h-3" /> Clear all
+            </button>
           </div>
         )}
 
