@@ -1,0 +1,87 @@
+{
+  "name": "Analysis",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the analysis"
+    },
+    "visibility": {
+      "type": "string",
+      "enum": [
+        "personal",
+        "firm"
+      ],
+      "description": "personal = only creator; firm = anyone can view/edit but only creator can delete"
+    },
+    "created_by_id": {
+      "type": "string",
+      "description": "ID of the user who created this analysis"
+    },
+    "analysis_type": {
+      "type": "string",
+      "enum": [
+        "single",
+        "multiple"
+      ],
+      "description": "Single product or multiple product analysis"
+    },
+    "product_configs": {
+      "type": "array",
+      "description": "Per-product configuration for this analysis",
+      "items": {
+        "type": "object",
+        "properties": {
+          "product_id": {
+            "type": "string"
+          },
+          "product_name": {
+            "type": "string"
+          },
+          "firm_name": {
+            "type": "string"
+          },
+          "benchmark_id": {
+            "type": "string"
+          },
+          "benchmark_name": {
+            "type": "string"
+          },
+          "return_type": {
+            "type": "string",
+            "enum": [
+              "gross",
+              "net",
+              "both"
+            ]
+          },
+          "include_clone_product": {
+            "type": "boolean"
+          },
+          "include_clone_benchmark": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "period_start": {
+      "type": "string",
+      "format": "date",
+      "description": "Analysis period start (YYYY-MM)"
+    },
+    "period_end": {
+      "type": "string",
+      "format": "date",
+      "description": "Analysis period end (YYYY-MM)"
+    },
+    "use_common_period": {
+      "type": "boolean",
+      "description": "Whether to use the common period across all selected products/benchmarks"
+    }
+  },
+  "required": [
+    "name",
+    "visibility",
+    "analysis_type"
+  ]
+}
