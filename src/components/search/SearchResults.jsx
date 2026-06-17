@@ -1,5 +1,5 @@
 import React from "react";
-import { Building2, User, Package, LayoutList } from "lucide-react";
+import { Building2, User, Package, LayoutList, LineChart } from "lucide-react";
 
 function getContactFullName(c) {
   return [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix]
@@ -32,7 +32,7 @@ function FirmLogo({ firm }) {
   );
 }
 
-export default function SearchResults({ query, firms, products, contacts, portfolios = [], onFirmClick, onContactClick, onProductClick, onPortfolioClick }) {
+export default function SearchResults({ query, firms, products, contacts, portfolios = [], analyses = [], onFirmClick, onContactClick, onProductClick, onPortfolioClick, onAnalysisClick }) {
   const q = query.toLowerCase().trim();
   if (!q) return null;
 
@@ -60,6 +60,11 @@ export default function SearchResults({ query, firms, products, contacts, portfo
     (p.advisor_firm_name || "").toLowerCase().includes(q)
   );
 
+  // --- Match analyses ---
+  const matchedAnalyses = analyses.filter((a) =>
+    (a.name || "").toLowerCase().includes(q)
+  );
+
   // For a firm result, gather its contacts
   const firmContacts = (firmId) => contacts.filter(c => (c.firm_ids || []).includes(firmId));
 
@@ -73,7 +78,7 @@ export default function SearchResults({ query, firms, products, contacts, portfo
     return firm ? firmContacts(firm.id) : [];
   };
 
-  const hasAny = matchedContacts.length > 0 || matchedFirms.length > 0 || matchedProducts.length > 0 || matchedPortfolios.length > 0;
+  const hasAny = matchedContacts.length > 0 || matchedFirms.length > 0 || matchedProducts.length > 0 || matchedPortfolios.length > 0 || matchedAnalyses.length > 0;
   if (!hasAny) return (
     <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 p-4 text-sm text-gray-400 text-center">
       No results for "{query}"
@@ -246,6 +251,39 @@ export default function SearchResults({ query, firms, products, contacts, portfo
               </button>
             );
           })}
+        </div>
+      )}
+
+      {/* Analysis Results */}
+      {matchedAnalyses.length > 0 && (
+        <div>
+          <div className="px-4 pt-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+            <LineChart className="w-3.5 h-3.5" /> Saved Analyses
+          </div>
+          {matchedAnalyses.map((analysis) => (
+            <button
+              key={analysis.id}
+              className="w-full text-left px-4 py-3 hover:bg-cyan-50 transition-colors"
+              onClick={() => onAnalysisClick && onAnalysisClick(analysis)}
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-7 h-7 rounded-lg border border-cyan-200 bg-cyan-50 flex items-center justify-center flex-shrink-0">
+                  <LineChart className="w-3.5 h-3.5 text-cyan-600" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-900 truncate">{analysis.name}</span>
+                    {analysis.is_template && (
+                      <span className="text-[10px] font-semibold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">Template</span>
+                    )}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-0.5">
+                    {analysis.analysis_type === "single" ? "Single Product" : "Multi-Product"} · {analysis.visibility === "firm" ? "Firm-wide" : "Personal"}
+                  </div>
+                </div>
+              </div>
+            </button>
+          ))}
         </div>
       )}
     </div>
