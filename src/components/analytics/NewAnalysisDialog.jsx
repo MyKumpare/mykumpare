@@ -243,7 +243,7 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
   const [analysisName, setAnalysisName] = useState("");
   const [isTemplate, setIsTemplate] = useState(false);
   const [visibility, setVisibility] = useState("personal");
-  const [analysisType, setAnalysisType] = useState(null);
+  const [analysisType, setAnalysisType] = useState("single");
 
   // Products
   const [selectedProductIds, setSelectedProductIds] = useState([]);
