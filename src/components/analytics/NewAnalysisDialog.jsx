@@ -266,7 +266,7 @@ function TogBtn({ active, onClick, children }) {
 
 // ── Main Dialog ───────────────────────────────────────────────────────────────
 
-export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
+export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProductClick, onBenchmarkClick }) {
   const { user } = useAuth();
   const qc = useQueryClient();
 
@@ -572,7 +572,12 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
                               const period = mr.length ? { start: ym(mr[0].date), end: ym(mr[mr.length - 1].date) } : null;
                               return (
                                 <DateRangeTooltip period={period}>
-                                  <p className="text-sm font-semibold text-gray-800">{product?.name}</p>
+                                  <p
+                                    className="text-sm font-semibold text-gray-800 hover:text-indigo-600 hover:underline cursor-pointer"
+                                    onClick={() => onProductClick && onProductClick(product)}
+                                  >
+                                    {product?.name}
+                                  </p>
                                 </DateRangeTooltip>
                               );
                             })()}
@@ -619,7 +624,10 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
                           const combinedPeriod = { start: earliest, end: latest };
                           return (
                             <DateRangeTooltip period={combinedPeriod}>
-                              <span className="text-[10px] text-gray-400 whitespace-nowrap mt-1.5 cursor-help">
+                              <span
+                                className="text-[10px] text-gray-400 whitespace-nowrap mt-1.5 cursor-help hover:text-indigo-600 hover:underline"
+                                onClick={() => onBenchmarkClick && onBenchmarkClick(bmIds[0])}
+                              >
                                 {formatMDY(earliest)} – {formatMDY(latest)}
                               </span>
                             </DateRangeTooltip>
@@ -655,7 +663,12 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
                               const period = mr.length ? { start: ym(mr[0].date), end: ym(mr[mr.length - 1].date) } : null;
                               return (
                                 <DateRangeTooltip period={period}>
-                                  <span className="cursor-help">Include clone return (product)</span>
+                                  <span
+                                    className="cursor-help hover:text-indigo-600 hover:underline"
+                                    onClick={() => onProductClick && onProductClick(product)}
+                                  >
+                                    Include clone return (product)
+                                  </span>
                                 </DateRangeTooltip>
                               );
                             })()}
@@ -692,7 +705,12 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
                                   const combinedPeriod = { start: earliest, end: latest };
                                   return (
                                     <DateRangeTooltip period={combinedPeriod}>
-                                      <span className="cursor-help">Include clone return (benchmark)</span>
+                                      <span
+                                        className="cursor-help hover:text-indigo-600 hover:underline"
+                                        onClick={() => onBenchmarkClick && onBenchmarkClick(bmIds[0])}
+                                      >
+                                        Include clone return (benchmark)
+                                      </span>
                                     </DateRangeTooltip>
                                   );
                                 })()}

@@ -5,7 +5,7 @@ import AnalysisLaunchModal from "./AnalysisLaunchModal";
 import NewAnalysisDialog from "./NewAnalysisDialog";
 import ExistingAnalysesDialog from "./ExistingAnalysesDialog";
 
-export default function AnalyticsSection({ openLaunch, onLaunchOpenChange, totalAnalyses = 0, forceExpanded, editingAnalysis, onEditAnalysisChange }) {
+export default function AnalyticsSection({ openLaunch, onLaunchOpenChange, totalAnalyses = 0, forceExpanded, editingAnalysis, onEditAnalysisChange, onProductClick, onFirmClick }) {
   const [expanded, setExpanded] = useState(false);
   const launchOpen = openLaunch ?? false;
   const setLaunchOpen = onLaunchOpenChange ?? (() => {});
@@ -72,6 +72,13 @@ export default function AnalyticsSection({ openLaunch, onLaunchOpenChange, total
         onOpenChange={setNewOpen}
         onSaved={(analysis) => {
           console.log("Analysis saved:", analysis);
+        }}
+        onProductClick={(product) => {
+          setNewOpen(false);
+          if (onProductClick) onProductClick(product);
+        }}
+        onBenchmarkClick={(benchmarkId) => {
+          console.log("Benchmark clicked:", benchmarkId);
         }}
       />
 

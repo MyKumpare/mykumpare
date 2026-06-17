@@ -22,6 +22,7 @@ import FirmsSection from "../components/firms/FirmsSection";
 import ProductsSection from "../components/products/ProductsSection";
 import ContactsSection from "../components/contacts/ContactsSection";
 import UtilitySection from "../components/utility/UtilitySection";
+import AddBenchmarkDialog from "../components/utility/AddBenchmarkDialog";
 import AnalyticsSection from "../components/analytics/AnalyticsSection";
 import EditAnalysisDialog from "../components/analytics/EditAnalysisDialog";
 
@@ -63,6 +64,9 @@ export default function Home() {
   const [analyticsLaunchOpen, setAnalyticsLaunchOpen] = useState(false);
   const [allExpanded, setAllExpanded] = useState(false);
   const [editingAnalysis, setEditingAnalysis] = useState(null);
+  const [analyticsReturnState, setAnalyticsReturnState] = useState(null); // { type: 'product'|'firm'|'benchmark', data: ... }
+  const [benchmarkDialogOpen, setBenchmarkDialogOpen] = useState(false);
+  const [editingBenchmark, setEditingBenchmark] = useState(null);
 
   const portfoliosRef = useRef(null);
   const firmsRef = useRef(null);
@@ -120,6 +124,11 @@ export default function Home() {
   const { data: analyses = [] } = useQuery({
     queryKey: ["analyses"],
     queryFn: () => base44.entities.Analysis.list("-created_date"),
+  });
+
+  const { data: benchmarks = [] } = useQuery({
+    queryKey: ["benchmarks"],
+    queryFn: () => base44.entities.Benchmark.list("-created_date"),
   });
 
   const deletedCount = deletedFirms.length + deletedProducts.length + deletedContacts.length + deletedPortfolios.length;
@@ -473,6 +482,21 @@ export default function Home() {
           forceExpanded={allExpanded}
           editingAnalysis={editingAnalysis}
           onEditAnalysisChange={setEditingAnalysis}
+          onProductClick={(product) => {
+            setAnalyticsReturnState({ type: 'product', product });
+            handleEditProduct(product);
+          }}
+          onFirmClick={(firm) => {
+            setAnalyticsReturnState({ type: 'firm', firm });
+            handleEdit(firm);
+          }}
+          onBenchmarkClick={(benchmarkId) => {
+            const bm = benchmarks.find(b => b.id === benchmarkId);
+            if (bm) {
+              setEditingBenchmark(bm);
+              setBenchmarkDialogOpen(true);
+            }
+          }}
         />
 
         {/* Utility section */}
@@ -638,6 +662,14 @@ export default function Home() {
         open={!!editingAnalysis}
         onOpenChange={(o) => { if (!o) setEditingAnalysis(null); }}
         analysis={editingAnalysis}
+      />
+
+      {/* Benchmark dialog */}
+      <AddBenchmarkDialog
+        open={benchmarkDialogOpen}
+        onOpenChange={(o) => { if (!o) setEditingBenchmark(null); setBenchmarkDialogOpen(o); }}
+        benchmarks={benchmarks}
+        editingBenchmark={editingBenchmark}
       />
 
     </div>
