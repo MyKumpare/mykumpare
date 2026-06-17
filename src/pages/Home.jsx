@@ -2,7 +2,8 @@ import React, { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut } from "lucide-react";
+import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -294,6 +295,7 @@ export default function Home() {
     { label: "Firms", icon: Building, ref: firmsRef, color: "text-indigo-600", activeBg: "bg-indigo-50" },
     { label: "Products", icon: Package, ref: productsRef, color: "text-violet-600", activeBg: "bg-violet-50" },
     { label: "Contacts", icon: User, ref: contactsRef, color: "text-pink-600", activeBg: "bg-pink-50" },
+    { label: "Analytics", icon: LineChart, ref: null, href: "/Analytics", color: "text-cyan-600", activeBg: "bg-cyan-50" },
     { label: "Utilities", icon: Wrench, ref: utilityRef, color: "text-gray-600", activeBg: "bg-gray-100" },
   ];
 
@@ -335,16 +337,20 @@ export default function Home() {
               )}
               {/* Desktop-only section nav (bottom nav covers mobile) */}
               <div className="hidden sm:grid grid-cols-3 gap-1">
-              {mobileNavItems.map(({ label, icon: Icon, ref }) => (
-                <button
-                  key={label}
-                  onClick={() => scrollTo(ref)}
-                  title={label}
-                  className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg hover:bg-white/15 transition-colors group"
-                >
-                  <Icon className="w-4 h-4 text-white/80 group-hover:text-white" />
-                  <span className="text-[10px] text-white/70 group-hover:text-white font-medium">{label}</span>
-                </button>
+              {mobileNavItems.map(({ label, icon: Icon, ref, href }) => (
+                href ? (
+                  <Link key={label} to={href} title={label}
+                    className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg hover:bg-white/15 transition-colors group">
+                    <Icon className="w-4 h-4 text-white/80 group-hover:text-white" />
+                    <span className="text-[10px] text-white/70 group-hover:text-white font-medium">{label}</span>
+                  </Link>
+                ) : (
+                  <button key={label} onClick={() => scrollTo(ref)} title={label}
+                    className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg hover:bg-white/15 transition-colors group">
+                    <Icon className="w-4 h-4 text-white/80 group-hover:text-white" />
+                    <span className="text-[10px] text-white/70 group-hover:text-white font-medium">{label}</span>
+                  </button>
+                )
               ))}
               </div>
             </div>
@@ -464,16 +470,21 @@ export default function Home() {
         className="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-white/95 backdrop-blur border-t border-gray-200 shadow-lg pb-safe"
         style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}
       >
-        <div className="grid grid-cols-5">
-          {mobileNavItems.map(({ label, icon: Icon, color, activeBg, ref }) => (
-            <button
-              key={label}
-              onClick={() => scrollTo(ref)}
-              className={`flex flex-col items-center gap-1 py-2.5 px-1 active:${activeBg} transition-colors`}
-            >
-              <Icon className={`w-5 h-5 ${color}`} />
-              <span className={`text-[10px] font-medium ${color}`}>{label}</span>
-            </button>
+        <div className="grid grid-cols-6">
+          {mobileNavItems.map(({ label, icon: Icon, color, activeBg, ref, href }) => (
+            href ? (
+              <Link key={label} to={href}
+                className={`flex flex-col items-center gap-1 py-2.5 px-1 transition-colors`}>
+                <Icon className={`w-5 h-5 ${color}`} />
+                <span className={`text-[10px] font-medium ${color}`}>{label}</span>
+              </Link>
+            ) : (
+              <button key={label} onClick={() => scrollTo(ref)}
+                className={`flex flex-col items-center gap-1 py-2.5 px-1 transition-colors`}>
+                <Icon className={`w-5 h-5 ${color}`} />
+                <span className={`text-[10px] font-medium ${color}`}>{label}</span>
+              </button>
+            )
           ))}
         </div>
       </nav>
