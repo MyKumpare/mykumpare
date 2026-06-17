@@ -5,6 +5,12 @@ import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { Search, Lock, Building2, BarChart2, LayoutList } from "lucide-react";
 
+const formatPeriodMDY = (ymStr) => {
+  if (!ymStr) return "";
+  const [year, month] = ymStr.split("-");
+  return `${month}/01/${year}`;
+};
+
 export default function ExistingAnalysesDialog({ open, onOpenChange, onSelect }) {
   const { user } = useAuth();
   const [search, setSearch] = useState("");
@@ -63,7 +69,7 @@ export default function ExistingAnalysesDialog({ open, onOpenChange, onSelect })
                 <p className="text-xs text-gray-500 pl-5">
                   {a.analysis_type === "single" ? "Single product" : `${(a.product_configs ?? []).length} products`}
                   {" · "}
-                  {a.period_start && a.period_end ? `${a.period_start} → ${a.period_end}` : "All periods"}
+                  {a.period_start && a.period_end ? `${formatPeriodMDY(a.period_start)} → ${formatPeriodMDY(a.period_end)}` : "All periods"}
                 </p>
               </button>
             ))}
