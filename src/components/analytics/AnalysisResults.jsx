@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from "recharts";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { BarChart2, LayoutList } from "lucide-react";
+import { BarChart2, LayoutList, LineChart as LineChartIcon } from "lucide-react";
 
 // Helper to format numbers
 const formatNumber = (num) => {
@@ -34,9 +34,17 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
   const [viewMode, setViewMode] = useState(
     analysis?.measurement_type?.view_mode || "table"
   );
+  const [chartTypes, setChartTypes] = useState({}); // { [attr]: 'bar' | 'line' }
 
   const selectedTypes = analysis?.measurement_type?.selected_types || [];
   const selectedAttributes = analysis?.measurement_type?.attributes || [];
+
+  const toggleChartType = (attr) => {
+    setChartTypes((prev) => ({
+      ...prev,
+      [attr]: prev[attr] === 'line' ? 'bar' : 'line',
+    }));
+  };
 
   // Calculate results for each product
   const results = useMemo(() => {
@@ -160,31 +168,80 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
       {/* Chart View */}
       {(viewMode === "chart" || viewMode === "both") && (
         <div className="space-y-6">
-          {selectedAttributes.map((attr) => (
-            <div key={attr} className="border border-gray-200 rounded-xl p-4">
-              <h4 className="text-sm font-semibold text-gray-700 mb-4">{attr}</h4>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={results}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="productName" tick={{ fontSize: 12 }} />
-                  <YAxis tickFormatter={(value) => `${value}%`} />
-                  <Tooltip
-                    formatter={(value) => [formatPercent(value), attr]}
-                    labelFormatter={(label) => `Product: ${label}`}
-                  />
-                  <Legend />
-                  <Bar dataKey={(data) => data.metrics[attr]} fill="#4F46E5">
-                    {results.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={entry.metrics[attr] < 0 ? "#DC2626" : "#10B981"}
+          {selectedAttributes.map((attr) => {
+            const chartType = chartTypes[attr] || 'bar';
+            return (
+              <div key={attr} className="border border-gray-200 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-sm font-semibold text-gray-700">{attr}</h4>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => setChartTypes((prev) => ({ ...prev, [attr]: 'bar' }))}
+                      className={`p-1.5 rounded-lg border transition-colors ${
+                        chartType === 'bar'
+                          ? 'bg-indigo-600 text-white border-indigo-600'
+                          : 'bg-white text-gray-600 border-gray-300 hover:border-indigo-400'
+                      }`}
+                      title="Bar Chart"
+                    >
+                      <BarChart2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setChartTypes((prev) => ({ ...prev, [attr]: 'line' }))}
+                      className={`p-1.5 rounded-lg border transition-colors ${
+                        chartType === 'line'
+                          ? 'bg-indigo-600 text-white border-indigo-600'
+                          : 'bg-white text-gray-600 border-gray-300 hover:border-indigo-400'
+                      }`}
+                      title="Line Chart"
+                    >
+                      <LineChartIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                <ResponsiveContainer width="100%" height={300}>
+                  {chartType === 'bar' ? (
+                    <BarChart data={results}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="productName" tick={{ fontSize: 12 }} />
+                      <YAxis tickFormatter={(value) => `${value}%`} />
+                      <Tooltip
+                        formatter={(value) => [formatPercent(value), attr]}
+                        labelFormatter={(label) => `Product: ${label}`}
                       />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          ))}
+                      <Legend />
+                      <Bar dataKey={(data) => data.metrics[attr]} fill="#4F46E5">
+                        {results.map((entry, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={entry.metrics[attr] < 0 ? "#DC2626" : "#10B981"}
+                          />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  ) : (
+                    <LineChart data={results}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="productName" tick={{ fontSize: 12 }} />
+                      <YAxis tickFormatter={(value) => `${value}%`} />
+                      <Tooltip
+                        formatter={(value) => [formatPercent(value), attr]}
+                        labelFormatter={(label) => `Product: ${label}`}
+                      />
+                      <Legend />
+                      <Line
+                        type="monotone"
+                        dataKey={(data) => data.metrics[attr]}
+                        stroke="#4F46E5"
+                        strokeWidth={2}
+                        dot={{ fill: '#4F46E5', strokeWidth: 2 }}
+                      />
+                    </LineChart>
+                  )}
+                </ResponsiveContainer>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
