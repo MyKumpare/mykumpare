@@ -26,6 +26,19 @@ const fromMDY = (mdyStr) => {
   const [month, day, year] = mdyStr.split("/");
   return `${year}-${month}`;
 };
+// Get prior month-end date from a YYYY-MM string
+const getPriorMonthEnd = (ymStr) => {
+  if (!ymStr) return "";
+  const [year, month] = ymStr.split("-").map(Number);
+  let priorYear = year;
+  let priorMonth = month - 1;
+  if (priorMonth === 0) {
+    priorMonth = 12;
+    priorYear = year - 1;
+  }
+  const lastDay = new Date(priorYear, priorMonth, 0).getDate();
+  return `${String(priorMonth).padStart(2, "0")}/${String(lastDay).padStart(2, "0")}/${priorYear}`;
+};
 
 function commonPeriod(productConfigs, allProducts, allBenchmarks, allSeries) {
   const starts = [];
@@ -332,7 +345,7 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
         activeProducts, benchmarks, allSeries
       );
       if (start && end) {
-        setPeriodStart(toMDY(start));
+        setPeriodStart(getPriorMonthEnd(start));
         setPeriodEnd(toMDY(end));
       }
     }
@@ -674,34 +687,40 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
                     Common Period
                   </button>
                 </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <input
-                    type="text"
-                    value={periodStart || ""}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (/^(\d{2})\/(\d{2})\/(\d{4})$/.test(val) || val === "") {
-                        setPeriodStart(val);
-                      }
-                    }}
-                    placeholder="MM/DD/YYYY"
-                    className="text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-400 w-28"
-                  />
-                  <span className="text-xs text-gray-400">to</span>
-                  <input
-                    type="text"
-                    value={periodEnd || ""}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (/^(\d{2})\/(\d{2})\/(\d{4})$/.test(val) || val === "") {
-                        setPeriodEnd(val);
-                      }
-                    }}
-                    placeholder="MM/DD/YYYY"
-                    className="text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-400 w-28"
-                  />
+                <div className="flex items-start gap-4 flex-wrap">
+                  <div>
+                    <input
+                      type="text"
+                      value={periodStart || ""}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (/^(\d{2})\/(\d{2})\/(\d{4})$/.test(val) || val === "") {
+                          setPeriodStart(val);
+                        }
+                      }}
+                      placeholder="MM/DD/YYYY"
+                      className="text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-400 w-28"
+                    />
+                    <p className="text-xs text-gray-500 mt-1 font-medium">Start Date</p>
+                  </div>
+                  <span className="text-xs text-gray-400 mt-2">to</span>
+                  <div>
+                    <input
+                      type="text"
+                      value={periodEnd || ""}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (/^(\d{2})\/(\d{2})\/(\d{4})$/.test(val) || val === "") {
+                          setPeriodEnd(val);
+                        }
+                      }}
+                      placeholder="MM/DD/YYYY"
+                      className="text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-400 w-28"
+                    />
+                    <p className="text-xs text-gray-500 mt-1 font-medium">End Date</p>
+                  </div>
                   {(periodStart || periodEnd) && (
-                    <button type="button" onClick={() => { setPeriodStart(""); setPeriodEnd(""); }} className="text-xs text-gray-400 hover:text-indigo-600 hover:underline">Clear</button>
+                    <button type="button" onClick={() => { setPeriodStart(""); setPeriodEnd(""); }} className="text-xs text-gray-400 hover:text-indigo-600 hover:underline mt-2">Clear</button>
                   )}
                 </div>
                 {!periodStart && !periodEnd && (
