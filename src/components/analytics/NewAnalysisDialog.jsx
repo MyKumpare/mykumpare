@@ -681,7 +681,7 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
                     type="button"
                     onClick={handleCommonPeriod}
                     title="Set to common period across all selected products & benchmarks"
-                    className="ml-auto flex items-center gap-1 px-2 py-1 text-xs font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
+                    className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
                   >
                     <RefreshCw className="w-3 h-3" />
                     Common Period
