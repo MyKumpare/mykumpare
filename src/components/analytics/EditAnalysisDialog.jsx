@@ -81,6 +81,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
   const [showResults, setShowResults] = useState(false);
+  const [savedAnalysis, setSavedAnalysis] = useState(null);
 
   // Form state
   const [analysisName, setAnalysisName] = useState("");
@@ -184,8 +185,9 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
 
   const saveMutation = useMutation({
     mutationFn: (data) => base44.entities.Analysis.update(analysis.id, data),
-    onSuccess: () => {
+    onSuccess: (updated) => {
       qc.invalidateQueries({ queryKey: ["analyses"] });
+      setSavedAnalysis(updated);
       setShowResults(true);
       setActiveTab("results");
     },
@@ -225,6 +227,8 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
       period_end: cleanDate(periodEnd),
       use_common_period: false,
       created_by_id: analysis.created_by_id,
+      // Preserve categories_config from new-format analyses
+      categories_config: analysis.categories_config ?? [],
       measurement_periods: measurementPeriods,
       measurement_type: measurementType,
     };
@@ -467,7 +471,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
           <TabsContent value="results" className="mt-1">
             {showResults ? (
               <AnalysisResults
-                analysis={analysis}
+                analysis={savedAnalysis ?? analysis}
                 products={activeProducts}
                 benchmarks={benchmarks}
                 returnSeries={allSeries}

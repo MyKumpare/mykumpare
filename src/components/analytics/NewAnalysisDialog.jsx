@@ -643,11 +643,11 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
       period_end: cleanDate(periodEnd) || "",
       use_common_period: false,
       created_by_id: user?.id ?? "",
+      categories_config: measurementCategories,
       measurement_type: {
         selected_types: measurementCategories.map(c => c.category),
         attributes: measurementCategories.flatMap(c => c.attributes ?? []),
         view_mode: "chart",
-        categories_config: measurementCategories,
       },
     };
     saveMutation.mutate(data);

@@ -333,8 +333,8 @@ export function runAnalysis({ analysis, allSeries, allBenchmarks }) {
   const periodStart = analysis?.period_start;
   const periodEnd = analysis?.period_end;
 
-  // Support both new (categories_config) and legacy (selected_types + attributes + measurement_periods) formats
-  let categoriesConfig = analysis?.measurement_type?.categories_config ?? [];
+  // Support both new (top-level categories_config) and legacy (selected_types + attributes + measurement_periods) formats
+  let categoriesConfig = analysis?.categories_config ?? analysis?.measurement_type?.categories_config ?? [];
   if (!categoriesConfig.length) {
     // Build a synthetic category from legacy fields
     const mp = analysis?.measurement_periods ?? {};

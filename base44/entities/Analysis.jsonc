@@ -47,25 +47,15 @@
           },
           "benchmark_ids": {
             "type": "array",
-            "description": "Selected benchmark IDs (multi-select)",
             "items": {
               "type": "string"
             }
           },
           "benchmark_names": {
             "type": "array",
-            "description": "Denormalized benchmark names",
             "items": {
               "type": "string"
             }
-          },
-          "benchmark_id": {
-            "type": "string",
-            "description": "Legacy single benchmark ID (kept for backwards compatibility)"
-          },
-          "benchmark_name": {
-            "type": "string",
-            "description": "Legacy single benchmark name"
           },
           "return_type": {
             "type": "string",
@@ -93,110 +83,95 @@
       "description": "Analysis period end (MM/DD/YYYY format)"
     },
     "use_common_period": {
-      "type": "boolean",
-      "description": "Whether to use the common period across all selected products/benchmarks"
+      "type": "boolean"
+    },
+    "categories_config": {
+      "type": "array",
+      "description": "Full measurement category configurations including attributes, period config, and benchmark config",
+      "items": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "attributes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "periods": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "periodConfig": {
+            "type": "object"
+          },
+          "benchmarkConfig": {
+            "type": "object"
+          }
+        }
+      }
     },
     "measurement_periods": {
       "type": "object",
-      "description": "Measurement periods configuration for performance analysis",
+      "description": "Legacy measurement periods configuration",
       "properties": {
         "trailing_periods": {
           "type": "array",
-          "description": "Selected trailing periods",
           "items": {
-            "type": "string",
-            "enum": [
-              "1M",
-              "3M",
-              "1Y",
-              "3Y",
-              "5Y",
-              "7Y",
-              "10Y",
-              "since_inception",
-              "custom"
-            ]
+            "type": "string"
           }
         },
         "trailing_custom_start": {
-          "type": "string",
-          "description": "Custom trailing period start date (MM/DD/YYYY)"
+          "type": "string"
         },
         "trailing_custom_end": {
-          "type": "string",
-          "description": "Custom trailing period end date (MM/DD/YYYY)"
+          "type": "string"
         },
         "rolling_periods": {
           "type": "array",
-          "description": "Selected rolling periods",
           "items": {
-            "type": "string",
-            "enum": [
-              "3M",
-              "6M",
-              "1Y",
-              "3Y",
-              "5Y",
-              "7Y",
-              "10Y",
-              "custom"
-            ]
+            "type": "string"
           }
         },
         "rolling_custom_start": {
-          "type": "string",
-          "description": "Custom rolling period start date (MM/DD/YYYY)"
+          "type": "string"
         },
         "rolling_custom_end": {
-          "type": "string",
-          "description": "Custom rolling period end date (MM/DD/YYYY)"
+          "type": "string"
         },
         "include_cumulative": {
-          "type": "boolean",
-          "description": "Whether to include cumulative period"
+          "type": "boolean"
         },
         "calendar_years": {
           "type": "array",
-          "description": "Selected calendar years for analysis",
           "items": {
             "type": "integer"
           }
         },
         "historical_periods": {
           "type": "array",
-          "description": "Selected historical return periods",
           "items": {
-            "type": "string",
-            "enum": [
-              "monthly",
-              "quarterly",
-              "annually"
-            ]
+            "type": "string"
           }
         }
       }
     },
     "measurement_type": {
       "type": "object",
-      "description": "Measurement type configuration for analytics calculations",
+      "description": "Measurement type configuration",
       "properties": {
         "selected_types": {
           "type": "array",
-          "description": "Selected measurement categories",
           "items": {
-            "type": "string",
-            "enum": [
-              "performance",
-              "risk",
-              "efficiency",
-              "valueAtRisk",
-              "population"
-            ]
+            "type": "string"
           }
         },
         "attributes": {
           "type": "array",
-          "description": "Selected attributes across all categories",
           "items": {
             "type": "string"
           }
@@ -207,8 +182,7 @@
             "table",
             "chart",
             "both"
-          ],
-          "description": "How to display the results"
+          ]
         }
       }
     }
