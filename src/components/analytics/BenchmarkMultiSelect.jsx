@@ -2,10 +2,10 @@ import React, { useState, useRef, useEffect } from "react";
 import { ChevronDown, X } from "lucide-react";
 
 const ym = (d) => (d ? d.slice(0, 7) : "");
-const formatMY = (ymStr) => {
+const formatMDY = (ymStr) => {
   if (!ymStr) return "";
   const [year, month] = ymStr.split("-");
-  return `${month}-${year}`;
+  return `${month}/01/${year}`;
 };
 
 /**
@@ -135,7 +135,7 @@ export default function BenchmarkMultiSelect({ benchmarks, selectedIds = [], onC
                       <span className={`truncate ${checked ? "text-indigo-700 font-medium" : "text-gray-700"}`}>{b.name}</span>
                       {period && (
                         <span className="text-[10px] text-gray-400 whitespace-nowrap flex-shrink-0">
-                          {formatMY(period.start)} – {formatMY(period.end)}
+                          {formatMDY(period.start)} – {formatMDY(period.end)}
                         </span>
                       )}
                     </div>

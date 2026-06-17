@@ -11,10 +11,10 @@ import BenchmarkMultiSelect from "./BenchmarkMultiSelect";
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 const ym = (d) => (d ? d.slice(0, 7) : "");
-const formatMY = (ymStr) => {
+const formatMDY = (ymStr) => {
   if (!ymStr) return "";
   const [year, month] = ymStr.split("-");
-  return `${month}-${year}`;
+  return `${month}/01/${year}`;
 };
 
 function commonPeriod(productConfigs, allProducts, allBenchmarks, allSeries) {
@@ -117,7 +117,7 @@ function ProductSearchDropdown({ products, selectedIds, onToggle, multi, allSeri
                 </div>
                 {period && (
                   <span className="text-[10px] text-gray-400 whitespace-nowrap flex-shrink-0">
-                    {formatMY(period.start)} – {formatMY(period.end)}
+                    {formatMDY(period.start)} – {formatMDY(period.end)}
                   </span>
                 )}
               </button>
@@ -520,7 +520,7 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
                           const period = mr.length ? { start: ym(mr[0].date), end: ym(mr[mr.length - 1].date) } : null;
                           return period ? (
                             <span className="text-[10px] text-gray-400 whitespace-nowrap flex-shrink-0 mt-0.5">
-                              {formatMY(period.start)} – {formatMY(period.end)}
+                              {formatMDY(period.start)} – {formatMDY(period.end)}
                             </span>
                           ) : null;
                         })()}
@@ -553,7 +553,7 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
                           const latest = bmPeriods.map(p => p.end).sort()[0];
                           return (
                             <span className="text-[10px] text-gray-400 whitespace-nowrap mt-1.5">
-                              {formatMY(earliest)} – {formatMY(latest)}
+                              {formatMDY(earliest)} – {formatMDY(latest)}
                             </span>
                           );
                         })()}
@@ -589,7 +589,7 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
                             const period = mr.length ? { start: ym(mr[0].date), end: ym(mr[mr.length - 1].date) } : null;
                             return period ? (
                               <span className="text-[10px] text-gray-400 whitespace-nowrap">
-                                {formatMY(period.start)} – {formatMY(period.end)}
+                                {formatMDY(period.start)} – {formatMDY(period.end)}
                               </span>
                             ) : null;
                           })()}
@@ -616,7 +616,7 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
                                 const latest = bmPeriods.map(p => p.end).sort()[0];
                                 return (
                                   <span className="text-[10px] text-gray-400 whitespace-nowrap">
-                                    {formatMY(earliest)} – {formatMY(latest)}
+                                    {formatMDY(earliest)} – {formatMDY(latest)}
                                   </span>
                                 );
                               })()}
