@@ -81,13 +81,13 @@ function commonPeriod(productConfigs, allProducts, allBenchmarks, allSeries) {
   return { start: starts.sort().pop(), end: ends.sort()[0] };
 }
 
-// Measurement type categories
+// Measurement type categories with their attributes
 const MEASUREMENT_CATEGORIES = [
-  { value: "performance", label: "Performance" },
-  { value: "risk", label: "Risk" },
-  { value: "efficiency", label: "Efficiency" },
-  { value: "valueAtRisk", label: "Value at Risk" },
-  { value: "population", label: "Population" },
+  { value: "performance", label: "Performance", attributes: ["Return","Cumulative Return","Excess Return","Cumulative Excess Return","Excess Return Geometric","Average Return","Average Positive Return","Average Negative Return","Growth of $100","Best Period","Worst Period","Number of Consecutive Periods","Number of Consecutive Negative Periods","Down Period Percent","Up Period Percent","Percent Profitable Period","Manager Consistency","Number of Observations","Periods Above the Benchmark","Percentage Above the Benchmark"] },
+  { value: "risk", label: "Risk and Regression", attributes: ["Standard Deviation","Downside Deviation","Variance","Skewness","Kurtosis","Information Ratio","Sharpe Ratio","Sortino Ratio","Beta","Alpha","R-Squared","Tracking Error","Treynor Ratio"] },
+  { value: "efficiency", label: "Efficiency", attributes: ["Efficiency Ratio","Calmar Ratio","Sterling Ratio","Burke Ratio","Pain Index","Pain Ratio"] },
+  { value: "valueAtRisk", label: "Value at Risk", attributes: ["Value at Risk (VaR)","Conditional VaR (CVaR)","Maximum Drawdown","Average Drawdown","Drawdown Duration","Recovery Factor"] },
+  { value: "population", label: "Population Calculations", attributes: ["Population Variance","Population Standard Deviation","Population Skewness","Population Kurtosis"] },
 ];
 
 // Measurement periods
@@ -255,6 +255,7 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
 
   // Current measurement type selection
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedAttributes, setSelectedAttributes] = useState([]);
   const [selectedPeriods, setSelectedPeriods] = useState([]);
 
   const { data: products = [] } = useQuery({
@@ -363,6 +364,7 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
     setPeriodStart("");
     setPeriodEnd("");
     setSelectedCategory("");
+    setSelectedAttributes([]);
     setSelectedPeriods([]);
   };
 
@@ -415,17 +417,18 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
   const addMeasurementCategory = () => {
     setMeasurementCategories((prev) => [
       ...prev,
-      { category: selectedCategory, periods: selectedPeriods, attributes: [] },
+      { category: selectedCategory, attributes: selectedAttributes, periods: selectedPeriods },
     ]);
     setSelectedCategory("");
+    setSelectedAttributes([]);
     setSelectedPeriods([]);
-    setCurrentCategoryIndex((prev) => prev + 1);
   };
 
   const canProceedMeta = analysisName.trim() && analysisType;
   const canProceedProducts = selectedProductIds.length > 0;
   const canProceedPeriod = periodStart && periodEnd;
-  const canProceedMeasurementType = selectedCategory;
+  const canProceedMeasurementType = selectedCategory !== "";
+  const canProceedAttributes = selectedAttributes.length > 0;
   const canProceedMeasurementPeriods = selectedPeriods.length > 0;
 
   return (
@@ -647,7 +650,7 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
                   <div key={idx} className="flex items-center gap-2 text-sm text-gray-700 bg-gray-50 px-3 py-2 rounded-lg">
                     <CheckCircle className="w-4 h-4 text-green-600" />
                     <span>{MEASUREMENT_CATEGORIES.find(c => c.value === cat.category)?.label}</span>
-                    <span className="text-gray-400">({cat.periods.length} periods)</span>
+                    <span className="text-gray-400">({cat.attributes?.length ?? 0} attrs · {cat.periods.length} periods)</span>
                   </div>
                 ))}
               </div>
@@ -665,7 +668,7 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
               )}
               <button
                 type="button"
-                onClick={() => setStep("measurement_periods")}
+                onClick={() => setStep("measurement_attributes")}
                 disabled={!canProceedMeasurementType}
                 className="px-5 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg disabled:opacity-40 hover:bg-indigo-700 transition-colors"
               >
@@ -675,9 +678,59 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
           </div>
         )}
 
+        {step === "measurement_attributes" && (() => {
+          const cat = MEASUREMENT_CATEGORIES.find(c => c.value === selectedCategory);
+          const toggleAttr = (attr) => setSelectedAttributes(prev =>
+            prev.includes(attr) ? prev.filter(a => a !== attr) : [...prev, attr]
+          );
+          return (
+            <div className="space-y-6 mt-1">
+              <button type="button" onClick={() => setStep("measurement_type")} className="text-xs text-indigo-600 hover:underline">← Back</button>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    Select Attributes for {cat?.label}
+                  </label>
+                  <div className="flex gap-3">
+                    <button type="button" onClick={() => setSelectedAttributes(cat?.attributes ?? [])} className="text-xs text-indigo-600 hover:underline">Select All</button>
+                    <button type="button" onClick={() => setSelectedAttributes([])} className="text-xs text-gray-400 hover:underline">Clear</button>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {(cat?.attributes ?? []).map((attr) => (
+                    <button
+                      key={attr}
+                      type="button"
+                      onClick={() => toggleAttr(attr)}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+                        selectedAttributes.includes(attr)
+                          ? "bg-indigo-600 text-white border-indigo-600"
+                          : "bg-white text-gray-600 border-gray-300 hover:border-indigo-400"
+                      }`}
+                    >
+                      {attr}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-1">
+                <button type="button" onClick={() => setStep("measurement_type")} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">Cancel</button>
+                <button
+                  type="button"
+                  onClick={() => setStep("measurement_periods")}
+                  disabled={!canProceedAttributes}
+                  className="px-5 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg disabled:opacity-40 hover:bg-indigo-700 transition-colors"
+                >
+                  Next →
+                </button>
+              </div>
+            </div>
+          );
+        })()}
+
         {step === "measurement_periods" && (
           <div className="space-y-6 mt-1">
-            <button type="button" onClick={() => setStep("measurement_type")} className="text-xs text-indigo-600 hover:underline">← Back</button>
+            <button type="button" onClick={() => setStep("measurement_attributes")} className="text-xs text-indigo-600 hover:underline">← Back</button>
             <div>
               <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-2">
                 Select Periods for {MEASUREMENT_CATEGORIES.find(c => c.value === selectedCategory)?.label}
