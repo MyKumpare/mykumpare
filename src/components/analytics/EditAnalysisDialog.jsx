@@ -5,6 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { CalendarDays, RefreshCw, Link2, Trash2 } from "lucide-react";
 import BenchmarkMultiSelect from "./BenchmarkMultiSelect";
+import MeasurementPeriodsSection from "./MeasurementPeriodsSection";
 
 const ym = (d) => (d ? d.slice(0, 7) : "");
 // Clean and validate MM/DD/YYYY dates
@@ -83,6 +84,16 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
   const [productConfigs, setProductConfigs] = useState({});
   const [periodStart, setPeriodStart] = useState("");
   const [periodEnd, setPeriodEnd] = useState("");
+  const [measurementPeriods, setMeasurementPeriods] = useState({
+    trailing_periods: [],
+    trailing_custom_start: "",
+    trailing_custom_end: "",
+    rolling_periods: [],
+    rolling_custom_start: "",
+    rolling_custom_end: "",
+    include_cumulative: false,
+    calendar_years: [],
+  });
 
   const { data: benchmarks = [] } = useQuery({
     queryKey: ["benchmarks-all"],
@@ -122,6 +133,18 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
       };
     });
     setProductConfigs(configs);
+    // Load measurement periods
+    const mp = analysis.measurement_periods || {};
+    setMeasurementPeriods({
+      trailing_periods: mp.trailing_periods || [],
+      trailing_custom_start: mp.trailing_custom_start || "",
+      trailing_custom_end: mp.trailing_custom_end || "",
+      rolling_periods: mp.rolling_periods || [],
+      rolling_custom_start: mp.rolling_custom_start || "",
+      rolling_custom_end: mp.rolling_custom_end || "",
+      include_cumulative: mp.include_cumulative || false,
+      calendar_years: mp.calendar_years || [],
+    });
     setConfirmDelete(false);
   }, [analysis]);
 
@@ -182,6 +205,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
       period_end: cleanDate(periodEnd),
       use_common_period: false,
       created_by_id: analysis.created_by_id,
+      measurement_periods: measurementPeriods,
     };
     saveMutation.mutate(data);
   };
@@ -357,6 +381,16 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
               </p>
             )}
           </div>
+
+          {/* Measurement periods */}
+          {selectedProductIds.length > 0 && (periodStart || periodEnd) && (
+            <MeasurementPeriodsSection
+              periodStart={periodStart}
+              periodEnd={periodEnd}
+              measurementPeriods={measurementPeriods}
+              setMeasurementPeriods={setMeasurementPeriods}
+            />
+          )}
 
           {/* Actions */}
           <div className="flex items-center justify-between pt-1 border-t border-gray-100">

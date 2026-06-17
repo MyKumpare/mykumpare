@@ -7,6 +7,7 @@ import {
   Search, X, ChevronDown, BarChart2, LayoutList, Link2, CalendarDays, RefreshCw
 } from "lucide-react";
 import BenchmarkMultiSelect from "./BenchmarkMultiSelect";
+import MeasurementPeriodsSection from "./MeasurementPeriodsSection";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -315,6 +316,16 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
   const [productConfigs, setProductConfigs] = useState({}); // { [productId]: { benchmark_id, return_type, include_clone_product, include_clone_benchmark } }
   const [periodStart, setPeriodStart] = useState("");
   const [periodEnd, setPeriodEnd] = useState("");
+  const [measurementPeriods, setMeasurementPeriods] = useState({
+    trailing_periods: ["1M", "3M", "1Y", "3Y", "5Y", "7Y", "10Y", "since_inception"],
+    trailing_custom_start: "",
+    trailing_custom_end: "",
+    rolling_periods: [],
+    rolling_custom_start: "",
+    rolling_custom_end: "",
+    include_cumulative: false,
+    calendar_years: [],
+  });
 
   const { data: products = [] } = useQuery({
     queryKey: ["products"],
@@ -426,6 +437,16 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
     setProductConfigs({});
     setPeriodStart("");
     setPeriodEnd("");
+    setMeasurementPeriods({
+      trailing_periods: [],
+      trailing_custom_start: "",
+      trailing_custom_end: "",
+      rolling_periods: [],
+      rolling_custom_start: "",
+      rolling_custom_end: "",
+      include_cumulative: false,
+      calendar_years: [],
+    });
   };
 
   const handleSave = () => {
@@ -453,6 +474,7 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
       period_end: cleanDate(periodEnd) || "",
       use_common_period: false,
       created_by_id: user?.id ?? "",
+      measurement_periods: measurementPeriods,
     };
     saveMutation.mutate(data);
   };
@@ -830,6 +852,16 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
                   </p>
                 )}
               </div>
+            )}
+
+            {/* Measurement periods */}
+            {selectedProductIds.length > 0 && (periodStart || periodEnd) && (
+              <MeasurementPeriodsSection
+                periodStart={periodStart}
+                periodEnd={periodEnd}
+                measurementPeriods={measurementPeriods}
+                setMeasurementPeriods={setMeasurementPeriods}
+              />
             )}
 
             {/* Save */}
