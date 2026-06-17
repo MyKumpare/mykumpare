@@ -5,7 +5,7 @@ import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, ReferenceLine, Legend,
 } from "recharts";
-import { BarChart2, ChevronDown } from "lucide-react";
+import { BarChart2, ChevronDown, Table2, LineChart as LineChartIcon, LayoutList } from "lucide-react";
 import { createPortal } from "react-dom";
 
 // ─── Math Helpers ─────────────────────────────────────────────────────────────
@@ -164,6 +164,30 @@ function ToggleButton({ active, onClick, children }) {
   );
 }
 
+// "Table | Chart | Both" toggle for each section
+function ViewModeToggle({ value, onChange }) {
+  return (
+    <div className="flex items-center gap-0.5 border border-gray-200 rounded-md p-0.5 bg-gray-50">
+      {[
+        { key: "table", icon: <Table2 className="w-3 h-3" />, label: "Table" },
+        { key: "chart", icon: <LineChartIcon className="w-3 h-3" />, label: "Chart" },
+        { key: "both",  icon: <LayoutList className="w-3 h-3" />, label: "Both" },
+      ].map(({ key, icon, label }) => (
+        <button
+          key={key}
+          onClick={() => onChange(key)}
+          title={label}
+          className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
+            value === key ? "bg-white text-indigo-700 shadow-sm border border-indigo-200" : "text-gray-400 hover:text-gray-600"
+          }`}
+        >
+          {icon} {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function ProductAnalyticsTab({ productId, editingProduct }) {
@@ -190,6 +214,20 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
   const [rollingPeriod, setRollingPeriod] = useState("12"); // "1","3","12","36","60","custom"
   const [selectedTrailing, setSelectedTrailing] = useState(new Set(["1Y", "3Y", "5Y", "SI"]));
   const [selectedMetric, setSelectedMetric] = useState("ann_return");
+
+  // ── View mode per section: "table" | "chart" | "both" (default: "table") ──
+  const [viewCumulative, setViewCumulative] = useState("table");
+  const [viewCumulativeExcess, setViewCumulativeExcess] = useState("table");
+  const [viewRolling, setViewRolling] = useState("table");
+  const [viewMonthlyExcess, setViewMonthlyExcess] = useState("table");
+  const [viewMonthly, setViewMonthly] = useState("table");
+  const [viewTrailing, setViewTrailing] = useState("table");
+  const [viewCalendar, setViewCalendar] = useState("table");
+
+  // ── Chart format options ──
+  const [cumChartType, setCumChartType] = useState("line"); // "line" | "bar"
+  const [monthlyChartType, setMonthlyChartType] = useState("bar"); // "line" | "bar"
+  const [rollingChartType, setRollingChartType] = useState("line");
 
   // Close benchmark dropdown on outside click
   useEffect(() => {
@@ -435,6 +473,73 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
   const showGross = returnType === "gross" || returnType === "both";
   const showNet = (returnType === "net" || returnType === "both") && hasNet;
 
+  // ── Helper: render a chart with selectable type (line or bar) ──
+  const ChartTypeToggle = ({ value, onChange }) => (
+    <div className="flex items-center gap-0.5 border border-gray-200 rounded p-0.5 bg-gray-50">
+      {["line", "bar"].map((t) => (
+        <button key={t} onClick={() => onChange(t)}
+          className={`px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors ${value === t ? "bg-white text-indigo-700 shadow-sm border border-indigo-200" : "text-gray-400 hover:text-gray-600"}`}>
+          {t === "line" ? "Line" : "Bar"}
+        </button>
+      ))}
+    </div>
+  );
+
+  const renderCumulativeChart = () => {
+    const C = cumChartType === "line" ? LineChart : BarChart;
+    const DataEl = cumChartType === "line"
+      ? (key, color, name, dash) => <Line key={key} type="monotone" dataKey={key} stroke={color} strokeWidth={2} dot={false} name={name} strokeDasharray={dash} connectNulls />
+      : (key, color, name) => <Bar key={key} dataKey={key} fill={color} name={name} isAnimationActive={false} radius={[2, 2, 0, 0]} />;
+    return (
+      <ResponsiveContainer width="100%" height={170}>
+        <C data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+          <XAxis dataKey="date" tickFormatter={xFmt} tick={{ fontSize: 9 }} interval="preserveStartEnd" />
+          <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => v + "%"} width={46} />
+          <Tooltip content={<ChartTooltip />} />
+          <ReferenceLine y={0} stroke="#ccc" />
+          <Legend iconType={cumChartType === "line" ? "line" : "square"} wrapperStyle={{ fontSize: 10 }} />
+          {showGross && DataEl("cumGross", "#6366f1", "Gross", "0")}
+          {showNet && DataEl("cumNet", "#10b981", "Net", "5 3")}
+          {activeBm && DataEl("cumBm", "#f59e0b", activeBm.name, "4 3")}
+        </C>
+      </ResponsiveContainer>
+    );
+  };
+
+  const renderMonthlyChart = () => {
+    const C = monthlyChartType === "line" ? LineChart : BarChart;
+    const DataEl = monthlyChartType === "line"
+      ? (key, color, name, dash) => <Line key={key} type="monotone" dataKey={key} stroke={color} strokeWidth={2} dot={false} name={name} strokeDasharray={dash} connectNulls />
+      : (key, color, name) => <Bar key={key} dataKey={key} fill={color} name={name} isAnimationActive={false} radius={[2, 2, 0, 0]} />;
+    return (
+      <ResponsiveContainer width="100%" height={130}>
+        <C data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+          <XAxis dataKey="date" tickFormatter={xFmt} tick={{ fontSize: 9 }} interval="preserveStartEnd" />
+          <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => v + "%"} width={46} />
+          <Tooltip content={<ChartTooltip />} />
+          <ReferenceLine y={0} stroke="#999" />
+          <Legend iconType={monthlyChartType === "line" ? "line" : "square"} wrapperStyle={{ fontSize: 10 }} />
+          {showGross && DataEl("grossReturn", "#6366f1", "Gross", "0")}
+          {showNet && DataEl("netReturn", "#10b981", "Net", "5 3")}
+          {activeBm && DataEl("bmReturn", "#f59e0b", activeBm.name, "4 3")}
+        </C>
+      </ResponsiveContainer>
+    );
+  };
+
+  // ── Section header with ViewModeToggle ──
+  const SectionHeader = ({ title, view, onViewChange, chartControls }) => (
+    <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{title}</p>
+      <div className="flex items-center gap-2">
+        {view !== "table" && chartControls}
+        <ViewModeToggle value={view} onChange={onViewChange} />
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-5 pb-4">
 
@@ -454,10 +559,8 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
         </div>
       </div>
 
-      {/* ── Controls row ── */}
-      <div className="flex flex-wrap items-center gap-3">
-
-        {/* Benchmark selector */}
+      {/* ── Benchmark + Period controls ── */}
+      <div className="space-y-2">
         {benchmarkDefs.length > 0 && (
           <div className="flex items-center gap-1.5">
             <span className="text-xs text-gray-500 font-medium">Benchmark:</span>
@@ -476,66 +579,43 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
                 <ChevronDown className="w-3 h-3" />
               </button>
               {bmDropdownOpen && createPortal(
-                <div
-                  style={{ position: "fixed", top: bmDropdownPos.top - window.scrollY, left: bmDropdownPos.left, zIndex: 9999 }}
-                  className="bg-white border border-gray-200 rounded-lg shadow-xl min-w-[220px] py-1"
-                >
+                <div style={{ position: "fixed", top: bmDropdownPos.top - window.scrollY, left: bmDropdownPos.left, zIndex: 9999 }}
+                  className="bg-white border border-gray-200 rounded-lg shadow-xl min-w-[220px] py-1">
                   {benchmarkDefs.map((b) => {
                     const bm = allBenchmarks.find((x) => x.id === b.id);
                     return (
-                      <button
-                        key={b.id}
-                        onMouseDown={(e) => e.stopPropagation()}
+                      <button key={b.id} onMouseDown={(e) => e.stopPropagation()}
                         onClick={() => { setSelectedBmId(b.id); setBmDropdownOpen(false); setStartYM(""); setEndYM(""); }}
-                        className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 flex items-center justify-between gap-2 ${b.id === activeBmId ? "text-indigo-700 font-semibold bg-indigo-50" : "text-gray-700"}`}
-                      >
+                        className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 flex items-center justify-between gap-2 ${b.id === activeBmId ? "text-indigo-700 font-semibold bg-indigo-50" : "text-gray-700"}`}>
                         <span>{bm?.name ?? b.id}</span>
                         {b.role && (
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${b.role === "Primary" ? "bg-indigo-100 text-indigo-700" : "bg-gray-100 text-gray-600"}`}>
-                            {b.role}
-                          </span>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${b.role === "Primary" ? "bg-indigo-100 text-indigo-700" : "bg-gray-100 text-gray-600"}`}>{b.role}</span>
                         )}
                       </button>
                     );
                   })}
-                </div>,
-                document.body
+                </div>, document.body
               )}
             </div>
           </div>
         )}
-
-      </div>
-
-      {/* ── Date range ── */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs text-gray-500 font-medium">Period:</span>
-        <input
-          type="month"
-          value={effectiveStart}
-          min={ym(grossMonthly[0]?.date)}
-          max={effectiveEnd}
-          onChange={(e) => setStartYM(e.target.value)}
-          className="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-400"
-        />
-        <span className="text-xs text-gray-400">to</span>
-        <input
-          type="month"
-          value={effectiveEnd}
-          min={effectiveStart}
-          max={ym(grossMonthly[grossMonthly.length - 1]?.date)}
-          onChange={(e) => setEndYM(e.target.value)}
-          className="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-400"
-        />
-        {(startYM || endYM) && (
-          <button onClick={() => { setStartYM(""); setEndYM(""); }} className="text-xs text-indigo-600 hover:underline">Reset</button>
-        )}
-        {commonRng && (
-          <button onClick={() => { setStartYM(commonRng.start); setEndYM(commonRng.end); }} className="text-xs text-gray-500 hover:text-indigo-600 hover:underline">
-            Common period
-          </button>
-        )}
-        <span className="text-xs text-gray-400">({filteredGross.length} months)</span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-gray-500 font-medium">Period:</span>
+          <input type="month" value={effectiveStart} min={ym(grossMonthly[0]?.date)} max={effectiveEnd}
+            onChange={(e) => setStartYM(e.target.value)}
+            className="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-400" />
+          <span className="text-xs text-gray-400">to</span>
+          <input type="month" value={effectiveEnd} min={effectiveStart} max={ym(grossMonthly[grossMonthly.length - 1]?.date)}
+            onChange={(e) => setEndYM(e.target.value)}
+            className="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-400" />
+          {(startYM || endYM) && (
+            <button onClick={() => { setStartYM(""); setEndYM(""); }} className="text-xs text-indigo-600 hover:underline">Reset</button>
+          )}
+          {commonRng && (
+            <button onClick={() => { setStartYM(commonRng.start); setEndYM(commonRng.end); }} className="text-xs text-gray-500 hover:text-indigo-600 hover:underline">Common period</button>
+          )}
+          <span className="text-xs text-gray-400">({filteredGross.length} months)</span>
+        </div>
       </div>
 
       {/* ── Stat cards ── */}
@@ -556,56 +636,100 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
         </div>
       )}
 
-      {/* ── Cumulative Return chart ── */}
+      {/* ── Cumulative Return ── */}
       <div>
-        <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Cumulative Return</p>
-        </div>
-        <ResponsiveContainer width="100%" height={170}>
-          <LineChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis dataKey="date" tickFormatter={xFmt} tick={{ fontSize: 9 }} interval="preserveStartEnd" />
-            <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => v + "%"} width={46} />
-            <Tooltip content={<ChartTooltip />} />
-            <ReferenceLine y={0} stroke="#ccc" />
-            <Legend iconType="line" wrapperStyle={{ fontSize: 10 }} />
-            {showGross && <Line type="monotone" dataKey="cumGross" stroke="#6366f1" strokeWidth={2} dot={false} name="Gross" connectNulls />}
-            {showNet && <Line type="monotone" dataKey="cumNet" stroke="#10b981" strokeWidth={2} dot={false} name="Net" strokeDasharray="5 3" connectNulls />}
-            {activeBm && <Line type="monotone" dataKey="cumBm" stroke="#f59e0b" strokeWidth={2} dot={false} name={activeBm.name} strokeDasharray="4 3" connectNulls />}
-          </LineChart>
-        </ResponsiveContainer>
+        <SectionHeader title="Cumulative Return" view={viewCumulative} onViewChange={setViewCumulative}
+          chartControls={<ChartTypeToggle value={cumChartType} onChange={setCumChartType} />} />
+        {(viewCumulative === "chart" || viewCumulative === "both") && renderCumulativeChart()}
+        {(viewCumulative === "table" || viewCumulative === "both") && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="py-1.5 pr-3 text-left font-semibold text-gray-600">Date</th>
+                  {showGross && <th className="py-1.5 px-2 text-right font-semibold text-gray-600">Gross Cum.</th>}
+                  {showNet && <th className="py-1.5 px-2 text-right font-semibold text-gray-600">Net Cum.</th>}
+                  {activeBm && <th className="py-1.5 px-2 text-right font-semibold text-gray-600">{activeBm.name} Cum.</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {chartData.filter((_, i) => i % Math.max(1, Math.floor(chartData.length / 24)) === 0 || i === chartData.length - 1).map((r) => (
+                  <tr key={r.date} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-1 pr-3 text-gray-600">{r.date}</td>
+                    {showGross && <td className={`py-1 px-2 text-right font-semibold ${r.cumGross > 0 ? "text-emerald-600" : r.cumGross < 0 ? "text-red-500" : "text-gray-600"}`}>{fmt(r.cumGross)}</td>}
+                    {showNet && <td className={`py-1 px-2 text-right font-semibold ${r.cumNet > 0 ? "text-emerald-600" : r.cumNet < 0 ? "text-red-500" : "text-gray-600"}`}>{fmt(r.cumNet)}</td>}
+                    {activeBm && <td className={`py-1 px-2 text-right ${r.cumBm > 0 ? "text-emerald-600" : r.cumBm < 0 ? "text-red-500" : "text-gray-500"}`}>{fmt(r.cumBm)}</td>}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      {/* ── Cumulative Excess Return chart ── */}
+      {/* ── Cumulative Excess Return ── */}
       {activeBm && (
         <div>
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Cumulative Excess Return</p>
-          <ResponsiveContainer width="100%" height={140}>
-            <LineChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="date" tickFormatter={xFmt} tick={{ fontSize: 9 }} interval="preserveStartEnd" />
-              <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => v + "%"} width={46} />
-              <Tooltip content={<ChartTooltip />} />
-              <ReferenceLine y={0} stroke="#ccc" />
-              <Legend iconType="line" wrapperStyle={{ fontSize: 10 }} />
-              {showGross && <Line type="monotone" dataKey="excessGross" stroke="#6366f1" strokeWidth={2} dot={false} name="Gross Excess" connectNulls />}
-              {showNet && <Line type="monotone" dataKey="excessNet" stroke="#10b981" strokeWidth={2} dot={false} name="Net Excess" strokeDasharray="5 3" connectNulls />}
-            </LineChart>
-          </ResponsiveContainer>
+          <SectionHeader title="Cumulative Excess Return" view={viewCumulativeExcess} onViewChange={setViewCumulativeExcess}
+            chartControls={<ChartTypeToggle value={cumChartType} onChange={setCumChartType} />} />
+          {(viewCumulativeExcess === "chart" || viewCumulativeExcess === "both") && (
+            <ResponsiveContainer width="100%" height={150}>
+              {cumChartType === "line" ? (
+                <LineChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="date" tickFormatter={xFmt} tick={{ fontSize: 9 }} interval="preserveStartEnd" />
+                  <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => v + "%"} width={46} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <ReferenceLine y={0} stroke="#ccc" />
+                  <Legend iconType="line" wrapperStyle={{ fontSize: 10 }} />
+                  {showGross && <Line type="monotone" dataKey="excessGross" stroke="#6366f1" strokeWidth={2} dot={false} name="Gross Excess" connectNulls />}
+                  {showNet && <Line type="monotone" dataKey="excessNet" stroke="#10b981" strokeWidth={2} dot={false} name="Net Excess" strokeDasharray="5 3" connectNulls />}
+                </LineChart>
+              ) : (
+                <BarChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="date" tickFormatter={xFmt} tick={{ fontSize: 9 }} interval="preserveStartEnd" />
+                  <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => v + "%"} width={46} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <ReferenceLine y={0} stroke="#ccc" />
+                  <Legend iconType="square" wrapperStyle={{ fontSize: 10 }} />
+                  {showGross && <Bar dataKey="excessGross" fill="#6366f1" name="Gross Excess" isAnimationActive={false} radius={[2, 2, 0, 0]} />}
+                  {showNet && <Bar dataKey="excessNet" fill="#10b981" name="Net Excess" isAnimationActive={false} radius={[2, 2, 0, 0]} />}
+                </BarChart>
+              )}
+            </ResponsiveContainer>
+          )}
+          {(viewCumulativeExcess === "table" || viewCumulativeExcess === "both") && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="py-1.5 pr-3 text-left font-semibold text-gray-600">Date</th>
+                    {showGross && <th className="py-1.5 px-2 text-right font-semibold text-gray-600">Gross Excess</th>}
+                    {showNet && <th className="py-1.5 px-2 text-right font-semibold text-gray-600">Net Excess</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {chartData.filter((_, i) => i % Math.max(1, Math.floor(chartData.length / 24)) === 0 || i === chartData.length - 1).map((r) => (
+                    <tr key={r.date} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="py-1 pr-3 text-gray-600">{r.date}</td>
+                      {showGross && <td className={`py-1 px-2 text-right font-semibold ${r.excessGross > 0 ? "text-emerald-600" : r.excessGross < 0 ? "text-red-500" : "text-gray-600"}`}>{fmt(r.excessGross)}</td>}
+                      {showNet && <td className={`py-1 px-2 text-right font-semibold ${r.excessNet > 0 ? "text-emerald-600" : r.excessNet < 0 ? "text-red-500" : "text-gray-600"}`}>{fmt(r.excessNet)}</td>}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
-      {/* ── Rolling metric chart ── */}
+      {/* ── Rolling metric ── */}
       {(() => {
         const metricDef = METRICS.find((m) => m.key === selectedMetric);
         const metricLabel = metricDef?.label ?? "Ann. Return";
         const isRatioMetric = ["sharpe", "info_ratio"].includes(selectedMetric);
-        const isHitRate = selectedMetric === "hit_rate";
         const needsBm = metricDef?.needsBm && activeBm;
-        const isPercentMetric = !isRatioMetric;
-        const chartTooltipFmt = isRatioMetric ? (v) => fmtNum(v) : isHitRate ? (v) => v + "%" : (v) => v + "%";
-
-        // Custom tooltip for ratio metrics
         const MetricTooltip = ({ active, payload, label }) => {
           if (!active || !payload?.length) return null;
           return (
@@ -619,153 +743,210 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
             </div>
           );
         };
-
+        const rollingChartControls = (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-xs text-gray-400">Window:</span>
+            {[{ label: "1M", value: "1" }, { label: "1Q", value: "3" }, { label: "1Y", value: "12" }, { label: "3Y", value: "36" }, { label: "5Y", value: "60" }, { label: "Custom", value: "custom" }].map((opt) => (
+              <ToggleButton key={opt.value} active={rollingPeriod === opt.value} onClick={() => setRollingPeriod(opt.value)}>{opt.label}</ToggleButton>
+            ))}
+            {rollingPeriod === "custom" && (
+              <div className="flex items-center gap-1">
+                <input type="number" min={1} max={filteredGross.length} value={rollingCustom}
+                  onChange={(e) => setRollingCustom(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="text-xs border border-gray-300 rounded px-2 py-0.5 w-16 focus:outline-none focus:ring-1 focus:ring-indigo-400" />
+                <span className="text-xs text-gray-400">months</span>
+              </div>
+            )}
+            <ChartTypeToggle value={rollingChartType} onChange={setRollingChartType} />
+          </div>
+        );
         return (
           <div>
-            <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                Rolling {effectiveRollingMonths}M — {metricLabel}
-              </p>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-xs text-gray-400 font-medium">Window:</span>
-                {[
-                  { label: "1M", value: "1" },
-                  { label: "1Q", value: "3" },
-                  { label: "1Y", value: "12" },
-                  { label: "3Y", value: "36" },
-                  { label: "5Y", value: "60" },
-                  { label: "Custom", value: "custom" },
-                ].map((opt) => (
-                  <ToggleButton key={opt.value} active={rollingPeriod === opt.value} onClick={() => setRollingPeriod(opt.value)}>
-                    {opt.label}
-                  </ToggleButton>
-                ))}
-                {rollingPeriod === "custom" && (
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="number" min={1} max={filteredGross.length} value={rollingCustom}
-                      onChange={(e) => setRollingCustom(Math.max(1, parseInt(e.target.value) || 1))}
-                      className="text-xs border border-gray-300 rounded px-2 py-0.5 w-16 focus:outline-none focus:ring-1 focus:ring-indigo-400"
-                    />
-                    <span className="text-xs text-gray-400">months</span>
-                  </div>
+            <SectionHeader title={`Rolling ${effectiveRollingMonths}M — ${metricLabel}`} view={viewRolling} onViewChange={setViewRolling} chartControls={rollingChartControls} />
+            {(viewRolling === "chart" || viewRolling === "both") && (
+              <ResponsiveContainer width="100%" height={170}>
+                {rollingChartType === "line" ? (
+                  <LineChart data={rollingMetricData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="date" tickFormatter={xFmt} tick={{ fontSize: 9 }} interval="preserveStartEnd" />
+                    <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => isRatioMetric ? v : v + "%"} width={46} />
+                    <Tooltip content={<MetricTooltip />} />
+                    <ReferenceLine y={0} stroke="#ccc" />
+                    <Legend iconType="line" wrapperStyle={{ fontSize: 10 }} />
+                    {showGross && <Line type="monotone" dataKey="gross" stroke="#6366f1" strokeWidth={2} dot={false} name="Gross" connectNulls />}
+                    {showNet && <Line type="monotone" dataKey="net" stroke="#10b981" strokeWidth={2} dot={false} name="Net" strokeDasharray="5 3" connectNulls />}
+                    {needsBm && !["excess_return", "tracking_err", "info_ratio", "hit_rate"].includes(selectedMetric) && (
+                      <Line type="monotone" dataKey="bm" stroke="#f59e0b" strokeWidth={2} dot={false} name={activeBm.name} strokeDasharray="4 3" connectNulls />
+                    )}
+                  </LineChart>
+                ) : (
+                  <BarChart data={rollingMetricData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="date" tickFormatter={xFmt} tick={{ fontSize: 9 }} interval="preserveStartEnd" />
+                    <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => isRatioMetric ? v : v + "%"} width={46} />
+                    <Tooltip content={<MetricTooltip />} />
+                    <ReferenceLine y={0} stroke="#ccc" />
+                    <Legend iconType="square" wrapperStyle={{ fontSize: 10 }} />
+                    {showGross && <Bar dataKey="gross" fill="#6366f1" name="Gross" isAnimationActive={false} radius={[2, 2, 0, 0]} />}
+                    {showNet && <Bar dataKey="net" fill="#10b981" name="Net" isAnimationActive={false} radius={[2, 2, 0, 0]} />}
+                    {needsBm && !["excess_return", "tracking_err", "info_ratio", "hit_rate"].includes(selectedMetric) && (
+                      <Bar dataKey="bm" fill="#f59e0b" name={activeBm.name} isAnimationActive={false} radius={[2, 2, 0, 0]} />
+                    )}
+                  </BarChart>
                 )}
+              </ResponsiveContainer>
+            )}
+            {(viewRolling === "table" || viewRolling === "both") && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="py-1.5 pr-3 text-left font-semibold text-gray-600">Date</th>
+                      {showGross && <th className="py-1.5 px-2 text-right font-semibold text-gray-600">Gross</th>}
+                      {showNet && <th className="py-1.5 px-2 text-right font-semibold text-gray-600">Net</th>}
+                      {needsBm && !["excess_return", "tracking_err", "info_ratio", "hit_rate"].includes(selectedMetric) && <th className="py-1.5 px-2 text-right font-semibold text-gray-600">{activeBm.name}</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rollingMetricData.filter((_, i) => i % Math.max(1, Math.floor(rollingMetricData.length / 24)) === 0 || i === rollingMetricData.length - 1).map((r) => (
+                      <tr key={r.date} className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="py-1 pr-3 text-gray-600">{r.date}</td>
+                        {showGross && <td className={`py-1 px-2 text-right font-semibold ${r.gross > 0 ? "text-emerald-600" : r.gross < 0 ? "text-red-500" : "text-gray-600"}`}>{isRatioMetric ? fmtNum(r.gross) : fmt(r.gross)}</td>}
+                        {showNet && <td className={`py-1 px-2 text-right font-semibold ${r.net > 0 ? "text-emerald-600" : r.net < 0 ? "text-red-500" : "text-gray-600"}`}>{isRatioMetric ? fmtNum(r.net) : fmt(r.net)}</td>}
+                        {needsBm && !["excess_return", "tracking_err", "info_ratio", "hit_rate"].includes(selectedMetric) && <td className={`py-1 px-2 text-right ${r.bm > 0 ? "text-emerald-600" : r.bm < 0 ? "text-red-500" : "text-gray-500"}`}>{isRatioMetric ? fmtNum(r.bm) : fmt(r.bm)}</td>}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            </div>
-            <ResponsiveContainer width="100%" height={170}>
-              <LineChart data={rollingMetricData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="date" tickFormatter={xFmt} tick={{ fontSize: 9 }} interval="preserveStartEnd" />
-                <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => isRatioMetric ? v : v + "%"} width={46} />
-                <Tooltip content={<MetricTooltip />} />
-                <ReferenceLine y={0} stroke="#ccc" />
-                <Legend iconType="line" wrapperStyle={{ fontSize: 10 }} />
-                {showGross && <Line type="monotone" dataKey="gross" stroke="#6366f1" strokeWidth={2} dot={false} name="Gross" connectNulls />}
-                {showNet && <Line type="monotone" dataKey="net" stroke="#10b981" strokeWidth={2} dot={false} name="Net" strokeDasharray="5 3" connectNulls />}
-                {needsBm && !["excess_return", "tracking_err", "info_ratio", "hit_rate"].includes(selectedMetric) && (
-                  <Line type="monotone" dataKey="bm" stroke="#f59e0b" strokeWidth={2} dot={false} name={activeBm.name} strokeDasharray="4 3" connectNulls />
-                )}
-              </LineChart>
-            </ResponsiveContainer>
+            )}
           </div>
         );
       })()}
 
-      {/* ── Monthly excess return chart ── */}
+      {/* ── Monthly Excess Return ── */}
       {activeBm && (
         <div>
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Monthly Excess Return</p>
-          <ResponsiveContainer width="100%" height={120}>
-            <BarChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="date" tickFormatter={xFmt} tick={{ fontSize: 9 }} interval="preserveStartEnd" />
-              <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => v + "%"} width={46} />
-              <Tooltip content={<ChartTooltip />} />
-              <ReferenceLine y={0} stroke="#999" />
-              {showGross && <Bar dataKey="monthlyExcessGross" name="Gross Excess" fill="#6366f1" isAnimationActive={false} radius={[2, 2, 0, 0]} />}
-              {showNet && <Bar dataKey="monthlyExcessNet" name="Net Excess" fill="#10b981" isAnimationActive={false} radius={[2, 2, 0, 0]} />}
-            </BarChart>
-          </ResponsiveContainer>
+          <SectionHeader title="Monthly Excess Return" view={viewMonthlyExcess} onViewChange={setViewMonthlyExcess}
+            chartControls={<ChartTypeToggle value={monthlyChartType} onChange={setMonthlyChartType} />} />
+          {(viewMonthlyExcess === "chart" || viewMonthlyExcess === "both") && (
+            <ResponsiveContainer width="100%" height={120}>
+              {monthlyChartType === "line" ? (
+                <LineChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="date" tickFormatter={xFmt} tick={{ fontSize: 9 }} interval="preserveStartEnd" />
+                  <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => v + "%"} width={46} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <ReferenceLine y={0} stroke="#999" />
+                  {showGross && <Line type="monotone" dataKey="monthlyExcessGross" stroke="#6366f1" strokeWidth={2} dot={false} name="Gross Excess" connectNulls />}
+                  {showNet && <Line type="monotone" dataKey="monthlyExcessNet" stroke="#10b981" strokeWidth={2} dot={false} name="Net Excess" strokeDasharray="5 3" connectNulls />}
+                </LineChart>
+              ) : (
+                <BarChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="date" tickFormatter={xFmt} tick={{ fontSize: 9 }} interval="preserveStartEnd" />
+                  <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => v + "%"} width={46} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <ReferenceLine y={0} stroke="#999" />
+                  {showGross && <Bar dataKey="monthlyExcessGross" name="Gross Excess" fill="#6366f1" isAnimationActive={false} radius={[2, 2, 0, 0]} />}
+                  {showNet && <Bar dataKey="monthlyExcessNet" name="Net Excess" fill="#10b981" isAnimationActive={false} radius={[2, 2, 0, 0]} />}
+                </BarChart>
+              )}
+            </ResponsiveContainer>
+          )}
+          {(viewMonthlyExcess === "table" || viewMonthlyExcess === "both") && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="py-1.5 pr-3 text-left font-semibold text-gray-600">Date</th>
+                    {showGross && <th className="py-1.5 px-2 text-right font-semibold text-gray-600">Gross Excess</th>}
+                    {showNet && <th className="py-1.5 px-2 text-right font-semibold text-gray-600">Net Excess</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {chartData.map((r) => (
+                    <tr key={r.date} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="py-1 pr-3 text-gray-600">{r.date}</td>
+                      {showGross && <td className={`py-1 px-2 text-right font-semibold ${r.monthlyExcessGross > 0 ? "text-emerald-600" : r.monthlyExcessGross < 0 ? "text-red-500" : "text-gray-600"}`}>{fmt(r.monthlyExcessGross)}</td>}
+                      {showNet && <td className={`py-1 px-2 text-right font-semibold ${r.monthlyExcessNet > 0 ? "text-emerald-600" : r.monthlyExcessNet < 0 ? "text-red-500" : "text-gray-600"}`}>{fmt(r.monthlyExcessNet)}</td>}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
-      {/* ── Monthly return chart ── */}
+      {/* ── Monthly Returns ── */}
       <div>
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Monthly Returns</p>
-        <ResponsiveContainer width="100%" height={120}>
-          <BarChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis dataKey="date" tickFormatter={xFmt} tick={{ fontSize: 9 }} interval="preserveStartEnd" />
-            <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => v + "%"} width={46} />
-            <Tooltip content={<ChartTooltip />} />
-            <ReferenceLine y={0} stroke="#999" />
-            <Legend iconType="square" wrapperStyle={{ fontSize: 10 }} />
-            {showGross && <Bar dataKey="grossReturn" name="Gross" fill="#6366f1" isAnimationActive={false} radius={[2, 2, 0, 0]} />}
-            {showNet && <Bar dataKey="netReturn" name="Net" fill="#10b981" isAnimationActive={false} radius={[2, 2, 0, 0]} />}
-            {activeBm && <Bar dataKey="bmReturn" name={activeBm.name} fill="#f59e0b" isAnimationActive={false} radius={[2, 2, 0, 0]} />}
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* ── Trailing returns ── */}
-      <div>
-        <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Trailing Returns</p>
-          <div className="flex flex-wrap gap-1">
-            {TRAILING_PERIODS.map((p) => (
-              <ToggleButton
-                key={p.label}
-                active={selectedTrailing.has(p.label)}
-                onClick={() => setSelectedTrailing((prev) => {
-                  const next = new Set(prev);
-                  next.has(p.label) ? next.delete(p.label) : next.add(p.label);
-                  return next;
-                })}
-              >
-                {p.label}
-              </ToggleButton>
-            ))}
-          </div>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs border-collapse">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="py-1.5 pr-3 text-left font-semibold text-gray-600">Period</th>
-                {showGross && <th className="py-1.5 px-2 text-right font-semibold text-gray-600">Gross</th>}
-                {showNet && <th className="py-1.5 px-2 text-right font-semibold text-gray-600">Net</th>}
-                {activeBm && <th className="py-1.5 px-2 text-right font-semibold text-gray-600">{activeBm.name}</th>}
-                {activeBm && showGross && <th className="py-1.5 pl-2 text-right font-semibold text-gray-600">Excess (G)</th>}
-                {activeBm && showNet && <th className="py-1.5 pl-2 text-right font-semibold text-gray-600">Excess (N)</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {trailingData.filter((r) => selectedTrailing.has(r.label) && r.hasData).map((r) => (
-                <tr key={r.label} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="py-1.5 pr-3 text-gray-700 font-medium">
-                    {r.label}{r.annualized && <span className="text-gray-400 font-normal"> (ann.)</span>}
-                  </td>
-                  {showGross && <td className={`py-1.5 px-2 text-right font-semibold ${r.gross > 0 ? "text-emerald-600" : r.gross < 0 ? "text-red-500" : "text-gray-600"}`}>{fmt(r.gross)}</td>}
-                  {showNet && <td className={`py-1.5 px-2 text-right font-semibold ${r.net > 0 ? "text-emerald-600" : r.net < 0 ? "text-red-500" : "text-gray-600"}`}>{fmt(r.net)}</td>}
-                  {activeBm && <td className={`py-1.5 px-2 text-right ${r.benchmark > 0 ? "text-emerald-600" : r.benchmark < 0 ? "text-red-500" : "text-gray-500"}`}>{fmt(r.benchmark)}</td>}
-                  {activeBm && showGross && <td className={`py-1.5 pl-2 text-right font-semibold ${r.excessGross > 0 ? "text-emerald-600" : r.excessGross < 0 ? "text-red-500" : "text-gray-500"}`}>{fmt(r.excessGross)}</td>}
-                  {activeBm && showNet && <td className={`py-1.5 pl-2 text-right font-semibold ${r.excessNet > 0 ? "text-emerald-600" : r.excessNet < 0 ? "text-red-500" : "text-gray-500"}`}>{fmt(r.excessNet)}</td>}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* ── Calendar year returns ── */}
-      {calendarYears.length > 0 && (
-        <div>
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Calendar Year Returns</p>
+        <SectionHeader title="Monthly Returns" view={viewMonthly} onViewChange={setViewMonthly}
+          chartControls={<ChartTypeToggle value={monthlyChartType} onChange={setMonthlyChartType} />} />
+        {(viewMonthly === "chart" || viewMonthly === "both") && renderMonthlyChart()}
+        {(viewMonthly === "table" || viewMonthly === "both") && (
           <div className="overflow-x-auto">
             <table className="w-full text-xs border-collapse">
               <thead>
                 <tr className="border-b border-gray-200">
-                  <th className="py-1.5 pr-3 text-left font-semibold text-gray-600">Year</th>
+                  <th className="py-1.5 pr-3 text-left font-semibold text-gray-600">Date</th>
+                  {showGross && <th className="py-1.5 px-2 text-right font-semibold text-gray-600">Gross</th>}
+                  {showNet && <th className="py-1.5 px-2 text-right font-semibold text-gray-600">Net</th>}
+                  {activeBm && <th className="py-1.5 px-2 text-right font-semibold text-gray-600">{activeBm.name}</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {chartData.map((r) => (
+                  <tr key={r.date} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-1 pr-3 text-gray-600">{r.date}</td>
+                    {showGross && <td className={`py-1 px-2 text-right font-semibold ${r.grossReturn > 0 ? "text-emerald-600" : r.grossReturn < 0 ? "text-red-500" : "text-gray-600"}`}>{fmt(r.grossReturn)}</td>}
+                    {showNet && <td className={`py-1 px-2 text-right font-semibold ${r.netReturn > 0 ? "text-emerald-600" : r.netReturn < 0 ? "text-red-500" : "text-gray-600"}`}>{fmt(r.netReturn)}</td>}
+                    {activeBm && <td className={`py-1 px-2 text-right ${r.bmReturn > 0 ? "text-emerald-600" : r.bmReturn < 0 ? "text-red-500" : "text-gray-500"}`}>{fmt(r.bmReturn)}</td>}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* ── Trailing Returns ── */}
+      <div>
+        <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Trailing Returns</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex flex-wrap gap-1">
+              {TRAILING_PERIODS.map((p) => (
+                <ToggleButton key={p.label} active={selectedTrailing.has(p.label)}
+                  onClick={() => setSelectedTrailing((prev) => { const next = new Set(prev); next.has(p.label) ? next.delete(p.label) : next.add(p.label); return next; })}>
+                  {p.label}
+                </ToggleButton>
+              ))}
+            </div>
+            <ViewModeToggle value={viewTrailing} onChange={setViewTrailing} />
+          </div>
+        </div>
+        {(viewTrailing === "chart" || viewTrailing === "both") && (
+          <ResponsiveContainer width="100%" height={150}>
+            <BarChart data={trailingData.filter((r) => selectedTrailing.has(r.label) && r.hasData)} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="label" tick={{ fontSize: 9 }} />
+              <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => v + "%"} width={46} />
+              <Tooltip formatter={(v, n) => [fmt(v), n]} />
+              <ReferenceLine y={0} stroke="#ccc" />
+              <Legend iconType="square" wrapperStyle={{ fontSize: 10 }} />
+              {showGross && <Bar dataKey="gross" fill="#6366f1" name="Gross" isAnimationActive={false} radius={[2, 2, 0, 0]} />}
+              {showNet && <Bar dataKey="net" fill="#10b981" name="Net" isAnimationActive={false} radius={[2, 2, 0, 0]} />}
+              {activeBm && <Bar dataKey="benchmark" fill="#f59e0b" name={activeBm.name} isAnimationActive={false} radius={[2, 2, 0, 0]} />}
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+        {(viewTrailing === "table" || viewTrailing === "both") && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="py-1.5 pr-3 text-left font-semibold text-gray-600">Period</th>
                   {showGross && <th className="py-1.5 px-2 text-right font-semibold text-gray-600">Gross</th>}
                   {showNet && <th className="py-1.5 px-2 text-right font-semibold text-gray-600">Net</th>}
                   {activeBm && <th className="py-1.5 px-2 text-right font-semibold text-gray-600">{activeBm.name}</th>}
@@ -774,9 +955,9 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
                 </tr>
               </thead>
               <tbody>
-                {calendarYears.map((r) => (
-                  <tr key={r.year} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-1.5 pr-3 text-gray-700 font-medium">{r.year}</td>
+                {trailingData.filter((r) => selectedTrailing.has(r.label) && r.hasData).map((r) => (
+                  <tr key={r.label} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-1.5 pr-3 text-gray-700 font-medium">{r.label}{r.annualized && <span className="text-gray-400 font-normal"> (ann.)</span>}</td>
                     {showGross && <td className={`py-1.5 px-2 text-right font-semibold ${r.gross > 0 ? "text-emerald-600" : r.gross < 0 ? "text-red-500" : "text-gray-600"}`}>{fmt(r.gross)}</td>}
                     {showNet && <td className={`py-1.5 px-2 text-right font-semibold ${r.net > 0 ? "text-emerald-600" : r.net < 0 ? "text-red-500" : "text-gray-600"}`}>{fmt(r.net)}</td>}
                     {activeBm && <td className={`py-1.5 px-2 text-right ${r.benchmark > 0 ? "text-emerald-600" : r.benchmark < 0 ? "text-red-500" : "text-gray-500"}`}>{fmt(r.benchmark)}</td>}
@@ -787,6 +968,59 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
               </tbody>
             </table>
           </div>
+        )}
+      </div>
+
+      {/* ── Calendar Year Returns ── */}
+      {calendarYears.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Calendar Year Returns</p>
+            <ViewModeToggle value={viewCalendar} onChange={setViewCalendar} />
+          </div>
+          {(viewCalendar === "chart" || viewCalendar === "both") && (
+            <ResponsiveContainer width="100%" height={150}>
+              <BarChart data={[...calendarYears].reverse()} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="year" tick={{ fontSize: 9 }} />
+                <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => v + "%"} width={46} />
+                <Tooltip formatter={(v, n) => [fmt(v), n]} />
+                <ReferenceLine y={0} stroke="#ccc" />
+                <Legend iconType="square" wrapperStyle={{ fontSize: 10 }} />
+                {showGross && <Bar dataKey="gross" fill="#6366f1" name="Gross" isAnimationActive={false} radius={[2, 2, 0, 0]} />}
+                {showNet && <Bar dataKey="net" fill="#10b981" name="Net" isAnimationActive={false} radius={[2, 2, 0, 0]} />}
+                {activeBm && <Bar dataKey="benchmark" fill="#f59e0b" name={activeBm.name} isAnimationActive={false} radius={[2, 2, 0, 0]} />}
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+          {(viewCalendar === "table" || viewCalendar === "both") && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="py-1.5 pr-3 text-left font-semibold text-gray-600">Year</th>
+                    {showGross && <th className="py-1.5 px-2 text-right font-semibold text-gray-600">Gross</th>}
+                    {showNet && <th className="py-1.5 px-2 text-right font-semibold text-gray-600">Net</th>}
+                    {activeBm && <th className="py-1.5 px-2 text-right font-semibold text-gray-600">{activeBm.name}</th>}
+                    {activeBm && showGross && <th className="py-1.5 pl-2 text-right font-semibold text-gray-600">Excess (G)</th>}
+                    {activeBm && showNet && <th className="py-1.5 pl-2 text-right font-semibold text-gray-600">Excess (N)</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {calendarYears.map((r) => (
+                    <tr key={r.year} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="py-1.5 pr-3 text-gray-700 font-medium">{r.year}</td>
+                      {showGross && <td className={`py-1.5 px-2 text-right font-semibold ${r.gross > 0 ? "text-emerald-600" : r.gross < 0 ? "text-red-500" : "text-gray-600"}`}>{fmt(r.gross)}</td>}
+                      {showNet && <td className={`py-1.5 px-2 text-right font-semibold ${r.net > 0 ? "text-emerald-600" : r.net < 0 ? "text-red-500" : "text-gray-600"}`}>{fmt(r.net)}</td>}
+                      {activeBm && <td className={`py-1.5 px-2 text-right ${r.benchmark > 0 ? "text-emerald-600" : r.benchmark < 0 ? "text-red-500" : "text-gray-500"}`}>{fmt(r.benchmark)}</td>}
+                      {activeBm && showGross && <td className={`py-1.5 pl-2 text-right font-semibold ${r.excessGross > 0 ? "text-emerald-600" : r.excessGross < 0 ? "text-red-500" : "text-gray-500"}`}>{fmt(r.excessGross)}</td>}
+                      {activeBm && showNet && <td className={`py-1.5 pl-2 text-right font-semibold ${r.excessNet > 0 ? "text-emerald-600" : r.excessNet < 0 ? "text-red-500" : "text-gray-500"}`}>{fmt(r.excessNet)}</td>}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </div>
