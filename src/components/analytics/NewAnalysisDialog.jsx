@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import BenchmarkMultiSelect from "./BenchmarkMultiSelect";
 import MeasurementPeriodsSection from "./MeasurementPeriodsSection";
+import MeasurementTypeSection from "./MeasurementTypeSection";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -327,6 +328,11 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
     calendar_years: [],
     historical_periods: [],
   });
+  const [measurementType, setMeasurementType] = useState({
+    selected_types: [],
+    attributes: [],
+    view_mode: "table",
+  });
 
   const { data: products = [] } = useQuery({
     queryKey: ["products"],
@@ -449,6 +455,11 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
       calendar_years: [],
       historical_periods: [],
     });
+    setMeasurementType({
+      selected_types: [],
+      attributes: [],
+      view_mode: "table",
+    });
   };
 
   const handleSave = () => {
@@ -477,6 +488,7 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
       use_common_period: false,
       created_by_id: user?.id ?? "",
       measurement_periods: measurementPeriods,
+      measurement_type: measurementType,
     };
     saveMutation.mutate(data);
   };
@@ -863,6 +875,14 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
                 periodEnd={periodEnd}
                 measurementPeriods={measurementPeriods}
                 setMeasurementPeriods={setMeasurementPeriods}
+              />
+            )}
+
+            {/* Measurement type */}
+            {selectedProductIds.length > 0 && (periodStart || periodEnd) && (
+              <MeasurementTypeSection
+                measurementType={measurementType}
+                setMeasurementType={setMeasurementType}
               />
             )}
 

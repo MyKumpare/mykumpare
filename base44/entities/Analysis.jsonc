@@ -175,6 +175,42 @@
           }
         }
       }
+    },
+    "measurement_type": {
+      "type": "object",
+      "description": "Measurement type configuration for analytics calculations",
+      "properties": {
+        "selected_types": {
+          "type": "array",
+          "description": "Selected measurement categories",
+          "items": {
+            "type": "string",
+            "enum": [
+              "performance",
+              "risk",
+              "efficiency",
+              "valueAtRisk",
+              "population"
+            ]
+          }
+        },
+        "attributes": {
+          "type": "array",
+          "description": "Selected attributes across all categories",
+          "items": {
+            "type": "string"
+          }
+        },
+        "view_mode": {
+          "type": "string",
+          "enum": [
+            "table",
+            "chart",
+            "both"
+          ],
+          "description": "How to display the results"
+        }
+      }
     }
   },
   "required": [

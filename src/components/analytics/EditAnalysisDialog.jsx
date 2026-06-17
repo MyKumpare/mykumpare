@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { CalendarDays, RefreshCw, Link2, Trash2 } from "lucide-react";
 import BenchmarkMultiSelect from "./BenchmarkMultiSelect";
 import MeasurementPeriodsSection from "./MeasurementPeriodsSection";
+import MeasurementTypeSection from "./MeasurementTypeSection";
 
 const ym = (d) => (d ? d.slice(0, 7) : "");
 // Clean and validate MM/DD/YYYY dates
@@ -95,6 +96,11 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
     calendar_years: [],
     historical_periods: [],
   });
+  const [measurementType, setMeasurementType] = useState({
+    selected_types: [],
+    attributes: [],
+    view_mode: "table",
+  });
 
   const { data: benchmarks = [] } = useQuery({
     queryKey: ["benchmarks-all"],
@@ -146,6 +152,13 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
       include_cumulative: mp.include_cumulative || false,
       calendar_years: mp.calendar_years || [],
       historical_periods: mp.historical_periods || [],
+    });
+    // Load measurement type
+    const mt = analysis.measurement_type || {};
+    setMeasurementType({
+      selected_types: mt.selected_types || [],
+      attributes: mt.attributes || [],
+      view_mode: mt.view_mode || "table",
     });
     setConfirmDelete(false);
   }, [analysis]);
@@ -208,6 +221,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
       use_common_period: false,
       created_by_id: analysis.created_by_id,
       measurement_periods: measurementPeriods,
+      measurement_type: measurementType,
     };
     saveMutation.mutate(data);
   };
@@ -391,6 +405,14 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
               periodEnd={periodEnd}
               measurementPeriods={measurementPeriods}
               setMeasurementPeriods={setMeasurementPeriods}
+            />
+          )}
+
+          {/* Measurement type */}
+          {selectedProductIds.length > 0 && (periodStart || periodEnd) && (
+            <MeasurementTypeSection
+              measurementType={measurementType}
+              setMeasurementType={setMeasurementType}
             />
           )}
 
