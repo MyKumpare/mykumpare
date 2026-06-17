@@ -105,14 +105,15 @@ const TRAILING_PERIODS = [
 // ─── Metric definitions ────────────────────────────────────────────────────────
 
 const METRICS = [
-  { key: "ann_return",    label: "Ann. Return",         needsBm: false },
-  { key: "ann_vol",       label: "Ann. Volatility",     needsBm: false },
-  { key: "sharpe",        label: "Sharpe Ratio",        needsBm: false },
-  { key: "max_dd",        label: "Max Drawdown",        needsBm: false },
-  { key: "excess_return", label: "Excess Return",       needsBm: true },
-  { key: "tracking_err",  label: "Tracking Error",      needsBm: true },
-  { key: "info_ratio",    label: "Information Ratio",   needsBm: true },
-  { key: "hit_rate",      label: "Hit Rate (vs Bm)",    needsBm: true },
+  { key: "ann_return",        label: "Ann. Return",              needsBm: false },
+  { key: "ann_vol",           label: "Ann. Volatility",          needsBm: false },
+  { key: "sharpe",            label: "Sharpe Ratio",             needsBm: false },
+  { key: "max_dd",            label: "Max Drawdown",             needsBm: false },
+  { key: "excess_return",     label: "Excess Return",            needsBm: true },
+  { key: "cum_excess_return", label: "Cum. Excess Return",       needsBm: true },
+  { key: "tracking_err",      label: "Tracking Error",           needsBm: true },
+  { key: "info_ratio",        label: "Information Ratio",        needsBm: true },
+  { key: "hit_rate",          label: "Hit Rate (vs Bm)",         needsBm: true },
 ];
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -211,7 +212,9 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
   const [endYM, setEndYM] = useState("");
   const [returnType, setReturnType] = useState("gross"); // "gross" | "net" | "both"
   const [rollingCustom, setRollingCustom] = useState(24);
-  const [rollingPeriod, setRollingPeriod] = useState("12"); // "1","3","12","36","60","custom"
+  const [rollingPeriod, setRollingPeriod] = useState("12"); // "1","3","12","36","60","120","si","common","custom_period","custom"
+  const [rollingCustomStart, setRollingCustomStart] = useState("");
+  const [rollingCustomEnd, setRollingCustomEnd] = useState("");
   const [selectedTrailing, setSelectedTrailing] = useState(new Set(["1Y", "3Y", "5Y", "SI"]));
   const [selectedMetric, setSelectedMetric] = useState("ann_return");
 
@@ -399,15 +402,39 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
     });
   }, [filteredGross, filteredNet, filteredBm]);
 
-  const effectiveRollingMonths = rollingPeriod === "custom" ? rollingCustom : parseInt(rollingPeriod);
+  // ── Rolling window: resolve to actual months or a date-filtered slice ──
+  const siMonths = grossMonthly.length; // since inception = all months
+  const commonMonths = commonRng ? (() => {
+    const s = commonRng.start, e = commonRng.end;
+    const d1 = new Date(s + "-01"), d2 = new Date(e + "-01");
+    return Math.max(1, (d2.getFullYear() - d1.getFullYear()) * 12 + d2.getMonth() - d1.getMonth() + 1);
+  })() : 12;
+
+  const effectiveRollingMonths = rollingPeriod === "custom" ? rollingCustom
+    : rollingPeriod === "si" ? siMonths
+    : rollingPeriod === "common" ? commonMonths
+    : rollingPeriod === "custom_period" ? (() => {
+        if (!rollingCustomStart || !rollingCustomEnd) return 12;
+        const d1 = new Date(rollingCustomStart + "-01"), d2 = new Date(rollingCustomEnd + "-01");
+        return Math.max(1, (d2.getFullYear() - d1.getFullYear()) * 12 + d2.getMonth() - d1.getMonth() + 1);
+      })()
+    : parseInt(rollingPeriod);
+
+  // For custom_period, filter the source data to the chosen date range
+  const rollingSourceGross = rollingPeriod === "custom_period" && rollingCustomStart && rollingCustomEnd
+    ? filterByRange(filteredGross, rollingCustomStart, rollingCustomEnd) : filteredGross;
+  const rollingSourceNet = rollingPeriod === "custom_period" && rollingCustomStart && rollingCustomEnd
+    ? filterByRange(filteredNet, rollingCustomStart, rollingCustomEnd) : filteredNet;
+  const rollingSourceBm = rollingPeriod === "custom_period" && rollingCustomStart && rollingCustomEnd
+    ? filterByRange(filteredBm, rollingCustomStart, rollingCustomEnd) : filteredBm;
 
   // ── Rolling metric chart data (drives the main chart when a metric is selected) ──
   const rollingMetricData = useMemo(() => {
     const W = effectiveRollingMonths;
     const gMap = {}, nMap = {}, bMap = {};
-    filteredGross.forEach((m) => { gMap[ym(m.date)] = m.return_value; });
-    filteredNet.forEach((m) => { nMap[ym(m.date)] = m.return_value; });
-    filteredBm.forEach((m) => { bMap[ym(m.date)] = m.return_value; });
+    rollingSourceGross.forEach((m) => { gMap[ym(m.date)] = m.return_value; });
+    rollingSourceNet.forEach((m) => { nMap[ym(m.date)] = m.return_value; });
+    rollingSourceBm.forEach((m) => { bMap[ym(m.date)] = m.return_value; });
     const dates = [...new Set([...Object.keys(gMap), ...Object.keys(bMap)])].sort();
 
     return dates.map((d, i) => {
@@ -433,11 +460,16 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
         const ir = exAnn != null && te ? exAnn / te : null;
         const hitRate = bmRets.length ? (pRets.filter((r, idx) => bmRets[idx] != null && r > bmRets[idx]).length / Math.min(pRets.length, bmRets.length)) * 100 : null;
         switch (metric) {
-          case "ann_return":    return ann;
-          case "ann_vol":       return vol;
-          case "sharpe":        return ann != null && vol ? ann / vol : null;
-          case "max_dd":        return maxDrawdown(pRets);
-          case "excess_return": return exAnn;
+          case "ann_return":        return ann;
+          case "ann_vol":           return vol;
+          case "sharpe":            return ann != null && vol ? ann / vol : null;
+          case "max_dd":            return maxDrawdown(pRets);
+          case "excess_return":     return exAnn;
+          case "cum_excess_return": {
+            const cumP = compound(pRets) * 100;
+            const cumB = bmRets.length ? compound(bmRets) * 100 : null;
+            return cumB != null ? parseFloat((cumP - cumB).toFixed(2)) : null;
+          }
           case "tracking_err":  return te;
           case "info_ratio":    return ir;
           case "hit_rate":      return hitRate;
@@ -451,7 +483,7 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
 
       return { date: d, gross: gVal != null ? parseFloat(gVal.toFixed(2)) : null, net: nVal != null ? parseFloat(nVal.toFixed(2)) : null, bm: bVal != null ? parseFloat(bVal.toFixed(2)) : null };
     }).filter(Boolean);
-  }, [selectedMetric, effectiveRollingMonths, filteredGross, filteredNet, filteredBm]);
+  }, [selectedMetric, effectiveRollingMonths, rollingSourceGross, rollingSourceNet, rollingSourceBm]);
 
   const isLoading = loadingSeries || loadingBm;
 
@@ -743,12 +775,33 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
             </div>
           );
         };
+        const rollingWindowLabel = rollingPeriod === "si" ? "Since Inception"
+          : rollingPeriod === "common" ? "Common Period"
+          : rollingPeriod === "custom_period" && rollingCustomStart && rollingCustomEnd ? `${rollingCustomStart} → ${rollingCustomEnd}`
+          : rollingPeriod === "custom_period" ? "Custom Period"
+          : rollingPeriod === "custom" ? `${rollingCustom}M`
+          : `${effectiveRollingMonths}M`;
+
         const rollingChartControls = (
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-xs text-gray-400">Window:</span>
-            {[{ label: "1M", value: "1" }, { label: "1Q", value: "3" }, { label: "1Y", value: "12" }, { label: "3Y", value: "36" }, { label: "5Y", value: "60" }, { label: "Custom", value: "custom" }].map((opt) => (
-              <ToggleButton key={opt.value} active={rollingPeriod === opt.value} onClick={() => setRollingPeriod(opt.value)}>{opt.label}</ToggleButton>
-            ))}
+          <div className="flex flex-col gap-1.5 w-full">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-xs text-gray-400 font-medium">Window:</span>
+              {[
+                { label: "1M", value: "1" },
+                { label: "1Q", value: "3" },
+                { label: "1Y", value: "12" },
+                { label: "3Y", value: "36" },
+                { label: "5Y", value: "60" },
+                { label: "10Y", value: "120" },
+                { label: "SI", value: "si" },
+                ...(commonRng ? [{ label: "Common", value: "common" }] : []),
+                { label: "Custom #", value: "custom" },
+                { label: "Custom Period", value: "custom_period" },
+              ].map((opt) => (
+                <ToggleButton key={opt.value} active={rollingPeriod === opt.value} onClick={() => setRollingPeriod(opt.value)}>{opt.label}</ToggleButton>
+              ))}
+              <ChartTypeToggle value={rollingChartType} onChange={setRollingChartType} />
+            </div>
             {rollingPeriod === "custom" && (
               <div className="flex items-center gap-1">
                 <input type="number" min={1} max={filteredGross.length} value={rollingCustom}
@@ -757,12 +810,45 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
                 <span className="text-xs text-gray-400">months</span>
               </div>
             )}
-            <ChartTypeToggle value={rollingChartType} onChange={setRollingChartType} />
+            {rollingPeriod === "custom_period" && (
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs text-gray-400">From:</span>
+                <input type="month" value={rollingCustomStart}
+                  min={ym(grossMonthly[0]?.date)} max={rollingCustomEnd || ym(grossMonthly[grossMonthly.length - 1]?.date)}
+                  onChange={(e) => setRollingCustomStart(e.target.value)}
+                  className="text-xs border border-gray-300 rounded px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-400" />
+                <span className="text-xs text-gray-400">to</span>
+                <input type="month" value={rollingCustomEnd}
+                  min={rollingCustomStart || ym(grossMonthly[0]?.date)} max={ym(grossMonthly[grossMonthly.length - 1]?.date)}
+                  onChange={(e) => setRollingCustomEnd(e.target.value)}
+                  className="text-xs border border-gray-300 rounded px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-400" />
+                {rollingCustomStart && rollingCustomEnd && (
+                  <span className="text-[10px] px-2 py-0.5 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded font-medium">
+                    {rollingCustomStart} → {rollingCustomEnd}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         );
         return (
           <div>
-            <SectionHeader title={`Rolling ${effectiveRollingMonths}M — ${metricLabel}`} view={viewRolling} onViewChange={setViewRolling} chartControls={rollingChartControls} />
+            <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Rolling {rollingWindowLabel}</p>
+                <select
+                  value={selectedMetric}
+                  onChange={(e) => setSelectedMetric(e.target.value)}
+                  className="text-xs border border-gray-300 rounded px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-400 bg-white font-medium text-indigo-700"
+                >
+                  {METRICS.filter((m) => !m.needsBm || activeBm).map((m) => (
+                    <option key={m.key} value={m.key}>{m.label}</option>
+                  ))}
+                </select>
+              </div>
+              <ViewModeToggle value={viewRolling} onChange={setViewRolling} />
+            </div>
+            {rollingChartControls}
             {(viewRolling === "chart" || viewRolling === "both") && (
               <ResponsiveContainer width="100%" height={170}>
                 {rollingChartType === "line" ? (
@@ -775,7 +861,7 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
                     <Legend iconType="line" wrapperStyle={{ fontSize: 10 }} />
                     {showGross && <Line type="monotone" dataKey="gross" stroke="#6366f1" strokeWidth={2} dot={false} name="Gross" connectNulls />}
                     {showNet && <Line type="monotone" dataKey="net" stroke="#10b981" strokeWidth={2} dot={false} name="Net" strokeDasharray="5 3" connectNulls />}
-                    {needsBm && !["excess_return", "tracking_err", "info_ratio", "hit_rate"].includes(selectedMetric) && (
+                    {needsBm && !["excess_return", "cum_excess_return", "tracking_err", "info_ratio", "hit_rate"].includes(selectedMetric) && (
                       <Line type="monotone" dataKey="bm" stroke="#f59e0b" strokeWidth={2} dot={false} name={activeBm.name} strokeDasharray="4 3" connectNulls />
                     )}
                   </LineChart>
@@ -789,7 +875,7 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
                     <Legend iconType="square" wrapperStyle={{ fontSize: 10 }} />
                     {showGross && <Bar dataKey="gross" fill="#6366f1" name="Gross" isAnimationActive={false} radius={[2, 2, 0, 0]} />}
                     {showNet && <Bar dataKey="net" fill="#10b981" name="Net" isAnimationActive={false} radius={[2, 2, 0, 0]} />}
-                    {needsBm && !["excess_return", "tracking_err", "info_ratio", "hit_rate"].includes(selectedMetric) && (
+                    {needsBm && !["excess_return", "cum_excess_return", "tracking_err", "info_ratio", "hit_rate"].includes(selectedMetric) && (
                       <Bar dataKey="bm" fill="#f59e0b" name={activeBm.name} isAnimationActive={false} radius={[2, 2, 0, 0]} />
                     )}
                   </BarChart>
@@ -804,7 +890,7 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
                       <th className="py-1.5 pr-3 text-left font-semibold text-gray-600">Date</th>
                       {showGross && <th className="py-1.5 px-2 text-right font-semibold text-gray-600">Gross</th>}
                       {showNet && <th className="py-1.5 px-2 text-right font-semibold text-gray-600">Net</th>}
-                      {needsBm && !["excess_return", "tracking_err", "info_ratio", "hit_rate"].includes(selectedMetric) && <th className="py-1.5 px-2 text-right font-semibold text-gray-600">{activeBm.name}</th>}
+                      {needsBm && !["excess_return", "cum_excess_return", "tracking_err", "info_ratio", "hit_rate"].includes(selectedMetric) && <th className="py-1.5 px-2 text-right font-semibold text-gray-600">{activeBm.name}</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -813,7 +899,7 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
                         <td className="py-1 pr-3 text-gray-600">{r.date}</td>
                         {showGross && <td className={`py-1 px-2 text-right font-semibold ${r.gross > 0 ? "text-emerald-600" : r.gross < 0 ? "text-red-500" : "text-gray-600"}`}>{isRatioMetric ? fmtNum(r.gross) : fmt(r.gross)}</td>}
                         {showNet && <td className={`py-1 px-2 text-right font-semibold ${r.net > 0 ? "text-emerald-600" : r.net < 0 ? "text-red-500" : "text-gray-600"}`}>{isRatioMetric ? fmtNum(r.net) : fmt(r.net)}</td>}
-                        {needsBm && !["excess_return", "tracking_err", "info_ratio", "hit_rate"].includes(selectedMetric) && <td className={`py-1 px-2 text-right ${r.bm > 0 ? "text-emerald-600" : r.bm < 0 ? "text-red-500" : "text-gray-500"}`}>{isRatioMetric ? fmtNum(r.bm) : fmt(r.bm)}</td>}
+                        {needsBm && !["excess_return", "cum_excess_return", "tracking_err", "info_ratio", "hit_rate"].includes(selectedMetric) && <td className={`py-1 px-2 text-right ${r.bm > 0 ? "text-emerald-600" : r.bm < 0 ? "text-red-500" : "text-gray-500"}`}>{isRatioMetric ? fmtNum(r.bm) : fmt(r.bm)}</td>}
                       </tr>
                     ))}
                   </tbody>
