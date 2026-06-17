@@ -7,6 +7,11 @@ import { CalendarDays, RefreshCw, Link2, Trash2 } from "lucide-react";
 import BenchmarkMultiSelect from "./BenchmarkMultiSelect";
 
 const ym = (d) => (d ? d.slice(0, 7) : "");
+const toMDY = (ymStr) => {
+  if (!ymStr) return "";
+  const [year, month] = ymStr.split("-");
+  return `${month}/01/${year}`;
+};
 
 function commonPeriod(productConfigs, allProducts, allBenchmarks, allSeries) {
   const starts = [], ends = [];
@@ -70,8 +75,8 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
     setAnalysisName(analysis.name ?? "");
     setIsTemplate(analysis.is_template ?? false);
     setVisibility(analysis.visibility ?? "personal");
-    setPeriodStart(analysis.period_start ?? "");
-    setPeriodEnd(analysis.period_end ?? "");
+    setPeriodStart(analysis.period_start || "");
+    setPeriodEnd(analysis.period_end || "");
     const configs = {};
     (analysis.product_configs ?? []).forEach((cfg) => {
       // Support both old single benchmark_id and new benchmark_ids array
@@ -98,8 +103,8 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
       selectedProductIds.map((id) => ({ product_id: id, ...productConfigs[id] })),
       activeProducts, benchmarks, allSeries
     );
-    setPeriodStart(start);
-    setPeriodEnd(end);
+    setPeriodStart(toMDY(start));
+    setPeriodEnd(toMDY(end));
   };
 
   const saveMutation = useMutation({
@@ -284,11 +289,31 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
               </button>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              <input type="month" value={periodStart} onChange={(e) => setPeriodStart(e.target.value)}
-                className="text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-400" />
+              <input
+                type="text"
+                value={periodStart || ""}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (/^(\d{2})\/(\d{2})\/(\d{4})$/.test(val) || val === "") {
+                    setPeriodStart(val);
+                  }
+                }}
+                placeholder="MM/DD/YYYY"
+                className="text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-400 w-28"
+              />
               <span className="text-xs text-gray-400">to</span>
-              <input type="month" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)}
-                className="text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-400" />
+              <input
+                type="text"
+                value={periodEnd || ""}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (/^(\d{2})\/(\d{2})\/(\d{4})$/.test(val) || val === "") {
+                    setPeriodEnd(val);
+                  }
+                }}
+                placeholder="MM/DD/YYYY"
+                className="text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-400 w-28"
+              />
               {(periodStart || periodEnd) && (
                 <button type="button" onClick={() => { setPeriodStart(""); setPeriodEnd(""); }} className="text-xs text-gray-400 hover:text-indigo-600 hover:underline">Clear</button>
               )}

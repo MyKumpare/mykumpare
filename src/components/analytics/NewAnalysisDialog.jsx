@@ -16,6 +16,16 @@ const formatMDY = (ymStr) => {
   const [year, month] = ymStr.split("-");
   return `${month}/01/${year}`;
 };
+const toMDY = (ymStr) => {
+  if (!ymStr) return "";
+  const [year, month] = ymStr.split("-");
+  return `${month}/01/${year}`;
+};
+const fromMDY = (mdyStr) => {
+  if (!mdyStr) return "";
+  const [month, day, year] = mdyStr.split("/");
+  return `${year}-${month}`;
+};
 
 function commonPeriod(productConfigs, allProducts, allBenchmarks, allSeries) {
   const starts = [];
@@ -306,8 +316,8 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
         activeProducts, benchmarks, allSeries
       );
       if (start && end) {
-        setPeriodStart(start);
-        setPeriodEnd(end);
+        setPeriodStart(toMDY(start));
+        setPeriodEnd(toMDY(end));
       }
     }
   }, [selectedProductIds, productConfigs, benchmarks, allSeries]);
@@ -317,8 +327,8 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
       selectedProductIds.map((id) => ({ product_id: id, ...productConfigs[id] })),
       activeProducts, benchmarks, allSeries
     );
-    setPeriodStart(start);
-    setPeriodEnd(end);
+    setPeriodStart(toMDY(start));
+    setPeriodEnd(toMDY(end));
   };
 
   const saveMutation = useMutation({
@@ -364,8 +374,8 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
           include_clone_benchmark: cfg.include_clone_benchmark ?? false,
         };
       }),
-      period_start: periodStart,
-      period_end: periodEnd,
+      period_start: periodStart ? toMDY(periodStart) : "",
+      period_end: periodEnd ? toMDY(periodEnd) : "",
       use_common_period: false,
       created_by_id: user?.id ?? "",
     };
@@ -649,15 +659,11 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
                 <div className="flex items-center gap-2 flex-wrap">
                   <input
                     type="text"
-                    value={periodStart ? formatMDY(periodStart) : ""}
+                    value={periodStart || ""}
                     onChange={(e) => {
                       const val = e.target.value;
-                      const match = val.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-                      if (match) {
-                        const [, month, , year] = match;
-                        setPeriodStart(`${year}-${month}`);
-                      } else if (!val) {
-                        setPeriodStart("");
+                      if (/^(\d{2})\/(\d{2})\/(\d{4})$/.test(val) || val === "") {
+                        setPeriodStart(val);
                       }
                     }}
                     placeholder="MM/DD/YYYY"
@@ -666,15 +672,11 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
                   <span className="text-xs text-gray-400">to</span>
                   <input
                     type="text"
-                    value={periodEnd ? formatMDY(periodEnd) : ""}
+                    value={periodEnd || ""}
                     onChange={(e) => {
                       const val = e.target.value;
-                      const match = val.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-                      if (match) {
-                        const [, month, , year] = match;
-                        setPeriodEnd(`${year}-${month}`);
-                      } else if (!val) {
-                        setPeriodEnd("");
+                      if (/^(\d{2})\/(\d{2})\/(\d{4})$/.test(val) || val === "") {
+                        setPeriodEnd(val);
                       }
                     }}
                     placeholder="MM/DD/YYYY"
