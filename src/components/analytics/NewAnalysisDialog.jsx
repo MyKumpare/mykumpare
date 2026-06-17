@@ -279,6 +279,20 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved }) {
     });
   }, [benchmarks, selectedProductIds]);
 
+  // Auto-populate common period when products or benchmarks change
+  useEffect(() => {
+    if (selectedProductIds.length > 0 && !periodStart && !periodEnd) {
+      const { start, end } = commonPeriod(
+        selectedProductIds.map((id) => ({ product_id: id, ...productConfigs[id] })),
+        activeProducts, benchmarks, allSeries
+      );
+      if (start && end) {
+        setPeriodStart(start);
+        setPeriodEnd(end);
+      }
+    }
+  }, [selectedProductIds, productConfigs, benchmarks, allSeries]);
+
   const handleCommonPeriod = () => {
     const { start, end } = commonPeriod(
       selectedProductIds.map((id) => ({ product_id: id, ...productConfigs[id] })),
