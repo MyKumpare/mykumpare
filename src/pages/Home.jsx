@@ -22,6 +22,7 @@ import FirmsSection from "../components/firms/FirmsSection";
 import ProductsSection from "../components/products/ProductsSection";
 import ContactsSection from "../components/contacts/ContactsSection";
 import UtilitySection from "../components/utility/UtilitySection";
+import AnalyticsSection from "../components/analytics/AnalyticsSection";
 
 const FIRM_TYPES = [
   "Manager of Managers",
@@ -62,6 +63,7 @@ export default function Home() {
   const firmsRef = useRef(null);
   const productsRef = useRef(null);
   const contactsRef = useRef(null);
+  const analyticsRef = useRef(null);
   const utilityRef = useRef(null);
 
   const scrollTo = (ref) => {
@@ -295,7 +297,7 @@ export default function Home() {
     { label: "Firms", icon: Building, ref: firmsRef, color: "text-indigo-600", activeBg: "bg-indigo-50" },
     { label: "Products", icon: Package, ref: productsRef, color: "text-violet-600", activeBg: "bg-violet-50" },
     { label: "Contacts", icon: User, ref: contactsRef, color: "text-pink-600", activeBg: "bg-pink-50" },
-    { label: "Analytics", icon: LineChart, ref: null, href: "/Analytics", color: "text-cyan-600", activeBg: "bg-cyan-50" },
+    { label: "Analytics", icon: LineChart, ref: analyticsRef, color: "text-cyan-600", activeBg: "bg-cyan-50" },
     { label: "Utilities", icon: Wrench, ref: utilityRef, color: "text-gray-600", activeBg: "bg-gray-100" },
   ];
 
@@ -337,20 +339,12 @@ export default function Home() {
               )}
               {/* Desktop-only section nav (bottom nav covers mobile) */}
               <div className="hidden sm:grid grid-cols-3 gap-1">
-              {mobileNavItems.map(({ label, icon: Icon, ref, href }) => (
-                href ? (
-                  <Link key={label} to={href} title={label}
-                    className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg hover:bg-white/15 transition-colors group">
-                    <Icon className="w-4 h-4 text-white/80 group-hover:text-white" />
-                    <span className="text-[10px] text-white/70 group-hover:text-white font-medium">{label}</span>
-                  </Link>
-                ) : (
-                  <button key={label} onClick={() => scrollTo(ref)} title={label}
-                    className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg hover:bg-white/15 transition-colors group">
-                    <Icon className="w-4 h-4 text-white/80 group-hover:text-white" />
-                    <span className="text-[10px] text-white/70 group-hover:text-white font-medium">{label}</span>
-                  </button>
-                )
+              {mobileNavItems.map(({ label, icon: Icon, ref }) => (
+                <button key={label} onClick={() => scrollTo(ref)} title={label}
+                  className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg hover:bg-white/15 transition-colors group">
+                  <Icon className="w-4 h-4 text-white/80 group-hover:text-white" />
+                  <span className="text-[10px] text-white/70 group-hover:text-white font-medium">{label}</span>
+                </button>
               ))}
               </div>
             </div>
@@ -458,6 +452,10 @@ export default function Home() {
           onAddContact={() => setAddContactOpen(true)}
         />
 
+        {/* Analytics section */}
+        <div ref={analyticsRef} />
+        <AnalyticsSection />
+
         {/* Utility section */}
         <div ref={utilityRef} />
         <UtilitySection deletedCount={deletedCount} />
@@ -471,20 +469,12 @@ export default function Home() {
         style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}
       >
         <div className="grid grid-cols-6">
-          {mobileNavItems.map(({ label, icon: Icon, color, activeBg, ref, href }) => (
-            href ? (
-              <Link key={label} to={href}
-                className={`flex flex-col items-center gap-1 py-2.5 px-1 transition-colors`}>
-                <Icon className={`w-5 h-5 ${color}`} />
-                <span className={`text-[10px] font-medium ${color}`}>{label}</span>
-              </Link>
-            ) : (
-              <button key={label} onClick={() => scrollTo(ref)}
-                className={`flex flex-col items-center gap-1 py-2.5 px-1 transition-colors`}>
-                <Icon className={`w-5 h-5 ${color}`} />
-                <span className={`text-[10px] font-medium ${color}`}>{label}</span>
-              </button>
-            )
+          {mobileNavItems.map(({ label, icon: Icon, color, ref }) => (
+            <button key={label} onClick={() => scrollTo(ref)}
+              className="flex flex-col items-center gap-1 py-2.5 px-1 transition-colors">
+              <Icon className={`w-5 h-5 ${color}`} />
+              <span className={`text-[10px] font-medium ${color}`}>{label}</span>
+            </button>
           ))}
         </div>
       </nav>
