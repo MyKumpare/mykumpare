@@ -58,13 +58,7 @@ export default function MeasurementPeriodsSection({
     }
   }, [measurementPeriods]);
 
-  const toggleHistoricalPeriod = (period) => {
-    const current = measurementPeriods?.historical_periods || [];
-    const updated = current.includes(period)
-      ? current.filter((p) => p !== period)
-      : [...current, period];
-    setMeasurementPeriods((prev) => ({ ...prev, historical_periods: updated }));
-  };
+
 
   // Calculate available calendar years based on common period
   const availableCalendarYears = React.useMemo(() => {
@@ -429,7 +423,13 @@ export default function MeasurementPeriodsSection({
                 <button
                   key={period}
                   type="button"
-                  onClick={() => toggleHistoricalPeriod(period)}
+                  onClick={() => {
+                    const current = measurementPeriods?.historical_periods || [];
+                    const updated = current.includes(period)
+                      ? current.filter((p) => p !== period)
+                      : [...current, period];
+                    setMeasurementPeriods((prev) => ({ ...prev, historical_periods: updated }));
+                  }}
                   className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
                     (measurementPeriods?.historical_periods || []).includes(period)
                       ? "bg-indigo-600 text-white border-indigo-600"
