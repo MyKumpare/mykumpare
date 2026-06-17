@@ -4,16 +4,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import {
-  Search, X, ChevronDown, BarChart2, LayoutList, Link2, CalendarDays, RefreshCw
+  Search, X, ChevronDown, BarChart2, LayoutList, Link2, CalendarDays, RefreshCw, Play, CheckCircle
 } from "lucide-react";
 import BenchmarkMultiSelect from "./BenchmarkMultiSelect";
-import MeasurementPeriodsSection from "./MeasurementPeriodsSection";
-import MeasurementTypeSection from "./MeasurementTypeSection";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 const ym = (d) => (d ? d.slice(0, 7) : "");
-// Check if date is already in MM/DD/YYYY format
 const isMDYFormat = (str) => str && typeof str === "string" && /^\d{2}\/\d{2}\/\d{4}$/.test(str);
 const formatMDY = (ymStr) => {
   if (!ymStr) return "";
@@ -29,12 +28,6 @@ const toMonthEnd = (ymStr) => {
   const lastDay = new Date(year, month, 0).getDate();
   return `${String(month).padStart(2, "0")}/${String(lastDay).padStart(2, "0")}/${year}`;
 };
-const fromMDY = (mdyStr) => {
-  if (!mdyStr) return "";
-  const [month, day, year] = mdyStr.split("/");
-  return `${year}-${month}`;
-};
-// Get prior month-end date from a YYYY-MM string
 const getPriorMonthEnd = (ymStr) => {
   if (!ymStr) return "";
   if (isMDYFormat(ymStr)) return ymStr;
@@ -48,22 +41,16 @@ const getPriorMonthEnd = (ymStr) => {
   const lastDay = new Date(priorYear, priorMonth, 0).getDate();
   return `${String(priorMonth).padStart(2, "0")}/${String(lastDay).padStart(2, "0")}/${priorYear}`;
 };
-
-// Clean and validate MM/DD/YYYY dates
 const cleanDate = (dateStr) => {
   if (!dateStr) return "";
-  // Fix corrupted dates like "undefined/01/09/30/2008"
   if (dateStr.includes("undefined")) {
     const parts = dateStr.split("/").filter(p => p !== "undefined" && p !== "");
-    if (parts.length === 3) {
-      return parts.join("/");
-    }
+    if (parts.length === 3) return parts.join("/");
     return "";
   }
   return dateStr;
 };
 
-// Tooltip component for date range
 const DateRangeTooltip = ({ period, children }) => {
   if (!period) return children;
   return (
@@ -94,6 +81,24 @@ function commonPeriod(productConfigs, allProducts, allBenchmarks, allSeries) {
   return { start: starts.sort().pop(), end: ends.sort()[0] };
 }
 
+// Measurement type categories
+const MEASUREMENT_CATEGORIES = [
+  { value: "performance", label: "Performance" },
+  { value: "risk", label: "Risk" },
+  { value: "efficiency", label: "Efficiency" },
+  { value: "valueAtRisk", label: "Value at Risk" },
+  { value: "population", label: "Population" },
+];
+
+// Measurement periods
+const MEASUREMENT_PERIODS = [
+  { value: "trailing", label: "Trailing Period" },
+  { value: "rolling", label: "Rolling Period" },
+  { value: "cumulative", label: "Cumulative Period" },
+  { value: "calendar", label: "Calendar Year Period" },
+  { value: "historical", label: "Historical Return Period" },
+];
+
 // ── ProductSearchDropdown ─────────────────────────────────────────────────────
 
 function ProductSearchDropdown({ products, selectedIds, onToggle, multi, allSeries }) {
@@ -122,7 +127,6 @@ function ProductSearchDropdown({ products, selectedIds, onToggle, multi, allSeri
       (p.firm_name || "").toLowerCase().includes(search.toLowerCase())
   );
 
-  // Helper to get period for a product
   const getProductPeriod = (productId) => {
     const series = allSeries.filter((s) => s.product_id === productId);
     const mr = series.flatMap((s) => s.monthly_returns ?? []).sort((a, b) => a.date.localeCompare(b.date));
@@ -132,13 +136,9 @@ function ProductSearchDropdown({ products, selectedIds, onToggle, multi, allSeri
 
   const selectedProduct = products.find((p) => p.id === selectedIds[0]);
   const selectedProductPeriod = selectedProduct ? getProductPeriod(selectedProduct.id) : null;
-  const label = multi
-    ? selectedIds.length === 0 ? "Choose products…" : `${selectedIds.length} product${selectedIds.length > 1 ? "s" : ""} selected`
-    : selectedIds.length === 0 ? "Choose a product…" : (selectedProduct?.name ?? "");
 
   return (
     <div className="border border-gray-200 rounded-xl overflow-hidden">
-      {/* Selected product display (single mode) */}
       {!multi && selectedIds.length === 1 && selectedProduct && (
         <div className="px-3 py-2.5 border-b border-gray-100 bg-white">
           <div className="flex items-center justify-between gap-2">
@@ -162,7 +162,6 @@ function ProductSearchDropdown({ products, selectedIds, onToggle, multi, allSeri
           {selectedProduct.firm_name && <p className="text-xs text-gray-500 mt-0.5">{selectedProduct.firm_name}</p>}
         </div>
       )}
-      {/* Search box always visible */}
       <div className="p-2 border-b border-gray-100 bg-gray-50">
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
@@ -174,7 +173,6 @@ function ProductSearchDropdown({ products, selectedIds, onToggle, multi, allSeri
           />
         </div>
       </div>
-      {/* Product list — no max-height cap, shows everything */}
       <div className="divide-y divide-gray-100">
         {filtered.length === 0 ? (
           <p className="px-3 py-4 text-xs text-gray-400 text-center">No products found</p>
@@ -216,73 +214,6 @@ function ProductSearchDropdown({ products, selectedIds, onToggle, multi, allSeri
   );
 }
 
-// ── BenchmarkDropdown ─────────────────────────────────────────────────────────
-
-function BenchmarkDropdown({ benchmarks, value, onChange }) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const ref = useRef(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, [open]);
-
-  const filtered = benchmarks.filter((b) =>
-    b.name.toLowerCase().includes(search.toLowerCase())
-  );
-  const selected = benchmarks.find((b) => b.id === value);
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => { setOpen((v) => !v); setSearch(""); }}
-        className="w-full flex items-center justify-between gap-2 px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs hover:border-indigo-400 bg-white transition-colors"
-      >
-        <span className={!selected ? "text-gray-400" : "text-gray-800 truncate"}>{selected ? selected.name : "None"}</span>
-        <ChevronDown className={`w-3 h-3 text-gray-400 flex-shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
-      </button>
-      {open && (
-        <div className="absolute z-[9999] top-full mt-1 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden min-w-[200px]">
-          <div className="p-2 border-b border-gray-100">
-            <input
-              autoFocus
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search benchmarks…"
-              className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-400"
-            />
-          </div>
-          <div className="max-h-52 overflow-y-auto">
-            <button
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => { onChange(null); setOpen(false); }}
-              className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 ${!value ? "text-indigo-600 font-semibold bg-indigo-50" : "text-gray-500"}`}
-            >
-              None
-            </button>
-            {filtered.map((b) => (
-              <button
-                key={b.id}
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => { onChange(b.id); setOpen(false); }}
-                className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 ${b.id === value ? "text-indigo-600 font-semibold bg-indigo-50" : "text-gray-700"}`}
-              >
-                {b.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ── ToggleButton ──────────────────────────────────────────────────────────────
 
 function TogBtn({ active, onClick, children }) {
@@ -303,36 +234,28 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
   const { user } = useAuth();
   const qc = useQueryClient();
 
-  // ── Step: "meta" → "config"
-  const [step, setStep] = useState("meta"); // "meta" | "config"
+  // Steps: "meta" → "products" → "period" → "measurement_type" → "measurement_periods" → "review" → "saved"
+  const [step, setStep] = useState("meta");
+  const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0);
+  const [measurementCategories, setMeasurementCategories] = useState([]); // [{ category, periods, attributes }]
 
-  // ── Meta
+  // Meta
   const [analysisName, setAnalysisName] = useState("");
   const [isTemplate, setIsTemplate] = useState(false);
   const [visibility, setVisibility] = useState("personal");
-  const [analysisType, setAnalysisType] = useState(null); // "single" | "multiple"
+  const [analysisType, setAnalysisType] = useState(null);
 
-  // ── Config
+  // Products
   const [selectedProductIds, setSelectedProductIds] = useState([]);
-  const [productConfigs, setProductConfigs] = useState({}); // { [productId]: { benchmark_id, return_type, include_clone_product, include_clone_benchmark } }
+  const [productConfigs, setProductConfigs] = useState({});
+
+  // Period
   const [periodStart, setPeriodStart] = useState("");
   const [periodEnd, setPeriodEnd] = useState("");
-  const [measurementPeriods, setMeasurementPeriods] = useState({
-    trailing_periods: ["1M", "3M", "1Y", "3Y", "5Y", "7Y", "10Y", "since_inception"],
-    trailing_custom_start: "",
-    trailing_custom_end: "",
-    rolling_periods: [],
-    rolling_custom_start: "",
-    rolling_custom_end: "",
-    include_cumulative: false,
-    calendar_years: [],
-    historical_periods: [],
-  });
-  const [measurementType, setMeasurementType] = useState({
-    selected_types: [],
-    attributes: [],
-    view_mode: "table",
-  });
+
+  // Current measurement type selection
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedPeriods, setSelectedPeriods] = useState([]);
 
   const { data: products = [] } = useQuery({
     queryKey: ["products"],
@@ -350,16 +273,12 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
 
   const activeProducts = products.filter((p) => !p.deleted_at);
 
-  // When a product is selected, seed its config with benchmarks from product setup
   const addProduct = (id) => {
     setSelectedProductIds((prev) => {
       if (prev.includes(id)) return prev;
       const product = activeProducts.find((p) => p.id === id);
       const productBms = product?.inv_desc_benchmarks ?? [];
-      // Default: pre-select all benchmarks defined on the product
-      const defaultBmIds = productBms
-        .map((b) => (typeof b === "object" ? b.id : b))
-        .filter(Boolean);
+      const defaultBmIds = productBms.map((b) => (typeof b === "object" ? b.id : b)).filter(Boolean);
       setProductConfigs((prev2) => ({
         ...prev2,
         [id]: {
@@ -387,7 +306,6 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
     setProductConfigs((prev) => ({ ...prev, [productId]: { ...prev[productId], [key]: value } }));
   };
 
-  // Also seed when benchmarks load after product is added
   useEffect(() => {
     selectedProductIds.forEach((id) => {
       if (!productConfigs[id]?.benchmark_ids?.length) {
@@ -401,7 +319,6 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
     });
   }, [benchmarks, selectedProductIds]);
 
-  // Auto-populate common period when products or benchmarks change
   useEffect(() => {
     if (selectedProductIds.length > 0 && !periodStart && !periodEnd) {
       const { start, end } = commonPeriod(
@@ -428,14 +345,15 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
     mutationFn: (data) => base44.entities.Analysis.create(data),
     onSuccess: (saved) => {
       qc.invalidateQueries({ queryKey: ["analyses"] });
-      onOpenChange(false);
       if (onSaved) onSaved(saved);
-      resetForm();
+      setStep("saved");
     },
   });
 
   const resetForm = () => {
     setStep("meta");
+    setCurrentCategoryIndex(0);
+    setMeasurementCategories([]);
     setAnalysisName("");
     setIsTemplate(false);
     setVisibility("personal");
@@ -444,22 +362,8 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
     setProductConfigs({});
     setPeriodStart("");
     setPeriodEnd("");
-    setMeasurementPeriods({
-      trailing_periods: [],
-      trailing_custom_start: "",
-      trailing_custom_end: "",
-      rolling_periods: [],
-      rolling_custom_start: "",
-      rolling_custom_end: "",
-      include_cumulative: false,
-      calendar_years: [],
-      historical_periods: [],
-    });
-    setMeasurementType({
-      selected_types: [],
-      attributes: [],
-      view_mode: "table",
-    });
+    setSelectedCategory("");
+    setSelectedPeriods([]);
   };
 
   const handleSave = () => {
@@ -487,14 +391,42 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
       period_end: cleanDate(periodEnd) || "",
       use_common_period: false,
       created_by_id: user?.id ?? "",
-      measurement_periods: measurementPeriods,
-      measurement_type: measurementType,
+      measurement_periods: {
+        trailing_periods: [],
+        trailing_custom_start: "",
+        trailing_custom_end: "",
+        rolling_periods: [],
+        rolling_custom_start: "",
+        rolling_custom_end: "",
+        include_cumulative: false,
+        calendar_years: [],
+        historical_periods: [],
+      },
+      measurement_type: {
+        selected_types: measurementCategories.map(c => c.category),
+        attributes: [],
+        view_mode: "chart",
+        categories_config: measurementCategories,
+      },
     };
     saveMutation.mutate(data);
   };
 
-  const canProceed = analysisName.trim() && analysisType;
-  const canSave = selectedProductIds.length > 0;
+  const addMeasurementCategory = () => {
+    setMeasurementCategories((prev) => [
+      ...prev,
+      { category: selectedCategory, periods: selectedPeriods, attributes: [] },
+    ]);
+    setSelectedCategory("");
+    setSelectedPeriods([]);
+    setCurrentCategoryIndex((prev) => prev + 1);
+  };
+
+  const canProceedMeta = analysisName.trim() && analysisType;
+  const canProceedProducts = selectedProductIds.length > 0;
+  const canProceedPeriod = periodStart && periodEnd;
+  const canProceedMeasurementType = selectedCategory;
+  const canProceedMeasurementPeriods = selectedPeriods.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) resetForm(); onOpenChange(o); }}>
@@ -510,7 +442,6 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
 
         {step === "meta" && (
           <div className="space-y-5 mt-1">
-            {/* Name */}
             <div>
               <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Analysis Name</label>
               <input
@@ -521,8 +452,6 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
               />
             </div>
-
-            {/* Template */}
             <div>
               <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-2">Analysis Mode</label>
               <div className="grid grid-cols-2 gap-3">
@@ -542,8 +471,6 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
                 ))}
               </div>
             </div>
-
-            {/* Visibility */}
             <div>
               <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-2">Visibility</label>
               <div className="grid grid-cols-2 gap-3">
@@ -563,8 +490,6 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
                 ))}
               </div>
             </div>
-
-            {/* Analysis type */}
             <div>
               <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-2">Analysis Type</label>
               <div className="grid grid-cols-2 gap-3">
@@ -587,12 +512,11 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
                 ))}
               </div>
             </div>
-
             <div className="flex justify-end pt-1">
               <button
                 type="button"
-                onClick={() => setStep("config")}
-                disabled={!canProceed}
+                onClick={() => setStep("products")}
+                disabled={!canProceedMeta}
                 className="px-5 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg disabled:opacity-40 hover:bg-indigo-700 transition-colors"
               >
                 Next →
@@ -601,12 +525,9 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
           </div>
         )}
 
-        {step === "config" && (
+        {step === "products" && (
           <div className="space-y-6 mt-1">
-            {/* Back */}
             <button type="button" onClick={() => setStep("meta")} className="text-xs text-indigo-600 hover:underline">← Back</button>
-
-            {/* Product selection */}
             <div>
               <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-2">
                 {analysisType === "single" ? "Select Product" : "Select Products"}
@@ -621,281 +542,238 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
                 allSeries={allSeries}
               />
             </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <button type="button" onClick={() => setStep("meta")} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">Cancel</button>
+              <button
+                type="button"
+                onClick={() => setStep("period")}
+                disabled={!canProceedProducts}
+                className="px-5 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg disabled:opacity-40 hover:bg-indigo-700 transition-colors"
+              >
+                Next →
+              </button>
+            </div>
+          </div>
+        )}
 
-            {/* Per-product configuration */}
-            {selectedProductIds.length > 0 && (
-              <div className="space-y-4">
-                {selectedProductIds.map((id) => {
-                  const product = activeProducts.find((p) => p.id === id);
-                  const cfg = productConfigs[id] ?? {};
-                  return (
-                    <div key={id} className="border border-gray-200 rounded-xl p-4 space-y-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            {(() => {
-                              const series = allSeries.filter((s) => s.product_id === id);
-                              const mr = series.flatMap((s) => s.monthly_returns ?? []).sort((a, b) => a.date.localeCompare(b.date));
-                              const period = mr.length ? { start: ym(mr[0].date), end: ym(mr[mr.length - 1].date) } : null;
-                              return (
-                                <DateRangeTooltip period={period}>
-                                  <p
-                                    className="text-sm font-semibold text-gray-800 hover:text-indigo-600 hover:underline cursor-pointer"
-                                    onClick={() => onProductClick && onProductClick(product)}
-                                  >
-                                    {product?.name}
-                                  </p>
-                                </DateRangeTooltip>
-                              );
-                            })()}
-                            {(() => {
-                              const series = allSeries.filter((s) => s.product_id === id);
-                              const mr = series.flatMap((s) => s.monthly_returns ?? []).sort((a, b) => a.date.localeCompare(b.date));
-                              const period = mr.length ? { start: ym(mr[0].date), end: ym(mr[mr.length - 1].date) } : null;
-                              return period ? (
-                                <span className="text-[10px] text-gray-400 whitespace-nowrap">
-                                  {formatMDY(period.start)} – {formatMDY(period.end)}
-                                </span>
-                              ) : null;
-                            })()}
-                          </div>
-                          {product?.firm_name && <p className="text-xs text-gray-500">{product.firm_name}</p>}
-                        </div>
-                        {analysisType === "multiple" && (
-                          <button type="button" onClick={() => removeProduct(id)} className="text-gray-400 hover:text-red-500">
-                            <X className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Benchmarks */}
-                      <div className="grid grid-cols-[auto_1fr_auto] items-start gap-2">
-                        <label className="text-xs text-gray-500 font-medium whitespace-nowrap mt-1.5">Benchmarks</label>
-                        <BenchmarkMultiSelect
-                          benchmarks={benchmarks}
-                          selectedIds={cfg.benchmark_ids ?? []}
-                          onChange={(ids) => updateConfig(id, "benchmark_ids", ids)}
-                          productBenchmarks={product?.inv_desc_benchmarks ?? []}
-                        />
-                        {(() => {
-                          const bmIds = cfg.benchmark_ids ?? [];
-                          if (bmIds.length === 0) return null;
-                          const bmPeriods = bmIds.map(bmId => {
-                            const bm = benchmarks.find(b => b.id === bmId);
-                            const mr = (bm?.monthly_returns ?? []).sort((a, b) => a.date.localeCompare(b.date));
-                            return mr.length ? { start: ym(mr[0].date), end: ym(mr[mr.length - 1].date) } : null;
-                          }).filter(Boolean);
-                          if (bmPeriods.length === 0) return null;
-                          const earliest = bmPeriods.map(p => p.start).sort().pop();
-                          const latest = bmPeriods.map(p => p.end).sort()[0];
-                          const combinedPeriod = { start: earliest, end: latest };
-                          return (
-                            <DateRangeTooltip period={combinedPeriod}>
-                              <span
-                                className="text-[10px] text-gray-400 whitespace-nowrap mt-1.5 cursor-help hover:text-indigo-600 hover:underline"
-                                onClick={() => onBenchmarkClick && onBenchmarkClick(bmIds[0])}
-                              >
-                                {formatMDY(earliest)} – {formatMDY(latest)}
-                              </span>
-                            </DateRangeTooltip>
-                          );
-                        })()}
-                      </div>
-
-                      {/* Return type */}
-                      <div className="grid grid-cols-[auto_1fr] items-center gap-2">
-                        <label className="text-xs text-gray-500 font-medium whitespace-nowrap">Return Type</label>
-                        <div className="flex gap-1">
-                          {["gross", "net", "both"].map((rt) => (
-                            <TogBtn key={rt} active={cfg.return_type === rt} onClick={() => updateConfig(id, "return_type", rt)}>
-                              {rt.charAt(0).toUpperCase() + rt.slice(1)}
-                            </TogBtn>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Clone returns — only relevant for gross or net, not "both" */}
-                      {cfg.return_type !== "both" && (
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                          <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={cfg.include_clone_product ?? false}
-                              onChange={(e) => updateConfig(id, "include_clone_product", e.target.checked)}
-                              className="rounded border-gray-300 text-indigo-600"
-                            />
-                            {(() => {
-                              const series = allSeries.filter((s) => s.product_id === id);
-                              const mr = series.flatMap((s) => s.monthly_returns ?? []).sort((a, b) => a.date.localeCompare(b.date));
-                              const period = mr.length ? { start: ym(mr[0].date), end: ym(mr[mr.length - 1].date) } : null;
-                              return (
-                                <DateRangeTooltip period={period}>
-                                  <span
-                                    className="cursor-help hover:text-indigo-600 hover:underline"
-                                    onClick={() => onProductClick && onProductClick(product)}
-                                  >
-                                    Include clone return (product)
-                                  </span>
-                                </DateRangeTooltip>
-                              );
-                            })()}
-                          </label>
-                          {(() => {
-                            const series = allSeries.filter((s) => s.product_id === id);
-                            const mr = series.flatMap((s) => s.monthly_returns ?? []).sort((a, b) => a.date.localeCompare(b.date));
-                            const period = mr.length ? { start: ym(mr[0].date), end: ym(mr[mr.length - 1].date) } : null;
-                            return period ? (
-                              <span className="text-[10px] text-gray-400 whitespace-nowrap">
-                                {formatMDY(period.start)} – {formatMDY(period.end)}
-                              </span>
-                            ) : null;
-                          })()}
-                          {(cfg.benchmark_ids ?? []).length > 0 && (
-                            <>
-                              <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={cfg.include_clone_benchmark ?? false}
-                                  onChange={(e) => updateConfig(id, "include_clone_benchmark", e.target.checked)}
-                                  className="rounded border-gray-300 text-indigo-600"
-                                />
-                                {(() => {
-                                  const bmIds = cfg.benchmark_ids ?? [];
-                                  const bmPeriods = bmIds.map(bmId => {
-                                    const bm = benchmarks.find(b => b.id === bmId);
-                                    const mr = (bm?.monthly_returns ?? []).sort((a, b) => a.date.localeCompare(b.date));
-                                    return mr.length ? { start: ym(mr[0].date), end: ym(mr[mr.length - 1].date) } : null;
-                                  }).filter(Boolean);
-                                  if (bmPeriods.length === 0) return null;
-                                  const earliest = bmPeriods.map(p => p.start).sort().pop();
-                                  const latest = bmPeriods.map(p => p.end).sort()[0];
-                                  const combinedPeriod = { start: earliest, end: latest };
-                                  return (
-                                    <DateRangeTooltip period={combinedPeriod}>
-                                      <span
-                                        className="cursor-help hover:text-indigo-600 hover:underline"
-                                        onClick={() => onBenchmarkClick && onBenchmarkClick(bmIds[0])}
-                                      >
-                                        Include clone return (benchmark)
-                                      </span>
-                                    </DateRangeTooltip>
-                                  );
-                                })()}
-                              </label>
-                              {(() => {
-                                const bmIds = cfg.benchmark_ids ?? [];
-                                const bmPeriods = bmIds.map(bmId => {
-                                  const bm = benchmarks.find(b => b.id === bmId);
-                                  const mr = (bm?.monthly_returns ?? []).sort((a, b) => a.date.localeCompare(b.date));
-                                  return mr.length ? { start: ym(mr[0].date), end: ym(mr[mr.length - 1].date) } : null;
-                                }).filter(Boolean);
-                                if (bmPeriods.length === 0) return null;
-                                const earliest = bmPeriods.map(p => p.start).sort().pop();
-                                const latest = bmPeriods.map(p => p.end).sort()[0];
-                                return (
-                                  <span className="text-[10px] text-gray-400 whitespace-nowrap">
-                                    {formatMDY(earliest)} – {formatMDY(latest)}
-                                  </span>
-                                );
-                              })()}
-                            </>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+        {step === "period" && (
+          <div className="space-y-6 mt-1">
+            <button type="button" onClick={() => setStep("products")} className="text-xs text-indigo-600 hover:underline">← Back</button>
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <CalendarDays className="w-3.5 h-3.5 text-gray-500" />
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Analysis Period</label>
+                <button
+                  type="button"
+                  onClick={handleCommonPeriod}
+                  title="Set to common period across all selected products & benchmarks"
+                  className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  Common Period
+                </button>
               </div>
-            )}
-
-            {/* Analysis period */}
-            {selectedProductIds.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <CalendarDays className="w-3.5 h-3.5 text-gray-500" />
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Analysis Period</label>
-                  <button
-                    type="button"
-                    onClick={handleCommonPeriod}
-                    title="Set to common period across all selected products & benchmarks"
-                    className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
-                  >
-                    <RefreshCw className="w-3 h-3" />
-                    Common Period
-                  </button>
+              <div className="flex items-start gap-4 flex-wrap">
+                <div>
+                  <input
+                    type="text"
+                    value={periodStart || ""}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (/^(\d{2})\/(\d{2})\/(\d{4})$/.test(val) || val === "") {
+                        setPeriodStart(val);
+                      }
+                    }}
+                    placeholder="MM/DD/YYYY"
+                    className="text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-400 w-28"
+                  />
+                  <p className="text-xs text-gray-500 mt-1 font-medium">Start Date</p>
                 </div>
-                <div className="flex items-start gap-4 flex-wrap">
-                  <div>
-                    <input
-                      type="text"
-                      value={periodStart || ""}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (/^(\d{2})\/(\d{2})\/(\d{4})$/.test(val) || val === "") {
-                          setPeriodStart(val);
-                        }
-                      }}
-                      placeholder="MM/DD/YYYY"
-                      className="text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-400 w-28"
-                    />
-                    <p className="text-xs text-gray-500 mt-1 font-medium">Start Date</p>
-                  </div>
-                  <span className="text-xs text-gray-400 mt-2">to</span>
-                  <div>
-                    <input
-                      type="text"
-                      value={periodEnd || ""}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (/^(\d{2})\/(\d{2})\/(\d{4})$/.test(val) || val === "") {
-                          setPeriodEnd(val);
-                        }
-                      }}
-                      placeholder="MM/DD/YYYY"
-                      className="text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-400 w-28"
-                    />
-                    <p className="text-xs text-gray-500 mt-1 font-medium">End Date</p>
-                  </div>
-                  {(periodStart || periodEnd) && (
-                    <button type="button" onClick={() => { setPeriodStart(""); setPeriodEnd(""); }} className="text-xs text-gray-400 hover:text-indigo-600 hover:underline mt-2">Clear</button>
-                  )}
+                <span className="text-xs text-gray-400 mt-2">to</span>
+                <div>
+                  <input
+                    type="text"
+                    value={periodEnd || ""}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (/^(\d{2})\/(\d{2})\/(\d{4})$/.test(val) || val === "") {
+                        setPeriodEnd(val);
+                      }
+                    }}
+                    placeholder="MM/DD/YYYY"
+                    className="text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-400 w-28"
+                  />
+                  <p className="text-xs text-gray-500 mt-1 font-medium">End Date</p>
                 </div>
-                {!periodStart && !periodEnd && (
-                  <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
-                    <Link2 className="w-3 h-3" /> Defaulting to common period — click "Common Period" to set automatically.
-                  </p>
+                {(periodStart || periodEnd) && (
+                  <button type="button" onClick={() => { setPeriodStart(""); setPeriodEnd(""); }} className="text-xs text-gray-400 hover:text-indigo-600 hover:underline mt-2">Clear</button>
                 )}
               </div>
-            )}
-
-            {/* Measurement periods */}
-            {selectedProductIds.length > 0 && (periodStart || periodEnd) && (
-              <MeasurementPeriodsSection
-                periodStart={periodStart}
-                periodEnd={periodEnd}
-                measurementPeriods={measurementPeriods}
-                setMeasurementPeriods={setMeasurementPeriods}
-              />
-            )}
-
-            {/* Measurement type */}
-            {selectedProductIds.length > 0 && (periodStart || periodEnd) && (
-              <MeasurementTypeSection
-                measurementType={measurementType}
-                setMeasurementType={setMeasurementType}
-              />
-            )}
-
-            {/* Save */}
+            </div>
             <div className="flex justify-end gap-2 pt-1">
-              <button type="button" onClick={() => { resetForm(); onOpenChange(false); }} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">Cancel</button>
+              <button type="button" onClick={() => setStep("products")} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">Cancel</button>
+              <button
+                type="button"
+                onClick={() => setStep("measurement_type")}
+                disabled={!canProceedPeriod}
+                className="px-5 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg disabled:opacity-40 hover:bg-indigo-700 transition-colors"
+              >
+                Next →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === "measurement_type" && (
+          <div className="space-y-6 mt-1">
+            <button type="button" onClick={() => setStep("period")} className="text-xs text-indigo-600 hover:underline">← Back</button>
+            <div>
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-2">Select Measurement Category</label>
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Choose a measurement category..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {MEASUREMENT_CATEGORIES.map((cat) => (
+                    <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {measurementCategories.length > 0 && (
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Selected Categories</label>
+                {measurementCategories.map((cat, idx) => (
+                  <div key={idx} className="flex items-center gap-2 text-sm text-gray-700 bg-gray-50 px-3 py-2 rounded-lg">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <span>{MEASUREMENT_CATEGORIES.find(c => c.value === cat.category)?.label}</span>
+                    <span className="text-gray-400">({cat.periods.length} periods)</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex justify-end gap-2 pt-1">
+              <button type="button" onClick={() => setStep("period")} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">Cancel</button>
+              {measurementCategories.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setStep("review")}
+                  className="px-5 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  Finish & Review
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setStep("measurement_periods")}
+                disabled={!canProceedMeasurementType}
+                className="px-5 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg disabled:opacity-40 hover:bg-indigo-700 transition-colors"
+              >
+                Next →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === "measurement_periods" && (
+          <div className="space-y-6 mt-1">
+            <button type="button" onClick={() => setStep("measurement_type")} className="text-xs text-indigo-600 hover:underline">← Back</button>
+            <div>
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-2">
+                Select Periods for {MEASUREMENT_CATEGORIES.find(c => c.value === selectedCategory)?.label}
+              </label>
+              <div className="space-y-3">
+                {MEASUREMENT_PERIODS.map((period) => (
+                  <div key={period.value} className="flex items-center gap-2">
+                    <Checkbox
+                      id={period.value}
+                      checked={selectedPeriods.includes(period.value)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedPeriods((prev) => [...prev, period.value]);
+                        } else {
+                          setSelectedPeriods((prev) => prev.filter((p) => p !== period.value));
+                        }
+                      }}
+                    />
+                    <label htmlFor={period.value} className="text-sm text-gray-700 cursor-pointer">{period.label}</label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <button type="button" onClick={() => setStep("measurement_type")} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">Cancel</button>
+              <button
+                type="button"
+                onClick={() => {
+                  addMeasurementCategory();
+                  setStep("measurement_type");
+                }}
+                disabled={!canProceedMeasurementPeriods}
+                className="px-5 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg disabled:opacity-40 hover:bg-indigo-700 transition-colors"
+              >
+                {measurementCategories.length > 0 ? "Add Another Category" : "Continue"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === "review" && (
+          <div className="space-y-6 mt-1">
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Analysis Summary</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Name:</span>
+                  <span className="text-gray-800 font-medium">{analysisName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Products:</span>
+                  <span className="text-gray-800 font-medium">{selectedProductIds.length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Period:</span>
+                  <span className="text-gray-800 font-medium">{periodStart} to {periodEnd}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Measurement Categories:</span>
+                  <span className="text-gray-800 font-medium">{measurementCategories.length}</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <button type="button" onClick={() => setStep("measurement_type")} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">← Back</button>
               <button
                 type="button"
                 onClick={handleSave}
-                disabled={!canSave || saveMutation.isPending}
+                disabled={saveMutation.isPending}
                 className="px-5 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg disabled:opacity-40 hover:bg-indigo-700 transition-colors"
               >
-                {saveMutation.isPending ? "Saving…" : isTemplate ? "Save Template" : "Save Analysis"}
+                {saveMutation.isPending ? "Saving..." : "Save Analysis"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === "saved" && (
+          <div className="space-y-6 mt-1 text-center py-8">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+              <CheckCircle className="w-8 h-8 text-green-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-800">Analysis Saved Successfully!</h3>
+            <p className="text-sm text-gray-600">Click the process button below to begin the analysis.</p>
+            <div className="flex justify-center gap-2 pt-4">
+              <button type="button" onClick={() => onOpenChange(false)} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">Close</button>
+              <button
+                type="button"
+                onClick={() => {
+                  // TODO: Trigger analysis processing
+                  onOpenChange(false);
+                }}
+                className="px-5 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+              >
+                <Play className="w-4 h-4" />
+                Process Analysis
               </button>
             </div>
           </div>
