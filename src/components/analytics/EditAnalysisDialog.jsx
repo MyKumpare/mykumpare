@@ -528,7 +528,34 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
             ) : (
               <AnalysisResults
                 key={resultsKey}
-                analysis={savedAnalysis || analysis}
+                analysis={{
+                  ...analysis,
+                  name: analysisName,
+                  is_template: isTemplate,
+                  visibility,
+                  analysis_type: analysis?.analysis_type || "single",
+                  product_configs: selectedProductIds.map((id) => {
+                    const cfg = productConfigs[id] ?? {};
+                    const product = activeProducts.find((p) => p.id === id);
+                    const savedCfg = (analysis.product_configs ?? []).find((c) => c.product_id === id) ?? {};
+                    const bmIds = cfg.benchmark_ids ?? [];
+                    return {
+                      product_id: id,
+                      product_name: product?.name ?? savedCfg.product_name ?? "",
+                      firm_name: product?.firm_name ?? savedCfg.firm_name ?? "",
+                      benchmark_ids: bmIds,
+                      benchmark_names: bmIds.map((bmId) => benchmarks.find((b) => b.id === bmId)?.name ?? ""),
+                      return_type: cfg.return_type ?? "gross",
+                      include_clone_product: cfg.include_clone_product ?? false,
+                      include_clone_benchmark: cfg.include_clone_benchmark ?? false,
+                    };
+                  }),
+                  period_start: cleanDate(periodStart),
+                  period_end: cleanDate(periodEnd),
+                  use_common_period: false,
+                  measurement_periods: measurementPeriods,
+                  measurement_type: measurementType,
+                }}
                 products={activeProducts}
                 benchmarks={benchmarks}
                 returnSeries={allSeries}
