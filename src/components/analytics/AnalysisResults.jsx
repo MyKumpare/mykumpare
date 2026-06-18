@@ -50,7 +50,7 @@ function SectionToggle({ label, badge, children }) {
   );
 }
 
-function PeriodResultTable({ periodResult, attributes, productName, bmNames }) {
+function PeriodResultTable({ periodResult, attributes, productName, bmNames, returnType, includeCloneProduct }) {
   const { attributeValues, bmValues, observations } = periodResult;
   const hasBm = !!bmValues;
   return (
@@ -67,7 +67,11 @@ function PeriodResultTable({ periodResult, attributes, productName, bmNames }) {
         <tbody>
           {/* Product row */}
           <tr className="border-b border-gray-100">
-            <td className="px-3 py-2 text-gray-600 font-medium">{productName}</td>
+            <td className="px-3 py-2 text-gray-600 font-medium">
+              {productName}
+              {returnType && <span className="text-gray-400 font-normal"> — {returnType.charAt(0).toUpperCase() + returnType.slice(1)} Return</span>}
+              {includeCloneProduct && <span className="text-gray-400 font-normal"> (Clone)</span>}
+            </td>
             {attributes.map((attr) => {
               const pVal = attributeValues?.[attr];
               return (
@@ -236,7 +240,7 @@ function AttributeBarChart({ periodResults, attribute, productNames, bmNames }) 
 }
 
 // Horizontal table: attributes as rows, periods as columns
-function PeriodResultTableHorizontal({ periodResults, productName, bmNames }) {
+function PeriodResultTableHorizontal({ periodResults, productName, bmNames, returnType, includeCloneProduct }) {
   const standardPeriods = periodResults.filter(pr => !pr.isRolling && !pr.isHistorical);
   if (standardPeriods.length === 0) return null;
   // Collect all unique attributes across all periods (not just the first one)
@@ -266,7 +270,13 @@ function PeriodResultTableHorizontal({ periodResults, productName, bmNames }) {
               {/* Product row for this attribute */}
               <tr className="border-b border-gray-100">
                 <td className="px-3 py-2 text-gray-600 font-medium sticky left-0 bg-white">
-                  {attrIdx === 0 ? productName : attr}
+                  {attrIdx === 0 ? (
+                    <span>
+                      {productName}
+                      {returnType && <span className="text-gray-400 font-normal"> — {returnType.charAt(0).toUpperCase() + returnType.slice(1)} Return</span>}
+                      {includeCloneProduct && <span className="text-gray-400 font-normal"> (Clone)</span>}
+                    </span>
+                  ) : attr}
                 </td>
                 {standardPeriods.map((pr, pi) => {
                   const pVal = pr.attributeValues?.[attr];
@@ -339,6 +349,9 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
     if (!analysis || !returnSeries || !benchmarks) return [];
     return runAnalysis({ analysis, allSeries: returnSeries, allBenchmarks: benchmarks });
   }, [analysis, returnSeries, benchmarks]);
+
+  // Extract includeCloneProduct from analysis product_configs
+  const includeCloneProduct = analysis?.product_configs?.[0]?.include_clone_product ?? false;
 
   const hasAnyData = results.some(r => r.categories?.some(c => c.periodResults?.length > 0));
   if (!results.length || !hasAnyData) {
@@ -419,6 +432,8 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                     periodResults={catResult.periodResults}
                     productName={productResult.productName}
                     bmNames={productResult.benchmarkNames}
+                    returnType={productResult.returnType}
+                    includeCloneProduct={includeCloneProduct}
                   />
                 </div>
               )}
@@ -502,6 +517,8 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                           attributes={attributes}
                           productName={productResult.productName}
                           bmNames={productResult.benchmarkNames}
+                          returnType={productResult.returnType}
+                          includeCloneProduct={includeCloneProduct}
                         />
                       </>
                     )}
