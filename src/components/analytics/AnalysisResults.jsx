@@ -207,8 +207,13 @@ function RollingChart({ periodResult, attribute, productName, bmNames, chartType
 
 function GrowthOf100Table({ growthData, bmGrowthData, productName, bmName }) {
   const hasBm = bmGrowthData?.length > 0;
+  const formatDate = (ymStr) => {
+    if (!ymStr) return "";
+    const [year, month] = ymStr.split("-").map(Number);
+    return `${String(month).padStart(2, "0")}/01/${year}`;
+  };
   const data = growthData?.map((row, i) => ({
-    date: row.date,
+    date: formatDate(row.date),
     product: row.value,
     benchmark: bmGrowthData?.[i]?.value ?? null,
   })) || [];
