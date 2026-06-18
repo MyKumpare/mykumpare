@@ -599,6 +599,16 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
     const coverCategories = (analysis?.categories_config || []).map(c => CATEGORY_LABELS[c.category] || c.category);
     const totalPages = contentBlocks.length + 1; // cover + content pages
 
+    // Build TOC entries from content blocks (gather before cover render)
+    const tocEntries = contentBlocks.map((block, i) => {
+      try {
+        const m = JSON.parse(block.getAttribute('data-pdf-meta') || '{}');
+        const parts = [m.category, m.periodLabel].filter(Boolean);
+        const label = parts.length ? parts.join(' · ') : `Section ${i + 1}`;
+        return { label, page: i + 2 }; // page 1 is cover
+      } catch(e) { return { label: `Section ${i + 1}`, page: i + 2 }; }
+    });
+
     const coverEl = document.createElement('div');
     coverEl.style.cssText = `width:${renderW}px;min-height:500px;background:#fff;font-family:sans-serif;padding:60px 70px;box-sizing:border-box;`;
     coverEl.innerHTML = `
@@ -627,10 +637,23 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
         ${coverBmLines.map(b => `<div style="font-size:13px;color:#1e293b;margin-bottom:5px;padding:8px 12px;background:#f8fafc;border-left:3px solid #94a3b8;border-radius:0 6px 6px 0;">${safe(b)}</div>`).join('')}
       </div>` : ''}
       ${coverCategories.length ? `
-      <div>
+      <div style="margin-bottom:36px;">
         <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">Analysis Types Included</div>
         <div style="display:flex;flex-wrap:wrap;gap:8px;">
           ${coverCategories.map(c => `<span style="font-size:12px;font-weight:600;color:#4f46e5;background:#eef2ff;padding:5px 14px;border-radius:20px;border:1px solid #c7d2fe;">${safe(c)}</span>`).join('')}
+        </div>
+      </div>` : ''}
+      ${tocEntries.length ? `
+      <div style="border-top:2px solid #e2e8f0;padding-top:28px;">
+        <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px;">Table of Contents</div>
+        <div>
+          ${tocEntries.map((entry, i) => `
+            <div style="display:flex;align-items:baseline;gap:0;margin-bottom:9px;">
+              <span style="font-size:12px;color:#1e293b;font-weight:${i % 2 === 0 ? '500' : '400'};">${safe(entry.label)}</span>
+              <span style="flex:1;border-bottom:1px dotted #cbd5e1;margin:0 8px;position:relative;top:-3px;"></span>
+              <span style="font-size:12px;color:#4f46e5;font-weight:600;white-space:nowrap;">Page ${entry.page}</span>
+            </div>
+          `).join('')}
         </div>
       </div>` : ''}
     `;
