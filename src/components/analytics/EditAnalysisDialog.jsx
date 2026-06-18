@@ -83,6 +83,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
   const [showResults, setShowResults] = useState(true); // Show existing results immediately
   const [savedAnalysis, setSavedAnalysis] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false); // Track if user has edited anything
+  const [resultsKey, setResultsKey] = useState(0); // Force Results tab remount after save
 
   // Form state
   const [analysisName, setAnalysisName] = useState("");
@@ -195,6 +196,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
       setSavedAnalysis(updated);
       setShowResults(true);
       setActiveTab("results");
+      setResultsKey(prev => prev + 1); // Force Results tab to remount with fresh data
     },
   });
 
@@ -243,9 +245,38 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
   // Auto-save when switching to Results tab with unsaved changes
   useEffect(() => {
     if (activeTab === "results" && hasUnsavedChanges && analysisName.trim() && !saveMutation.isPending) {
-      handleSave();
+      const data = {
+        name: analysisName,
+        is_template: isTemplate,
+        visibility,
+        analysis_type: analysis.analysis_type,
+        product_configs: selectedProductIds.map((id) => {
+          const cfg = productConfigs[id] ?? {};
+          const product = activeProducts.find((p) => p.id === id);
+          const savedCfg = (analysis.product_configs ?? []).find((c) => c.product_id === id) ?? {};
+          const bmIds = cfg.benchmark_ids ?? [];
+          return {
+            product_id: id,
+            product_name: product?.name ?? savedCfg.product_name ?? "",
+            firm_name: product?.firm_name ?? savedCfg.firm_name ?? "",
+            benchmark_ids: bmIds,
+            benchmark_names: bmIds.map((bmId) => benchmarks.find((b) => b.id === bmId)?.name ?? ""),
+            return_type: cfg.return_type ?? "gross",
+            include_clone_product: cfg.include_clone_product ?? false,
+            include_clone_benchmark: cfg.include_clone_benchmark ?? false,
+          };
+        }),
+        period_start: cleanDate(periodStart),
+        period_end: cleanDate(periodEnd),
+        use_common_period: false,
+        created_by_id: analysis.created_by_id,
+        categories_config: analysis.categories_config ?? [],
+        measurement_periods: measurementPeriods,
+        measurement_type: measurementType,
+      };
+      saveMutation.mutate(data);
     }
-  }, [activeTab, hasUnsavedChanges]);
+  }, [activeTab, hasUnsavedChanges, analysisName, isTemplate, visibility, analysis.analysis_type, selectedProductIds, productConfigs, activeProducts, analysis.product_configs, benchmarks, periodStart, periodEnd, measurementPeriods, measurementType, saveMutation.isPending, saveMutation.mutate]);
 
   const isOwner = !analysis?.created_by_id || analysis.created_by_id === user?.id;
 
@@ -490,6 +521,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
               </div>
             ) : (
               <AnalysisResults
+                key={resultsKey}
                 analysis={savedAnalysis || analysis}
                 products={activeProducts}
                 benchmarks={benchmarks}
