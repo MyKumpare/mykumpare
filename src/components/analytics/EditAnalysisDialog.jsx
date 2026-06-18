@@ -431,7 +431,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
               periodStart={periodStart}
               periodEnd={periodEnd}
               measurementPeriods={measurementPeriods}
-              setMeasurementPeriods={setMeasurementPeriods}
+              setMeasurementPeriods={(mp) => { setMeasurementPeriods(mp); setHasUnsavedChanges(true); }}
             />
           )}
 
@@ -439,7 +439,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
           {selectedProductIds.length > 0 && (periodStart || periodEnd) && (
             <MeasurementTypeSection
               measurementType={measurementType}
-              setMeasurementType={setMeasurementType}
+              setMeasurementType={(mt) => { setMeasurementType(mt); setHasUnsavedChanges(true); }}
             />
           )}
 
@@ -476,7 +476,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
           </TabsContent>
 
           <TabsContent value="results" className="mt-1">
-            {hasUnsavedChanges ? (
+            {!showResults || hasUnsavedChanges ? (
               <div className="py-16 text-center space-y-4">
                 <p className="text-sm text-gray-500">Save your changes to update the analysis results.</p>
                 <button type="button" onClick={() => { handleSave(); }}
@@ -488,7 +488,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
               </div>
             ) : (
               <AnalysisResults
-                analysis={analysis}
+                analysis={savedAnalysis || analysis}
                 products={activeProducts}
                 benchmarks={benchmarks}
                 returnSeries={allSeries}
