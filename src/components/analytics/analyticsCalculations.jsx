@@ -267,6 +267,57 @@ function formatDateToMDY(date) {
   return `${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getDate()).padStart(2, "0")}/${date.getFullYear()}`;
 }
 
+// ── Period Sorting ─────────────────────────────────────────────────────────────
+
+// Sort order for trailing periods (by months approximately)
+const TRAILING_SORT_ORDER = {
+  "1M": 1, "3M": 3, "QTD": 3, "YTD": 6, "1Y": 12, "2Y": 24, "3Y": 36,
+  "4Y": 48, "5Y": 60, "7Y": 84, "10Y": 120, "since_inception": 9999, "custom": 9998
+};
+
+function getTrailingSortValue(code) {
+  return TRAILING_SORT_ORDER[code] || 9999;
+}
+
+function getRollingSortValue(code) {
+  const order = { "1M": 1, "2M": 2, "3M": 3, "6M": 6, "1Y": 12, "3Y": 36, "5Y": 60, "10Y": 120, "custom": 9999 };
+  return order[code] || 9999;
+}
+
+// Sort windows to ensure logical chronological/numerical order
+function sortWindows(windows) {
+  return windows.sort((a, b) => {
+    // Group by type first: trailing, rolling, cumulative, calendar, historical
+    const typeOrder = { trailing: 0, rolling: 1, rolling_single: 1, cumulative: 2, calendar: 3, historical: 4 };
+    const typeDiff = (typeOrder[a.type] ?? 99) - (typeOrder[b.type] ?? 99);
+    if (typeDiff !== 0) return typeDiff;
+
+    // Within trailing periods, sort by numeric order
+    if (a.type === "trailing") {
+      const aVal = getTrailingSortValue(a.originalCode || a.label);
+      const bVal = getTrailingSortValue(b.originalCode || b.label);
+      return aVal - bVal;
+    }
+
+    // Within rolling periods, sort by numeric order
+    if (a.type === "rolling" || a.type === "rolling_single") {
+      const aVal = getRollingSortValue(a.originalCode || a.label);
+      const bVal = getRollingSortValue(b.originalCode || b.label);
+      return aVal - bVal;
+    }
+
+    // Calendar years: sort numerically
+    if (a.type === "calendar") {
+      const aYear = parseInt(a.label) || 9999;
+      const bYear = parseInt(b.label) || 9999;
+      return aYear - bYear;
+    }
+
+    // Historical: keep original order
+    return 0;
+  });
+}
+
 // ── Master Compute Function ───────────────────────────────────────────────────
 
 export function computeAttributeValue(attribute, returns, benchmarkReturns) {
@@ -418,17 +469,17 @@ export function runAnalysis({ analysis, allSeries, allBenchmarks }) {
         const start = getTrailingStartDate(code, periodEnd || formatDateToMDY(new Date()), inceptionDate);
         if (start) {
           const labels = { "1M": "1 Month", "3M": "3 Months", "QTD": "QTD", "YTD": "YTD", "1Y": "1 Year", "2Y": "2 Years", "3Y": "3 Years", "4Y": "4 Years", "5Y": "5 Years", "7Y": "7 Years", "10Y": "10 Years", "since_inception": "Since Inception" };
-          windows.push({ label: labels[code] || code, start, end: periodEnd || formatDateToMDY(new Date()), type: "trailing" });
+          windows.push({ label: labels[code] || code, start, end: periodEnd || formatDateToMDY(new Date()), type: "trailing", originalCode: code });
         }
       }
       // Legacy single custom trailing (backwards compat)
       if (pc.trailing_custom_start && pc.trailing_custom_end) {
-        windows.push({ label: "Custom Trailing", start: pc.trailing_custom_start, end: pc.trailing_custom_end, type: "trailing" });
+        windows.push({ label: "Custom Trailing", start: pc.trailing_custom_start, end: pc.trailing_custom_end, type: "trailing", originalCode: "custom" });
       }
       // Multiple custom trailing periods
       for (const cp of (pc.trailing_custom_periods ?? [])) {
         if (cp.start && cp.end) {
-          windows.push({ label: cp.label || `${cp.start} – ${cp.end}`, start: cp.start, end: cp.end, type: "trailing" });
+          windows.push({ label: cp.label || `${cp.start} – ${cp.end}`, start: cp.start, end: cp.end, type: "trailing", originalCode: "custom" });
         }
       }
 
@@ -438,17 +489,17 @@ export function runAnalysis({ analysis, allSeries, allBenchmarks }) {
         const months = rollMonths[code];
         if (months) {
           const labels = { "1M": "Rolling 1M", "2M": "Rolling 2M", "3M": "Rolling 3M", "6M": "Rolling 6M", "1Y": "Rolling 1Y", "3Y": "Rolling 3Y", "5Y": "Rolling 5Y", "10Y": "Rolling 10Y" };
-          windows.push({ label: labels[code] || code, windowMonths: months, type: "rolling", start: periodStart, end: periodEnd });
+          windows.push({ label: labels[code] || code, windowMonths: months, type: "rolling", start: periodStart, end: periodEnd, originalCode: code });
         }
       }
       // Legacy single custom rolling (backwards compat)
       if (pc.rolling_custom_start && pc.rolling_custom_end) {
-        windows.push({ label: "Custom Rolling", start: pc.rolling_custom_start, end: pc.rolling_custom_end, type: "rolling_single" });
+        windows.push({ label: "Custom Rolling", start: pc.rolling_custom_start, end: pc.rolling_custom_end, type: "rolling_single", originalCode: "custom" });
       }
       // Multiple custom rolling periods (treated as fixed-range, not a rolling window)
       for (const cp of (pc.rolling_custom_periods ?? [])) {
         if (cp.start && cp.end) {
-          windows.push({ label: cp.label || `${cp.start} – ${cp.end}`, start: cp.start, end: cp.end, type: "trailing" });
+          windows.push({ label: cp.label || `${cp.start} – ${cp.end}`, start: cp.start, end: cp.end, type: "trailing", originalCode: "custom" });
         }
       }
 
@@ -473,6 +524,9 @@ export function runAnalysis({ analysis, allSeries, allBenchmarks }) {
       for (const freq of (pc.historical ?? [])) {
         windows.push({ label: freq.charAt(0).toUpperCase() + freq.slice(1), start: periodStart, end: periodEnd, type: "historical", freq });
       }
+
+      // Sort windows to ensure logical order
+      sortWindows(windows);
 
       // ── Compute each window ────────────────────────────────────────────────
       for (const win of windows) {
