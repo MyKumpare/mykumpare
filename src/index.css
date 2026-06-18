@@ -124,3 +124,34 @@ textarea {
     @apply bg-background text-foreground;
   }
 }
+
+@media print {
+  @page {
+    size: letter landscape;
+    margin: 10mm;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .pdf-block,
+  .pdf-block * {
+    visibility: visible;
+  }
+
+  .pdf-block {
+    position: relative;
+    page-break-before: always;
+    page-break-inside: avoid;
+    break-before: page;
+    break-inside: avoid;
+    width: 100%;
+    background: white;
+  }
+
+  .pdf-block:first-of-type {
+    page-break-before: auto;
+    break-before: auto;
+  }
+}

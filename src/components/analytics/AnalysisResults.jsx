@@ -471,59 +471,45 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
   const [chartTypes, setChartTypes] = useState({});
   const [tableOrientation, setTableOrientation] = useState("vertical"); // "vertical" | "horizontal"
   
-  // Download/Print handler
+  // Download/Print handler — each .pdf-block gets its own page
   const handleDownload = async () => {
-    const element = document.getElementById('analysis-results-content');
-    if (!element) return;
-    
-    // Show loading state
-    const originalText = document.body.style.cursor;
+    const blocks = document.querySelectorAll('.pdf-block');
+    if (!blocks.length) return;
+
     document.body.style.cursor = 'wait';
-    
     try {
-      // Use letter size landscape (11in x 8.5in = 279.4mm x 215.9mm)
-      const pdf = new jsPDF({
-        orientation: 'landscape',
-        unit: 'mm',
-        format: 'letter',
-      });
-      
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'letter' });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
       const margin = 10;
-      const availableWidth = pageWidth - (margin * 2);
-      const availableHeight = pageHeight - (margin * 2);
-      
-      // Capture at lower scale for better fit
-      const canvas = await html2canvas(element, {
-        scale: 1.5,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        windowWidth: 1200,
-      });
-      
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      
-      // Calculate scale to fit width first
-      const scaleX = availableWidth / imgWidth;
-      const scaleY = availableHeight / imgHeight;
-      const scale = Math.min(scaleX, scaleY);
-      
-      const finalWidth = imgWidth * scale;
-      const finalHeight = imgHeight * scale;
-      
-      // Center on page
-      const x = (pageWidth - finalWidth) / 2;
-      const y = (pageHeight - finalHeight) / 2;
-      
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', x, y, finalWidth, finalHeight);
+      const availW = pageW - margin * 2;
+      const availH = pageH - margin * 2;
+
+      let firstPage = true;
+      for (const block of blocks) {
+        const canvas = await html2canvas(block, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+        });
+        const imgW = canvas.width;
+        const imgH = canvas.height;
+        const scale = Math.min(availW / imgW, availH / imgH);
+        const finalW = imgW * scale;
+        const finalH = imgH * scale;
+        const x = (pageW - finalW) / 2;
+        const y = (pageH - finalH) / 2;
+
+        if (!firstPage) pdf.addPage('letter', 'landscape');
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', x, y, finalW, finalH);
+        firstPage = false;
+      }
       pdf.save(`${analysis?.name || 'Analysis'}-Results.pdf`);
     } catch (error) {
-      console.error('Failed to generate PDF:', error);
+      console.error('PDF generation failed:', error);
       window.print();
     } finally {
-      document.body.style.cursor = originalText;
+      document.body.style.cursor = 'default';
     }
   };
 
@@ -556,7 +542,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
     <div className="space-y-5">
       <div id="analysis-results-content" className="space-y-5 bg-white p-6 rounded-xl border border-gray-200">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="pdf-block flex items-center justify-between">
         <div>
           <h3 className="text-base font-bold text-gray-800">Analysis Results</h3>
           {analysis?.period_start && analysis?.period_end && (
@@ -614,7 +600,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
 
               {/* Horizontal table mode: one consolidated table, periods as columns */}
               {viewMode !== "chart" && tableOrientation === "horizontal" && (
-                <div className="mb-4">
+                <div className="mb-4 pdf-block">
                   <PeriodResultTableHorizontal
                     periodResults={catResult.periodResults}
                     productName={productResult.productName}
@@ -631,7 +617,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                 // Historical
                 if (pr.isHistorical) {
                   return (
-                    <div key={pri} className="mb-4">
+                    <div key={pri} className="mb-4 pdf-block">
                       {(viewMode === "table" || viewMode === "both") && (
                         <>
                           <div className="flex items-center justify-between mb-2">
@@ -663,7 +649,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                     : Object.keys(pr.rollingData?.[0]?.values || {});
                   if (viewMode === "table") return null;
                   return (
-                    <div key={pri} className="mb-4">
+                    <div key={pri} className="mb-4 pdf-block">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">{pr.window.label}</span>
                         <button onClick={() => toggleChartType(chartKey, pr)} title={getChartType(chartKey, pr) === "line" ? "Switch to Bar" : "Switch to Line"}
@@ -689,7 +675,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                 // Special rendering for Growth of $100 - show table or chart based on view mode
                 if (isGrowthOf100) {
                   return (
-                    <div key={pri} className="mb-4">
+                    <div key={pri} className="mb-4 pdf-block">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg">{pr.window.label}</span>
@@ -723,7 +709,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                 if (tableOrientation === "horizontal" && viewMode === "table") return null;
 
                 return (
-                  <div key={pri} className="mb-4">
+                  <div key={pri} className="mb-4 pdf-block">
                     {/* Table view */}
                     {(viewMode === "table" || viewMode === "both") && tableOrientation === "vertical" && (
                       <>
@@ -791,7 +777,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
 
               {/* Cross-period attribute comparison charts (chart/both mode, non-rolling) */}
               {viewMode !== "table" && catResult.periodResults.filter(pr => !pr.isRolling && !pr.isHistorical).length > 1 && (
-                <div className="mt-4 pt-4 border-t border-gray-100">
+                <div className="mt-4 pt-4 border-t border-gray-100 pdf-block">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Cross-Period Comparison</p>
                   {Object.keys(catResult.periodResults.find(pr => !pr.isRolling && !pr.isHistorical)?.attributeValues || {}).slice(0, 3).map(attr => (
                     <div key={attr} className="mb-4">
