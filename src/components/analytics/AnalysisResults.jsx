@@ -471,32 +471,49 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
   const [chartTypes, setChartTypes] = useState({});
   const [tableOrientation, setTableOrientation] = useState("vertical"); // "vertical" | "horizontal"
   
-  // Download/Print handler — each .pdf-block gets its own page
+  // Download/Print handler — each .pdf-block gets its own landscape page, scaled to fill it
   const handleDownload = async () => {
     const blocks = document.querySelectorAll('.pdf-block');
     if (!blocks.length) return;
 
     document.body.style.cursor = 'wait';
     try {
-      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'letter' });
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      const margin = 10;
+      // Letter landscape in points: 792 x 612 pt → in mm: 279.4 x 215.9
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'letter' });
+      const pageW = pdf.internal.pageSize.getWidth();   // 792 pt
+      const pageH = pdf.internal.pageSize.getHeight();  // 612 pt
+      const margin = 28; // ~10mm in pt
       const availW = pageW - margin * 2;
       const availH = pageH - margin * 2;
 
       let firstPage = true;
       for (const block of blocks) {
+        // Temporarily stretch the block to full page width so recharts fills it
+        const origWidth = block.style.width;
+        const origMinWidth = block.style.minWidth;
+        block.style.width = `${availW}px`;
+        block.style.minWidth = `${availW}px`;
+
         const canvas = await html2canvas(block, {
           scale: 2,
           useCORS: true,
           backgroundColor: '#ffffff',
+          width: availW,
+          windowWidth: availW,
         });
+
+        block.style.width = origWidth;
+        block.style.minWidth = origMinWidth;
+
         const imgW = canvas.width;
         const imgH = canvas.height;
-        const scale = Math.min(availW / imgW, availH / imgH);
-        const finalW = imgW * scale;
-        const finalH = imgH * scale;
+        // Scale to fill the available width; crop height if needed, or shrink to fit
+        const scaleToFill = availW / imgW;
+        const scaledH = imgH * scaleToFill;
+        // If it's taller than the page, scale down to fit height instead
+        const finalScale = scaledH > availH ? availH / imgH : scaleToFill;
+        const finalW = imgW * finalScale;
+        const finalH = imgH * finalScale;
         const x = (pageW - finalW) / 2;
         const y = (pageH - finalH) / 2;
 
