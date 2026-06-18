@@ -473,17 +473,20 @@ async function downloadBlock(el, filename, meta = {}) {
   // Build a temporary off-screen header div with analysis details
   const header = document.createElement('div');
   header.style.cssText = 'position:fixed;top:-9999px;left:-9999px;background:#fff;padding:16px 20px 12px;font-family:sans-serif;border-bottom:2px solid #e5e7eb;width:736px;box-sizing:border-box;';
+
+  // Use textContent to safely set values (avoid HTML injection from special chars in names)
+  const safe = (v) => v ? String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : '';
   header.innerHTML = `
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">
       <div>
-        <div style="font-size:15px;font-weight:700;color:#1e293b;margin-bottom:4px;">${meta.analysisName || 'Analysis'}</div>
-        ${meta.periodLabel ? `<div style="font-size:11px;color:#6366f1;font-weight:600;margin-bottom:2px;">${meta.periodLabel}</div>` : ''}
-        ${meta.category ? `<div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;">${meta.category}</div>` : ''}
+        <div style="font-size:15px;font-weight:700;color:#1e293b;margin-bottom:4px;">${safe(meta.analysisName) || 'Analysis'}</div>
+        ${meta.periodLabel ? `<div style="font-size:11px;color:#6366f1;font-weight:600;margin-bottom:2px;">${safe(meta.periodLabel)}</div>` : ''}
+        ${meta.category ? `<div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;">${safe(meta.category)}</div>` : ''}
       </div>
       <div style="text-align:right;flex-shrink:0;">
-        ${meta.periodStart && meta.periodEnd ? `<div style="font-size:10px;color:#64748b;margin-bottom:3px;"><span style="font-weight:600;">Period:</span> ${meta.periodStart} → ${meta.periodEnd}</div>` : ''}
-        ${meta.productName ? `<div style="font-size:10px;color:#64748b;margin-bottom:3px;"><span style="font-weight:600;">Product:</span> ${meta.productName}${meta.firmName ? ` <span style="color:#94a3b8;">(${meta.firmName})</span>` : ''}${meta.returnType ? ` · ${meta.returnType.charAt(0).toUpperCase()+meta.returnType.slice(1)}` : ''}</div>` : ''}
-        ${meta.benchmarkName ? `<div style="font-size:10px;color:#64748b;"><span style="font-weight:600;">Benchmark:</span> ${meta.benchmarkName}</div>` : ''}
+        ${meta.periodStart && meta.periodEnd ? `<div style="font-size:10px;color:#64748b;margin-bottom:3px;"><b>Period:</b> ${safe(meta.periodStart)} &rarr; ${safe(meta.periodEnd)}</div>` : ''}
+        ${meta.productName ? `<div style="font-size:10px;color:#64748b;margin-bottom:3px;"><b>Product:</b> ${safe(meta.productName)}${meta.firmName ? ` (${safe(meta.firmName)})` : ''}${meta.returnType ? ` &middot; ${safe(meta.returnType.charAt(0).toUpperCase()+meta.returnType.slice(1))}` : ''}</div>` : ''}
+        ${meta.benchmarkName ? `<div style="font-size:10px;color:#64748b;"><b>Benchmark:</b> ${safe(meta.benchmarkName)}</div>` : ''}
       </div>
     </div>
   `;
@@ -522,10 +525,8 @@ async function downloadBlock(el, filename, meta = {}) {
 
     // Scale both to fill available width, then stack them
     const hScale = availW / headerCanvas.width;
-    const cScale = availW / contentCanvas.width;
     const hH = headerCanvas.height * hScale;
-    const cW = contentCanvas.width * cScale;
-    const cH = contentCanvas.height * cScale;
+    const cH = contentCanvas.height * (availW / contentCanvas.width);
 
     // If combined height fits on one page, stack them
     if (hH + cH <= availH) {
@@ -543,8 +544,8 @@ async function downloadBlock(el, filename, meta = {}) {
     pdf.save(filename);
   } catch (e) {
     console.error(e);
-    if (document.body.contains(header)) document.body.removeChild(header);
   } finally {
+    if (document.body.contains(header)) document.body.removeChild(header);
     document.body.style.cursor = origCursor;
   }
 }
