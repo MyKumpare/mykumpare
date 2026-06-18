@@ -262,7 +262,7 @@ function getTrailingStartDate(code, periodEnd, inceptionDate) {
     "1M": () => getLastDayOfMonth(endMonthEnd.getFullYear(), endMonthEnd.getMonth() - 0), // Just the end month
     "3M": () => getLastDayOfMonth(endMonthEnd.getFullYear(), endMonthEnd.getMonth() - 2), // 3 months total
     "QTD": () => getLastDayOfMonth(endDate.getFullYear(), qtdStart.getMonth() - 1), // Quarter start month-end
-    "YTD": () => new Date(endDate.getFullYear() - 1, 11, 31), // Prior year-end
+    "YTD": () => new Date(endDate.getFullYear(), 0, 1), // January 1st of current year
     "1Y": () => getLastDayOfMonth(endMonthEnd.getFullYear() - 1, endMonthEnd.getMonth()),
     "2Y": () => getLastDayOfMonth(endMonthEnd.getFullYear() - 2, endMonthEnd.getMonth()),
     "3Y": () => getLastDayOfMonth(endMonthEnd.getFullYear() - 3, endMonthEnd.getMonth()),
