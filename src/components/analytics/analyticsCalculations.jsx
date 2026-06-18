@@ -258,18 +258,19 @@ function getTrailingStartDate(code, periodEnd, inceptionDate) {
 
   const offsets = {
     // For month-based periods, calculate using month-end dates
-    // Trailing N months: start = end month - (N-1) to capture exactly N month-ends
+    // Trailing N months/years: start = same month-end N periods ago to capture exactly N periods
+    // Example: Trailing 3Y ending March 2026 → start = March 2023 (captures 36 month-ends: Apr 2023 - Mar 2026)
     "1M": () => getLastDayOfMonth(endMonthEnd.getFullYear(), endMonthEnd.getMonth() - 0), // Just the end month
     "3M": () => getLastDayOfMonth(endMonthEnd.getFullYear(), endMonthEnd.getMonth() - 2), // 3 months total
     "QTD": () => getLastDayOfMonth(endDate.getFullYear(), qtdStart.getMonth() - 1), // Quarter start month-end
     "YTD": () => new Date(endDate.getFullYear(), 0, 1), // January 1st of current year
-    "1Y": () => getLastDayOfMonth(endMonthEnd.getFullYear() - 1, endMonthEnd.getMonth()),
-    "2Y": () => getLastDayOfMonth(endMonthEnd.getFullYear() - 2, endMonthEnd.getMonth()),
-    "3Y": () => getLastDayOfMonth(endMonthEnd.getFullYear() - 3, endMonthEnd.getMonth()),
-    "4Y": () => getLastDayOfMonth(endMonthEnd.getFullYear() - 4, endMonthEnd.getMonth()),
-    "5Y": () => getLastDayOfMonth(endMonthEnd.getFullYear() - 5, endMonthEnd.getMonth()),
-    "7Y": () => getLastDayOfMonth(endMonthEnd.getFullYear() - 7, endMonthEnd.getMonth()),
-    "10Y": () => getLastDayOfMonth(endMonthEnd.getFullYear() - 10, endMonthEnd.getMonth()),
+    "1Y": () => getLastDayOfMonth(endMonthEnd.getFullYear() - 1, endMonthEnd.getMonth()), // 12 months
+    "2Y": () => getLastDayOfMonth(endMonthEnd.getFullYear() - 2, endMonthEnd.getMonth()), // 24 months
+    "3Y": () => getLastDayOfMonth(endMonthEnd.getFullYear() - 3, endMonthEnd.getMonth()), // 36 months
+    "4Y": () => getLastDayOfMonth(endMonthEnd.getFullYear() - 4, endMonthEnd.getMonth()), // 48 months
+    "5Y": () => getLastDayOfMonth(endMonthEnd.getFullYear() - 5, endMonthEnd.getMonth()), // 60 months
+    "7Y": () => getLastDayOfMonth(endMonthEnd.getFullYear() - 7, endMonthEnd.getMonth()), // 84 months
+    "10Y": () => getLastDayOfMonth(endMonthEnd.getFullYear() - 10, endMonthEnd.getMonth()), // 120 months
     "since_inception": () => inceptionDate ? (inceptionDate.includes("/") ? parseMDY(inceptionDate) : parseYMD(inceptionDate)) : null,
   };
   const fn = offsets[code];
