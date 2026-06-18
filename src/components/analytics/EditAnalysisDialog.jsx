@@ -244,12 +244,12 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
 
   // Auto-save when switching to Results tab with unsaved changes
   useEffect(() => {
-    if (activeTab === "results" && hasUnsavedChanges && analysisName.trim() && !saveMutation.isPending) {
+    if (activeTab === "results" && hasUnsavedChanges && analysisName.trim() && !saveMutation.isPending && analysis) {
       const data = {
         name: analysisName,
         is_template: isTemplate,
         visibility,
-        analysis_type: analysis.analysis_type,
+        analysis_type: analysis?.analysis_type || "single",
         product_configs: selectedProductIds.map((id) => {
           const cfg = productConfigs[id] ?? {};
           const product = activeProducts.find((p) => p.id === id);
@@ -351,7 +351,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
           </div>
 
           {/* Per-product configuration */}
-          {selectedProductIds.length > 0 && (
+          {selectedProductIds.length > 0 && analysis && (
             <div className="space-y-4">
               <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block">
                 {analysis.analysis_type === "single" ? "Product" : "Products"}
