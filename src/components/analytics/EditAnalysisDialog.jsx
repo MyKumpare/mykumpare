@@ -6,7 +6,7 @@ import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { CalendarDays, RefreshCw, Link2, Trash2, BarChart2, Plus, Pencil, CheckCircle } from "lucide-react";
 import BenchmarkMultiSelect from "./BenchmarkMultiSelect";
-import AnalysisResults from "./AnalysisResults";
+import AnalysisResults from "./AnalysisResults.jsx";
 
 const ym = (d) => (d ? d.slice(0, 7) : "");
 // Clean and validate MM/DD/YYYY dates

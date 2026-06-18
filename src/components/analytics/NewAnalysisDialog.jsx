@@ -8,7 +8,7 @@ import {
   Play, CheckCircle, Pencil, Trash2, Eye, EyeOff, Plus
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import AnalysisResults from "./AnalysisResults";
+import AnalysisResults from "./AnalysisResults.jsx";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
