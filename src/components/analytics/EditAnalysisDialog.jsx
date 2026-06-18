@@ -189,7 +189,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
   };
 
   const saveMutation = useMutation({
-    mutationFn: (data) => base44.entities.Analysis.update(analysis.id, data),
+    mutationFn: (data) => base44.entities.Analysis.update(analysis?.id, data),
     onSuccess: (updated) => {
       qc.invalidateQueries({ queryKey: ["analyses"] });
       setHasUnsavedChanges(false);
@@ -201,7 +201,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: () => base44.entities.Analysis.delete(analysis.id),
+    mutationFn: () => base44.entities.Analysis.delete(analysis?.id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["analyses"] });
       onOpenChange(false);
@@ -213,7 +213,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
       name: analysisName,
       is_template: isTemplate,
       visibility,
-      analysis_type: analysis.analysis_type,
+      analysis_type: analysis?.analysis_type || "single",
       product_configs: selectedProductIds.map((id) => {
         const cfg = productConfigs[id] ?? {};
         const product = activeProducts.find((p) => p.id === id);
@@ -233,9 +233,9 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
       period_start: cleanDate(periodStart),
       period_end: cleanDate(periodEnd),
       use_common_period: false,
-      created_by_id: analysis.created_by_id,
+      created_by_id: analysis?.created_by_id || user?.id,
       // Preserve categories_config from new-format analyses
-      categories_config: analysis.categories_config ?? [],
+      categories_config: analysis?.categories_config ?? [],
       measurement_periods: measurementPeriods,
       measurement_type: measurementType,
     };
@@ -269,16 +269,16 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
         period_start: cleanDate(periodStart),
         period_end: cleanDate(periodEnd),
         use_common_period: false,
-        created_by_id: analysis.created_by_id,
-        categories_config: analysis.categories_config ?? [],
+        created_by_id: analysis?.created_by_id || user?.id,
+        categories_config: analysis?.categories_config ?? [],
         measurement_periods: measurementPeriods,
         measurement_type: measurementType,
       };
       saveMutation.mutate(data);
     }
-  }, [activeTab, hasUnsavedChanges, analysisName, isTemplate, visibility, analysis.analysis_type, selectedProductIds, productConfigs, activeProducts, analysis.product_configs, benchmarks, periodStart, periodEnd, measurementPeriods, measurementType, saveMutation.isPending, saveMutation.mutate]);
+  }, [activeTab, hasUnsavedChanges, analysisName, isTemplate, visibility, analysis?.analysis_type, selectedProductIds, productConfigs, activeProducts, analysis?.product_configs, benchmarks, periodStart, periodEnd, measurementPeriods, measurementType, saveMutation.isPending, saveMutation.mutate]);
 
-  const isOwner = !analysis?.created_by_id || analysis.created_by_id === user?.id;
+  const isOwner = !analysis?.created_by_id || analysis?.created_by_id === user?.id;
 
   if (!analysis) return null;
 
