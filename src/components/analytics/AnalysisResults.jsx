@@ -451,10 +451,6 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                             <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg">{pr.window.label}</span>
                             <span className="text-[10px] text-gray-400 capitalize">{pr.window.type}</span>
                           </div>
-                          <button onClick={() => toggleChartType(chartKey, pr)} title={getChartType(chartKey, pr) === "bar" ? "Switch to Line" : "Switch to Bar"}
-                            className="flex items-center gap-1 px-2 py-1 rounded border border-gray-200 text-gray-400 hover:border-indigo-400 hover:text-indigo-600 transition-colors text-xs">
-                            {getChartType(chartKey, pr) === "bar" ? <><TrendingUp className="w-3.5 h-3.5" /> Line</> : <><BarChart2 className="w-3.5 h-3.5" /> Bar</>}
-                          </button>
                         </div>
                         {(() => {
                           const chartData = attributes.map(attr => {
@@ -473,7 +469,11 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
                                 <XAxis type="number" tickFormatter={v => isRatioMetric(attributes[0]) ? v?.toFixed(1) : `${v?.toFixed(1)}%`} tick={{ fontSize: 9 }} />
                                 <YAxis type="category" dataKey="attr" tick={{ fontSize: 9 }} width={130} />
-                                <Tooltip formatter={(v, name) => [fmt(v, name === "excess" ? "Excess Return" : "Return"), name]} />
+                                <Tooltip formatter={(v, name) => {
+                                  const isExcess = name === "excess";
+                                  const val = fmt(v, isExcess ? "Excess Return" : "Return");
+                                  return [<span style={{ color: isExcess && v != null ? (v > 0 ? "#10B981" : "#EF4444") : "inherit" }}>{val}</span>, name];
+                                }} />
                                 <Legend />
                                 <ReferenceLine x={0} stroke="#e5e7eb" />
                                 <Bar dataKey="product" name={productResult.productName} fill={PRODUCT_COLORS[pi % PRODUCT_COLORS.length]}>
