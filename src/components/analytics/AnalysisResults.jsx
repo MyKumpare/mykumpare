@@ -456,31 +456,35 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                             {getChartType(chartKey, pr) === "bar" ? <><TrendingUp className="w-3.5 h-3.5" /> Line</> : <><BarChart2 className="w-3.5 h-3.5" /> Bar</>}
                           </button>
                         </div>
-                        {attributes.length > 1 ? (() => {
-                          const chartData = attributes.map(attr => ({ attr, product: pr.attributeValues?.[attr] ?? null, benchmark: pr.bmValues?.[attr] ?? null }));
-                          return (
-                            <ResponsiveContainer width="100%" height={Math.max(180, attributes.length * 28)}>
-                              <BarChart data={chartData} layout="vertical">
-                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
-                                <XAxis type="number" tickFormatter={v => isRatioMetric(attributes[0]) ? v?.toFixed(1) : `${v?.toFixed(1)}%`} tick={{ fontSize: 9 }} />
-                                <YAxis type="category" dataKey="attr" tick={{ fontSize: 9 }} width={130} />
-                                <Tooltip formatter={(v, name) => [fmt(v, "Return"), name]} />
-                                <Legend />
-                                <ReferenceLine x={0} stroke="#e5e7eb" />
-                                <Bar dataKey="product" name={productResult.productName} fill={PRODUCT_COLORS[pi % PRODUCT_COLORS.length]}>
-                                  {chartData.map((d, i) => <Cell key={i} fill={(d.product ?? 0) >= 0 ? PRODUCT_COLORS[pi % PRODUCT_COLORS.length] : "#EF4444"} />)}
-                                </Bar>
-                                {pr.bmValues && <Bar dataKey="benchmark" name={productResult.benchmarkNames?.[0] || "Benchmark"} fill={BM_COLOR} />}
-                              </BarChart>
-                            </ResponsiveContainer>
-                          );
-                        })() : (
-                          <div className="text-center py-4">
-                            <p className="text-2xl font-bold" style={{ color: (pr.attributeValues?.[attributes[0]] ?? 0) >= 0 ? "#10B981" : "#EF4444" }}>
-                              {fmt(pr.attributeValues?.[attributes[0]], attributes[0])}
-                            </p>
-                            <p className="text-xs text-gray-400 mt-1">{attributes[0]}</p>
-                          </div>
+                        {attributes.length > 1 ? (
+                          <ResponsiveContainer width="100%" height={Math.max(180, attributes.length * 28)}>
+                            <BarChart data={attributes.map(attr => ({ attr, product: pr.attributeValues?.[attr] ?? null, benchmark: pr.bmValues?.[attr] ?? null }))} layout="vertical">
+                              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
+                              <XAxis type="number" tickFormatter={v => isRatioMetric(attributes[0]) ? v?.toFixed(1) : `${v?.toFixed(1)}%`} tick={{ fontSize: 9 }} />
+                              <YAxis type="category" dataKey="attr" tick={{ fontSize: 9 }} width={130} />
+                              <Tooltip formatter={(v, name) => [fmt(v, "Return"), name]} />
+                              <Legend />
+                              <ReferenceLine x={0} stroke="#e5e7eb" />
+                              <Bar dataKey="product" name={productResult.productName} fill={PRODUCT_COLORS[pi % PRODUCT_COLORS.length]}>
+                                {attributes.map((attr, i) => <Cell key={i} fill={(pr.attributeValues?.[attr] ?? 0) >= 0 ? PRODUCT_COLORS[pi % PRODUCT_COLORS.length] : "#EF4444"} />)}
+                              </Bar>
+                              {pr.bmValues && <Bar dataKey="benchmark" name={productResult.benchmarkNames?.[0] || "Benchmark"} fill={BM_COLOR} />}
+                            </BarChart>
+                          </ResponsiveContainer>
+                        ) : (
+                          <ResponsiveContainer width="100%" height={220}>
+                            <BarChart data={[{ name: attributes[0], product: pr.attributeValues?.[attributes[0]] ?? null, benchmark: pr.bmValues?.[attributes[0]] ?? null }]}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                              <XAxis type="number" tickFormatter={v => `${v?.toFixed(1)}%`} tick={{ fontSize: 9 }} />
+                              <YAxis type="category" dataKey="name" tick={{ fontSize: 9 }} width={100} />
+                              <Tooltip formatter={(v, name) => [fmt(v, name), name]} />
+                              <ReferenceLine x={0} stroke="#e5e7eb" />
+                              <Bar dataKey="product" name={productResult.productName} fill={PRODUCT_COLORS[pi % PRODUCT_COLORS.length]}>
+                                <Cell fill={(pr.attributeValues?.[attributes[0]] ?? 0) >= 0 ? PRODUCT_COLORS[pi % PRODUCT_COLORS.length] : "#EF4444"} />
+                              </Bar>
+                              {pr.bmValues && <Bar dataKey="benchmark" name={productResult.benchmarkNames?.[0] || "Benchmark"} fill={BM_COLOR} />}
+                            </BarChart>
+                          </ResponsiveContainer>
                         )}
                       </div>
                     )}
