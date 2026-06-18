@@ -18,8 +18,9 @@ const parseYMD = (ymd) => {
   return new Date(ymd + "T00:00:00");
 };
 
-// Filter monthly returns within [startDate, endDate] (both inclusive)
-// For trailing periods, this captures the exact month-end dates needed
+// Filter monthly returns within (startDate, endDate] (start exclusive, end inclusive)
+// Start date is the prior month-end (excluded), end date is the current month-end (included)
+// Example: start=12/31/2025, end=03/31/2026 captures 01/31, 02/28, 03/31 (not 12/31)
 export function filterReturns(monthlyReturns, startStr, endStr, returnField = "return_value") {
   if (!monthlyReturns?.length) return [];
   const start = startStr?.includes("/") ? parseMDY(startStr) : parseYMD(startStr);
@@ -28,8 +29,8 @@ export function filterReturns(monthlyReturns, startStr, endStr, returnField = "r
     .filter((r) => {
       const d = parseYMD(r.date);
       if (!d) return false;
-      // Use <= and >= to ensure we capture the exact month-end dates
-      if (start && d < start) return false;
+      // Start is exclusive (>), end is inclusive (<=) to properly capture month-end returns
+      if (start && d <= start) return false;
       if (end && d > end) return false;
       return true;
     })
