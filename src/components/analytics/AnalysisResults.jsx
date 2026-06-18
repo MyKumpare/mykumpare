@@ -470,12 +470,16 @@ async function downloadBlock(el, filename, meta = {}) {
   const origCursor = document.body.style.cursor;
   document.body.style.cursor = 'wait';
 
-  // Build a temporary off-screen header div with analysis details
-  const header = document.createElement('div');
-  header.style.cssText = 'position:fixed;top:-9999px;left:-9999px;background:#fff;padding:16px 20px 12px;font-family:sans-serif;border-bottom:2px solid #e5e7eb;width:736px;box-sizing:border-box;';
-
-  // Use textContent to safely set values (avoid HTML injection from special chars in names)
   const safe = (v) => v ? String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : '';
+  const renderW = 900;
+
+  // Build an off-screen wrapper with no clipping at all
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = `position:fixed;top:-99999px;left:-99999px;width:${renderW}px;overflow:visible;background:#fff;font-family:sans-serif;`;
+
+  // Header
+  const header = document.createElement('div');
+  header.style.cssText = `padding:16px 20px 12px;border-bottom:2px solid #e5e7eb;width:${renderW}px;box-sizing:border-box;`;
   header.innerHTML = `
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">
       <div>
@@ -490,83 +494,43 @@ async function downloadBlock(el, filename, meta = {}) {
       </div>
     </div>
   `;
-  document.body.appendChild(header);
+
+  // Clone the content element — no overflow clipping in clone
+  const clone = el.cloneNode(true);
+  clone.style.cssText = `width:${renderW}px;overflow:visible;`;
+  clone.querySelectorAll('*').forEach(d => {
+    d.style.overflow = 'visible';
+    d.style.overflowX = 'visible';
+    d.style.overflowY = 'visible';
+    d.style.maxHeight = 'none';
+  });
+  // Hide the PDF download button in the clone
+  clone.querySelectorAll('button').forEach(b => { if (b.title === 'Download as PDF') b.style.display = 'none'; });
+
+  wrapper.appendChild(header);
+  wrapper.appendChild(clone);
+  document.body.appendChild(wrapper);
 
   try {
-    const renderW = 900;
-
-    // Collect all elements that need overflow unlocked: the element itself, all descendants, and all ancestors up to body
-    const overflowEls = [];
-    // Ancestors
-    let ancestor = el.parentElement;
-    while (ancestor && ancestor !== document.body) {
-      overflowEls.push(ancestor);
-      ancestor = ancestor.parentElement;
-    }
-    // Element itself + all descendants
-    overflowEls.push(el);
-    el.querySelectorAll('*').forEach(d => overflowEls.push(d));
-
-    // Save and unlock overflow on all of them
-    const origOverflows = overflowEls.map(e => ({
-      el: e,
-      overflow: e.style.overflow,
-      overflowX: e.style.overflowX,
-      overflowY: e.style.overflowY,
-      maxHeight: e.style.maxHeight,
-    }));
-    overflowEls.forEach(e => {
-      e.style.overflow = 'visible';
-      e.style.overflowX = 'visible';
-      e.style.overflowY = 'visible';
-      e.style.maxHeight = 'none';
-    });
-
-    const origWidth = el.style.width;
-    const origMinWidth = el.style.minWidth;
-    el.style.width = `${renderW}px`;
-    el.style.minWidth = `${renderW}px`;
-
-    // Force recharts SVGs to render at the fixed width
-    const svgs = el.querySelectorAll('.recharts-responsive-container');
-    const origSvgStyles = [];
-    svgs.forEach((svg, i) => {
-      origSvgStyles[i] = { width: svg.style.width, minWidth: svg.style.minWidth };
+    // Force recharts containers in the clone to fixed width and wait for repaint
+    clone.querySelectorAll('.recharts-responsive-container').forEach(svg => {
       svg.style.width = `${renderW}px`;
       svg.style.minWidth = `${renderW}px`;
     });
 
-    // Wait for layout to repaint
-    await new Promise(r => setTimeout(r, 200));
+    await new Promise(r => setTimeout(r, 250));
 
-    const captureW = Math.max(renderW, el.scrollWidth);
-
-    const [headerCanvas, contentCanvas] = await Promise.all([
-      html2canvas(header, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: renderW, windowWidth: renderW }),
-      html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: captureW, windowWidth: captureW, logging: false }),
-    ]);
-
-    // Restore all styles
-    el.style.width = origWidth;
-    el.style.minWidth = origMinWidth;
-    origOverflows.forEach(({ el: e, overflow, overflowX, overflowY, maxHeight }) => {
-      e.style.overflow = overflow;
-      e.style.overflowX = overflowX;
-      e.style.overflowY = overflowY;
-      e.style.maxHeight = maxHeight;
+    const canvas = await html2canvas(wrapper, {
+      scale: 2, useCORS: true, backgroundColor: '#ffffff',
+      width: renderW, windowWidth: renderW, logging: false,
     });
-    svgs.forEach((svg, i) => {
-      svg.style.width = origSvgStyles[i].width;
-      svg.style.minWidth = origSvgStyles[i].minWidth;
-    });
-    document.body.removeChild(header);
 
-    // Total natural height of header + content at 1:1 (72dpi approximation)
-    const totalNaturalH = (headerCanvas.height + contentCanvas.height) / 2;
-    const totalNaturalW = renderW;
+    document.body.removeChild(wrapper);
 
-    // Choose orientation: landscape if content is wider than tall, portrait otherwise
-    const orientation = totalNaturalH > totalNaturalW ? 'portrait' : 'landscape';
+    // Choose orientation based on canvas dimensions
+    const naturalH = canvas.height / 2;
+    const naturalW = canvas.width / 2;
+    const orientation = naturalH > naturalW ? 'portrait' : 'landscape';
     const pdf = new jsPDF({ orientation, unit: 'pt', format: 'letter' });
     const pageW = pdf.internal.pageSize.getWidth();
     const pageH = pdf.internal.pageSize.getHeight();
@@ -574,29 +538,16 @@ async function downloadBlock(el, filename, meta = {}) {
     const availW = pageW - margin * 2;
     const availH = pageH - margin * 2;
 
-    // Scale both to fill available width, then stack them
-    const hScale = availW / headerCanvas.width;
-    const hH = headerCanvas.height * hScale;
-    const cH = contentCanvas.height * (availW / contentCanvas.width);
-
-    // If combined height fits on one page, stack them
-    if (hH + cH <= availH) {
-      pdf.addImage(headerCanvas.toDataURL('image/png'), 'PNG', margin, margin, availW, hH);
-      pdf.addImage(contentCanvas.toDataURL('image/png'), 'PNG', margin, margin + hH + 4, availW, cH);
-    } else {
-      // Header on page 1, content scaled to fill page 2
-      pdf.addImage(headerCanvas.toDataURL('image/png'), 'PNG', margin, margin, availW, Math.min(hH, availH));
-      pdf.addPage('letter', orientation);
-      const fitScale = Math.min(availW / contentCanvas.width, availH / contentCanvas.height);
-      const fW = contentCanvas.width * fitScale, fH = contentCanvas.height * fitScale;
-      pdf.addImage(contentCanvas.toDataURL('image/png'), 'PNG', (pageW - fW) / 2, (pageH - fH) / 2, fW, fH);
-    }
+    const fitScale = Math.min(availW / canvas.width, availH / canvas.height);
+    const fW = canvas.width * fitScale;
+    const fH = canvas.height * fitScale;
+    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', (pageW - fW) / 2, (pageH - fH) / 2, fW, fH);
 
     pdf.save(filename);
   } catch (e) {
     console.error(e);
   } finally {
-    if (document.body.contains(header)) document.body.removeChild(header);
+    if (document.body.contains(wrapper)) document.body.removeChild(wrapper);
     document.body.style.cursor = origCursor;
   }
 }
@@ -642,54 +593,30 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
 
       let firstPage = true;
       for (const block of blocks) {
-        // Collect all overflow-clipping ancestors and descendants
-        const overflowEls = [];
-        let anc = block.parentElement;
-        while (anc && anc !== document.body) { overflowEls.push(anc); anc = anc.parentElement; }
-        overflowEls.push(block);
-        block.querySelectorAll('*').forEach(d => overflowEls.push(d));
-
-        const origOverflows = overflowEls.map(e => ({
-          el: e, overflow: e.style.overflow, overflowX: e.style.overflowX,
-          overflowY: e.style.overflowY, maxHeight: e.style.maxHeight,
-        }));
-        overflowEls.forEach(e => {
-          e.style.overflow = 'visible'; e.style.overflowX = 'visible';
-          e.style.overflowY = 'visible'; e.style.maxHeight = 'none';
+        // Clone into off-screen wrapper — no overflow clipping
+        const cloneWrapper = document.createElement('div');
+        cloneWrapper.style.cssText = `position:fixed;top:-99999px;left:-99999px;width:${availW}px;overflow:visible;background:#fff;`;
+        const clone = block.cloneNode(true);
+        clone.style.cssText = `width:${availW}px;overflow:visible;`;
+        clone.querySelectorAll('*').forEach(d => {
+          d.style.overflow = 'visible'; d.style.overflowX = 'visible';
+          d.style.overflowY = 'visible'; d.style.maxHeight = 'none';
         });
-
-        const origWidth = block.style.width;
-        const origMinWidth = block.style.minWidth;
-        block.style.width = `${availW}px`;
-        block.style.minWidth = `${availW}px`;
-
-        const svgs = block.querySelectorAll('.recharts-responsive-container');
-        const origSvgStyles = [];
-        svgs.forEach((svg, i) => {
-          origSvgStyles[i] = { width: svg.style.width, minWidth: svg.style.minWidth };
-          svg.style.width = `${availW}px`;
-          svg.style.minWidth = `${availW}px`;
+        clone.querySelectorAll('button').forEach(b => { if (b.title === 'Download as PDF') b.style.display = 'none'; });
+        clone.querySelectorAll('.recharts-responsive-container').forEach(svg => {
+          svg.style.width = `${availW}px`; svg.style.minWidth = `${availW}px`;
         });
+        cloneWrapper.appendChild(clone);
+        document.body.appendChild(cloneWrapper);
 
-        await new Promise(r => setTimeout(r, 200));
+        await new Promise(r => setTimeout(r, 250));
 
-        const captureW = Math.max(availW, block.scrollWidth);
-
-        const canvas = await html2canvas(block, {
+        const canvas = await html2canvas(cloneWrapper, {
           scale: 2, useCORS: true, backgroundColor: '#ffffff',
-          width: captureW, windowWidth: captureW, logging: false,
+          width: availW, windowWidth: availW, logging: false,
         });
 
-        block.style.width = origWidth;
-        block.style.minWidth = origMinWidth;
-        svgs.forEach((svg, i) => {
-          svg.style.width = origSvgStyles[i].width;
-          svg.style.minWidth = origSvgStyles[i].minWidth;
-        });
-        origOverflows.forEach(({ el: e, overflow, overflowX, overflowY, maxHeight }) => {
-          e.style.overflow = overflow; e.style.overflowX = overflowX;
-          e.style.overflowY = overflowY; e.style.maxHeight = maxHeight;
-        });
+        document.body.removeChild(cloneWrapper);
 
         const imgW = canvas.width;
         const imgH = canvas.height;
