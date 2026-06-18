@@ -205,6 +205,29 @@ function RollingChart({ periodResult, attribute, productName, bmNames, chartType
   );
 }
 
+function GrowthOf100Chart({ growthData, bmGrowthData, productName, bmName }) {
+  const hasBm = bmGrowthData?.length > 0;
+  const data = growthData?.map((row, i) => ({
+    date: row.date,
+    product: row.value,
+    benchmark: bmGrowthData?.[i]?.value ?? null,
+  })) || [];
+  
+  return (
+    <ResponsiveContainer width="100%" height={300}>
+      <LineChart data={data}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+        <XAxis dataKey="date" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
+        <YAxis tickFormatter={v => `$${v?.toFixed(0)}`} tick={{ fontSize: 10 }} domain={['auto', 'auto']} />
+        <Tooltip formatter={(v, name) => [`$${v?.toFixed(2)}`, name]} />
+        <Legend />
+        <Line type="monotone" dataKey="product" name={productName} stroke={PRODUCT_COLORS[0]} strokeWidth={2} dot={false} />
+        {hasBm && <Line type="monotone" dataKey="benchmark" name={bmName || "Benchmark"} stroke={BM_COLOR} strokeWidth={1.5} strokeDasharray="4 2" dot={false} />}
+      </LineChart>
+    </ResponsiveContainer>
+  );
+}
+
 function AttributeBarChart({ periodResults, attribute, productNames, bmNames }) {
   // Build comparison data across non-rolling, non-historical periods
   const comparablePeriods = periodResults.filter(pr => !pr.isRolling && !pr.isHistorical);
@@ -497,6 +520,28 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
 
                 // Standard period
                 const attributes = Object.keys(pr.attributeValues || {});
+                const isGrowthOf100 = attributes.includes("Growth of $100") && pr.growthOf100Data;
+
+                // Special rendering for Growth of $100 - show chart instead of table
+                if (isGrowthOf100) {
+                  return (
+                    <div key={pri} className="mb-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg">{pr.window.label}</span>
+                          <span className="text-[10px] text-gray-400 capitalize">{pr.window.type}</span>
+                          {shouldAnnualize(pr.window) && <span className="text-[10px] text-amber-600 font-semibold px-1.5 py-0.5 bg-amber-50 border border-amber-200 rounded">Ann.</span>}
+                        </div>
+                      </div>
+                      <GrowthOf100Chart
+                        growthData={pr.growthOf100Data}
+                        bmGrowthData={pr.bmGrowthOf100Data}
+                        productName={productResult.productName}
+                        bmName={productResult.benchmarkNames?.[0]}
+                      />
+                    </div>
+                  );
+                }
 
                 // In horizontal table mode, skip individual period blocks (consolidated table shown above)
                 if (tableOrientation === "horizontal" && viewMode === "table") return null;

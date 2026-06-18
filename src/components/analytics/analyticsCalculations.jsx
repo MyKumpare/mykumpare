@@ -621,9 +621,31 @@ export function runAnalysis({ analysis, allSeries, allBenchmarks }) {
 
         const attributeValues = {};
         const bmValues = {};
+        const growthOf100Data = [];
+        const bmGrowthOf100Data = [];
+        
         for (const attr of (attributes ?? [])) {
           attributeValues[attr] = computeAttributeValue(attr, filteredProduct, filteredBm.length ? filteredBm : null, win);
           if (primaryBm) bmValues[attr] = computeAttributeValue(attr, filteredBm, null, win);
+          
+          // Special handling for Growth of $100 - compute monthly time-series
+          if (attr === "Growth of $100" && win.type === "cumulative") {
+            let cumulative = 100;
+            const filteredFull = filterReturns(allMonthly, win.start, win.end);
+            for (const r of filteredFull) {
+              const ret = returnType === "net" ? (r.net_return ?? r.return_value) : r.return_value;
+              cumulative *= (1 + ret / 100);
+              growthOf100Data.push({ date: r.date.slice(0, 7), value: cumulative });
+            }
+            if (primaryBm) {
+              const bmFiltered = filterReturns(primaryBm.monthly_returns ?? [], win.start, win.end);
+              let bmCumulative = 100;
+              for (const r of bmFiltered) {
+                bmCumulative *= (1 + r.return_value / 100);
+                bmGrowthOf100Data.push({ date: r.date.slice(0, 7), value: bmCumulative });
+              }
+            }
+          }
         }
 
         categoryResult.periodResults.push({
@@ -631,6 +653,8 @@ export function runAnalysis({ analysis, allSeries, allBenchmarks }) {
           attributeValues,
           bmValues: primaryBm ? bmValues : null,
           observations: filteredProduct.length,
+          growthOf100Data: growthOf100Data.length > 0 ? growthOf100Data : null,
+          bmGrowthOf100Data: bmGrowthOf100Data.length > 0 ? bmGrowthOf100Data : null,
         });
       }
 
