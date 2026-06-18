@@ -354,7 +354,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
           {selectedProductIds.length > 0 && analysis && (
             <div className="space-y-4">
               <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block">
-                {analysis.analysis_type === "single" ? "Product" : "Products"}
+                {analysis?.analysis_type === "single" ? "Product" : "Products"}
               </label>
               {selectedProductIds.map((id) => {
                 const product = activeProducts.find((p) => p.id === id);
