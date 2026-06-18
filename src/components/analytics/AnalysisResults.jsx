@@ -4,7 +4,7 @@ import {
   ResponsiveContainer, Cell, ReferenceLine,
 } from "recharts";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { BarChart2, TrendingUp, LayoutList, ChevronDown, ChevronUp, Download, AlignVerticalJustifyStart, AlignHorizontalJustifyStart } from "lucide-react";
+import { BarChart2, TrendingUp, LayoutList, ChevronDown, ChevronUp, Download, AlignVerticalJustifyStart, AlignHorizontalJustifyStart, Printer } from "lucide-react";
 import { runAnalysis, isRatioMetric, shouldAnnualize } from "./analyticsCalculations";
 
 const CATEGORY_LABELS = {
@@ -468,6 +468,51 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
   const [viewMode, setViewMode] = useState(savedViewMode);
   const [chartTypes, setChartTypes] = useState({});
   const [tableOrientation, setTableOrientation] = useState("vertical"); // "vertical" | "horizontal"
+  
+  // Download/Print handler
+  const handleDownload = async () => {
+    const html2canvas = (await import('html2canvas')).default;
+    const jsPDF = (await import('jspdf')).default;
+    
+    const element = document.getElementById('analysis-results-content');
+    if (!element) return;
+    
+    // Show loading state
+    const originalText = document.body.style.cursor;
+    document.body.style.cursor = 'wait';
+    
+    try {
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4',
+      });
+      
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      const imgX = (pdfWidth - imgWidth * ratio) / 2;
+      const imgY = 10;
+      
+      pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+      pdf.save(`${analysis?.name || 'Analysis'}-Results.pdf`);
+    } catch (error) {
+      console.error('Failed to generate PDF:', error);
+      // Fallback to print
+      window.print();
+    } finally {
+      document.body.style.cursor = originalText;
+    }
+  };
 
   const results = useMemo(() => {
     if (!analysis || !returnSeries || !benchmarks) return [];
@@ -496,6 +541,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
 
   return (
     <div className="space-y-5">
+      <div id="analysis-results-content" className="space-y-5 bg-white p-6 rounded-xl border border-gray-200">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -505,6 +551,10 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
           )}
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
+          <button onClick={handleDownload} title="Download PDF or Print"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:border-indigo-400 hover:text-indigo-600 transition-colors">
+            <Printer className="w-3.5 h-3.5" /> Download / Print
+          </button>
           {(viewMode === "table" || viewMode === "both") && (
             <div className="flex gap-1">
               <button onClick={() => setTableOrientation("vertical")} title="Periods stacked vertically"
@@ -749,6 +799,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
           ))}
         </div>
       ))}
+      </div>
     </div>
   );
 }
