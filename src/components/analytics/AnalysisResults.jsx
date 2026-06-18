@@ -210,7 +210,9 @@ function GrowthOf100Table({ growthData, bmGrowthData, productName, bmName }) {
   const formatDate = (ymStr) => {
     if (!ymStr) return "";
     const [year, month] = ymStr.split("-").map(Number);
-    return `${String(month).padStart(2, "0")}/01/${year}`;
+    // Get last day of month (handles negative months by rolling back years)
+    const lastDay = new Date(year, month, 0).getDate();
+    return `${String(month).padStart(2, "0")}/${String(lastDay).padStart(2, "0")}/${year}`;
   };
   const data = growthData?.map((row, i) => ({
     date: formatDate(row.date),
