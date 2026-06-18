@@ -493,13 +493,23 @@ async function downloadBlock(el, filename, meta = {}) {
   document.body.appendChild(header);
 
   try {
-    // Render header and content canvases at a fixed render width
-    const renderW = 736;
+    // Render at a fixed width wide enough to show all columns
+    const renderW = 900;
 
     const origWidth = el.style.width;
     const origMinWidth = el.style.minWidth;
+    const origOverflow = el.style.overflow;
     el.style.width = `${renderW}px`;
     el.style.minWidth = `${renderW}px`;
+    el.style.overflow = 'visible';
+
+    // Also expand any overflow-hidden/auto containers inside (tables, scroll wrappers)
+    const scrollers = el.querySelectorAll('[class*="overflow"]');
+    const origScrollerStyles = [];
+    scrollers.forEach((s, i) => {
+      origScrollerStyles[i] = s.style.overflow;
+      s.style.overflow = 'visible';
+    });
 
     // Force recharts SVGs to render at the fixed width before capturing
     const svgs = el.querySelectorAll('.recharts-responsive-container');
@@ -510,21 +520,26 @@ async function downloadBlock(el, filename, meta = {}) {
       svg.style.minWidth = `${renderW}px`;
     });
 
-    // Wait for a paint cycle so recharts re-renders at new width
-    await new Promise(r => setTimeout(r, 150));
+    // Wait for recharts and layout to repaint at new width
+    await new Promise(r => setTimeout(r, 200));
+
+    // Measure actual scroll dimensions after expansion
+    const captureW = Math.max(renderW, el.scrollWidth);
+    const captureH = el.scrollHeight;
 
     const [headerCanvas, contentCanvas] = await Promise.all([
       html2canvas(header, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: renderW, windowWidth: renderW }),
-      html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: renderW, windowWidth: renderW, logging: false }),
+      html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: captureW, height: captureH, windowWidth: captureW, logging: false }),
     ]);
 
+    el.style.width = origWidth;
+    el.style.minWidth = origMinWidth;
+    el.style.overflow = origOverflow;
+    scrollers.forEach((s, i) => { s.style.overflow = origScrollerStyles[i]; });
     svgs.forEach((svg, i) => {
       svg.style.width = origSvgStyles[i].width;
       svg.style.minWidth = origSvgStyles[i].minWidth;
     });
-
-    el.style.width = origWidth;
-    el.style.minWidth = origMinWidth;
     document.body.removeChild(header);
 
     // Total natural height of header + content at 1:1 (72dpi approximation)
@@ -623,15 +638,27 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
           svg.style.minWidth = `${availW}px`;
         });
 
+        // Also expand overflow containers inside the block
+        const scrollers = block.querySelectorAll('[class*="overflow"]');
+        const origScrollerStyles = [];
+        scrollers.forEach((s, i) => {
+          origScrollerStyles[i] = s.style.overflow;
+          s.style.overflow = 'visible';
+        });
+
         // Wait for recharts to repaint at new width
-        await new Promise(r => setTimeout(r, 150));
+        await new Promise(r => setTimeout(r, 200));
+
+        const captureW = Math.max(availW, block.scrollWidth);
+        const captureH = block.scrollHeight;
 
         const canvas = await html2canvas(block, {
           scale: 2,
           useCORS: true,
           backgroundColor: '#ffffff',
-          width: availW,
-          windowWidth: availW,
+          width: captureW,
+          height: captureH,
+          windowWidth: captureW,
           logging: false,
         });
 
@@ -641,6 +668,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
           svg.style.width = origSvgStyles[i].width;
           svg.style.minWidth = origSvgStyles[i].minWidth;
         });
+        scrollers.forEach((s, i) => { s.style.overflow = origScrollerStyles[i]; });
 
         const imgW = canvas.width;
         const imgH = canvas.height;
