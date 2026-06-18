@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useCallback } from "react";
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, Cell, ReferenceLine,
@@ -464,6 +464,58 @@ function defaultChartType(pr) {
   return "bar";                           // trailing/calendar/cumulative → bar
 }
 
+// Captures a single DOM element and saves it as a one-page landscape PDF
+async function downloadBlock(el, filename) {
+  if (!el) return;
+  const origCursor = document.body.style.cursor;
+  document.body.style.cursor = 'wait';
+  try {
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'letter' });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const margin = 28;
+    const availW = pageW - margin * 2;
+    const availH = pageH - margin * 2;
+
+    const origWidth = el.style.width;
+    const origMinWidth = el.style.minWidth;
+    el.style.width = `${availW}px`;
+    el.style.minWidth = `${availW}px`;
+
+    const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: availW, windowWidth: availW });
+
+    el.style.width = origWidth;
+    el.style.minWidth = origMinWidth;
+
+    const imgW = canvas.width, imgH = canvas.height;
+    const scale = Math.min(availW / imgW, availH / imgH);
+    const finalW = imgW * scale, finalH = imgH * scale;
+    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', (pageW - finalW) / 2, (pageH - finalH) / 2, finalW, finalH);
+    pdf.save(filename);
+  } catch (e) {
+    console.error(e);
+  } finally {
+    document.body.style.cursor = origCursor;
+  }
+}
+
+// Wraps a pdf-block and injects a floating download button top-right
+function PdfBlock({ filename, className = "", children }) {
+  const ref = useRef(null);
+  return (
+    <div ref={ref} className={`pdf-block relative group ${className}`}>
+      <button
+        onClick={() => downloadBlock(ref.current, filename)}
+        title="Download as PDF"
+        className="absolute top-1 right-1 z-10 opacity-0 group-hover:opacity-100 flex items-center gap-1 px-2 py-1 rounded border border-gray-200 bg-white text-gray-400 hover:border-indigo-400 hover:text-indigo-600 transition-all text-xs shadow-sm"
+      >
+        <Download className="w-3 h-3" /> PDF
+      </button>
+      {children}
+    </div>
+  );
+}
+
 export default function AnalysisResults({ analysis, products, benchmarks, returnSeries }) {
   // Initialize viewMode from analysis config, default to "table" if not set
   const savedViewMode = analysis?.measurement_type?.view_mode || "table";
@@ -617,7 +669,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
 
               {/* Horizontal table mode: one consolidated table, periods as columns */}
               {viewMode !== "chart" && tableOrientation === "horizontal" && (
-                <div className="mb-4 pdf-block">
+                <PdfBlock filename={`${analysis?.name || 'Analysis'}-${CATEGORY_LABELS[catResult.category] || catResult.category}-Table.pdf`} className="mb-4">
                   <PeriodResultTableHorizontal
                     periodResults={catResult.periodResults}
                     productName={productResult.productName}
@@ -625,7 +677,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                     returnType={productResult.returnType}
                     includeCloneProduct={includeCloneProduct}
                   />
-                </div>
+                </PdfBlock>
               )}
 
               {catResult.periodResults.map((pr, pri) => {
@@ -634,7 +686,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                 // Historical
                 if (pr.isHistorical) {
                   return (
-                    <div key={pri} className="mb-4 pdf-block">
+                    <PdfBlock key={pri} filename={`${analysis?.name || 'Analysis'}-${pr.window.label}-Historical.pdf`} className="mb-4">
                       {(viewMode === "table" || viewMode === "both") && (
                         <>
                           <div className="flex items-center justify-between mb-2">
@@ -655,7 +707,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                           <HistoricalChart periodResult={pr} productName={productResult.productName} bmNames={productResult.benchmarkNames} chartType={getChartType(chartKey, pr)} />
                         </div>
                       )}
-                    </div>
+                    </PdfBlock>
                   );
                 }
 
@@ -666,7 +718,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                     : Object.keys(pr.rollingData?.[0]?.values || {});
                   if (viewMode === "table") return null;
                   return (
-                    <div key={pri} className="mb-4 pdf-block">
+                    <PdfBlock key={pri} filename={`${analysis?.name || 'Analysis'}-${pr.window.label}-Rolling.pdf`} className="mb-4">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">{pr.window.label}</span>
                         <button onClick={() => toggleChartType(chartKey, pr)} title={getChartType(chartKey, pr) === "line" ? "Switch to Bar" : "Switch to Line"}
@@ -681,7 +733,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                         </div>
                       ))}
                       {attrs.length > 4 && <p className="text-xs text-gray-400 mt-1">+{attrs.length - 4} more attributes in table view</p>}
-                    </div>
+                    </PdfBlock>
                   );
                 }
 
@@ -692,7 +744,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                 // Special rendering for Growth of $100 - show table or chart based on view mode
                 if (isGrowthOf100) {
                   return (
-                    <div key={pri} className="mb-4 pdf-block">
+                    <PdfBlock key={pri} filename={`${analysis?.name || 'Analysis'}-Growth-of-100.pdf`} className="mb-4">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg">{pr.window.label}</span>
@@ -718,7 +770,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                           />
                         </div>
                       )}
-                    </div>
+                    </PdfBlock>
                   );
                 }
 
@@ -726,7 +778,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                 if (tableOrientation === "horizontal" && viewMode === "table") return null;
 
                 return (
-                  <div key={pri} className="mb-4 pdf-block">
+                  <PdfBlock key={pri} filename={`${analysis?.name || 'Analysis'}-${pr.window.label}-${Object.keys(pr.attributeValues || {}).join('-').slice(0, 40)}.pdf`} className="mb-4">
                     {/* Table view */}
                     {(viewMode === "table" || viewMode === "both") && tableOrientation === "vertical" && (
                       <>
@@ -788,13 +840,13 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                         })()}
                       </div>
                     )}
-                  </div>
+                  </PdfBlock>
                 );
               })}
 
               {/* Cross-period attribute comparison charts (chart/both mode, non-rolling) */}
               {viewMode !== "table" && catResult.periodResults.filter(pr => !pr.isRolling && !pr.isHistorical).length > 1 && (
-                <div className="mt-4 pt-4 border-t border-gray-100 pdf-block">
+                <PdfBlock filename={`${analysis?.name || 'Analysis'}-Cross-Period-Comparison.pdf`} className="mt-4 pt-4 border-t border-gray-100">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Cross-Period Comparison</p>
                   {Object.keys(catResult.periodResults.find(pr => !pr.isRolling && !pr.isHistorical)?.attributeValues || {}).slice(0, 3).map(attr => (
                     <div key={attr} className="mb-4">
@@ -809,7 +861,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                       />
                     </div>
                   ))}
-                </div>
+                </PdfBlock>
               )}
             </SectionToggle>
           ))}
