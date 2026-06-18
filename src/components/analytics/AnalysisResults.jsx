@@ -59,25 +59,48 @@ function PeriodResultTable({ periodResult, attributes, productName, bmNames }) {
         <thead>
           <tr className="border-b border-gray-200 bg-gray-50">
             <th className="text-left px-3 py-2 font-semibold text-gray-500 w-40">Attribute</th>
-            <th className="text-right px-3 py-2 font-semibold text-indigo-700">{productName}</th>
-            {hasBm && <th className="text-right px-3 py-2 font-semibold text-gray-500">{bmNames?.[0] || "Benchmark"}</th>}
-            {hasBm && <th className="text-right px-3 py-2 font-semibold text-orange-600">Excess</th>}
+            {attributes.map((attr, i) => (
+              <th key={attr} className="text-right px-3 py-2 font-semibold text-indigo-700 min-w-[90px]">{attr}</th>
+            ))}
           </tr>
         </thead>
         <tbody>
-          {attributes.map((attr, i) => {
-            const pVal = attributeValues?.[attr];
-            const bVal = bmValues?.[attr];
-            const excess = (pVal !== null && pVal !== undefined && bVal !== null && bVal !== undefined) ? pVal - bVal : null;
-            return (
-              <tr key={attr} className={`border-b border-gray-100 ${i % 2 === 0 ? "" : "bg-gray-50/50"}`}>
-                <td className="px-3 py-2 text-gray-600 font-medium">{attr}</td>
-                <td className={`px-3 py-2 text-right font-semibold ${colorClass(pVal, attr)}`}>{fmt(pVal, attr)}</td>
-                {hasBm && <td className={`px-3 py-2 text-right font-medium ${colorClass(bVal, attr)}`}>{fmt(bVal, attr)}</td>}
-                {hasBm && <td className={`px-3 py-2 text-right font-semibold ${colorClass(excess, attr)}`}>{fmt(excess, attr)}</td>}
-              </tr>
-            );
-          })}
+          {/* Product row */}
+          <tr className="border-b border-gray-100">
+            <td className="px-3 py-2 text-gray-600 font-medium">{productName}</td>
+            {attributes.map((attr) => {
+              const pVal = attributeValues?.[attr];
+              return (
+                <td key={attr} className={`px-3 py-2 text-right font-semibold ${colorClass(pVal, attr)}`}>{fmt(pVal, attr)}</td>
+              );
+            })}
+          </tr>
+          {/* Benchmark row */}
+          {hasBm && (
+            <tr className="border-b border-gray-100">
+              <td className="px-3 py-2 text-gray-600 font-medium">{bmNames?.[0] || "Benchmark"}</td>
+              {attributes.map((attr) => {
+                const bVal = bmValues?.[attr];
+                return (
+                  <td key={attr} className={`px-3 py-2 text-right font-medium ${colorClass(bVal, attr)}`}>{fmt(bVal, attr)}</td>
+                );
+              })}
+            </tr>
+          )}
+          {/* Excess row with separator line above */}
+          {hasBm && (
+            <tr className="border-t-2 border-gray-200">
+              <td className="px-3 py-2 text-gray-600 font-semibold text-orange-600">Excess Return</td>
+              {attributes.map((attr) => {
+                const pVal = attributeValues?.[attr];
+                const bVal = bmValues?.[attr];
+                const excess = (pVal !== null && pVal !== undefined && bVal !== null && bVal !== undefined) ? pVal - bVal : null;
+                return (
+                  <td key={attr} className={`px-3 py-2 text-right font-semibold ${colorClass(excess, attr)}`}>{fmt(excess, attr)}</td>
+                );
+              })}
+            </tr>
+          )}
         </tbody>
       </table>
       {observations > 0 && <p className="text-[10px] text-gray-400 px-3 pt-1">n = {observations} monthly observations</p>}
