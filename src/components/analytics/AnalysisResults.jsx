@@ -239,7 +239,12 @@ function AttributeBarChart({ periodResults, attribute, productNames, bmNames }) 
 function PeriodResultTableHorizontal({ periodResults, productName, bmNames }) {
   const standardPeriods = periodResults.filter(pr => !pr.isRolling && !pr.isHistorical);
   if (standardPeriods.length === 0) return null;
-  const attributes = Object.keys(standardPeriods[0]?.attributeValues || {});
+  // Collect all unique attributes across all periods (not just the first one)
+  const allAttributesSet = new Set();
+  standardPeriods.forEach(pr => {
+    Object.keys(pr.attributeValues || {}).forEach(attr => allAttributesSet.add(attr));
+  });
+  const attributes = Array.from(allAttributesSet);
   const hasBm = standardPeriods.some(pr => !!pr.bmValues);
 
   return (
