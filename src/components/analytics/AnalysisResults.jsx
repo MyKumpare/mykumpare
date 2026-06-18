@@ -603,10 +603,28 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
     const tocEntries = contentBlocks.map((block, i) => {
       try {
         const m = JSON.parse(block.getAttribute('data-pdf-meta') || '{}');
-        const parts = [m.category, m.periodLabel].filter(Boolean);
-        const label = parts.length ? parts.join(' · ') : `Section ${i + 1}`;
-        return { label, page: i + 2 }; // page 1 is cover
-      } catch(e) { return { label: `Section ${i + 1}`, page: i + 2 }; }
+        // Determine period type label from periodLabel context
+        const periodLabel = m.periodLabel || '';
+        let periodType = '';
+        if (periodLabel.toLowerCase().includes('rolling')) periodType = 'Rolling';
+        else if (periodLabel === 'Cumulative' || periodLabel === 'cumulative') periodType = 'Cumulative';
+        else if (periodLabel === 'Cross-Period Comparison') periodType = '';
+        else if (periodLabel === 'YTD' || periodLabel === 'QTD') periodType = 'Trailing';
+        else if (/^\d/.test(periodLabel) || periodLabel.toLowerCase().includes('year') || periodLabel.toLowerCase().includes('month') || periodLabel.toLowerCase().includes('inception')) periodType = 'Trailing';
+        else if (periodLabel.toLowerCase().includes('monthly') || periodLabel.toLowerCase().includes('quarterly') || periodLabel.toLowerCase().includes('annual')) periodType = 'Historical';
+
+        const categoryLabel = m.category || '';
+        // Build a descriptive label: Category | Period Type: Period Label | Attributes
+        const periodDisplay = periodType ? `${periodType}: ${periodLabel}` : periodLabel;
+        const attrsDisplay = m.attributes ? m.attributes.slice(0, 3).join(', ') + (m.attributes.length > 3 ? '…' : '') : '';
+
+        return {
+          category: categoryLabel,
+          period: periodDisplay,
+          attributes: attrsDisplay,
+          page: i + 2,
+        };
+      } catch(e) { return { category: `Section ${i + 1}`, period: '', attributes: '', page: i + 2 }; }
     });
 
     const coverEl = document.createElement('div');
@@ -646,15 +664,26 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
       ${tocEntries.length ? `
       <div style="border-top:2px solid #e2e8f0;padding-top:28px;">
         <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px;">Table of Contents</div>
-        <div>
-          ${tocEntries.map((entry, i) => `
-            <div style="display:flex;align-items:baseline;gap:0;margin-bottom:9px;">
-              <span style="font-size:12px;color:#1e293b;font-weight:${i % 2 === 0 ? '500' : '400'};">${safe(entry.label)}</span>
-              <span style="flex:1;border-bottom:1px dotted #cbd5e1;margin:0 8px;position:relative;top:-3px;"></span>
-              <span style="font-size:12px;color:#4f46e5;font-weight:600;white-space:nowrap;">Page ${entry.page}</span>
-            </div>
-          `).join('')}
-        </div>
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr style="border-bottom:1px solid #e2e8f0;">
+              <th style="text-align:left;font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;padding:0 0 7px 0;width:18%;">Analysis Type</th>
+              <th style="text-align:left;font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;padding:0 0 7px 8px;width:22%;">Reporting Period</th>
+              <th style="text-align:left;font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;padding:0 0 7px 8px;">Attributes</th>
+              <th style="text-align:right;font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;padding:0 0 7px 0;width:60px;">Page</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tocEntries.map((entry, i) => `
+              <tr style="border-bottom:1px solid ${i % 2 === 0 ? '#f8fafc' : '#f1f5f9'};background:${i % 2 === 0 ? '#fff' : '#f8fafc'};">
+                <td style="font-size:12px;color:#1e293b;font-weight:600;padding:8px 0;">${safe(entry.category)}</td>
+                <td style="font-size:12px;color:#4f46e5;font-weight:500;padding:8px 0 8px 8px;">${safe(entry.period)}</td>
+                <td style="font-size:11px;color:#64748b;padding:8px 0 8px 8px;">${safe(entry.attributes)}</td>
+                <td style="font-size:12px;color:#4f46e5;font-weight:700;text-align:right;padding:8px 0;white-space:nowrap;">p. ${entry.page}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
       </div>` : ''}
     `;
 
@@ -791,6 +820,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
     benchmarkName: productResult?.benchmarkNames?.filter(Boolean).join(', ') || null,
     category: catResult ? (CATEGORY_LABELS[catResult.category] || catResult.category) : null,
     periodLabel: pr?.window?.label || null,
+    attributes: pr && !pr.isHistorical && !pr.isRolling ? Object.keys(pr.attributeValues || {}) : (catResult?.attributes || []),
   });
 
   // Use smart default based on result type, allow user override
