@@ -265,7 +265,9 @@ function PeriodResultTableHorizontal({ periodResults, productName, bmNames }) {
             <React.Fragment key={attr}>
               {/* Product row for this attribute */}
               <tr className="border-b border-gray-100">
-                <td className="px-3 py-2 text-gray-600 font-medium sticky left-0 bg-white">{attr}</td>
+                <td className="px-3 py-2 text-gray-600 font-medium sticky left-0 bg-white">
+                  {attrIdx === 0 ? productName : attr}
+                </td>
                 {standardPeriods.map((pr, pi) => {
                   const pVal = pr.attributeValues?.[attr];
                   return (
