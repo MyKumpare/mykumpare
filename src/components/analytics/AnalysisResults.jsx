@@ -482,32 +482,46 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
     document.body.style.cursor = 'wait';
     
     try {
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-      });
-      
-      const imgData = canvas.toDataURL('image/png');
+      // Use letter size landscape (11in x 8.5in = 279.4mm x 215.9mm)
       const pdf = new jsPDF({
         orientation: 'landscape',
         unit: 'mm',
-        format: 'a4',
+        format: 'letter',
       });
       
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 10;
+      const availableWidth = pageWidth - (margin * 2);
+      const availableHeight = pageHeight - (margin * 2);
+      
+      // Capture at lower scale for better fit
+      const canvas = await html2canvas(element, {
+        scale: 1.5,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        windowWidth: 1200,
+      });
+      
       const imgWidth = canvas.width;
       const imgHeight = canvas.height;
-      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-      const imgX = (pdfWidth - imgWidth * ratio) / 2;
-      const imgY = 10;
       
-      pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+      // Calculate scale to fit width first
+      const scaleX = availableWidth / imgWidth;
+      const scaleY = availableHeight / imgHeight;
+      const scale = Math.min(scaleX, scaleY);
+      
+      const finalWidth = imgWidth * scale;
+      const finalHeight = imgHeight * scale;
+      
+      // Center on page
+      const x = (pageWidth - finalWidth) / 2;
+      const y = (pageHeight - finalHeight) / 2;
+      
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', x, y, finalWidth, finalHeight);
       pdf.save(`${analysis?.name || 'Analysis'}-Results.pdf`);
     } catch (error) {
       console.error('Failed to generate PDF:', error);
-      // Fallback to print
       window.print();
     } finally {
       document.body.style.cursor = originalText;
