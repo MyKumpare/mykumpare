@@ -595,10 +595,10 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
     setDownloadModalOpen(true);
   };
 
-  // Download/Print handler — receives the ordered, selected block objects {block, meta} from the modal
+  // Download/Print handler — receives the ordered, selected block objects {block, meta, combinedWith?} from the modal
   const handleDownload = async (selectedItems) => {
-    const contentBlocks = selectedItems.map(it => it.block);
-    if (!contentBlocks.length) return;
+    if (!selectedItems.length) return;
+    const contentBlocks = selectedItems; // keep full objects, handle combined below
 
     document.body.style.cursor = 'wait';
     const safe = (v) => v ? String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : '';
@@ -715,7 +715,9 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
 
     // --- Capture content block canvases ---
     const canvases = [];
-    for (const block of contentBlocks) {
+    for (const item of contentBlocks) {
+      const block = item.block;
+      const combinedBlock = item.combinedWith?.block || null;
       const metaStr = block.getAttribute('data-pdf-meta') || '{}';
       let meta = {};
       try { meta = JSON.parse(metaStr); } catch(e) {}
@@ -727,7 +729,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
           <div>
             <div style="font-size:14px;font-weight:700;color:#1e293b;margin-bottom:3px;">${safe(meta.analysisName) || 'Analysis'}</div>
             ${meta.periodLabel ? `<div style="font-size:11px;color:#6366f1;font-weight:600;margin-bottom:2px;">${safe(meta.periodLabel)}</div>` : ''}
-            ${meta.category ? `<div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;">${safe(meta.category)}</div>` : ''}
+            ${meta.category ? `<div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;">${safe(meta.category)}${combinedBlock ? ' &mdash; Table &amp; Chart' : ''}</div>` : ''}
           </div>
           <div style="text-align:right;flex-shrink:0;">
             ${meta.periodStart && meta.periodEnd ? `<div style="font-size:10px;color:#64748b;margin-bottom:2px;"><b>Period:</b> ${safe(meta.periodStart)} &rarr; ${safe(meta.periodEnd)}</div>` : ''}
@@ -737,23 +739,43 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
         </div>
       `;
 
-      const clone = block.cloneNode(true);
-      clone.style.cssText = `width:${renderW}px;overflow:visible;`;
-      clone.querySelectorAll('*').forEach(d => {
-        d.style.overflow = 'visible'; d.style.overflowX = 'visible';
-        d.style.overflowY = 'visible'; d.style.maxHeight = 'none';
-      });
-      clone.querySelectorAll('button').forEach(b => { b.style.display = 'none'; });
-      clone.querySelectorAll('.recharts-responsive-container').forEach(svg => {
-        svg.style.width = `${renderW}px`; svg.style.minWidth = `${renderW}px`;
-      });
+      const cloneBlock = (src, w) => {
+        const c = src.cloneNode(true);
+        c.style.cssText = `width:${w}px;overflow:visible;`;
+        c.querySelectorAll('*').forEach(d => {
+          d.style.overflow = 'visible'; d.style.overflowX = 'visible';
+          d.style.overflowY = 'visible'; d.style.maxHeight = 'none';
+        });
+        c.querySelectorAll('button').forEach(b => { b.style.display = 'none'; });
+        c.querySelectorAll('.recharts-responsive-container').forEach(svg => {
+          svg.style.width = `${w}px`; svg.style.minWidth = `${w}px`;
+        });
+        return c;
+      };
 
       const wrapper = document.createElement('div');
       wrapper.style.cssText = `position:fixed;top:-99999px;left:-99999px;width:${renderW}px;overflow:visible;background:#fff;font-family:sans-serif;`;
       wrapper.appendChild(headerEl);
-      wrapper.appendChild(clone);
-      document.body.appendChild(wrapper);
 
+      if (combinedBlock) {
+        // Side-by-side: table left, chart right, auto-fit each to half width
+        const halfW = Math.floor((renderW - 16) / 2);
+        const row = document.createElement('div');
+        row.style.cssText = `display:flex;gap:16px;align-items:flex-start;width:${renderW}px;`;
+        const leftWrap = document.createElement('div');
+        leftWrap.style.cssText = `flex:0 0 ${halfW}px;overflow:visible;`;
+        leftWrap.appendChild(cloneBlock(block, halfW));
+        const rightWrap = document.createElement('div');
+        rightWrap.style.cssText = `flex:0 0 ${halfW}px;overflow:visible;`;
+        rightWrap.appendChild(cloneBlock(combinedBlock, halfW));
+        row.appendChild(leftWrap);
+        row.appendChild(rightWrap);
+        wrapper.appendChild(row);
+      } else {
+        wrapper.appendChild(cloneBlock(block, renderW));
+      }
+
+      document.body.appendChild(wrapper);
       await new Promise(r => setTimeout(r, 250));
       const canvas = await html2canvas(wrapper, {
         scale: 2, useCORS: true, backgroundColor: '#ffffff',
