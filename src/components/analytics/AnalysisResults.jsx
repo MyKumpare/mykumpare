@@ -541,7 +541,7 @@ async function downloadBlock(el, filename, meta = {}) {
     const fitScale = Math.min(availW / canvas.width, availH / canvas.height);
     const fW = canvas.width * fitScale;
     const fH = canvas.height * fitScale;
-    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', (pageW - fW) / 2, (pageH - fH) / 2, fW, fH);
+    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', (pageW - fW) / 2, margin, fW, fH);
 
     pdf.save(filename);
   } catch (e) {
@@ -661,7 +661,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
         const fitScale = Math.min(availW / canvas.width, availH / canvas.height);
         const fW = canvas.width * fitScale;
         const fH = canvas.height * fitScale;
-        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', (pageW - fW) / 2, (pageH - fH) / 2, fW, fH);
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', (pageW - fW) / 2, margin, fW, fH);
       }
       if (pdf) pdf.save(`${analysis?.name || 'Analysis'}-Results.pdf`);
     } catch (error) {
