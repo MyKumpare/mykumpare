@@ -327,7 +327,9 @@ function defaultChartType(pr) {
 }
 
 export default function AnalysisResults({ analysis, products, benchmarks, returnSeries }) {
-  const [viewMode, setViewMode] = useState("table");
+  // Initialize viewMode from analysis config, default to "table" if not set
+  const savedViewMode = analysis?.measurement_type?.view_mode || "table";
+  const [viewMode, setViewMode] = useState(savedViewMode);
   const [chartTypes, setChartTypes] = useState({});
   const [tableOrientation, setTableOrientation] = useState("vertical"); // "vertical" | "horizontal"
 
