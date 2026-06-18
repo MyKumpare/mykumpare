@@ -214,11 +214,22 @@ function GrowthOf100Table({ growthData, bmGrowthData, productName, bmName }) {
     const lastDay = new Date(year, month, 0).getDate();
     return `${String(month).padStart(2, "0")}/${String(lastDay).padStart(2, "0")}/${year}`;
   };
-  const data = growthData?.map((row, i) => ({
-    date: formatDate(row.date),
-    product: row.value,
-    benchmark: bmGrowthData?.[i]?.value ?? null,
-  })) || [];
+  // Build data array with starting $100 base row
+  const data = [
+    // Starting point row
+    {
+      date: "Start",
+      product: 100,
+      benchmark: hasBm ? 100 : null,
+      isStartRow: true,
+    },
+    // Monthly data rows
+    ...growthData.map((row, i) => ({
+      date: formatDate(row.date),
+      product: row.value,
+      benchmark: bmGrowthData?.[i]?.value ?? null,
+    })) || [],
+  ];
   
   return (
     <div className="overflow-x-auto max-h-96 overflow-y-auto">
@@ -233,22 +244,36 @@ function GrowthOf100Table({ growthData, bmGrowthData, productName, bmName }) {
         </thead>
         <tbody>
           {data.map((row, i) => {
-            const excess = row.benchmark !== null ? row.product - row.benchmark : null;
+            const excess = row.benchmark !== null && row.benchmark !== undefined ? row.product - row.benchmark : null;
+            if (row.isStartRow) {
+              return (
+                <tr key="start" className="border-b border-gray-200 bg-indigo-50/50 font-semibold">
+                  <td className="px-3 py-2 text-gray-700">Start</td>
+                  <td className="px-3 py-2 text-right text-indigo-700">$100.00</td>
+                  {hasBm && (
+                    <>
+                      <td className="px-3 py-2 text-right text-gray-600">$100.00</td>
+                      <td className="px-3 py-2 text-right text-gray-400">$0.00</td>
+                    </>
+                  )}
+                </tr>
+              );
+            }
             return (
-              <tr key={i} className={`border-b border-gray-100 ${i % 2 === 0 ? "" : "bg-gray-50/50"}`}>
+              <tr key={i} className={`border-b border-gray-100 ${(i - 1) % 2 === 0 ? "" : "bg-gray-50/50"}`}>
                 <td className="px-3 py-2 text-gray-600 font-medium">{row.date}</td>
                 <td className={`px-3 py-2 text-right font-semibold ${row.product >= 100 ? "text-green-700" : "text-red-600"}`}>
                   ${row.product?.toFixed(2)}
                 </td>
                 {hasBm && (
-                  <td className={`px-3 py-2 text-right ${row.benchmark >= 100 ? "text-green-700" : "text-red-600"}`}>
-                    ${row.benchmark?.toFixed(2)}
-                  </td>
-                )}
-                {hasBm && (
-                  <td className={`px-3 py-2 text-right font-semibold ${excess >= 0 ? "text-green-700" : "text-red-600"}`}>
-                    ${excess?.toFixed(2)}
-                  </td>
+                  <>
+                    <td className={`px-3 py-2 text-right ${row.benchmark >= 100 ? "text-green-700" : "text-red-600"}`}>
+                      ${row.benchmark?.toFixed(2)}
+                    </td>
+                    <td className={`px-3 py-2 text-right font-semibold ${excess >= 0 ? "text-green-700" : "text-red-600"}`}>
+                      ${excess?.toFixed(2)}
+                    </td>
+                  </>
                 )}
               </tr>
             );
