@@ -1,8 +1,15 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { X, GripVertical, CheckSquare, Square, Download } from "lucide-react";
 
 export default function ReportDownloadModal({ isOpen, onClose, sections, onDownload }) {
-  const [items, setItems] = useState(() => sections.map((s, i) => ({ ...s, id: i, selected: true })));
+  const [items, setItems] = useState([]);
+
+  // Sync items when sections change (e.g. when modal opens)
+  React.useEffect(() => {
+    if (isOpen && sections.length > 0) {
+      setItems(sections.map((s, i) => ({ ...s, id: i, selected: true })));
+    }
+  }, [isOpen, sections]);
   const dragIdx = useRef(null);
   const dragOverIdx = useRef(null);
 
@@ -46,7 +53,7 @@ export default function ReportDownloadModal({ isOpen, onClose, sections, onDownl
   const handleDownload = () => {
     const selected = items.filter(it => it.selected);
     if (!selected.length) return;
-    onDownload(selected.map(it => it.block));
+    onDownload(selected);
     onClose();
   };
 

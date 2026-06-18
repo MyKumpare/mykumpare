@@ -579,11 +579,13 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
 
   // Open the modal with available sections
   const handleOpenDownloadModal = () => {
-    const allBlocks = Array.from(document.querySelectorAll('.pdf-block'));
+    const allBlocks = Array.from(document.querySelectorAll('[data-pdf-meta]'));
     const contentBlocks = allBlocks.filter(b => {
-      try { const m = JSON.parse(b.getAttribute('data-pdf-meta') || '{}'); return !!m.productName; } catch(e) { return false; }
+      try {
+        const m = JSON.parse(b.getAttribute('data-pdf-meta') || '{}');
+        return !!m.productName || !!m.category || !!m.periodLabel;
+      } catch(e) { return false; }
     });
-    if (!contentBlocks.length) return;
     const sections = contentBlocks.map(block => {
       let meta = {};
       try { meta = JSON.parse(block.getAttribute('data-pdf-meta') || '{}'); } catch(e) {}
@@ -593,9 +595,9 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
     setDownloadModalOpen(true);
   };
 
-  // Download/Print handler — receives the ordered, selected blocks from the modal
-  const handleDownload = async (selectedBlocks) => {
-    const contentBlocks = selectedBlocks;
+  // Download/Print handler — receives the ordered, selected block objects {block, meta} from the modal
+  const handleDownload = async (selectedItems) => {
+    const contentBlocks = selectedItems.map(it => it.block);
     if (!contentBlocks.length) return;
 
     document.body.style.cursor = 'wait';
