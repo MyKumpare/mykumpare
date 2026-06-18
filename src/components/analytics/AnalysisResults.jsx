@@ -556,7 +556,7 @@ async function downloadBlock(el, filename, meta = {}) {
 function PdfBlock({ filename, meta = {}, className = "", children }) {
   const ref = useRef(null);
   return (
-    <div ref={ref} className={`pdf-block relative group ${className}`}>
+    <div ref={ref} className={`pdf-block relative group ${className}`} data-pdf-meta={JSON.stringify(meta)}>
       <button
         onClick={() => downloadBlock(ref.current, filename, meta)}
         title="Download as PDF"
@@ -576,68 +576,96 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
   const [chartTypes, setChartTypes] = useState({});
   const [tableOrientation, setTableOrientation] = useState("vertical"); // "vertical" | "horizontal"
   
-  // Download/Print handler — each .pdf-block gets its own landscape page, scaled to fill it
+  // Download/Print handler — each .pdf-block gets its own page with auto-fit orientation (same as individual block download)
   const handleDownload = async () => {
     const blocks = document.querySelectorAll('.pdf-block');
     if (!blocks.length) return;
 
     document.body.style.cursor = 'wait';
+    const safe = (v) => v ? String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : '';
+    const renderW = 900;
+    const margin = 28;
+
+    // Capture all blocks first (same clone logic as downloadBlock)
+    const canvases = [];
+    for (const block of blocks) {
+      // Build off-screen header matching the block's data-meta attribute (set by PdfBlock)
+      const metaStr = block.getAttribute('data-pdf-meta') || '{}';
+      let meta = {};
+      try { meta = JSON.parse(metaStr); } catch(e) {}
+
+      const headerEl = document.createElement('div');
+      headerEl.style.cssText = `padding:14px 20px 10px;border-bottom:2px solid #e5e7eb;width:${renderW}px;box-sizing:border-box;background:#fff;font-family:sans-serif;`;
+      headerEl.innerHTML = `
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:#1e293b;margin-bottom:3px;">${safe(meta.analysisName) || 'Analysis'}</div>
+            ${meta.periodLabel ? `<div style="font-size:11px;color:#6366f1;font-weight:600;margin-bottom:2px;">${safe(meta.periodLabel)}</div>` : ''}
+            ${meta.category ? `<div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;">${safe(meta.category)}</div>` : ''}
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            ${meta.periodStart && meta.periodEnd ? `<div style="font-size:10px;color:#64748b;margin-bottom:2px;"><b>Period:</b> ${safe(meta.periodStart)} &rarr; ${safe(meta.periodEnd)}</div>` : ''}
+            ${meta.productName ? `<div style="font-size:10px;color:#64748b;margin-bottom:2px;"><b>Product:</b> ${safe(meta.productName)}${meta.firmName ? ` (${safe(meta.firmName)})` : ''}${meta.returnType ? ` &middot; ${safe(meta.returnType.charAt(0).toUpperCase()+meta.returnType.slice(1))}` : ''}</div>` : ''}
+            ${meta.benchmarkName ? `<div style="font-size:10px;color:#64748b;"><b>Benchmark:</b> ${safe(meta.benchmarkName)}</div>` : ''}
+          </div>
+        </div>
+      `;
+
+      const clone = block.cloneNode(true);
+      clone.style.cssText = `width:${renderW}px;overflow:visible;`;
+      clone.querySelectorAll('*').forEach(d => {
+        d.style.overflow = 'visible'; d.style.overflowX = 'visible';
+        d.style.overflowY = 'visible'; d.style.maxHeight = 'none';
+      });
+      clone.querySelectorAll('button').forEach(b => { b.style.display = 'none'; });
+      clone.querySelectorAll('.recharts-responsive-container').forEach(svg => {
+        svg.style.width = `${renderW}px`; svg.style.minWidth = `${renderW}px`;
+      });
+
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = `position:fixed;top:-99999px;left:-99999px;width:${renderW}px;overflow:visible;background:#fff;font-family:sans-serif;`;
+      wrapper.appendChild(headerEl);
+      wrapper.appendChild(clone);
+      document.body.appendChild(wrapper);
+
+      await new Promise(r => setTimeout(r, 250));
+
+      const canvas = await html2canvas(wrapper, {
+        scale: 2, useCORS: true, backgroundColor: '#ffffff',
+        width: renderW, windowWidth: renderW, logging: false,
+      });
+      document.body.removeChild(wrapper);
+      canvases.push(canvas);
+    }
+
+    // Build PDF: auto-orient each page to best fit its canvas
     try {
-      // Letter landscape in points: 792 x 612 pt → in mm: 279.4 x 215.9
-      const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'letter' });
-      const pageW = pdf.internal.pageSize.getWidth();   // 792 pt
-      const pageH = pdf.internal.pageSize.getHeight();  // 612 pt
-      const margin = 28; // ~10mm in pt
-      const availW = pageW - margin * 2;
-      const availH = pageH - margin * 2;
-
+      let pdf = null;
       let firstPage = true;
-      for (const block of blocks) {
-        // Clone into off-screen wrapper — no overflow clipping
-        const cloneWrapper = document.createElement('div');
-        cloneWrapper.style.cssText = `position:fixed;top:-99999px;left:-99999px;width:${availW}px;overflow:visible;background:#fff;`;
-        const clone = block.cloneNode(true);
-        clone.style.cssText = `width:${availW}px;overflow:visible;`;
-        clone.querySelectorAll('*').forEach(d => {
-          d.style.overflow = 'visible'; d.style.overflowX = 'visible';
-          d.style.overflowY = 'visible'; d.style.maxHeight = 'none';
-        });
-        clone.querySelectorAll('button').forEach(b => { if (b.title === 'Download as PDF') b.style.display = 'none'; });
-        clone.querySelectorAll('.recharts-responsive-container').forEach(svg => {
-          svg.style.width = `${availW}px`; svg.style.minWidth = `${availW}px`;
-        });
-        cloneWrapper.appendChild(clone);
-        document.body.appendChild(cloneWrapper);
+      for (const canvas of canvases) {
+        const naturalW = canvas.width / 2;
+        const naturalH = canvas.height / 2;
+        const orientation = naturalH > naturalW ? 'portrait' : 'landscape';
 
-        await new Promise(r => setTimeout(r, 250));
+        if (firstPage) {
+          pdf = new jsPDF({ orientation, unit: 'pt', format: 'letter' });
+          firstPage = false;
+        } else {
+          pdf.addPage('letter', orientation);
+        }
 
-        const canvas = await html2canvas(cloneWrapper, {
-          scale: 2, useCORS: true, backgroundColor: '#ffffff',
-          width: availW, windowWidth: availW, logging: false,
-        });
-
-        document.body.removeChild(cloneWrapper);
-
-        const imgW = canvas.width;
-        const imgH = canvas.height;
-        // Scale to fill the available width; crop height if needed, or shrink to fit
-        const scaleToFill = availW / imgW;
-        const scaledH = imgH * scaleToFill;
-        // If it's taller than the page, scale down to fit height instead
-        const finalScale = scaledH > availH ? availH / imgH : scaleToFill;
-        const finalW = imgW * finalScale;
-        const finalH = imgH * finalScale;
-        const x = (pageW - finalW) / 2;
-        const y = (pageH - finalH) / 2;
-
-        if (!firstPage) pdf.addPage('letter', 'landscape');
-        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', x, y, finalW, finalH);
-        firstPage = false;
+        const pageW = pdf.internal.pageSize.getWidth();
+        const pageH = pdf.internal.pageSize.getHeight();
+        const availW = pageW - margin * 2;
+        const availH = pageH - margin * 2;
+        const fitScale = Math.min(availW / canvas.width, availH / canvas.height);
+        const fW = canvas.width * fitScale;
+        const fH = canvas.height * fitScale;
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', (pageW - fW) / 2, (pageH - fH) / 2, fW, fH);
       }
-      pdf.save(`${analysis?.name || 'Analysis'}-Results.pdf`);
+      if (pdf) pdf.save(`${analysis?.name || 'Analysis'}-Results.pdf`);
     } catch (error) {
       console.error('PDF generation failed:', error);
-      window.print();
     } finally {
       document.body.style.cursor = 'default';
     }
