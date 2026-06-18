@@ -525,7 +525,7 @@ export function runAnalysis({ analysis, allSeries, allBenchmarks }) {
         windows.push({ label: "Cumulative", start: periodStart, end: periodEnd, type: "cumulative" });
       }
 
-      // Calendar years
+      // Calendar years - use month-end dates for consistency
       for (const year of (pc.calendar_years ?? [])) {
         const s = `01/01/${year}`, e = `12/31/${year}`;
         windows.push({ label: String(year), start: s, end: e, type: "calendar" });
@@ -533,7 +533,8 @@ export function runAnalysis({ analysis, allSeries, allBenchmarks }) {
       if (pc.calendar_include_ctd) {
         const now = new Date();
         const ctdStart = `01/01/${now.getFullYear()}`;
-        const ctdEnd = formatDateToMDY(now);
+        // Use current month-end for CTD end date
+        const ctdEnd = formatDateToMDY(getLastDayOfMonth(now.getFullYear(), now.getMonth()));
         windows.push({ label: "CTD", start: ctdStart, end: ctdEnd, type: "calendar" });
       }
 
