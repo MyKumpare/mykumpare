@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -84,7 +84,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
   const [savedAnalysis, setSavedAnalysis] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false); // Track if user has edited anything
   const [resultsKey, setResultsKey] = useState(0); // Force Results tab remount after save
-  const [triggerSaveForResults, setTriggerSaveForResults] = useState(false); // Flag to trigger save when switching to Results tab
+  const autoSaveTimeoutRef = useRef(null);
 
   // Form state
   const [analysisName, setAnalysisName] = useState("");
@@ -242,42 +242,53 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
     saveMutation.mutate(data);
   };
 
-  // Auto-save and re-process when switching to Results tab with unsaved changes
+  // Auto-save and re-process when on Results tab with unsaved changes (debounced)
   useEffect(() => {
-    if (triggerSaveForResults && hasUnsavedChanges && analysisName.trim() && analysis && !saveMutation.isPending) {
-      const data = {
-        name: analysisName,
-        is_template: isTemplate,
-        visibility,
-        analysis_type: analysis?.analysis_type || "single",
-        product_configs: selectedProductIds.map((id) => {
-          const cfg = productConfigs[id] ?? {};
-          const product = activeProducts.find((p) => p.id === id);
-          const savedCfg = (analysis.product_configs ?? []).find((c) => c.product_id === id) ?? {};
-          const bmIds = cfg.benchmark_ids ?? [];
-          return {
-            product_id: id,
-            product_name: product?.name ?? savedCfg.product_name ?? "",
-            firm_name: product?.firm_name ?? savedCfg.firm_name ?? "",
-            benchmark_ids: bmIds,
-            benchmark_names: bmIds.map((bmId) => benchmarks.find((b) => b.id === bmId)?.name ?? ""),
-            return_type: cfg.return_type ?? "gross",
-            include_clone_product: cfg.include_clone_product ?? false,
-            include_clone_benchmark: cfg.include_clone_benchmark ?? false,
-          };
-        }),
-        period_start: cleanDate(periodStart),
-        period_end: cleanDate(periodEnd),
-        use_common_period: false,
-        created_by_id: analysis?.created_by_id || user?.id,
-        categories_config: analysis?.categories_config ?? [],
-        measurement_periods: measurementPeriods,
-        measurement_type: measurementType,
-      };
-      saveMutation.mutate(data);
-      setTriggerSaveForResults(false);
+    if (activeTab === "results" && hasUnsavedChanges && analysisName.trim() && analysis && !saveMutation.isPending) {
+      // Clear existing timeout
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+      // Debounce auto-save by 500ms to avoid rapid saves while typing
+      autoSaveTimeoutRef.current = setTimeout(() => {
+        const data = {
+          name: analysisName,
+          is_template: isTemplate,
+          visibility,
+          analysis_type: analysis?.analysis_type || "single",
+          product_configs: selectedProductIds.map((id) => {
+            const cfg = productConfigs[id] ?? {};
+            const product = activeProducts.find((p) => p.id === id);
+            const savedCfg = (analysis.product_configs ?? []).find((c) => c.product_id === id) ?? {};
+            const bmIds = cfg.benchmark_ids ?? [];
+            return {
+              product_id: id,
+              product_name: product?.name ?? savedCfg.product_name ?? "",
+              firm_name: product?.firm_name ?? savedCfg.firm_name ?? "",
+              benchmark_ids: bmIds,
+              benchmark_names: bmIds.map((bmId) => benchmarks.find((b) => b.id === bmId)?.name ?? ""),
+              return_type: cfg.return_type ?? "gross",
+              include_clone_product: cfg.include_clone_product ?? false,
+              include_clone_benchmark: cfg.include_clone_benchmark ?? false,
+            };
+          }),
+          period_start: cleanDate(periodStart),
+          period_end: cleanDate(periodEnd),
+          use_common_period: false,
+          created_by_id: analysis?.created_by_id || user?.id,
+          categories_config: analysis?.categories_config ?? [],
+          measurement_periods: measurementPeriods,
+          measurement_type: measurementType,
+        };
+        saveMutation.mutate(data);
+      }, 500);
     }
-  }, [triggerSaveForResults, hasUnsavedChanges, analysisName, isTemplate, visibility, analysis, selectedProductIds, productConfigs, activeProducts, benchmarks, periodStart, periodEnd, measurementPeriods, measurementType, saveMutation.isPending]);
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [activeTab, hasUnsavedChanges, analysisName, isTemplate, visibility, analysis, selectedProductIds, productConfigs, activeProducts, benchmarks, periodStart, periodEnd, measurementPeriods, measurementType, saveMutation.isPending]);
 
   const isOwner = !analysis?.created_by_id || analysis?.created_by_id === user?.id;
 
@@ -295,12 +306,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={(val) => {
-          setActiveTab(val);
-          if (val === "results") {
-            setTriggerSaveForResults(true);
-          }
-        }} className="mt-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
           <TabsList className="grid w-full grid-cols-2 mb-4">
             <TabsTrigger value="details" className="flex items-center gap-2">
               <span>Details</span>
