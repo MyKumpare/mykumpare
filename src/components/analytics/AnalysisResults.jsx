@@ -6,6 +6,8 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart2, TrendingUp, LayoutList, ChevronDown, ChevronUp, Download, AlignVerticalJustifyStart, AlignHorizontalJustifyStart, Printer } from "lucide-react";
 import { runAnalysis, isRatioMetric, shouldAnnualize } from "./analyticsCalculations";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 const CATEGORY_LABELS = {
   performance: "Performance",
@@ -471,9 +473,6 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
   
   // Download/Print handler
   const handleDownload = async () => {
-    const html2canvas = (await import('html2canvas')).default;
-    const jsPDF = (await import('jspdf')).default;
-    
     const element = document.getElementById('analysis-results-content');
     if (!element) return;
     
