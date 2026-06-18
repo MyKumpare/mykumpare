@@ -6,6 +6,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart2, TrendingUp, LayoutList, ChevronDown, ChevronUp, Download, AlignVerticalJustifyStart, AlignHorizontalJustifyStart, Printer } from "lucide-react";
 import { runAnalysis, isRatioMetric, shouldAnnualize } from "./analyticsCalculations";
+import ReportDownloadModal from "./ReportDownloadModal";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
@@ -573,14 +574,28 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
   const [viewMode, setViewMode] = useState(savedViewMode);
   const [chartTypes, setChartTypes] = useState({});
   const [tableOrientation, setTableOrientation] = useState("vertical"); // "vertical" | "horizontal"
-  
-  // Download/Print handler — cover page first, then each .pdf-block with header + page numbers
-  const handleDownload = async () => {
+  const [downloadModalOpen, setDownloadModalOpen] = useState(false);
+  const [downloadSections, setDownloadSections] = useState([]);
+
+  // Open the modal with available sections
+  const handleOpenDownloadModal = () => {
     const allBlocks = Array.from(document.querySelectorAll('.pdf-block'));
-    // Filter out the header block (it has no data-pdf-meta product info — it's the UI controls block)
     const contentBlocks = allBlocks.filter(b => {
       try { const m = JSON.parse(b.getAttribute('data-pdf-meta') || '{}'); return !!m.productName; } catch(e) { return false; }
     });
+    if (!contentBlocks.length) return;
+    const sections = contentBlocks.map(block => {
+      let meta = {};
+      try { meta = JSON.parse(block.getAttribute('data-pdf-meta') || '{}'); } catch(e) {}
+      return { block, meta };
+    });
+    setDownloadSections(sections);
+    setDownloadModalOpen(true);
+  };
+
+  // Download/Print handler — receives the ordered, selected blocks from the modal
+  const handleDownload = async (selectedBlocks) => {
+    const contentBlocks = selectedBlocks;
     if (!contentBlocks.length) return;
 
     document.body.style.cursor = 'wait';
@@ -830,6 +845,12 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
 
   return (
     <div className="space-y-5">
+      <ReportDownloadModal
+        isOpen={downloadModalOpen}
+        onClose={() => setDownloadModalOpen(false)}
+        sections={downloadSections}
+        onDownload={handleDownload}
+      />
       <div id="analysis-results-content" className="space-y-5 bg-white p-6 rounded-xl border border-gray-200">
       {/* Header */}
       <div className="pdf-block flex items-center justify-between">
@@ -840,7 +861,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
           )}
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
-          <button onClick={handleDownload} title="Download PDF or Print"
+          <button onClick={handleOpenDownloadModal} title="Download PDF or Print"
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:border-indigo-400 hover:text-indigo-600 transition-colors">
             <Printer className="w-3.5 h-3.5" /> Download / Print
           </button>
