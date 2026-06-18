@@ -6,8 +6,6 @@ import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { CalendarDays, RefreshCw, Link2, Trash2, BarChart2 } from "lucide-react";
 import BenchmarkMultiSelect from "./BenchmarkMultiSelect";
-import MeasurementPeriodsSection from "./MeasurementPeriodsSection";
-import MeasurementTypeSection from "./MeasurementTypeSection";
 import AnalysisResults from "./AnalysisResults";
 
 const ym = (d) => (d ? d.slice(0, 7) : "");
@@ -93,22 +91,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
   const [productConfigs, setProductConfigs] = useState({});
   const [periodStart, setPeriodStart] = useState("");
   const [periodEnd, setPeriodEnd] = useState("");
-  const [measurementPeriods, setMeasurementPeriods] = useState({
-    trailing_periods: [],
-    trailing_custom_start: "",
-    trailing_custom_end: "",
-    rolling_periods: [],
-    rolling_custom_start: "",
-    rolling_custom_end: "",
-    include_cumulative: false,
-    calendar_years: [],
-    historical_periods: [],
-  });
-  const [measurementType, setMeasurementType] = useState({
-    selected_types: [],
-    attributes: [],
-    view_mode: "table",
-  });
+  const [measurementCategories, setMeasurementCategories] = useState([]);
 
   const { data: benchmarks = [] } = useQuery({
     queryKey: ["benchmarks-all"],
@@ -148,26 +131,8 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
       };
     });
     setProductConfigs(configs);
-    // Load measurement periods
-    const mp = analysis.measurement_periods || {};
-    setMeasurementPeriods({
-      trailing_periods: mp.trailing_periods || [],
-      trailing_custom_start: mp.trailing_custom_start || "",
-      trailing_custom_end: mp.trailing_custom_end || "",
-      rolling_periods: mp.rolling_periods || [],
-      rolling_custom_start: mp.rolling_custom_start || "",
-      rolling_custom_end: mp.rolling_custom_end || "",
-      include_cumulative: mp.include_cumulative || false,
-      calendar_years: mp.calendar_years || [],
-      historical_periods: mp.historical_periods || [],
-    });
-    // Load measurement type
-    const mt = analysis.measurement_type || {};
-    setMeasurementType({
-      selected_types: mt.selected_types || [],
-      attributes: mt.attributes || [],
-      view_mode: mt.view_mode || "table",
-    });
+    // Load measurement categories (categories_config)
+    setMeasurementCategories(analysis.categories_config || []);
     setConfirmDelete(false);
     setHasUnsavedChanges(false);
     setShowResults(true);
@@ -235,9 +200,12 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
       period_end: cleanDate(periodEnd),
       use_common_period: false,
       created_by_id: analysis?.created_by_id || user?.id,
-      categories_config: analysis?.categories_config ?? [],
-      measurement_periods: measurementPeriods,
-      measurement_type: measurementType,
+      categories_config: measurementCategories,
+      measurement_type: {
+        selected_types: measurementCategories.map(c => c.category),
+        attributes: measurementCategories.flatMap(c => c.attributes ?? []),
+        view_mode: "table",
+      },
     };
     saveMutation.mutate(data);
   };
@@ -276,9 +244,12 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
           period_end: cleanDate(periodEnd),
           use_common_period: false,
           created_by_id: analysis?.created_by_id || user?.id,
-          categories_config: analysis?.categories_config ?? [],
-          measurement_periods: measurementPeriods,
-          measurement_type: measurementType,
+          categories_config: measurementCategories,
+          measurement_type: {
+            selected_types: measurementCategories.map(c => c.category),
+            attributes: measurementCategories.flatMap(c => c.attributes ?? []),
+            view_mode: "table",
+          },
         };
         saveMutation.mutate(data);
       }, 500);
@@ -288,7 +259,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
         clearTimeout(autoSaveTimeoutRef.current);
       }
     };
-  }, [activeTab, hasUnsavedChanges, analysisName, isTemplate, visibility, analysis, selectedProductIds, productConfigs, activeProducts, benchmarks, periodStart, periodEnd, measurementPeriods, measurementType, saveMutation.isPending]);
+  }, [activeTab, hasUnsavedChanges, analysisName, isTemplate, visibility, analysis, selectedProductIds, productConfigs, activeProducts, benchmarks, periodStart, periodEnd, measurementCategories, saveMutation.isPending]);
 
   const isOwner = !analysis?.created_by_id || analysis?.created_by_id === user?.id;
 
@@ -475,22 +446,37 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
             )}
           </div>
 
-          {/* Measurement periods */}
-          {selectedProductIds.length > 0 && (periodStart || periodEnd) && (
-            <MeasurementPeriodsSection
-              periodStart={periodStart}
-              periodEnd={periodEnd}
-              measurementPeriods={measurementPeriods}
-              setMeasurementPeriods={(mp) => { setMeasurementPeriods(mp); setHasUnsavedChanges(true); }}
-            />
-          )}
-
-          {/* Measurement type */}
-          {selectedProductIds.length > 0 && (periodStart || periodEnd) && (
-            <MeasurementTypeSection
-              measurementType={measurementType}
-              setMeasurementType={(mt) => { setMeasurementType(mt); setHasUnsavedChanges(true); }}
-            />
+          {/* Measurement categories summary */}
+          {measurementCategories.length > 0 && (
+            <div>
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-2">Measurement Categories</label>
+              <div className="space-y-2">
+                {measurementCategories.map((cat, idx) => {
+                  const pc = cat.periodConfig || {};
+                  const trailingCount = (pc.trailing || []).length + (pc.trailing_custom_periods || []).length;
+                  const rollingCount = (pc.rolling || []).length + (pc.rolling_custom_periods || []).length;
+                  const historicalCount = (pc.historical || []).length;
+                  const calCount = (pc.calendar_years || []).length;
+                  const parts = [
+                    trailingCount > 0 && `${trailingCount} trailing`,
+                    rollingCount > 0 && `${rollingCount} rolling`,
+                    pc.cumulative && "cumulative",
+                    calCount > 0 && `${calCount} cal. years`,
+                    historicalCount > 0 && `${historicalCount} historical`,
+                  ].filter(Boolean).join(", ");
+                  return (
+                    <div key={idx} className="flex items-start gap-2 text-xs text-gray-600 bg-gray-50 px-3 py-2 rounded-lg">
+                      <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 flex-shrink-0 mt-1" />
+                      <div>
+                        <span className="font-semibold text-gray-700 capitalize">{cat.category}</span>
+                        {parts && <span className="text-gray-400 ml-1">· {parts}</span>}
+                        <span className="text-gray-400 ml-1">· {cat.attributes?.length ?? 0} attrs</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           )}
 
           {/* Actions */}
@@ -559,8 +545,12 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
                   period_start: cleanDate(periodStart),
                   period_end: cleanDate(periodEnd),
                   use_common_period: false,
-                  measurement_periods: measurementPeriods,
-                  measurement_type: measurementType,
+                  categories_config: measurementCategories,
+                  measurement_type: {
+                    selected_types: measurementCategories.map(c => c.category),
+                    attributes: measurementCategories.flatMap(c => c.attributes ?? []),
+                    view_mode: "table",
+                  },
                 }}
                 products={activeProducts}
                 benchmarks={benchmarks}
