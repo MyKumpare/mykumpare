@@ -378,13 +378,13 @@ function PeriodResultTableHorizontal({ periodResults, productName, bmNames, retu
   const hasBm = standardPeriods.some(pr => !!pr.bmValues);
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-xs">
+    <div className="w-full overflow-x-auto">
+      <table className="text-xs" style={{ width: "100%", tableLayout: "auto", borderCollapse: "collapse" }}>
         <thead>
           <tr className="border-b border-gray-200 bg-gray-50">
-            <th className="text-left px-3 py-2 font-semibold text-gray-500 sticky left-0 bg-gray-50 min-w-[140px]"></th>
+            <th className="text-left px-3 py-2 font-semibold text-gray-500 whitespace-nowrap" style={{ width: "1%" }}></th>
             {standardPeriods.map((pr, i) => (
-              <th key={i} className="px-3 py-2 font-semibold text-indigo-700 text-center min-w-[90px]">
+              <th key={i} className="px-3 py-2 font-semibold text-indigo-700 text-center whitespace-nowrap">
                 {pr.window.label}
               </th>
             ))}
@@ -393,60 +393,58 @@ function PeriodResultTableHorizontal({ periodResults, productName, bmNames, retu
         <tbody>
           {attributes.map((attr, attrIdx) => (
             <React.Fragment key={attr}>
-              {/* Product row for this attribute */}
+              {/* Attribute label row */}
+              {attributes.length > 1 && (
+                <tr className="bg-gray-50/70">
+                  <td colSpan={standardPeriods.length + 1} className="px-3 pt-3 pb-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    {attr}
+                  </td>
+                </tr>
+              )}
+              {/* Product row */}
               <tr className="border-b border-gray-100">
-                <td className="px-3 py-2 text-gray-600 font-medium sticky left-0 bg-white">
-                  {attrIdx === 0 ? (
-                    <span>
-                      {productName}
-                      {returnType && <span className="text-gray-400 font-normal"> — {returnType.charAt(0).toUpperCase() + returnType.slice(1)} Return</span>}
-                      {includeCloneProduct && <span className="text-gray-400 font-normal"> (Clone)</span>}
-                    </span>
-                  ) : attr}
+                <td className="px-3 py-2 text-gray-600 font-medium whitespace-nowrap">
+                  {productName}
+                  {returnType && <span className="text-gray-400 font-normal"> — {returnType.charAt(0).toUpperCase() + returnType.slice(1)}</span>}
+                  {includeCloneProduct && <span className="text-gray-400 font-normal"> (Clone)</span>}
                 </td>
                 {standardPeriods.map((pr, pi) => {
                   const pVal = pr.attributeValues?.[attr];
                   return (
-                    <td key={pi} className={`px-3 py-2 text-center font-semibold ${colorClass(pVal, attr)}`}>
+                    <td key={pi} className={`px-3 py-2 text-center font-semibold whitespace-nowrap ${colorClass(pVal, attr)}`}>
                       {fmt(pVal, attr)}
                     </td>
                   );
                 })}
               </tr>
-              {/* Benchmark row for this attribute */}
+              {/* Benchmark row */}
               {hasBm && (
                 <tr className="border-b border-gray-100">
-                  <td className="px-3 py-2 text-gray-600 font-medium sticky left-0 bg-white">{bmNames?.[0] || "Benchmark"}</td>
+                  <td className="px-3 py-2 text-gray-600 font-medium whitespace-nowrap">{bmNames?.[0] || "Benchmark"}</td>
                   {standardPeriods.map((pr, pi) => {
                     const bVal = pr.bmValues?.[attr];
                     return (
-                      <td key={pi} className={`px-3 py-2 text-center ${colorClass(bVal, attr)}`}>
+                      <td key={pi} className={`px-3 py-2 text-center whitespace-nowrap ${colorClass(bVal, attr)}`}>
                         {fmt(bVal, attr)}
                       </td>
                     );
                   })}
                 </tr>
               )}
-              {/* Excess row for this attribute with separator line above */}
+              {/* Excess row */}
               {hasBm && (
-                <tr className="border-t-2 border-gray-200">
-                  <td className="px-3 py-2 text-gray-600 font-semibold text-orange-600 sticky left-0 bg-white">Excess Return</td>
+                <tr className={`border-t-2 border-gray-200 ${attrIdx < attributes.length - 1 ? "border-b-4 border-b-gray-100" : ""}`}>
+                  <td className="px-3 py-2 text-orange-600 font-semibold whitespace-nowrap">Excess Return</td>
                   {standardPeriods.map((pr, pi) => {
                     const pVal = pr.attributeValues?.[attr];
                     const bVal = pr.bmValues?.[attr];
                     const excess = (pVal != null && bVal != null) ? pVal - bVal : null;
                     return (
-                      <td key={pi} className={`px-3 py-2 text-center font-semibold ${colorClass(excess, attr)}`}>
+                      <td key={pi} className={`px-3 py-2 text-center font-semibold whitespace-nowrap ${colorClass(excess, attr)}`}>
                         {fmt(excess, attr)}
                       </td>
                     );
                   })}
-                </tr>
-              )}
-              {/* Extra spacing between attributes */}
-              {attrIdx < attributes.length - 1 && (
-                <tr>
-                  <td colSpan={standardPeriods.length + 1} className="h-2"></td>
                 </tr>
               )}
             </React.Fragment>
