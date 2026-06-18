@@ -476,10 +476,10 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                                 }} />
                                 <Legend />
                                 <ReferenceLine x={0} stroke="#e5e7eb" />
-                                <Bar dataKey="product" name={productResult.productName} fill={PRODUCT_COLORS[pi % PRODUCT_COLORS.length]}>
-                                  {chartData.map((d, i) => <Cell key={i} fill={PRODUCT_COLORS[pi % PRODUCT_COLORS.length]} />)}
+                                <Bar dataKey="product" name={productResult.productName} fill="#4F46E5">
+                                  {chartData.map((d, i) => <Cell key={i} fill="#4F46E5" />)}
                                 </Bar>
-                                {pr.bmValues && <Bar dataKey="benchmark" name={productResult.benchmarkNames?.[0] || "Benchmark"} fill={BM_COLOR} />}
+                                {pr.bmValues && <Bar dataKey="benchmark" name={productResult.benchmarkNames?.[0] || "Benchmark"} fill="#94A3B8" />}
                                 {pr.bmValues && <Bar dataKey="excess" name="Excess Return" fill="#F97316">
                                   {chartData.map((d, i) => <Cell key={i} fill={(d.product ?? 0) > (d.benchmark ?? 0) ? "#10B981" : "#EF4444"} />)}
                                 </Bar>}
