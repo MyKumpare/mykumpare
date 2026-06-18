@@ -464,48 +464,98 @@ function defaultChartType(pr) {
   return "bar";                           // trailing/calendar/cumulative → bar
 }
 
-// Captures a single DOM element and saves it as a one-page landscape PDF
-async function downloadBlock(el, filename) {
+// Captures a single block + a header summary and saves as a PDF, auto-fitting orientation
+async function downloadBlock(el, filename, meta = {}) {
   if (!el) return;
   const origCursor = document.body.style.cursor;
   document.body.style.cursor = 'wait';
+
+  // Build a temporary off-screen header div with analysis details
+  const header = document.createElement('div');
+  header.style.cssText = 'position:fixed;top:-9999px;left:-9999px;background:#fff;padding:16px 20px 12px;font-family:sans-serif;border-bottom:2px solid #e5e7eb;width:736px;box-sizing:border-box;';
+  header.innerHTML = `
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:#1e293b;margin-bottom:4px;">${meta.analysisName || 'Analysis'}</div>
+        ${meta.periodLabel ? `<div style="font-size:11px;color:#6366f1;font-weight:600;margin-bottom:2px;">${meta.periodLabel}</div>` : ''}
+        ${meta.category ? `<div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;">${meta.category}</div>` : ''}
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        ${meta.periodStart && meta.periodEnd ? `<div style="font-size:10px;color:#64748b;margin-bottom:3px;"><span style="font-weight:600;">Period:</span> ${meta.periodStart} → ${meta.periodEnd}</div>` : ''}
+        ${meta.productName ? `<div style="font-size:10px;color:#64748b;margin-bottom:3px;"><span style="font-weight:600;">Product:</span> ${meta.productName}${meta.firmName ? ` <span style="color:#94a3b8;">(${meta.firmName})</span>` : ''}${meta.returnType ? ` · ${meta.returnType.charAt(0).toUpperCase()+meta.returnType.slice(1)}` : ''}</div>` : ''}
+        ${meta.benchmarkName ? `<div style="font-size:10px;color:#64748b;"><span style="font-weight:600;">Benchmark:</span> ${meta.benchmarkName}</div>` : ''}
+      </div>
+    </div>
+  `;
+  document.body.appendChild(header);
+
   try {
-    const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'letter' });
+    // Render header and content canvases at a fixed render width
+    const renderW = 736;
+
+    const origWidth = el.style.width;
+    const origMinWidth = el.style.minWidth;
+    el.style.width = `${renderW}px`;
+    el.style.minWidth = `${renderW}px`;
+
+    const [headerCanvas, contentCanvas] = await Promise.all([
+      html2canvas(header, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: renderW, windowWidth: renderW }),
+      html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: renderW, windowWidth: renderW }),
+    ]);
+
+    el.style.width = origWidth;
+    el.style.minWidth = origMinWidth;
+    document.body.removeChild(header);
+
+    // Total natural height of header + content at 1:1 (72dpi approximation)
+    const totalNaturalH = (headerCanvas.height + contentCanvas.height) / 2;
+    const totalNaturalW = renderW;
+
+    // Choose orientation: landscape if content is wider than tall, portrait otherwise
+    const orientation = totalNaturalH > totalNaturalW ? 'portrait' : 'landscape';
+    const pdf = new jsPDF({ orientation, unit: 'pt', format: 'letter' });
     const pageW = pdf.internal.pageSize.getWidth();
     const pageH = pdf.internal.pageSize.getHeight();
     const margin = 28;
     const availW = pageW - margin * 2;
     const availH = pageH - margin * 2;
 
-    const origWidth = el.style.width;
-    const origMinWidth = el.style.minWidth;
-    el.style.width = `${availW}px`;
-    el.style.minWidth = `${availW}px`;
+    // Scale both to fill available width, then stack them
+    const hScale = availW / headerCanvas.width;
+    const cScale = availW / contentCanvas.width;
+    const hH = headerCanvas.height * hScale;
+    const cW = contentCanvas.width * cScale;
+    const cH = contentCanvas.height * cScale;
 
-    const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: availW, windowWidth: availW });
+    // If combined height fits on one page, stack them
+    if (hH + cH <= availH) {
+      pdf.addImage(headerCanvas.toDataURL('image/png'), 'PNG', margin, margin, availW, hH);
+      pdf.addImage(contentCanvas.toDataURL('image/png'), 'PNG', margin, margin + hH + 4, availW, cH);
+    } else {
+      // Header on page 1, content scaled to fill page 2
+      pdf.addImage(headerCanvas.toDataURL('image/png'), 'PNG', margin, margin, availW, Math.min(hH, availH));
+      pdf.addPage('letter', orientation);
+      const fitScale = Math.min(availW / contentCanvas.width, availH / contentCanvas.height);
+      const fW = contentCanvas.width * fitScale, fH = contentCanvas.height * fitScale;
+      pdf.addImage(contentCanvas.toDataURL('image/png'), 'PNG', (pageW - fW) / 2, (pageH - fH) / 2, fW, fH);
+    }
 
-    el.style.width = origWidth;
-    el.style.minWidth = origMinWidth;
-
-    const imgW = canvas.width, imgH = canvas.height;
-    const scale = Math.min(availW / imgW, availH / imgH);
-    const finalW = imgW * scale, finalH = imgH * scale;
-    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', (pageW - finalW) / 2, (pageH - finalH) / 2, finalW, finalH);
     pdf.save(filename);
   } catch (e) {
     console.error(e);
+    if (document.body.contains(header)) document.body.removeChild(header);
   } finally {
     document.body.style.cursor = origCursor;
   }
 }
 
 // Wraps a pdf-block and injects a floating download button top-right
-function PdfBlock({ filename, className = "", children }) {
+function PdfBlock({ filename, meta = {}, className = "", children }) {
   const ref = useRef(null);
   return (
     <div ref={ref} className={`pdf-block relative group ${className}`}>
       <button
-        onClick={() => downloadBlock(ref.current, filename)}
+        onClick={() => downloadBlock(ref.current, filename, meta)}
         title="Download as PDF"
         className="absolute top-1 right-1 z-10 opacity-0 group-hover:opacity-100 flex items-center gap-1 px-2 py-1 rounded border border-gray-200 bg-white text-gray-400 hover:border-indigo-400 hover:text-indigo-600 transition-all text-xs shadow-sm"
       >
@@ -600,6 +650,19 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
     );
   }
 
+  // Helper to build meta for PDF block downloads
+  const buildMeta = (productResult, catResult, pr) => ({
+    analysisName: analysis?.name || 'Analysis',
+    periodStart: analysis?.period_start,
+    periodEnd: analysis?.period_end,
+    productName: productResult?.productName,
+    firmName: productResult?.firmName,
+    returnType: productResult?.returnType,
+    benchmarkName: productResult?.benchmarkNames?.filter(Boolean).join(', ') || null,
+    category: catResult ? (CATEGORY_LABELS[catResult.category] || catResult.category) : null,
+    periodLabel: pr?.window?.label || null,
+  });
+
   // Use smart default based on result type, allow user override
   const getChartType = (key, pr) => chartTypes[key] ?? defaultChartType(pr);
   const toggleChartType = (key, pr) => setChartTypes(prev => {
@@ -669,7 +732,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
 
               {/* Horizontal table mode: one consolidated table, periods as columns */}
               {viewMode !== "chart" && tableOrientation === "horizontal" && (
-                <PdfBlock filename={`${analysis?.name || 'Analysis'}-${CATEGORY_LABELS[catResult.category] || catResult.category}-Table.pdf`} className="mb-4">
+                <PdfBlock filename={`${analysis?.name || 'Analysis'}-${CATEGORY_LABELS[catResult.category] || catResult.category}-Table.pdf`} meta={buildMeta(productResult, catResult, null)} className="mb-4">
                   <PeriodResultTableHorizontal
                     periodResults={catResult.periodResults}
                     productName={productResult.productName}
@@ -686,7 +749,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                 // Historical
                 if (pr.isHistorical) {
                   return (
-                    <PdfBlock key={pri} filename={`${analysis?.name || 'Analysis'}-${pr.window.label}-Historical.pdf`} className="mb-4">
+                    <PdfBlock key={pri} filename={`${analysis?.name || 'Analysis'}-${pr.window.label}-Historical.pdf`} meta={buildMeta(productResult, catResult, pr)} className="mb-4">
                       {(viewMode === "table" || viewMode === "both") && (
                         <>
                           <div className="flex items-center justify-between mb-2">
@@ -718,7 +781,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                     : Object.keys(pr.rollingData?.[0]?.values || {});
                   if (viewMode === "table") return null;
                   return (
-                    <PdfBlock key={pri} filename={`${analysis?.name || 'Analysis'}-${pr.window.label}-Rolling.pdf`} className="mb-4">
+                    <PdfBlock key={pri} filename={`${analysis?.name || 'Analysis'}-${pr.window.label}-Rolling.pdf`} meta={buildMeta(productResult, catResult, pr)} className="mb-4">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">{pr.window.label}</span>
                         <button onClick={() => toggleChartType(chartKey, pr)} title={getChartType(chartKey, pr) === "line" ? "Switch to Bar" : "Switch to Line"}
@@ -744,7 +807,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                 // Special rendering for Growth of $100 - show table or chart based on view mode
                 if (isGrowthOf100) {
                   return (
-                    <PdfBlock key={pri} filename={`${analysis?.name || 'Analysis'}-Growth-of-100.pdf`} className="mb-4">
+                    <PdfBlock key={pri} filename={`${analysis?.name || 'Analysis'}-Growth-of-100.pdf`} meta={buildMeta(productResult, catResult, pr)} className="mb-4">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg">{pr.window.label}</span>
@@ -778,7 +841,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                 if (tableOrientation === "horizontal" && viewMode === "table") return null;
 
                 return (
-                  <PdfBlock key={pri} filename={`${analysis?.name || 'Analysis'}-${pr.window.label}-${Object.keys(pr.attributeValues || {}).join('-').slice(0, 40)}.pdf`} className="mb-4">
+                  <PdfBlock key={pri} filename={`${analysis?.name || 'Analysis'}-${pr.window.label}-${Object.keys(pr.attributeValues || {}).join('-').slice(0, 40)}.pdf`} meta={buildMeta(productResult, catResult, pr)} className="mb-4">
                     {/* Table view */}
                     {(viewMode === "table" || viewMode === "both") && tableOrientation === "vertical" && (
                       <>
@@ -846,7 +909,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
 
               {/* Cross-period attribute comparison charts (chart/both mode, non-rolling) */}
               {viewMode !== "table" && catResult.periodResults.filter(pr => !pr.isRolling && !pr.isHistorical).length > 1 && (
-                <PdfBlock filename={`${analysis?.name || 'Analysis'}-Cross-Period-Comparison.pdf`} className="mt-4 pt-4 border-t border-gray-100">
+                <PdfBlock filename={`${analysis?.name || 'Analysis'}-Cross-Period-Comparison.pdf`} meta={buildMeta(productResult, catResult, { window: { label: 'Cross-Period Comparison' } })} className="mt-4 pt-4 border-t border-gray-100">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Cross-Period Comparison</p>
                   {Object.keys(catResult.periodResults.find(pr => !pr.isRolling && !pr.isHistorical)?.attributeValues || {}).slice(0, 3).map(attr => (
                     <div key={attr} className="mb-4">
