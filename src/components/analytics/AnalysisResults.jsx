@@ -286,11 +286,23 @@ function GrowthOf100Table({ growthData, bmGrowthData, productName, bmName }) {
 
 function GrowthOf100Chart({ growthData, bmGrowthData, productName, bmName }) {
   const hasBm = bmGrowthData?.length > 0;
-  const data = growthData?.map((row, i) => ({
-    date: row.date,
-    product: row.value,
-    benchmark: bmGrowthData?.[i]?.value ?? null,
-  })) || [];
+  // Build data array with starting $100 point at the first date
+  const firstDate = growthData?.[0]?.date || "";
+  const data = [
+    // Starting point at $100
+    {
+      date: firstDate,
+      product: 100,
+      benchmark: hasBm ? 100 : null,
+      isStartPoint: true,
+    },
+    // Monthly data points
+    ...growthData.map((row, i) => ({
+      date: row.date,
+      product: row.value,
+      benchmark: bmGrowthData?.[i]?.value ?? null,
+    })) || [],
+  ];
   
   return (
     <ResponsiveContainer width="100%" height={300}>
