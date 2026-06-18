@@ -6,6 +6,13 @@ const parseMDY = (mdy) => {
   return new Date(y, m - 1, d);
 };
 
+// Get last day of month (handles negative months by rolling back years)
+function getLastDayOfMonth(year, month) {
+  // Handle negative months or months > 11
+  const normalized = new Date(year, month + 1, 0);
+  return new Date(normalized.getFullYear(), normalized.getMonth(), normalized.getDate());
+}
+
 const parseYMD = (ymd) => {
   if (!ymd) return null;
   return new Date(ymd + "T00:00:00");
@@ -237,13 +244,9 @@ export function treynorRatio(returns, benchmarkReturns) {
 
 // ── Trailing Period Helpers ───────────────────────────────────────────────────
 
-// Get the last day of a given month (returns date object)
-function getLastDayOfMonth(year, month) {
-  return new Date(year, month + 1, 0);
-}
-
 // Calculate trailing period start date using month-end logic
-// For trailing N months ending on month-end, go back N month-ends
+// For trailing N months ending on month-end, go back (N-1) months to capture N month-ends total
+// Example: Trailing 3M ending March 2026 → start = January 2026 (captures Jan, Feb, Mar = 3 months)
 function getTrailingStartDate(code, periodEnd, inceptionDate) {
   const endDate = parseMDY(periodEnd) || new Date();
   // Ensure we're working with month-end dates
@@ -255,9 +258,10 @@ function getTrailingStartDate(code, periodEnd, inceptionDate) {
 
   const offsets = {
     // For month-based periods, calculate using month-end dates
-    "1M": () => getLastDayOfMonth(endMonthEnd.getFullYear(), endMonthEnd.getMonth() - 1),
-    "3M": () => getLastDayOfMonth(endMonthEnd.getFullYear(), endMonthEnd.getMonth() - 2), // Include end month + 2 prior month-ends
-    "QTD": () => getLastDayOfMonth(endDate.getFullYear(), qtdStart.getMonth() - 1),
+    // Trailing N months: start = end month - (N-1) to capture exactly N month-ends
+    "1M": () => getLastDayOfMonth(endMonthEnd.getFullYear(), endMonthEnd.getMonth() - 0), // Just the end month
+    "3M": () => getLastDayOfMonth(endMonthEnd.getFullYear(), endMonthEnd.getMonth() - 2), // 3 months total
+    "QTD": () => getLastDayOfMonth(endDate.getFullYear(), qtdStart.getMonth() - 1), // Quarter start month-end
     "YTD": () => new Date(endDate.getFullYear() - 1, 11, 31), // Prior year-end
     "1Y": () => getLastDayOfMonth(endMonthEnd.getFullYear() - 1, endMonthEnd.getMonth()),
     "2Y": () => getLastDayOfMonth(endMonthEnd.getFullYear() - 2, endMonthEnd.getMonth()),
