@@ -456,43 +456,37 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                             {getChartType(chartKey, pr) === "bar" ? <><TrendingUp className="w-3.5 h-3.5" /> Line</> : <><BarChart2 className="w-3.5 h-3.5" /> Bar</>}
                           </button>
                         </div>
-                        {attributes.length > 1 ? (
-                          <ResponsiveContainer width="100%" height={Math.max(180, attributes.length * 28)}>
-                            <BarChart data={attributes.map(attr => ({ attr, product: pr.attributeValues?.[attr] ?? null, benchmark: pr.bmValues?.[attr] ?? null, excess: (pr.attributeValues?.[attr] != null && pr.bmValues?.[attr] != null) ? pr.attributeValues?.[attr] - pr.bmValues?.[attr] : null }))} layout="vertical">
-                              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
-                              <XAxis type="number" tickFormatter={v => isRatioMetric(attributes[0]) ? v?.toFixed(1) : `${v?.toFixed(1)}%`} tick={{ fontSize: 9 }} />
-                              <YAxis type="category" dataKey="attr" tick={{ fontSize: 9 }} width={130} />
-                              <Tooltip formatter={(v, name) => [fmt(v, name === "excess" ? "Excess Return" : "Return"), name]} />
-                              <Legend />
-                              <ReferenceLine x={0} stroke="#e5e7eb" />
-                              <Bar dataKey="product" name={productResult.productName} fill={PRODUCT_COLORS[pi % PRODUCT_COLORS.length]}>
-                                {attributes.map((attr, i) => <Cell key={i} fill={(pr.attributeValues?.[attr] ?? 0) >= 0 ? PRODUCT_COLORS[pi % PRODUCT_COLORS.length] : "#EF4444"} />)}
-                              </Bar>
-                              {pr.bmValues && <Bar dataKey="benchmark" name={productResult.benchmarkNames?.[0] || "Benchmark"} fill={BM_COLOR} />}
-                              {pr.bmValues && <Bar dataKey="excess" name="Excess Return" fill="#F97316">
-                                {attributes.map((attr, i) => <Cell key={i} fill={((pr.attributeValues?.[attr] ?? 0) - (pr.bmValues?.[attr] ?? 0)) >= 0 ? "#F97316" : "#EF4444"} />)}
-                              </Bar>}
-                            </BarChart>
-                          </ResponsiveContainer>
-                        ) : (
-                          <ResponsiveContainer width="100%" height={220}>
-                            <BarChart data={[{ name: attributes[0], product: pr.attributeValues?.[attributes[0]] ?? null, benchmark: pr.bmValues?.[attributes[0]] ?? null, excess: (pr.attributeValues?.[attributes[0]] != null && pr.bmValues?.[attributes[0]] != null) ? pr.attributeValues?.[attributes[0]] - pr.bmValues?.[attributes[0]] : null }]}>
-                              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                              <XAxis type="number" tickFormatter={v => `${v?.toFixed(1)}%`} tick={{ fontSize: 9 }} />
-                              <YAxis type="category" dataKey="name" tick={{ fontSize: 9 }} width={100} />
-                              <Tooltip formatter={(v, name) => [fmt(v, name === "excess" ? "Excess Return" : "Return"), name]} />
-                              <Legend />
-                              <ReferenceLine x={0} stroke="#e5e7eb" />
-                              <Bar dataKey="product" name={productResult.productName} fill={PRODUCT_COLORS[pi % PRODUCT_COLORS.length]}>
-                                <Cell fill={(pr.attributeValues?.[attributes[0]] ?? 0) >= 0 ? PRODUCT_COLORS[pi % PRODUCT_COLORS.length] : "#EF4444"} />
-                              </Bar>
-                              {pr.bmValues && <Bar dataKey="benchmark" name={productResult.benchmarkNames?.[0] || "Benchmark"} fill={BM_COLOR} />}
-                              {pr.bmValues && <Bar dataKey="excess" name="Excess Return" fill="#F97316">
-                                <Cell fill={((pr.attributeValues?.[attributes[0]] ?? 0) - (pr.bmValues?.[attributes[0]] ?? 0)) >= 0 ? "#F97316" : "#EF4444"} />
-                              </Bar>}
-                            </BarChart>
-                          </ResponsiveContainer>
-                        )}
+                        {(() => {
+                          const chartData = attributes.map(attr => {
+                            const productVal = pr.attributeValues?.[attr] ?? null;
+                            const benchmarkVal = pr.bmValues?.[attr] ?? null;
+                            return {
+                              attr,
+                              product: productVal,
+                              benchmark: benchmarkVal,
+                              excess: (productVal != null && benchmarkVal != null) ? productVal - benchmarkVal : null,
+                            };
+                          });
+                          return (
+                            <ResponsiveContainer width="100%" height={Math.max(180, attributes.length * 28)}>
+                              <BarChart data={chartData} layout="vertical">
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
+                                <XAxis type="number" tickFormatter={v => isRatioMetric(attributes[0]) ? v?.toFixed(1) : `${v?.toFixed(1)}%`} tick={{ fontSize: 9 }} />
+                                <YAxis type="category" dataKey="attr" tick={{ fontSize: 9 }} width={130} />
+                                <Tooltip formatter={(v, name) => [fmt(v, name === "excess" ? "Excess Return" : "Return"), name]} />
+                                <Legend />
+                                <ReferenceLine x={0} stroke="#e5e7eb" />
+                                <Bar dataKey="product" name={productResult.productName} fill={PRODUCT_COLORS[pi % PRODUCT_COLORS.length]}>
+                                  {chartData.map((d, i) => <Cell key={i} fill={(d.product ?? 0) >= 0 ? PRODUCT_COLORS[pi % PRODUCT_COLORS.length] : "#EF4444"} />)}
+                                </Bar>
+                                {pr.bmValues && <Bar dataKey="benchmark" name={productResult.benchmarkNames?.[0] || "Benchmark"} fill={BM_COLOR} />}
+                                {pr.bmValues && <Bar dataKey="excess" name="Excess Return" fill="#F97316">
+                                  {chartData.map((d, i) => <Cell key={i} fill={(d.excess ?? 0) >= 0 ? "#F97316" : "#EF4444"} />)}
+                                </Bar>}
+                              </BarChart>
+                            </ResponsiveContainer>
+                          );
+                        })()}
                       </div>
                     )}
                   </div>
