@@ -242,41 +242,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
     saveMutation.mutate(data);
   };
 
-  // Auto-save when switching to Results tab with unsaved changes
-  useEffect(() => {
-    if (activeTab === "results" && hasUnsavedChanges && analysisName.trim() && !saveMutation.isPending && analysis) {
-      const data = {
-        name: analysisName,
-        is_template: isTemplate,
-        visibility,
-        analysis_type: analysis?.analysis_type || "single",
-        product_configs: selectedProductIds.map((id) => {
-          const cfg = productConfigs[id] ?? {};
-          const product = activeProducts.find((p) => p.id === id);
-          const savedCfg = (analysis.product_configs ?? []).find((c) => c.product_id === id) ?? {};
-          const bmIds = cfg.benchmark_ids ?? [];
-          return {
-            product_id: id,
-            product_name: product?.name ?? savedCfg.product_name ?? "",
-            firm_name: product?.firm_name ?? savedCfg.firm_name ?? "",
-            benchmark_ids: bmIds,
-            benchmark_names: bmIds.map((bmId) => benchmarks.find((b) => b.id === bmId)?.name ?? ""),
-            return_type: cfg.return_type ?? "gross",
-            include_clone_product: cfg.include_clone_product ?? false,
-            include_clone_benchmark: cfg.include_clone_benchmark ?? false,
-          };
-        }),
-        period_start: cleanDate(periodStart),
-        period_end: cleanDate(periodEnd),
-        use_common_period: false,
-        created_by_id: analysis?.created_by_id || user?.id,
-        categories_config: analysis?.categories_config ?? [],
-        measurement_periods: measurementPeriods,
-        measurement_type: measurementType,
-      };
-      saveMutation.mutate(data);
-    }
-  }, [activeTab, hasUnsavedChanges, analysisName, isTemplate, visibility, analysis?.analysis_type, selectedProductIds, productConfigs, activeProducts, analysis?.product_configs, benchmarks, periodStart, periodEnd, measurementPeriods, measurementType, saveMutation.isPending, saveMutation.mutate]);
+
 
   const isOwner = !analysis?.created_by_id || analysis?.created_by_id === user?.id;
 
@@ -294,7 +260,42 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+        <Tabs value={activeTab} onValueChange={(val) => {
+          setActiveTab(val);
+          // Auto-save and re-process when switching to Results tab with unsaved changes
+          if (val === "results" && hasUnsavedChanges && analysisName.trim() && analysis) {
+            const data = {
+              name: analysisName,
+              is_template: isTemplate,
+              visibility,
+              analysis_type: analysis?.analysis_type || "single",
+              product_configs: selectedProductIds.map((id) => {
+                const cfg = productConfigs[id] ?? {};
+                const product = activeProducts.find((p) => p.id === id);
+                const savedCfg = (analysis.product_configs ?? []).find((c) => c.product_id === id) ?? {};
+                const bmIds = cfg.benchmark_ids ?? [];
+                return {
+                  product_id: id,
+                  product_name: product?.name ?? savedCfg.product_name ?? "",
+                  firm_name: product?.firm_name ?? savedCfg.firm_name ?? "",
+                  benchmark_ids: bmIds,
+                  benchmark_names: bmIds.map((bmId) => benchmarks.find((b) => b.id === bmId)?.name ?? ""),
+                  return_type: cfg.return_type ?? "gross",
+                  include_clone_product: cfg.include_clone_product ?? false,
+                  include_clone_benchmark: cfg.include_clone_benchmark ?? false,
+                };
+              }),
+              period_start: cleanDate(periodStart),
+              period_end: cleanDate(periodEnd),
+              use_common_period: false,
+              created_by_id: analysis?.created_by_id || user?.id,
+              categories_config: analysis?.categories_config ?? [],
+              measurement_periods: measurementPeriods,
+              measurement_type: measurementType,
+            };
+            saveMutation.mutate(data);
+          }
+        }} className="mt-4">
           <TabsList className="grid w-full grid-cols-2 mb-4">
             <TabsTrigger value="details" className="flex items-center gap-2">
               <span>Details</span>
