@@ -501,10 +501,27 @@ async function downloadBlock(el, filename, meta = {}) {
     el.style.width = `${renderW}px`;
     el.style.minWidth = `${renderW}px`;
 
+    // Force recharts SVGs to render at the fixed width before capturing
+    const svgs = el.querySelectorAll('.recharts-responsive-container');
+    const origSvgStyles = [];
+    svgs.forEach((svg, i) => {
+      origSvgStyles[i] = { width: svg.style.width, minWidth: svg.style.minWidth };
+      svg.style.width = `${renderW}px`;
+      svg.style.minWidth = `${renderW}px`;
+    });
+
+    // Wait for a paint cycle so recharts re-renders at new width
+    await new Promise(r => setTimeout(r, 150));
+
     const [headerCanvas, contentCanvas] = await Promise.all([
       html2canvas(header, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: renderW, windowWidth: renderW }),
-      html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: renderW, windowWidth: renderW }),
+      html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: renderW, windowWidth: renderW, logging: false }),
     ]);
+
+    svgs.forEach((svg, i) => {
+      svg.style.width = origSvgStyles[i].width;
+      svg.style.minWidth = origSvgStyles[i].minWidth;
+    });
 
     el.style.width = origWidth;
     el.style.minWidth = origMinWidth;
@@ -597,16 +614,33 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
         block.style.width = `${availW}px`;
         block.style.minWidth = `${availW}px`;
 
+        // Force recharts responsive containers to the fixed width before capture
+        const svgs = block.querySelectorAll('.recharts-responsive-container');
+        const origSvgStyles = [];
+        svgs.forEach((svg, i) => {
+          origSvgStyles[i] = { width: svg.style.width, minWidth: svg.style.minWidth };
+          svg.style.width = `${availW}px`;
+          svg.style.minWidth = `${availW}px`;
+        });
+
+        // Wait for recharts to repaint at new width
+        await new Promise(r => setTimeout(r, 150));
+
         const canvas = await html2canvas(block, {
           scale: 2,
           useCORS: true,
           backgroundColor: '#ffffff',
           width: availW,
           windowWidth: availW,
+          logging: false,
         });
 
         block.style.width = origWidth;
         block.style.minWidth = origMinWidth;
+        svgs.forEach((svg, i) => {
+          svg.style.width = origSvgStyles[i].width;
+          svg.style.minWidth = origSvgStyles[i].minWidth;
+        });
 
         const imgW = canvas.width;
         const imgH = canvas.height;
