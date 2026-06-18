@@ -45,6 +45,23 @@ export function annualizeReturns(monthlyReturns) {
   return (Math.pow(compound, 12 / n) - 1) * 100;
 }
 
+// Determine if a period should be annualized (over 12 months)
+export function shouldAnnualize(window) {
+  if (!window) return false;
+  // Annualize trailing periods over 1 year
+  if (window.type === "trailing") {
+    const annualizeCodes = ["1Y", "2Y", "3Y", "4Y", "5Y", "7Y", "10Y", "since_inception"];
+    return annualizeCodes.includes(window.originalCode);
+  }
+  // Annualize calendar years (always 12 months)
+  if (window.type === "calendar" && window.label !== "CTD") return true;
+  // Annualize rolling periods over 1 year
+  if (window.type === "rolling") {
+    return (window.windowMonths || 0) > 12;
+  }
+  return false;
+}
+
 // Cumulative return (geometric)
 export function cumulativeReturn(returns) {
   if (!returns.length) return null;
@@ -341,14 +358,15 @@ function sortWindows(windows) {
 
 // ── Master Compute Function ───────────────────────────────────────────────────
 
-export function computeAttributeValue(attribute, returns, benchmarkReturns) {
+export function computeAttributeValue(attribute, returns, benchmarkReturns, window = null) {
   if (!returns || returns.length === 0) return null;
   const hasBm = benchmarkReturns && benchmarkReturns.length > 0;
+  const doAnnualize = shouldAnnualize(window);
 
   switch (attribute) {
-    case "Return": return annualizeReturns(returns);
+    case "Return": return doAnnualize ? annualizeReturns(returns) : annualizeReturns(returns);
     case "Cumulative Return": return cumulativeReturn(returns);
-    case "Excess Return": return hasBm ? annualizeReturns(returns) - annualizeReturns(benchmarkReturns) : null;
+    case "Excess Return": return hasBm ? (doAnnualize ? annualizeReturns(returns) - annualizeReturns(benchmarkReturns) : annualizeReturns(returns) - annualizeReturns(benchmarkReturns)) : null;
     case "Cumulative Excess Return": return hasBm ? cumulativeReturn(returns) - cumulativeReturn(benchmarkReturns) : null;
     case "Excess Return Geometric": return hasBm ? ((1 + annualizeReturns(returns) / 100) / (1 + annualizeReturns(benchmarkReturns) / 100) - 1) * 100 : null;
     case "Average Return": return averageReturn(returns);
@@ -604,8 +622,8 @@ export function runAnalysis({ analysis, allSeries, allBenchmarks }) {
         const attributeValues = {};
         const bmValues = {};
         for (const attr of (attributes ?? [])) {
-          attributeValues[attr] = computeAttributeValue(attr, filteredProduct, filteredBm.length ? filteredBm : null);
-          if (primaryBm) bmValues[attr] = computeAttributeValue(attr, filteredBm, null);
+          attributeValues[attr] = computeAttributeValue(attr, filteredProduct, filteredBm.length ? filteredBm : null, win);
+          if (primaryBm) bmValues[attr] = computeAttributeValue(attr, filteredBm, null, win);
         }
 
         categoryResult.periodResults.push({

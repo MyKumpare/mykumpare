@@ -5,7 +5,7 @@ import {
 } from "recharts";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart2, TrendingUp, LayoutList, ChevronDown, ChevronUp, Download, AlignVerticalJustifyStart, AlignHorizontalJustifyStart } from "lucide-react";
-import { runAnalysis, isRatioMetric } from "./analyticsCalculations";
+import { runAnalysis, isRatioMetric, shouldAnnualize } from "./analyticsCalculations";
 
 const CATEGORY_LABELS = {
   performance: "Performance",
@@ -510,6 +510,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg">{pr.window.label}</span>
                             <span className="text-[10px] text-gray-400 capitalize">{pr.window.type}</span>
+                            {shouldAnnualize(pr.window) && <span className="text-[10px] text-amber-600 font-semibold px-1.5 py-0.5 bg-amber-50 border border-amber-200 rounded">Ann.</span>}
                           </div>
                         </div>
                         <PeriodResultTable
@@ -529,6 +530,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg">{pr.window.label}</span>
                             <span className="text-[10px] text-gray-400 capitalize">{pr.window.type}</span>
+                            {shouldAnnualize(pr.window) && <span className="text-[10px] text-amber-600 font-semibold px-1.5 py-0.5 bg-amber-50 border border-amber-200 rounded">Ann.</span>}
                           </div>
                         </div>
                         {(() => {
