@@ -275,6 +275,7 @@ function GrowthOf100Chart({ growthData, bmGrowthData, productName, bmName }) {
         <YAxis tickFormatter={v => `$${v?.toFixed(0)}`} tick={{ fontSize: 10 }} domain={['auto', 'auto']} />
         <Tooltip formatter={(v, name) => [`$${v?.toFixed(2)}`, name]} />
         <Legend />
+        <ReferenceLine y={100} stroke="#6B7280" strokeDasharray="4 2" />
         <Line type="monotone" dataKey="product" name={productName} stroke={PRODUCT_COLORS[0]} strokeWidth={2} dot={false} />
         {hasBm && <Line type="monotone" dataKey="benchmark" name={bmName || "Benchmark"} stroke={BM_COLOR} strokeWidth={1.5} strokeDasharray="4 2" dot={false} />}
       </LineChart>
@@ -655,6 +656,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                               excess: (productVal != null && benchmarkVal != null) ? productVal - benchmarkVal : null,
                             };
                           });
+                          const isGrowthChart = attributes.includes("Growth of $100");
                           return (
                             <ResponsiveContainer width="100%" height={Math.max(180, attributes.length * 28)}>
                               <BarChart data={chartData} layout="vertical">
@@ -664,6 +666,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                                 <Tooltip formatter={(v, name) => [fmt(v, name === "excess" ? "Excess Return" : "Return"), name]} />
                                 <Legend />
                                 <ReferenceLine x={0} stroke="#e5e7eb" />
+                                {isGrowthChart && <ReferenceLine x={100} stroke="#6B7280" strokeDasharray="4 2" />}
                                 <Bar dataKey="product" name={productResult.productName} fill="#4F46E5" />
                                 {pr.bmValues && <Bar dataKey="benchmark" name={productResult.benchmarkNames?.[0] || "Benchmark"} fill="#94A3B8" />}
                                 {pr.bmValues && <Bar dataKey="excess" name="Excess Return" fill="#F97316" />}
