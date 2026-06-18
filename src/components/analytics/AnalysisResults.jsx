@@ -247,36 +247,66 @@ function PeriodResultTableHorizontal({ periodResults, productName, bmNames }) {
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-gray-200 bg-gray-50">
-            <th className="text-left px-3 py-2 font-semibold text-gray-500 sticky left-0 bg-gray-50 min-w-[140px]">Attribute</th>
+            <th className="text-left px-3 py-2 font-semibold text-gray-500 sticky left-0 bg-gray-50 min-w-[140px]"></th>
             {standardPeriods.map((pr, i) => (
-              <th key={i} className="px-3 py-2 font-semibold text-center min-w-[90px]">
-                <span className="text-indigo-700 block">{pr.window.label}</span>
-                {hasBm && <span className="text-gray-400 font-normal text-[10px] block">{productName} / {bmNames?.[0] || "BM"} / Excess</span>}
+              <th key={i} className="px-3 py-2 font-semibold text-indigo-700 text-center min-w-[90px]">
+                {pr.window.label}
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {attributes.map((attr, ai) => (
-            <tr key={attr} className={`border-b border-gray-100 ${ai % 2 === 0 ? "" : "bg-gray-50/50"}`}>
-              <td className="px-3 py-2 text-gray-600 font-medium sticky left-0 bg-inherit">{attr}</td>
-              {standardPeriods.map((pr, pi) => {
-                const pVal = pr.attributeValues?.[attr];
-                const bVal = pr.bmValues?.[attr];
-                const excess = (pVal != null && bVal != null) ? pVal - bVal : null;
-                return (
-                  <td key={pi} className="px-3 py-2 text-center">
-                    <span className={`font-semibold block ${colorClass(pVal, attr)}`}>{fmt(pVal, attr)}</span>
-                    {hasBm && (
-                      <>
-                        <span className={`block ${colorClass(bVal, attr)}`}>{fmt(bVal, attr)}</span>
-                        <span className={`block font-semibold ${colorClass(excess, attr)}`}>{fmt(excess, attr)}</span>
-                      </>
-                    )}
-                  </td>
-                );
-              })}
-            </tr>
+          {attributes.map((attr, attrIdx) => (
+            <React.Fragment key={attr}>
+              {/* Product row for this attribute */}
+              <tr className="border-b border-gray-100">
+                <td className="px-3 py-2 text-gray-600 font-medium sticky left-0 bg-white">{attr}</td>
+                {standardPeriods.map((pr, pi) => {
+                  const pVal = pr.attributeValues?.[attr];
+                  return (
+                    <td key={pi} className={`px-3 py-2 text-center font-semibold ${colorClass(pVal, attr)}`}>
+                      {fmt(pVal, attr)}
+                    </td>
+                  );
+                })}
+              </tr>
+              {/* Benchmark row for this attribute */}
+              {hasBm && (
+                <tr className="border-b border-gray-100">
+                  <td className="px-3 py-2 text-gray-600 font-medium sticky left-0 bg-white">{bmNames?.[0] || "Benchmark"}</td>
+                  {standardPeriods.map((pr, pi) => {
+                    const bVal = pr.bmValues?.[attr];
+                    return (
+                      <td key={pi} className={`px-3 py-2 text-center ${colorClass(bVal, attr)}`}>
+                        {fmt(bVal, attr)}
+                      </td>
+                    );
+                  })}
+                </tr>
+              )}
+              {/* Excess row for this attribute with separator line above */}
+              {hasBm && (
+                <tr className="border-t-2 border-gray-200">
+                  <td className="px-3 py-2 text-gray-600 font-semibold text-orange-600 sticky left-0 bg-white">Excess Return</td>
+                  {standardPeriods.map((pr, pi) => {
+                    const pVal = pr.attributeValues?.[attr];
+                    const bVal = pr.bmValues?.[attr];
+                    const excess = (pVal != null && bVal != null) ? pVal - bVal : null;
+                    return (
+                      <td key={pi} className={`px-3 py-2 text-center font-semibold ${colorClass(excess, attr)}`}>
+                        {fmt(excess, attr)}
+                      </td>
+                    );
+                  })}
+                </tr>
+              )}
+              {/* Extra spacing between attributes */}
+              {attrIdx < attributes.length - 1 && (
+                <tr>
+                  <td colSpan={standardPeriods.length + 1} className="h-2"></td>
+                </tr>
+              )}
+            </React.Fragment>
           ))}
         </tbody>
       </table>
