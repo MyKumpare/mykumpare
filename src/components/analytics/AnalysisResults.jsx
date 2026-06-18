@@ -493,25 +493,41 @@ async function downloadBlock(el, filename, meta = {}) {
   document.body.appendChild(header);
 
   try {
-    // Render at a fixed width wide enough to show all columns
     const renderW = 900;
+
+    // Collect all elements that need overflow unlocked: the element itself, all descendants, and all ancestors up to body
+    const overflowEls = [];
+    // Ancestors
+    let ancestor = el.parentElement;
+    while (ancestor && ancestor !== document.body) {
+      overflowEls.push(ancestor);
+      ancestor = ancestor.parentElement;
+    }
+    // Element itself + all descendants
+    overflowEls.push(el);
+    el.querySelectorAll('*').forEach(d => overflowEls.push(d));
+
+    // Save and unlock overflow on all of them
+    const origOverflows = overflowEls.map(e => ({
+      el: e,
+      overflow: e.style.overflow,
+      overflowX: e.style.overflowX,
+      overflowY: e.style.overflowY,
+      maxHeight: e.style.maxHeight,
+    }));
+    overflowEls.forEach(e => {
+      e.style.overflow = 'visible';
+      e.style.overflowX = 'visible';
+      e.style.overflowY = 'visible';
+      e.style.maxHeight = 'none';
+    });
 
     const origWidth = el.style.width;
     const origMinWidth = el.style.minWidth;
-    const origOverflow = el.style.overflow;
     el.style.width = `${renderW}px`;
     el.style.minWidth = `${renderW}px`;
-    el.style.overflow = 'visible';
 
-    // Also expand any overflow-hidden/auto containers inside (tables, scroll wrappers)
-    const scrollers = el.querySelectorAll('[class*="overflow"]');
-    const origScrollerStyles = [];
-    scrollers.forEach((s, i) => {
-      origScrollerStyles[i] = s.style.overflow;
-      s.style.overflow = 'visible';
-    });
-
-    // Force recharts SVGs to render at the fixed width before capturing
+    // Force recharts SVGs to render at the fixed width
     const svgs = el.querySelectorAll('.recharts-responsive-container');
     const origSvgStyles = [];
     svgs.forEach((svg, i) => {
@@ -520,10 +536,9 @@ async function downloadBlock(el, filename, meta = {}) {
       svg.style.minWidth = `${renderW}px`;
     });
 
-    // Wait for recharts and layout to repaint at new width
+    // Wait for layout to repaint
     await new Promise(r => setTimeout(r, 200));
 
-    // Measure actual scroll dimensions after expansion
     const captureW = Math.max(renderW, el.scrollWidth);
 
     const [headerCanvas, contentCanvas] = await Promise.all([
@@ -531,10 +546,15 @@ async function downloadBlock(el, filename, meta = {}) {
       html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: captureW, windowWidth: captureW, logging: false }),
     ]);
 
+    // Restore all styles
     el.style.width = origWidth;
     el.style.minWidth = origMinWidth;
-    el.style.overflow = origOverflow;
-    scrollers.forEach((s, i) => { s.style.overflow = origScrollerStyles[i]; });
+    origOverflows.forEach(({ el: e, overflow, overflowX, overflowY, maxHeight }) => {
+      e.style.overflow = overflow;
+      e.style.overflowX = overflowX;
+      e.style.overflowY = overflowY;
+      e.style.maxHeight = maxHeight;
+    });
     svgs.forEach((svg, i) => {
       svg.style.width = origSvgStyles[i].width;
       svg.style.minWidth = origSvgStyles[i].minWidth;
@@ -622,13 +642,27 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
 
       let firstPage = true;
       for (const block of blocks) {
-        // Temporarily stretch the block to full page width so recharts fills it
+        // Collect all overflow-clipping ancestors and descendants
+        const overflowEls = [];
+        let anc = block.parentElement;
+        while (anc && anc !== document.body) { overflowEls.push(anc); anc = anc.parentElement; }
+        overflowEls.push(block);
+        block.querySelectorAll('*').forEach(d => overflowEls.push(d));
+
+        const origOverflows = overflowEls.map(e => ({
+          el: e, overflow: e.style.overflow, overflowX: e.style.overflowX,
+          overflowY: e.style.overflowY, maxHeight: e.style.maxHeight,
+        }));
+        overflowEls.forEach(e => {
+          e.style.overflow = 'visible'; e.style.overflowX = 'visible';
+          e.style.overflowY = 'visible'; e.style.maxHeight = 'none';
+        });
+
         const origWidth = block.style.width;
         const origMinWidth = block.style.minWidth;
         block.style.width = `${availW}px`;
         block.style.minWidth = `${availW}px`;
 
-        // Force recharts responsive containers to the fixed width before capture
         const svgs = block.querySelectorAll('.recharts-responsive-container');
         const origSvgStyles = [];
         svgs.forEach((svg, i) => {
@@ -637,26 +671,13 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
           svg.style.minWidth = `${availW}px`;
         });
 
-        // Also expand overflow containers inside the block
-        const scrollers = block.querySelectorAll('[class*="overflow"]');
-        const origScrollerStyles = [];
-        scrollers.forEach((s, i) => {
-          origScrollerStyles[i] = s.style.overflow;
-          s.style.overflow = 'visible';
-        });
-
-        // Wait for recharts to repaint at new width
         await new Promise(r => setTimeout(r, 200));
 
         const captureW = Math.max(availW, block.scrollWidth);
 
         const canvas = await html2canvas(block, {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: '#ffffff',
-          width: captureW,
-          windowWidth: captureW,
-          logging: false,
+          scale: 2, useCORS: true, backgroundColor: '#ffffff',
+          width: captureW, windowWidth: captureW, logging: false,
         });
 
         block.style.width = origWidth;
@@ -665,7 +686,10 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
           svg.style.width = origSvgStyles[i].width;
           svg.style.minWidth = origSvgStyles[i].minWidth;
         });
-        scrollers.forEach((s, i) => { s.style.overflow = origScrollerStyles[i]; });
+        origOverflows.forEach(({ el: e, overflow, overflowX, overflowY, maxHeight }) => {
+          e.style.overflow = overflow; e.style.overflowX = overflowX;
+          e.style.overflowY = overflowY; e.style.maxHeight = maxHeight;
+        });
 
         const imgW = canvas.width;
         const imgH = canvas.height;
