@@ -240,6 +240,13 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
     saveMutation.mutate(data);
   };
 
+  // Auto-save when switching to Results tab with unsaved changes
+  useEffect(() => {
+    if (activeTab === "results" && hasUnsavedChanges && analysisName.trim() && !saveMutation.isPending) {
+      handleSave();
+    }
+  }, [activeTab, hasUnsavedChanges]);
+
   const isOwner = !analysis?.created_by_id || analysis.created_by_id === user?.id;
 
   if (!analysis) return null;
@@ -256,13 +263,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={(tab) => {
-          setActiveTab(tab);
-          // Auto-save and re-process when switching to Results tab with unsaved changes
-          if (tab === "results" && hasUnsavedChanges && analysisName.trim()) {
-            handleSave();
-          }
-        }} className="mt-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
           <TabsList className="grid w-full grid-cols-2 mb-4">
             <TabsTrigger value="details" className="flex items-center gap-2">
               <span>Details</span>
