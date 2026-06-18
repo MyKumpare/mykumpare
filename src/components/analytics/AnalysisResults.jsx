@@ -205,6 +205,53 @@ function RollingChart({ periodResult, attribute, productName, bmNames, chartType
   );
 }
 
+function GrowthOf100Table({ growthData, bmGrowthData, productName, bmName }) {
+  const hasBm = bmGrowthData?.length > 0;
+  const data = growthData?.map((row, i) => ({
+    date: row.date,
+    product: row.value,
+    benchmark: bmGrowthData?.[i]?.value ?? null,
+  })) || [];
+  
+  return (
+    <div className="overflow-x-auto max-h-96 overflow-y-auto">
+      <table className="w-full text-xs">
+        <thead className="sticky top-0 bg-gray-50">
+          <tr className="border-b border-gray-200">
+            <th className="text-left px-3 py-2 font-semibold text-gray-500">Period</th>
+            <th className="text-right px-3 py-2 font-semibold text-indigo-700">{productName}</th>
+            {hasBm && <th className="text-right px-3 py-2 font-semibold text-gray-500">{bmName || "Benchmark"}</th>}
+            {hasBm && <th className="text-right px-3 py-2 font-semibold text-orange-600">Excess</th>}
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((row, i) => {
+            const excess = row.benchmark !== null ? row.product - row.benchmark : null;
+            return (
+              <tr key={i} className={`border-b border-gray-100 ${i % 2 === 0 ? "" : "bg-gray-50/50"}`}>
+                <td className="px-3 py-2 text-gray-600 font-medium">{row.date}</td>
+                <td className={`px-3 py-2 text-right font-semibold ${row.product >= 100 ? "text-green-700" : "text-red-600"}`}>
+                  ${row.product?.toFixed(2)}
+                </td>
+                {hasBm && (
+                  <td className={`px-3 py-2 text-right ${row.benchmark >= 100 ? "text-green-700" : "text-red-600"}`}>
+                    ${row.benchmark?.toFixed(2)}
+                  </td>
+                )}
+                {hasBm && (
+                  <td className={`px-3 py-2 text-right font-semibold ${excess >= 0 ? "text-green-700" : "text-red-600"}`}>
+                    ${excess?.toFixed(2)}
+                  </td>
+                )}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function GrowthOf100Chart({ growthData, bmGrowthData, productName, bmName }) {
   const hasBm = bmGrowthData?.length > 0;
   const data = growthData?.map((row, i) => ({
@@ -522,7 +569,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                 const attributes = Object.keys(pr.attributeValues || {});
                 const isGrowthOf100 = attributes.includes("Growth of $100") && pr.growthOf100Data;
 
-                // Special rendering for Growth of $100 - show chart instead of table
+                // Special rendering for Growth of $100 - show table or chart based on view mode
                 if (isGrowthOf100) {
                   return (
                     <div key={pri} className="mb-4">
@@ -533,12 +580,24 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                           {shouldAnnualize(pr.window) && <span className="text-[10px] text-amber-600 font-semibold px-1.5 py-0.5 bg-amber-50 border border-amber-200 rounded">Ann.</span>}
                         </div>
                       </div>
-                      <GrowthOf100Chart
-                        growthData={pr.growthOf100Data}
-                        bmGrowthData={pr.bmGrowthOf100Data}
-                        productName={productResult.productName}
-                        bmName={productResult.benchmarkNames?.[0]}
-                      />
+                      {(viewMode === "table" || viewMode === "both") && (
+                        <GrowthOf100Table
+                          growthData={pr.growthOf100Data}
+                          bmGrowthData={pr.bmGrowthOf100Data}
+                          productName={productResult.productName}
+                          bmName={productResult.benchmarkNames?.[0]}
+                        />
+                      )}
+                      {(viewMode === "chart" || viewMode === "both") && (
+                        <div className={viewMode === "both" ? "mt-4" : ""}>
+                          <GrowthOf100Chart
+                            growthData={pr.growthOf100Data}
+                            bmGrowthData={pr.bmGrowthOf100Data}
+                            productName={productResult.productName}
+                            bmName={productResult.benchmarkNames?.[0]}
+                          />
+                        </div>
+                      )}
                     </div>
                   );
                 }
