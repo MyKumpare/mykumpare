@@ -525,11 +525,10 @@ async function downloadBlock(el, filename, meta = {}) {
 
     // Measure actual scroll dimensions after expansion
     const captureW = Math.max(renderW, el.scrollWidth);
-    const captureH = el.scrollHeight;
 
     const [headerCanvas, contentCanvas] = await Promise.all([
       html2canvas(header, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: renderW, windowWidth: renderW }),
-      html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: captureW, height: captureH, windowWidth: captureW, logging: false }),
+      html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: captureW, windowWidth: captureW, logging: false }),
     ]);
 
     el.style.width = origWidth;
@@ -650,14 +649,12 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
         await new Promise(r => setTimeout(r, 200));
 
         const captureW = Math.max(availW, block.scrollWidth);
-        const captureH = block.scrollHeight;
 
         const canvas = await html2canvas(block, {
           scale: 2,
           useCORS: true,
           backgroundColor: '#ffffff',
           width: captureW,
-          height: captureH,
           windowWidth: captureW,
           logging: false,
         });
