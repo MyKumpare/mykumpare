@@ -12,6 +12,7 @@ const parseYMD = (ymd) => {
 };
 
 // Filter monthly returns within [startDate, endDate] (both inclusive)
+// For trailing periods, this captures the exact month-end dates needed
 export function filterReturns(monthlyReturns, startStr, endStr, returnField = "return_value") {
   if (!monthlyReturns?.length) return [];
   const start = startStr?.includes("/") ? parseMDY(startStr) : parseYMD(startStr);
@@ -20,6 +21,7 @@ export function filterReturns(monthlyReturns, startStr, endStr, returnField = "r
     .filter((r) => {
       const d = parseYMD(r.date);
       if (!d) return false;
+      // Use <= and >= to ensure we capture the exact month-end dates
       if (start && d < start) return false;
       if (end && d > end) return false;
       return true;
@@ -235,24 +237,35 @@ export function treynorRatio(returns, benchmarkReturns) {
 
 // ── Trailing Period Helpers ───────────────────────────────────────────────────
 
+// Get the last day of a given month (returns date object)
+function getLastDayOfMonth(year, month) {
+  return new Date(year, month + 1, 0);
+}
+
+// Calculate trailing period start date using month-end logic
+// For trailing N months ending on month-end, go back N month-ends
 function getTrailingStartDate(code, periodEnd, inceptionDate) {
   const endDate = parseMDY(periodEnd) || new Date();
+  // Ensure we're working with month-end dates
+  const endMonthEnd = getLastDayOfMonth(endDate.getFullYear(), endDate.getMonth());
+  
   const yearStart = new Date(endDate.getFullYear(), 0, 1);
   const qStartMonth = Math.floor(endDate.getMonth() / 3) * 3;
   const qtdStart = new Date(endDate.getFullYear(), qStartMonth, 1);
 
   const offsets = {
-    "1M": () => new Date(endDate.getFullYear(), endDate.getMonth() - 1, endDate.getDate()),
-    "3M": () => new Date(endDate.getFullYear(), endDate.getMonth() - 3, endDate.getDate()),
-    "QTD": () => qtdStart,
-    "YTD": () => yearStart,
-    "1Y": () => new Date(endDate.getFullYear() - 1, endDate.getMonth(), endDate.getDate()),
-    "2Y": () => new Date(endDate.getFullYear() - 2, endDate.getMonth(), endDate.getDate()),
-    "3Y": () => new Date(endDate.getFullYear() - 3, endDate.getMonth(), endDate.getDate()),
-    "4Y": () => new Date(endDate.getFullYear() - 4, endDate.getMonth(), endDate.getDate()),
-    "5Y": () => new Date(endDate.getFullYear() - 5, endDate.getMonth(), endDate.getDate()),
-    "7Y": () => new Date(endDate.getFullYear() - 7, endDate.getMonth(), endDate.getDate()),
-    "10Y": () => new Date(endDate.getFullYear() - 10, endDate.getMonth(), endDate.getDate()),
+    // For month-based periods, calculate using month-end dates
+    "1M": () => getLastDayOfMonth(endMonthEnd.getFullYear(), endMonthEnd.getMonth() - 1),
+    "3M": () => getLastDayOfMonth(endMonthEnd.getFullYear(), endMonthEnd.getMonth() - 2), // Include end month + 2 prior month-ends
+    "QTD": () => getLastDayOfMonth(endDate.getFullYear(), qtdStart.getMonth() - 1),
+    "YTD": () => new Date(endDate.getFullYear() - 1, 11, 31), // Prior year-end
+    "1Y": () => getLastDayOfMonth(endMonthEnd.getFullYear() - 1, endMonthEnd.getMonth()),
+    "2Y": () => getLastDayOfMonth(endMonthEnd.getFullYear() - 2, endMonthEnd.getMonth()),
+    "3Y": () => getLastDayOfMonth(endMonthEnd.getFullYear() - 3, endMonthEnd.getMonth()),
+    "4Y": () => getLastDayOfMonth(endMonthEnd.getFullYear() - 4, endMonthEnd.getMonth()),
+    "5Y": () => getLastDayOfMonth(endMonthEnd.getFullYear() - 5, endMonthEnd.getMonth()),
+    "7Y": () => getLastDayOfMonth(endMonthEnd.getFullYear() - 7, endMonthEnd.getMonth()),
+    "10Y": () => getLastDayOfMonth(endMonthEnd.getFullYear() - 10, endMonthEnd.getMonth()),
     "since_inception": () => inceptionDate ? (inceptionDate.includes("/") ? parseMDY(inceptionDate) : parseYMD(inceptionDate)) : null,
   };
   const fn = offsets[code];
