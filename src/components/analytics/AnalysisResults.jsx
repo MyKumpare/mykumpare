@@ -576,20 +576,79 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
   const [chartTypes, setChartTypes] = useState({});
   const [tableOrientation, setTableOrientation] = useState("vertical"); // "vertical" | "horizontal"
   
-  // Download/Print handler — each .pdf-block gets its own page with auto-fit orientation (same as individual block download)
+  // Download/Print handler — cover page first, then each .pdf-block with header + page numbers
   const handleDownload = async () => {
-    const blocks = document.querySelectorAll('.pdf-block');
-    if (!blocks.length) return;
+    const allBlocks = Array.from(document.querySelectorAll('.pdf-block'));
+    // Filter out the header block (it has no data-pdf-meta product info — it's the UI controls block)
+    const contentBlocks = allBlocks.filter(b => {
+      try { const m = JSON.parse(b.getAttribute('data-pdf-meta') || '{}'); return !!m.productName; } catch(e) { return false; }
+    });
+    if (!contentBlocks.length) return;
 
     document.body.style.cursor = 'wait';
     const safe = (v) => v ? String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : '';
     const renderW = 900;
     const margin = 28;
 
-    // Capture all blocks first (same clone logic as downloadBlock)
+    // --- Build cover page canvas ---
+    // Gather unique products, benchmarks, categories from results
+    const coverProductLines = (analysis?.product_configs || []).map(cfg =>
+      `${safe(cfg.product_name || '')}${cfg.firm_name ? ` <span style="color:#94a3b8">(${safe(cfg.firm_name)})</span>` : ''}${cfg.return_type ? ` &middot; <span style="color:#6366f1;font-weight:600">${safe(cfg.return_type.charAt(0).toUpperCase()+cfg.return_type.slice(1))}</span>` : ''}`
+    );
+    const coverBmLines = [...new Set((analysis?.product_configs || []).flatMap(cfg => cfg.benchmark_names || []).filter(Boolean))];
+    const coverCategories = (analysis?.categories_config || []).map(c => CATEGORY_LABELS[c.category] || c.category);
+    const totalPages = contentBlocks.length + 1; // cover + content pages
+
+    const coverEl = document.createElement('div');
+    coverEl.style.cssText = `width:${renderW}px;min-height:500px;background:#fff;font-family:sans-serif;padding:60px 70px;box-sizing:border-box;`;
+    coverEl.innerHTML = `
+      <div style="border-bottom:3px solid #4f46e5;padding-bottom:24px;margin-bottom:32px;">
+        <div style="font-size:28px;font-weight:800;color:#1e293b;line-height:1.2;margin-bottom:8px;">${safe(analysis?.name || 'Analysis')}</div>
+        <div style="font-size:13px;color:#64748b;">Generated ${new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-bottom:36px;">
+        <div>
+          <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">Analysis Period</div>
+          <div style="font-size:15px;font-weight:600;color:#1e293b;">${safe(analysis?.period_start || '')} → ${safe(analysis?.period_end || '')}</div>
+        </div>
+        <div>
+          <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">Report Pages</div>
+          <div style="font-size:15px;font-weight:600;color:#1e293b;">${contentBlocks.length} section${contentBlocks.length !== 1 ? 's' : ''}</div>
+        </div>
+      </div>
+      ${coverProductLines.length ? `
+      <div style="margin-bottom:28px;">
+        <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">Product${coverProductLines.length > 1 ? 's' : ''}</div>
+        ${coverProductLines.map(p => `<div style="font-size:13px;color:#1e293b;margin-bottom:5px;padding:8px 12px;background:#f8fafc;border-left:3px solid #4f46e5;border-radius:0 6px 6px 0;">${p}</div>`).join('')}
+      </div>` : ''}
+      ${coverBmLines.length ? `
+      <div style="margin-bottom:28px;">
+        <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">Benchmark${coverBmLines.length > 1 ? 's' : ''}</div>
+        ${coverBmLines.map(b => `<div style="font-size:13px;color:#1e293b;margin-bottom:5px;padding:8px 12px;background:#f8fafc;border-left:3px solid #94a3b8;border-radius:0 6px 6px 0;">${safe(b)}</div>`).join('')}
+      </div>` : ''}
+      ${coverCategories.length ? `
+      <div>
+        <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">Analysis Types Included</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+          ${coverCategories.map(c => `<span style="font-size:12px;font-weight:600;color:#4f46e5;background:#eef2ff;padding:5px 14px;border-radius:20px;border:1px solid #c7d2fe;">${safe(c)}</span>`).join('')}
+        </div>
+      </div>` : ''}
+    `;
+
+    const coverWrapper = document.createElement('div');
+    coverWrapper.style.cssText = `position:fixed;top:-99999px;left:-99999px;width:${renderW}px;overflow:visible;background:#fff;`;
+    coverWrapper.appendChild(coverEl);
+    document.body.appendChild(coverWrapper);
+    await new Promise(r => setTimeout(r, 200));
+    const coverCanvas = await html2canvas(coverWrapper, {
+      scale: 2, useCORS: true, backgroundColor: '#ffffff',
+      width: renderW, windowWidth: renderW, logging: false,
+    });
+    document.body.removeChild(coverWrapper);
+
+    // --- Capture content block canvases ---
     const canvases = [];
-    for (const block of blocks) {
-      // Build off-screen header matching the block's data-meta attribute (set by PdfBlock)
+    for (const block of contentBlocks) {
       const metaStr = block.getAttribute('data-pdf-meta') || '{}';
       let meta = {};
       try { meta = JSON.parse(metaStr); } catch(e) {}
@@ -629,7 +688,6 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
       document.body.appendChild(wrapper);
 
       await new Promise(r => setTimeout(r, 250));
-
       const canvas = await html2canvas(wrapper, {
         scale: 2, useCORS: true, backgroundColor: '#ffffff',
         width: renderW, windowWidth: renderW, logging: false,
@@ -638,32 +696,42 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
       canvases.push(canvas);
     }
 
-    // Build PDF: auto-orient each page to best fit its canvas
+    // --- Assemble PDF ---
     try {
-      let pdf = null;
-      let firstPage = true;
-      for (const canvas of canvases) {
-        const naturalW = canvas.width / 2;
-        const naturalH = canvas.height / 2;
-        const orientation = naturalH > naturalW ? 'portrait' : 'landscape';
+      // Start with portrait cover page
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter' });
 
-        if (firstPage) {
-          pdf = new jsPDF({ orientation, unit: 'pt', format: 'letter' });
-          firstPage = false;
-        } else {
-          pdf.addPage('letter', orientation);
-        }
-
-        const pageW = pdf.internal.pageSize.getWidth();
-        const pageH = pdf.internal.pageSize.getHeight();
-        const availW = pageW - margin * 2;
-        const availH = pageH - margin * 2;
+      const addCanvasToPage = (canvas, pgW, pgH) => {
+        const availW = pgW - margin * 2;
+        const availH = pgH - margin * 2;
         const fitScale = Math.min(availW / canvas.width, availH / canvas.height);
         const fW = canvas.width * fitScale;
         const fH = canvas.height * fitScale;
-        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', (pageW - fW) / 2, margin, fW, fH);
-      }
-      if (pdf) pdf.save(`${analysis?.name || 'Analysis'}-Results.pdf`);
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', (pgW - fW) / 2, margin, fW, fH);
+      };
+
+      // Page 1: cover (no page number)
+      addCanvasToPage(coverCanvas, pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight());
+
+      // Subsequent pages: content blocks with page numbers
+      canvases.forEach((canvas, i) => {
+        const naturalH = canvas.height / 2;
+        const naturalW = canvas.width / 2;
+        const orientation = naturalH > naturalW ? 'portrait' : 'landscape';
+        pdf.addPage('letter', orientation);
+
+        const pgW = pdf.internal.pageSize.getWidth();
+        const pgH = pdf.internal.pageSize.getHeight();
+        addCanvasToPage(canvas, pgW, pgH);
+
+        // Page number bottom-right: "Page X of Y"
+        const pageNum = i + 2; // page 1 is cover
+        pdf.setFontSize(8);
+        pdf.setTextColor(150, 150, 150);
+        pdf.text(`Page ${pageNum} of ${totalPages}`, pgW - margin, pgH - 12, { align: 'right' });
+      });
+
+      pdf.save(`${analysis?.name || 'Analysis'}-Results.pdf`);
     } catch (error) {
       console.error('PDF generation failed:', error);
     } finally {
