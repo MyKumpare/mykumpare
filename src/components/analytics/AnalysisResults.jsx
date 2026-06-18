@@ -351,7 +351,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
               badge={`${catResult.periodResults.length} period${catResult.periodResults.length !== 1 ? "s" : ""}`}>
 
               {/* Horizontal table mode: one consolidated table, periods as columns */}
-              {(viewMode === "table" || viewMode === "both") && tableOrientation === "horizontal" && (
+              {viewMode !== "chart" && tableOrientation === "horizontal" && (
                 <div className="mb-4">
                   <PeriodResultTableHorizontal
                     periodResults={catResult.periodResults}
@@ -368,18 +368,23 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                 if (pr.isHistorical) {
                   return (
                     <div key={pri} className="mb-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">{pr.window.label} Returns</span>
-                        <button onClick={() => toggleChartType(chartKey, pr)} title={getChartType(chartKey, pr) === "bar" ? "Switch to Line" : "Switch to Bar"}
-                          className="flex items-center gap-1 px-2 py-1 rounded border border-gray-200 text-gray-400 hover:border-indigo-400 hover:text-indigo-600 transition-colors text-xs">
-                          {getChartType(chartKey, pr) === "bar" ? <><TrendingUp className="w-3.5 h-3.5" /> Line</> : <><BarChart2 className="w-3.5 h-3.5" /> Bar</>}
-                        </button>
-                      </div>
                       {(viewMode === "table" || viewMode === "both") && (
-                        <HistoricalTable periodResult={pr} productName={productResult.productName} bmNames={productResult.benchmarkNames} />
+                        <>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">{pr.window.label} Returns</span>
+                          </div>
+                          <HistoricalTable periodResult={pr} productName={productResult.productName} bmNames={productResult.benchmarkNames} />
+                        </>
                       )}
                       {(viewMode === "chart" || viewMode === "both") && (
-                        <div className="mt-3">
+                        <div className={viewMode === "both" ? "mt-4" : ""}>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">{pr.window.label} Returns</span>
+                            <button onClick={() => toggleChartType(chartKey, pr)} title={getChartType(chartKey, pr) === "bar" ? "Switch to Line" : "Switch to Bar"}
+                              className="flex items-center gap-1 px-2 py-1 rounded border border-gray-200 text-gray-400 hover:border-indigo-400 hover:text-indigo-600 transition-colors text-xs">
+                              {getChartType(chartKey, pr) === "bar" ? <><TrendingUp className="w-3.5 h-3.5" /> Line</> : <><BarChart2 className="w-3.5 h-3.5" /> Bar</>}
+                            </button>
+                          </div>
                           <HistoricalChart periodResult={pr} productName={productResult.productName} bmNames={productResult.benchmarkNames} chartType={getChartType(chartKey, pr)} />
                         </div>
                       )}
@@ -387,11 +392,12 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                   );
                 }
 
-                // Rolling per attribute — defaults to line
+                // Rolling per attribute — defaults to line (chart-only, no table)
                 if (pr.isRolling) {
                   const attrs = catResult.periodResults.find(p => !p.isRolling && !p.isHistorical)
                     ? Object.keys(catResult.periodResults.find(p => !p.isRolling && !p.isHistorical)?.attributeValues || {})
                     : Object.keys(pr.rollingData?.[0]?.values || {});
+                  if (viewMode === "table") return null;
                   return (
                     <div key={pri} className="mb-4">
                       <div className="flex items-center justify-between mb-2">
@@ -415,37 +421,41 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                 // Standard period
                 const attributes = Object.keys(pr.attributeValues || {});
 
-                // In horizontal table mode with no chart, skip rendering individual period blocks
-                // (the horizontal table above already shows all periods consolidated)
+                // In horizontal table mode, skip individual period blocks (consolidated table shown above)
                 if (tableOrientation === "horizontal" && viewMode === "table") return null;
 
                 return (
                   <div key={pri} className="mb-4">
-                    {/* Only show period label/header when vertical table or chart is visible */}
-                    {(tableOrientation === "vertical" || viewMode === "chart" || viewMode === "both") && (
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg">{pr.window.label}</span>
-                          <span className="text-[10px] text-gray-400 capitalize">{pr.window.type}</span>
+                    {/* Table view */}
+                    {(viewMode === "table" || viewMode === "both") && tableOrientation === "vertical" && (
+                      <>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg">{pr.window.label}</span>
+                            <span className="text-[10px] text-gray-400 capitalize">{pr.window.type}</span>
+                          </div>
                         </div>
-                        {(viewMode === "chart" || viewMode === "both") && (
+                        <PeriodResultTable
+                          periodResult={pr}
+                          attributes={attributes}
+                          productName={productResult.productName}
+                          bmNames={productResult.benchmarkNames}
+                        />
+                      </>
+                    )}
+                    {/* Chart view */}
+                    {(viewMode === "chart" || viewMode === "both") && attributes.length > 0 && (
+                      <div className={viewMode === "both" ? "mt-4" : ""}>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg">{pr.window.label}</span>
+                            <span className="text-[10px] text-gray-400 capitalize">{pr.window.type}</span>
+                          </div>
                           <button onClick={() => toggleChartType(chartKey, pr)} title={getChartType(chartKey, pr) === "bar" ? "Switch to Line" : "Switch to Bar"}
                             className="flex items-center gap-1 px-2 py-1 rounded border border-gray-200 text-gray-400 hover:border-indigo-400 hover:text-indigo-600 transition-colors text-xs">
                             {getChartType(chartKey, pr) === "bar" ? <><TrendingUp className="w-3.5 h-3.5" /> Line</> : <><BarChart2 className="w-3.5 h-3.5" /> Bar</>}
                           </button>
-                        )}
-                      </div>
-                    )}
-                    {(viewMode === "table" || viewMode === "both") && tableOrientation === "vertical" && (
-                      <PeriodResultTable
-                        periodResult={pr}
-                        attributes={attributes}
-                        productName={productResult.productName}
-                        bmNames={productResult.benchmarkNames}
-                      />
-                    )}
-                    {(viewMode === "chart" || viewMode === "both") && attributes.length > 0 && (
-                      <div className="mt-3">
+                        </div>
                         {attributes.length > 1 ? (() => {
                           const chartData = attributes.map(attr => ({ attr, product: pr.attributeValues?.[attr] ?? null, benchmark: pr.bmValues?.[attr] ?? null }));
                           return (
@@ -479,7 +489,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
               })}
 
               {/* Cross-period attribute comparison charts (chart/both mode, non-rolling) */}
-              {(viewMode === "chart" || viewMode === "both") && catResult.periodResults.filter(pr => !pr.isRolling && !pr.isHistorical).length > 1 && (
+              {viewMode !== "table" && catResult.periodResults.filter(pr => !pr.isRolling && !pr.isHistorical).length > 1 && (
                 <div className="mt-4 pt-4 border-t border-gray-100">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Cross-Period Comparison</p>
                   {Object.keys(catResult.periodResults.find(pr => !pr.isRolling && !pr.isHistorical)?.attributeValues || {}).slice(0, 3).map(attr => (
