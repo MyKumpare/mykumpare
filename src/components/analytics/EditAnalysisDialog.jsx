@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
-import { CalendarDays, RefreshCw, Link2, Trash2, BarChart2 } from "lucide-react";
+import { CalendarDays, RefreshCw, Link2, Trash2, BarChart2, Plus, Pencil, CheckCircle } from "lucide-react";
 import BenchmarkMultiSelect from "./BenchmarkMultiSelect";
 import AnalysisResults from "./AnalysisResults";
 
@@ -67,9 +67,259 @@ function commonPeriod(productConfigs, allProducts, allBenchmarks, allSeries) {
 function TogBtn({ active, onClick, children }) {
   return (
     <button type="button" onClick={onClick}
-      className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${active ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-gray-500 border-gray-300 hover:border-indigo-400"}`}>
+      className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${active ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-gray-600 border-gray-300 hover:border-indigo-400"}`}>
       {children}
     </button>
+  );
+}
+
+const MEASUREMENT_CATEGORIES = [
+  { value: "performance", label: "Performance", attributes: ["Return","Cumulative Return","Excess Return","Cumulative Excess Return","Excess Return Geometric","Average Return","Average Positive Return","Average Negative Return","Growth of $100","Best Period","Worst Period","Number of Consecutive Periods","Number of Consecutive Negative Periods","Down Period Percent","Up Period Percent","Percent Profitable Period","Manager Consistency","Number of Observations","Periods Above the Benchmark","Percentage Above the Benchmark"] },
+  { value: "risk", label: "Risk and Regression", attributes: ["Standard Deviation","Downside Deviation","Variance","Skewness","Kurtosis","Information Ratio","Sharpe Ratio","Sortino Ratio","Beta","Alpha","R-Squared","Tracking Error","Treynor Ratio"] },
+  { value: "efficiency", label: "Efficiency", attributes: ["Efficiency Ratio","Calmar Ratio","Sterling Ratio","Burke Ratio","Pain Index","Pain Ratio"] },
+  { value: "valueAtRisk", label: "Value at Risk", attributes: ["Value at Risk (VaR)","Conditional VaR (CVaR)","Maximum Drawdown","Average Drawdown","Drawdown Duration","Recovery Factor"] },
+  { value: "population", label: "Population Calculations", attributes: ["Population Variance","Population Standard Deviation","Population Skewness","Population Kurtosis"] },
+];
+
+const TRAILING_OPTIONS = [
+  { value: "1M", label: "Trailing 1 Month" },
+  { value: "3M", label: "Trailing 3 Months" },
+  { value: "QTD", label: "QTD" },
+  { value: "YTD", label: "YTD" },
+  { value: "1Y", label: "1 Year" },
+  { value: "2Y", label: "2 Years" },
+  { value: "3Y", label: "3 Years" },
+  { value: "4Y", label: "4 Years" },
+  { value: "5Y", label: "5 Years" },
+  { value: "7Y", label: "7 Years" },
+  { value: "10Y", label: "10 Years" },
+  { value: "since_inception", label: "Since Inception" },
+  { value: "custom", label: "Custom Period" },
+];
+
+const ROLLING_OPTIONS = [
+  { value: "1M", label: "Rolling 1 Month" },
+  { value: "2M", label: "Rolling 2 Months" },
+  { value: "3M", label: "Rolling 3 Months" },
+  { value: "6M", label: "Rolling 6 Months" },
+  { value: "1Y", label: "Rolling 1 Year" },
+  { value: "3Y", label: "Rolling 3 Years" },
+  { value: "5Y", label: "Rolling 5 Years" },
+  { value: "10Y", label: "Rolling 10 Years" },
+  { value: "custom", label: "Custom Period" },
+];
+
+const HISTORICAL_OPTIONS = [
+  { value: "monthly", label: "Monthly" },
+  { value: "quarterly", label: "Quarterly" },
+  { value: "annually", label: "Annual" },
+];
+
+const emptyPeriodConfig = () => ({
+  trailing: [],
+  trailing_custom_periods: [],
+  rolling: [],
+  rolling_custom_periods: [],
+  cumulative: false,
+  calendar_years: [],
+  calendar_include_ctd: false,
+  historical: [],
+});
+
+const emptyBenchmarkConfig = () => ({
+  show_default: true,
+  secondary_benchmark_ids: [],
+});
+
+function CustomPeriodsEditor({ periods, onChange }) {
+  const [newStart, setNewStart] = useState("");
+  const [newEnd, setNewEnd] = useState("");
+
+  const addPeriod = () => {
+    if (!newStart || !newEnd) return;
+    const label = `${newStart} – ${newEnd}`;
+    onChange([...periods, { start: newStart, end: newEnd, label }]);
+    setNewStart("");
+    setNewEnd("");
+  };
+
+  const removePeriod = (idx) => onChange(periods.filter((_, i) => i !== idx));
+
+  return (
+    <div className="mt-2 space-y-2">
+      {periods.length > 0 && (
+        <div className="space-y-1">
+          {periods.map((p, idx) => (
+            <div key={idx} className="flex items-center justify-between px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg text-xs">
+              <span className="text-indigo-700 font-medium">{p.start} – {p.end}</span>
+              <button type="button" onClick={() => removePeriod(idx)} className="text-gray-400 hover:text-red-500 ml-2">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="flex items-end gap-2 p-3 bg-gray-50 rounded-lg flex-wrap">
+        <div>
+          <input type="text" value={newStart} onChange={e => setNewStart(e.target.value)}
+            placeholder="MM/DD/YYYY"
+            className="text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-400 w-28" />
+          <p className="text-[10px] text-gray-500 mt-0.5 font-medium">Start Date</p>
+        </div>
+        <span className="text-xs text-gray-400 pb-4">to</span>
+        <div>
+          <input type="text" value={newEnd} onChange={e => setNewEnd(e.target.value)}
+            placeholder="MM/DD/YYYY"
+            className="text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-400 w-28" />
+          <p className="text-[10px] text-gray-500 mt-0.5 font-medium">End Date</p>
+        </div>
+        <button type="button" onClick={addPeriod} disabled={!newStart || !newEnd}
+          className="flex items-center gap-1 px-3 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg disabled:opacity-40 hover:bg-indigo-700 transition-colors mb-0.5">
+          <Plus className="w-3.5 h-3.5" /> Add
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PeriodConfigPanel({ periodConfig, setPeriodConfig, periodStart, periodEnd }) {
+  const [expanded, setExpanded] = useState({ trailing: true, rolling: false, cumulative: false, calendar: false, historical: false });
+  const toggle = (type) => setExpanded(prev => ({ ...prev, [type]: !prev[type] }));
+  const toggleArr = (field, val) => setPeriodConfig(prev => {
+    const cur = prev[field] || [];
+    return { ...prev, [field]: cur.includes(val) ? cur.filter(x => x !== val) : [...cur, val] };
+  });
+
+  const availableYears = useMemo(() => {
+    if (!periodStart || !periodEnd) return [];
+    const parseMDY = (mdy) => { const [m, d, y] = mdy.split("/").map(Number); return new Date(y, m - 1, d); };
+    const start = parseMDY(periodStart), end = parseMDY(periodEnd);
+    const years = [];
+    for (let y = start.getFullYear(); y <= end.getFullYear(); y++) years.push(y);
+    return years;
+  }, [periodStart, periodEnd]);
+
+  const SectionHeader = ({ type, label, badge }) => (
+    <button type="button" onClick={() => toggle(type)}
+      className="w-full flex items-center justify-between px-3 py-2.5 bg-gray-50 hover:bg-gray-100 transition-colors">
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-semibold text-gray-700">{label}</span>
+        {badge > 0 && <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">{badge} selected</span>}
+        {badge === true && <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">On</span>}
+      </div>
+      {expanded[type] ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-gray-400"><path d="M18 15l-6-6-6 6" /></svg> : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-gray-400"><path d="M6 9l6 6 6-6" /></svg>}
+    </button>
+  );
+
+  return (
+    <div className="space-y-2">
+      {/* Trailing */}
+      <div className="border border-gray-200 rounded-xl overflow-hidden">
+        <SectionHeader type="trailing" label="Trailing Period" badge={(periodConfig.trailing || []).length} />
+        {expanded.trailing && (
+          <div className="p-4 border-t border-gray-200 space-y-3">
+            <div className="flex flex-wrap gap-2">
+              {TRAILING_OPTIONS.filter(o => o.value !== "custom").map(({ value, label }) => (
+                <TogBtn key={value} active={(periodConfig.trailing || []).includes(value)}
+                  onClick={() => toggleArr("trailing", value)}>{label}</TogBtn>
+              ))}
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-gray-500 mb-1">Custom Periods</p>
+              <CustomPeriodsEditor
+                periods={periodConfig.trailing_custom_periods || []}
+                onChange={(val) => setPeriodConfig(prev => ({ ...prev, trailing_custom_periods: val }))}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Rolling */}
+      <div className="border border-gray-200 rounded-xl overflow-hidden">
+        <SectionHeader type="rolling" label="Rolling Period" badge={(periodConfig.rolling || []).length} />
+        {expanded.rolling && (
+          <div className="p-4 border-t border-gray-200 space-y-3">
+            <div className="flex flex-wrap gap-2">
+              {ROLLING_OPTIONS.filter(o => o.value !== "custom").map(({ value, label }) => (
+                <TogBtn key={value} active={(periodConfig.rolling || []).includes(value)}
+                  onClick={() => toggleArr("rolling", value)}>{label}</TogBtn>
+              ))}
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-gray-500 mb-1">Custom Periods</p>
+              <CustomPeriodsEditor
+                periods={periodConfig.rolling_custom_periods || []}
+                onChange={(val) => setPeriodConfig(prev => ({ ...prev, rolling_custom_periods: val }))}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Cumulative */}
+      <div className="border border-gray-200 rounded-xl overflow-hidden">
+        <SectionHeader type="cumulative" label="Cumulative Period" badge={periodConfig.cumulative ? true : 0} />
+        {expanded.cumulative && (
+          <div className="p-4 border-t border-gray-200">
+            <label className="flex items-center gap-2.5 text-sm text-gray-700 cursor-pointer">
+              <input type="checkbox" checked={!!periodConfig.cumulative}
+                onChange={(e) => setPeriodConfig(prev => ({ ...prev, cumulative: e.target.checked }))}
+                className="rounded border-gray-300 text-indigo-600" />
+              Show cumulative result over analysis period
+            </label>
+          </div>
+        )}
+      </div>
+
+      {/* Calendar Year */}
+      <div className="border border-gray-200 rounded-xl overflow-hidden">
+        <SectionHeader type="calendar" label="Calendar Year Period" badge={(periodConfig.calendar_years || []).length} />
+        {expanded.calendar && (
+          <div className="p-4 border-t border-gray-200 space-y-3">
+            {availableYears.length > 0 ? (
+              <>
+                <div className="flex gap-3">
+                  <button type="button" onClick={() => setPeriodConfig(prev => ({ ...prev, calendar_years: availableYears }))}
+                    className="text-xs text-indigo-600 hover:underline font-medium">Select All</button>
+                  <button type="button" onClick={() => setPeriodConfig(prev => ({ ...prev, calendar_years: [] }))}
+                    className="text-xs text-gray-500 hover:underline font-medium">Clear All</button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {availableYears.map((year) => (
+                    <TogBtn key={year} active={(periodConfig.calendar_years || []).includes(year)}
+                      onClick={() => toggleArr("calendar_years", year)}>{year}</TogBtn>
+                  ))}
+                </div>
+                <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer mt-1">
+                  <input type="checkbox" checked={!!periodConfig.calendar_include_ctd}
+                    onChange={(e) => setPeriodConfig(prev => ({ ...prev, calendar_include_ctd: e.target.checked }))}
+                    className="rounded border-gray-300 text-indigo-600" />
+                  Include Calendar-to-Date (CTD)
+                </label>
+              </>
+            ) : (
+              <p className="text-xs text-gray-400">Set analysis period first to see available calendar years.</p>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Historical */}
+      <div className="border border-gray-200 rounded-xl overflow-hidden">
+        <SectionHeader type="historical" label="Historical Return Period" badge={(periodConfig.historical || []).length} />
+        {expanded.historical && (
+          <div className="p-4 border-t border-gray-200">
+            <div className="flex flex-wrap gap-2">
+              {HISTORICAL_OPTIONS.map(({ value, label }) => (
+                <TogBtn key={value} active={(periodConfig.historical || []).includes(value)}
+                  onClick={() => toggleArr("historical", value)}>{label}</TogBtn>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -92,6 +342,24 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
   const [periodStart, setPeriodStart] = useState("");
   const [periodEnd, setPeriodEnd] = useState("");
   const [measurementCategories, setMeasurementCategories] = useState([]);
+  const [editingCategoryIndex, setEditingCategoryIndex] = useState(null);
+  const [showCategoryEditor, setShowCategoryEditor] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedAttributes, setSelectedAttributes] = useState([]);
+  const [periodConfig, setPeriodConfig] = useState({
+    trailing: [],
+    trailing_custom_periods: [],
+    rolling: [],
+    rolling_custom_periods: [],
+    cumulative: false,
+    calendar_years: [],
+    calendar_include_ctd: false,
+    historical: [],
+  });
+  const [benchmarkConfig, setBenchmarkConfig] = useState({
+    show_default: true,
+    secondary_benchmark_ids: [],
+  });
 
   const { data: benchmarks = [] } = useQuery({
     queryKey: ["benchmarks-all"],
@@ -446,10 +714,18 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
             )}
           </div>
 
-          {/* Measurement categories summary */}
-          {measurementCategories.length > 0 && (
-            <div>
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-2">Measurement Categories</label>
+          {/* Measurement categories management */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Measurement Categories</label>
+              <button type="button" onClick={() => { setShowCategoryEditor(true); setEditingCategoryIndex(null); setSelectedCategory(""); setSelectedAttributes([]); setPeriodConfig(emptyPeriodConfig()); setBenchmarkConfig(emptyBenchmarkConfig()); }}
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors">
+                <Plus className="w-3.5 h-3.5" /> Add Category
+              </button>
+            </div>
+            {measurementCategories.length === 0 ? (
+              <p className="text-xs text-gray-400 px-3 py-4 text-center bg-gray-50 rounded-lg">No measurement categories added yet. Click "Add Category" to configure your analysis metrics.</p>
+            ) : (
               <div className="space-y-2">
                 {measurementCategories.map((cat, idx) => {
                   const pc = cat.periodConfig || {};
@@ -465,16 +741,119 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
                     historicalCount > 0 && `${historicalCount} historical`,
                   ].filter(Boolean).join(", ");
                   return (
-                    <div key={idx} className="flex items-start gap-2 text-xs text-gray-600 bg-gray-50 px-3 py-2 rounded-lg">
+                    <div key={idx} className="flex items-start gap-2 text-xs text-gray-600 bg-gray-50 px-3 py-2.5 rounded-lg border border-gray-200">
                       <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 flex-shrink-0 mt-1" />
-                      <div>
+                      <div className="flex-1">
                         <span className="font-semibold text-gray-700 capitalize">{cat.category}</span>
                         {parts && <span className="text-gray-400 ml-1">· {parts}</span>}
                         <span className="text-gray-400 ml-1">· {cat.attributes?.length ?? 0} attrs</span>
                       </div>
+                      <button type="button" onClick={() => { setEditingCategoryIndex(idx); setSelectedCategory(cat.category); setSelectedAttributes(cat.attributes || []); setPeriodConfig(cat.periodConfig || emptyPeriodConfig()); setBenchmarkConfig(cat.benchmarkConfig || emptyBenchmarkConfig()); setShowCategoryEditor(true); }}
+                        className="p-1 text-gray-400 hover:text-indigo-600 transition-colors" title="Edit">
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button type="button" onClick={() => setMeasurementCategories((prev) => prev.filter((_, i) => i !== idx))}
+                        className="p-1 text-gray-400 hover:text-red-500 transition-colors" title="Delete">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   );
                 })}
+              </div>
+            )}
+          </div>
+
+          {/* Category Editor Modal */}
+          {showCategoryEditor && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowCategoryEditor(false)}>
+              <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto m-4" onClick={(e) => e.stopPropagation()}>
+                <div className="p-5 border-b border-gray-200">
+                  <h3 className="text-base font-bold text-gray-800">{editingCategoryIndex !== null ? "Edit" : "Add"} Measurement Category</h3>
+                </div>
+                <div className="p-5 space-y-5">
+                  {/* Category selector */}
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-2">Select Category</label>
+                    <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                      disabled={editingCategoryIndex !== null}>
+                      <option value="">Choose a measurement category...</option>
+                      {MEASUREMENT_CATEGORIES.map((cat) => {
+                        const alreadyAdded = measurementCategories.some((c, i) => c.category === cat.value && i !== editingCategoryIndex);
+                        return (
+                          <option key={cat.value} value={cat.value} disabled={alreadyAdded}>
+                            {cat.label}{alreadyAdded ? " (already added)" : ""}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+
+                  {/* Attributes selector */}
+                  {selectedCategory && (
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Select Attributes</label>
+                        <div className="flex gap-2">
+                          <button type="button" onClick={() => setSelectedAttributes(MEASUREMENT_CATEGORIES.find(c => c.value === selectedCategory)?.attributes || [])} className="text-xs text-indigo-600 hover:underline">Select All</button>
+                          <button type="button" onClick={() => setSelectedAttributes([])} className="text-xs text-gray-400 hover:underline">Clear</button>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        {(MEASUREMENT_CATEGORIES.find(c => c.value === selectedCategory)?.attributes || []).map((attr) => (
+                          <button key={attr} type="button" onClick={() => setSelectedAttributes((prev) => prev.includes(attr) ? prev.filter(a => a !== attr) : [...prev, attr])}
+                            className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${selectedAttributes.includes(attr) ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-gray-600 border-gray-300 hover:border-indigo-400"}`}>
+                            {attr}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Period configuration */}
+                  {selectedCategory && selectedAttributes.length > 0 && (
+                    <div>
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-3">Configure Periods</label>
+                      <PeriodConfigPanel
+                        periodConfig={periodConfig}
+                        setPeriodConfig={setPeriodConfig}
+                        periodStart={periodStart}
+                        periodEnd={periodEnd}
+                      />
+                    </div>
+                  )}
+                </div>
+                <div className="p-5 border-t border-gray-200 flex justify-end gap-2">
+                  <button type="button" onClick={() => setShowCategoryEditor(false)} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">Cancel</button>
+                  <button type="button"
+                    onClick={() => {
+                      if (!selectedCategory || selectedAttributes.length === 0) return;
+                      const entry = {
+                        category: selectedCategory,
+                        attributes: selectedAttributes,
+                        periodConfig,
+                        benchmarkConfig,
+                        periods: [
+                          ...(periodConfig.trailing?.length || periodConfig.trailing_custom_periods?.length ? ["trailing"] : []),
+                          ...(periodConfig.rolling?.length || periodConfig.rolling_custom_periods?.length ? ["rolling"] : []),
+                          ...(periodConfig.cumulative ? ["cumulative"] : []),
+                          ...(periodConfig.calendar_years?.length ? ["calendar"] : []),
+                          ...(periodConfig.historical?.length ? ["historical"] : []),
+                        ],
+                      };
+                      if (editingCategoryIndex !== null) {
+                        setMeasurementCategories((prev) => prev.map((c, i) => i === editingCategoryIndex ? entry : c));
+                      } else {
+                        setMeasurementCategories((prev) => [...prev, entry]);
+                      }
+                      setShowCategoryEditor(false);
+                      setHasUnsavedChanges(true);
+                    }}
+                    disabled={!selectedCategory || selectedAttributes.length === 0}
+                    className="px-5 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg disabled:opacity-40 hover:bg-indigo-700 transition-colors">
+                    {editingCategoryIndex !== null ? "Update Category" : "Add Category"}
+                  </button>
+                </div>
               </div>
             </div>
           )}
