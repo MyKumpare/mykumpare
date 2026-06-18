@@ -256,7 +256,13 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+        <Tabs value={activeTab} onValueChange={(tab) => {
+          setActiveTab(tab);
+          // Auto-save and re-process when switching to Results tab with unsaved changes
+          if (tab === "results" && hasUnsavedChanges && analysisName.trim()) {
+            handleSave();
+          }
+        }} className="mt-4">
           <TabsList className="grid w-full grid-cols-2 mb-4">
             <TabsTrigger value="details" className="flex items-center gap-2">
               <span>Details</span>
@@ -476,15 +482,10 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
           </TabsContent>
 
           <TabsContent value="results" className="mt-1">
-            {!showResults || hasUnsavedChanges ? (
+            {saveMutation.isPending ? (
               <div className="py-16 text-center space-y-4">
-                <p className="text-sm text-gray-500">Save your changes to update the analysis results.</p>
-                <button type="button" onClick={() => { handleSave(); }}
-                  className="px-6 py-2.5 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 mx-auto"
-                  disabled={!analysisName.trim() || saveMutation.isPending}>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                  {saveMutation.isPending ? "Processing…" : "Save & Re-Process"}
-                </button>
+                <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto"></div>
+                <p className="text-sm text-gray-500">Processing analysis...</p>
               </div>
             ) : (
               <AnalysisResults
