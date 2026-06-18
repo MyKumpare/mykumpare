@@ -197,16 +197,16 @@ function AttributeBarChart({ periodResults, attribute, productNames, bmNames }) 
         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
         <XAxis dataKey="period" tick={{ fontSize: 10 }} />
         <YAxis tickFormatter={v => isRatioMetric(attribute) ? v?.toFixed(2) : `${v?.toFixed(1)}%`} tick={{ fontSize: 10 }} />
-        <Tooltip formatter={(v, name) => [fmt(v, attribute), name]} />
+        <Tooltip formatter={(v, name) => {
+          const isExcess = name === "excess";
+          const val = fmt(v, attribute);
+          return [<span style={{ color: isExcess && v != null ? (v > 0 ? "#10B981" : "#EF4444") : "inherit" }}>{val}</span>, name];
+        }} />
         <Legend />
         <ReferenceLine y={0} stroke="#e5e7eb" />
-        <Bar dataKey="product" name={productNames[0]} fill={PRODUCT_COLORS[0]}>
-          {data.map((d, i) => <Cell key={i} fill={(d.product ?? 0) >= 0 ? PRODUCT_COLORS[0] : "#EF4444"} />)}
-        </Bar>
-        {hasBm && <Bar dataKey="benchmark" name={bmNames?.[0] || "Benchmark"} fill={BM_COLOR} />}
-        {hasBm && <Bar dataKey="excess" name="Excess Return" fill="#F97316">
-          {data.map((d, i) => <Cell key={i} fill={(d.excess ?? 0) >= 0 ? "#F97316" : "#EF4444"} />)}
-        </Bar>}
+        <Bar dataKey="product" name={productNames[0]} fill="#4F46E5" />
+        {hasBm && <Bar dataKey="benchmark" name={bmNames?.[0] || "Benchmark"} fill="#94A3B8" />}
+        {hasBm && <Bar dataKey="excess" name="Excess Return" fill="#F97316" />}
       </BarChart>
     </ResponsiveContainer>
   );
@@ -469,20 +469,12 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
                                 <XAxis type="number" tickFormatter={v => isRatioMetric(attributes[0]) ? v?.toFixed(1) : `${v?.toFixed(1)}%`} tick={{ fontSize: 9 }} />
                                 <YAxis type="category" dataKey="attr" tick={{ fontSize: 9 }} width={130} />
-                                <Tooltip formatter={(v, name) => {
-                                  const isExcess = name === "excess";
-                                  const val = fmt(v, isExcess ? "Excess Return" : "Return");
-                                  return [<span style={{ color: isExcess && v != null ? (v > 0 ? "#10B981" : "#EF4444") : "inherit" }}>{val}</span>, name];
-                                }} />
+                                <Tooltip formatter={(v, name) => [fmt(v, name === "excess" ? "Excess Return" : "Return"), name]} />
                                 <Legend />
                                 <ReferenceLine x={0} stroke="#e5e7eb" />
-                                <Bar dataKey="product" name={productResult.productName} fill="#4F46E5">
-                                  {chartData.map((d, i) => <Cell key={i} fill="#4F46E5" />)}
-                                </Bar>
+                                <Bar dataKey="product" name={productResult.productName} fill="#4F46E5" />
                                 {pr.bmValues && <Bar dataKey="benchmark" name={productResult.benchmarkNames?.[0] || "Benchmark"} fill="#94A3B8" />}
-                                {pr.bmValues && <Bar dataKey="excess" name="Excess Return" fill="#F97316">
-                                  {chartData.map((d, i) => <Cell key={i} fill={(d.product ?? 0) > (d.benchmark ?? 0) ? "#10B981" : "#EF4444"} />)}
-                                </Bar>}
+                                {pr.bmValues && <Bar dataKey="excess" name="Excess Return" fill="#F97316" />}
                               </BarChart>
                             </ResponsiveContainer>
                           );
