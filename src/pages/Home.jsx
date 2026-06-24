@@ -26,6 +26,7 @@ import AddBenchmarkDialog from "../components/utility/AddBenchmarkDialog";
 import AnalyticsSection from "../components/analytics/AnalyticsSection";
 import EditAnalysisDialog from "../components/analytics/EditAnalysisDialog";
 import GlobalActivityLogModal from "../components/activity/GlobalActivityLogModal";
+import PortfolioPickerModal from "../components/portfolios/PortfolioPickerModal";
 
 const FIRM_TYPES = [
   "Manager of Managers",
@@ -70,6 +71,7 @@ export default function Home() {
   const [editingBenchmark, setEditingBenchmark] = useState(null);
   const [activityLogModalOpen, setActivityLogModalOpen] = useState(false);
   const [activityLogDefaultTab, setActivityLogDefaultTab] = useState("activity");
+  const [portfolioPickerOpen, setPortfolioPickerOpen] = useState(false);
 
   const portfoliosRef = useRef(null);
   const firmsRef = useRef(null);
@@ -316,7 +318,7 @@ export default function Home() {
   const hasResults = Object.keys(groupedFirms).length > 0;
 
   const mobileNavItems = [
-    { label: "Portfolios", icon: BarChart3, ref: portfoliosRef, color: "text-emerald-600", activeBg: "bg-emerald-50" },
+    { label: "Portfolios", icon: BarChart3, ref: null, color: "text-emerald-600", activeBg: "bg-emerald-50", onClick: () => setPortfolioPickerOpen(true) },
     { label: "Firms", icon: Building, ref: firmsRef, color: "text-indigo-600", activeBg: "bg-indigo-50" },
     { label: "Products", icon: Package, ref: productsRef, color: "text-violet-600", activeBg: "bg-violet-50" },
     { label: "Contacts", icon: User, ref: contactsRef, color: "text-pink-600", activeBg: "bg-pink-50" },
@@ -690,6 +692,14 @@ export default function Home() {
         open={activityLogModalOpen}
         onClose={() => setActivityLogModalOpen(false)}
         defaultTab={activityLogDefaultTab}
+      />
+
+      <PortfolioPickerModal
+        open={portfolioPickerOpen}
+        onClose={() => setPortfolioPickerOpen(false)}
+        portfolios={portfolios}
+        onPortfolioClick={(portfolio) => { setEditingPortfolio(portfolio); setPreselectedAllocatorId(null); setPortfolioDialogOpen(true); }}
+        onAddPortfolio={() => { setEditingPortfolio(null); setPreselectedAllocatorId(null); setPortfolioDialogOpen(true); }}
       />
 
       {/* Benchmark dialog */}
