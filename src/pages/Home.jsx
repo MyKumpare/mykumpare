@@ -32,6 +32,8 @@ import ProductPickerModal from "../components/products/ProductPickerModal";
 import ContactPickerModal from "../components/contacts/ContactPickerModal";
 import ActivityLogPickerModal from "../components/activity/ActivityLogPickerModal";
 import ActivityDetailModal from "../components/activity/ActivityDetailModal";
+import FollowUpTaskPickerModal from "../components/activity/FollowUpTaskPickerModal";
+import TaskDetailModal from "../components/activity/TaskDetailModal";
 
 const FIRM_TYPES = [
   "Manager of Managers",
@@ -82,6 +84,8 @@ export default function Home() {
   const [contactPickerOpen, setContactPickerOpen] = useState(false);
   const [activityPickerOpen, setActivityPickerOpen] = useState(false);
   const [viewingActivity, setViewingActivity] = useState(null);
+  const [taskPickerOpen, setTaskPickerOpen] = useState(false);
+  const [viewingTask, setViewingTask] = useState(null);
 
   const portfoliosRef = useRef(null);
   const firmsRef = useRef(null);
@@ -333,7 +337,7 @@ export default function Home() {
     { label: "Products", icon: Package, ref: null, color: "text-violet-600", activeBg: "bg-violet-50", onClick: () => setProductPickerOpen(true) },
     { label: "Contacts", icon: User, ref: null, color: "text-pink-600", activeBg: "bg-pink-50", onClick: () => setContactPickerOpen(true) },
     { label: "Activity", icon: ClipboardList, ref: null, color: "text-amber-600", activeBg: "bg-amber-50", onClick: () => setActivityPickerOpen(true) },
-    { label: "Tasks", icon: LayoutList, ref: null, color: "text-orange-600", activeBg: "bg-orange-50", onClick: () => { setActivityLogDefaultTab("task"); setActivityLogModalOpen(true); } },
+    { label: "Tasks", icon: LayoutList, ref: null, color: "text-orange-600", activeBg: "bg-orange-50", onClick: () => setTaskPickerOpen(true) },
     { label: "Analytics", icon: LineChart, ref: analyticsRef, color: "text-cyan-600", activeBg: "bg-cyan-50", onClick: () => setAnalyticsLaunchOpen(true) },
     { label: "Utilities", icon: Wrench, ref: utilityRef, color: "text-gray-600", activeBg: "bg-gray-100" },
   ];
@@ -749,6 +753,19 @@ export default function Home() {
         activity={viewingActivity}
         onClose={() => setViewingActivity(null)}
         onOpenContact={(contact) => setViewingContact(contact)}
+      />
+
+      <FollowUpTaskPickerModal
+        open={taskPickerOpen}
+        onClose={() => setTaskPickerOpen(false)}
+        onAddTask={() => { setActivityLogDefaultTab("task"); setActivityLogModalOpen(true); }}
+        onTaskClick={(task) => setViewingTask(task)}
+      />
+
+      <TaskDetailModal
+        open={!!viewingTask}
+        task={viewingTask}
+        onClose={() => setViewingTask(null)}
       />
 
       {/* Benchmark dialog */}
