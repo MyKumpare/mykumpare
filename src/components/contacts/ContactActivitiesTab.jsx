@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Phone, Mail, Users, FileText, MoreHorizontal, Trash2, X, ChevronDown, ChevronUp } from "lucide-react";
 import { format } from "date-fns";
+import FollowUpTasksSection from "./FollowUpTasksSection";
 
 const ACTIVITY_TYPES = ["Call", "Email", "Meeting", "Note", "Other"];
 
@@ -162,7 +163,7 @@ function ActivityItem({ activity, contactId }) {
   );
 }
 
-export default function ContactActivitiesTab({ contactId }) {
+export default function ContactActivitiesTab({ contactId, contactName }) {
   const [showForm, setShowForm] = useState(false);
 
   const { data: activities = [], isLoading } = useQuery({
@@ -180,7 +181,7 @@ export default function ContactActivitiesTab({ contactId }) {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-6">
       <div className="flex justify-end">
         <Button
           type="button"
@@ -214,6 +215,11 @@ export default function ContactActivitiesTab({ contactId }) {
           ))}
         </div>
       )}
+
+      {/* ── Divider ── */}
+      <div className="border-t border-gray-200 pt-4">
+        <FollowUpTasksSection contactId={contactId} contactName={contactName} />
+      </div>
     </div>
   );
 }

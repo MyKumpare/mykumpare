@@ -1117,7 +1117,10 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
             </TabsContent>
             {/* ── ACTIVITIES TAB ── */}
             <TabsContent value="activities" className="mt-0">
-              <ContactActivitiesTab contactId={editingContact?.id} />
+              <ContactActivitiesTab
+                contactId={editingContact?.id}
+                contactName={[firstName, lastName].filter(Boolean).join(" ")}
+              />
             </TabsContent>
           </Tabs>
         </div>

@@ -1,0 +1,69 @@
+{
+  "name": "FollowUpTask",
+  "type": "object",
+  "properties": {
+    "originator_contact_id": {
+      "type": "string",
+      "description": "ID of the contact who created this task"
+    },
+    "originator_contact_name": {
+      "type": "string",
+      "description": "Full name of the originator (denormalized)"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Due date of the task (YYYY-MM-DD)"
+    },
+    "task_description": {
+      "type": "string",
+      "description": "Task description / memo (rich text HTML)"
+    },
+    "assigned_to_contact_id": {
+      "type": "string",
+      "description": "ID of the contact this task is assigned to (optional)"
+    },
+    "assigned_to_contact_name": {
+      "type": "string",
+      "description": "Full name of the assignee (denormalized)"
+    },
+    "assigned_to_firm_id": {
+      "type": "string",
+      "description": "ID of the firm of the assignee"
+    },
+    "assigned_to_firm_name": {
+      "type": "string",
+      "description": "Firm name of the assignee (denormalized)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Not Started",
+        "In-process",
+        "Completed",
+        "Cancelled"
+      ],
+      "default": "Not Started",
+      "description": "Current status of the task"
+    },
+    "completion_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the task was completed"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notes on the task (rich text HTML)"
+    },
+    "parent_task_id": {
+      "type": "string",
+      "description": "If this task is a sub-task, points to the parent task id"
+    }
+  },
+  "required": [
+    "originator_contact_id",
+    "due_date",
+    "task_description",
+    "status"
+  ]
+}

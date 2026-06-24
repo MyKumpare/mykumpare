@@ -125,6 +125,20 @@ textarea {
   }
 }
 
+/* Quill rich-text preview (read-only) */
+.quill-preview p { margin: 0 0 4px; }
+.quill-preview ul, .quill-preview ol { padding-left: 18px; margin: 0 0 4px; }
+.quill-preview strong { font-weight: 600; }
+.quill-preview em { font-style: italic; }
+.quill-preview h1, .quill-preview h2, .quill-preview h3 { font-weight: 700; margin: 4px 0; }
+.quill-preview blockquote { border-left: 3px solid #d1d5db; padding-left: 8px; color: #6b7280; margin: 4px 0; }
+
+/* Compact Quill editor (quill-sm) */
+.quill-sm .ql-toolbar { padding: 4px 8px; }
+.quill-sm .ql-toolbar .ql-formats { margin-right: 6px; }
+.quill-sm .ql-container { font-size: 13px; }
+.quill-sm .ql-editor { min-height: 80px; padding: 8px 10px; }
+
 @media print {
   @page {
     size: letter landscape;
