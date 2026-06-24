@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Plus, X, ChevronDown, ChevronUp, Trash2, CheckCircle2, Clock, AlertCircle, XCircle,
-  User, Building2, Calendar, ClipboardList, Edit2, Check, Link2, Link2Off
+  User, Building2, Calendar, ClipboardList, Edit2, Check, Link2, Paperclip, Upload, FileText
 } from "lucide-react";
 import { format } from "date-fns";
 import ReactQuill from "react-quill";
@@ -36,6 +36,95 @@ function dateInputToDisplay(dateStr) {
   if (!dateStr) return "—";
   try { return format(new Date(dateStr + "T00:00:00"), "MMM d, yyyy"); } catch { return dateStr; }
 }
+
+// ── File Attachments Manager ──────────────────────────────────────────────────
+function AttachmentsManager({ attachments = [], onChange }) {
+  const [uploading, setUploading] = useState(false);
+  const [pendingNames, setPendingNames] = useState({});
+
+  const handleFileSelect = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setUploading(true);
+    const newAttachments = [...attachments];
+    for (const file of files) {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const id = `att_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      newAttachments.push({
+        id,
+        name: file.name,
+        file_url,
+        file_type: file.type || file.name.split(".").pop(),
+        uploaded_at: new Date().toISOString(),
+      });
+    }
+    onChange(newAttachments);
+    setUploading(false);
+    e.target.value = "";
+  };
+
+  const handleRename = (id, name) => {
+    onChange(attachments.map(a => a.id === id ? { ...a, name } : a));
+    setPendingNames(prev => { const n = { ...prev }; delete n[id]; return n; });
+  };
+
+  const handleRemove = (id) => {
+    onChange(attachments.filter(a => a.id !== id));
+  };
+
+  return (
+    <div className="space-y-2">
+      {attachments.map(att => (
+        <div key={att.id} className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-gray-50 border border-gray-200">
+          <FileText className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+          {pendingNames[att.id] !== undefined ? (
+            <input
+              className="flex-1 text-xs border border-indigo-300 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+              value={pendingNames[att.id]}
+              onChange={e => setPendingNames(prev => ({ ...prev, [att.id]: e.target.value }))}
+              onBlur={() => handleRename(att.id, pendingNames[att.id] || att.name)}
+              onKeyDown={e => { if (e.key === "Enter") handleRename(att.id, pendingNames[att.id] || att.name); }}
+              autoFocus
+            />
+          ) : (
+            <a
+              href={att.file_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 text-xs text-indigo-600 hover:underline truncate"
+            >
+              {att.name}
+            </a>
+          )}
+          <button
+            type="button"
+            title="Rename"
+            onClick={() => setPendingNames(prev => ({ ...prev, [att.id]: att.name }))}
+            className="text-gray-300 hover:text-indigo-500 transition-colors"
+          >
+            <Edit2 className="w-3 h-3" />
+          </button>
+          <button
+            type="button"
+            title="Remove"
+            onClick={() => handleRemove(att.id)}
+            className="text-gray-300 hover:text-red-500 transition-colors"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      ))}
+
+      <label className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg border border-dashed border-gray-300 text-xs text-gray-500 hover:border-indigo-400 hover:text-indigo-600 transition-colors cursor-pointer ${uploading ? "opacity-60 pointer-events-none" : ""}`}>
+        <Upload className="w-3.5 h-3.5" />
+        {uploading ? "Uploading..." : "Attach file(s)"}
+        <input type="file" multiple className="hidden" onChange={handleFileSelect} disabled={uploading} />
+      </label>
+    </div>
+  );
+}
+
+// ── Edit2 rename icon already imported above ──
 
 // ── Single-task sub-form used inside the multi-task form ──────────────────────
 function TaskEntryForm({ idx, task, onChange, onRemove, showRemove, allFirms, allContacts, allActivities = [] }) {
@@ -94,12 +183,7 @@ function TaskEntryForm({ idx, task, onChange, onRemove, showRemove, allFirms, al
       <div className="grid grid-cols-2 gap-2">
         <div className="space-y-1">
           <Label className="text-xs font-medium text-gray-700">Due Date *</Label>
-          <Input
-            type="date"
-            value={task.due_date}
-            onChange={(e) => onChange(idx, { ...task, due_date: e.target.value })}
-            className="h-8 text-sm"
-          />
+          <Input type="date" value={task.due_date} onChange={(e) => onChange(idx, { ...task, due_date: e.target.value })} className="h-8 text-sm" />
         </div>
         <div className="space-y-1">
           <Label className="text-xs font-medium text-gray-700">Status</Label>
@@ -125,11 +209,8 @@ function TaskEntryForm({ idx, task, onChange, onRemove, showRemove, allFirms, al
             </button>
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={() => setAssignModalOpen(true)}
-            className="w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-dashed border-gray-300 text-xs text-gray-500 hover:border-indigo-400 hover:text-indigo-600 transition-colors"
-          >
+          <button type="button" onClick={() => setAssignModalOpen(true)}
+            className="w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-dashed border-gray-300 text-xs text-gray-500 hover:border-indigo-400 hover:text-indigo-600 transition-colors">
             <User className="w-3.5 h-3.5" /> Assign to a contact...
           </button>
         )}
@@ -168,6 +249,17 @@ function TaskEntryForm({ idx, task, onChange, onRemove, showRemove, allFirms, al
         </div>
       )}
 
+      {/* Attachments */}
+      <div className="space-y-1">
+        <Label className="text-xs font-medium text-gray-700 flex items-center gap-1">
+          <Paperclip className="w-3 h-3 text-gray-400" /> Attachments
+        </Label>
+        <AttachmentsManager
+          attachments={task.attachments || []}
+          onChange={(atts) => onChange(idx, { ...task, attachments: atts })}
+        />
+      </div>
+
       {/* Assignment Modal */}
       {assignModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -196,12 +288,8 @@ function TaskEntryForm({ idx, task, onChange, onRemove, showRemove, allFirms, al
                 ) : (
                   <div className="space-y-1 max-h-52 overflow-y-auto">
                     {firmContacts.map(c => (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() => handleAssign(c)}
-                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-indigo-50 text-left transition-colors"
-                      >
+                      <button key={c.id} type="button" onClick={() => handleAssign(c)}
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-indigo-50 text-left transition-colors">
                         <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-700">
                           {(c.first_name || "")[0]}{(c.last_name || "")[0]}
                         </div>
@@ -222,10 +310,14 @@ function TaskEntryForm({ idx, task, onChange, onRemove, showRemove, allFirms, al
   );
 }
 
-// ── New-tasks form (one or more tasks at once) ──────────────────────────────
+// ── New-tasks form ────────────────────────────────────────────────────────────
 function NewTasksForm({ contactId, contactName, onSaved, onCancel, allFirms, allContacts, allActivities = [] }) {
   const queryClient = useQueryClient();
-  const emptyTask = () => ({ task_description: "", due_date: new Date().toISOString().split("T")[0], status: "Not Started", assigned_to_contact_id: "", assigned_to_contact_name: "", assigned_to_firm_id: "", assigned_to_firm_name: "", activity_id: "", activity_label: "" });
+  const emptyTask = () => ({
+    task_description: "", due_date: new Date().toISOString().split("T")[0], status: "Not Started",
+    assigned_to_contact_id: "", assigned_to_contact_name: "", assigned_to_firm_id: "", assigned_to_firm_name: "",
+    activity_id: "", activity_label: "", attachments: [],
+  });
   const [tasks, setTasks] = useState([emptyTask()]);
   const [saving, setSaving] = useState(false);
 
@@ -250,10 +342,10 @@ function NewTasksForm({ contactId, contactName, onSaved, onCancel, allFirms, all
         assigned_to_firm_name: t.assigned_to_firm_name || undefined,
         activity_id: t.activity_id || undefined,
         activity_label: t.activity_label || undefined,
+        attachments: t.attachments?.length ? t.attachments : undefined,
       });
     }
     queryClient.invalidateQueries({ queryKey: ["follow_up_tasks", contactId] });
-    // also refresh any assigned contact's tasks
     for (const t of valid) {
       if (t.assigned_to_contact_id) {
         queryClient.invalidateQueries({ queryKey: ["follow_up_tasks", t.assigned_to_contact_id] });
@@ -270,40 +362,21 @@ function NewTasksForm({ contactId, contactName, onSaved, onCancel, allFirms, all
         <span className="text-xs font-semibold text-indigo-700">Add Follow-up Task(s)</span>
         <button type="button" onClick={onCancel}><X className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" /></button>
       </div>
-
       <div className="space-y-2">
         {tasks.map((task, idx) => (
           <TaskEntryForm
-            key={idx}
-            idx={idx}
-            task={task}
-            onChange={handleChange}
-            onRemove={handleRemove}
-            showRemove={tasks.length > 1}
-            allFirms={allFirms}
-            allContacts={allContacts}
-            allActivities={allActivities}
+            key={idx} idx={idx} task={task} onChange={handleChange} onRemove={handleRemove}
+            showRemove={tasks.length > 1} allFirms={allFirms} allContacts={allContacts} allActivities={allActivities}
           />
         ))}
       </div>
-
-      <button
-        type="button"
-        onClick={handleAdd}
-        className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-dashed border-indigo-300 text-xs text-indigo-600 hover:bg-indigo-50 transition-colors"
-      >
+      <button type="button" onClick={handleAdd}
+        className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-dashed border-indigo-300 text-xs text-indigo-600 hover:bg-indigo-50 transition-colors">
         <Plus className="w-3.5 h-3.5" /> Add Another Task
       </button>
-
       <div className="flex gap-2 justify-end">
         <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={onCancel}>Cancel</Button>
-        <Button
-          type="button"
-          size="sm"
-          className="h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
-          onClick={handleSave}
-          disabled={saving}
-        >
+        <Button type="button" size="sm" className="h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white" onClick={handleSave} disabled={saving}>
           {saving ? "Saving..." : `Save Task${tasks.length > 1 ? "s" : ""}`}
         </Button>
       </div>
@@ -317,7 +390,6 @@ function TaskItem({ task, contactId, allFirms, allContacts, allActivities = [] }
   const [expanded, setExpanded] = useState(false);
   const [editMode, setEditMode] = useState(false);
 
-  // Edit state
   const [editStatus, setEditStatus] = useState(task.status);
   const [editNotes, setEditNotes] = useState(task.notes || "");
   const [editDueDate, setEditDueDate] = useState(task.due_date || "");
@@ -328,11 +400,9 @@ function TaskItem({ task, contactId, allFirms, allContacts, allActivities = [] }
   const [editFirmName, setEditFirmName] = useState(task.assigned_to_firm_name || "");
   const [editActivityId, setEditActivityId] = useState(task.activity_id || "");
   const [editActivityLabel, setEditActivityLabel] = useState(task.activity_label || "");
+  const [editAttachments, setEditAttachments] = useState(task.attachments || []);
   const [assignOpen, setAssignOpen] = useState(false);
   const [selFirmId, setSelFirmId] = useState("");
-
-  const isAssignedToContact = !!task.assigned_to_contact_id;
-  const isOriginator = !!task.originator_contact_id;
 
   const firmContacts = useMemo(
     () => allContacts.filter(c => !c.deleted_at && (c.firm_ids || []).includes(selFirmId)),
@@ -344,8 +414,8 @@ function TaskItem({ task, contactId, allFirms, allContacts, allActivities = [] }
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ["follow_up_tasks", contactId] });
       queryClient.invalidateQueries({ queryKey: ["follow_up_tasks_assigned", contactId] });
-      // if status changed to Completed, refresh originator
-      if (vars.status === "Completed" && task.originator_contact_id && task.originator_contact_id !== contactId) {
+      // sync status update to originator's view if different contact
+      if (task.originator_contact_id && task.originator_contact_id !== contactId) {
         queryClient.invalidateQueries({ queryKey: ["follow_up_tasks", task.originator_contact_id] });
         queryClient.invalidateQueries({ queryKey: ["follow_up_tasks_assigned", task.originator_contact_id] });
       }
@@ -377,6 +447,7 @@ function TaskItem({ task, contactId, allFirms, allContacts, allActivities = [] }
       assigned_to_firm_name: editFirmName || undefined,
       activity_id: editActivityId || undefined,
       activity_label: editActivityLabel || undefined,
+      attachments: editAttachments.length ? editAttachments : undefined,
     };
     if (editStatus === "Completed" && !task.completion_date) {
       data.completion_date = new Date().toISOString().split("T")[0];
@@ -394,6 +465,10 @@ function TaskItem({ task, contactId, allFirms, allContacts, allActivities = [] }
     setSelFirmId("");
   };
 
+  // Determine role tags
+  const isRequested = task.originator_contact_id === contactId;
+  const isAssignedToMe = task.assigned_to_contact_id === contactId;
+
   const s = STATUS_STYLES[task.status] || STATUS_STYLES["Not Started"];
   const StatusIcon = s.icon;
 
@@ -407,8 +482,24 @@ function TaskItem({ task, contactId, allFirms, allContacts, allActivities = [] }
           <StatusIcon className={`w-3.5 h-3.5 ${s.color}`} />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${s.bg} ${s.color}`}>{task.status}</span>
+            {/* Role tags */}
+            {isRequested && (
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                Requested
+              </span>
+            )}
+            {isAssignedToMe && !isRequested && (
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                Assigned to Me
+              </span>
+            )}
+            {isRequested && isAssignedToMe && (
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
+                Self-assigned
+              </span>
+            )}
             <span className="text-xs text-gray-500 flex items-center gap-1">
               <Calendar className="w-3 h-3" /> Due {dateInputToDisplay(task.due_date)}
             </span>
@@ -417,25 +508,24 @@ function TaskItem({ task, contactId, allFirms, allContacts, allActivities = [] }
                 <User className="w-2.5 h-2.5" /> {task.assigned_to_contact_name}
               </span>
             )}
+            {task.attachments?.length > 0 && (
+              <span className="text-[10px] text-gray-500 flex items-center gap-0.5 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded-full">
+                <Paperclip className="w-2.5 h-2.5" /> {task.attachments.length}
+              </span>
+            )}
             {task.completion_date && (
               <span className="text-[10px] text-green-600 flex items-center gap-1 bg-green-50 px-1.5 py-0.5 rounded-full">
-                <CheckCircle2 className="w-2.5 h-2.5" /> Completed {dateInputToDisplay(task.completion_date)}
+                <CheckCircle2 className="w-2.5 h-2.5" /> {dateInputToDisplay(task.completion_date)}
               </span>
             )}
           </div>
           {task.task_description && (
-            <div
-              className="text-xs text-gray-600 mt-1 line-clamp-2 quill-preview"
-              dangerouslySetInnerHTML={{ __html: task.task_description }}
-            />
+            <div className="text-xs text-gray-600 mt-1 line-clamp-2 quill-preview" dangerouslySetInnerHTML={{ __html: task.task_description }} />
           )}
         </div>
         <div className="flex items-center gap-1 flex-shrink-0 mt-0.5">
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); setEditMode(true); setExpanded(true); }}
-            className="p-1 rounded text-gray-300 hover:text-indigo-600 transition-colors"
-          >
+          <button type="button" onClick={(e) => { e.stopPropagation(); setEditMode(true); setExpanded(true); }}
+            className="p-1 rounded text-gray-300 hover:text-indigo-600 transition-colors">
             <Edit2 className="w-3.5 h-3.5" />
           </button>
           {expanded ? <ChevronUp className="w-3.5 h-3.5 text-gray-400" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-400" />}
@@ -464,7 +554,7 @@ function TaskItem({ task, contactId, allFirms, allContacts, allActivities = [] }
           {task.originator_contact_name && task.originator_contact_id !== contactId && (
             <div className="flex items-center gap-2 text-xs text-gray-500">
               <User className="w-3 h-3" />
-              Assigned by <span className="font-medium text-gray-700">{task.originator_contact_name}</span>
+              Requested by <span className="font-medium text-gray-700">{task.originator_contact_name}</span>
             </div>
           )}
           {task.activity_label && (
@@ -473,13 +563,24 @@ function TaskItem({ task, contactId, allFirms, allContacts, allActivities = [] }
               <span className="truncate">Linked to: {task.activity_label}</span>
             </div>
           )}
+          {/* Attachments read-only */}
+          {task.attachments?.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Attachments</p>
+              <div className="space-y-1">
+                {task.attachments.map(att => (
+                  <a key={att.id} href={att.file_url} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-xs text-indigo-600 hover:bg-indigo-50 transition-colors">
+                    <FileText className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                    <span className="truncate">{att.name}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={() => deleteMutation.mutate()}
-              disabled={deleteMutation.isPending}
-              className="flex items-center gap-1 text-xs text-red-400 hover:text-red-600 transition-colors"
-            >
+            <button type="button" onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending}
+              className="flex items-center gap-1 text-xs text-red-400 hover:text-red-600 transition-colors">
               <Trash2 className="w-3 h-3" /> Delete
             </button>
           </div>
@@ -530,11 +631,8 @@ function TaskItem({ task, contactId, allFirms, allContacts, allActivities = [] }
                 </button>
               </div>
             ) : (
-              <button
-                type="button"
-                onClick={() => setAssignOpen(true)}
-                className="w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-dashed border-gray-300 text-xs text-gray-500 hover:border-indigo-400 hover:text-indigo-600 transition-colors"
-              >
+              <button type="button" onClick={() => setAssignOpen(true)}
+                className="w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-dashed border-gray-300 text-xs text-gray-500 hover:border-indigo-400 hover:text-indigo-600 transition-colors">
                 <User className="w-3.5 h-3.5" /> Assign to a contact...
               </button>
             )}
@@ -603,8 +701,7 @@ function TaskItem({ task, contactId, allFirms, allContacts, allActivities = [] }
               <Select value={editActivityId} onValueChange={(val) => {
                 const act = allActivities.find(a => a.id === val);
                 if (act) {
-                  const { format: fmt } = { format: (d, f) => { try { return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(d); } catch { return ""; } } };
-                  const lbl = `${act.activity_type}${act.subject ? ` – ${act.subject}` : ""} (${act.activity_date ? fmt(new Date(act.activity_date + "T00:00:00")) : "—"})`;
+                  const lbl = `${act.activity_type}${act.subject ? ` – ${act.subject}` : ""} (${act.activity_date ? new Date(act.activity_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"})`;
                   setEditActivityId(val);
                   setEditActivityLabel(lbl);
                 }
@@ -621,15 +718,18 @@ function TaskItem({ task, contactId, allFirms, allContacts, allActivities = [] }
             )}
           </div>
 
+          {/* Attachments */}
+          <div className="space-y-1">
+            <Label className="text-xs font-medium text-gray-700 flex items-center gap-1">
+              <Paperclip className="w-3 h-3 text-gray-400" /> Attachments
+            </Label>
+            <AttachmentsManager attachments={editAttachments} onChange={setEditAttachments} />
+          </div>
+
           <div className="flex gap-2 justify-end">
             <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={() => setEditMode(false)}>Cancel</Button>
-            <Button
-              type="button"
-              size="sm"
-              className="h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
-              onClick={handleSaveEdit}
-              disabled={updateMutation.isPending}
-            >
+            <Button type="button" size="sm" className="h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
+              onClick={handleSaveEdit} disabled={updateMutation.isPending}>
               <Check className="w-3 h-3 mr-1" /> {updateMutation.isPending ? "Saving..." : "Save Changes"}
             </Button>
           </div>
@@ -643,21 +743,18 @@ function TaskItem({ task, contactId, allFirms, allContacts, allActivities = [] }
 export default function FollowUpTasksSection({ contactId, contactName, allActivities = [] }) {
   const [showForm, setShowForm] = useState(false);
 
-  // Tasks where this contact is the originator
   const { data: originatedTasks = [], isLoading: loadingOriginated } = useQuery({
     queryKey: ["follow_up_tasks", contactId],
     queryFn: () => base44.entities.FollowUpTask.filter({ originator_contact_id: contactId }, "-due_date"),
     enabled: !!contactId,
   });
 
-  // Tasks assigned TO this contact (from others)
   const { data: assignedTasks = [], isLoading: loadingAssigned } = useQuery({
     queryKey: ["follow_up_tasks_assigned", contactId],
     queryFn: () => base44.entities.FollowUpTask.filter({ assigned_to_contact_id: contactId }, "-due_date"),
     enabled: !!contactId,
   });
 
-  // All firms & contacts for assignment picker
   const { data: allFirms = [] } = useQuery({
     queryKey: ["all_firms_for_tasks"],
     queryFn: () => base44.entities.Firm.list(),
@@ -667,8 +764,11 @@ export default function FollowUpTasksSection({ contactId, contactName, allActivi
     queryFn: () => base44.entities.Contact.list(),
   });
 
-  // Deduplicate: assigned tasks that are also originated by this contact already show in originatedTasks
-  const pureAssigned = assignedTasks.filter(t => t.originator_contact_id !== contactId);
+  // Tasks originator requested (could also be assigned to someone else or self)
+  const requestedTasks = originatedTasks;
+
+  // Tasks assigned TO this contact that someone else originated
+  const assignedToMeTasks = assignedTasks.filter(t => t.originator_contact_id !== contactId);
 
   const isLoading = loadingOriginated || loadingAssigned;
 
@@ -682,61 +782,65 @@ export default function FollowUpTasksSection({ contactId, contactName, allActivi
 
   return (
     <div className="space-y-4">
-      {/* My Tasks (originated) */}
+      {/* Tasks Requested (originated by this contact) */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <h4 className="text-xs font-bold text-gray-600 uppercase tracking-wide flex items-center gap-1.5">
-            <ClipboardList className="w-3.5 h-3.5 text-indigo-500" /> My Follow-up Tasks
+            <ClipboardList className="w-3.5 h-3.5 text-amber-500" />
+            Follow-up Tasks Requested
+            {requestedTasks.length > 0 && (
+              <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">{requestedTasks.length}</span>
+            )}
           </h4>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
+          <Button type="button" variant="ghost" size="sm"
             className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs"
-            onClick={() => setShowForm(true)}
-          >
+            onClick={() => setShowForm(true)}>
             <Plus className="w-3.5 h-3.5" /> Add Task
           </Button>
         </div>
 
         {showForm && (
           <NewTasksForm
-            contactId={contactId}
-            contactName={contactName}
-            onSaved={() => setShowForm(false)}
-            onCancel={() => setShowForm(false)}
-            allFirms={allFirms}
-            allContacts={allContacts}
-            allActivities={allActivities}
+            contactId={contactId} contactName={contactName}
+            onSaved={() => setShowForm(false)} onCancel={() => setShowForm(false)}
+            allFirms={allFirms} allContacts={allContacts} allActivities={allActivities}
           />
         )}
 
         {isLoading ? (
           <div className="text-xs text-gray-400 italic py-3 text-center">Loading...</div>
-        ) : originatedTasks.length === 0 && !showForm ? (
+        ) : requestedTasks.length === 0 && !showForm ? (
           <div className="text-xs text-gray-400 italic py-3 text-center border border-dashed border-gray-200 rounded-xl">
-            No follow-up tasks yet
+            No follow-up tasks requested yet
           </div>
         ) : (
           <div className="space-y-2">
-            {originatedTasks.map(task => (
+            {requestedTasks.map(task => (
               <TaskItem key={task.id} task={task} contactId={contactId} allFirms={allFirms} allContacts={allContacts} allActivities={allActivities} />
             ))}
           </div>
         )}
       </div>
 
-      {/* Assigned to me (from others) */}
-      {pureAssigned.length > 0 && (
+      {/* Tasks Assigned to This Contact (from others) */}
+      {(assignedToMeTasks.length > 0 || loadingAssigned) && (
         <div className="space-y-2">
           <h4 className="text-xs font-bold text-gray-600 uppercase tracking-wide flex items-center gap-1.5">
-            <User className="w-3.5 h-3.5 text-amber-500" /> Assigned to Me
+            <User className="w-3.5 h-3.5 text-blue-500" />
+            Tasks Assigned to This Contact
+            {assignedToMeTasks.length > 0 && (
+              <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">{assignedToMeTasks.length}</span>
+            )}
           </h4>
-          <div className="space-y-2">
-            {pureAssigned.map(task => (
-              <TaskItem key={task.id} task={task} contactId={contactId} allFirms={allFirms} allContacts={allContacts} allActivities={allActivities} />
-            ))}
-          </div>
+          {loadingAssigned ? (
+            <div className="text-xs text-gray-400 italic py-3 text-center">Loading...</div>
+          ) : (
+            <div className="space-y-2">
+              {assignedToMeTasks.map(task => (
+                <TaskItem key={task.id} task={task} contactId={contactId} allFirms={allFirms} allContacts={allContacts} allActivities={allActivities} />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

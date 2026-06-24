@@ -6,7 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Phone, Mail, Users, FileText, MoreHorizontal, Trash2, X, ChevronDown, ChevronUp, ClipboardList, Link2, Link2Off } from "lucide-react";
+import {
+  Plus, Phone, Mail, Users, FileText, MoreHorizontal, Trash2, X,
+  ChevronDown, ChevronUp, ClipboardList, Link2, Link2Off, Building2, User
+} from "lucide-react";
 import { format } from "date-fns";
 import FollowUpTasksSection from "./FollowUpTasksSection";
 import ReactQuill from "react-quill";
@@ -31,12 +34,119 @@ const ACTIVITY_ICONS = {
   Other: { icon: MoreHorizontal, color: "text-gray-500", bg: "bg-gray-100" },
 };
 
-function ActivityForm({ contactId, contactName, onSaved, onCancel }) {
+// ── Firm+Contact associator used inside ActivityForm ─────────────────────────
+function AssociatedFirmsEditor({ value = [], onChange, allFirms, allContacts }) {
+  const [addingFirmId, setAddingFirmId] = useState("");
+
+  const handleAddFirm = () => {
+    if (!addingFirmId) return;
+    if (value.find(e => e.firm_id === addingFirmId)) { setAddingFirmId(""); return; }
+    const firm = allFirms.find(f => f.id === addingFirmId);
+    onChange([...value, { firm_id: addingFirmId, firm_name: firm?.name || "", contacts: [] }]);
+    setAddingFirmId("");
+  };
+
+  const handleRemoveFirm = (firmId) => {
+    onChange(value.filter(e => e.firm_id !== firmId));
+  };
+
+  const handleAddContact = (firmId, contact) => {
+    onChange(value.map(e => {
+      if (e.firm_id !== firmId) return e;
+      if (e.contacts.find(c => c.contact_id === contact.id)) return e;
+      return { ...e, contacts: [...e.contacts, { contact_id: contact.id, contact_name: [contact.first_name, contact.last_name].filter(Boolean).join(" ") }] };
+    }));
+  };
+
+  const handleRemoveContact = (firmId, contactId) => {
+    onChange(value.map(e => {
+      if (e.firm_id !== firmId) return e;
+      return { ...e, contacts: e.contacts.filter(c => c.contact_id !== contactId) };
+    }));
+  };
+
+  const usedFirmIds = value.map(e => e.firm_id);
+  const availableFirms = allFirms.filter(f => !f.deleted_at && !usedFirmIds.includes(f.id));
+
+  return (
+    <div className="space-y-2">
+      {value.map((entry) => {
+        const firmContacts = allContacts.filter(
+          c => !c.deleted_at && (c.firm_ids || []).includes(entry.firm_id) && !entry.contacts.find(ec => ec.contact_id === c.id)
+        );
+        return (
+          <div key={entry.firm_id} className="rounded-lg border border-gray-200 bg-white p-2.5 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+                <Building2 className="w-3.5 h-3.5 text-indigo-500" /> {entry.firm_name}
+              </span>
+              <button type="button" onClick={() => handleRemoveFirm(entry.firm_id)} className="text-gray-300 hover:text-red-500">
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+            {entry.contacts.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {entry.contacts.map(c => (
+                  <span key={c.contact_id} className="inline-flex items-center gap-1 text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.5 rounded-full">
+                    <User className="w-2.5 h-2.5" /> {c.contact_name}
+                    <button type="button" onClick={() => handleRemoveContact(entry.firm_id, c.contact_id)} className="ml-0.5 text-indigo-300 hover:text-red-500">
+                      <X className="w-2.5 h-2.5" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            {firmContacts.length > 0 && (
+              <Select onValueChange={(cid) => {
+                const c = allContacts.find(x => x.id === cid);
+                if (c) handleAddContact(entry.firm_id, c);
+              }}>
+                <SelectTrigger className="h-7 text-xs border-dashed border-gray-300 text-gray-500">
+                  <SelectValue placeholder="+ Add contact from this firm..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {firmContacts.map(c => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {[c.first_name, c.last_name].filter(Boolean).join(" ")}{c.title ? ` · ${c.title}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        );
+      })}
+
+      {availableFirms.length > 0 && (
+        <div className="flex gap-1.5">
+          <Select value={addingFirmId} onValueChange={setAddingFirmId}>
+            <SelectTrigger className="h-7 text-xs flex-1 border-dashed border-gray-300 text-gray-500">
+              <SelectValue placeholder="+ Add a firm..." />
+            </SelectTrigger>
+            <SelectContent>
+              {availableFirms.map(f => (
+                <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {addingFirmId && (
+            <button type="button" onClick={handleAddFirm} className="px-2 py-1 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+              Add
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ActivityForm({ contactId, contactName, onSaved, onCancel, allFirms, allContacts }) {
   const queryClient = useQueryClient();
   const [activityType, setActivityType] = useState("Call");
   const [activityDate, setActivityDate] = useState(new Date().toISOString().split("T")[0]);
   const [subject, setSubject] = useState("");
   const [notes, setNotes] = useState("");
+  const [associatedFirmsContacts, setAssociatedFirmsContacts] = useState([]);
   const [addTask, setAddTask] = useState(false);
   const [taskDesc, setTaskDesc] = useState("");
   const [taskDueDate, setTaskDueDate] = useState(new Date().toISOString().split("T")[0]);
@@ -64,7 +174,14 @@ function ActivityForm({ contactId, contactName, onSaved, onCancel }) {
 
   const handleSave = () => {
     if (!activityType || !activityDate) return;
-    createMutation.mutate({ contact_id: contactId, activity_type: activityType, activity_date: activityDate, subject: subject.trim(), notes: notes.trim() });
+    createMutation.mutate({
+      contact_id: contactId,
+      activity_type: activityType,
+      activity_date: activityDate,
+      subject: subject.trim(),
+      notes: notes.trim(),
+      associated_firms_contacts: associatedFirmsContacts,
+    });
   };
 
   return (
@@ -98,6 +215,19 @@ function ActivityForm({ contactId, contactName, onSaved, onCancel }) {
       <div className="space-y-1">
         <Label className="text-xs font-medium text-gray-700">Notes</Label>
         <Textarea placeholder="Activity details..." value={notes} onChange={(e) => setNotes(e.target.value)} className="min-h-16 text-sm" />
+      </div>
+
+      {/* Associated Firms & Contacts */}
+      <div className="space-y-1.5">
+        <Label className="text-xs font-medium text-gray-700 flex items-center gap-1">
+          <Building2 className="w-3 h-3 text-indigo-500" /> Associated Firms & Contacts
+        </Label>
+        <AssociatedFirmsEditor
+          value={associatedFirmsContacts}
+          onChange={setAssociatedFirmsContacts}
+          allFirms={allFirms}
+          allContacts={allContacts}
+        />
       </div>
 
       {/* Follow-up task toggle */}
@@ -153,7 +283,6 @@ function ActivityItem({ activity, contactId, contactName, linkedTasks, allActivi
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["contact_activities", contactId] }),
   });
 
-  // Re-link a task to a different activity (or unlink)
   const relinkTask = async (taskId, newActivityId, newActivityLabel) => {
     await base44.entities.FollowUpTask.update(taskId, {
       activity_id: newActivityId || undefined,
@@ -164,6 +293,7 @@ function ActivityItem({ activity, contactId, contactName, linkedTasks, allActivi
 
   const { icon: Icon, color, bg } = ACTIVITY_ICONS[activity.activity_type] || ACTIVITY_ICONS.Other;
   const activityLabel = `${activity.activity_type}${activity.subject ? ` – ${activity.subject}` : ""} (${activity.activity_date ? format(new Date(activity.activity_date + "T00:00:00"), "MMM d, yyyy") : "—"})`;
+  const associated = activity.associated_firms_contacts || [];
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
@@ -175,9 +305,14 @@ function ActivityItem({ activity, contactId, contactName, linkedTasks, allActivi
           <Icon className={`w-3.5 h-3.5 ${color}`} />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-semibold text-gray-700">{activity.activity_type}</span>
             {activity.subject && <span className="text-xs text-gray-500 truncate">· {activity.subject}</span>}
+            {associated.length > 0 && (
+              <span className="text-[10px] bg-purple-50 text-purple-600 border border-purple-200 px-1.5 py-0.5 rounded-full flex items-center gap-0.5 flex-shrink-0">
+                <Building2 className="w-2.5 h-2.5" /> {associated.length} firm{associated.length > 1 ? "s" : ""}
+              </span>
+            )}
             {linkedTasks?.length > 0 && (
               <span className="text-[10px] bg-indigo-50 text-indigo-600 border border-indigo-200 px-1.5 py-0.5 rounded-full flex items-center gap-0.5 flex-shrink-0">
                 <ClipboardList className="w-2.5 h-2.5" /> {linkedTasks.length} task{linkedTasks.length > 1 ? "s" : ""}
@@ -199,6 +334,29 @@ function ActivityItem({ activity, contactId, contactName, linkedTasks, allActivi
             <p className="text-sm text-gray-700 whitespace-pre-wrap">{activity.notes}</p>
           ) : (
             <p className="text-xs text-gray-400 italic">No notes recorded.</p>
+          )}
+
+          {/* Associated firms/contacts */}
+          {associated.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Associated Firms & Contacts</p>
+              {associated.map(entry => (
+                <div key={entry.firm_id} className="rounded-lg bg-purple-50 border border-purple-100 px-2.5 py-2 space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-purple-700">
+                    <Building2 className="w-3 h-3" /> {entry.firm_name}
+                  </div>
+                  {entry.contacts?.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {entry.contacts.map(c => (
+                        <span key={c.contact_id} className="text-[10px] bg-white text-purple-600 border border-purple-200 px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                          <User className="w-2.5 h-2.5" /> {c.contact_name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
 
           {/* Linked tasks */}
@@ -233,7 +391,6 @@ function ActivityItem({ activity, contactId, contactName, linkedTasks, allActivi
   );
 }
 
-// Shows a single linked task inside an ActivityItem, with relink capability
 function LinkedTaskRow({ task, allActivities, onRelink }) {
   const [showRelink, setShowRelink] = useState(false);
   const statusColors = { "Not Started": "text-gray-500", "In-process": "text-blue-600", "Completed": "text-green-600", "Cancelled": "text-red-500" };
@@ -291,14 +448,22 @@ export default function ContactActivitiesTab({ contactId, contactName }) {
     enabled: !!contactId,
   });
 
-  // All tasks for this contact so we can show which are linked to each activity
   const { data: allTasks = [] } = useQuery({
     queryKey: ["follow_up_tasks", contactId],
     queryFn: () => base44.entities.FollowUpTask.filter({ originator_contact_id: contactId }, "-due_date"),
     enabled: !!contactId,
   });
 
-  // Build a map: activity_id -> tasks[]
+  const { data: allFirms = [] } = useQuery({
+    queryKey: ["all_firms_for_activities"],
+    queryFn: () => base44.entities.Firm.list(),
+  });
+
+  const { data: allContacts = [] } = useQuery({
+    queryKey: ["all_contacts_for_activities"],
+    queryFn: () => base44.entities.Contact.list(),
+  });
+
   const tasksByActivity = useMemo(() => {
     const map = {};
     allTasks.forEach(t => {
@@ -338,6 +503,8 @@ export default function ContactActivitiesTab({ contactId, contactName }) {
           contactName={contactName}
           onSaved={() => setShowForm(false)}
           onCancel={() => setShowForm(false)}
+          allFirms={allFirms}
+          allContacts={allContacts}
         />
       )}
 
@@ -362,7 +529,6 @@ export default function ContactActivitiesTab({ contactId, contactName }) {
         </div>
       )}
 
-      {/* ── Divider ── */}
       <div className="border-t border-gray-200 pt-4">
         <FollowUpTasksSection contactId={contactId} contactName={contactName} allActivities={activities} />
       </div>

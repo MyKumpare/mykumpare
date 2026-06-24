@@ -29,6 +29,35 @@
     "notes": {
       "type": "string",
       "description": "Detailed notes about the activity"
+    },
+    "associated_firms_contacts": {
+      "type": "array",
+      "description": "Firms and contacts associated with this activity log",
+      "items": {
+        "type": "object",
+        "properties": {
+          "firm_id": {
+            "type": "string"
+          },
+          "firm_name": {
+            "type": "string"
+          },
+          "contacts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "contact_id": {
+                  "type": "string"
+                },
+                "contact_name": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "required": [

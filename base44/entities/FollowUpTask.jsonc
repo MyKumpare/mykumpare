@@ -16,7 +16,7 @@
     },
     "activity_label": {
       "type": "string",
-      "description": "Short label of the associated activity (denormalized, e.g. 'Call \u2013 Jan 5, 2025')"
+      "description": "Short label of the associated activity (denormalized)"
     },
     "due_date": {
       "type": "string",
@@ -66,6 +66,34 @@
     "parent_task_id": {
       "type": "string",
       "description": "If this task is a sub-task, points to the parent task id"
+    },
+    "attachments": {
+      "type": "array",
+      "description": "Files attached to this task",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "description": "User-defined display name for the file"
+          },
+          "file_url": {
+            "type": "string",
+            "description": "URL of the uploaded file"
+          },
+          "file_type": {
+            "type": "string",
+            "description": "MIME type or extension"
+          },
+          "uploaded_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
     }
   },
   "required": [
