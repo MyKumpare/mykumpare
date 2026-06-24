@@ -20,6 +20,7 @@ import OwnershipTab from "./OwnershipTab";
 import OrgChartTab from "./OrgChartTab";
 import FirmProductsTab from "./FirmProductsTab";
 import FirmPortfoliosTab from "./FirmPortfoliosTab";
+import FirmActivityLogTab from "./FirmActivityLogTab";
 
 function getCountryCodeFromCountryName(countryName) {
   if (!countryName) return "";
@@ -484,12 +485,13 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
              </TabsList>
              {/* Row 2: Portfolios, Products, Due Diligence */}
              {!hideProductTabs && (
-               <TabsList className="grid w-full mt-1 grid-cols-3">
-                 {showPortfolioTab && <TabsTrigger value="portfolios">Portfolios</TabsTrigger>}
-                 {showAdvisorPortfolioTab && <TabsTrigger value="advisor-portfolios">Portfolios</TabsTrigger>}
-                 <TabsTrigger value="products">Products</TabsTrigger>
-                 <TabsTrigger value="due-diligence">Due Diligence</TabsTrigger>
-               </TabsList>
+              <TabsList className="grid w-full mt-1 grid-cols-4">
+                {showPortfolioTab && <TabsTrigger value="portfolios">Portfolios</TabsTrigger>}
+                {showAdvisorPortfolioTab && <TabsTrigger value="advisor-portfolios">Portfolios</TabsTrigger>}
+                <TabsTrigger value="products">Products</TabsTrigger>
+                <TabsTrigger value="due-diligence">Due Diligence</TabsTrigger>
+                <TabsTrigger value="activity-log">Activity Log</TabsTrigger>
+              </TabsList>
              )}
              {/* Row 3: Ownership, Org Chart */}
              {!hideProductTabs && (
@@ -499,10 +501,11 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                </TabsList>
              )}
              {hideProductTabs && (
-               <TabsList className="grid w-full grid-cols-1 mt-1">
+               <TabsList className="grid w-full grid-cols-2 mt-1">
                  <TabsTrigger value="orgchart">Org Chart</TabsTrigger>
+                 <TabsTrigger value="activity-log">Activity Log</TabsTrigger>
                </TabsList>
-             )}
+              )}
 
             <TabsContent value="contacts" className="space-y-3">
               {editingFirm ? (
@@ -701,6 +704,16 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               ) : (
                 <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
                   Save the firm first to add due diligence information
+                </div>
+              )}
+              </TabsContent>
+
+              <TabsContent value="activity-log" className="space-y-3">
+              {editingFirm ? (
+                <FirmActivityLogTab firmId={editingFirm.id} firmName={editingFirm.name} />
+              ) : (
+                <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
+                  Save the firm first to view activity logs
                 </div>
               )}
               </TabsContent>
