@@ -1,5 +1,6 @@
 import React from "react";
-import { Building2, User, Package, LayoutList, LineChart } from "lucide-react";
+import { Building2, User, Package, LayoutList, LineChart, ClipboardList, Clock, AlertCircle, CheckCircle2, XCircle, Calendar } from "lucide-react";
+import { format } from "date-fns";
 
 function getContactFullName(c) {
   return [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix]
@@ -32,7 +33,30 @@ function FirmLogo({ firm }) {
   );
 }
 
-export default function SearchResults({ query, firms, products, contacts, portfolios = [], analyses = [], onFirmClick, onContactClick, onProductClick, onPortfolioClick, onAnalysisClick }) {
+const TASK_STATUS_ICON = {
+  "Not Started": Clock,
+  "In-process": AlertCircle,
+  "Completed": CheckCircle2,
+  "Cancelled": XCircle,
+};
+const TASK_STATUS_COLOR = {
+  "Not Started": "text-gray-500",
+  "In-process": "text-blue-600",
+  "Completed": "text-green-600",
+  "Cancelled": "text-red-500",
+};
+
+function stripHtml(html) {
+  if (!html) return "";
+  return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function fmtDate(dateStr) {
+  if (!dateStr) return "";
+  try { return format(new Date(dateStr + "T00:00:00"), "MMM d, yyyy"); } catch { return dateStr; }
+}
+
+export default function SearchResults({ query, firms, products, contacts, portfolios = [], analyses = [], activities = [], followUpTasks = [], onFirmClick, onContactClick, onProductClick, onPortfolioClick, onAnalysisClick, onActivityClick, onTaskClick }) {
   const q = query.toLowerCase().trim();
   if (!q) return null;
 
@@ -65,6 +89,22 @@ export default function SearchResults({ query, firms, products, contacts, portfo
     (a.name || "").toLowerCase().includes(q)
   );
 
+  // --- Match activities ---
+  const matchedActivities = activities.filter((a) =>
+    (a.subject || "").toLowerCase().includes(q) ||
+    (a.activity_type || "").toLowerCase().includes(q) ||
+    stripHtml(a.notes).toLowerCase().includes(q)
+  );
+
+  // --- Match follow-up tasks ---
+  const matchedTasks = followUpTasks.filter((t) =>
+    stripHtml(t.task_description).toLowerCase().includes(q) ||
+    (t.originator_contact_name || "").toLowerCase().includes(q) ||
+    (t.assigned_to_contact_name || "").toLowerCase().includes(q) ||
+    (t.assigned_to_firm_name || "").toLowerCase().includes(q) ||
+    (t.status || "").toLowerCase().includes(q)
+  );
+
   // For a firm result, gather its contacts
   const firmContacts = (firmId) => contacts.filter(c => (c.firm_ids || []).includes(firmId));
 
@@ -78,7 +118,7 @@ export default function SearchResults({ query, firms, products, contacts, portfo
     return firm ? firmContacts(firm.id) : [];
   };
 
-  const hasAny = matchedContacts.length > 0 || matchedFirms.length > 0 || matchedProducts.length > 0 || matchedPortfolios.length > 0 || matchedAnalyses.length > 0;
+  const hasAny = matchedContacts.length > 0 || matchedFirms.length > 0 || matchedProducts.length > 0 || matchedPortfolios.length > 0 || matchedAnalyses.length > 0 || matchedActivities.length > 0 || matchedTasks.length > 0;
   if (!hasAny) return (
     <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 p-4 text-sm text-gray-400 text-center">
       No results for "{query}"
@@ -245,6 +285,84 @@ export default function SearchResults({ query, firms, products, contacts, portfo
                     )}
                     {portfolio.advisor_firm_name && (
                       <div className="text-xs text-emerald-600 mt-0.5">{portfolio.advisor_type}: {portfolio.advisor_firm_name}</div>
+                    )}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Activity Results */}
+      {matchedActivities.length > 0 && (
+        <div>
+          <div className="px-4 pt-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+            <ClipboardList className="w-3.5 h-3.5" /> Activities
+          </div>
+          {matchedActivities.map((activity) => (
+            <button
+              key={activity.id}
+              className="w-full text-left px-4 py-3 hover:bg-amber-50 transition-colors"
+              onClick={() => onActivityClick && onActivityClick(activity)}
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-7 h-7 rounded-lg border border-amber-200 bg-amber-50 flex items-center justify-center flex-shrink-0">
+                  <ClipboardList className="w-3.5 h-3.5 text-amber-600" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-medium text-gray-900 truncate">{activity.subject || "(No subject)"}</span>
+                    <span className="text-[10px] font-semibold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">{activity.activity_type}</span>
+                  </div>
+                  {activity.activity_date && (
+                    <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                      <Calendar className="w-3 h-3" /> {fmtDate(activity.activity_date)}
+                    </div>
+                  )}
+                  {activity.notes && (
+                    <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{stripHtml(activity.notes)}</p>
+                  )}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Follow-up Task Results */}
+      {matchedTasks.length > 0 && (
+        <div>
+          <div className="px-4 pt-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+            <LayoutList className="w-3.5 h-3.5 text-orange-500" /> Follow-up Tasks
+          </div>
+          {matchedTasks.map((task) => {
+            const StatusIcon = TASK_STATUS_ICON[task.status] || Clock;
+            const statusColor = TASK_STATUS_COLOR[task.status] || "text-gray-500";
+            return (
+              <button
+                key={task.id}
+                className="w-full text-left px-4 py-3 hover:bg-orange-50 transition-colors"
+                onClick={() => onTaskClick && onTaskClick(task)}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-7 h-7 rounded-lg border border-orange-200 bg-orange-50 flex items-center justify-center flex-shrink-0">
+                    <StatusIcon className={`w-3.5 h-3.5 ${statusColor}`} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-orange-50 ${statusColor}`}>{task.status}</span>
+                      {task.due_date && (
+                        <span className="text-xs text-gray-400 flex items-center gap-1">
+                          <Calendar className="w-3 h-3" /> {fmtDate(task.due_date)}
+                        </span>
+                      )}
+                    </div>
+                    {task.task_description && (
+                      <p className="text-xs text-gray-700 mt-0.5 line-clamp-1">{stripHtml(task.task_description)}</p>
+                    )}
+                    {task.originator_contact_name && (
+                      <p className="text-xs text-gray-400 mt-0.5">By: {task.originator_contact_name}{task.assigned_to_contact_name ? ` → ${task.assigned_to_contact_name}` : ""}</p>
                     )}
                   </div>
                 </div>

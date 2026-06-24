@@ -150,6 +150,16 @@ export default function Home() {
     queryFn: () => base44.entities.Benchmark.list("-created_date"),
   });
 
+  const { data: activities = [] } = useQuery({
+    queryKey: ["contact_activities_search"],
+    queryFn: () => base44.entities.ContactActivity.list("-activity_date"),
+  });
+
+  const { data: followUpTasks = [] } = useQuery({
+    queryKey: ["follow_up_tasks_search"],
+    queryFn: () => base44.entities.FollowUpTask.list("-due_date"),
+  });
+
   const deletedCount = deletedFirms.length + deletedProducts.length + deletedContacts.length + deletedPortfolios.length;
 
 
@@ -409,7 +419,7 @@ export default function Home() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
-              placeholder="Search firms, products, contacts or analyses..."
+              placeholder="Search firms, products, contacts, activities, tasks..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => setSearchFocused(true)}
@@ -424,11 +434,15 @@ export default function Home() {
                 contacts={contacts}
                 portfolios={portfolios}
                 analyses={analyses}
+                activities={activities}
+                followUpTasks={followUpTasks}
                 onFirmClick={(firm) => { setSearchQuery(""); handleEdit(firm); }}
                 onContactClick={(contact) => { setSearchQuery(""); setViewingContact(contact); }}
                 onProductClick={(product) => { setSearchQuery(""); handleEditProduct(product); }}
                 onPortfolioClick={(portfolio) => { setSearchQuery(""); setPreselectedAllocatorId(portfolio.firm_id); setPortfolioDialogOpen(true); }}
                 onAnalysisClick={(analysis) => { setSearchQuery(""); setEditingAnalysis(analysis); }}
+                onActivityClick={(activity) => { setSearchQuery(""); setViewingActivity(activity); }}
+                onTaskClick={(task) => { setSearchQuery(""); setViewingTask(task); }}
               />
             )}
           </div>
