@@ -27,6 +27,7 @@ import AnalyticsSection from "../components/analytics/AnalyticsSection";
 import EditAnalysisDialog from "../components/analytics/EditAnalysisDialog";
 import GlobalActivityLogModal from "../components/activity/GlobalActivityLogModal";
 import PortfolioPickerModal from "../components/portfolios/PortfolioPickerModal";
+import FirmPickerModal from "../components/firms/FirmPickerModal";
 
 const FIRM_TYPES = [
   "Manager of Managers",
@@ -72,6 +73,7 @@ export default function Home() {
   const [activityLogModalOpen, setActivityLogModalOpen] = useState(false);
   const [activityLogDefaultTab, setActivityLogDefaultTab] = useState("activity");
   const [portfolioPickerOpen, setPortfolioPickerOpen] = useState(false);
+  const [firmPickerOpen, setFirmPickerOpen] = useState(false);
 
   const portfoliosRef = useRef(null);
   const firmsRef = useRef(null);
@@ -319,7 +321,7 @@ export default function Home() {
 
   const mobileNavItems = [
     { label: "Portfolios", icon: BarChart3, ref: null, color: "text-emerald-600", activeBg: "bg-emerald-50", onClick: () => setPortfolioPickerOpen(true) },
-    { label: "Firms", icon: Building, ref: firmsRef, color: "text-indigo-600", activeBg: "bg-indigo-50" },
+    { label: "Firms", icon: Building, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => setFirmPickerOpen(true) },
     { label: "Products", icon: Package, ref: productsRef, color: "text-violet-600", activeBg: "bg-violet-50" },
     { label: "Contacts", icon: User, ref: contactsRef, color: "text-pink-600", activeBg: "bg-pink-50" },
     { label: "Activity", icon: ClipboardList, ref: null, color: "text-amber-600", activeBg: "bg-amber-50", onClick: () => { setActivityLogDefaultTab("activity"); setActivityLogModalOpen(true); } },
@@ -700,6 +702,14 @@ export default function Home() {
         portfolios={portfolios}
         onPortfolioClick={(portfolio) => { setEditingPortfolio(portfolio); setPreselectedAllocatorId(null); setPortfolioDialogOpen(true); }}
         onAddPortfolio={() => { setEditingPortfolio(null); setPreselectedAllocatorId(null); setPortfolioDialogOpen(true); }}
+      />
+
+      <FirmPickerModal
+        open={firmPickerOpen}
+        onClose={() => setFirmPickerOpen(false)}
+        firms={firms}
+        onFirmClick={(firm) => handleEdit(firm)}
+        onAddFirm={() => { setEditingFirm(null); setPreselectedType(null); setDialogOpen(true); }}
       />
 
       {/* Benchmark dialog */}
