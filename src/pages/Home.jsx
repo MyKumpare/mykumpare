@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown } from "lucide-react";
+import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,7 @@ import UtilitySection from "../components/utility/UtilitySection";
 import AddBenchmarkDialog from "../components/utility/AddBenchmarkDialog";
 import AnalyticsSection from "../components/analytics/AnalyticsSection";
 import EditAnalysisDialog from "../components/analytics/EditAnalysisDialog";
+import GlobalActivityLogModal from "../components/activity/GlobalActivityLogModal";
 
 const FIRM_TYPES = [
   "Manager of Managers",
@@ -67,6 +68,8 @@ export default function Home() {
   const [analyticsReturnState, setAnalyticsReturnState] = useState(null); // { type: 'product'|'firm'|'benchmark', data: ... }
   const [benchmarkDialogOpen, setBenchmarkDialogOpen] = useState(false);
   const [editingBenchmark, setEditingBenchmark] = useState(null);
+  const [activityLogModalOpen, setActivityLogModalOpen] = useState(false);
+  const [activityLogDefaultTab, setActivityLogDefaultTab] = useState("activity");
 
   const portfoliosRef = useRef(null);
   const firmsRef = useRef(null);
@@ -317,6 +320,8 @@ export default function Home() {
     { label: "Firms", icon: Building, ref: firmsRef, color: "text-indigo-600", activeBg: "bg-indigo-50" },
     { label: "Products", icon: Package, ref: productsRef, color: "text-violet-600", activeBg: "bg-violet-50" },
     { label: "Contacts", icon: User, ref: contactsRef, color: "text-pink-600", activeBg: "bg-pink-50" },
+    { label: "Activity", icon: ClipboardList, ref: null, color: "text-amber-600", activeBg: "bg-amber-50", onClick: () => { setActivityLogDefaultTab("activity"); setActivityLogModalOpen(true); } },
+    { label: "Tasks", icon: LayoutList, ref: null, color: "text-orange-600", activeBg: "bg-orange-50", onClick: () => { setActivityLogDefaultTab("task"); setActivityLogModalOpen(true); } },
     { label: "Analytics", icon: LineChart, ref: analyticsRef, color: "text-cyan-600", activeBg: "bg-cyan-50", onClick: () => setAnalyticsLaunchOpen(true) },
     { label: "Utilities", icon: Wrench, ref: utilityRef, color: "text-gray-600", activeBg: "bg-gray-100" },
   ];
@@ -340,7 +345,7 @@ export default function Home() {
             </div>
             <div className="flex items-center gap-2">
               {/* Desktop-only section nav (bottom nav covers mobile) */}
-              <div className="hidden sm:grid grid-cols-3 gap-1">
+              <div className="hidden sm:grid grid-cols-4 gap-1">
               {mobileNavItems.map(({ label, icon: NavIcon, ref, onClick }) => (
                 <button key={label} onClick={() => onClick ? onClick() : scrollTo(ref)} title={label}
                   className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg hover:bg-white/15 transition-colors group">
@@ -519,7 +524,7 @@ export default function Home() {
         className="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-white/95 backdrop-blur border-t border-gray-200 shadow-lg pb-safe"
         style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}
       >
-        <div className="grid grid-cols-7">
+        <div className="grid grid-cols-9">
           {mobileNavItems.map(({ label, icon: MobileIcon, color, ref, onClick }) => (
             <button key={label} onClick={() => onClick ? onClick() : scrollTo(ref)}
               className="flex flex-col items-center gap-1 py-2.5 px-1 transition-colors">
@@ -670,6 +675,12 @@ export default function Home() {
         open={!!editingAnalysis}
         onOpenChange={(o) => { if (!o) setEditingAnalysis(null); }}
         analysis={editingAnalysis}
+      />
+
+      <GlobalActivityLogModal
+        open={activityLogModalOpen}
+        onClose={() => setActivityLogModalOpen(false)}
+        defaultTab={activityLogDefaultTab}
       />
 
       {/* Benchmark dialog */}
