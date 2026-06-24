@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -34,16 +34,121 @@ const ACTIVITY_ICONS = {
   Other: { icon: MoreHorizontal, color: "text-gray-500", bg: "bg-gray-100" },
 };
 
+// ── Searchable firm picker dropdown ──────────────────────────────────────────
+function FirmPickerDropdown({ availableFirms, onSelect }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [expandedTypes, setExpandedTypes] = useState({});
+  const ref = React.useRef(null);
+
+  // Close on outside click
+  React.useEffect(() => {
+    if (!open) return;
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const FIRM_TYPES = [
+    "Allocator", "Investment Consultant", "Investment Manager",
+    "Manager of Managers", "Securities Brokerage", "Trade Organizations",
+  ];
+
+  const filtered = availableFirms.filter(f =>
+    !search || f.name.toLowerCase().includes(search.toLowerCase()) ||
+    (f.firm_types || [f.firm_type]).filter(Boolean).some(t => t.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  // Group by type alphabetically; a firm with multiple types appears under each
+  const grouped = {};
+  FIRM_TYPES.forEach(t => { grouped[t] = []; });
+  filtered.forEach(f => {
+    const types = f.firm_types?.length ? f.firm_types : f.firm_type ? [f.firm_type] : ["Other"];
+    types.forEach(t => {
+      if (!grouped[t]) grouped[t] = [];
+      grouped[t].push(f);
+    });
+  });
+  // Sort firms within each group
+  Object.keys(grouped).forEach(t => grouped[t].sort((a, b) => a.name.localeCompare(b.name)));
+  const activeTypes = Object.keys(grouped).filter(t => grouped[t].length > 0).sort();
+
+  const toggleType = (t) => setExpandedTypes(prev => ({ ...prev, [t]: !prev[t] }));
+
+  const handleSelect = (firm) => {
+    onSelect(firm);
+    setOpen(false);
+    setSearch("");
+  };
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center gap-2 h-7 px-2.5 rounded-lg border border-dashed border-gray-300 text-xs text-gray-500 hover:border-indigo-400 hover:text-indigo-600 transition-colors bg-white"
+      >
+        <Plus className="w-3 h-3" /> Add a firm...
+        <ChevronDown className="w-3 h-3 ml-auto" />
+      </button>
+
+      {open && (
+        <div className="absolute z-30 left-0 right-0 top-8 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
+          {/* Search */}
+          <div className="p-2 border-b border-gray-100">
+            <input
+              autoFocus
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search firms..."
+              className="w-full h-7 px-2.5 text-xs rounded-lg border border-gray-200 outline-none focus:border-indigo-400 bg-gray-50"
+            />
+          </div>
+          {/* Grouped list */}
+          <div className="max-h-56 overflow-y-auto">
+            {activeTypes.length === 0 ? (
+              <p className="text-xs text-gray-400 italic text-center py-4">No firms found</p>
+            ) : (
+              activeTypes.map(type => (
+                <div key={type}>
+                  <button
+                    type="button"
+                    onClick={() => toggleType(type)}
+                    className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-bold text-gray-500 uppercase tracking-wide hover:bg-gray-50 transition-colors"
+                  >
+                    <span>{type}</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">{grouped[type].length}</span>
+                      {expandedTypes[type] ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                    </div>
+                  </button>
+                  {expandedTypes[type] && grouped[type].map(f => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => handleSelect(f)}
+                      className="w-full flex items-center gap-2 px-4 py-1.5 text-xs text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors text-left"
+                    >
+                      <Building2 className="w-3 h-3 text-indigo-400 flex-shrink-0" />
+                      {f.name}
+                    </button>
+                  ))}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Firm+Contact associator used inside ActivityForm ─────────────────────────
 function AssociatedFirmsEditor({ value = [], onChange, allFirms, allContacts }) {
-  const [addingFirmId, setAddingFirmId] = useState("");
-
-  const handleAddFirm = () => {
-    if (!addingFirmId) return;
-    if (value.find(e => e.firm_id === addingFirmId)) { setAddingFirmId(""); return; }
-    const firm = allFirms.find(f => f.id === addingFirmId);
-    onChange([...value, { firm_id: addingFirmId, firm_name: firm?.name || "", contacts: [] }]);
-    setAddingFirmId("");
+  const handleAddFirm = (firm) => {
+    if (value.find(e => e.firm_id === firm.id)) return;
+    onChange([...value, { firm_id: firm.id, firm_name: firm.name, contacts: [] }]);
   };
 
   const handleRemoveFirm = (firmId) => {
@@ -118,23 +223,7 @@ function AssociatedFirmsEditor({ value = [], onChange, allFirms, allContacts }) 
       })}
 
       {availableFirms.length > 0 && (
-        <div className="flex gap-1.5">
-          <Select value={addingFirmId} onValueChange={setAddingFirmId}>
-            <SelectTrigger className="h-7 text-xs flex-1 border-dashed border-gray-300 text-gray-500">
-              <SelectValue placeholder="+ Add a firm..." />
-            </SelectTrigger>
-            <SelectContent>
-              {availableFirms.map(f => (
-                <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {addingFirmId && (
-            <button type="button" onClick={handleAddFirm} className="px-2 py-1 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-              Add
-            </button>
-          )}
-        </div>
+        <FirmPickerDropdown availableFirms={availableFirms} onSelect={handleAddFirm} />
       )}
     </div>
   );
