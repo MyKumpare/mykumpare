@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import {
   Phone, Mail, Users, FileText, MoreHorizontal,
   ChevronDown, ChevronUp, Building2, User,
   Clock, AlertCircle, CheckCircle2, XCircle, Calendar, Paperclip,
-  Link2, FileText as FileIcon, Plus, X, ClipboardList, Trash2, UserPlus
+  Link2, Plus, X, ClipboardList, Trash2, UserPlus, Upload, Edit2, Check
 } from "lucide-react";
 import { format } from "date-fns";
 import ReactQuill from "react-quill";
@@ -19,9 +19,9 @@ import "react-quill/dist/quill.snow.css";
 const QUILL_MODULES = {
   toolbar: [
     [{ header: [false] }],
-    ["bold", "italic", "underline"],
+    ["bold", "italic", "underline", "strike"],
     [{ list: "ordered" }, { list: "bullet" }],
-    ["clean"],
+    ["blockquote", "clean"],
   ],
 };
 
@@ -48,10 +48,10 @@ function fmt(dateStr) {
   try { return format(new Date(dateStr + "T00:00:00"), "MMM d, yyyy"); } catch { return dateStr; }
 }
 
-// ── Contact picker / quick-add modal ────────────────────────────────────────
+// ── Contact picker / quick-add modal ─────────────────────────────────────────
 function ContactPickerModal({ firmId, firmName, firmContacts, onPick, onClose }) {
   const queryClient = useQueryClient();
-  const [mode, setMode] = useState("pick"); // "pick" | "add"
+  const [mode, setMode] = useState("pick");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [title, setTitle] = useState("");
@@ -61,10 +61,8 @@ function ContactPickerModal({ firmId, firmName, firmContacts, onPick, onClose })
     if (!firstName.trim() || !lastName.trim()) return;
     setSaving(true);
     const created = await base44.entities.Contact.create({
-      first_name: firstName.trim(),
-      last_name: lastName.trim(),
-      title: title.trim() || undefined,
-      firm_ids: [firmId],
+      first_name: firstName.trim(), last_name: lastName.trim(),
+      title: title.trim() || undefined, firm_ids: [firmId],
     });
     queryClient.invalidateQueries({ queryKey: ["contacts_for_firm_activity", firmId] });
     setSaving(false);
@@ -79,7 +77,6 @@ function ContactPickerModal({ firmId, firmName, firmContacts, onPick, onClose })
           <h3 className="text-sm font-bold text-gray-800">Select Contact for {firmName}</h3>
           <button onClick={onClose}><X className="w-4 h-4 text-gray-400" /></button>
         </div>
-
         {mode === "pick" ? (
           <>
             {firmContacts.length === 0 ? (
@@ -135,7 +132,358 @@ function ContactPickerModal({ firmId, firmName, firmContacts, onPick, onClose })
   );
 }
 
-// ── Activity Log form (mirrors ContactActivitiesTab's ActivityForm) ───────────
+// ── Assign-to modal (shared) ──────────────────────────────────────────────────
+function AssignModal({ allFirms, allContacts, onAssign, onClose }) {
+  const [selFirmId, setSelFirmId] = useState("");
+  const firmContacts = useMemo(
+    () => allContacts.filter(c => !c.deleted_at && (c.firm_ids || []).includes(selFirmId)),
+    [allContacts, selFirmId]
+  );
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-bold text-gray-800">Assign Task</h3>
+          <button onClick={onClose}><X className="w-4 h-4 text-gray-400" /></button>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs font-medium text-gray-700">Select Firm</Label>
+          <Select value={selFirmId} onValueChange={setSelFirmId}>
+            <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Choose a firm..." /></SelectTrigger>
+            <SelectContent>
+              {allFirms.filter(f => !f.deleted_at).map(f => (
+                <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {selFirmId && (
+          <div className="space-y-1">
+            <Label className="text-xs font-medium text-gray-700">Select Contact</Label>
+            {firmContacts.length === 0 ? (
+              <p className="text-xs text-gray-400 italic py-2 text-center">No contacts found for this firm</p>
+            ) : (
+              <div className="space-y-1 max-h-52 overflow-y-auto">
+                {firmContacts.map(c => (
+                  <button key={c.id} type="button"
+                    onClick={() => onAssign(c, allFirms.find(f => f.id === selFirmId))}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-indigo-50 text-left transition-colors">
+                    <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-700">
+                      {(c.first_name || "")[0]}{(c.last_name || "")[0]}
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-800">{[c.first_name, c.last_name].filter(Boolean).join(" ")}</p>
+                      {c.title && <p className="text-[10px] text-gray-400">{c.title}</p>}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Searchable firm picker (same as ContactActivitiesTab) ─────────────────────
+function FirmPickerDropdown({ availableFirms, onSelect }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [expandedTypes, setExpandedTypes] = useState({});
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const FIRM_TYPES = ["Allocator", "Investment Consultant", "Investment Manager", "Manager of Managers", "Securities Brokerage", "Trade Organizations"];
+
+  const filtered = availableFirms.filter(f =>
+    !search || f.name.toLowerCase().includes(search.toLowerCase()) ||
+    (f.firm_types || [f.firm_type]).filter(Boolean).some(t => t.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  const isSearching = search.trim().length > 0;
+
+  const grouped = {};
+  FIRM_TYPES.forEach(t => { grouped[t] = []; });
+  filtered.forEach(f => {
+    const types = f.firm_types?.length ? f.firm_types : f.firm_type ? [f.firm_type] : ["Other"];
+    types.forEach(t => { if (!grouped[t]) grouped[t] = []; grouped[t].push(f); });
+  });
+  Object.keys(grouped).forEach(t => grouped[t].sort((a, b) => a.name.localeCompare(b.name)));
+  const activeTypes = Object.keys(grouped).filter(t => grouped[t].length > 0).sort();
+
+  return (
+    <div className="relative" ref={ref}>
+      <button type="button" onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center gap-2 h-7 px-2.5 rounded-lg border border-dashed border-gray-300 text-xs text-gray-500 hover:border-indigo-400 hover:text-indigo-600 transition-colors bg-white">
+        <Plus className="w-3 h-3" /> Add a firm...
+        <ChevronDown className="w-3 h-3 ml-auto" />
+      </button>
+      {open && (
+        <div className="absolute z-30 left-0 right-0 top-8 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
+          <div className="p-2 border-b border-gray-100">
+            <input autoFocus type="text" value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Search firms..." className="w-full h-7 px-2.5 text-xs rounded-lg border border-gray-200 outline-none focus:border-indigo-400 bg-gray-50" />
+          </div>
+          <div className="max-h-56 overflow-y-auto">
+            {activeTypes.length === 0 ? (
+              <p className="text-xs text-gray-400 italic text-center py-4">No firms found</p>
+            ) : activeTypes.map(type => (
+              <div key={type}>
+                <button type="button" onClick={() => setExpandedTypes(prev => ({ ...prev, [type]: !prev[type] }))}
+                  className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-bold text-gray-500 uppercase tracking-wide hover:bg-gray-50 transition-colors">
+                  <span>{type}</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">{grouped[type].length}</span>
+                    {(isSearching || expandedTypes[type]) ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                  </div>
+                </button>
+                {(isSearching || expandedTypes[type]) && grouped[type].map(f => (
+                  <button key={f.id} type="button" onClick={() => { onSelect(f); setOpen(false); setSearch(""); }}
+                    className="w-full flex items-center gap-2 px-4 py-1.5 text-xs text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors text-left">
+                    <Building2 className="w-3 h-3 text-indigo-400 flex-shrink-0" /> {f.name}
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Associated Firms & Contacts editor (same as ContactActivitiesTab) ─────────
+function AssociatedFirmsEditor({ value = [], onChange, allFirms, allContacts }) {
+  const handleAddFirm = (firm) => {
+    if (value.find(e => e.firm_id === firm.id)) return;
+    onChange([...value, { firm_id: firm.id, firm_name: firm.name, contacts: [] }]);
+  };
+  const handleRemoveFirm = (firmId) => onChange(value.filter(e => e.firm_id !== firmId));
+  const handleAddContact = (firmId, contact) => {
+    onChange(value.map(e => {
+      if (e.firm_id !== firmId) return e;
+      if (e.contacts.find(c => c.contact_id === contact.id)) return e;
+      return { ...e, contacts: [...e.contacts, { contact_id: contact.id, contact_name: [contact.first_name, contact.last_name].filter(Boolean).join(" ") }] };
+    }));
+  };
+  const handleRemoveContact = (firmId, contactId) => {
+    onChange(value.map(e => {
+      if (e.firm_id !== firmId) return e;
+      return { ...e, contacts: e.contacts.filter(c => c.contact_id !== contactId) };
+    }));
+  };
+
+  const usedFirmIds = value.map(e => e.firm_id);
+  const availableFirms = allFirms.filter(f => !f.deleted_at && !usedFirmIds.includes(f.id));
+
+  return (
+    <div className="space-y-2">
+      {value.map((entry) => {
+        const firmContacts = allContacts.filter(c => !c.deleted_at && (c.firm_ids || []).includes(entry.firm_id) && !entry.contacts.find(ec => ec.contact_id === c.id));
+        return (
+          <div key={entry.firm_id} className="rounded-lg border border-gray-200 bg-white p-2.5 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+                <Building2 className="w-3.5 h-3.5 text-indigo-500" /> {entry.firm_name}
+              </span>
+              <button type="button" onClick={() => handleRemoveFirm(entry.firm_id)} className="text-gray-300 hover:text-red-500">
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+            {entry.contacts.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {entry.contacts.map(c => (
+                  <span key={c.contact_id} className="inline-flex items-center gap-1 text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.5 rounded-full">
+                    <User className="w-2.5 h-2.5" /> {c.contact_name}
+                    <button type="button" onClick={() => handleRemoveContact(entry.firm_id, c.contact_id)} className="ml-0.5 text-indigo-300 hover:text-red-500">
+                      <X className="w-2.5 h-2.5" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            {firmContacts.length > 0 && (
+              <Select onValueChange={(cid) => { const c = allContacts.find(x => x.id === cid); if (c) handleAddContact(entry.firm_id, c); }}>
+                <SelectTrigger className="h-7 text-xs border-dashed border-gray-300 text-gray-500">
+                  <SelectValue placeholder="+ Add contact from this firm..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {firmContacts.map(c => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {[c.first_name, c.last_name].filter(Boolean).join(" ")}{c.title ? ` · ${c.title}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        );
+      })}
+      {availableFirms.length > 0 && <FirmPickerDropdown availableFirms={availableFirms} onSelect={handleAddFirm} />}
+    </div>
+  );
+}
+
+// ── Attachments manager ───────────────────────────────────────────────────────
+function AttachmentsManager({ attachments = [], onChange }) {
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef(null);
+
+  const handleUpload = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setUploading(true);
+    const results = [];
+    for (const file of files) {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      results.push({ id: crypto.randomUUID(), name: file.name, file_url, file_type: file.type, uploaded_at: new Date().toISOString() });
+    }
+    onChange([...attachments, ...results]);
+    setUploading(false);
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  return (
+    <div className="space-y-1.5">
+      {attachments.map(att => (
+        <div key={att.id} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-xs">
+          <Paperclip className="w-3 h-3 text-gray-400 flex-shrink-0" />
+          <input className="flex-1 bg-transparent outline-none text-gray-700 min-w-0" value={att.name}
+            onChange={e => onChange(attachments.map(a => a.id === att.id ? { ...a, name: e.target.value } : a))} />
+          <button type="button" onClick={() => onChange(attachments.filter(a => a.id !== att.id))} className="text-gray-300 hover:text-red-500 flex-shrink-0">
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      ))}
+      <button type="button" onClick={() => fileRef.current?.click()}
+        className="w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-dashed border-gray-300 text-xs text-gray-500 hover:border-indigo-400 hover:text-indigo-600 transition-colors">
+        <Upload className="w-3 h-3" /> {uploading ? "Uploading..." : "Attach file(s)"}
+      </button>
+      <input ref={fileRef} type="file" multiple className="hidden" onChange={handleUpload} />
+    </div>
+  );
+}
+
+// ── Single task entry form (mirrors TaskEntryForm from FollowUpTasksSection) ──
+function TaskEntryForm({ idx, task, onChange, onRemove, showRemove, allFirms, allContacts, allActivities }) {
+  const [assignOpen, setAssignOpen] = useState(false);
+
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-3 space-y-3 relative">
+      {showRemove && (
+        <button type="button" onClick={() => onRemove(idx)} className="absolute top-2.5 right-2.5 p-0.5 text-gray-300 hover:text-red-500 transition-colors">
+          <X className="w-3.5 h-3.5" />
+        </button>
+      )}
+      <div className="flex items-center gap-2">
+        <ClipboardList className="w-3.5 h-3.5 text-indigo-400" />
+        <span className="text-xs font-semibold text-gray-700">Task {idx + 1}</span>
+      </div>
+
+      <div className="space-y-1">
+        <Label className="text-xs font-medium text-gray-700">Task Description *</Label>
+        <div className="quill-sm border border-gray-200 rounded-lg overflow-hidden bg-white">
+          <ReactQuill theme="snow" value={task.task_description}
+            onChange={(val) => onChange(idx, { ...task, task_description: val })}
+            modules={QUILL_MODULES} placeholder="Describe the task..." style={{ minHeight: 80 }} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1">
+          <Label className="text-xs font-medium text-gray-700">Due Date *</Label>
+          <Input type="date" value={task.due_date} onChange={e => onChange(idx, { ...task, due_date: e.target.value })} className="h-8 text-sm" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs font-medium text-gray-700">Status</Label>
+          <Select value={task.status} onValueChange={(v) => onChange(idx, { ...task, status: v })}>
+            <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {TASK_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <Label className="text-xs font-medium text-gray-700">Assign To (optional)</Label>
+        {task.assigned_to_contact_name ? (
+          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200 text-xs">
+            <User className="w-3.5 h-3.5 text-indigo-500" />
+            <span className="font-medium text-indigo-700">{task.assigned_to_contact_name}</span>
+            {task.assigned_to_firm_name && <span className="text-indigo-400">· {task.assigned_to_firm_name}</span>}
+            <button type="button" onClick={() => onChange(idx, { ...task, assigned_to_contact_id: "", assigned_to_contact_name: "", assigned_to_firm_id: "", assigned_to_firm_name: "" })} className="ml-auto text-indigo-300 hover:text-red-500">
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        ) : (
+          <button type="button" onClick={() => setAssignOpen(true)}
+            className="w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-dashed border-gray-300 text-xs text-gray-500 hover:border-indigo-400 hover:text-indigo-600 transition-colors">
+            <User className="w-3.5 h-3.5" /> Assign to a contact...
+          </button>
+        )}
+      </div>
+
+      {allActivities.length > 0 && (
+        <div className="space-y-1">
+          <Label className="text-xs font-medium text-gray-700">Link to Activity (optional)</Label>
+          {task.activity_id ? (
+            <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200 text-xs">
+              <Link2 className="w-3.5 h-3.5 text-indigo-500" />
+              <span className="flex-1 truncate text-indigo-700">{task.activity_label}</span>
+              <button type="button" onClick={() => onChange(idx, { ...task, activity_id: "", activity_label: "" })} className="text-indigo-300 hover:text-red-500">
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ) : (
+            <Select value={task.activity_id || ""} onValueChange={(val) => {
+              const act = allActivities.find(a => a.id === val);
+              if (act) {
+                const lbl = `${act.activity_type}${act.subject ? ` – ${act.subject}` : ""} (${act.activity_date ? fmt(act.activity_date) : "—"})`;
+                onChange(idx, { ...task, activity_id: val, activity_label: lbl });
+              }
+            }}>
+              <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Link to an activity..." /></SelectTrigger>
+              <SelectContent>
+                {allActivities.map(a => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.activity_type}{a.subject ? ` – ${a.subject}` : ""} · {a.activity_date ? fmt(a.activity_date) : "—"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+      )}
+
+      <div className="space-y-1">
+        <Label className="text-xs font-medium text-gray-700 flex items-center gap-1">
+          <Paperclip className="w-3 h-3 text-gray-400" /> Attachments
+        </Label>
+        <AttachmentsManager attachments={task.attachments || []} onChange={(atts) => onChange(idx, { ...task, attachments: atts })} />
+      </div>
+
+      {assignOpen && (
+        <AssignModal allFirms={allFirms} allContacts={allContacts}
+          onAssign={(contact, firm) => {
+            onChange(idx, { ...task, assigned_to_contact_id: contact.id, assigned_to_contact_name: [contact.first_name, contact.last_name].filter(Boolean).join(" "), assigned_to_firm_id: firm?.id || "", assigned_to_firm_name: firm?.name || "" });
+            setAssignOpen(false);
+          }}
+          onClose={() => setAssignOpen(false)} />
+      )}
+    </div>
+  );
+}
+
+// ── Activity form (full, mirrors ContactActivitiesTab's ActivityForm) ─────────
 function FirmActivityForm({ firmId, firmName, contact, allFirms, allContacts, onSaved, onCancel }) {
   const queryClient = useQueryClient();
   const contactId = contact.id;
@@ -145,6 +493,7 @@ function FirmActivityForm({ firmId, firmName, contact, allFirms, allContacts, on
   const [activityDate, setActivityDate] = useState(new Date().toISOString().split("T")[0]);
   const [subject, setSubject] = useState("");
   const [notes, setNotes] = useState("");
+  const [associatedFirmsContacts, setAssociatedFirmsContacts] = useState([{ firm_id: firmId, firm_name: firmName, contacts: [] }]);
   const [addTask, setAddTask] = useState(false);
   const [taskDesc, setTaskDesc] = useState("");
   const [taskDueDate, setTaskDueDate] = useState(new Date().toISOString().split("T")[0]);
@@ -155,15 +504,11 @@ function FirmActivityForm({ firmId, firmName, contact, allFirms, allContacts, on
       queryClient.invalidateQueries({ queryKey: ["contact_activities", contactId] });
       queryClient.invalidateQueries({ queryKey: ["all_activities_for_firm", firmId] });
       if (addTask && taskDesc && taskDesc !== "<p><br></p>") {
-        const label = `${activityType} – ${format(new Date(activityDate + "T00:00:00"), "MMM d, yyyy")}`;
+        const label = `${activityType} – ${fmt(activityDate)}`;
         await base44.entities.FollowUpTask.create({
-          originator_contact_id: contactId,
-          originator_contact_name: contactName,
-          activity_id: created.id,
-          activity_label: label,
-          due_date: taskDueDate,
-          task_description: taskDesc,
-          status: "Not Started",
+          originator_contact_id: contactId, originator_contact_name: contactName,
+          activity_id: created.id, activity_label: label,
+          due_date: taskDueDate, task_description: taskDesc, status: "Not Started",
         });
         queryClient.invalidateQueries({ queryKey: ["follow_up_tasks", contactId] });
         queryClient.invalidateQueries({ queryKey: ["all_tasks_for_firm", firmId] });
@@ -187,9 +532,7 @@ function FirmActivityForm({ firmId, firmName, contact, allFirms, allContacts, on
           <Label className="text-xs font-medium text-gray-700">Type</Label>
           <Select value={activityType} onValueChange={setActivityType}>
             <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {ACTIVITY_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-            </SelectContent>
+            <SelectContent>{ACTIVITY_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
           </Select>
         </div>
         <div className="space-y-1">
@@ -206,6 +549,13 @@ function FirmActivityForm({ firmId, firmName, contact, allFirms, allContacts, on
       <div className="space-y-1">
         <Label className="text-xs font-medium text-gray-700">Notes</Label>
         <Textarea placeholder="Activity details..." value={notes} onChange={e => setNotes(e.target.value)} className="min-h-16 text-sm" />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-xs font-medium text-gray-700 flex items-center gap-1">
+          <Building2 className="w-3 h-3 text-indigo-500" /> Associated Firms & Contacts
+        </Label>
+        <AssociatedFirmsEditor value={associatedFirmsContacts} onChange={setAssociatedFirmsContacts} allFirms={allFirms} allContacts={allContacts} />
       </div>
 
       {!addTask ? (
@@ -236,14 +586,7 @@ function FirmActivityForm({ firmId, firmName, contact, allFirms, allContacts, on
         <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={onCancel}>Cancel</Button>
         <Button type="button" size="sm" className="h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
           disabled={!activityType || !activityDate || createMutation.isPending}
-          onClick={() => createMutation.mutate({
-            contact_id: contactId,
-            activity_type: activityType,
-            activity_date: activityDate,
-            subject: subject.trim(),
-            notes: notes.trim(),
-            associated_firms_contacts: [{ firm_id: firmId, firm_name: firmName, contacts: [] }],
-          })}>
+          onClick={() => createMutation.mutate({ contact_id: contactId, activity_type: activityType, activity_date: activityDate, subject: subject.trim(), notes: notes.trim(), associated_firms_contacts: associatedFirmsContacts })}>
           {createMutation.isPending ? "Saving..." : "Save Activity"}
         </Button>
       </div>
@@ -251,27 +594,40 @@ function FirmActivityForm({ firmId, firmName, contact, allFirms, allContacts, on
   );
 }
 
-// ── Follow-up Task form (mirrors FollowUpTasksSection's NewTasksForm) ─────────
+// ── Task form (full, mirrors NewTasksForm from FollowUpTasksSection) ──────────
 function FirmTaskForm({ firmId, firmName, contact, allFirms, allContacts, allActivities, onSaved, onCancel }) {
   const queryClient = useQueryClient();
   const contactId = contact.id;
   const contactName = [contact.first_name, contact.last_name].filter(Boolean).join(" ");
 
-  const [taskDesc, setTaskDesc] = useState("");
-  const [dueDate, setDueDate] = useState(new Date().toISOString().split("T")[0]);
-  const [status, setStatus] = useState("Not Started");
+  const emptyTask = () => ({
+    task_description: "", due_date: new Date().toISOString().split("T")[0], status: "Not Started",
+    assigned_to_contact_id: "", assigned_to_contact_name: "", assigned_to_firm_id: "", assigned_to_firm_name: "",
+    activity_id: "", activity_label: "", attachments: [],
+  });
+  const [tasks, setTasks] = useState([emptyTask()]);
   const [saving, setSaving] = useState(false);
 
+  const handleChange = (idx, updated) => setTasks(prev => prev.map((t, i) => i === idx ? updated : t));
+  const handleRemove = (idx) => setTasks(prev => prev.filter((_, i) => i !== idx));
+
   const handleSave = async () => {
-    if (!taskDesc || taskDesc === "<p><br></p>" || !dueDate) return;
+    const valid = tasks.filter(t => t.due_date && t.task_description && t.task_description !== "<p><br></p>");
+    if (!valid.length) return;
     setSaving(true);
-    await base44.entities.FollowUpTask.create({
-      originator_contact_id: contactId,
-      originator_contact_name: contactName,
-      due_date: dueDate,
-      task_description: taskDesc,
-      status,
-    });
+    for (const t of valid) {
+      await base44.entities.FollowUpTask.create({
+        originator_contact_id: contactId, originator_contact_name: contactName,
+        due_date: t.due_date, task_description: t.task_description,
+        status: t.status || "Not Started",
+        assigned_to_contact_id: t.assigned_to_contact_id || undefined,
+        assigned_to_contact_name: t.assigned_to_contact_name || undefined,
+        assigned_to_firm_id: t.assigned_to_firm_id || undefined,
+        assigned_to_firm_name: t.assigned_to_firm_name || undefined,
+        activity_id: t.activity_id || undefined, activity_label: t.activity_label || undefined,
+        attachments: t.attachments?.length ? t.attachments : undefined,
+      });
+    }
     queryClient.invalidateQueries({ queryKey: ["follow_up_tasks", contactId] });
     queryClient.invalidateQueries({ queryKey: ["all_tasks_for_firm", firmId] });
     setSaving(false);
@@ -282,40 +638,25 @@ function FirmTaskForm({ firmId, firmName, contact, allFirms, allContacts, allAct
     <div className="rounded-xl border border-indigo-100 bg-indigo-50/30 p-3 space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <span className="text-xs font-semibold text-indigo-700">Add Follow-up Task</span>
+          <span className="text-xs font-semibold text-indigo-700">Add Follow-up Task(s)</span>
           <span className="text-xs text-indigo-400 ml-1.5">for {contactName}</span>
         </div>
         <button type="button" onClick={onCancel}><X className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" /></button>
       </div>
-
-      <div className="space-y-1">
-        <Label className="text-xs font-medium text-gray-700">Task Description *</Label>
-        <div className="quill-sm border border-gray-200 rounded-lg overflow-hidden bg-white">
-          <ReactQuill theme="snow" value={taskDesc} onChange={setTaskDesc} modules={QUILL_MODULES} placeholder="Describe the task..." style={{ minHeight: 80 }} />
-        </div>
+      <div className="space-y-2">
+        {tasks.map((task, idx) => (
+          <TaskEntryForm key={idx} idx={idx} task={task} onChange={handleChange} onRemove={handleRemove}
+            showRemove={tasks.length > 1} allFirms={allFirms} allContacts={allContacts} allActivities={allActivities} />
+        ))}
       </div>
-
-      <div className="grid grid-cols-2 gap-2">
-        <div className="space-y-1">
-          <Label className="text-xs font-medium text-gray-700">Due Date *</Label>
-          <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="h-8 text-sm" />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs font-medium text-gray-700">Status</Label>
-          <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {TASK_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
+      <button type="button" onClick={() => setTasks(prev => [...prev, emptyTask()])}
+        className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-dashed border-indigo-300 text-xs text-indigo-600 hover:bg-indigo-50 transition-colors">
+        <Plus className="w-3.5 h-3.5" /> Add Another Task
+      </button>
       <div className="flex gap-2 justify-end">
         <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={onCancel}>Cancel</Button>
-        <Button type="button" size="sm" className="h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
-          disabled={saving || !taskDesc || taskDesc === "<p><br></p>" || !dueDate} onClick={handleSave}>
-          {saving ? "Saving..." : "Save Task"}
+        <Button type="button" size="sm" className="h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white" onClick={handleSave} disabled={saving}>
+          {saving ? "Saving..." : `Save Task${tasks.length > 1 ? "s" : ""}`}
         </Button>
       </div>
     </div>
@@ -338,6 +679,11 @@ function ActivityRow({ activity }) {
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-semibold text-gray-700">{activity.activity_type}</span>
             {activity.subject && <span className="text-xs text-gray-500 truncate">· {activity.subject}</span>}
+            {associated.length > 0 && (
+              <span className="text-[10px] bg-purple-50 text-purple-600 border border-purple-200 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                <Building2 className="w-2.5 h-2.5" /> {associated.length} firm{associated.length > 1 ? "s" : ""}
+              </span>
+            )}
           </div>
           <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-2">
             {activity.activity_date ? fmt(activity.activity_date) : "—"}
@@ -350,12 +696,9 @@ function ActivityRow({ activity }) {
         </div>
         {expanded ? <ChevronUp className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />}
       </div>
-
       {expanded && (
         <div className="px-3 pb-3 border-t border-gray-100 pt-2 space-y-3">
-          {activity.notes
-            ? <p className="text-sm text-gray-700 whitespace-pre-wrap">{activity.notes}</p>
-            : <p className="text-xs text-gray-400 italic">No notes recorded.</p>}
+          {activity.notes ? <p className="text-sm text-gray-700 whitespace-pre-wrap">{activity.notes}</p> : <p className="text-xs text-gray-400 italic">No notes recorded.</p>}
           {associated.length > 0 && (
             <div className="space-y-1.5">
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Associated Firms & Contacts</p>
@@ -398,9 +741,7 @@ function TaskRow({ task }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${s.bg} ${s.color}`}>{task.status}</span>
-            <span className="text-xs text-gray-500 flex items-center gap-1">
-              <Calendar className="w-3 h-3" /> Due {fmt(task.due_date)}
-            </span>
+            <span className="text-xs text-gray-500 flex items-center gap-1"><Calendar className="w-3 h-3" /> Due {fmt(task.due_date)}</span>
             {task.assigned_to_contact_name && (
               <span className="text-[10px] text-indigo-600 flex items-center gap-1 bg-indigo-50 px-1.5 py-0.5 rounded-full">
                 <User className="w-2.5 h-2.5" /> {task.assigned_to_contact_name}
@@ -418,7 +759,6 @@ function TaskRow({ task }) {
         </div>
         {expanded ? <ChevronUp className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 mt-0.5" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 mt-0.5" />}
       </div>
-
       {expanded && (
         <div className="px-3 pb-3 pt-2 border-t border-gray-100 space-y-3">
           <div>
@@ -434,14 +774,12 @@ function TaskRow({ task }) {
           <div className="flex flex-wrap gap-3 text-xs text-gray-500">
             {task.originator_contact_name && (
               <span className="flex items-center gap-1">
-                <User className="w-3 h-3 text-amber-500" />
-                Requested by <span className="font-medium text-gray-700 ml-0.5">{task.originator_contact_name}</span>
+                <User className="w-3 h-3 text-amber-500" /> Requested by <span className="font-medium text-gray-700 ml-0.5">{task.originator_contact_name}</span>
               </span>
             )}
             {task.assigned_to_contact_name && (
               <span className="flex items-center gap-1">
-                <User className="w-3 h-3 text-blue-500" />
-                Assigned to <span className="font-medium text-gray-700 ml-0.5">{task.assigned_to_contact_name}</span>
+                <User className="w-3 h-3 text-blue-500" /> Assigned to <span className="font-medium text-gray-700 ml-0.5">{task.assigned_to_contact_name}</span>
                 {task.assigned_to_firm_name && <span>· {task.assigned_to_firm_name}</span>}
               </span>
             )}
@@ -463,7 +801,7 @@ function TaskRow({ task }) {
               {task.attachments.map(att => (
                 <a key={att.id} href={att.file_url} target="_blank" rel="noopener noreferrer"
                   className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-xs text-indigo-600 hover:bg-indigo-50 transition-colors">
-                  <FileIcon className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                  <Paperclip className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
                   <span className="truncate">{att.name}</span>
                 </a>
               ))}
@@ -539,28 +877,20 @@ export default function FirmActivityLogTab({ firmId, firmName }) {
     else if (uiState === "picking-for-task") setUiState("task-form");
   };
 
-  const handleFormSaved = () => {
-    setUiState("idle");
-    setSelectedContact(null);
-  };
-
-  const handleCancel = () => {
-    setUiState("idle");
-    setSelectedContact(null);
-  };
+  const handleFormSaved = () => { setUiState("idle"); setSelectedContact(null); };
+  const handleCancel = () => { setUiState("idle"); setSelectedContact(null); };
 
   const isLoading = loadingActivities || loadingTasks || loadingContacts;
+  const showingPicker = uiState === "picking-for-activity" || uiState === "picking-for-task";
 
   const sections = [
     { key: "activities", label: "Activity Logs", count: firmActivities.length },
     { key: "tasks", label: "Follow-up Tasks", count: firmTasks.length },
   ];
 
-  const showingPicker = uiState === "picking-for-activity" || uiState === "picking-for-task";
-
   return (
     <div className="space-y-3">
-      {/* Section toggle + action button */}
+      {/* Section toggle + action buttons */}
       <div className="flex items-center gap-2">
         <div className="flex gap-1 p-1 bg-gray-100 rounded-lg flex-1">
           {sections.map(s => (
@@ -570,81 +900,58 @@ export default function FirmActivityLogTab({ firmId, firmName }) {
               }`}>
               {s.label}
               {s.count > 0 && (
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                  activeSection === s.key ? "bg-indigo-100 text-indigo-700" : "bg-gray-200 text-gray-500"
-                }`}>{s.count}</span>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeSection === s.key ? "bg-indigo-100 text-indigo-700" : "bg-gray-200 text-gray-500"}`}>{s.count}</span>
               )}
             </button>
           ))}
         </div>
         {uiState === "idle" && (
-          <Button type="button" variant="ghost" size="sm"
-            className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs flex-shrink-0"
-            onClick={() => { setActiveSection(activeSection); setUiState(activeSection === "activities" ? "picking-for-activity" : "picking-for-task"); }}>
-            <Plus className="w-3.5 h-3.5" />
-            {activeSection === "activities" ? "Log Activity" : "Add Task"}
-          </Button>
+          <>
+            <Button type="button" variant="ghost" size="sm"
+              className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs flex-shrink-0"
+              onClick={() => { setActiveSection("activities"); setUiState("picking-for-activity"); }}>
+              <Plus className="w-3.5 h-3.5" /> Log Activity
+            </Button>
+            <Button type="button" variant="ghost" size="sm"
+              className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs flex-shrink-0"
+              onClick={() => { setActiveSection("tasks"); setUiState("picking-for-task"); }}>
+              <Plus className="w-3.5 h-3.5" /> Add Task
+            </Button>
+          </>
         )}
       </div>
 
       {/* Contact picker modal */}
       {showingPicker && (
-        <ContactPickerModal
-          firmId={firmId}
-          firmName={firmName}
+        <ContactPickerModal firmId={firmId} firmName={firmName}
           firmContacts={firmContacts.filter(c => !c.deleted_at)}
-          onPick={handlePickContact}
-          onClose={handleCancel}
-        />
+          onPick={handlePickContact} onClose={handleCancel} />
       )}
 
-      {/* Inline form after contact selected */}
+      {/* Inline forms */}
       {uiState === "activity-form" && selectedContact && (
-        <FirmActivityForm
-          firmId={firmId}
-          firmName={firmName}
-          contact={selectedContact}
-          allFirms={allFirms}
-          allContacts={allContacts}
-          onSaved={handleFormSaved}
-          onCancel={handleCancel}
-        />
+        <FirmActivityForm firmId={firmId} firmName={firmName} contact={selectedContact}
+          allFirms={allFirms} allContacts={allContacts} onSaved={handleFormSaved} onCancel={handleCancel} />
       )}
-
       {uiState === "task-form" && selectedContact && (
-        <FirmTaskForm
-          firmId={firmId}
-          firmName={firmName}
-          contact={selectedContact}
-          allFirms={allFirms}
-          allContacts={allContacts}
-          allActivities={firmActivities}
-          onSaved={handleFormSaved}
-          onCancel={handleCancel}
-        />
+        <FirmTaskForm firmId={firmId} firmName={firmName} contact={selectedContact}
+          allFirms={allFirms} allContacts={allContacts} allActivities={firmActivities}
+          onSaved={handleFormSaved} onCancel={handleCancel} />
       )}
 
       {isLoading ? (
         <div className="text-xs text-gray-400 italic py-6 text-center">Loading...</div>
       ) : activeSection === "activities" ? (
         firmActivities.length === 0 ? (
-          <div className="text-sm text-gray-400 italic py-6 text-center border border-dashed border-gray-200 rounded-xl">
-            No activity logs for this firm yet
-          </div>
+          <div className="text-sm text-gray-400 italic py-6 text-center border border-dashed border-gray-200 rounded-xl">No activity logs for this firm yet</div>
         ) : (
-          <div className="space-y-2">
-            {firmActivities.map(a => <ActivityRow key={a.id} activity={a} />)}
-          </div>
+          <div className="space-y-2">{firmActivities.map(a => <ActivityRow key={a.id} activity={a} />)}</div>
         )
       ) : (
         firmTasks.length === 0 ? (
-          <div className="text-sm text-gray-400 italic py-6 text-center border border-dashed border-gray-200 rounded-xl">
-            No follow-up tasks associated with this firm yet
-          </div>
+          <div className="text-sm text-gray-400 italic py-6 text-center border border-dashed border-gray-200 rounded-xl">No follow-up tasks associated with this firm yet</div>
         ) : (
-          <div className="space-y-2">
-            {firmTasks.map(t => <TaskRow key={t.id} task={t} />)}
-          </div>
+          <div className="space-y-2">{firmTasks.map(t => <TaskRow key={t.id} task={t} />)}</div>
         )
       )}
     </div>
