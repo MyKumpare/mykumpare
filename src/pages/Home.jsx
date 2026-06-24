@@ -29,6 +29,7 @@ import GlobalActivityLogModal from "../components/activity/GlobalActivityLogModa
 import PortfolioPickerModal from "../components/portfolios/PortfolioPickerModal";
 import FirmPickerModal from "../components/firms/FirmPickerModal";
 import ProductPickerModal from "../components/products/ProductPickerModal";
+import ContactPickerModal from "../components/contacts/ContactPickerModal";
 
 const FIRM_TYPES = [
   "Manager of Managers",
@@ -76,6 +77,7 @@ export default function Home() {
   const [portfolioPickerOpen, setPortfolioPickerOpen] = useState(false);
   const [firmPickerOpen, setFirmPickerOpen] = useState(false);
   const [productPickerOpen, setProductPickerOpen] = useState(false);
+  const [contactPickerOpen, setContactPickerOpen] = useState(false);
 
   const portfoliosRef = useRef(null);
   const firmsRef = useRef(null);
@@ -325,7 +327,7 @@ export default function Home() {
     { label: "Portfolios", icon: BarChart3, ref: null, color: "text-emerald-600", activeBg: "bg-emerald-50", onClick: () => setPortfolioPickerOpen(true) },
     { label: "Firms", icon: Building, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => setFirmPickerOpen(true) },
     { label: "Products", icon: Package, ref: null, color: "text-violet-600", activeBg: "bg-violet-50", onClick: () => setProductPickerOpen(true) },
-    { label: "Contacts", icon: User, ref: contactsRef, color: "text-pink-600", activeBg: "bg-pink-50" },
+    { label: "Contacts", icon: User, ref: null, color: "text-pink-600", activeBg: "bg-pink-50", onClick: () => setContactPickerOpen(true) },
     { label: "Activity", icon: ClipboardList, ref: null, color: "text-amber-600", activeBg: "bg-amber-50", onClick: () => { setActivityLogDefaultTab("activity"); setActivityLogModalOpen(true); } },
     { label: "Tasks", icon: LayoutList, ref: null, color: "text-orange-600", activeBg: "bg-orange-50", onClick: () => { setActivityLogDefaultTab("task"); setActivityLogModalOpen(true); } },
     { label: "Analytics", icon: LineChart, ref: analyticsRef, color: "text-cyan-600", activeBg: "bg-cyan-50", onClick: () => setAnalyticsLaunchOpen(true) },
@@ -720,6 +722,15 @@ export default function Home() {
         products={products}
         onProductClick={(product) => handleEditProduct(product)}
         onAddProduct={() => { setEditingProduct(null); setPreselectedProductType(null); setPreselectedFirmId(null); setProductDialogOpen(true); }}
+      />
+
+      <ContactPickerModal
+        open={contactPickerOpen}
+        onClose={() => setContactPickerOpen(false)}
+        contacts={contacts}
+        firms={firms}
+        onContactClick={(contact) => setViewingContact(contact)}
+        onAddContact={() => setAddContactOpen(true)}
       />
 
       {/* Benchmark dialog */}
