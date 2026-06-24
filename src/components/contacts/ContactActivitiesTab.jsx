@@ -59,6 +59,9 @@ function FirmPickerDropdown({ availableFirms, onSelect }) {
     (f.firm_types || [f.firm_type]).filter(Boolean).some(t => t.toLowerCase().includes(search.toLowerCase()))
   );
 
+  // Auto-expand all groups when searching
+  const isSearching = search.trim().length > 0;
+
   // Group by type alphabetically; a firm with multiple types appears under each
   const grouped = {};
   FIRM_TYPES.forEach(t => { grouped[t] = []; });
@@ -120,10 +123,10 @@ function FirmPickerDropdown({ availableFirms, onSelect }) {
                     <span>{type}</span>
                     <div className="flex items-center gap-1">
                       <span className="text-[10px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">{grouped[type].length}</span>
-                      {expandedTypes[type] ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                      {(isSearching || expandedTypes[type]) ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                     </div>
                   </button>
-                  {expandedTypes[type] && grouped[type].map(f => (
+                  {(isSearching || expandedTypes[type]) && grouped[type].map(f => (
                     <button
                       key={f.id}
                       type="button"
