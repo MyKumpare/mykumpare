@@ -521,19 +521,28 @@ export default function Home() {
 
       {/* ── Mobile bottom navigation (hidden on sm+ screens) ── */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-white/95 backdrop-blur border-t border-gray-200 shadow-lg pb-safe"
+        className="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-white/95 backdrop-blur border-t border-gray-200 shadow-lg"
         style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}
       >
-        <div className="grid grid-cols-9">
+        <div className="flex overflow-x-auto scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
           {mobileNavItems.map(({ label, icon: MobileIcon, color, ref, onClick }) => (
-            <button key={label} onClick={() => onClick ? onClick() : scrollTo(ref)}
-              className="flex flex-col items-center gap-1 py-2.5 px-1 transition-colors">
+            <button
+              key={label}
+              onTouchEnd={(e) => { e.preventDefault(); onClick ? onClick() : scrollTo(ref); }}
+              onClick={() => onClick ? onClick() : scrollTo(ref)}
+              className="flex flex-col items-center gap-1 py-2.5 flex-shrink-0 transition-colors"
+              style={{ minWidth: 72 }}
+            >
               <MobileIcon className={`w-5 h-5 ${color}`} />
               <span className={`text-[10px] font-medium ${color}`}>{label}</span>
             </button>
           ))}
-          <button onClick={() => setAllExpanded(v => !v)}
-            className="flex flex-col items-center gap-1 py-2.5 px-1 transition-colors">
+          <button
+            onTouchEnd={(e) => { e.preventDefault(); setAllExpanded(v => !v); }}
+            onClick={() => setAllExpanded(v => !v)}
+            className="flex flex-col items-center gap-1 py-2.5 flex-shrink-0 transition-colors"
+            style={{ minWidth: 72 }}
+          >
             {allExpanded
               ? <ChevronsDownUp className="w-5 h-5 text-gray-500" />
               : <ChevronsUpDown className="w-5 h-5 text-gray-500" />
