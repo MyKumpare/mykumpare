@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Plus, X, ChevronDown, ChevronUp, Trash2, CheckCircle2, Clock, AlertCircle, XCircle,
-  User, Building2, Calendar, ClipboardList, Edit2, Check
+  User, Building2, Calendar, ClipboardList, Edit2, Check, Link2, Link2Off
 } from "lucide-react";
 import { format } from "date-fns";
 import ReactQuill from "react-quill";
@@ -38,7 +38,7 @@ function dateInputToDisplay(dateStr) {
 }
 
 // ── Single-task sub-form used inside the multi-task form ──────────────────────
-function TaskEntryForm({ idx, task, onChange, onRemove, showRemove, allFirms, allContacts }) {
+function TaskEntryForm({ idx, task, onChange, onRemove, showRemove, allFirms, allContacts, allActivities = [] }) {
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [selectedFirmId, setSelectedFirmId] = useState(task.assigned_to_firm_id || "");
 
@@ -135,6 +135,39 @@ function TaskEntryForm({ idx, task, onChange, onRemove, showRemove, allFirms, al
         )}
       </div>
 
+      {/* Linked Activity */}
+      {allActivities.length > 0 && (
+        <div className="space-y-1">
+          <Label className="text-xs font-medium text-gray-700">Link to Activity (optional)</Label>
+          {task.activity_id ? (
+            <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200 text-xs">
+              <Link2 className="w-3.5 h-3.5 text-indigo-500" />
+              <span className="flex-1 truncate text-indigo-700">{task.activity_label}</span>
+              <button type="button" onClick={() => onChange(idx, { ...task, activity_id: "", activity_label: "" })} className="text-indigo-300 hover:text-red-500">
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ) : (
+            <Select value={task.activity_id || ""} onValueChange={(val) => {
+              const act = allActivities.find(a => a.id === val);
+              if (act) {
+                const lbl = `${act.activity_type}${act.subject ? ` – ${act.subject}` : ""} (${act.activity_date ? new Date(act.activity_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"})`;
+                onChange(idx, { ...task, activity_id: val, activity_label: lbl });
+              }
+            }}>
+              <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Link to an activity..." /></SelectTrigger>
+              <SelectContent>
+                {allActivities.map(a => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.activity_type}{a.subject ? ` – ${a.subject}` : ""} · {a.activity_date ? new Date(a.activity_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+      )}
+
       {/* Assignment Modal */}
       {assignModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -190,9 +223,9 @@ function TaskEntryForm({ idx, task, onChange, onRemove, showRemove, allFirms, al
 }
 
 // ── New-tasks form (one or more tasks at once) ──────────────────────────────
-function NewTasksForm({ contactId, contactName, onSaved, onCancel, allFirms, allContacts }) {
+function NewTasksForm({ contactId, contactName, onSaved, onCancel, allFirms, allContacts, allActivities = [] }) {
   const queryClient = useQueryClient();
-  const emptyTask = () => ({ task_description: "", due_date: new Date().toISOString().split("T")[0], status: "Not Started", assigned_to_contact_id: "", assigned_to_contact_name: "", assigned_to_firm_id: "", assigned_to_firm_name: "" });
+  const emptyTask = () => ({ task_description: "", due_date: new Date().toISOString().split("T")[0], status: "Not Started", assigned_to_contact_id: "", assigned_to_contact_name: "", assigned_to_firm_id: "", assigned_to_firm_name: "", activity_id: "", activity_label: "" });
   const [tasks, setTasks] = useState([emptyTask()]);
   const [saving, setSaving] = useState(false);
 
@@ -215,6 +248,8 @@ function NewTasksForm({ contactId, contactName, onSaved, onCancel, allFirms, all
         assigned_to_contact_name: t.assigned_to_contact_name || undefined,
         assigned_to_firm_id: t.assigned_to_firm_id || undefined,
         assigned_to_firm_name: t.assigned_to_firm_name || undefined,
+        activity_id: t.activity_id || undefined,
+        activity_label: t.activity_label || undefined,
       });
     }
     queryClient.invalidateQueries({ queryKey: ["follow_up_tasks", contactId] });
@@ -247,6 +282,7 @@ function NewTasksForm({ contactId, contactName, onSaved, onCancel, allFirms, all
             showRemove={tasks.length > 1}
             allFirms={allFirms}
             allContacts={allContacts}
+            allActivities={allActivities}
           />
         ))}
       </div>
@@ -276,7 +312,7 @@ function NewTasksForm({ contactId, contactName, onSaved, onCancel, allFirms, all
 }
 
 // ── Task detail/edit row ──────────────────────────────────────────────────────
-function TaskItem({ task, contactId, allFirms, allContacts }) {
+function TaskItem({ task, contactId, allFirms, allContacts, allActivities = [] }) {
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -290,6 +326,8 @@ function TaskItem({ task, contactId, allFirms, allContacts }) {
   const [editAssignedName, setEditAssignedName] = useState(task.assigned_to_contact_name || "");
   const [editFirmId, setEditFirmId] = useState(task.assigned_to_firm_id || "");
   const [editFirmName, setEditFirmName] = useState(task.assigned_to_firm_name || "");
+  const [editActivityId, setEditActivityId] = useState(task.activity_id || "");
+  const [editActivityLabel, setEditActivityLabel] = useState(task.activity_label || "");
   const [assignOpen, setAssignOpen] = useState(false);
   const [selFirmId, setSelFirmId] = useState("");
 
@@ -337,6 +375,8 @@ function TaskItem({ task, contactId, allFirms, allContacts }) {
       assigned_to_contact_name: editAssignedName || undefined,
       assigned_to_firm_id: editFirmId || undefined,
       assigned_to_firm_name: editFirmName || undefined,
+      activity_id: editActivityId || undefined,
+      activity_label: editActivityLabel || undefined,
     };
     if (editStatus === "Completed" && !task.completion_date) {
       data.completion_date = new Date().toISOString().split("T")[0];
@@ -425,6 +465,12 @@ function TaskItem({ task, contactId, allFirms, allContacts }) {
             <div className="flex items-center gap-2 text-xs text-gray-500">
               <User className="w-3 h-3" />
               Assigned by <span className="font-medium text-gray-700">{task.originator_contact_name}</span>
+            </div>
+          )}
+          {task.activity_label && (
+            <div className="flex items-center gap-1.5 text-xs text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-1 rounded-lg">
+              <Link2 className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate">Linked to: {task.activity_label}</span>
             </div>
           )}
           <div className="flex justify-end">
@@ -540,6 +586,41 @@ function TaskItem({ task, contactId, allFirms, allContacts }) {
             </div>
           )}
 
+          {/* Linked Activity */}
+          <div className="space-y-1">
+            <Label className="text-xs font-medium text-gray-700">Linked Activity (optional)</Label>
+            {editActivityId ? (
+              <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200 text-xs">
+                <Link2 className="w-3.5 h-3.5 text-indigo-500" />
+                <span className="flex-1 truncate text-indigo-700">{editActivityLabel}</span>
+                <button type="button" onClick={() => { setEditActivityId(""); setEditActivityLabel(""); }} className="text-indigo-300 hover:text-red-500">
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ) : allActivities.length === 0 ? (
+              <p className="text-xs text-gray-400 italic">No activities logged yet</p>
+            ) : (
+              <Select value={editActivityId} onValueChange={(val) => {
+                const act = allActivities.find(a => a.id === val);
+                if (act) {
+                  const { format: fmt } = { format: (d, f) => { try { return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(d); } catch { return ""; } } };
+                  const lbl = `${act.activity_type}${act.subject ? ` – ${act.subject}` : ""} (${act.activity_date ? fmt(new Date(act.activity_date + "T00:00:00")) : "—"})`;
+                  setEditActivityId(val);
+                  setEditActivityLabel(lbl);
+                }
+              }}>
+                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Link to an activity..." /></SelectTrigger>
+                <SelectContent>
+                  {allActivities.map(a => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.activity_type}{a.subject ? ` – ${a.subject}` : ""} · {a.activity_date ? new Date(a.activity_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+
           <div className="flex gap-2 justify-end">
             <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={() => setEditMode(false)}>Cancel</Button>
             <Button
@@ -559,7 +640,7 @@ function TaskItem({ task, contactId, allFirms, allContacts }) {
 }
 
 // ── Main exported section ────────────────────────────────────────────────────
-export default function FollowUpTasksSection({ contactId, contactName }) {
+export default function FollowUpTasksSection({ contactId, contactName, allActivities = [] }) {
   const [showForm, setShowForm] = useState(false);
 
   // Tasks where this contact is the originator
@@ -626,6 +707,7 @@ export default function FollowUpTasksSection({ contactId, contactName }) {
             onCancel={() => setShowForm(false)}
             allFirms={allFirms}
             allContacts={allContacts}
+            allActivities={allActivities}
           />
         )}
 
@@ -638,7 +720,7 @@ export default function FollowUpTasksSection({ contactId, contactName }) {
         ) : (
           <div className="space-y-2">
             {originatedTasks.map(task => (
-              <TaskItem key={task.id} task={task} contactId={contactId} allFirms={allFirms} allContacts={allContacts} />
+              <TaskItem key={task.id} task={task} contactId={contactId} allFirms={allFirms} allContacts={allContacts} allActivities={allActivities} />
             ))}
           </div>
         )}
@@ -652,7 +734,7 @@ export default function FollowUpTasksSection({ contactId, contactName }) {
           </h4>
           <div className="space-y-2">
             {pureAssigned.map(task => (
-              <TaskItem key={task.id} task={task} contactId={contactId} allFirms={allFirms} allContacts={allContacts} />
+              <TaskItem key={task.id} task={task} contactId={contactId} allFirms={allFirms} allContacts={allContacts} allActivities={allActivities} />
             ))}
           </div>
         </div>

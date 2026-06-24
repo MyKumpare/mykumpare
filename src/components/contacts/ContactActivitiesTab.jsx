@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -6,9 +6,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Phone, Mail, Users, FileText, MoreHorizontal, Trash2, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Phone, Mail, Users, FileText, MoreHorizontal, Trash2, X, ChevronDown, ChevronUp, ClipboardList, Link2, Link2Off } from "lucide-react";
 import { format } from "date-fns";
 import FollowUpTasksSection from "./FollowUpTasksSection";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
+
+const QUILL_MODULES = {
+  toolbar: [
+    [{ header: [false] }],
+    ["bold", "italic", "underline"],
+    [{ list: "ordered" }, { list: "bullet" }],
+    ["clean"],
+  ],
+};
 
 const ACTIVITY_TYPES = ["Call", "Email", "Meeting", "Note", "Other"];
 
@@ -20,17 +31,33 @@ const ACTIVITY_ICONS = {
   Other: { icon: MoreHorizontal, color: "text-gray-500", bg: "bg-gray-100" },
 };
 
-function ActivityForm({ contactId, onSaved, onCancel }) {
+function ActivityForm({ contactId, contactName, onSaved, onCancel }) {
   const queryClient = useQueryClient();
   const [activityType, setActivityType] = useState("Call");
   const [activityDate, setActivityDate] = useState(new Date().toISOString().split("T")[0]);
   const [subject, setSubject] = useState("");
   const [notes, setNotes] = useState("");
+  const [addTask, setAddTask] = useState(false);
+  const [taskDesc, setTaskDesc] = useState("");
+  const [taskDueDate, setTaskDueDate] = useState(new Date().toISOString().split("T")[0]);
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.ContactActivity.create(data),
-    onSuccess: () => {
+    onSuccess: async (created) => {
       queryClient.invalidateQueries({ queryKey: ["contact_activities", contactId] });
+      if (addTask && taskDesc && taskDesc !== "<p><br></p>") {
+        const label = `${activityType} – ${format(new Date(activityDate + "T00:00:00"), "MMM d, yyyy")}`;
+        await base44.entities.FollowUpTask.create({
+          originator_contact_id: contactId,
+          originator_contact_name: contactName,
+          activity_id: created.id,
+          activity_label: label,
+          due_date: taskDueDate,
+          task_description: taskDesc,
+          status: "Not Started",
+        });
+        queryClient.invalidateQueries({ queryKey: ["follow_up_tasks", contactId] });
+      }
       onSaved();
     },
   });
@@ -59,34 +86,47 @@ function ActivityForm({ contactId, onSaved, onCancel }) {
         </div>
         <div className="space-y-1">
           <Label className="text-xs font-medium text-gray-700">Date</Label>
-          <Input
-            type="date"
-            value={activityDate}
-            onChange={(e) => setActivityDate(e.target.value)}
-            className="h-8 text-sm"
-          />
+          <Input type="date" value={activityDate} onChange={(e) => setActivityDate(e.target.value)} className="h-8 text-sm" />
         </div>
       </div>
 
       <div className="space-y-1">
         <Label className="text-xs font-medium text-gray-700">Subject</Label>
-        <Input
-          placeholder="Brief subject..."
-          value={subject}
-          onChange={(e) => setSubject(e.target.value)}
-          className="h-8 text-sm"
-        />
+        <Input placeholder="Brief subject..." value={subject} onChange={(e) => setSubject(e.target.value)} className="h-8 text-sm" />
       </div>
 
       <div className="space-y-1">
         <Label className="text-xs font-medium text-gray-700">Notes</Label>
-        <Textarea
-          placeholder="Activity details..."
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          className="min-h-16 text-sm"
-        />
+        <Textarea placeholder="Activity details..." value={notes} onChange={(e) => setNotes(e.target.value)} className="min-h-16 text-sm" />
       </div>
+
+      {/* Follow-up task toggle */}
+      {!addTask ? (
+        <button
+          type="button"
+          onClick={() => setAddTask(true)}
+          className="w-full flex items-center gap-1.5 px-2.5 py-2 rounded-lg border border-dashed border-indigo-300 text-xs text-indigo-600 hover:bg-indigo-50 transition-colors"
+        >
+          <ClipboardList className="w-3.5 h-3.5" /> Add a follow-up task for this activity
+        </button>
+      ) : (
+        <div className="rounded-lg border border-indigo-200 bg-white p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-indigo-700 flex items-center gap-1"><ClipboardList className="w-3 h-3" /> Follow-up Task</span>
+            <button type="button" onClick={() => setAddTask(false)}><X className="w-3 h-3 text-gray-400 hover:text-red-500" /></button>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs font-medium text-gray-700">Task Description *</Label>
+            <div className="quill-sm border border-gray-200 rounded-lg overflow-hidden bg-white">
+              <ReactQuill theme="snow" value={taskDesc} onChange={setTaskDesc} modules={QUILL_MODULES} placeholder="Describe the task..." style={{ minHeight: 70 }} />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs font-medium text-gray-700">Due Date</Label>
+            <Input type="date" value={taskDueDate} onChange={(e) => setTaskDueDate(e.target.value)} className="h-8 text-sm" />
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-2 justify-end">
         <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={onCancel}>Cancel</Button>
@@ -104,7 +144,7 @@ function ActivityForm({ contactId, onSaved, onCancel }) {
   );
 }
 
-function ActivityItem({ activity, contactId }) {
+function ActivityItem({ activity, contactId, contactName, linkedTasks, allActivities }) {
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
 
@@ -113,7 +153,17 @@ function ActivityItem({ activity, contactId }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["contact_activities", contactId] }),
   });
 
+  // Re-link a task to a different activity (or unlink)
+  const relinkTask = async (taskId, newActivityId, newActivityLabel) => {
+    await base44.entities.FollowUpTask.update(taskId, {
+      activity_id: newActivityId || undefined,
+      activity_label: newActivityLabel || undefined,
+    });
+    queryClient.invalidateQueries({ queryKey: ["follow_up_tasks", contactId] });
+  };
+
   const { icon: Icon, color, bg } = ACTIVITY_ICONS[activity.activity_type] || ACTIVITY_ICONS.Other;
+  const activityLabel = `${activity.activity_type}${activity.subject ? ` – ${activity.subject}` : ""} (${activity.activity_date ? format(new Date(activity.activity_date + "T00:00:00"), "MMM d, yyyy") : "—"})`;
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
@@ -127,8 +177,11 @@ function ActivityItem({ activity, contactId }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-gray-700">{activity.activity_type}</span>
-            {activity.subject && (
-              <span className="text-xs text-gray-500 truncate">· {activity.subject}</span>
+            {activity.subject && <span className="text-xs text-gray-500 truncate">· {activity.subject}</span>}
+            {linkedTasks?.length > 0 && (
+              <span className="text-[10px] bg-indigo-50 text-indigo-600 border border-indigo-200 px-1.5 py-0.5 rounded-full flex items-center gap-0.5 flex-shrink-0">
+                <ClipboardList className="w-2.5 h-2.5" /> {linkedTasks.length} task{linkedTasks.length > 1 ? "s" : ""}
+              </span>
             )}
           </div>
           <div className="text-xs text-gray-400 mt-0.5">
@@ -141,12 +194,29 @@ function ActivityItem({ activity, contactId }) {
       </div>
 
       {expanded && (
-        <div className="px-3 pb-3 border-t border-gray-100 pt-2 space-y-2">
+        <div className="px-3 pb-3 border-t border-gray-100 pt-2 space-y-3">
           {activity.notes ? (
             <p className="text-sm text-gray-700 whitespace-pre-wrap">{activity.notes}</p>
           ) : (
             <p className="text-xs text-gray-400 italic">No notes recorded.</p>
           )}
+
+          {/* Linked tasks */}
+          {linkedTasks?.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Linked Follow-up Tasks</p>
+              {linkedTasks.map(task => (
+                <LinkedTaskRow
+                  key={task.id}
+                  task={task}
+                  activityLabel={activityLabel}
+                  allActivities={allActivities}
+                  onRelink={relinkTask}
+                />
+              ))}
+            </div>
+          )}
+
           <div className="flex justify-end">
             <button
               type="button"
@@ -163,6 +233,55 @@ function ActivityItem({ activity, contactId }) {
   );
 }
 
+// Shows a single linked task inside an ActivityItem, with relink capability
+function LinkedTaskRow({ task, allActivities, onRelink }) {
+  const [showRelink, setShowRelink] = useState(false);
+  const statusColors = { "Not Started": "text-gray-500", "In-process": "text-blue-600", "Completed": "text-green-600", "Cancelled": "text-red-500" };
+
+  return (
+    <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-indigo-50/60 border border-indigo-100 text-xs">
+      <ClipboardList className="w-3 h-3 text-indigo-400 flex-shrink-0" />
+      <span className="flex-1 text-gray-700 truncate quill-preview" dangerouslySetInnerHTML={{ __html: task.task_description }} />
+      <span className={`font-medium flex-shrink-0 ${statusColors[task.status] || "text-gray-500"}`}>{task.status}</span>
+      <div className="relative flex-shrink-0">
+        <button
+          type="button"
+          title="Change linked activity"
+          onClick={() => setShowRelink(v => !v)}
+          className="p-0.5 text-indigo-300 hover:text-indigo-600 transition-colors"
+        >
+          <Link2 className="w-3 h-3" />
+        </button>
+        {showRelink && (
+          <div className="absolute right-0 top-6 z-20 bg-white border border-gray-200 rounded-xl shadow-xl w-56 p-2 space-y-1">
+            <p className="text-[10px] font-semibold text-gray-500 uppercase px-1 mb-1">Link to activity</p>
+            <button
+              onClick={() => { onRelink(task.id, null, null); setShowRelink(false); }}
+              className="w-full flex items-center gap-1.5 px-2 py-1.5 text-xs rounded-lg hover:bg-red-50 text-red-500 transition-colors"
+            >
+              <Link2Off className="w-3 h-3" /> Unlink (make independent)
+            </button>
+            {allActivities.filter(a => a.id !== task.activity_id).map(a => (
+              <button
+                key={a.id}
+                onClick={() => {
+                  const lbl = `${a.activity_type}${a.subject ? ` – ${a.subject}` : ""} (${a.activity_date ? format(new Date(a.activity_date + "T00:00:00"), "MMM d, yyyy") : "—"})`;
+                  onRelink(task.id, a.id, lbl);
+                  setShowRelink(false);
+                }}
+                className="w-full flex items-center gap-1.5 px-2 py-1.5 text-xs rounded-lg hover:bg-indigo-50 text-gray-700 transition-colors text-left"
+              >
+                <Link2 className="w-3 h-3 text-indigo-400 flex-shrink-0" />
+                <span className="truncate">{a.activity_type}{a.subject ? ` – ${a.subject}` : ""} · {a.activity_date ? format(new Date(a.activity_date + "T00:00:00"), "MMM d, yyyy") : "—"}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function ContactActivitiesTab({ contactId, contactName }) {
   const [showForm, setShowForm] = useState(false);
 
@@ -171,6 +290,25 @@ export default function ContactActivitiesTab({ contactId, contactName }) {
     queryFn: () => base44.entities.ContactActivity.filter({ contact_id: contactId }, "-activity_date"),
     enabled: !!contactId,
   });
+
+  // All tasks for this contact so we can show which are linked to each activity
+  const { data: allTasks = [] } = useQuery({
+    queryKey: ["follow_up_tasks", contactId],
+    queryFn: () => base44.entities.FollowUpTask.filter({ originator_contact_id: contactId }, "-due_date"),
+    enabled: !!contactId,
+  });
+
+  // Build a map: activity_id -> tasks[]
+  const tasksByActivity = useMemo(() => {
+    const map = {};
+    allTasks.forEach(t => {
+      if (t.activity_id) {
+        if (!map[t.activity_id]) map[t.activity_id] = [];
+        map[t.activity_id].push(t);
+      }
+    });
+    return map;
+  }, [allTasks]);
 
   if (!contactId) {
     return (
@@ -197,6 +335,7 @@ export default function ContactActivitiesTab({ contactId, contactName }) {
       {showForm && (
         <ActivityForm
           contactId={contactId}
+          contactName={contactName}
           onSaved={() => setShowForm(false)}
           onCancel={() => setShowForm(false)}
         />
@@ -211,14 +350,21 @@ export default function ContactActivitiesTab({ contactId, contactName }) {
       ) : (
         <div className="space-y-2">
           {activities.map((activity) => (
-            <ActivityItem key={activity.id} activity={activity} contactId={contactId} />
+            <ActivityItem
+              key={activity.id}
+              activity={activity}
+              contactId={contactId}
+              contactName={contactName}
+              linkedTasks={tasksByActivity[activity.id] || []}
+              allActivities={activities}
+            />
           ))}
         </div>
       )}
 
       {/* ── Divider ── */}
       <div className="border-t border-gray-200 pt-4">
-        <FollowUpTasksSection contactId={contactId} contactName={contactName} />
+        <FollowUpTasksSection contactId={contactId} contactName={contactName} allActivities={activities} />
       </div>
     </div>
   );

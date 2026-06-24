@@ -10,6 +10,14 @@
       "type": "string",
       "description": "Full name of the originator (denormalized)"
     },
+    "activity_id": {
+      "type": "string",
+      "description": "ID of the associated ContactActivity (optional)"
+    },
+    "activity_label": {
+      "type": "string",
+      "description": "Short label of the associated activity (denormalized, e.g. 'Call \u2013 Jan 5, 2025')"
+    },
     "due_date": {
       "type": "string",
       "format": "date",
