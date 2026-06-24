@@ -28,6 +28,7 @@ import EditAnalysisDialog from "../components/analytics/EditAnalysisDialog";
 import GlobalActivityLogModal from "../components/activity/GlobalActivityLogModal";
 import PortfolioPickerModal from "../components/portfolios/PortfolioPickerModal";
 import FirmPickerModal from "../components/firms/FirmPickerModal";
+import ProductPickerModal from "../components/products/ProductPickerModal";
 
 const FIRM_TYPES = [
   "Manager of Managers",
@@ -74,6 +75,7 @@ export default function Home() {
   const [activityLogDefaultTab, setActivityLogDefaultTab] = useState("activity");
   const [portfolioPickerOpen, setPortfolioPickerOpen] = useState(false);
   const [firmPickerOpen, setFirmPickerOpen] = useState(false);
+  const [productPickerOpen, setProductPickerOpen] = useState(false);
 
   const portfoliosRef = useRef(null);
   const firmsRef = useRef(null);
@@ -322,7 +324,7 @@ export default function Home() {
   const mobileNavItems = [
     { label: "Portfolios", icon: BarChart3, ref: null, color: "text-emerald-600", activeBg: "bg-emerald-50", onClick: () => setPortfolioPickerOpen(true) },
     { label: "Firms", icon: Building, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => setFirmPickerOpen(true) },
-    { label: "Products", icon: Package, ref: productsRef, color: "text-violet-600", activeBg: "bg-violet-50" },
+    { label: "Products", icon: Package, ref: null, color: "text-violet-600", activeBg: "bg-violet-50", onClick: () => setProductPickerOpen(true) },
     { label: "Contacts", icon: User, ref: contactsRef, color: "text-pink-600", activeBg: "bg-pink-50" },
     { label: "Activity", icon: ClipboardList, ref: null, color: "text-amber-600", activeBg: "bg-amber-50", onClick: () => { setActivityLogDefaultTab("activity"); setActivityLogModalOpen(true); } },
     { label: "Tasks", icon: LayoutList, ref: null, color: "text-orange-600", activeBg: "bg-orange-50", onClick: () => { setActivityLogDefaultTab("task"); setActivityLogModalOpen(true); } },
@@ -710,6 +712,14 @@ export default function Home() {
         firms={firms}
         onFirmClick={(firm) => handleEdit(firm)}
         onAddFirm={() => { setEditingFirm(null); setPreselectedType(null); setDialogOpen(true); }}
+      />
+
+      <ProductPickerModal
+        open={productPickerOpen}
+        onClose={() => setProductPickerOpen(false)}
+        products={products}
+        onProductClick={(product) => handleEditProduct(product)}
+        onAddProduct={() => { setEditingProduct(null); setPreselectedProductType(null); setPreselectedFirmId(null); setProductDialogOpen(true); }}
       />
 
       {/* Benchmark dialog */}
