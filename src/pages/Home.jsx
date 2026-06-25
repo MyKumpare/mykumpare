@@ -84,6 +84,7 @@ export default function Home() {
   const [contactPickerOpen, setContactPickerOpen] = useState(false);
   const [activityPickerOpen, setActivityPickerOpen] = useState(false);
   const [viewingActivity, setViewingActivity] = useState(null);
+  const [returnToActivity, setReturnToActivity] = useState(null); // activity to reopen when contact closes
   const [taskPickerOpen, setTaskPickerOpen] = useState(false);
   const [viewingTask, setViewingTask] = useState(null);
 
@@ -661,7 +662,15 @@ export default function Home() {
 
       <AddContactDialog
         open={!!viewingContact && !productDialogOpen && !dialogOpen}
-        onOpenChange={(open) => !open && !productDialogOpen && !dialogOpen && setViewingContact(null)}
+        onOpenChange={(open) => {
+          if (!open && !productDialogOpen && !dialogOpen) {
+            setViewingContact(null);
+            if (returnToActivity) {
+              setViewingActivity(returnToActivity);
+              setReturnToActivity(null);
+            }
+          }
+        }}
         editingContact={viewingContact}
         firms={firms}
         viewMode={true}
@@ -770,7 +779,11 @@ export default function Home() {
         open={!!viewingActivity}
         activity={viewingActivity}
         onClose={() => setViewingActivity(null)}
-        onOpenContact={(contact) => setViewingContact(contact)}
+        onOpenContact={(contact) => {
+          setReturnToActivity(viewingActivity);
+          setViewingActivity(null);
+          setViewingContact(contact);
+        }}
       />
 
       <FollowUpTaskPickerModal

@@ -213,7 +213,7 @@ export default function ActivityDetailModal({ open, activity, onClose, onOpenCon
                   {onOpenContact && contact && (
                     <button
                       type="button"
-                      onClick={() => { onOpenContact(contact); onClose(); }}
+                      onClick={() => onOpenContact(contact, () => {})}
                       className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-800 font-medium whitespace-nowrap"
                     >
                       <ExternalLink className="w-3 h-3" /> View Contact
