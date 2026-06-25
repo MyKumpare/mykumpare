@@ -791,8 +791,14 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
   const [editAttachments, setEditAttachments] = useState([]);
 
   const updateMutation = useMutation({
-    mutationFn: (data) => base44.entities.FollowUpTask.update(task.id, data),
-    onSuccess: () => {
+    mutationFn: async (data) => {
+      console.log("Mutation function called with:", data);
+      const result = await base44.entities.FollowUpTask.update(task.id, data);
+      console.log("Update result:", result);
+      return result;
+    },
+    onSuccess: (data) => {
+      console.log("Mutation onSuccess called, data:", data);
       queryClient.invalidateQueries({ queryKey: ["task_detail", task.id] });
       queryClient.invalidateQueries({ queryKey: ["follow_up_tasks", task.originator_contact_id] });
       queryClient.invalidateQueries({ queryKey: ["follow_up_tasks_assigned", task.assigned_to_contact_id] });
@@ -808,6 +814,10 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
         queryClient.invalidateQueries({ queryKey: ["tasks_for_activity", task.activity_id] });
       }
       setEditMode(false);
+    },
+    onError: (error) => {
+      console.error("Mutation onError called:", error);
+      alert("Failed to save: " + error.message);
     },
   });
 
