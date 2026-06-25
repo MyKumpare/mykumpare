@@ -573,6 +573,76 @@ function FirmActivityForm({ firmId, firmName, contact, allFirms, allContacts, on
   );
 }
 
+// ── Task entry inner card (top-level so ReactQuill doesn't remount on re-render)
+function TaskEntryInner({ idx, task, onChange, onRemove, showRemove, allFirms, allContacts, allActivities, originatorFirmId, originatorFirmName }) {
+  const today = new Date().toISOString().split("T")[0];
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-3 space-y-3 relative">
+      {showRemove && (
+        <button type="button" onClick={() => onRemove(idx)} className="absolute top-2.5 right-2.5 p-0.5 text-gray-300 hover:text-red-500">
+          <X className="w-3.5 h-3.5" />
+        </button>
+      )}
+      <div className="flex items-center gap-2">
+        <ClipboardList className="w-3.5 h-3.5 text-indigo-400" />
+        <span className="text-xs font-semibold text-gray-700">Task {idx + 1}</span>
+      </div>
+      <div className="space-y-1">
+        <Label className="text-xs font-medium text-gray-700">Task Description *</Label>
+        <div className="quill-sm border border-gray-200 rounded-lg overflow-hidden bg-white">
+          <ReactQuill theme="snow" value={task.task_description}
+            onChange={(val) => onChange(idx, { ...task, task_description: val })}
+            modules={QUILL_MODULES} placeholder="Describe the task..." style={{ minHeight: 80 }} />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1">
+          <Label className="text-xs font-medium text-gray-700">Due Date *</Label>
+          <Input type="date" value={task.due_date} onChange={e => onChange(idx, { ...task, due_date: e.target.value })} className="h-8 text-sm" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs font-medium text-gray-700">Status</Label>
+          <Select value={task.status} onValueChange={(v) => onChange(idx, { ...task, status: v, status_date: today })}>
+            <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>{TASK_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-xs font-medium text-gray-700 flex items-center gap-1">
+          <User className="w-3 h-3 text-indigo-500" /> Assign To (firms & contacts)
+        </Label>
+        <TaskAssigneeEditor
+          value={task.assigned_firms_contacts || []}
+          onChange={(v) => onChange(idx, { ...task, assigned_firms_contacts: v })}
+          allFirms={allFirms} allContacts={allContacts}
+          originatorFirmId={originatorFirmId} originatorFirmName={originatorFirmName}
+        />
+      </div>
+      {allActivities.length > 0 && (
+        <div className="space-y-1">
+          <Label className="text-xs font-medium text-gray-700">Link to Activity (optional)</Label>
+          {task.activity_id ? (
+            <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200 text-xs">
+              <Link2 className="w-3.5 h-3.5 text-indigo-500" />
+              <span className="flex-1 truncate text-indigo-700">{task.activity_label}</span>
+              <button type="button" onClick={() => onChange(idx, { ...task, activity_id: "", activity_label: "" })} className="text-indigo-300 hover:text-red-500"><X className="w-3 h-3" /></button>
+            </div>
+          ) : (
+            <Select value={task.activity_id || ""} onValueChange={(val) => {
+              const act = allActivities.find(a => a.id === val);
+              if (act) onChange(idx, { ...task, activity_id: val, activity_label: `${act.activity_type}${act.subject ? ` – ${act.subject}` : ""} (${fmt(act.activity_date)})` });
+            }}>
+              <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Link to an activity..." /></SelectTrigger>
+              <SelectContent>{allActivities.map(a => <SelectItem key={a.id} value={a.id}>{a.activity_type}{a.subject ? ` – ${a.subject}` : ""} · {fmt(a.activity_date)}</SelectItem>)}</SelectContent>
+            </Select>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Task form (uses TaskAssigneeEditor for multi-firm assignment) ─────────────
 function FirmTaskForm({ firmId, firmName, contact, allFirms, allContacts, allActivities, onSaved, onCancel }) {
   const queryClient = useQueryClient();
@@ -628,73 +698,6 @@ function FirmTaskForm({ firmId, firmName, contact, allFirms, allContacts, allAct
     onSaved();
   };
 
-  // TaskEntryForm inline (with TaskAssigneeEditor)
-  const TaskEntryInner = ({ idx, task, onChange, onRemove, showRemove }) => (
-    <div className="rounded-xl border border-gray-200 bg-white p-3 space-y-3 relative">
-      {showRemove && (
-        <button type="button" onClick={() => onRemove(idx)} className="absolute top-2.5 right-2.5 p-0.5 text-gray-300 hover:text-red-500">
-          <X className="w-3.5 h-3.5" />
-        </button>
-      )}
-      <div className="flex items-center gap-2">
-        <ClipboardList className="w-3.5 h-3.5 text-indigo-400" />
-        <span className="text-xs font-semibold text-gray-700">Task {idx + 1}</span>
-      </div>
-      <div className="space-y-1">
-        <Label className="text-xs font-medium text-gray-700">Task Description *</Label>
-        <div className="quill-sm border border-gray-200 rounded-lg overflow-hidden bg-white">
-          <ReactQuill theme="snow" value={task.task_description}
-            onChange={(val) => onChange(idx, { ...task, task_description: val })}
-            modules={QUILL_MODULES} placeholder="Describe the task..." style={{ minHeight: 80 }} />
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <div className="space-y-1">
-          <Label className="text-xs font-medium text-gray-700">Due Date *</Label>
-          <Input type="date" value={task.due_date} onChange={e => onChange(idx, { ...task, due_date: e.target.value })} className="h-8 text-sm" />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs font-medium text-gray-700">Status</Label>
-          <Select value={task.status} onValueChange={(v) => onChange(idx, { ...task, status: v, status_date: today })}>
-            <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-            <SelectContent>{TASK_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="space-y-1.5">
-        <Label className="text-xs font-medium text-gray-700 flex items-center gap-1">
-          <User className="w-3 h-3 text-indigo-500" /> Assign To (firms & contacts)
-        </Label>
-        <TaskAssigneeEditor
-          value={task.assigned_firms_contacts || []}
-          onChange={(v) => onChange(idx, { ...task, assigned_firms_contacts: v })}
-          allFirms={allFirms} allContacts={allContacts}
-          originatorFirmId={firmId} originatorFirmName={firmName}
-        />
-      </div>
-      {allActivities.length > 0 && (
-        <div className="space-y-1">
-          <Label className="text-xs font-medium text-gray-700">Link to Activity (optional)</Label>
-          {task.activity_id ? (
-            <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200 text-xs">
-              <Link2 className="w-3.5 h-3.5 text-indigo-500" />
-              <span className="flex-1 truncate text-indigo-700">{task.activity_label}</span>
-              <button type="button" onClick={() => onChange(idx, { ...task, activity_id: "", activity_label: "" })} className="text-indigo-300 hover:text-red-500"><X className="w-3 h-3" /></button>
-            </div>
-          ) : (
-            <Select value={task.activity_id || ""} onValueChange={(val) => {
-              const act = allActivities.find(a => a.id === val);
-              if (act) onChange(idx, { ...task, activity_id: val, activity_label: `${act.activity_type}${act.subject ? ` – ${act.subject}` : ""} (${fmt(act.activity_date)})` });
-            }}>
-              <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Link to an activity..." /></SelectTrigger>
-              <SelectContent>{allActivities.map(a => <SelectItem key={a.id} value={a.id}>{a.activity_type}{a.subject ? ` – ${a.subject}` : ""} · {fmt(a.activity_date)}</SelectItem>)}</SelectContent>
-            </Select>
-          )}
-        </div>
-      )}
-    </div>
-  );
-
   return (
     <div className="rounded-xl border border-indigo-100 bg-indigo-50/30 p-3 space-y-3">
       <div className="flex items-center justify-between">
@@ -705,8 +708,10 @@ function FirmTaskForm({ firmId, firmName, contact, allFirms, allContacts, allAct
         <button type="button" onClick={onCancel}><X className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" /></button>
       </div>
       <div className="space-y-2">
-        {tasks.map((task, idx) => (
-          <TaskEntryInner key={idx} idx={idx} task={task} onChange={handleChange} onRemove={handleRemove} showRemove={tasks.length > 1} />
+        {tasks.map((t, idx) => (
+          <TaskEntryInner key={idx} idx={idx} task={t} onChange={handleChange} onRemove={handleRemove}
+            showRemove={tasks.length > 1} allFirms={allFirms} allContacts={allContacts}
+            allActivities={allActivities} originatorFirmId={firmId} originatorFirmName={firmName} />
         ))}
       </div>
       <button type="button" onClick={() => setTasks(prev => [...prev, emptyTask()])}
