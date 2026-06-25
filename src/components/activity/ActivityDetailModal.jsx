@@ -284,28 +284,177 @@ function AssociatedFirmsEditor({ value = [], onChange, allFirms }) {
   );
 }
 
+// ── File type picker with search and create ───────────────────────────────────
+const COMMON_FILE_TYPES = [
+  "Document", "Spreadsheet", "Presentation", "PDF", "Image", "Photo", "Video", "Audio",
+  "Contract", "Agreement", "Invoice", "Receipt", "Report", "Memo", "Email", "Note",
+  "Marketing Material", "Brochure", "Fact Sheet", "Pitch Deck", "Due Diligence",
+  "Financial Statement", "Tax Document", "Legal Document", "Compliance", "Certificate",
+  "Meeting Notes", "Call Notes", "Presentation Slides", "Data File", "Archive", "Other"
+];
+
+function FileTypePicker({ value, onChange, onClose }) {
+  const [search, setSearch] = useState("");
+  const [creatingNew, setCreatingNew] = useState(false);
+  const [newType, setNewType] = useState("");
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!ref.current) return;
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [onClose]);
+
+  const filtered = COMMON_FILE_TYPES.filter(t =>
+    !search || t.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const handleSelect = (type) => {
+    onChange(type);
+    onClose();
+  };
+
+  const handleCreate = () => {
+    if (!newType.trim()) return;
+    onChange(newType.trim());
+    setCreatingNew(false);
+    setNewType("");
+    onClose();
+  };
+
+  return (
+    <div className="absolute z-[100] left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden" ref={ref}>
+      <div className="p-2 border-b border-gray-100">
+        <input
+          autoFocus={!creatingNew}
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search file types..."
+          className="w-full h-7 px-2.5 text-xs rounded-lg border border-gray-200 outline-none focus:border-indigo-400 bg-gray-50"
+        />
+      </div>
+      <div className="max-h-48 overflow-y-auto">
+        {filtered.length === 0 && !creatingNew && (
+          <div className="px-3 py-3">
+            <p className="text-xs text-gray-400 italic text-center mb-2">No matching types</p>
+            <button
+              type="button"
+              onClick={() => setCreatingNew(true)}
+              className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-indigo-300 text-xs text-indigo-600 hover:bg-indigo-50 transition-colors"
+            >
+              <Plus className="w-3 h-3" /> Create "{search}"
+            </button>
+          </div>
+        )}
+        {!creatingNew && filtered.map(type => (
+          <button
+            key={type}
+            type="button"
+            onClick={() => handleSelect(type)}
+            className="w-full flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors text-left"
+          >
+            {type}
+          </button>
+        ))}
+        {creatingNew && (
+          <div className="p-2 space-y-2">
+            <input
+              autoFocus
+              type="text"
+              value={newType}
+              onChange={e => setNewType(e.target.value)}
+              placeholder="Enter file type..."
+              className="w-full h-7 px-2.5 text-xs rounded-lg border border-gray-200 outline-none focus:border-indigo-400"
+              onKeyDown={e => e.key === "Enter" && handleCreate()}
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => { setCreatingNew(false); setNewType(""); }}
+                className="flex-1 h-7 text-xs rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleCreate}
+                disabled={!newType.trim()}
+                className="flex-1 h-7 text-xs rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
+              >
+                Create
+              </button>
+            </div>
+          </div>
+        )}
+        {!creatingNew && (
+          <div className="px-3 py-2 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={() => setCreatingNew(true)}
+              className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs text-indigo-600 hover:bg-indigo-50 transition-colors"
+            >
+              <Plus className="w-3 h-3" /> Create new file type
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Attachments manager (reusable for activity) ───────────────────────────────
 function ActivityAttachmentsManager({ attachments = [], onChange, readOnly = false, onDirectSave }) {
   const [uploading, setUploading] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState([]);
+  const [showTypePicker, setShowTypePicker] = useState(null);
   const fileRef = useRef(null);
 
   const handleUpload = async (e) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    setUploading(true);
-    const results = [];
-    for (const file of files) {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      results.push({ id: crypto.randomUUID(), name: file.name, file_url, file_type: file.type, uploaded_at: new Date().toISOString() });
-    }
-    const updated = [...attachments, ...results];
-    if (onDirectSave) {
-      onDirectSave(updated);
-    } else {
-      onChange(updated);
-    }
-    setUploading(false);
+    const pending = files.map(f => ({
+      file: f,
+      id: crypto.randomUUID(),
+      name: f.name,
+      file_url: null,
+      file_type: null,
+      uploaded_at: null
+    }));
+    setPendingFiles(prev => [...prev, ...pending]);
     if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const handleSetType = async (pendingId, fileType) => {
+    const pending = pendingFiles.find(p => p.id === pendingId);
+    if (!pending) return;
+    
+    setUploading(true);
+    const { file_url } = await base44.integrations.Core.UploadFile({ file: pending.file });
+    const result = {
+      id: pending.id,
+      name: pending.name,
+      file_url,
+      file_type: fileType,
+      uploaded_at: new Date().toISOString()
+    };
+    
+    const updated = attachments.filter(a => !pendingFiles.find(p => p.id === a.id));
+    const final = [...updated, result];
+    
+    if (onDirectSave) {
+      onDirectSave(final);
+    } else {
+      onChange(final);
+    }
+    
+    setPendingFiles(prev => prev.filter(p => p.id !== pendingId));
+    setUploading(false);
+  };
+
+  const handleRemovePending = (pendingId) => {
+    setPendingFiles(prev => prev.filter(p => p.id !== pendingId));
   };
 
   if (readOnly) {
@@ -322,18 +471,56 @@ function ActivityAttachmentsManager({ attachments = [], onChange, readOnly = fal
           className="w-full flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dashed border-gray-200 text-xs text-gray-500 hover:border-indigo-400 hover:text-indigo-600 transition-colors">
           <Upload className="w-3 h-3" /> {uploading ? "Uploading..." : "Attach file(s)"}
         </button>
-        <input ref={fileRef} type="file" multiple className="hidden" onChange={handleUpload} />
+        <input ref={fileRef} type="file" multiple className="hidden" onChange={handleUpload} disabled={uploading} />
       </div>
     );
   }
 
   return (
-    <div className="space-y-1.5">
-      {attachments.map(att => (
+    <div className="space-y-1.5 relative">
+      {/* Pending files awaiting type selection */}
+      {pendingFiles.map(pending => (
+        <div key={pending.id} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-xs">
+          <Paperclip className="w-3 h-3 text-amber-500 flex-shrink-0" />
+          <span className="flex-1 truncate text-gray-700">{pending.name}</span>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowTypePicker(showTypePicker === pending.id ? null : pending.id)}
+              className="flex items-center gap-1 px-2 py-1 rounded bg-white border border-amber-200 text-amber-700 hover:bg-amber-100"
+            >
+              <Tag className="w-3 h-3" />
+              <span className="text-[10px]">Select Type</span>
+              <ChevronDown className="w-2.5 h-2.5" />
+            </button>
+            {showTypePicker === pending.id && (
+              <FileTypePicker
+                value=""
+                onChange={(type) => handleSetType(pending.id, type)}
+                onClose={() => setShowTypePicker(null)}
+              />
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => handleRemovePending(pending.id)}
+            className="text-amber-400 hover:text-red-500 flex-shrink-0"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      ))}
+      
+      {/* Uploaded attachments */}
+      {attachments.filter(att => att.file_url).map(att => (
         <div key={att.id} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-xs">
           <Paperclip className="w-3 h-3 text-gray-400 flex-shrink-0" />
-          <input className="flex-1 bg-transparent outline-none text-gray-700 min-w-0" value={att.name}
-            onChange={e => onChange(attachments.map(a => a.id === att.id ? { ...a, name: e.target.value } : a))} />
+          <input
+            className="flex-1 bg-transparent outline-none text-gray-700 min-w-0"
+            value={att.name}
+            onChange={e => onChange(attachments.map(a => a.id === att.id ? { ...a, name: e.target.value } : a))}
+          />
+          <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">{att.file_type}</span>
           <a href={att.file_url} target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-600 flex-shrink-0">
             <FileText className="w-3 h-3" />
           </a>
@@ -342,11 +529,16 @@ function ActivityAttachmentsManager({ attachments = [], onChange, readOnly = fal
           </button>
         </div>
       ))}
-      <button type="button" onClick={() => fileRef.current?.click()}
-        className="w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-dashed border-gray-300 text-xs text-gray-500 hover:border-indigo-400 hover:text-indigo-600 transition-colors">
+      
+      <button
+        type="button"
+        onClick={() => fileRef.current?.click()}
+        disabled={uploading}
+        className="w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-dashed border-gray-300 text-xs text-gray-500 hover:border-indigo-400 hover:text-indigo-600 transition-colors disabled:opacity-50"
+      >
         <Upload className="w-3 h-3" /> {uploading ? "Uploading..." : "Attach file(s)"}
       </button>
-      <input ref={fileRef} type="file" multiple className="hidden" onChange={handleUpload} />
+      <input ref={fileRef} type="file" multiple className="hidden" onChange={handleUpload} disabled={uploading} />
     </div>
   );
 }
@@ -504,6 +696,7 @@ export default function ActivityDetailModal({ open, activity, onClose, onOpenCon
             task_description: taskDesc,
             status: taskStatus,
             status_date: new Date().toISOString().split("T")[0],
+            attachments: taskAttachments.length ? taskAttachments : undefined,
           });
           queryClient.invalidateQueries({ queryKey: ["follow_up_tasks"] });
           queryClient.invalidateQueries({ queryKey: ["all_tasks_for_firm"] });
@@ -512,6 +705,7 @@ export default function ActivityDetailModal({ open, activity, onClose, onOpenCon
           setTaskDesc("");
           setTaskDueDate(new Date().toISOString().split("T")[0]);
           setTaskStatus("Not Started");
+          setTaskAttachments([]);
         }
       }
     });
@@ -679,6 +873,12 @@ export default function ActivityDetailModal({ open, activity, onClose, onOpenCon
                           <SelectContent>{TASK_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                         </Select>
                       </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-gray-700 flex items-center gap-1">
+                        <Paperclip className="w-3 h-3 text-gray-400" /> Attachments
+                      </Label>
+                      <ActivityAttachmentsManager attachments={taskAttachments} onChange={setTaskAttachments} />
                     </div>
                   </div>
                 )}
