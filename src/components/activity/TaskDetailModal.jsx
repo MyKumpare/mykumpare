@@ -781,6 +781,10 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
         queryClient.invalidateQueries({ queryKey: ["all_tasks_for_firm", e.firm_id] });
         (e.contacts || []).forEach(c => queryClient.invalidateQueries({ queryKey: ["follow_up_tasks_assigned", c.contact_id] }));
       });
+      // Invalidate tasks for the linked activity so ActivityDetailModal refreshes
+      if (task.activity_id) {
+        queryClient.invalidateQueries({ queryKey: ["tasks_for_activity", task.activity_id] });
+      }
       setEditMode(false);
     },
   });
@@ -999,6 +1003,13 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
                     setEditStatus(v);
                     // Auto-set status date to today when status changes
                     if (v !== task.status) setEditStatusDate(todayStr());
+                    // Also update all assignments to match the new status
+                    const today = todayStr();
+                    setEditAssignments(editAssignments.map(a => ({
+                      ...a,
+                      status: v,
+                      status_date: v !== a.status ? today : a.status_date,
+                    })));
                   }}>
                     <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
                     <SelectContent>{TASK_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
