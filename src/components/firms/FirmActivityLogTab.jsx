@@ -951,7 +951,15 @@ export default function FirmActivityLogTab({ firmId, firmName, onFirmClick, onCo
       )}
 
       <TaskDetailModal open={!!detailTask} task={detailTask} onClose={() => setDetailTask(null)} />
-      <ActivityDetailModal open={!!detailActivity} activity={detailActivity} onClose={() => setDetailActivity(null)} onDeleted={() => setDetailActivity(null)} />
+      <ActivityDetailModal
+        open={!!detailActivity}
+        activity={detailActivity}
+        onClose={() => setDetailActivity(null)}
+        onDeleted={() => setDetailActivity(null)}
+        onOpenContact={(contact, cb) => {}}
+        onFirmClick={onFirmClick}
+        onContactClick={onContactClick}
+      />
     </div>
   );
 }

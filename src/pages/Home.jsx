@@ -784,6 +784,15 @@ export default function Home() {
           setViewingActivity(null);
           setViewingContact(contact);
         }}
+        onFirmClick={(firm) => {
+          setViewingActivity(null);
+          handleEdit(firm);
+        }}
+        onContactClick={(contact) => {
+          setReturnToActivity(viewingActivity);
+          setViewingActivity(null);
+          setViewingContact(contact);
+        }}
       />
 
       <FollowUpTaskPickerModal

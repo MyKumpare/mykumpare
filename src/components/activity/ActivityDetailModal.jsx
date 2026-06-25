@@ -544,7 +544,7 @@ function ActivityAttachmentsManager({ attachments = [], onChange, readOnly = fal
 }
 
 // ── Main Modal ────────────────────────────────────────────────────────────────
-export default function ActivityDetailModal({ open, activity, onClose, onOpenContact, onDeleted }) {
+export default function ActivityDetailModal({ open, activity, onClose, onOpenContact, onDeleted, onFirmClick, onContactClick }) {
   const queryClient = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -892,15 +892,24 @@ export default function ActivityDetailModal({ open, activity, onClose, onOpenCon
                         <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Assigned To</p>
                         {taskAssignedFirms.map((entry, i) => (
                           <div key={i} className="rounded-xl border border-gray-100 bg-gray-50 p-3">
-                            <p className="text-xs font-semibold text-gray-700 flex items-center gap-1.5 mb-1">
+                            <button
+                              type="button"
+                              onClick={() => onFirmClick && onFirmClick(firms.find(f => f.id === entry.firm_id))}
+                              className="text-xs font-semibold text-gray-700 flex items-center gap-1.5 mb-1 hover:text-indigo-600 transition-colors"
+                            >
                               <Building2 className="w-3 h-3 text-indigo-400" /> {entry.firm_name}
-                            </p>
+                            </button>
                             {entry.contacts?.length > 0 && (
                               <div className="flex flex-wrap gap-1.5 pl-4">
                                 {entry.contacts.map((c, j) => (
-                                  <span key={j} className="inline-flex items-center gap-1 text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.5 rounded-full">
+                                  <button
+                                    key={j}
+                                    type="button"
+                                    onClick={() => onContactClick && onContactClick(contacts.find(x => x.id === c.contact_id))}
+                                    className="inline-flex items-center gap-1 text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.5 rounded-full hover:bg-indigo-100 transition-colors"
+                                  >
                                     <User className="w-2.5 h-2.5" /> {c.contact_name}
-                                  </span>
+                                  </button>
                                 ))}
                               </div>
                             )}
@@ -1104,15 +1113,24 @@ export default function ActivityDetailModal({ open, activity, onClose, onOpenCon
                         <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Assigned To</p>
                         {taskAssignedFirms.map((entry, i) => (
                           <div key={i} className="rounded-xl border border-gray-100 bg-gray-50 p-3">
-                            <p className="text-xs font-semibold text-gray-700 flex items-center gap-1.5 mb-1">
+                            <button
+                              type="button"
+                              onClick={() => onFirmClick && onFirmClick(firms.find(f => f.id === entry.firm_id))}
+                              className="text-xs font-semibold text-gray-700 flex items-center gap-1.5 mb-1 hover:text-indigo-600 transition-colors"
+                            >
                               <Building2 className="w-3 h-3 text-indigo-400" /> {entry.firm_name}
-                            </p>
+                            </button>
                             {entry.contacts?.length > 0 && (
                               <div className="flex flex-wrap gap-1.5 pl-4">
                                 {entry.contacts.map((c, j) => (
-                                  <span key={j} className="inline-flex items-center gap-1 text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.5 rounded-full">
+                                  <button
+                                    key={j}
+                                    type="button"
+                                    onClick={() => onContactClick && onContactClick(contacts.find(x => x.id === c.contact_id))}
+                                    className="inline-flex items-center gap-1 text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.5 rounded-full hover:bg-indigo-100 transition-colors"
+                                  >
                                     <User className="w-2.5 h-2.5" /> {c.contact_name}
-                                  </span>
+                                  </button>
                                 ))}
                               </div>
                             )}
