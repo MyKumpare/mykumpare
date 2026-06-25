@@ -25,15 +25,10 @@ const STATUS_STYLES = {
 };
 
 // Compute aggregate status from individual assignments
-function computeAggregateStatus(assignedFirmsContacts) {
-  if (!assignedFirmsContacts || assignedFirmsContacts.length === 0) return "Not Started";
+function computeAggregateStatus(assignments) {
+  if (!assignments || assignments.length === 0) return "Not Started";
   
-  const allStatuses = [];
-  assignedFirmsContacts.forEach(entry => {
-    (entry.contacts || []).forEach(c => {
-      if (c.status) allStatuses.push(c.status);
-    });
-  });
+  const allStatuses = assignments.map(a => a.status || "Not Started");
   
   if (allStatuses.length === 0) return "Not Started";
   
@@ -413,65 +408,148 @@ function ViewModeAttachments({ task, onAttachmentsUpdated }) {
   );
 }
 
-// ── Individual assignee status editor ─────────────────────────────────────────
-function AssigneeStatusEditor({ assignedFirmsContacts, onChange, allContacts }) {
-  const handleStatusChange = (firmId, contactId, newStatus) => {
+// ── Individual assignee status editor with firm/contact picker ───────────────
+function AssigneeStatusEditor({ assignments = [], onChange, allContacts, allFirms }) {
+  const queryClient = useQueryClient();
+  const [addingNewFirm, setAddingNewFirm] = useState(false);
+  const [newFirmName, setNewFirmName] = useState("");
+
+  const handleStatusChange = (assignmentId, newStatus) => {
     const today = todayStr();
-    onChange(assignedFirmsContacts.map(entry => {
-      if (entry.firm_id !== firmId) return entry;
+    onChange(assignments.map(a => {
+      if (a.id !== assignmentId) return a;
       return {
-        ...entry,
-        contacts: (entry.contacts || []).map(c => {
-          if (c.contact_id !== contactId) return c;
-          return {
-            ...c,
-            status: newStatus,
-            status_date: newStatus !== c.status ? today : c.status_date,
-          };
-        }),
+        ...a,
+        status: newStatus,
+        status_date: newStatus !== a.status ? today : a.status_date,
       };
     }));
   };
 
-  const handleNotesChange = (firmId, contactId, newNotes) => {
-    onChange(assignedFirmsContacts.map(entry => {
-      if (entry.firm_id !== firmId) return entry;
-      return {
-        ...entry,
-        contacts: (entry.contacts || []).map(c => {
-          if (c.contact_id !== contactId) return c;
-          return { ...c, notes: newNotes };
-        }),
-      };
+  const handleNotesChange = (assignmentId, newNotes) => {
+    onChange(assignments.map(a => {
+      if (a.id !== assignmentId) return a;
+      return { ...a, notes: newNotes };
     }));
   };
+
+  const handleAddAssignment = (firm, contact) => {
+    const newAssignment = {
+      id: crypto.randomUUID(),
+      contact_id: contact.id,
+      contact_name: [contact.first_name, contact.last_name].filter(Boolean).join(" "),
+      firm_id: firm.id,
+      firm_name: firm.name,
+      status: "Not Started",
+      status_date: "",
+      notes: "",
+    };
+    onChange([...assignments, newAssignment]);
+  };
+
+  const handleRemoveAssignment = (assignmentId) => {
+    onChange(assignments.filter(a => a.id !== assignmentId));
+  };
+
+  const handleCreateFirm = async () => {
+    if (!newFirmName.trim()) return;
+    const created = await base44.entities.Firm.create({ name: newFirmName.trim() });
+    queryClient.invalidateQueries({ queryKey: ["all_firms_for_activities"] });
+    setAddingNewFirm(false);
+    setNewFirmName("");
+    // Auto-add the new firm with no contacts yet - user will add contacts
+    const newAssignment = {
+      id: crypto.randomUUID(),
+      contact_id: "",
+      contact_name: "(No contact assigned)",
+      firm_id: created.id,
+      firm_name: created.name,
+      status: "Not Started",
+      status_date: "",
+      notes: "",
+    };
+    onChange([...assignments, newAssignment]);
+  };
+
+  // Group assignments by firm
+  const assignmentsByFirm = {};
+  assignments.forEach(a => {
+    if (!assignmentsByFirm[a.firm_id]) {
+      assignmentsByFirm[a.firm_id] = { firm_id: a.firm_id, firm_name: a.firm_name, assignments: [] };
+    }
+    assignmentsByFirm[a.firm_id].assignments.push(a);
+  });
+
+  const usedFirmIds = assignments.map(a => a.firm_id);
+  const availableFirms = (allFirms || []).filter(f => !f.deleted_at && !usedFirmIds.includes(f.id));
 
   return (
     <div className="space-y-3">
-      {assignedFirmsContacts.map((entry, i) => (
-        <div key={i} className="rounded-xl border border-gray-200 bg-gray-50 p-3 space-y-2">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-700">
-            <Building2 className="w-3.5 h-3.5 text-indigo-500" /> {entry.firm_name}
+      {/* Add new assignee section */}
+      {!addingNewFirm ? (
+        <FirmPickerDropdown
+          availableFirms={availableFirms}
+          onSelect={(firm) => {
+            // For simplicity, add the firm with a placeholder - user can edit details
+            const newAssignment = {
+              id: crypto.randomUUID(),
+              contact_id: "",
+              contact_name: "(Select contact)",
+              firm_id: firm.id,
+              firm_name: firm.name,
+              status: "Not Started",
+              status_date: "",
+              notes: "",
+            };
+            onChange([...assignments, newAssignment]);
+          }}
+          onAddNew={() => setAddingNewFirm(true)}
+          placeholder="+ Add assignee firm..."
+        />
+      ) : (
+        <div className="rounded-lg border border-indigo-200 bg-indigo-50/30 p-2.5 space-y-2">
+          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">New Firm</p>
+          <Input value={newFirmName} onChange={e => setNewFirmName(e.target.value)} className="h-7 text-xs" placeholder="Firm name *" autoFocus />
+          <div className="flex gap-2 justify-end">
+            <Button type="button" variant="outline" size="sm" className="h-6 text-xs px-2" onClick={() => { setAddingNewFirm(false); setNewFirmName(""); }}>Cancel</Button>
+            <Button type="button" size="sm" className="h-6 text-xs px-2 bg-indigo-600 hover:bg-indigo-700 text-white"
+              disabled={!newFirmName.trim()} onClick={handleCreateFirm}>
+              Create Firm
+            </Button>
           </div>
-          {entry.contacts?.length > 0 && (
+        </div>
+      )}
+
+      {/* Existing assignments grouped by firm */}
+      {Object.values(assignmentsByFirm).map((firmGroup, i) => (
+        <div key={i} className="rounded-xl border border-gray-200 bg-gray-50 p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-700">
+              <Building2 className="w-3.5 h-3.5 text-indigo-500" /> {firmGroup.firm_name}
+            </div>
+            <button type="button" onClick={() => handleRemoveAssignment(firmGroup.assignments[0].id)} className="text-gray-300 hover:text-red-500">
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+          {firmGroup.assignments.length > 0 && (
             <div className="space-y-2">
-              {entry.contacts.map(c => {
-                const contactStatus = c.status || "Not Started";
+              {firmGroup.assignments.map(a => {
+                const contactStatus = a.status || "Not Started";
                 const s = STATUS_STYLES[contactStatus] || STATUS_STYLES["Not Started"];
                 const StatusIcon = s.icon;
-                const contact = allContacts.find(x => x.id === c.contact_id);
+                const contact = allContacts.find(x => x.id === a.contact_id);
 
                 return (
-                  <div key={c.contact_id} className="rounded-lg bg-white border border-gray-100 p-2.5 space-y-2">
+                  <div key={a.id} className="rounded-lg bg-white border border-gray-100 p-2.5 space-y-2">
                     <div className="flex items-center gap-2">
                       <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${s.bg}`}>
                         <StatusIcon className={`w-3 h-3 ${s.color}`} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-gray-700 truncate">{c.contact_name}</p>
+                        <p className="text-xs font-medium text-gray-700 truncate">{a.contact_name}</p>
                         {contact?.title && <p className="text-[10px] text-gray-400 truncate">{contact.title}</p>}
                       </div>
-                      <Select value={contactStatus} onValueChange={(v) => handleStatusChange(entry.firm_id, c.contact_id, v)}>
+                      <Select value={contactStatus} onValueChange={(v) => handleStatusChange(a.id, v)}>
                         <SelectTrigger className="h-7 text-xs w-32">
                           <SelectValue />
                         </SelectTrigger>
@@ -482,8 +560,8 @@ function AssigneeStatusEditor({ assignedFirmsContacts, onChange, allContacts }) 
                     </div>
                     <div>
                       <textarea
-                        value={c.notes || ""}
-                        onChange={(e) => handleNotesChange(entry.firm_id, c.contact_id, e.target.value)}
+                        value={a.notes || ""}
+                        onChange={(e) => handleNotesChange(a.id, e.target.value)}
                         placeholder="Add notes for this assignee..."
                         className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-indigo-300 bg-gray-50"
                         rows={2}
@@ -620,7 +698,7 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
       setEditDueDate(task.due_date || "");
       setEditDesc(task.task_description || "");
       setEditNotes(task.notes || "");
-      setEditAssignedFirms(task.assigned_firms_contacts || (task.assigned_to_firm_id ? [{ firm_id: task.assigned_to_firm_id, firm_name: task.assigned_to_firm_name, contacts: task.assigned_to_contact_id ? [{ contact_id: task.assigned_to_contact_id, contact_name: task.assigned_to_contact_name }] : [] }] : []));
+      setEditAssignments(task.assignments || []);
       setEditAttachments(task.attachments || []);
     }
   }, [editMode, task?.id, task]);
@@ -641,7 +719,7 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
   const [editDueDate, setEditDueDate] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [editNotes, setEditNotes] = useState("");
-  const [editAssignedFirms, setEditAssignedFirms] = useState([]);
+  const [editAssignments, setEditAssignments] = useState([]);
   const [editAttachments, setEditAttachments] = useState([]);
 
   const updateMutation = useMutation({
@@ -673,25 +751,36 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
   const handleSave = () => {
     const today = todayStr();
     // Compute aggregate status from individual assignments
-    const aggregateStatus = computeAggregateStatus(editAssignedFirms);
+    const aggregateStatus = computeAggregateStatus(editAssignments);
     const statusChanged = aggregateStatus !== task.status;
     
-    // Derive primary assignee from assigned_firms_contacts
+    // Derive primary assignee from assignments
     let primaryContact = null;
     let primaryFirm = null;
-    for (const entry of editAssignedFirms) {
-      if (entry.contacts?.length) {
-        primaryContact = entry.contacts[0];
-        primaryFirm = entry;
-        break;
-      }
+    if (editAssignments && editAssignments.length > 0) {
+      const firstAssignment = editAssignments[0];
+      primaryContact = { contact_id: firstAssignment.contact_id, contact_name: firstAssignment.contact_name };
+      primaryFirm = { firm_id: firstAssignment.firm_id, firm_name: firstAssignment.firm_name };
     }
+    
+    // Build assigned_firms_contacts from assignments for backward compatibility
+    const assignedFirmsContacts = [];
+    const firmMap = {};
+    (editAssignments || []).forEach(a => {
+      if (!firmMap[a.firm_id]) {
+        firmMap[a.firm_id] = { firm_id: a.firm_id, firm_name: a.firm_name, contacts: [] };
+        assignedFirmsContacts.push(firmMap[a.firm_id]);
+      }
+      firmMap[a.firm_id].contacts.push({ contact_id: a.contact_id, contact_name: a.contact_name });
+    });
+    
     const data = {
       status: aggregateStatus,
       due_date: editDueDate,
       task_description: editDesc,
       notes: editNotes,
-      assigned_firms_contacts: editAssignedFirms,
+      assignments: editAssignments,
+      assigned_firms_contacts: assignedFirmsContacts.length ? assignedFirmsContacts : undefined,
       assigned_to_contact_id: primaryContact?.contact_id || undefined,
       assigned_to_contact_name: primaryContact?.contact_name || undefined,
       assigned_to_firm_id: primaryFirm?.firm_id || undefined,
@@ -879,15 +968,12 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
                 <Label className="text-xs font-medium text-gray-700 flex items-center gap-1">
                   <User className="w-3 h-3 text-indigo-500" /> Assignees & Status
                 </Label>
-                <AssigneeFirmsEditor value={editAssignedFirms} onChange={setEditAssignedFirms} allFirms={allFirms} allContacts={allContacts} />
-                <div className="pt-2">
-                  <Label className="text-xs font-medium text-gray-700 mb-2 block">Individual Status Updates</Label>
-                  <AssigneeStatusEditor
-                    assignedFirmsContacts={editAssignedFirms}
-                    onChange={setEditAssignedFirms}
-                    allContacts={allContacts}
-                  />
-                </div>
+                <AssigneeStatusEditor
+                  assignments={editAssignments}
+                  onChange={setEditAssignments}
+                  allContacts={allContacts}
+                  allFirms={allFirms}
+                />
               </div>
 
               <div className="space-y-1">
