@@ -5,6 +5,7 @@ import { pagesConfig } from './pages.config'
 import { HashRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import Analytics from './pages/Analytics';
+import ActivityLog from './pages/ActivityLog';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 
@@ -61,6 +62,7 @@ const AuthenticatedApp = () => {
       ))}
 
       <Route path="/Analytics" element={<LayoutWrapper currentPageName="Analytics"><Analytics /></LayoutWrapper>} />
+      <Route path="/ActivityLog" element={<LayoutWrapper currentPageName="ActivityLog"><ActivityLog /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
