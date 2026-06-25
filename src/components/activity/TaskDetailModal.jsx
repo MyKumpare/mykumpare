@@ -744,7 +744,7 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
       setEditNotes(task.notes || "");
       // Initialize assignments from task.assignments array
       const assignmentsData = task.assignments || [];
-      setEditAssignments(assignmentsData);
+      setEditAssignments(JSON.parse(JSON.stringify(assignmentsData))); // Deep copy to avoid reference issues
       setEditAttachments(task.attachments || []);
     }
   }, [editMode, task]);
@@ -804,6 +804,13 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
     const aggregateStatus = computeAggregateStatus(editAssignments);
     const statusChanged = aggregateStatus !== task.status;
     
+    console.log("Saving task:", {
+      editAssignments,
+      aggregateStatus,
+      editStatus,
+      statusChanged
+    });
+    
     // Derive primary assignee from assignments
     let primaryContact = null;
     let primaryFirm = null;
@@ -842,6 +849,7 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
     if (aggregateStatus === "Completed" && !task.completion_date) {
       data.completion_date = today;
     }
+    console.log("Sending to backend:", data);
     updateMutation.mutate(data);
   };
 
