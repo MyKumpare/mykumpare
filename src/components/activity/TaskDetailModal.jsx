@@ -502,7 +502,6 @@ function AssignmentCard({ entry, allContacts, allFirms, onContactClick, onFirmCl
         type="button"
         onClick={() => {
           const firm = allFirms.find(f => f.id === entry.firm_id);
-          console.log('Firm click:', firm, 'Handler:', onFirmClick);
           if (firm && onFirmClick) {
             onFirmClick(firm);
           }
@@ -519,7 +518,8 @@ function AssignmentCard({ entry, allContacts, allFirms, onContactClick, onFirmCl
             const CIcon = cStyle.icon;
             const contact = allContacts.find(x => x.id === c.contact_id);
             
-            console.log('Contact render:', c.contact_name, 'Contact object:', contact, 'Handler:', onContactClick);
+            // Create a minimal contact object if not found in allContacts
+            const contactData = contact || { id: c.contact_id, first_name: c.contact_name.split(' ')[0], last_name: c.contact_name.split(' ').slice(1).join(' ') };
             
             return (
               <div key={c.contact_id} className="rounded-lg bg-white border border-indigo-100 p-2.5 space-y-2">
@@ -528,9 +528,8 @@ function AssignmentCard({ entry, allContacts, allFirms, onContactClick, onFirmCl
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      console.log('Contact clicked:', contact);
-                      if (contact && onContactClick) {
-                        onContactClick(contact);
+                      if (onContactClick) {
+                        onContactClick(contactData);
                       }
                     }}
                     className="flex items-center gap-1.5 text-xs font-medium text-gray-700 hover:text-indigo-700 hover:bg-indigo-50 transition-colors flex-1 min-w-0 cursor-pointer px-2 py-1.5 rounded-lg -ml-2"
