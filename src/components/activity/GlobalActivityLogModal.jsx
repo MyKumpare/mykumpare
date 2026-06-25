@@ -248,6 +248,7 @@ function OriginatorPicker({ allFirms, allContacts, firmId, firmName, contactId, 
 // ── Firm entry with inline contact picker & new-contact form ─────────────────
 function FirmEntry({ entry, allContacts, onChange, onRemove, onFirmClick, onContactClick }) {
   const [addingContact, setAddingContact] = useState(false);
+  const [contactSearch, setContactSearch] = useState("");
   const [newFirst, setNewFirst] = useState("");
   const [newLast, setNewLast] = useState("");
   const [newTitle, setNewTitle] = useState("");
@@ -301,8 +302,17 @@ function FirmEntry({ entry, allContacts, onChange, onRemove, onFirmClick, onCont
       {allFirmContacts.length > 0 && (
         <div className="space-y-1">
           <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Who was involved?</p>
+          {allFirmContacts.length > 4 && (
+            <input
+              type="text"
+              value={contactSearch}
+              onChange={e => setContactSearch(e.target.value)}
+              placeholder="Search contacts..."
+              className="w-full h-7 px-2.5 text-xs rounded-lg border border-gray-200 outline-none focus:border-indigo-400 bg-gray-50 mb-1"
+            />
+          )}
           <div className="space-y-1 max-h-32 overflow-y-auto">
-            {allFirmContacts.map(c => {
+            {allFirmContacts.filter(c => !contactSearch || [c.first_name, c.last_name].filter(Boolean).join(" ").toLowerCase().includes(contactSearch.toLowerCase())).map(c => {
               const selected = !!entry.contacts.find(ec => ec.contact_id === c.id);
               return (
                 <button key={c.id} type="button" onClick={() => handleToggleContact(c)}

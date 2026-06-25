@@ -252,6 +252,7 @@ function InlineNewContactForm({ firmId, onCreated, onCancel }) {
 // ── Associated Firms & Contacts editor (same as ContactActivitiesTab) ─────────
 function AssociatedFirmsEditor({ value = [], onChange, allFirms, allContacts, onFirmClick, onContactClick }) {
   const [addingContactForFirm, setAddingContactForFirm] = useState(null);
+  const [contactSearchByFirm, setContactSearchByFirm] = useState({});
 
   const handleAddFirm = (firm) => {
     if (value.find(e => e.firm_id === firm.id)) return;
@@ -305,20 +306,40 @@ function AssociatedFirmsEditor({ value = [], onChange, allFirms, allContacts, on
                 ))}
               </div>
             )}
-            {firmContacts.length > 0 && (
-              <Select onValueChange={(cid) => { const c = allContacts.find(x => x.id === cid); if (c) handleAddContact(entry.firm_id, c); }}>
-                <SelectTrigger className="h-7 text-xs border-dashed border-gray-300 text-gray-500">
-                  <SelectValue placeholder="+ Add contact from this firm..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {firmContacts.map(c => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {[c.first_name, c.last_name].filter(Boolean).join(" ")}{c.title ? ` · ${c.title}` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+            {firmContacts.length > 0 && (() => {
+              const search = contactSearchByFirm[entry.firm_id] || "";
+              const filtered = firmContacts.filter(c =>
+                !search || [c.first_name, c.last_name].filter(Boolean).join(" ").toLowerCase().includes(search.toLowerCase())
+              );
+              return (
+                <div className="space-y-1">
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={e => setContactSearchByFirm(prev => ({ ...prev, [entry.firm_id]: e.target.value }))}
+                    placeholder="Search contacts..."
+                    className="w-full h-7 px-2.5 text-xs rounded-lg border border-dashed border-gray-300 outline-none focus:border-indigo-400 bg-white placeholder-gray-400"
+                  />
+                  {filtered.length > 0 && (
+                    <div className="max-h-32 overflow-y-auto space-y-0.5 rounded-lg border border-gray-100">
+                      {filtered.map(c => (
+                        <button key={c.id} type="button"
+                          onClick={() => { handleAddContact(entry.firm_id, c); setContactSearchByFirm(prev => ({ ...prev, [entry.firm_id]: "" })); }}
+                          className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors text-left">
+                          <div className="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] font-bold text-indigo-700 flex-shrink-0">
+                            {(c.first_name || "")[0]}{(c.last_name || "")[0]}
+                          </div>
+                          <span className="truncate">{[c.first_name, c.last_name].filter(Boolean).join(" ")}{c.title ? ` · ${c.title}` : ""}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {search && filtered.length === 0 && (
+                    <p className="text-[10px] text-gray-400 italic px-1">No contacts match "{search}"</p>
+                  )}
+                </div>
+              );
+            })()}
             {firmContacts.length === 0 && !isAddingHere && (
               <p className="text-xs text-gray-400 italic px-0.5">No contacts on file for this firm.</p>
             )}
