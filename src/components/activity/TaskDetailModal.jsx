@@ -500,8 +500,13 @@ function AssignmentCard({ entry, allContacts, allFirms, onContactClick, onFirmCl
     <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3 space-y-2">
       <button
         type="button"
-        onClick={() => onFirmClick && onFirmClick(allFirms.find(f => f.id === entry.firm_id))}
-        className="flex items-center gap-1.5 text-xs font-semibold text-indigo-700 hover:text-indigo-900 transition-colors"
+        onClick={() => {
+          const firm = allFirms.find(f => f.id === entry.firm_id);
+          if (firm && onFirmClick) {
+            onFirmClick(firm);
+          }
+        }}
+        className="flex items-center gap-1.5 text-xs font-semibold text-indigo-700 hover:text-indigo-900 transition-colors w-full text-left"
       >
         <Building2 className="w-3.5 h-3.5" /> {entry.firm_name}
       </button>
@@ -518,10 +523,15 @@ function AssignmentCard({ entry, allContacts, allFirms, onContactClick, onFirmCl
                 <div className="flex items-center justify-between">
                   <button
                     type="button"
-                    onClick={() => onContactClick && onContactClick(contact)}
-                    className="flex items-center gap-1.5 text-xs font-medium text-gray-700 hover:text-indigo-700 transition-colors"
+                    onClick={() => {
+                      if (contact && onContactClick) {
+                        onContactClick(contact);
+                      }
+                    }}
+                    className="flex items-center gap-1.5 text-xs font-medium text-gray-700 hover:text-indigo-700 transition-colors flex-1 min-w-0"
                   >
-                    <User className="w-3 h-3 text-indigo-400" /> {c.contact_name}
+                    <User className="w-3 h-3 text-indigo-400 flex-shrink-0" /> 
+                    <span className="truncate">{c.contact_name}</span>
                   </button>
                   <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${cStyle.bg} ${cStyle.color}`}>
                     <CIcon className="w-2.5 h-2.5" /> {cStatus}
