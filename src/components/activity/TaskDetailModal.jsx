@@ -832,13 +832,13 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
 
   const handleSave = () => {
     const today = todayStr();
-    // Compute aggregate status from individual assignments
-    const aggregateStatus = computeAggregateStatus(editAssignments);
-    const statusChanged = aggregateStatus !== task.status;
+    // Use editStatus directly (user's manual selection from dropdown)
+    const finalStatus = editStatus;
+    const statusChanged = finalStatus !== task.status;
     
     console.log("Saving task:", {
       editAssignments,
-      aggregateStatus,
+      finalStatus,
       editStatus,
       statusChanged
     });
@@ -864,7 +864,7 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
     });
     
     const data = {
-      status: aggregateStatus,
+      status: finalStatus,
       due_date: editDueDate,
       task_description: editDesc,
       notes: editNotes,
@@ -878,7 +878,7 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
       // Use the user-edited status date; if status changed and no date set, default to today
       status_date: editStatusDate || (statusChanged ? today : task.status_date) || undefined,
     };
-    if (aggregateStatus === "Completed" && !task.completion_date) {
+    if (finalStatus === "Completed" && !task.completion_date) {
       data.completion_date = today;
     }
     console.log("Sending to backend:", data);
