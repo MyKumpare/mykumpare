@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
+import ActivityDetailModal from "@/components/activity/ActivityDetailModal";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -366,6 +367,16 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
     enabled: open,
   });
 
+  // Linked activity modal state
+  const [linkedActivity, setLinkedActivity] = useState(null);
+  const [linkedActivityModalOpen, setLinkedActivityModalOpen] = useState(false);
+
+  const { data: linkedActivityData } = useQuery({
+    queryKey: ["linked_activity", task?.activity_id],
+    queryFn: () => base44.entities.ContactActivity.filter({ id: task.activity_id }).then(r => r[0]),
+    enabled: open && !!task?.activity_id,
+  });
+
   // Edit state
   const [editStatus, setEditStatus] = useState("");
   const [editDueDate, setEditDueDate] = useState("");
@@ -559,10 +570,15 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
 
               {/* Linked Activity */}
               {task.activity_label && (
-                <div className="flex items-center gap-1.5 text-xs text-indigo-600 bg-indigo-50 border border-indigo-100 px-3 py-2 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => { if (linkedActivityData) { setLinkedActivity(linkedActivityData); setLinkedActivityModalOpen(true); } }}
+                  className={`w-full flex items-center gap-1.5 text-xs text-indigo-600 bg-indigo-50 border border-indigo-100 px-3 py-2 rounded-xl text-left transition-colors ${linkedActivityData ? "hover:bg-indigo-100 cursor-pointer" : "cursor-default"}`}
+                >
                   <Link2 className="w-3.5 h-3.5 flex-shrink-0" />
-                  <span className="truncate">Linked to: {task.activity_label}</span>
-                </div>
+                  <span className="truncate flex-1">Linked to: {task.activity_label}</span>
+                  {linkedActivityData && <span className="text-[10px] text-indigo-400 flex-shrink-0">View →</span>}
+                </button>
               )}
 
               {/* Attachments */}
@@ -659,6 +675,14 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
           )}
         </div>
       </div>
+
+      {linkedActivityModalOpen && linkedActivity && (
+        <ActivityDetailModal
+          open={linkedActivityModalOpen}
+          activity={linkedActivity}
+          onClose={() => { setLinkedActivityModalOpen(false); setLinkedActivity(null); }}
+        />
+      )}
     </div>
   );
 }
