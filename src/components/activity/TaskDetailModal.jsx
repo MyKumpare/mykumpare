@@ -502,11 +502,12 @@ function AssignmentCard({ entry, allContacts, allFirms, onContactClick, onFirmCl
         type="button"
         onClick={() => {
           const firm = allFirms.find(f => f.id === entry.firm_id);
+          console.log('Firm click:', firm, 'Handler:', onFirmClick);
           if (firm && onFirmClick) {
             onFirmClick(firm);
           }
         }}
-        className="flex items-center gap-1.5 text-xs font-semibold text-indigo-700 hover:text-indigo-900 transition-colors w-full text-left"
+        className="flex items-center gap-1.5 text-xs font-semibold text-indigo-700 hover:text-indigo-900 transition-colors w-full text-left cursor-pointer"
       >
         <Building2 className="w-3.5 h-3.5" /> {entry.firm_name}
       </button>
@@ -518,17 +519,21 @@ function AssignmentCard({ entry, allContacts, allFirms, onContactClick, onFirmCl
             const CIcon = cStyle.icon;
             const contact = allContacts.find(x => x.id === c.contact_id);
             
+            console.log('Contact render:', c.contact_name, 'Contact object:', contact, 'Handler:', onContactClick);
+            
             return (
               <div key={c.contact_id} className="rounded-lg bg-white border border-indigo-100 p-2.5 space-y-2">
                 <div className="flex items-center justify-between">
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      console.log('Contact clicked:', contact);
                       if (contact && onContactClick) {
                         onContactClick(contact);
                       }
                     }}
-                    className="flex items-center gap-1.5 text-xs font-medium text-gray-700 hover:text-indigo-700 transition-colors flex-1 min-w-0"
+                    className="flex items-center gap-1.5 text-xs font-medium text-gray-700 hover:text-indigo-700 hover:bg-indigo-50 transition-colors flex-1 min-w-0 cursor-pointer px-2 py-1.5 rounded-lg -ml-2"
                   >
                     <User className="w-3 h-3 text-indigo-400 flex-shrink-0" /> 
                     <span className="truncate">{c.contact_name}</span>
