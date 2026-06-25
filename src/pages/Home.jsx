@@ -806,6 +806,14 @@ export default function Home() {
         open={!!viewingTask}
         task={viewingTask}
         onClose={() => setViewingTask(null)}
+        onFirmClick={(firm) => {
+          setViewingTask(null);
+          handleEdit(firm);
+        }}
+        onContactClick={(contact) => {
+          setViewingTask(null);
+          setViewingContact(contact);
+        }}
       />
 
       {/* Benchmark dialog */}

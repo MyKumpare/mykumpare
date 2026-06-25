@@ -386,7 +386,19 @@ export default function FollowUpTasksSection({ contactId, contactName, contactFi
       )}
 
       {/* Task Detail Modal */}
-      <TaskDetailModal open={!!detailTask} task={detailTask} onClose={() => setDetailTask(null)} />
+      <TaskDetailModal
+        open={!!detailTask}
+        task={detailTask}
+        onClose={() => setDetailTask(null)}
+        onFirmClick={(firm) => {
+          setDetailTask(null);
+          // Navigate to firm - parent component should handle this
+        }}
+        onContactClick={(contact) => {
+          setDetailTask(null);
+          // Navigate to contact - parent component should handle this
+        }}
+      />
     </div>
   );
 }

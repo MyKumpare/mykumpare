@@ -388,7 +388,7 @@ function getPrimaryAssignee(task) {
 }
 
 // ── Main Modal ────────────────────────────────────────────────────────────────
-export default function TaskDetailModal({ open, task: initialTask, onClose, onTaskClick }) {
+export default function TaskDetailModal({ open, task: initialTask, onClose, onTaskClick, onFirmClick, onContactClick }) {
   const queryClient = useQueryClient();
   const [editMode, setEditMode] = useState(false);
 
@@ -587,15 +587,24 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
                   <div className="space-y-2">
                     {assignedFirmsContacts.map((entry, i) => (
                       <div key={i} className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3 space-y-1.5">
-                        <div className="flex items-center gap-1.5 text-xs font-semibold text-indigo-700">
+                        <button
+                          type="button"
+                          onClick={() => onFirmClick && onFirmClick(allFirms.find(f => f.id === entry.firm_id))}
+                          className="flex items-center gap-1.5 text-xs font-semibold text-indigo-700 hover:text-indigo-900 transition-colors"
+                        >
                           <Building2 className="w-3.5 h-3.5" /> {entry.firm_name}
-                        </div>
+                        </button>
                         {entry.contacts?.length > 0 && (
                           <div className="flex flex-wrap gap-1.5">
                             {entry.contacts.map(c => (
-                              <span key={c.contact_id} className="inline-flex items-center gap-1 text-[10px] bg-white text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-full">
+                              <button
+                                key={c.contact_id}
+                                type="button"
+                                onClick={() => onContactClick && onContactClick(allContacts.find(x => x.id === c.contact_id))}
+                                className="inline-flex items-center gap-1 text-[10px] bg-white text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-full hover:bg-indigo-50 transition-colors"
+                              >
                                 <User className="w-2.5 h-2.5" /> {c.contact_name}
-                              </span>
+                              </button>
                             ))}
                           </div>
                         )}
