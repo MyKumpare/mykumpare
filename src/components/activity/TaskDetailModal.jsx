@@ -1008,16 +1008,19 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
                 <div className="space-y-1">
                   <Label className="text-xs font-medium text-gray-700">Status</Label>
                   <Select value={editStatus} onValueChange={(v) => {
+                    console.log("Status dropdown changed to:", v, "Current assignments:", editAssignments);
                     setEditStatus(v);
                     // Auto-set status date to today when status changes
                     if (v !== task.status) setEditStatusDate(todayStr());
                     // Also update all assignments to match the new status
                     const today = todayStr();
-                    setEditAssignments(editAssignments.map(a => ({
+                    const updated = editAssignments.map(a => ({
                       ...a,
                       status: v,
                       status_date: v !== a.status ? today : a.status_date,
-                    })));
+                    }));
+                    console.log("Updated assignments:", updated);
+                    setEditAssignments(updated);
                   }}>
                     <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
                     <SelectContent>{TASK_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
