@@ -742,10 +742,32 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
       setEditDueDate(task.due_date || "");
       setEditDesc(task.task_description || "");
       setEditNotes(task.notes || "");
-      // Initialize assignments from task.assignments array
-      const assignmentsData = task.assignments || [];
-      setEditAssignments(JSON.parse(JSON.stringify(assignmentsData))); // Deep copy to avoid reference issues
       setEditAttachments(task.attachments || []);
+      
+      // Initialize assignments from task.assignments array, or convert from old assigned_firms_contacts format
+      let assignmentsData = [];
+      if (task.assignments && task.assignments.length > 0) {
+        assignmentsData = JSON.parse(JSON.stringify(task.assignments));
+      } else if (task.assigned_firms_contacts && task.assigned_firms_contacts.length > 0) {
+        // Convert old format to new assignments format
+        task.assigned_firms_contacts.forEach(firmEntry => {
+          if (firmEntry.contacts && firmEntry.contacts.length > 0) {
+            firmEntry.contacts.forEach(contact => {
+              assignmentsData.push({
+                id: crypto.randomUUID(),
+                contact_id: contact.contact_id,
+                contact_name: contact.contact_name,
+                firm_id: firmEntry.firm_id,
+                firm_name: firmEntry.firm_name,
+                status: contact.status || task.status || "Not Started",
+                status_date: contact.status_date || task.status_date || "",
+                notes: contact.notes || "",
+              });
+            });
+          }
+        });
+      }
+      setEditAssignments(assignmentsData);
     }
   }, [editMode, task]);
 
