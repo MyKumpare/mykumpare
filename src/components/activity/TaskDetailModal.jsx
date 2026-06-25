@@ -36,9 +36,28 @@ function computeAggregateStatus(assignedFirmsContacts) {
   });
   
   if (allStatuses.length === 0) return "Not Started";
+  
+  // If all are Completed, task is Completed
   if (allStatuses.every(s => s === "Completed")) return "Completed";
+  
+  // If all are Cancelled, task is Cancelled
   if (allStatuses.every(s => s === "Cancelled")) return "Cancelled";
-  if (allStatuses.some(s => s === "In-process")) return "In-process";
+  
+  // If there's any mix of statuses (e.g., one Completed and one Not Started, or one In-process and one Not Started), task is In-process
+  const hasCompleted = allStatuses.some(s => s === "Completed");
+  const hasInProgress = allStatuses.some(s => s === "In-process");
+  const hasNotStarted = allStatuses.some(s => s === "Not Started");
+  
+  // If any assignee has started (Completed or In-process) while others haven't, or there's any mix, it's In-process
+  if ((hasCompleted || hasInProgress) && hasNotStarted) return "In-process";
+  if (hasCompleted && hasInProgress) return "In-process";
+  
+  // If any is In-process, task is In-process
+  if (hasInProgress) return "In-process";
+  
+  // If any is Completed (but not all), task is In-process
+  if (hasCompleted) return "In-process";
+  
   return "Not Started";
 }
 
