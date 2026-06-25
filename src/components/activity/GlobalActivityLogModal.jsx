@@ -38,10 +38,12 @@ function fmt(dateStr) {
 }
 
 // ── Searchable firm picker ────────────────────────────────────────────────────
+// onSelect receives { firm, firmType } — firmType is the chosen type context
 function FirmPickerDropdown({ availableFirms, onSelect, onAddNew, placeholder = "+ Add a firm..." }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [expandedTypes, setExpandedTypes] = useState({});
+  const [pendingFirm, setPendingFirm] = useState(null); // firm awaiting type selection
   const ref = useRef(null);
 
   useEffect(() => {
@@ -67,6 +69,25 @@ function FirmPickerDropdown({ availableFirms, onSelect, onAddNew, placeholder = 
   Object.keys(grouped).forEach(t => grouped[t].sort((a, b) => a.name.localeCompare(b.name)));
   const activeTypes = Object.keys(grouped).filter(t => grouped[t].length > 0).sort();
 
+  const handleFirmClick = (f) => {
+    const types = f.firm_types?.length ? f.firm_types : f.firm_type ? [f.firm_type] : [];
+    if (types.length > 1) {
+      // Multiple types — ask user to pick one
+      setPendingFirm(f);
+    } else {
+      onSelect({ firm: f, firmType: types[0] || null });
+      setOpen(false);
+      setSearch("");
+    }
+  };
+
+  const handleTypeConfirm = (type) => {
+    onSelect({ firm: pendingFirm, firmType: type });
+    setPendingFirm(null);
+    setOpen(false);
+    setSearch("");
+  };
+
   return (
     <div className="relative" ref={ref}>
       <button type="button" onClick={() => setOpen(v => !v)}
@@ -76,49 +97,74 @@ function FirmPickerDropdown({ availableFirms, onSelect, onAddNew, placeholder = 
       </button>
       {open && (
         <div className="absolute z-50 left-0 right-0 top-8 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
-          <div className="p-2 border-b border-gray-100">
-            <input autoFocus type="text" value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Search firms..." className="w-full h-7 px-2.5 text-xs rounded-lg border border-gray-200 outline-none focus:border-indigo-400 bg-gray-50" />
-          </div>
-          <div className="max-h-56 overflow-y-auto">
-            {activeTypes.length === 0 && (
-              <div className="px-3 py-3 space-y-1">
-                <p className="text-xs text-gray-400 italic text-center">No firms found</p>
-                {onAddNew && (
-                  <button type="button" onClick={() => { setOpen(false); onAddNew(); }}
-                    className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-indigo-300 text-xs text-indigo-600 hover:bg-indigo-50 transition-colors">
-                    <Plus className="w-3 h-3" /> Add new firm
-                  </button>
-                )}
-              </div>
-            )}
-            {activeTypes.map(type => (
-              <div key={type}>
-                <button type="button" onClick={() => setExpandedTypes(prev => ({ ...prev, [type]: !prev[type] }))}
-                  className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-bold text-gray-500 uppercase tracking-wide hover:bg-gray-50 transition-colors">
-                  <span>{type}</span>
-                  <div className="flex items-center gap-1">
-                    <span className="text-[10px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">{grouped[type].length}</span>
-                    {(isSearching || expandedTypes[type]) ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                  </div>
+          {pendingFirm ? (
+            // Type selector step
+            <div className="p-3 space-y-2">
+              <div className="flex items-center gap-2 mb-1">
+                <button type="button" onClick={() => setPendingFirm(null)} className="text-gray-400 hover:text-gray-600">
+                  <ChevronDown className="w-3 h-3 rotate-90" />
                 </button>
-                {(isSearching || expandedTypes[type]) && grouped[type].map(f => (
-                  <button key={f.id} type="button" onClick={() => { onSelect(f); setOpen(false); setSearch(""); }}
-                    className="w-full flex items-center gap-2 px-4 py-1.5 text-xs text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors text-left">
-                    <Building2 className="w-3 h-3 text-indigo-400 flex-shrink-0" /> {f.name}
+                <p className="text-xs font-semibold text-gray-700">{pendingFirm.name}</p>
+              </div>
+              <p className="text-[10px] text-gray-500">This firm has multiple types. Select which type context to use:</p>
+              <div className="space-y-1">
+                {(pendingFirm.firm_types?.length ? pendingFirm.firm_types : [pendingFirm.firm_type]).filter(Boolean).map(type => (
+                  <button key={type} type="button" onClick={() => handleTypeConfirm(type)}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 hover:bg-indigo-50 hover:border-indigo-300 text-xs text-gray-700 text-left transition-colors">
+                    <Building2 className="w-3 h-3 text-indigo-400 flex-shrink-0" />
+                    <span className="font-medium">{type}</span>
                   </button>
                 ))}
               </div>
-            ))}
-            {onAddNew && activeTypes.length > 0 && (
-              <div className="px-3 py-2 border-t border-gray-100">
-                <button type="button" onClick={() => { setOpen(false); onAddNew(); }}
-                  className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs text-indigo-600 hover:bg-indigo-50 transition-colors">
-                  <Plus className="w-3 h-3" /> Add new firm not in list
-                </button>
+            </div>
+          ) : (
+            <>
+              <div className="p-2 border-b border-gray-100">
+                <input autoFocus type="text" value={search} onChange={e => setSearch(e.target.value)}
+                  placeholder="Search firms..." className="w-full h-7 px-2.5 text-xs rounded-lg border border-gray-200 outline-none focus:border-indigo-400 bg-gray-50" />
               </div>
-            )}
-          </div>
+              <div className="max-h-56 overflow-y-auto">
+                {activeTypes.length === 0 && (
+                  <div className="px-3 py-3 space-y-1">
+                    <p className="text-xs text-gray-400 italic text-center">No firms found</p>
+                    {onAddNew && (
+                      <button type="button" onClick={() => { setOpen(false); onAddNew(); }}
+                        className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-indigo-300 text-xs text-indigo-600 hover:bg-indigo-50 transition-colors">
+                        <Plus className="w-3 h-3" /> Add new firm
+                      </button>
+                    )}
+                  </div>
+                )}
+                {activeTypes.map(type => (
+                  <div key={type}>
+                    <button type="button" onClick={() => setExpandedTypes(prev => ({ ...prev, [type]: !prev[type] }))}
+                      className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-bold text-gray-500 uppercase tracking-wide hover:bg-gray-50 transition-colors">
+                      <span>{type}</span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">{grouped[type].length}</span>
+                        {(isSearching || expandedTypes[type]) ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                      </div>
+                    </button>
+                    {(isSearching || expandedTypes[type]) && grouped[type].map(f => (
+                      <button key={f.id} type="button" onClick={() => handleFirmClick(f)}
+                        className="w-full flex items-center gap-2 px-4 py-1.5 text-xs text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors text-left">
+                        <Building2 className="w-3 h-3 text-indigo-400 flex-shrink-0" /> {f.name}
+                        {(f.firm_types?.length > 1) && <span className="ml-auto text-[10px] text-indigo-400 bg-indigo-50 px-1.5 py-0.5 rounded-full">{f.firm_types.length} types</span>}
+                      </button>
+                    ))}
+                  </div>
+                ))}
+                {onAddNew && activeTypes.length > 0 && (
+                  <div className="px-3 py-2 border-t border-gray-100">
+                    <button type="button" onClick={() => { setOpen(false); onAddNew(); }}
+                      className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs text-indigo-600 hover:bg-indigo-50 transition-colors">
+                      <Plus className="w-3 h-3" /> Add new firm not in list
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
@@ -126,7 +172,7 @@ function FirmPickerDropdown({ availableFirms, onSelect, onAddNew, placeholder = 
 }
 
 // ── Originator firm+contact picker ────────────────────────────────────────────
-function OriginatorPicker({ allFirms, allContacts, firmId, firmName, contactId, contactName, onChange }) {
+function OriginatorPicker({ allFirms, allContacts, firmId, firmName, firmType, contactId, contactName, onChange }) {
   const [addingContact, setAddingContact] = useState(false);
   const [newFirst, setNewFirst] = useState("");
   const [newLast, setNewLast] = useState("");
@@ -140,8 +186,8 @@ function OriginatorPicker({ allFirms, allContacts, firmId, firmName, contactId, 
     [allContacts, firmId]
   );
 
-  const handleSelectFirm = (firm) => {
-    onChange({ firmId: firm.id, firmName: firm.name, contactId: "", contactName: "" });
+  const handleSelectFirm = ({ firm, firmType }) => {
+    onChange({ firmId: firm.id, firmName: firm.name, firmType: firmType || null, contactId: "", contactName: "" });
   };
 
   const handleSelectContact = (contact) => {
@@ -171,8 +217,11 @@ function OriginatorPicker({ allFirms, allContacts, firmId, firmName, contactId, 
       {firmId ? (
         <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200 text-xs">
           <Building2 className="w-3.5 h-3.5 text-indigo-500" />
-          <span className="font-medium text-indigo-700 flex-1">{firmName}</span>
-          <button type="button" onClick={() => onChange({ firmId: "", firmName: "", contactId: "", contactName: "" })} className="text-indigo-300 hover:text-red-500">
+          <div className="flex-1 min-w-0">
+            <span className="font-medium text-indigo-700">{firmName}</span>
+            {firmType && <span className="ml-1.5 text-[10px] text-indigo-400 bg-indigo-100 px-1.5 py-0.5 rounded-full">{firmType}</span>}
+          </div>
+          <button type="button" onClick={() => onChange({ firmId: "", firmName: "", firmType: null, contactId: "", contactName: "" })} className="text-indigo-300 hover:text-red-500">
             <X className="w-3 h-3" />
           </button>
         </div>
@@ -291,6 +340,7 @@ function FirmEntry({ entry, allContacts, onChange, onRemove, onFirmClick, onCont
           onClick={() => onFirmClick && onFirmClick({ id: entry.firm_id, name: entry.firm_name })}
           className="text-xs font-semibold text-gray-700 flex items-center gap-1.5 hover:text-indigo-600 transition-colors">
           <Building2 className="w-3.5 h-3.5 text-indigo-500" /> {entry.firm_name}
+          {entry.firm_type_context && <span className="text-[10px] font-medium text-indigo-400 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded-full">{entry.firm_type_context}</span>}
         </button>
         <button type="button" onClick={onRemove} className="text-gray-300 hover:text-red-500"><X className="w-3 h-3" /></button>
       </div>
@@ -372,9 +422,11 @@ function AssociatedFirmsEditor({ value = [], onChange, allFirms, onFirmClick, on
   const [newFirmName, setNewFirmName] = useState("");
   const [savingFirm, setSavingFirm] = useState(false);
 
-  const handleAddFirm = (firm) => {
-    if (value.find(e => e.firm_id === firm.id)) return;
-    onChange([...value, { firm_id: firm.id, firm_name: firm.name, contacts: [] }]);
+  const handleAddFirm = ({ firm, firmType }) => {
+    // Allow same firm to be added multiple times if different firm types
+    const key = firmType ? `${firm.id}::${firmType}` : firm.id;
+    if (value.find(e => e._key === key)) return;
+    onChange([...value, { _key: key, firm_id: firm.id, firm_name: firm.name, firm_type_context: firmType || null, contacts: [] }]);
   };
 
   const handleCreateFirm = async () => {
@@ -387,21 +439,32 @@ function AssociatedFirmsEditor({ value = [], onChange, allFirms, onFirmClick, on
     setSavingFirm(false);
   };
 
-  const handleUpdateEntry = (firmId, updated) => {
-    onChange(value.map(e => e.firm_id === firmId ? updated : e));
+  const handleUpdateEntry = (key, updated) => {
+    onChange(value.map(e => (e._key || e.firm_id) === key ? updated : e));
   };
 
-  const usedFirmIds = value.map(e => e.firm_id);
-  const availableFirms = allFirms.filter(f => !f.deleted_at && !usedFirmIds.includes(f.id));
+  const usedKeys = value.map(e => e._key || e.firm_id);
+  const availableFirms = allFirms.filter(f => {
+    if (f.deleted_at) return false;
+    const types = f.firm_types?.length ? f.firm_types : f.firm_type ? [f.firm_type] : [null];
+    // Show firm if at least one type context hasn't been added yet
+    return types.some(t => {
+      const key = t ? `${f.id}::${t}` : f.id;
+      return !usedKeys.includes(key);
+    });
+  });
 
   return (
     <div className="space-y-2">
-      {value.map((entry) => (
-        <FirmEntry key={entry.firm_id} entry={entry} allContacts={allContacts}
-          onChange={(updated) => handleUpdateEntry(entry.firm_id, updated)}
-          onRemove={() => onChange(value.filter(e => e.firm_id !== entry.firm_id))}
-          onFirmClick={onFirmClick} onContactClick={onContactClick} />
-      ))}
+      {value.map((entry) => {
+        const key = entry._key || entry.firm_id;
+        return (
+          <FirmEntry key={key} entry={entry} allContacts={allContacts}
+            onChange={(updated) => handleUpdateEntry(key, updated)}
+            onRemove={() => onChange(value.filter(e => (e._key || e.firm_id) !== key))}
+            onFirmClick={onFirmClick} onContactClick={onContactClick} />
+        );
+      })}
 
       {/* Add existing firm picker */}
       {!addingFirm && (
@@ -610,7 +673,7 @@ function TaskEntryForm({ idx, task, onChange, onRemove, showRemove, allFirms, al
 // ── Activity Log form ─────────────────────────────────────────────────────────
 function ActivityLogForm({ onSaved, onCancel, allFirms, allContacts, onFirmClick, onContactClick }) {
   const queryClient = useQueryClient();
-  const [originator, setOriginator] = useState({ firmId: "", firmName: "", contactId: "", contactName: "" });
+  const [originator, setOriginator] = useState({ firmId: "", firmName: "", firmType: null, contactId: "", contactName: "" });
   const [activityType, setActivityType] = useState("Call");
   const [activityDate, setActivityDate] = useState(new Date().toISOString().split("T")[0]);
   const [subject, setSubject] = useState("");
@@ -651,7 +714,7 @@ function ActivityLogForm({ onSaved, onCancel, allFirms, allContacts, onFirmClick
       {/* Originator */}
       <div className="rounded-xl border border-amber-100 bg-amber-50/40 p-3">
         <OriginatorPicker allFirms={allFirms} allContacts={allContacts}
-          firmId={originator.firmId} firmName={originator.firmName}
+          firmId={originator.firmId} firmName={originator.firmName} firmType={originator.firmType}
           contactId={originator.contactId} contactName={originator.contactName}
           onChange={setOriginator} />
       </div>
@@ -728,7 +791,7 @@ function ActivityLogForm({ onSaved, onCancel, allFirms, allContacts, onFirmClick
 // ── Follow-up Tasks form ──────────────────────────────────────────────────────
 function TasksForm({ onSaved, onCancel, allFirms, allContacts }) {
   const queryClient = useQueryClient();
-  const [originator, setOriginator] = useState({ firmId: "", firmName: "", contactId: "", contactName: "" });
+  const [originator, setOriginator] = useState({ firmId: "", firmName: "", firmType: null, contactId: "", contactName: "" });
   const emptyTask = () => ({
     task_description: "", due_date: new Date().toISOString().split("T")[0], status: "Not Started",
     assigned_to_contact_id: "", assigned_to_contact_name: "", assigned_to_firm_id: "", assigned_to_firm_name: "",
@@ -767,7 +830,7 @@ function TasksForm({ onSaved, onCancel, allFirms, allContacts }) {
     <div className="space-y-4">
       <div className="rounded-xl border border-amber-100 bg-amber-50/40 p-3">
         <OriginatorPicker allFirms={allFirms} allContacts={allContacts}
-          firmId={originator.firmId} firmName={originator.firmName}
+          firmId={originator.firmId} firmName={originator.firmName} firmType={originator.firmType}
           contactId={originator.contactId} contactName={originator.contactName}
           onChange={setOriginator} />
       </div>
