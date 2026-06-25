@@ -391,6 +391,11 @@ function getPrimaryAssignee(task) {
 export default function TaskDetailModal({ open, task: initialTask, onClose, onTaskClick, onFirmClick, onContactClick }) {
   const queryClient = useQueryClient();
   const [editMode, setEditMode] = useState(false);
+  const [taskDescription, setTaskDescription] = useState("");
+  const [taskNotes, setTaskNotes] = useState("");
+  const [status, setStatus] = useState("Not Started");
+  const [statusDate, setStatusDate] = useState("");
+  const [dueDate, setDueDate] = useState("");
 
   // Local live task state (refreshed from query)
   const { data: task } = useQuery({
@@ -412,6 +417,19 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
     enabled: open,
   });
 
+  // Sync local state with task data when entering edit mode
+  useEffect(() => {
+    if (task && editMode) {
+      setEditStatus(task.status || "Not Started");
+      setEditStatusDate(task.status_date || "");
+      setEditDueDate(task.due_date || "");
+      setEditDesc(task.task_description || "");
+      setEditNotes(task.notes || "");
+      setEditAssignedFirms(task.assigned_firms_contacts || (task.assigned_to_firm_id ? [{ firm_id: task.assigned_to_firm_id, firm_name: task.assigned_to_firm_name, contacts: task.assigned_to_contact_id ? [{ contact_id: task.assigned_to_contact_id, contact_name: task.assigned_to_contact_name }] : [] }] : []));
+      setEditAttachments(task.attachments || []);
+    }
+  }, [editMode, task?.id, task]);
+
   // Linked activity modal state
   const [linkedActivity, setLinkedActivity] = useState(null);
   const [linkedActivityModalOpen, setLinkedActivityModalOpen] = useState(false);
@@ -430,18 +448,6 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
   const [editNotes, setEditNotes] = useState("");
   const [editAssignedFirms, setEditAssignedFirms] = useState([]);
   const [editAttachments, setEditAttachments] = useState([]);
-
-  useEffect(() => {
-    if (task && editMode) {
-      setEditStatus(task.status || "Not Started");
-      setEditStatusDate(task.status_date || "");
-      setEditDueDate(task.due_date || "");
-      setEditDesc(task.task_description || "");
-      setEditNotes(task.notes || "");
-      setEditAssignedFirms(task.assigned_firms_contacts || (task.assigned_to_firm_id ? [{ firm_id: task.assigned_to_firm_id, firm_name: task.assigned_to_firm_name, contacts: task.assigned_to_contact_id ? [{ contact_id: task.assigned_to_contact_id, contact_name: task.assigned_to_contact_name }] : [] }] : []));
-      setEditAttachments(task.attachments || []);
-    }
-  }, [editMode, task?.id]);
 
   const updateMutation = useMutation({
     mutationFn: (data) => base44.entities.FollowUpTask.update(task.id, data),
