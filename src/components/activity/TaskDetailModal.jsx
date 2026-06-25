@@ -328,6 +328,51 @@ function AttachmentsManager({ attachments = [], onChange }) {
   );
 }
 
+// ── View-mode attachments with quick-add ─────────────────────────────────────
+function ViewModeAttachments({ task, onAttachmentsUpdated }) {
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef(null);
+
+  const handleUpload = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setUploading(true);
+    const current = task.attachments || [];
+    const results = [];
+    for (const file of files) {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      results.push({ id: crypto.randomUUID(), name: file.name, file_url, file_type: file.type, uploaded_at: new Date().toISOString() });
+    }
+    onAttachmentsUpdated([...current, ...results]);
+    setUploading(false);
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const atts = task.attachments || [];
+
+  return (
+    <div>
+      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+        <Paperclip className="w-3 h-3" /> Attachments
+      </p>
+      <div className="space-y-1">
+        {atts.map(att => (
+          <a key={att.id} href={att.file_url} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50 border border-gray-100 text-xs text-indigo-600 hover:bg-indigo-50 transition-colors">
+            <FileText className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+            <span className="truncate">{att.name}</span>
+          </a>
+        ))}
+        <button type="button" onClick={() => fileRef.current?.click()}
+          className="w-full flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dashed border-gray-200 text-xs text-gray-500 hover:border-indigo-400 hover:text-indigo-600 transition-colors">
+          <Upload className="w-3 h-3" /> {uploading ? "Uploading..." : "Attach file(s)"}
+        </button>
+        <input ref={fileRef} type="file" multiple className="hidden" onChange={handleUpload} />
+      </div>
+    </div>
+  );
+}
+
 // ── Helper: derive primary assignee from assigned_firms_contacts ──────────────
 function getPrimaryAssignee(task) {
   const fc = task.assigned_firms_contacts;
@@ -379,6 +424,7 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
 
   // Edit state
   const [editStatus, setEditStatus] = useState("");
+  const [editStatusDate, setEditStatusDate] = useState("");
   const [editDueDate, setEditDueDate] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [editNotes, setEditNotes] = useState("");
@@ -388,6 +434,7 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
   useEffect(() => {
     if (task && editMode) {
       setEditStatus(task.status || "Not Started");
+      setEditStatusDate(task.status_date || "");
       setEditDueDate(task.due_date || "");
       setEditDesc(task.task_description || "");
       setEditNotes(task.notes || "");
@@ -446,10 +493,9 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
       assigned_to_firm_id: primaryFirm?.firm_id || undefined,
       assigned_to_firm_name: primaryFirm?.firm_name || undefined,
       attachments: editAttachments.length ? editAttachments : undefined,
+      // Use the user-edited status date; if status changed and no date set, default to today
+      status_date: editStatusDate || (statusChanged ? today : task.status_date) || undefined,
     };
-    if (statusChanged) {
-      data.status_date = today;
-    }
     if (editStatus === "Completed" && !task.completion_date) {
       data.completion_date = today;
     }
@@ -581,23 +627,8 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
                 </button>
               )}
 
-              {/* Attachments */}
-              {task.attachments?.length > 0 && (
-                <div>
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                    <Paperclip className="w-3 h-3" /> Attachments
-                  </p>
-                  <div className="space-y-1">
-                    {task.attachments.map(att => (
-                      <a key={att.id} href={att.file_url} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50 border border-gray-100 text-xs text-indigo-600 hover:bg-indigo-50 transition-colors">
-                        <FileText className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                        <span className="truncate">{att.name}</span>
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* Attachments (view mode with quick-add) */}
+              <ViewModeAttachments task={task} onAttachmentsUpdated={(atts) => updateMutation.mutate({ attachments: atts })} />
 
               <div className="flex justify-end">
                 <button type="button" onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending}
@@ -612,18 +643,23 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
                   <Label className="text-xs font-medium text-gray-700">Status</Label>
-                  <Select value={editStatus} onValueChange={setEditStatus}>
+                  <Select value={editStatus} onValueChange={(v) => {
+                    setEditStatus(v);
+                    // Auto-set status date to today when status changes
+                    if (v !== task.status) setEditStatusDate(todayStr());
+                  }}>
                     <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
                     <SelectContent>{TASK_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                   </Select>
-                  {editStatus !== (task.status) && (
-                    <p className="text-[10px] text-amber-600">Status date will be updated to today</p>
-                  )}
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs font-medium text-gray-700">Due Date</Label>
                   <Input type="date" value={editDueDate} onChange={e => setEditDueDate(e.target.value)} className="h-8 text-sm" />
                 </div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-medium text-gray-700">Status Date <span className="text-gray-400 font-normal">(auto-set on status change, editable)</span></Label>
+                <Input type="date" value={editStatusDate} onChange={e => setEditStatusDate(e.target.value)} className="h-8 text-sm" placeholder="Leave blank if not applicable" />
               </div>
 
               <div className="space-y-1">
