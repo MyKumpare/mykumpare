@@ -786,9 +786,11 @@ export default function FirmActivityLogTab({ firmId, firmName, onFirmClick, onCo
   const firmActivities = useMemo(() => {
     return allActivities
       .filter(a => {
-        const contactBelongs = firmContactIds.has(a.contact_id);
+        // Only show if this firm is explicitly the originator's firm OR explicitly listed in associated_firms_contacts
+        const contact = firmContacts.find(c => c.id === a.contact_id);
+        const contactPrimaryFirm = contact && (contact.firm_ids || [])[0] === firmId;
         const firmMentioned = (a.associated_firms_contacts || []).some(e => e.firm_id === firmId);
-        return contactBelongs || firmMentioned;
+        return contactPrimaryFirm || firmMentioned;
       })
       .map(a => {
         const contact = firmContacts.find(c => c.id === a.contact_id);
@@ -798,11 +800,11 @@ export default function FirmActivityLogTab({ firmId, firmName, onFirmClick, onCo
 
   const firmTasks = useMemo(() => {
     return allTasks.filter(t =>
+      t.originator_firm_id === firmId ||
       t.assigned_to_firm_id === firmId ||
-      firmContactIds.has(t.originator_contact_id) ||
-      firmContactIds.has(t.assigned_to_contact_id)
+      (t.assigned_firms_contacts || []).some(e => e.firm_id === firmId)
     );
-  }, [allTasks, firmContactIds, firmId]);
+  }, [allTasks, firmId]);
 
   const handlePickContact = (contact) => {
     setSelectedContact(contact);
