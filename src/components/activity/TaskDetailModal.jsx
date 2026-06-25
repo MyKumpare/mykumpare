@@ -469,14 +469,14 @@ function getPrimaryAssignee(task) {
 }
 
 // ── Individual assignment status card ─────────────────────────────────────────
-function AssignmentCard({ entry, allContacts, onContactClick, onAssignmentUpdate }) {
+function AssignmentCard({ entry, allContacts, allFirms, onContactClick, onFirmClick }) {
   const contacts = entry.contacts || [];
   
   return (
     <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3 space-y-2">
       <button
         type="button"
-        onClick={() => onContactClick && onContactClick(allContacts.find(f => f.id === entry.firm_id))}
+        onClick={() => onFirmClick && onFirmClick(allFirms.find(f => f.id === entry.firm_id))}
         className="flex items-center gap-1.5 text-xs font-semibold text-indigo-700 hover:text-indigo-900 transition-colors"
       >
         <Building2 className="w-3.5 h-3.5" /> {entry.firm_name}
@@ -730,7 +730,9 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
                         key={i}
                         entry={entry}
                         allContacts={allContacts}
+                        allFirms={allFirms}
                         onContactClick={onContactClick}
+                        onFirmClick={onFirmClick}
                       />
                     ))}
                   </div>
