@@ -737,11 +737,11 @@ function ActivityLogForm({ onSaved, onCancel, allFirms, allContacts, onFirmClick
       </div>
 
       <div className="space-y-1">
-        <Label className="text-xs font-medium text-gray-700">Activity Type</Label>
+        <Label className="text-xs font-medium text-gray-700">Subject Type</Label>
         <SubjectPicker
           value={subject}
           onChange={setSubject}
-          placeholder="Select or add activity type..."
+          placeholder="Select or add subject type..."
         />
       </div>
 
