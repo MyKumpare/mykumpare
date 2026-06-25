@@ -587,6 +587,8 @@ export default function Home() {
       <AddFirmDialog
         onProductClick={(product) => handleEditProduct(product, false)}
         onPortfolioClick={(portfolio) => { setDialogOpen(false); setEditingPortfolio(portfolio); setPreselectedAllocatorId(null); setPortfolioDialogOpen(true); }}
+        onFirmClick={(f) => { const full = firms.find(x => x.id === f?.id) || f; if (full) handleEdit(full); }}
+        onContactClick={(c) => { if (c) setViewingContact(c); }}
         open={dialogOpen}
         onOpenChange={(open) => {
           setDialogOpen(open);
@@ -720,6 +722,8 @@ export default function Home() {
         open={activityLogModalOpen}
         onClose={() => setActivityLogModalOpen(false)}
         defaultTab={activityLogDefaultTab}
+        onFirmClick={(f) => { setActivityLogModalOpen(false); const full = firms.find(x => x.id === f?.id) || f; if (full) handleEdit(full); }}
+        onContactClick={(c) => { if (c) setViewingContact(c); }}
       />
 
       <PortfolioPickerModal

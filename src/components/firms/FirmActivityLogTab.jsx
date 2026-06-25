@@ -300,7 +300,7 @@ function InlineNewContactForm({ firmId, onCreated, onCancel }) {
 }
 
 // ── Associated Firms & Contacts editor (same as ContactActivitiesTab) ─────────
-function AssociatedFirmsEditor({ value = [], onChange, allFirms, allContacts }) {
+function AssociatedFirmsEditor({ value = [], onChange, allFirms, allContacts, onFirmClick, onContactClick }) {
   const [addingContactForFirm, setAddingContactForFirm] = useState(null);
 
   const handleAddFirm = (firm) => {
@@ -333,9 +333,10 @@ function AssociatedFirmsEditor({ value = [], onChange, allFirms, allContacts }) 
         return (
           <div key={entry.firm_id} className="rounded-lg border border-gray-200 bg-white p-2.5 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+              <button type="button" onClick={() => onFirmClick && onFirmClick(allFirms.find(f => f.id === entry.firm_id))}
+                className="text-xs font-semibold text-gray-700 flex items-center gap-1.5 hover:text-indigo-600 transition-colors">
                 <Building2 className="w-3.5 h-3.5 text-indigo-500" /> {entry.firm_name}
-              </span>
+              </button>
               <button type="button" onClick={() => handleRemoveFirm(entry.firm_id)} className="text-gray-300 hover:text-red-500">
                 <X className="w-3 h-3" />
               </button>
@@ -344,7 +345,9 @@ function AssociatedFirmsEditor({ value = [], onChange, allFirms, allContacts }) 
               <div className="flex flex-wrap gap-1.5">
                 {entry.contacts.map(c => (
                   <span key={c.contact_id} className="inline-flex items-center gap-1 text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.5 rounded-full">
-                    <User className="w-2.5 h-2.5" /> {c.contact_name}
+                    <User className="w-2.5 h-2.5" />
+                    <button type="button" onClick={() => onContactClick && onContactClick(allContacts.find(x => x.id === c.contact_id))}
+                      className="hover:underline">{c.contact_name}</button>
                     <button type="button" onClick={() => handleRemoveContact(entry.firm_id, c.contact_id)} className="ml-0.5 text-indigo-300 hover:text-red-500">
                       <X className="w-2.5 h-2.5" />
                     </button>
@@ -541,7 +544,7 @@ function TaskEntryForm({ idx, task, onChange, onRemove, showRemove, allFirms, al
 }
 
 // ── Activity form (full, mirrors ContactActivitiesTab's ActivityForm) ─────────
-function FirmActivityForm({ firmId, firmName, contact, allFirms, allContacts, onSaved, onCancel }) {
+function FirmActivityForm({ firmId, firmName, contact, allFirms, allContacts, onSaved, onCancel, onFirmClick, onContactClick }) {
   const queryClient = useQueryClient();
   const contactId = contact.id;
   const contactName = [contact.first_name, contact.last_name].filter(Boolean).join(" ");
@@ -612,7 +615,7 @@ function FirmActivityForm({ firmId, firmName, contact, allFirms, allContacts, on
         <Label className="text-xs font-medium text-gray-700 flex items-center gap-1">
           <Building2 className="w-3 h-3 text-indigo-500" /> Associated Firms & Contacts
         </Label>
-        <AssociatedFirmsEditor value={associatedFirmsContacts} onChange={setAssociatedFirmsContacts} allFirms={allFirms} allContacts={allContacts} />
+        <AssociatedFirmsEditor value={associatedFirmsContacts} onChange={setAssociatedFirmsContacts} allFirms={allFirms} allContacts={allContacts} onFirmClick={onFirmClick} onContactClick={onContactClick} />
       </div>
 
       {!addTask ? (
@@ -871,7 +874,7 @@ function TaskRow({ task }) {
 }
 
 // ── Main Tab ──────────────────────────────────────────────────────────────────
-export default function FirmActivityLogTab({ firmId, firmName }) {
+export default function FirmActivityLogTab({ firmId, firmName, onFirmClick, onContactClick }) {
   const [activeSection, setActiveSection] = useState("activities");
   // "idle" | "picking-for-activity" | "picking-for-task" | "activity-form" | "task-form"
   const [uiState, setUiState] = useState("idle");
@@ -988,7 +991,8 @@ export default function FirmActivityLogTab({ firmId, firmName }) {
       {/* Inline forms */}
       {uiState === "activity-form" && selectedContact && (
         <FirmActivityForm firmId={firmId} firmName={firmName} contact={selectedContact}
-          allFirms={allFirms} allContacts={allContacts} onSaved={handleFormSaved} onCancel={handleCancel} />
+          allFirms={allFirms} allContacts={allContacts} onSaved={handleFormSaved} onCancel={handleCancel}
+          onFirmClick={onFirmClick} onContactClick={onContactClick} />
       )}
       {uiState === "task-form" && selectedContact && (
         <FirmTaskForm firmId={firmId} firmName={firmName} contact={selectedContact}

@@ -246,7 +246,7 @@ function OriginatorPicker({ allFirms, allContacts, firmId, firmName, contactId, 
 }
 
 // ── Firm entry with inline contact picker & new-contact form ─────────────────
-function FirmEntry({ entry, allContacts, onChange, onRemove }) {
+function FirmEntry({ entry, allContacts, onChange, onRemove, onFirmClick, onContactClick }) {
   const [addingContact, setAddingContact] = useState(false);
   const [newFirst, setNewFirst] = useState("");
   const [newLast, setNewLast] = useState("");
@@ -286,9 +286,11 @@ function FirmEntry({ entry, allContacts, onChange, onRemove }) {
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-2.5 space-y-2">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+        <button type="button"
+          onClick={() => onFirmClick && onFirmClick({ id: entry.firm_id, name: entry.firm_name })}
+          className="text-xs font-semibold text-gray-700 flex items-center gap-1.5 hover:text-indigo-600 transition-colors">
           <Building2 className="w-3.5 h-3.5 text-indigo-500" /> {entry.firm_name}
-        </span>
+        </button>
         <button type="button" onClick={onRemove} className="text-gray-300 hover:text-red-500"><X className="w-3 h-3" /></button>
       </div>
 
@@ -311,8 +313,8 @@ function FirmEntry({ entry, allContacts, onChange, onRemove }) {
                   <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] font-bold text-indigo-700 flex-shrink-0">
                     {(c.first_name || "")[0]}{(c.last_name || "")[0]}
                   </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-800">{[c.first_name, c.last_name].filter(Boolean).join(" ")}</p>
+                  <div onClick={(e) => { e.stopPropagation(); onContactClick && onContactClick(c); }} className="cursor-pointer">
+                    <p className="text-xs font-medium text-gray-800 hover:text-indigo-600 hover:underline">{[c.first_name, c.last_name].filter(Boolean).join(" ")}</p>
                     {c.title && <p className="text-[10px] text-gray-400">{c.title}</p>}
                   </div>
                 </button>
@@ -349,7 +351,7 @@ function FirmEntry({ entry, allContacts, onChange, onRemove }) {
 }
 
 // ── Associated Firms & Contacts editor ────────────────────────────────────────
-function AssociatedFirmsEditor({ value = [], onChange, allFirms }) {
+function AssociatedFirmsEditor({ value = [], onChange, allFirms, onFirmClick, onContactClick }) {
   const queryClient = useQueryClient();
   // Own query so new contacts added inline are reflected immediately
   const { data: allContacts = [] } = useQuery({
@@ -387,7 +389,8 @@ function AssociatedFirmsEditor({ value = [], onChange, allFirms }) {
       {value.map((entry) => (
         <FirmEntry key={entry.firm_id} entry={entry} allContacts={allContacts}
           onChange={(updated) => handleUpdateEntry(entry.firm_id, updated)}
-          onRemove={() => onChange(value.filter(e => e.firm_id !== entry.firm_id))} />
+          onRemove={() => onChange(value.filter(e => e.firm_id !== entry.firm_id))}
+          onFirmClick={onFirmClick} onContactClick={onContactClick} />
       ))}
 
       {/* Add existing firm picker */}
@@ -595,7 +598,7 @@ function TaskEntryForm({ idx, task, onChange, onRemove, showRemove, allFirms, al
 }
 
 // ── Activity Log form ─────────────────────────────────────────────────────────
-function ActivityLogForm({ onSaved, onCancel, allFirms, allContacts }) {
+function ActivityLogForm({ onSaved, onCancel, allFirms, allContacts, onFirmClick, onContactClick }) {
   const queryClient = useQueryClient();
   const [originator, setOriginator] = useState({ firmId: "", firmName: "", contactId: "", contactName: "" });
   const [activityType, setActivityType] = useState("Call");
@@ -666,7 +669,7 @@ function ActivityLogForm({ onSaved, onCancel, allFirms, allContacts }) {
 
       <div className="space-y-1.5">
         <Label className="text-xs font-medium text-gray-700 flex items-center gap-1"><Building2 className="w-3 h-3 text-indigo-500" /> Associated Firms & Contacts</Label>
-        <AssociatedFirmsEditor value={associatedFirmsContacts} onChange={setAssociatedFirmsContacts} allFirms={allFirms} />
+        <AssociatedFirmsEditor value={associatedFirmsContacts} onChange={setAssociatedFirmsContacts} allFirms={allFirms} onFirmClick={onFirmClick} onContactClick={onContactClick} />
       </div>
 
       {!addTask ? (
@@ -777,7 +780,7 @@ function TasksForm({ onSaved, onCancel, allFirms, allContacts }) {
 }
 
 // ── Main Modal ────────────────────────────────────────────────────────────────
-export default function GlobalActivityLogModal({ open, onClose }) {
+export default function GlobalActivityLogModal({ open, onClose, onFirmClick, onContactClick }) {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -821,7 +824,7 @@ export default function GlobalActivityLogModal({ open, onClose }) {
               <p className="text-sm font-semibold text-gray-700">Saved successfully!</p>
             </div>
           ) : (
-            <ActivityLogForm onSaved={handleSaved} onCancel={onClose} allFirms={allFirms} allContacts={allContacts} />
+            <ActivityLogForm onSaved={handleSaved} onCancel={onClose} allFirms={allFirms} allContacts={allContacts} onFirmClick={onFirmClick} onContactClick={onContactClick} />
           )}
         </div>
       </div>

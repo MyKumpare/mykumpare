@@ -84,7 +84,7 @@ const newAddress = () => ({
   address_line2: "",
 });
 
-export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, editingFirm, preselectedType, existingFirms = [], defaultTab, defaultOwnershipId, onProductClick, onPortfolioClick }) {
+export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, editingFirm, preselectedType, existingFirms = [], defaultTab, defaultOwnershipId, onProductClick, onPortfolioClick, onFirmClick, onContactClick }) {
   const [isEditing, setIsEditing] = useState(false);
   const [firmTypes, setFirmTypes] = useState([]);
   const [firmName, setFirmName] = useState("");
@@ -710,7 +710,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
               <TabsContent value="activity-log" className="space-y-3">
               {editingFirm ? (
-                <FirmActivityLogTab firmId={editingFirm.id} firmName={editingFirm.name} />
+                <FirmActivityLogTab firmId={editingFirm.id} firmName={editingFirm.name} onFirmClick={onFirmClick} onContactClick={onContactClick} />
               ) : (
                 <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
                   Save the firm first to view activity logs
