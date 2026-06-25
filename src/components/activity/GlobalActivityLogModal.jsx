@@ -293,6 +293,9 @@ function FirmEntry({ entry, allContacts, onChange, onRemove }) {
       </div>
 
       {/* Contact checkboxes */}
+      {allFirmContacts.length === 0 && !addingContact && (
+        <p className="text-xs text-gray-400 italic px-1">No contacts on file for this firm.</p>
+      )}
       {allFirmContacts.length > 0 && (
         <div className="space-y-1">
           <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Who was involved?</p>
@@ -346,8 +349,13 @@ function FirmEntry({ entry, allContacts, onChange, onRemove }) {
 }
 
 // ── Associated Firms & Contacts editor ────────────────────────────────────────
-function AssociatedFirmsEditor({ value = [], onChange, allFirms, allContacts }) {
+function AssociatedFirmsEditor({ value = [], onChange, allFirms }) {
   const queryClient = useQueryClient();
+  // Own query so new contacts added inline are reflected immediately
+  const { data: allContacts = [] } = useQuery({
+    queryKey: ["all_contacts_for_activities"],
+    queryFn: () => base44.entities.Contact.list(),
+  });
   const [addingFirm, setAddingFirm] = useState(false);
   const [newFirmName, setNewFirmName] = useState("");
   const [savingFirm, setSavingFirm] = useState(false);
@@ -658,7 +666,7 @@ function ActivityLogForm({ onSaved, onCancel, allFirms, allContacts }) {
 
       <div className="space-y-1.5">
         <Label className="text-xs font-medium text-gray-700 flex items-center gap-1"><Building2 className="w-3 h-3 text-indigo-500" /> Associated Firms & Contacts</Label>
-        <AssociatedFirmsEditor value={associatedFirmsContacts} onChange={setAssociatedFirmsContacts} allFirms={allFirms} allContacts={allContacts} />
+        <AssociatedFirmsEditor value={associatedFirmsContacts} onChange={setAssociatedFirmsContacts} allFirms={allFirms} />
       </div>
 
       {!addTask ? (
