@@ -38,7 +38,7 @@ function fmt(dateStr) {
 }
 
 // ── Searchable firm picker ────────────────────────────────────────────────────
-function FirmPickerDropdown({ availableFirms, onSelect, placeholder = "+ Add a firm..." }) {
+function FirmPickerDropdown({ availableFirms, onSelect, onAddNew, placeholder = "+ Add a firm..." }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [expandedTypes, setExpandedTypes] = useState({});
@@ -81,9 +81,18 @@ function FirmPickerDropdown({ availableFirms, onSelect, placeholder = "+ Add a f
               placeholder="Search firms..." className="w-full h-7 px-2.5 text-xs rounded-lg border border-gray-200 outline-none focus:border-indigo-400 bg-gray-50" />
           </div>
           <div className="max-h-56 overflow-y-auto">
-            {activeTypes.length === 0 ? (
-              <p className="text-xs text-gray-400 italic text-center py-4">No firms found</p>
-            ) : activeTypes.map(type => (
+            {activeTypes.length === 0 && (
+              <div className="px-3 py-3 space-y-1">
+                <p className="text-xs text-gray-400 italic text-center">No firms found</p>
+                {onAddNew && (
+                  <button type="button" onClick={() => { setOpen(false); onAddNew(); }}
+                    className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-indigo-300 text-xs text-indigo-600 hover:bg-indigo-50 transition-colors">
+                    <Plus className="w-3 h-3" /> Add new firm
+                  </button>
+                )}
+              </div>
+            )}
+            {activeTypes.map(type => (
               <div key={type}>
                 <button type="button" onClick={() => setExpandedTypes(prev => ({ ...prev, [type]: !prev[type] }))}
                   className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-bold text-gray-500 uppercase tracking-wide hover:bg-gray-50 transition-colors">
@@ -101,6 +110,14 @@ function FirmPickerDropdown({ availableFirms, onSelect, placeholder = "+ Add a f
                 ))}
               </div>
             ))}
+            {onAddNew && activeTypes.length > 0 && (
+              <div className="px-3 py-2 border-t border-gray-100">
+                <button type="button" onClick={() => { setOpen(false); onAddNew(); }}
+                  className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs text-indigo-600 hover:bg-indigo-50 transition-colors">
+                  <Plus className="w-3 h-3" /> Add new firm not in list
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -228,67 +245,163 @@ function OriginatorPicker({ allFirms, allContacts, firmId, firmName, contactId, 
   );
 }
 
+// ── Firm entry with inline contact picker & new-contact form ─────────────────
+function FirmEntry({ entry, allContacts, onChange, onRemove }) {
+  const [addingContact, setAddingContact] = useState(false);
+  const [newFirst, setNewFirst] = useState("");
+  const [newLast, setNewLast] = useState("");
+  const [newTitle, setNewTitle] = useState("");
+  const [saving, setSaving] = useState(false);
+  const queryClient = useQueryClient();
+
+  const firmContacts = allContacts.filter(
+    c => !c.deleted_at && (c.firm_ids || []).includes(entry.firm_id) && !entry.contacts.find(ec => ec.contact_id === c.id)
+  );
+
+  const handleToggleContact = (contact) => {
+    const already = entry.contacts.find(c => c.contact_id === contact.id);
+    if (already) {
+      onChange({ ...entry, contacts: entry.contacts.filter(c => c.contact_id !== contact.id) });
+    } else {
+      onChange({ ...entry, contacts: [...entry.contacts, { contact_id: contact.id, contact_name: [contact.first_name, contact.last_name].filter(Boolean).join(" ") }] });
+    }
+  };
+
+  const handleCreateContact = async () => {
+    if (!newFirst.trim() || !newLast.trim()) return;
+    setSaving(true);
+    const created = await base44.entities.Contact.create({
+      first_name: newFirst.trim(), last_name: newLast.trim(),
+      title: newTitle.trim() || undefined, firm_ids: [entry.firm_id],
+    });
+    queryClient.invalidateQueries({ queryKey: ["all_contacts_for_activities"] });
+    onChange({ ...entry, contacts: [...entry.contacts, { contact_id: created.id, contact_name: [created.first_name, created.last_name].filter(Boolean).join(" ") }] });
+    setAddingContact(false); setNewFirst(""); setNewLast(""); setNewTitle("");
+    setSaving(false);
+  };
+
+  // All contacts for this firm (selected + available)
+  const allFirmContacts = allContacts.filter(c => !c.deleted_at && (c.firm_ids || []).includes(entry.firm_id));
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-2.5 space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+          <Building2 className="w-3.5 h-3.5 text-indigo-500" /> {entry.firm_name}
+        </span>
+        <button type="button" onClick={onRemove} className="text-gray-300 hover:text-red-500"><X className="w-3 h-3" /></button>
+      </div>
+
+      {/* Contact checkboxes */}
+      {allFirmContacts.length > 0 && (
+        <div className="space-y-1">
+          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Who was involved?</p>
+          <div className="space-y-1 max-h-32 overflow-y-auto">
+            {allFirmContacts.map(c => {
+              const selected = !!entry.contacts.find(ec => ec.contact_id === c.id);
+              return (
+                <button key={c.id} type="button" onClick={() => handleToggleContact(c)}
+                  className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left transition-colors border ${selected ? "bg-indigo-50 border-indigo-200" : "bg-white border-gray-100 hover:bg-gray-50"}`}>
+                  <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${selected ? "bg-indigo-600 border-indigo-600" : "border-gray-300"}`}>
+                    {selected && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                  </div>
+                  <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] font-bold text-indigo-700 flex-shrink-0">
+                    {(c.first_name || "")[0]}{(c.last_name || "")[0]}
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-gray-800">{[c.first_name, c.last_name].filter(Boolean).join(" ")}</p>
+                    {c.title && <p className="text-[10px] text-gray-400">{c.title}</p>}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Add new contact inline */}
+      {!addingContact ? (
+        <button type="button" onClick={() => setAddingContact(true)}
+          className="w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-dashed border-indigo-200 text-[10px] text-indigo-500 hover:bg-indigo-50 transition-colors">
+          <UserPlus className="w-3 h-3" /> Add new contact for this firm
+        </button>
+      ) : (
+        <div className="rounded-lg border border-indigo-100 bg-indigo-50/30 p-2.5 space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <Input value={newFirst} onChange={e => setNewFirst(e.target.value)} className="h-7 text-xs" placeholder="First name *" />
+            <Input value={newLast} onChange={e => setNewLast(e.target.value)} className="h-7 text-xs" placeholder="Last name *" />
+          </div>
+          <Input value={newTitle} onChange={e => setNewTitle(e.target.value)} className="h-7 text-xs" placeholder="Title (optional)" />
+          <div className="flex gap-2 justify-end">
+            <Button type="button" variant="outline" size="sm" className="h-6 text-xs px-2" onClick={() => setAddingContact(false)}>Cancel</Button>
+            <Button type="button" size="sm" className="h-6 text-xs px-2 bg-indigo-600 hover:bg-indigo-700 text-white"
+              disabled={!newFirst.trim() || !newLast.trim() || saving} onClick={handleCreateContact}>
+              {saving ? "Saving..." : "Add & Select"}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Associated Firms & Contacts editor ────────────────────────────────────────
 function AssociatedFirmsEditor({ value = [], onChange, allFirms, allContacts }) {
+  const queryClient = useQueryClient();
+  const [addingFirm, setAddingFirm] = useState(false);
+  const [newFirmName, setNewFirmName] = useState("");
+  const [savingFirm, setSavingFirm] = useState(false);
+
   const handleAddFirm = (firm) => {
     if (value.find(e => e.firm_id === firm.id)) return;
     onChange([...value, { firm_id: firm.id, firm_name: firm.name, contacts: [] }]);
   };
-  const handleRemoveFirm = (firmId) => onChange(value.filter(e => e.firm_id !== firmId));
-  const handleAddContact = (firmId, contact) => {
-    onChange(value.map(e => {
-      if (e.firm_id !== firmId) return e;
-      if (e.contacts.find(c => c.contact_id === contact.id)) return e;
-      return { ...e, contacts: [...e.contacts, { contact_id: contact.id, contact_name: [contact.first_name, contact.last_name].filter(Boolean).join(" ") }] };
-    }));
+
+  const handleCreateFirm = async () => {
+    if (!newFirmName.trim()) return;
+    setSavingFirm(true);
+    const created = await base44.entities.Firm.create({ name: newFirmName.trim() });
+    queryClient.invalidateQueries({ queryKey: ["all_firms_for_activities"] });
+    onChange([...value, { firm_id: created.id, firm_name: created.name, contacts: [] }]);
+    setAddingFirm(false); setNewFirmName("");
+    setSavingFirm(false);
   };
-  const handleRemoveContact = (firmId, contactId) => {
-    onChange(value.map(e => {
-      if (e.firm_id !== firmId) return e;
-      return { ...e, contacts: e.contacts.filter(c => c.contact_id !== contactId) };
-    }));
+
+  const handleUpdateEntry = (firmId, updated) => {
+    onChange(value.map(e => e.firm_id === firmId ? updated : e));
   };
+
   const usedFirmIds = value.map(e => e.firm_id);
   const availableFirms = allFirms.filter(f => !f.deleted_at && !usedFirmIds.includes(f.id));
 
   return (
     <div className="space-y-2">
-      {value.map((entry) => {
-        const firmContacts = allContacts.filter(c => !c.deleted_at && (c.firm_ids || []).includes(entry.firm_id) && !entry.contacts.find(ec => ec.contact_id === c.id));
-        return (
-          <div key={entry.firm_id} className="rounded-lg border border-gray-200 bg-white p-2.5 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
-                <Building2 className="w-3.5 h-3.5 text-indigo-500" /> {entry.firm_name}
-              </span>
-              <button type="button" onClick={() => handleRemoveFirm(entry.firm_id)} className="text-gray-300 hover:text-red-500"><X className="w-3 h-3" /></button>
-            </div>
-            {entry.contacts.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {entry.contacts.map(c => (
-                  <span key={c.contact_id} className="inline-flex items-center gap-1 text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.5 rounded-full">
-                    <User className="w-2.5 h-2.5" /> {c.contact_name}
-                    <button type="button" onClick={() => handleRemoveContact(entry.firm_id, c.contact_id)} className="ml-0.5 text-indigo-300 hover:text-red-500"><X className="w-2.5 h-2.5" /></button>
-                  </span>
-                ))}
-              </div>
-            )}
-            {firmContacts.length > 0 && (
-              <Select onValueChange={(cid) => { const c = allContacts.find(x => x.id === cid); if (c) handleAddContact(entry.firm_id, c); }}>
-                <SelectTrigger className="h-7 text-xs border-dashed border-gray-300 text-gray-500">
-                  <SelectValue placeholder="+ Add contact from this firm..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {firmContacts.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{[c.first_name, c.last_name].filter(Boolean).join(" ")}{c.title ? ` · ${c.title}` : ""}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+      {value.map((entry) => (
+        <FirmEntry key={entry.firm_id} entry={entry} allContacts={allContacts}
+          onChange={(updated) => handleUpdateEntry(entry.firm_id, updated)}
+          onRemove={() => onChange(value.filter(e => e.firm_id !== entry.firm_id))} />
+      ))}
+
+      {/* Add existing firm picker */}
+      {!addingFirm && (
+        <FirmPickerDropdown availableFirms={availableFirms} onSelect={handleAddFirm}
+          onAddNew={() => setAddingFirm(true)} />
+      )}
+
+      {/* Add new firm form */}
+      {addingFirm && (
+        <div className="rounded-lg border border-indigo-200 bg-indigo-50/30 p-2.5 space-y-2">
+          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">New Firm</p>
+          <Input value={newFirmName} onChange={e => setNewFirmName(e.target.value)} className="h-7 text-xs" placeholder="Firm name *" autoFocus />
+          <div className="flex gap-2 justify-end">
+            <Button type="button" variant="outline" size="sm" className="h-6 text-xs px-2" onClick={() => { setAddingFirm(false); setNewFirmName(""); }}>Cancel</Button>
+            <Button type="button" size="sm" className="h-6 text-xs px-2 bg-indigo-600 hover:bg-indigo-700 text-white"
+              disabled={!newFirmName.trim() || savingFirm} onClick={handleCreateFirm}>
+              {savingFirm ? "Saving..." : "Create Firm"}
+            </Button>
           </div>
-        );
-      })}
-      {availableFirms.length > 0 && <FirmPickerDropdown availableFirms={availableFirms} onSelect={handleAddFirm} />}
+        </div>
+      )}
     </div>
   );
 }
