@@ -623,6 +623,25 @@ export default function ActivityDetailModal({ open, activity, onClose, onOpenCon
     const originatorContact = contacts.find(c => c.id === activity.contact_id);
     const originatorFirmId = (originatorContact?.firm_ids || [])[0];
     const originatorFirm = originatorFirmId ? firms.find(f => f.id === originatorFirmId) : null;
+    const today = new Date().toISOString().split("T")[0];
+    
+    // Initialize assignments array with status for each contact
+    const assignments = [];
+    taskAssignedFirms.forEach(entry => {
+      (entry.contacts || []).forEach(c => {
+        assignments.push({
+          id: crypto.randomUUID(),
+          contact_id: c.contact_id,
+          contact_name: c.contact_name,
+          firm_id: entry.firm_id,
+          firm_name: entry.firm_name,
+          status: taskStatus || "Not Started",
+          status_date: today,
+          notes: "",
+        });
+      });
+    });
+    
     let primaryContactId, primaryContactName, primaryFirmId, primaryFirmName;
     for (const entry of taskAssignedFirms) {
       if (entry.contacts?.length) {
@@ -643,8 +662,9 @@ export default function ActivityDetailModal({ open, activity, onClose, onOpenCon
       due_date: taskDueDate,
       task_description: taskDesc,
       status: taskStatus,
-      status_date: new Date().toISOString().split("T")[0],
+      status_date: today,
       assigned_firms_contacts: taskAssignedFirms.length ? taskAssignedFirms : undefined,
+      assignments: assignments.length ? assignments : undefined,
       assigned_to_contact_id: primaryContactId || undefined,
       assigned_to_contact_name: primaryContactName || undefined,
       assigned_to_firm_id: primaryFirmId || undefined,
@@ -685,6 +705,35 @@ export default function ActivityDetailModal({ open, activity, onClose, onOpenCon
           const originatorContact = contacts.find(c => c.id === activity.contact_id);
           const originatorFirmId = (originatorContact?.firm_ids || [])[0];
           const originatorFirm = originatorFirmId ? firms.find(f => f.id === originatorFirmId) : null;
+          const today = new Date().toISOString().split("T")[0];
+          
+          // Initialize assignments array with status for each contact
+          const assignments = [];
+          taskAssignedFirms.forEach(entry => {
+            (entry.contacts || []).forEach(c => {
+              assignments.push({
+                id: crypto.randomUUID(),
+                contact_id: c.contact_id,
+                contact_name: c.contact_name,
+                firm_id: entry.firm_id,
+                firm_name: entry.firm_name,
+                status: taskStatus || "Not Started",
+                status_date: today,
+                notes: "",
+              });
+            });
+          });
+          
+          let primaryContactId, primaryContactName, primaryFirmId, primaryFirmName;
+          for (const entry of taskAssignedFirms) {
+            if (entry.contacts?.length) {
+              primaryContactId = entry.contacts[0].contact_id;
+              primaryContactName = entry.contacts[0].contact_name;
+              primaryFirmId = entry.firm_id;
+              primaryFirmName = entry.firm_name;
+              break;
+            }
+          }
           await base44.entities.FollowUpTask.create({
             originator_contact_id: activity.contact_id,
             originator_contact_name: originatorContact ? [originatorContact.first_name, originatorContact.last_name].filter(Boolean).join(" ") : "",
@@ -695,7 +744,13 @@ export default function ActivityDetailModal({ open, activity, onClose, onOpenCon
             due_date: taskDueDate,
             task_description: taskDesc,
             status: taskStatus,
-            status_date: new Date().toISOString().split("T")[0],
+            status_date: today,
+            assigned_firms_contacts: taskAssignedFirms.length ? taskAssignedFirms : undefined,
+            assignments: assignments.length ? assignments : undefined,
+            assigned_to_contact_id: primaryContactId || undefined,
+            assigned_to_contact_name: primaryContactName || undefined,
+            assigned_to_firm_id: primaryFirmId || undefined,
+            assigned_to_firm_name: primaryFirmName || undefined,
             attachments: taskAttachments.length ? taskAttachments : undefined,
           });
           queryClient.invalidateQueries({ queryKey: ["follow_up_tasks"] });

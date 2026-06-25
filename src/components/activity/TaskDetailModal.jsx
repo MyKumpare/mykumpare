@@ -24,6 +24,24 @@ const STATUS_STYLES = {
   "Cancelled":   { color: "text-red-500",   bg: "bg-red-50",    border: "border-red-200",   icon: XCircle },
 };
 
+// Compute aggregate status from individual assignments
+function computeAggregateStatus(assignedFirmsContacts) {
+  if (!assignedFirmsContacts || assignedFirmsContacts.length === 0) return "Not Started";
+  
+  const allStatuses = [];
+  assignedFirmsContacts.forEach(entry => {
+    (entry.contacts || []).forEach(c => {
+      if (c.status) allStatuses.push(c.status);
+    });
+  });
+  
+  if (allStatuses.length === 0) return "Not Started";
+  if (allStatuses.every(s => s === "Completed")) return "Completed";
+  if (allStatuses.every(s => s === "Cancelled")) return "Cancelled";
+  if (allStatuses.some(s => s === "In-process")) return "In-process";
+  return "Not Started";
+}
+
 const QUILL_MODULES = {
   toolbar: [
     [{ header: [false] }],
@@ -373,6 +391,69 @@ function ViewModeAttachments({ task, onAttachmentsUpdated }) {
   );
 }
 
+// ── Individual assignee status editor ─────────────────────────────────────────
+function AssigneeStatusEditor({ assignedFirmsContacts, onChange, allContacts }) {
+  const handleStatusChange = (firmId, contactId, newStatus) => {
+    const today = todayStr();
+    onChange(assignedFirmsContacts.map(entry => {
+      if (entry.firm_id !== firmId) return entry;
+      return {
+        ...entry,
+        contacts: (entry.contacts || []).map(c => {
+          if (c.contact_id !== contactId) return c;
+          return {
+            ...c,
+            status: newStatus,
+            status_date: newStatus !== c.status ? today : c.status_date,
+          };
+        }),
+      };
+    }));
+  };
+
+  return (
+    <div className="space-y-3">
+      {assignedFirmsContacts.map((entry, i) => (
+        <div key={i} className="rounded-xl border border-gray-200 bg-gray-50 p-3 space-y-2">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-700">
+            <Building2 className="w-3.5 h-3.5 text-indigo-500" /> {entry.firm_name}
+          </div>
+          {entry.contacts?.length > 0 && (
+            <div className="space-y-2">
+              {entry.contacts.map(c => {
+                const contactStatus = c.status || "Not Started";
+                const s = STATUS_STYLES[contactStatus] || STATUS_STYLES["Not Started"];
+                const StatusIcon = s.icon;
+                const contact = allContacts.find(x => x.id === c.contact_id);
+
+                return (
+                  <div key={c.contact_id} className="flex items-center gap-2 p-2 rounded-lg bg-white border border-gray-100">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${s.bg}`}>
+                      <StatusIcon className={`w-3 h-3 ${s.color}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-gray-700 truncate">{c.contact_name}</p>
+                      {contact?.title && <p className="text-[10px] text-gray-400 truncate">{contact.title}</p>}
+                    </div>
+                    <Select value={contactStatus} onValueChange={(v) => handleStatusChange(entry.firm_id, c.contact_id, v)}>
+                      <SelectTrigger className="h-7 text-xs w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TASK_STATUSES.map(st => <SelectItem key={st} value={st}>{st}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── Helper: derive primary assignee from assigned_firms_contacts ──────────────
 function getPrimaryAssignee(task) {
   const fc = task.assigned_firms_contacts;
@@ -385,6 +466,56 @@ function getPrimaryAssignee(task) {
   }
   if (task.assigned_to_contact_name) return { name: task.assigned_to_contact_name, firm: task.assigned_to_firm_name };
   return null;
+}
+
+// ── Individual assignment status card ─────────────────────────────────────────
+function AssignmentCard({ entry, allContacts, onContactClick, onAssignmentUpdate }) {
+  const contacts = entry.contacts || [];
+  
+  return (
+    <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3 space-y-2">
+      <button
+        type="button"
+        onClick={() => onContactClick && onContactClick(allContacts.find(f => f.id === entry.firm_id))}
+        className="flex items-center gap-1.5 text-xs font-semibold text-indigo-700 hover:text-indigo-900 transition-colors"
+      >
+        <Building2 className="w-3.5 h-3.5" /> {entry.firm_name}
+      </button>
+      {contacts.length > 0 && (
+        <div className="space-y-1.5">
+          {contacts.map(c => {
+            const cStatus = c.status || "Not Started";
+            const cStyle = STATUS_STYLES[cStatus] || STATUS_STYLES["Not Started"];
+            const CIcon = cStyle.icon;
+            const contact = allContacts.find(x => x.id === c.contact_id);
+            
+            return (
+              <div key={c.contact_id} className="rounded-lg bg-white border border-indigo-100 p-2.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => onContactClick && onContactClick(contact)}
+                    className="flex items-center gap-1.5 text-xs font-medium text-gray-700 hover:text-indigo-700 transition-colors"
+                  >
+                    <User className="w-3 h-3 text-indigo-400" /> {c.contact_name}
+                  </button>
+                  <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${cStyle.bg} ${cStyle.color}`}>
+                    <CIcon className="w-2.5 h-2.5" /> {cStatus}
+                  </span>
+                </div>
+                {c.status_date && (
+                  <p className="text-[10px] text-gray-400">Status updated {fmt(c.status_date)}</p>
+                )}
+                {c.notes && (
+                  <div className="quill-preview text-xs text-gray-600" dangerouslySetInnerHTML={{ __html: c.notes }} />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ── Main Modal ────────────────────────────────────────────────────────────────
@@ -477,7 +608,10 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
 
   const handleSave = () => {
     const today = todayStr();
-    const statusChanged = editStatus !== task.status;
+    // Compute aggregate status from individual assignments
+    const aggregateStatus = computeAggregateStatus(editAssignedFirms);
+    const statusChanged = aggregateStatus !== task.status;
+    
     // Derive primary assignee from assigned_firms_contacts
     let primaryContact = null;
     let primaryFirm = null;
@@ -489,7 +623,7 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
       }
     }
     const data = {
-      status: editStatus,
+      status: aggregateStatus,
       due_date: editDueDate,
       task_description: editDesc,
       notes: editNotes,
@@ -502,7 +636,7 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
       // Use the user-edited status date; if status changed and no date set, default to today
       status_date: editStatusDate || (statusChanged ? today : task.status_date) || undefined,
     };
-    if (editStatus === "Completed" && !task.completion_date) {
+    if (aggregateStatus === "Completed" && !task.completion_date) {
       data.completion_date = today;
     }
     updateMutation.mutate(data);
@@ -586,35 +720,18 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
                 </div>
               )}
 
-              {/* Assigned firms/contacts */}
+              {/* Assigned firms/contacts with individual statuses */}
               {assignedFirmsContacts.length > 0 && (
                 <div>
                   <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Assigned To</p>
                   <div className="space-y-2">
                     {assignedFirmsContacts.map((entry, i) => (
-                      <div key={i} className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3 space-y-1.5">
-                        <button
-                          type="button"
-                          onClick={() => onFirmClick && onFirmClick(allFirms.find(f => f.id === entry.firm_id))}
-                          className="flex items-center gap-1.5 text-xs font-semibold text-indigo-700 hover:text-indigo-900 transition-colors"
-                        >
-                          <Building2 className="w-3.5 h-3.5" /> {entry.firm_name}
-                        </button>
-                        {entry.contacts?.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5">
-                            {entry.contacts.map(c => (
-                              <button
-                                key={c.contact_id}
-                                type="button"
-                                onClick={() => onContactClick && onContactClick(allContacts.find(x => x.id === c.contact_id))}
-                                className="inline-flex items-center gap-1 text-[10px] bg-white text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-full hover:bg-indigo-50 transition-colors"
-                              >
-                                <User className="w-2.5 h-2.5" /> {c.contact_name}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                      <AssignmentCard
+                        key={i}
+                        entry={entry}
+                        allContacts={allContacts}
+                        onContactClick={onContactClick}
+                      />
                     ))}
                   </div>
                 </div>
@@ -693,9 +810,17 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
 
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium text-gray-700 flex items-center gap-1">
-                  <User className="w-3 h-3 text-indigo-500" /> Assigned To (firms & contacts)
+                  <User className="w-3 h-3 text-indigo-500" /> Assignees & Status
                 </Label>
                 <AssigneeFirmsEditor value={editAssignedFirms} onChange={setEditAssignedFirms} allFirms={allFirms} allContacts={allContacts} />
+                <div className="pt-2">
+                  <Label className="text-xs font-medium text-gray-700 mb-2 block">Individual Status Updates</Label>
+                  <AssigneeStatusEditor
+                    assignedFirmsContacts={editAssignedFirms}
+                    onChange={setEditAssignedFirms}
+                    allContacts={allContacts}
+                  />
+                </div>
               </div>
 
               <div className="space-y-1">

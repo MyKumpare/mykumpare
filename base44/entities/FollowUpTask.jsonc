@@ -64,6 +64,60 @@
         }
       }
     },
+    "assignments": {
+      "type": "array",
+      "description": "Individual assignments for each contact with their own status and notes",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique ID for this assignment"
+          },
+          "contact_id": {
+            "type": "string",
+            "description": "ID of the assigned contact"
+          },
+          "contact_name": {
+            "type": "string",
+            "description": "Name of the assigned contact"
+          },
+          "firm_id": {
+            "type": "string",
+            "description": "ID of the contact's firm"
+          },
+          "firm_name": {
+            "type": "string",
+            "description": "Name of the contact's firm"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "Not Started",
+              "In-process",
+              "Completed",
+              "Cancelled"
+            ],
+            "default": "Not Started",
+            "description": "This contact's status for the task"
+          },
+          "status_date": {
+            "type": "string",
+            "format": "date",
+            "description": "Date when this contact's status was last changed"
+          },
+          "notes": {
+            "type": "string",
+            "description": "Notes from this contact (rich text HTML)"
+          }
+        },
+        "required": [
+          "contact_id",
+          "contact_name",
+          "status"
+        ]
+      }
+    },
     "assigned_to_contact_id": {
       "type": "string",
       "description": "Primary assignee contact ID (denormalized for quick filtering)"
@@ -89,21 +143,21 @@
         "Cancelled"
       ],
       "default": "Not Started",
-      "description": "Current status of the task"
+      "description": "Aggregate status of the task (computed from assignments)"
     },
     "status_date": {
       "type": "string",
       "format": "date",
-      "description": "Date when the status was last changed (auto-set on status change)"
+      "description": "Date when the aggregate status was last changed"
     },
     "completion_date": {
       "type": "string",
       "format": "date",
-      "description": "Date the task was completed"
+      "description": "Date the task was completed (all assignments completed)"
     },
     "notes": {
       "type": "string",
-      "description": "Notes on the task (rich text HTML)"
+      "description": "Overall notes on the task (rich text HTML)"
     },
     "parent_task_id": {
       "type": "string",

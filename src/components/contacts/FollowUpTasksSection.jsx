@@ -180,6 +180,23 @@ function NewTasksForm({ contactId, contactName, contactFirmId, contactFirmName, 
     setSaving(true);
     for (const t of valid) {
       const afc = t.assigned_firms_contacts || [];
+      // Initialize assignments array with status for each contact
+      const assignments = [];
+      afc.forEach(entry => {
+        (entry.contacts || []).forEach(c => {
+          assignments.push({
+            id: crypto.randomUUID(),
+            contact_id: c.contact_id,
+            contact_name: c.contact_name,
+            firm_id: entry.firm_id,
+            firm_name: entry.firm_name,
+            status: t.status || "Not Started",
+            status_date: today,
+            notes: "",
+          });
+        });
+      });
+      
       // Derive primary assignee for quick-filter fields
       let primaryContactId, primaryContactName, primaryFirmId, primaryFirmName;
       for (const entry of afc) {
@@ -201,6 +218,7 @@ function NewTasksForm({ contactId, contactName, contactFirmId, contactFirmName, 
         status: t.status || "Not Started",
         status_date: t.status_date || today,
         assigned_firms_contacts: afc.length ? afc : undefined,
+        assignments: assignments.length ? assignments : undefined,
         assigned_to_contact_id: primaryContactId || undefined,
         assigned_to_contact_name: primaryContactName || undefined,
         assigned_to_firm_id: primaryFirmId || undefined,
