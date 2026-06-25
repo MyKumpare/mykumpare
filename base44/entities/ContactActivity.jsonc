@@ -58,6 +58,34 @@
           }
         }
       }
+    },
+    "attachments": {
+      "type": "array",
+      "description": "Files attached to this activity",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name for the file"
+          },
+          "file_url": {
+            "type": "string",
+            "description": "URL of the uploaded file"
+          },
+          "file_type": {
+            "type": "string",
+            "description": "MIME type or extension"
+          },
+          "uploaded_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
     }
   },
   "required": [
