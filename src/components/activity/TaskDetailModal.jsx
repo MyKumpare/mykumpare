@@ -411,6 +411,19 @@ function AssigneeStatusEditor({ assignedFirmsContacts, onChange, allContacts }) 
     }));
   };
 
+  const handleNotesChange = (firmId, contactId, newNotes) => {
+    onChange(assignedFirmsContacts.map(entry => {
+      if (entry.firm_id !== firmId) return entry;
+      return {
+        ...entry,
+        contacts: (entry.contacts || []).map(c => {
+          if (c.contact_id !== contactId) return c;
+          return { ...c, notes: newNotes };
+        }),
+      };
+    }));
+  };
+
   return (
     <div className="space-y-3">
       {assignedFirmsContacts.map((entry, i) => (
@@ -427,22 +440,33 @@ function AssigneeStatusEditor({ assignedFirmsContacts, onChange, allContacts }) 
                 const contact = allContacts.find(x => x.id === c.contact_id);
 
                 return (
-                  <div key={c.contact_id} className="flex items-center gap-2 p-2 rounded-lg bg-white border border-gray-100">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${s.bg}`}>
-                      <StatusIcon className={`w-3 h-3 ${s.color}`} />
+                  <div key={c.contact_id} className="rounded-lg bg-white border border-gray-100 p-2.5 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${s.bg}`}>
+                        <StatusIcon className={`w-3 h-3 ${s.color}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-700 truncate">{c.contact_name}</p>
+                        {contact?.title && <p className="text-[10px] text-gray-400 truncate">{contact.title}</p>}
+                      </div>
+                      <Select value={contactStatus} onValueChange={(v) => handleStatusChange(entry.firm_id, c.contact_id, v)}>
+                        <SelectTrigger className="h-7 text-xs w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TASK_STATUSES.map(st => <SelectItem key={st} value={st}>{st}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-gray-700 truncate">{c.contact_name}</p>
-                      {contact?.title && <p className="text-[10px] text-gray-400 truncate">{contact.title}</p>}
+                    <div>
+                      <textarea
+                        value={c.notes || ""}
+                        onChange={(e) => handleNotesChange(entry.firm_id, c.contact_id, e.target.value)}
+                        placeholder="Add notes for this assignee..."
+                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-indigo-300 bg-gray-50"
+                        rows={2}
+                      />
                     </div>
-                    <Select value={contactStatus} onValueChange={(v) => handleStatusChange(entry.firm_id, c.contact_id, v)}>
-                      <SelectTrigger className="h-7 text-xs w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {TASK_STATUSES.map(st => <SelectItem key={st} value={st}>{st}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
                   </div>
                 );
               })}
