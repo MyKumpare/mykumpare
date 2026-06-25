@@ -37,6 +37,9 @@ function computeAggregateStatus(assignedFirmsContacts) {
   
   if (allStatuses.length === 0) return "Not Started";
   
+  // If all are Not Started, task is Not Started
+  if (allStatuses.every(s => s === "Not Started")) return "Not Started";
+  
   // If all are Completed, task is Completed
   if (allStatuses.every(s => s === "Completed")) return "Completed";
   
