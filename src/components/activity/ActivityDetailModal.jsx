@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { X, ClipboardList, Calendar, Tag, Building2, User, FileText, Trash2, ExternalLink, Pencil, Plus, ChevronDown, ChevronUp, UserPlus, ChevronRight } from "lucide-react";
+import TaskAssigneeEditor from "@/components/activity/TaskAssigneeEditor";
 import { format } from "date-fns";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
@@ -293,6 +294,8 @@ export default function ActivityDetailModal({ open, activity, onClose, onOpenCon
   const [taskDesc, setTaskDesc] = useState("");
   const [taskDueDate, setTaskDueDate] = useState(new Date().toISOString().split("T")[0]);
   const [taskStatus, setTaskStatus] = useState("Not Started");
+  const [taskAssignedFirms, setTaskAssignedFirms] = useState([]);
+  const [savingTask, setSavingTask] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
 
   useEffect(() => {
@@ -310,6 +313,7 @@ export default function ActivityDetailModal({ open, activity, onClose, onOpenCon
       setTaskDesc("");
       setTaskDueDate(new Date().toISOString().split("T")[0]);
       setTaskStatus("Not Started");
+      setTaskAssignedFirms([]);
     }
   }, [activity]);
 
@@ -351,6 +355,50 @@ export default function ActivityDetailModal({ open, activity, onClose, onOpenCon
     queryFn: () => base44.entities.FollowUpTask.filter({ activity_id: activity.id }),
     enabled: open && !!activity?.id,
   });
+
+  const handleSaveTask = async () => {
+    if (!taskDesc || taskDesc === "<p><br></p>") return;
+    setSavingTask(true);
+    const originatorContact = contacts.find(c => c.id === activity.contact_id);
+    const originatorFirmId = (originatorContact?.firm_ids || [])[0];
+    const originatorFirm = originatorFirmId ? firms.find(f => f.id === originatorFirmId) : null;
+    let primaryContactId, primaryContactName, primaryFirmId, primaryFirmName;
+    for (const entry of taskAssignedFirms) {
+      if (entry.contacts?.length) {
+        primaryContactId = entry.contacts[0].contact_id;
+        primaryContactName = entry.contacts[0].contact_name;
+        primaryFirmId = entry.firm_id;
+        primaryFirmName = entry.firm_name;
+        break;
+      }
+    }
+    await base44.entities.FollowUpTask.create({
+      originator_contact_id: activity.contact_id,
+      originator_contact_name: originatorContact ? [originatorContact.first_name, originatorContact.last_name].filter(Boolean).join(" ") : "",
+      originator_firm_id: originatorFirmId || undefined,
+      originator_firm_name: originatorFirm?.name || undefined,
+      activity_id: activity.id,
+      activity_label: `${activity.activity_type}${activity.subject ? ` – ${activity.subject}` : ""} (${fmt(activity.activity_date)})`,
+      due_date: taskDueDate,
+      task_description: taskDesc,
+      status: taskStatus,
+      status_date: new Date().toISOString().split("T")[0],
+      assigned_firms_contacts: taskAssignedFirms.length ? taskAssignedFirms : undefined,
+      assigned_to_contact_id: primaryContactId || undefined,
+      assigned_to_contact_name: primaryContactName || undefined,
+      assigned_to_firm_id: primaryFirmId || undefined,
+      assigned_to_firm_name: primaryFirmName || undefined,
+    });
+    queryClient.invalidateQueries({ queryKey: ["follow_up_tasks"] });
+    queryClient.invalidateQueries({ queryKey: ["all_tasks_for_firm"] });
+    queryClient.invalidateQueries({ queryKey: ["tasks_for_activity", activity.id] });
+    setAddTask(false);
+    setTaskDesc("");
+    setTaskDueDate(new Date().toISOString().split("T")[0]);
+    setTaskStatus("Not Started");
+    setTaskAssignedFirms([]);
+    setSavingTask(false);
+  };
 
   if (!open || !activity) return null;
 
@@ -670,6 +718,65 @@ export default function ActivityDetailModal({ open, activity, onClose, onOpenCon
                           )}
                         </button>
                       ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Add follow-up task (view mode) */}
+                {!addTask ? (
+                  <button type="button" onClick={() => setAddTask(true)}
+                    className="w-full flex items-center gap-1.5 px-2.5 py-2 rounded-lg border border-dashed border-indigo-300 text-xs text-indigo-600 hover:bg-indigo-50 transition-colors">
+                    <ClipboardList className="w-3.5 h-3.5" /> Add a follow-up task
+                  </button>
+                ) : (
+                  <div className="rounded-lg border border-indigo-200 bg-white p-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-indigo-700 flex items-center gap-1">
+                        <ClipboardList className="w-3 h-3" /> Follow-up Task
+                      </span>
+                      <button type="button" onClick={() => setAddTask(false)}>
+                        <X className="w-3 h-3 text-gray-400 hover:text-red-500" />
+                      </button>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs font-medium text-gray-700">Task Description *</Label>
+                      <div className="quill-sm border border-gray-200 rounded-lg overflow-hidden bg-white">
+                        <ReactQuill theme="snow" value={taskDesc} onChange={setTaskDesc}
+                          modules={QUILL_MODULES} placeholder="Describe the task..." style={{ minHeight: 70 }} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-gray-700">Due Date</Label>
+                        <Input type="date" value={taskDueDate} onChange={e => setTaskDueDate(e.target.value)} className="h-8 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-gray-700">Status</Label>
+                        <Select value={taskStatus} onValueChange={setTaskStatus}>
+                          <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                          <SelectContent>{TASK_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-gray-700 flex items-center gap-1">
+                        <User className="w-3 h-3 text-indigo-500" /> Assign To (firms & contacts)
+                      </Label>
+                      <TaskAssigneeEditor
+                        value={taskAssignedFirms}
+                        onChange={setTaskAssignedFirms}
+                        allFirms={firms}
+                        allContacts={contacts}
+                        originatorFirmId={(contacts.find(c => c.id === activity.contact_id)?.firm_ids || [])[0]}
+                        originatorFirmName={firms.find(f => f.id === (contacts.find(c => c.id === activity.contact_id)?.firm_ids || [])[0])?.name}
+                      />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={() => setAddTask(false)}>Cancel</Button>
+                      <Button type="button" size="sm" className="h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
+                        onClick={handleSaveTask} disabled={savingTask || !taskDesc || taskDesc === "<p><br></p>"}>
+                        {savingTask ? "Saving..." : "Save Task"}
+                      </Button>
                     </div>
                   </div>
                 )}
