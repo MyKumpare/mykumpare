@@ -49,8 +49,8 @@ function levenshteinDistance(s1, s2) {
   return dp[m][n];
 }
 
-// Subject picker with search-as-you-type and add-new functionality
-export default function SubjectPicker({ value = "", onChange, placeholder = "Select subject..." }) {
+// Activity type picker with search-as-you-type and add-new functionality
+export default function SubjectPicker({ value = "", onChange, placeholder = "Select activity type..." }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [addingNew, setAddingNew] = useState(false);
@@ -59,9 +59,9 @@ export default function SubjectPicker({ value = "", onChange, placeholder = "Sel
   const [similarSubjects, setSimilarSubjects] = useState([]);
   const ref = useRef(null);
 
-  // Fetch all unique subjects from ContactActivity entities
+  // Fetch all unique activity types from ContactActivity entities
   const { data: allSubjects = [] } = useQuery({
-    queryKey: ["all_activity_subjects"],
+    queryKey: ["all_activity_types"],
     queryFn: async () => {
       const activities = await base44.entities.ContactActivity.list();
       const subjects = activities
@@ -86,14 +86,14 @@ export default function SubjectPicker({ value = "", onChange, placeholder = "Sel
     return allSubjects.filter(s => s.toLowerCase().includes(search.toLowerCase()));
   }, [allSubjects, search]);
 
-  const handleSelectSubject = (subject) => {
-    onChange(subject);
+  const handleSelectSubject = (activityType) => {
+    onChange(activityType);
     setOpen(false);
     setSearch("");
   };
 
-  const checkSimilarity = (subject) => {
-    const similar = allSubjects.filter(existing => areSimilar(subject, existing));
+  const checkSimilarity = (activityType) => {
+    const similar = allSubjects.filter(existing => areSimilar(activityType, existing));
     return similar;
   };
 
@@ -159,7 +159,7 @@ export default function SubjectPicker({ value = "", onChange, placeholder = "Sel
 
   return (
     <div className="relative" ref={ref}>
-      {/* Selected subject display */}
+      {/* Selected activity type display */}
       {value && (
         <div className="flex items-center gap-2 mb-1">
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 border border-indigo-200 rounded-lg text-xs font-medium text-indigo-700">
@@ -180,7 +180,7 @@ export default function SubjectPicker({ value = "", onChange, placeholder = "Sel
         }`}
       >
         <span className={`truncate ${value ? "text-gray-400" : ""}`}>
-          {value ? "Change subject..." : placeholder}
+          {value ? "Change activity type..." : placeholder}
         </span>
         <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
@@ -194,13 +194,13 @@ export default function SubjectPicker({ value = "", onChange, placeholder = "Sel
                 <button type="button" onClick={() => setAddingNew(false)} className="text-gray-400 hover:text-gray-600">
                   <ChevronDown className="w-3 h-3 rotate-90" />
                 </button>
-                <p className="text-xs font-semibold text-gray-700">Add New Subject</p>
+                <p className="text-xs font-semibold text-gray-700">Add New Activity Type</p>
               </div>
               <Input
                 autoFocus
                 value={newSubject}
                 onChange={e => setNewSubject(e.target.value)}
-                placeholder="Enter subject..."
+                placeholder="Enter activity type..."
                 className="h-8 text-sm"
                 onKeyDown={e => {
                   if (e.key === "Enter") handleAddNewAttempt();
@@ -221,7 +221,7 @@ export default function SubjectPicker({ value = "", onChange, placeholder = "Sel
                   disabled={!newSubject.trim()}
                   className="px-3 py-1.5 rounded-lg bg-indigo-600 text-xs text-white hover:bg-indigo-700 disabled:opacity-50"
                 >
-                  Add Subject
+                  Add Type
                 </button>
               </div>
             </div>
@@ -229,7 +229,7 @@ export default function SubjectPicker({ value = "", onChange, placeholder = "Sel
             <div className="p-4 space-y-3">
               <div className="flex items-center gap-2 mb-2">
                 <AlertTriangle className="w-5 h-5 text-amber-500" />
-                <h4 className="text-sm font-semibold text-gray-800">Similar Subjects Found</h4>
+                <h4 className="text-sm font-semibold text-gray-800">Similar Activity Types Found</h4>
               </div>
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {similarSubjects.map((subject, idx) => (
@@ -249,7 +249,7 @@ export default function SubjectPicker({ value = "", onChange, placeholder = "Sel
                 ))}
               </div>
               <p className="text-xs text-gray-600">
-                Did you mean one of the above? Or you can add "<span className="font-semibold">{newSubject}</span>" as a new subject.
+                Did you mean one of the above? Or you can add "<span className="font-semibold">{newSubject}</span>" as a new activity type.
               </p>
               <div className="flex gap-2 justify-end pt-2 border-t border-gray-100">
                 <Button
@@ -280,7 +280,7 @@ export default function SubjectPicker({ value = "", onChange, placeholder = "Sel
                   type="text"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  placeholder="Search subjects..."
+                  placeholder="Search activity types..."
                   className="w-full h-7 px-2.5 text-xs rounded-lg border border-gray-200 outline-none focus:border-indigo-400 bg-gray-50"
                 />
               </div>
@@ -290,7 +290,7 @@ export default function SubjectPicker({ value = "", onChange, placeholder = "Sel
                 {filteredSubjects.length === 0 ? (
                   <div className="px-3 py-3 space-y-1">
                     <p className="text-xs text-gray-400 italic text-center">
-                      {search ? "No subjects found" : "No subjects yet"}
+                      {search ? "No activity types found" : "No activity types yet"}
                     </p>
                     <button
                       type="button"
@@ -335,7 +335,7 @@ export default function SubjectPicker({ value = "", onChange, placeholder = "Sel
                         onClick={() => setAddingNew(true)}
                         className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs text-indigo-600 hover:bg-indigo-50 transition-colors"
                       >
-                        <Plus className="w-3 h-3" /> Add new subject
+                        <Plus className="w-3 h-3" /> Add new activity type
                       </button>
                     </div>
                   </>
