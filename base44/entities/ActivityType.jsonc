@@ -1,0 +1,13 @@
+{
+  "name": "ActivityType",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the activity type"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

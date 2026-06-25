@@ -59,17 +59,15 @@ export default function ActivityTypePicker({ value = "", onChange, placeholder =
   const [similarTypes, setSimilarTypes] = useState([]);
   const ref = useRef(null);
 
-  // Fetch all unique activity types from ContactActivity entities
-  const { data: allTypes = [] } = useQuery({
+  // Fetch all activity types from the ActivityType entity
+  const { data: allTypes = [], refetch } = useQuery({
     queryKey: ["all_activity_types"],
     queryFn: async () => {
-      const activities = await base44.entities.ContactActivity.list();
-      const types = activities
-        .map(a => a.activity_type)
+      const types = await base44.entities.ActivityType.list();
+      return types
+        .map(t => t.name)
         .filter(Boolean)
-        .filter((v, i, a) => a.indexOf(v) === i) // unique
         .sort((a, b) => a.localeCompare(b));
-      return types;
     },
     enabled: open,
   });
@@ -124,8 +122,17 @@ export default function ActivityTypePicker({ value = "", onChange, placeholder =
     }
   };
 
-  const finalizeAddNew = () => {
-    onChange(newType.trim());
+  const finalizeAddNew = async () => {
+    const trimmedType = newType.trim();
+    // Save to ActivityType entity
+    try {
+      await base44.entities.ActivityType.create({ name: trimmedType });
+      // Refetch to update the list
+      refetch();
+    } catch (error) {
+      console.error("Failed to save activity type:", error);
+    }
+    onChange(trimmedType);
     setAddingNew(false);
     setNewType("");
     setSearch("");
