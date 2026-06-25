@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import {
@@ -33,6 +33,10 @@ function stripHtml(html) {
 }
 
 export default function FollowUpTaskPickerModal({ open, onClose, onAddTask, onTaskClick }) {
+  const handleTaskClick = (task) => {
+    setPreviousViewMode(viewMode);
+    onTaskClick(task);
+  };
   const [search, setSearch] = useState("");
   const [collapsedTypes, setCollapsedTypes] = useState({});
   const [collapsedFirms, setCollapsedFirms] = useState({});
@@ -45,6 +49,7 @@ export default function FollowUpTaskPickerModal({ open, onClose, onAddTask, onTa
   const [sortOrder, setSortOrder] = useState("desc");
   const [viewMode, setViewMode] = useState("list");
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [previousViewMode, setPreviousViewMode] = useState("list");
 
   const toggleType    = (k) => setCollapsedTypes(p    => ({ ...p, [k]: !p[k] }));
   const toggleFirm    = (k) => setCollapsedFirms(p    => ({ ...p, [k]: !p[k] }));
@@ -55,6 +60,13 @@ export default function FollowUpTaskPickerModal({ open, onClose, onAddTask, onTa
     queryFn: () => base44.entities.FollowUpTask.list("-due_date"),
     enabled: open,
   });
+
+  // Restore calendar view when modal reopens after closing task detail
+  React.useEffect(() => {
+    if (open && previousViewMode === "calendar") {
+      setViewMode("calendar");
+    }
+  }, [open]);
 
   const { data: firms = [] } = useQuery({
     queryKey: ["firms"],
@@ -343,7 +355,7 @@ export default function FollowUpTaskPickerModal({ open, onClose, onAddTask, onTa
                         return (
                           <button
                             key={task.id}
-                            onClick={() => { onTaskClick(task); onClose(); }}
+                            onClick={() => { handleTaskClick(task); onClose(); }}
                             className={`w-full text-left text-[9px] px-1 py-0.5 mb-0.5 rounded truncate ${s.bg} ${s.color} hover:opacity-80`}
                           >
                             {stripHtml(task.task_description).slice(0, 20)}...
@@ -440,7 +452,7 @@ export default function FollowUpTaskPickerModal({ open, onClose, onAddTask, onTa
                                                       <button
                                                         key={task.id}
                                                         type="button"
-                                                        onClick={() => { onTaskClick(task); onClose(); }}
+                                                        onClick={() => { handleTaskClick(task); onClose(); }}
                                                         className={`w-full text-left flex items-start gap-2.5 px-3 py-2 rounded-xl border hover:bg-orange-50 transition-all group ${s.border} bg-white shadow-sm`}
                                                       >
                                                         <div className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${s.bg}`}>
