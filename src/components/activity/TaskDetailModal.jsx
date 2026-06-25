@@ -742,10 +742,12 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
       setEditDueDate(task.due_date || "");
       setEditDesc(task.task_description || "");
       setEditNotes(task.notes || "");
-      setEditAssignments(task.assignments || []);
+      // Initialize assignments from task.assignments array
+      const assignmentsData = task.assignments || [];
+      setEditAssignments(assignmentsData);
       setEditAttachments(task.attachments || []);
     }
-  }, [editMode, task?.id, task]);
+  }, [editMode, task]);
 
   // Linked activity modal state
   const [linkedActivity, setLinkedActivity] = useState(null);
