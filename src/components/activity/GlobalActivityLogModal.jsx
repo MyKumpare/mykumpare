@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SubjectPicker from "./SubjectPicker";
+import ActivityTypePicker from "./ActivityTypePicker";
 import {
   Phone, Mail, Users, FileText, MoreHorizontal, ChevronDown, ChevronUp,
   Building2, User, Clock, AlertCircle, CheckCircle2, XCircle, Calendar,
@@ -25,7 +26,6 @@ const QUILL_MODULES = {
   ],
 };
 
-const ACTIVITY_TYPES = ["Call", "Email", "Meeting", "Note", "Other"];
 const TASK_STATUSES = ["Not Started", "In-process", "Completed", "Cancelled"];
 
 const FIRM_TYPES_ORDER = [
@@ -724,10 +724,11 @@ function ActivityLogForm({ onSaved, onCancel, allFirms, allContacts, onFirmClick
       <div className="grid grid-cols-2 gap-2">
         <div className="space-y-1">
           <Label className="text-xs font-medium text-gray-700">Type</Label>
-          <Select value={activityType} onValueChange={setActivityType}>
-            <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-            <SelectContent>{ACTIVITY_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-          </Select>
+          <ActivityTypePicker
+            value={activityType}
+            onChange={setActivityType}
+            placeholder="Select activity type..."
+          />
         </div>
         <div className="space-y-1">
           <Label className="text-xs font-medium text-gray-700">Date</Label>
