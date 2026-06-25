@@ -579,11 +579,21 @@ export default function ActivityDetailModal({ open, activity, onClose, onOpenCon
   }, [activity]);
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.ContactActivity.delete(id),
+    mutationFn: async (id) => {
+      // First, delete all associated follow-up tasks
+      const tasks = await base44.entities.FollowUpTask.filter({ activity_id: id });
+      if (tasks && tasks.length > 0) {
+        await Promise.all(tasks.map(task => base44.entities.FollowUpTask.delete(task.id)));
+      }
+      // Then delete the activity
+      await base44.entities.ContactActivity.delete(id);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contact_activities"] });
       queryClient.invalidateQueries({ queryKey: ["all_activities_for_firm"] });
       queryClient.invalidateQueries({ queryKey: ["all_activities"] });
+      queryClient.invalidateQueries({ queryKey: ["follow_up_tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["all_tasks_for_firm"] });
       onClose();
       if (onDeleted) onDeleted();
     },
