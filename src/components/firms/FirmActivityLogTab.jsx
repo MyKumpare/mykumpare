@@ -12,6 +12,8 @@ import {
   Clock, AlertCircle, CheckCircle2, XCircle, Calendar, Paperclip,
   Link2, Plus, X, ClipboardList, Trash2, UserPlus, Upload, Edit2, Check
 } from "lucide-react";
+import TaskAssigneeEditor from "@/components/activity/TaskAssigneeEditor";
+import TaskDetailModal from "@/components/activity/TaskDetailModal";
 import { format } from "date-fns";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
@@ -132,60 +134,7 @@ function ContactPickerModal({ firmId, firmName, firmContacts, onPick, onClose })
   );
 }
 
-// ── Assign-to modal (shared) ──────────────────────────────────────────────────
-function AssignModal({ allFirms, allContacts, onAssign, onClose }) {
-  const [selFirmId, setSelFirmId] = useState("");
-  const firmContacts = useMemo(
-    () => allContacts.filter(c => !c.deleted_at && (c.firm_ids || []).includes(selFirmId)),
-    [allContacts, selFirmId]
-  );
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-bold text-gray-800">Assign Task</h3>
-          <button onClick={onClose}><X className="w-4 h-4 text-gray-400" /></button>
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs font-medium text-gray-700">Select Firm</Label>
-          <Select value={selFirmId} onValueChange={setSelFirmId}>
-            <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Choose a firm..." /></SelectTrigger>
-            <SelectContent>
-              {allFirms.filter(f => !f.deleted_at).map(f => (
-                <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        {selFirmId && (
-          <div className="space-y-1">
-            <Label className="text-xs font-medium text-gray-700">Select Contact</Label>
-            {firmContacts.length === 0 ? (
-              <p className="text-xs text-gray-400 italic py-2 text-center">No contacts found for this firm</p>
-            ) : (
-              <div className="space-y-1 max-h-52 overflow-y-auto">
-                {firmContacts.map(c => (
-                  <button key={c.id} type="button"
-                    onClick={() => onAssign(c, allFirms.find(f => f.id === selFirmId))}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-indigo-50 text-left transition-colors">
-                    <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-700">
-                      {(c.first_name || "")[0]}{(c.last_name || "")[0]}
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-gray-800">{[c.first_name, c.last_name].filter(Boolean).join(" ")}</p>
-                      {c.title && <p className="text-[10px] text-gray-400">{c.title}</p>}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+// (AssignModal removed — replaced by TaskAssigneeEditor)
 
 // ── Searchable firm picker (same as ContactActivitiesTab) ─────────────────────
 function FirmPickerDropdown({ availableFirms, onSelect }) {
@@ -432,116 +381,7 @@ function AttachmentsManager({ attachments = [], onChange }) {
   );
 }
 
-// ── Single task entry form (mirrors TaskEntryForm from FollowUpTasksSection) ──
-function TaskEntryForm({ idx, task, onChange, onRemove, showRemove, allFirms, allContacts, allActivities }) {
-  const [assignOpen, setAssignOpen] = useState(false);
-
-  return (
-    <div className="rounded-xl border border-gray-200 bg-white p-3 space-y-3 relative">
-      {showRemove && (
-        <button type="button" onClick={() => onRemove(idx)} className="absolute top-2.5 right-2.5 p-0.5 text-gray-300 hover:text-red-500 transition-colors">
-          <X className="w-3.5 h-3.5" />
-        </button>
-      )}
-      <div className="flex items-center gap-2">
-        <ClipboardList className="w-3.5 h-3.5 text-indigo-400" />
-        <span className="text-xs font-semibold text-gray-700">Task {idx + 1}</span>
-      </div>
-
-      <div className="space-y-1">
-        <Label className="text-xs font-medium text-gray-700">Task Description *</Label>
-        <div className="quill-sm border border-gray-200 rounded-lg overflow-hidden bg-white">
-          <ReactQuill theme="snow" value={task.task_description}
-            onChange={(val) => onChange(idx, { ...task, task_description: val })}
-            modules={QUILL_MODULES} placeholder="Describe the task..." style={{ minHeight: 80 }} />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2">
-        <div className="space-y-1">
-          <Label className="text-xs font-medium text-gray-700">Due Date *</Label>
-          <Input type="date" value={task.due_date} onChange={e => onChange(idx, { ...task, due_date: e.target.value })} className="h-8 text-sm" />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs font-medium text-gray-700">Status</Label>
-          <Select value={task.status} onValueChange={(v) => onChange(idx, { ...task, status: v })}>
-            <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {TASK_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="space-y-1">
-        <Label className="text-xs font-medium text-gray-700">Assign To (optional)</Label>
-        {task.assigned_to_contact_name ? (
-          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200 text-xs">
-            <User className="w-3.5 h-3.5 text-indigo-500" />
-            <span className="font-medium text-indigo-700">{task.assigned_to_contact_name}</span>
-            {task.assigned_to_firm_name && <span className="text-indigo-400">· {task.assigned_to_firm_name}</span>}
-            <button type="button" onClick={() => onChange(idx, { ...task, assigned_to_contact_id: "", assigned_to_contact_name: "", assigned_to_firm_id: "", assigned_to_firm_name: "" })} className="ml-auto text-indigo-300 hover:text-red-500">
-              <X className="w-3 h-3" />
-            </button>
-          </div>
-        ) : (
-          <button type="button" onClick={() => setAssignOpen(true)}
-            className="w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-dashed border-gray-300 text-xs text-gray-500 hover:border-indigo-400 hover:text-indigo-600 transition-colors">
-            <User className="w-3.5 h-3.5" /> Assign to a contact...
-          </button>
-        )}
-      </div>
-
-      {allActivities.length > 0 && (
-        <div className="space-y-1">
-          <Label className="text-xs font-medium text-gray-700">Link to Activity (optional)</Label>
-          {task.activity_id ? (
-            <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200 text-xs">
-              <Link2 className="w-3.5 h-3.5 text-indigo-500" />
-              <span className="flex-1 truncate text-indigo-700">{task.activity_label}</span>
-              <button type="button" onClick={() => onChange(idx, { ...task, activity_id: "", activity_label: "" })} className="text-indigo-300 hover:text-red-500">
-                <X className="w-3 h-3" />
-              </button>
-            </div>
-          ) : (
-            <Select value={task.activity_id || ""} onValueChange={(val) => {
-              const act = allActivities.find(a => a.id === val);
-              if (act) {
-                const lbl = `${act.activity_type}${act.subject ? ` – ${act.subject}` : ""} (${act.activity_date ? fmt(act.activity_date) : "—"})`;
-                onChange(idx, { ...task, activity_id: val, activity_label: lbl });
-              }
-            }}>
-              <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Link to an activity..." /></SelectTrigger>
-              <SelectContent>
-                {allActivities.map(a => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.activity_type}{a.subject ? ` – ${a.subject}` : ""} · {a.activity_date ? fmt(a.activity_date) : "—"}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
-      )}
-
-      <div className="space-y-1">
-        <Label className="text-xs font-medium text-gray-700 flex items-center gap-1">
-          <Paperclip className="w-3 h-3 text-gray-400" /> Attachments
-        </Label>
-        <AttachmentsManager attachments={task.attachments || []} onChange={(atts) => onChange(idx, { ...task, attachments: atts })} />
-      </div>
-
-      {assignOpen && (
-        <AssignModal allFirms={allFirms} allContacts={allContacts}
-          onAssign={(contact, firm) => {
-            onChange(idx, { ...task, assigned_to_contact_id: contact.id, assigned_to_contact_name: [contact.first_name, contact.last_name].filter(Boolean).join(" "), assigned_to_firm_id: firm?.id || "", assigned_to_firm_name: firm?.name || "" });
-            setAssignOpen(false);
-          }}
-          onClose={() => setAssignOpen(false)} />
-      )}
-    </div>
-  );
-}
+// (TaskEntryForm replaced by inline TaskEntryInner inside FirmTaskForm)
 
 // ── Activity form (full, mirrors ContactActivitiesTab's ActivityForm) ─────────
 function FirmActivityForm({ firmId, firmName, contact, allFirms, allContacts, onSaved, onCancel, onFirmClick, onContactClick }) {
@@ -565,10 +405,13 @@ function FirmActivityForm({ firmId, firmName, contact, allFirms, allContacts, on
       queryClient.invalidateQueries({ queryKey: ["all_activities_for_firm", firmId] });
       if (addTask && taskDesc && taskDesc !== "<p><br></p>") {
         const label = `${activityType} – ${fmt(activityDate)}`;
+        const today = new Date().toISOString().split("T")[0];
         await base44.entities.FollowUpTask.create({
           originator_contact_id: contactId, originator_contact_name: contactName,
+          originator_firm_id: firmId, originator_firm_name: firmName,
           activity_id: created.id, activity_label: label,
           due_date: taskDueDate, task_description: taskDesc, status: "Not Started",
+          status_date: today,
         });
         queryClient.invalidateQueries({ queryKey: ["follow_up_tasks", contactId] });
         queryClient.invalidateQueries({ queryKey: ["all_tasks_for_firm", firmId] });
@@ -654,15 +497,16 @@ function FirmActivityForm({ firmId, firmName, contact, allFirms, allContacts, on
   );
 }
 
-// ── Task form (full, mirrors NewTasksForm from FollowUpTasksSection) ──────────
+// ── Task form (uses TaskAssigneeEditor for multi-firm assignment) ─────────────
 function FirmTaskForm({ firmId, firmName, contact, allFirms, allContacts, allActivities, onSaved, onCancel }) {
   const queryClient = useQueryClient();
   const contactId = contact.id;
   const contactName = [contact.first_name, contact.last_name].filter(Boolean).join(" ");
+  const today = new Date().toISOString().split("T")[0];
 
   const emptyTask = () => ({
-    task_description: "", due_date: new Date().toISOString().split("T")[0], status: "Not Started",
-    assigned_to_contact_id: "", assigned_to_contact_name: "", assigned_to_firm_id: "", assigned_to_firm_name: "",
+    task_description: "", due_date: today, status: "Not Started", status_date: today,
+    assigned_firms_contacts: [],
     activity_id: "", activity_label: "", attachments: [],
   });
   const [tasks, setTasks] = useState([emptyTask()]);
@@ -676,14 +520,28 @@ function FirmTaskForm({ firmId, firmName, contact, allFirms, allContacts, allAct
     if (!valid.length) return;
     setSaving(true);
     for (const t of valid) {
+      const afc = t.assigned_firms_contacts || [];
+      let primaryContactId, primaryContactName, primaryFirmId, primaryFirmName;
+      for (const entry of afc) {
+        if (entry.contacts?.length) {
+          primaryContactId = entry.contacts[0].contact_id;
+          primaryContactName = entry.contacts[0].contact_name;
+          primaryFirmId = entry.firm_id;
+          primaryFirmName = entry.firm_name;
+          break;
+        }
+      }
       await base44.entities.FollowUpTask.create({
         originator_contact_id: contactId, originator_contact_name: contactName,
+        originator_firm_id: firmId, originator_firm_name: firmName,
         due_date: t.due_date, task_description: t.task_description,
         status: t.status || "Not Started",
-        assigned_to_contact_id: t.assigned_to_contact_id || undefined,
-        assigned_to_contact_name: t.assigned_to_contact_name || undefined,
-        assigned_to_firm_id: t.assigned_to_firm_id || undefined,
-        assigned_to_firm_name: t.assigned_to_firm_name || undefined,
+        status_date: t.status_date || today,
+        assigned_firms_contacts: afc.length ? afc : undefined,
+        assigned_to_contact_id: primaryContactId || undefined,
+        assigned_to_contact_name: primaryContactName || undefined,
+        assigned_to_firm_id: primaryFirmId || undefined,
+        assigned_to_firm_name: primaryFirmName || undefined,
         activity_id: t.activity_id || undefined, activity_label: t.activity_label || undefined,
         attachments: t.attachments?.length ? t.attachments : undefined,
       });
@@ -693,6 +551,73 @@ function FirmTaskForm({ firmId, firmName, contact, allFirms, allContacts, allAct
     setSaving(false);
     onSaved();
   };
+
+  // TaskEntryForm inline (with TaskAssigneeEditor)
+  const TaskEntryInner = ({ idx, task, onChange, onRemove, showRemove }) => (
+    <div className="rounded-xl border border-gray-200 bg-white p-3 space-y-3 relative">
+      {showRemove && (
+        <button type="button" onClick={() => onRemove(idx)} className="absolute top-2.5 right-2.5 p-0.5 text-gray-300 hover:text-red-500">
+          <X className="w-3.5 h-3.5" />
+        </button>
+      )}
+      <div className="flex items-center gap-2">
+        <ClipboardList className="w-3.5 h-3.5 text-indigo-400" />
+        <span className="text-xs font-semibold text-gray-700">Task {idx + 1}</span>
+      </div>
+      <div className="space-y-1">
+        <Label className="text-xs font-medium text-gray-700">Task Description *</Label>
+        <div className="quill-sm border border-gray-200 rounded-lg overflow-hidden bg-white">
+          <ReactQuill theme="snow" value={task.task_description}
+            onChange={(val) => onChange(idx, { ...task, task_description: val })}
+            modules={QUILL_MODULES} placeholder="Describe the task..." style={{ minHeight: 80 }} />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1">
+          <Label className="text-xs font-medium text-gray-700">Due Date *</Label>
+          <Input type="date" value={task.due_date} onChange={e => onChange(idx, { ...task, due_date: e.target.value })} className="h-8 text-sm" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs font-medium text-gray-700">Status</Label>
+          <Select value={task.status} onValueChange={(v) => onChange(idx, { ...task, status: v, status_date: today })}>
+            <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>{TASK_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-xs font-medium text-gray-700 flex items-center gap-1">
+          <User className="w-3 h-3 text-indigo-500" /> Assign To (firms & contacts)
+        </Label>
+        <TaskAssigneeEditor
+          value={task.assigned_firms_contacts || []}
+          onChange={(v) => onChange(idx, { ...task, assigned_firms_contacts: v })}
+          allFirms={allFirms} allContacts={allContacts}
+          originatorFirmId={firmId} originatorFirmName={firmName}
+        />
+      </div>
+      {allActivities.length > 0 && (
+        <div className="space-y-1">
+          <Label className="text-xs font-medium text-gray-700">Link to Activity (optional)</Label>
+          {task.activity_id ? (
+            <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200 text-xs">
+              <Link2 className="w-3.5 h-3.5 text-indigo-500" />
+              <span className="flex-1 truncate text-indigo-700">{task.activity_label}</span>
+              <button type="button" onClick={() => onChange(idx, { ...task, activity_id: "", activity_label: "" })} className="text-indigo-300 hover:text-red-500"><X className="w-3 h-3" /></button>
+            </div>
+          ) : (
+            <Select value={task.activity_id || ""} onValueChange={(val) => {
+              const act = allActivities.find(a => a.id === val);
+              if (act) onChange(idx, { ...task, activity_id: val, activity_label: `${act.activity_type}${act.subject ? ` – ${act.subject}` : ""} (${fmt(act.activity_date)})` });
+            }}>
+              <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Link to an activity..." /></SelectTrigger>
+              <SelectContent>{allActivities.map(a => <SelectItem key={a.id} value={a.id}>{a.activity_type}{a.subject ? ` – ${a.subject}` : ""} · {fmt(a.activity_date)}</SelectItem>)}</SelectContent>
+            </Select>
+          )}
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="rounded-xl border border-indigo-100 bg-indigo-50/30 p-3 space-y-3">
@@ -705,8 +630,7 @@ function FirmTaskForm({ firmId, firmName, contact, allFirms, allContacts, allAct
       </div>
       <div className="space-y-2">
         {tasks.map((task, idx) => (
-          <TaskEntryForm key={idx} idx={idx} task={task} onChange={handleChange} onRemove={handleRemove}
-            showRemove={tasks.length > 1} allFirms={allFirms} allContacts={allContacts} allActivities={allActivities} />
+          <TaskEntryInner key={idx} idx={idx} task={task} onChange={handleChange} onRemove={handleRemove} showRemove={tasks.length > 1} />
         ))}
       </div>
       <button type="button" onClick={() => setTasks(prev => [...prev, emptyTask()])}
@@ -786,15 +710,15 @@ function ActivityRow({ activity }) {
   );
 }
 
-// ── Expandable Task Row ───────────────────────────────────────────────────────
-function TaskRow({ task }) {
-  const [expanded, setExpanded] = useState(false);
+// ── Clickable Task Row (opens TaskDetailModal) ────────────────────────────────
+function TaskRow({ task, onOpenDetail }) {
   const s = STATUS_STYLES[task.status] || STATUS_STYLES["Not Started"];
   const StatusIcon = s.icon;
 
   return (
-    <div className={`rounded-lg border bg-white overflow-hidden ${s.border}`}>
-      <div className="flex items-start gap-2.5 px-3 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => setExpanded(e => !e)}>
+    <button type="button" onClick={() => onOpenDetail(task)}
+      className={`w-full rounded-lg border bg-white overflow-hidden text-left hover:shadow-sm transition-shadow ${s.border}`}>
+      <div className="flex items-start gap-2.5 px-3 py-2.5">
         <div className={`mt-0.5 w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${s.bg}`}>
           <StatusIcon className={`w-3.5 h-3.5 ${s.color}`} />
         </div>
@@ -802,6 +726,7 @@ function TaskRow({ task }) {
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${s.bg} ${s.color}`}>{task.status}</span>
             <span className="text-xs text-gray-500 flex items-center gap-1"><Calendar className="w-3 h-3" /> Due {fmt(task.due_date)}</span>
+            {task.status_date && <span className="text-[10px] text-gray-400">· {fmt(task.status_date)}</span>}
             {task.assigned_to_contact_name && (
               <span className="text-[10px] text-indigo-600 flex items-center gap-1 bg-indigo-50 px-1.5 py-0.5 rounded-full">
                 <User className="w-2.5 h-2.5" /> {task.assigned_to_contact_name}
@@ -817,59 +742,9 @@ function TaskRow({ task }) {
             <div className="text-xs text-gray-600 mt-1 line-clamp-2 quill-preview" dangerouslySetInnerHTML={{ __html: task.task_description }} />
           )}
         </div>
-        {expanded ? <ChevronUp className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 mt-0.5" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 mt-0.5" />}
+        <ChevronDown className="w-3.5 h-3.5 text-gray-300 flex-shrink-0 mt-0.5" />
       </div>
-      {expanded && (
-        <div className="px-3 pb-3 pt-2 border-t border-gray-100 space-y-3">
-          <div>
-            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Task Description</p>
-            <div className="text-sm text-gray-700 quill-preview" dangerouslySetInnerHTML={{ __html: task.task_description || "<em>—</em>" }} />
-          </div>
-          {task.notes && (
-            <div>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Notes</p>
-              <div className="text-sm text-gray-700 quill-preview" dangerouslySetInnerHTML={{ __html: task.notes }} />
-            </div>
-          )}
-          <div className="flex flex-wrap gap-3 text-xs text-gray-500">
-            {task.originator_contact_name && (
-              <span className="flex items-center gap-1">
-                <User className="w-3 h-3 text-amber-500" /> Requested by <span className="font-medium text-gray-700 ml-0.5">{task.originator_contact_name}</span>
-              </span>
-            )}
-            {task.assigned_to_contact_name && (
-              <span className="flex items-center gap-1">
-                <User className="w-3 h-3 text-blue-500" /> Assigned to <span className="font-medium text-gray-700 ml-0.5">{task.assigned_to_contact_name}</span>
-                {task.assigned_to_firm_name && <span>· {task.assigned_to_firm_name}</span>}
-              </span>
-            )}
-            {task.completion_date && (
-              <span className="flex items-center gap-1 text-green-600">
-                <CheckCircle2 className="w-3 h-3" /> Completed {fmt(task.completion_date)}
-              </span>
-            )}
-          </div>
-          {task.activity_label && (
-            <div className="flex items-center gap-1.5 text-xs text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-1 rounded-lg">
-              <Link2 className="w-3 h-3 flex-shrink-0" />
-              <span className="truncate">Linked to: {task.activity_label}</span>
-            </div>
-          )}
-          {task.attachments?.length > 0 && (
-            <div className="space-y-1">
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Attachments</p>
-              {task.attachments.map(att => (
-                <a key={att.id} href={att.file_url} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-xs text-indigo-600 hover:bg-indigo-50 transition-colors">
-                  <Paperclip className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                  <span className="truncate">{att.name}</span>
-                </a>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+    </button>
   );
 }
 
@@ -879,6 +754,7 @@ export default function FirmActivityLogTab({ firmId, firmName, onFirmClick, onCo
   // "idle" | "picking-for-activity" | "picking-for-task" | "activity-form" | "task-form"
   const [uiState, setUiState] = useState("idle");
   const [selectedContact, setSelectedContact] = useState(null);
+  const [detailTask, setDetailTask] = useState(null);
 
   const { data: allActivities = [], isLoading: loadingActivities } = useQuery({
     queryKey: ["all_activities_for_firm", firmId],
@@ -1012,9 +888,11 @@ export default function FirmActivityLogTab({ firmId, firmName, onFirmClick, onCo
         firmTasks.length === 0 ? (
           <div className="text-sm text-gray-400 italic py-6 text-center border border-dashed border-gray-200 rounded-xl">No follow-up tasks associated with this firm yet</div>
         ) : (
-          <div className="space-y-2">{firmTasks.map(t => <TaskRow key={t.id} task={t} />)}</div>
+          <div className="space-y-2">{firmTasks.map(t => <TaskRow key={t.id} task={t} onOpenDetail={setDetailTask} />)}</div>
         )
       )}
+
+      <TaskDetailModal open={!!detailTask} task={detailTask} onClose={() => setDetailTask(null)} />
     </div>
   );
 }

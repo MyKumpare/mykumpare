@@ -1120,6 +1120,8 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
               <ContactActivitiesTab
                 contactId={editingContact?.id}
                 contactName={[firstName, lastName].filter(Boolean).join(" ")}
+                contactFirmId={firmIds?.[0]}
+                contactFirmName={firmIds?.[0] ? firms?.find?.(f => f.id === firmIds[0])?.name : undefined}
               />
             </TabsContent>
           </Tabs>

@@ -10,6 +10,14 @@
       "type": "string",
       "description": "Full name of the originator (denormalized)"
     },
+    "originator_firm_id": {
+      "type": "string",
+      "description": "ID of the originator's firm"
+    },
+    "originator_firm_name": {
+      "type": "string",
+      "description": "Name of the originator's firm (denormalized)"
+    },
     "activity_id": {
       "type": "string",
       "description": "ID of the associated ContactActivity (optional)"
@@ -27,21 +35,50 @@
       "type": "string",
       "description": "Task description / memo (rich text HTML)"
     },
+    "assigned_firms_contacts": {
+      "type": "array",
+      "description": "Firms and contacts this task is assigned to (multi-firm/multi-contact)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "firm_id": {
+            "type": "string"
+          },
+          "firm_name": {
+            "type": "string"
+          },
+          "contacts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "contact_id": {
+                  "type": "string"
+                },
+                "contact_name": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "assigned_to_contact_id": {
       "type": "string",
-      "description": "ID of the contact this task is assigned to (optional)"
+      "description": "Primary assignee contact ID (denormalized for quick filtering)"
     },
     "assigned_to_contact_name": {
       "type": "string",
-      "description": "Full name of the assignee (denormalized)"
+      "description": "Primary assignee name (denormalized)"
     },
     "assigned_to_firm_id": {
       "type": "string",
-      "description": "ID of the firm of the assignee"
+      "description": "Primary assignee firm ID (denormalized for quick filtering)"
     },
     "assigned_to_firm_name": {
       "type": "string",
-      "description": "Firm name of the assignee (denormalized)"
+      "description": "Primary assignee firm name (denormalized)"
     },
     "status": {
       "type": "string",
@@ -53,6 +90,11 @@
       ],
       "default": "Not Started",
       "description": "Current status of the task"
+    },
+    "status_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date when the status was last changed (auto-set on status change)"
     },
     "completion_date": {
       "type": "string",

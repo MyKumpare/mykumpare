@@ -257,6 +257,7 @@ function ActivityForm({ contactId, contactName, onSaved, onCancel, allFirms, all
           due_date: taskDueDate,
           task_description: taskDesc,
           status: "Not Started",
+          status_date: new Date().toISOString().split("T")[0],
         });
         queryClient.invalidateQueries({ queryKey: ["follow_up_tasks", contactId] });
       }
@@ -531,7 +532,7 @@ function LinkedTaskRow({ task, allActivities, onRelink }) {
   );
 }
 
-export default function ContactActivitiesTab({ contactId, contactName }) {
+export default function ContactActivitiesTab({ contactId, contactName, contactFirmId, contactFirmName }) {
   const [showForm, setShowForm] = useState(false);
 
   const { data: activities = [], isLoading } = useQuery({
@@ -622,7 +623,7 @@ export default function ContactActivitiesTab({ contactId, contactName }) {
       )}
 
       <div className="border-t border-gray-200 pt-4">
-        <FollowUpTasksSection contactId={contactId} contactName={contactName} allActivities={activities} />
+        <FollowUpTasksSection contactId={contactId} contactName={contactName} contactFirmId={contactFirmId} contactFirmName={contactFirmName} allActivities={activities} />
       </div>
     </div>
   );

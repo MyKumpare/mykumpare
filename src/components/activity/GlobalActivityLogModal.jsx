@@ -616,12 +616,16 @@ function ActivityLogForm({ onSaved, onCancel, allFirms, allContacts, onFirmClick
       queryClient.invalidateQueries({ queryKey: ["contact_activities", originator.contactId] });
       queryClient.invalidateQueries({ queryKey: ["all_activities_for_firm", originator.firmId] });
       if (addTask && taskDesc && taskDesc !== "<p><br></p>") {
+        const today = new Date().toISOString().split("T")[0];
         await base44.entities.FollowUpTask.create({
           originator_contact_id: originator.contactId,
           originator_contact_name: originator.contactName,
+          originator_firm_id: originator.firmId || undefined,
+          originator_firm_name: originator.firmName || undefined,
           activity_id: created.id,
           activity_label: `${activityType} – ${fmt(activityDate)}`,
           due_date: taskDueDate, task_description: taskDesc, status: "Not Started",
+          status_date: today,
         });
         queryClient.invalidateQueries({ queryKey: ["follow_up_tasks", originator.contactId] });
         queryClient.invalidateQueries({ queryKey: ["all_tasks_for_firm", originator.firmId] });
