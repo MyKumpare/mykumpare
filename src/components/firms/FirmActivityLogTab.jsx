@@ -10,7 +10,8 @@ import {
   Phone, Mail, Users, FileText, MoreHorizontal,
   ChevronDown, ChevronUp, Building2, User,
   Clock, AlertCircle, CheckCircle2, XCircle, Calendar, Paperclip,
-  Link2, Plus, X, ClipboardList, Trash2, UserPlus, Upload, Edit2, Check
+  Link2, Plus, X, ClipboardList, Trash2, UserPlus, Upload, Edit2, Check,
+  ChevronLeft, ChevronRight
 } from "lucide-react";
 import TaskAssigneeEditor from "@/components/activity/TaskAssigneeEditor";
 import TaskDetailModal from "@/components/activity/TaskDetailModal";
@@ -803,14 +804,115 @@ function TaskRow({ task, onOpenDetail }) {
   );
 }
 
+// ── Calendar View Component ──────────────────────────────────────────────────
+function ActivityCalendarView({ activities, currentMonth, onMonthChange, onOpenActivity }) {
+  const year = currentMonth.getFullYear();
+  const month = currentMonth.getMonth();
+  
+  const firstDayOfMonth = new Date(year, month, 1);
+  const lastDayOfMonth = new Date(year, month + 1, 0);
+  const startDayOfWeek = firstDayOfMonth.getDay();
+  const totalDays = lastDayOfMonth.getDate();
+  
+  const prevMonth = () => onMonthChange(new Date(year, month - 1, 1));
+  const nextMonth = () => onMonthChange(new Date(year, month + 1, 1));
+  const goToToday = () => onMonthChange(new Date());
+  
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  
+  const getActivitiesForDate = (date) => {
+    const dateStr = date.toISOString().split("T")[0];
+    return activities.filter(a => a.activity_date === dateStr);
+  };
+  
+  const days = [];
+  for (let i = 0; i < startDayOfWeek; i++) {
+    days.push(<div key={`empty-${i}`} className="h-24 bg-gray-50 border border-gray-100" />);
+  }
+  
+  for (let day = 1; day <= totalDays; day++) {
+    const currentDate = new Date(year, month, day);
+    const dayActivities = getActivitiesForDate(currentDate);
+    const isToday = new Date().toDateString() === currentDate.toDateString();
+    
+    days.push(
+      <div key={day} className={`h-24 border border-gray-100 p-1 overflow-y-auto ${isToday ? "bg-indigo-50" : "bg-white"}`}>
+        <div className={`text-xs font-semibold mb-1 ${isToday ? "text-indigo-700" : "text-gray-700"}`}>
+          {day}
+        </div>
+        <div className="space-y-0.5">
+          {dayActivities.slice(0, 3).map((activity, idx) => {
+            const { icon: Icon, color, bg } = ACTIVITY_ICONS[activity.activity_type] || ACTIVITY_ICONS.Other;
+            return (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => onOpenActivity(activity)}
+                className={`w-full text-left flex items-center gap-1 px-1 py-0.5 rounded text-[9px] ${bg} hover:opacity-80 transition-opacity`}
+              >
+                <Icon className={`w-2.5 h-2.5 flex-shrink-0 ${color}`} />
+                <span className={`truncate flex-1 ${color}`}>{activity.activity_type}</span>
+              </button>
+            );
+          })}
+          {dayActivities.length > 3 && (
+            <div className="text-[9px] text-gray-400 text-center">+{dayActivities.length - 3} more</div>
+          )}
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="border border-gray-200 rounded-lg overflow-hidden">
+      <div className="flex items-center justify-between p-2 bg-gray-50 border-b border-gray-200">
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={prevMonth} className="p-1 hover:bg-gray-200 rounded">
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button type="button" onClick={goToToday} className="text-xs font-semibold text-gray-700 hover:text-indigo-700 px-2 py-1">
+            Today
+          </button>
+          <button type="button" onClick={nextMonth} className="p-1 hover:bg-gray-200 rounded">
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="text-sm font-bold text-gray-800">
+          {monthNames[month]} {year}
+        </div>
+      </div>
+      <div className="grid grid-cols-7 bg-gray-200 border-b border-gray-200">
+        {dayNames.map(day => (
+          <div key={day} className="h-8 flex items-center justify-center text-xs font-semibold text-gray-600 bg-gray-100">
+            {day}
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7">
+        {days}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Tab ──────────────────────────────────────────────────────────────────
 export default function FirmActivityLogTab({ firmId, firmName, onFirmClick, onContactClick }) {
   const [activeSection, setActiveSection] = useState("activities");
+  const [viewMode, setViewMode] = useState("list"); // "list" | "calendar"
   // "idle" | "picking-for-activity" | "picking-for-task" | "activity-form" | "task-form"
   const [uiState, setUiState] = useState("idle");
   const [selectedContact, setSelectedContact] = useState(null);
   const [detailTask, setDetailTask] = useState(null);
   const [detailActivity, setDetailActivity] = useState(null);
+  
+  // Filters
+  const [filterFirmType, setFilterFirmType] = useState("");
+  const [filterFirmName, setFilterFirmName] = useState("");
+  const [filterDateStart, setFilterDateStart] = useState("");
+  const [filterDateEnd, setFilterDateEnd] = useState("");
+  const [sortOrder, setSortOrder] = useState("desc"); // "asc" | "desc"
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
 
   const { data: allActivities = [], isLoading: loadingActivities } = useQuery({
     queryKey: ["all_activities_for_firm", firmId],
@@ -843,9 +945,8 @@ export default function FirmActivityLogTab({ firmId, firmName, onFirmClick, onCo
   const firmContactIds = useMemo(() => new Set(firmContacts.map(c => c.id)), [firmContacts]);
 
   const firmActivities = useMemo(() => {
-    return allActivities
+    let filtered = allActivities
       .filter(a => {
-        // Only show if this firm is explicitly the originator's firm OR explicitly listed in associated_firms_contacts
         const contact = firmContacts.find(c => c.id === a.contact_id);
         const contactPrimaryFirm = contact && (contact.firm_ids || [])[0] === firmId;
         const firmMentioned = (a.associated_firms_contacts || []).some(e => e.firm_id === firmId);
@@ -855,7 +956,44 @@ export default function FirmActivityLogTab({ firmId, firmName, onFirmClick, onCo
         const contact = firmContacts.find(c => c.id === a.contact_id);
         return { ...a, contact_name: contact ? [contact.first_name, contact.last_name].filter(Boolean).join(" ") : null };
       });
-  }, [allActivities, firmContactIds, firmId, firmContacts]);
+
+    // Filter by firm type
+    if (filterFirmType) {
+      filtered = filtered.filter(a => 
+        (a.associated_firms_contacts || []).some(e => {
+          const firm = allFirms.find(f => f.id === e.firm_id);
+          const firmTypes = firm?.firm_types?.length ? firm.firm_types : firm?.firm_type ? [firm.firm_type] : [];
+          return firmTypes.includes(filterFirmType);
+        })
+      );
+    }
+
+    // Filter by firm name
+    if (filterFirmName) {
+      filtered = filtered.filter(a => 
+        (a.associated_firms_contacts || []).some(e => 
+          e.firm_name.toLowerCase().includes(filterFirmName.toLowerCase())
+        )
+      );
+    }
+
+    // Filter by date range
+    if (filterDateStart) {
+      filtered = filtered.filter(a => a.activity_date >= filterDateStart);
+    }
+    if (filterDateEnd) {
+      filtered = filtered.filter(a => a.activity_date <= filterDateEnd);
+    }
+
+    // Sort
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.activity_date || "");
+      const dateB = new Date(b.activity_date || "");
+      return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
+    });
+
+    return filtered;
+  }, [allActivities, firmContactIds, firmId, firmContacts, allFirms, filterFirmType, filterFirmName, filterDateStart, filterDateEnd, sortOrder]);
 
   const firmTasks = useMemo(() => {
     return allTasks.filter(t =>
@@ -885,33 +1023,111 @@ export default function FirmActivityLogTab({ firmId, firmName, onFirmClick, onCo
   return (
     <div className="space-y-3">
       {/* Section toggle + action buttons */}
-      <div className="flex items-center gap-2">
-        <div className="flex gap-1 p-1 bg-gray-100 rounded-lg flex-1">
-          {sections.map(s => (
-            <button key={s.key} type="button" onClick={() => setActiveSection(s.key)}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                activeSection === s.key ? "bg-white text-indigo-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
-              }`}>
-              {s.label}
-              {s.count > 0 && (
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeSection === s.key ? "bg-indigo-100 text-indigo-700" : "bg-gray-200 text-gray-500"}`}>{s.count}</span>
-              )}
-            </button>
-          ))}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1 p-1 bg-gray-100 rounded-lg flex-1">
+            {sections.map(s => (
+              <button key={s.key} type="button" onClick={() => setActiveSection(s.key)}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                  activeSection === s.key ? "bg-white text-indigo-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                }`}>
+                {s.label}
+                {s.count > 0 && (
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeSection === s.key ? "bg-indigo-100 text-indigo-700" : "bg-gray-200 text-gray-500"}`}>{s.count}</span>
+                )}
+              </button>
+            ))}
+          </div>
+          {uiState === "idle" && (
+            <>
+              <Button type="button" variant="ghost" size="sm"
+                className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs flex-shrink-0"
+                onClick={() => { setActiveSection("activities"); setUiState("picking-for-activity"); }}>
+                <Plus className="w-3.5 h-3.5" /> Log Activity
+              </Button>
+              <Button type="button" variant="ghost" size="sm"
+                className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs flex-shrink-0"
+                onClick={() => { setActiveSection("tasks"); setUiState("picking-for-task"); }}>
+                <Plus className="w-3.5 h-3.5" /> Add Task
+              </Button>
+            </>
+          )}
         </div>
-        {uiState === "idle" && (
-          <>
-            <Button type="button" variant="ghost" size="sm"
-              className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs flex-shrink-0"
-              onClick={() => { setActiveSection("activities"); setUiState("picking-for-activity"); }}>
-              <Plus className="w-3.5 h-3.5" /> Log Activity
-            </Button>
-            <Button type="button" variant="ghost" size="sm"
-              className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs flex-shrink-0"
-              onClick={() => { setActiveSection("tasks"); setUiState("picking-for-task"); }}>
-              <Plus className="w-3.5 h-3.5" /> Add Task
-            </Button>
-          </>
+
+        {/* Filters for activities */}
+        {activeSection === "activities" && (
+          <div className="flex flex-wrap gap-2 items-center p-2 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setViewMode("list")}
+                className={`px-2 py-1 text-xs rounded ${viewMode === "list" ? "bg-white shadow text-indigo-700" : "text-gray-500 hover:bg-gray-100"}`}
+              >
+                List
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("calendar")}
+                className={`px-2 py-1 text-xs rounded ${viewMode === "calendar" ? "bg-white shadow text-indigo-700" : "text-gray-500 hover:bg-gray-100"}`}
+              >
+                Calendar
+              </button>
+            </div>
+            <div className="h-4 w-px bg-gray-300" />
+            <select
+              value={filterFirmType}
+              onChange={(e) => setFilterFirmType(e.target.value)}
+              className="h-7 px-2 text-xs rounded border border-gray-300 bg-white"
+            >
+              <option value="">All Firm Types</option>
+              {["Allocator", "Investment Consultant", "Investment Manager", "Manager of Managers", "Securities Brokerage", "Trade Organizations"].map(t => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+            <Input
+              placeholder="Filter by firm name..."
+              value={filterFirmName}
+              onChange={(e) => setFilterFirmName(e.target.value)}
+              className="h-7 text-xs w-40"
+            />
+            <Input
+              type="date"
+              value={filterDateStart}
+              onChange={(e) => setFilterDateStart(e.target.value)}
+              className="h-7 text-xs w-32"
+              placeholder="Start date"
+            />
+            <Input
+              type="date"
+              value={filterDateEnd}
+              onChange={(e) => setFilterDateEnd(e.target.value)}
+              className="h-7 text-xs w-32"
+              placeholder="End date"
+            />
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value)}
+              className="h-7 px-2 text-xs rounded border border-gray-300 bg-white"
+            >
+              <option value="desc">Newest First</option>
+              <option value="asc">Oldest First</option>
+            </select>
+            {(filterFirmType || filterFirmName || filterDateStart || filterDateEnd) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setFilterFirmType("");
+                  setFilterFirmName("");
+                  setFilterDateStart("");
+                  setFilterDateEnd("");
+                  setSortOrder("desc");
+                }}
+                className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+              >
+                <X className="w-3 h-3" /> Clear
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -939,6 +1155,13 @@ export default function FirmActivityLogTab({ firmId, firmName, onFirmClick, onCo
       ) : activeSection === "activities" ? (
         firmActivities.length === 0 ? (
           <div className="text-sm text-gray-400 italic py-6 text-center border border-dashed border-gray-200 rounded-xl">No activity logs for this firm yet</div>
+        ) : viewMode === "calendar" ? (
+          <ActivityCalendarView
+            activities={firmActivities}
+            currentMonth={calendarMonth}
+            onMonthChange={setCalendarMonth}
+            onOpenActivity={setDetailActivity}
+          />
         ) : (
           <div className="space-y-2">{firmActivities.map(a => <ActivityRow key={a.id} activity={a} onOpen={setDetailActivity} />)}</div>
         )
