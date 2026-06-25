@@ -292,6 +292,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   ])].sort();
 
   const [firmRemoveWarning, setFirmRemoveWarning] = useState(null); // firmId pending removal
+  const [confirmDeleteContact, setConfirmDeleteContact] = useState(false);
 
   const sortedFirms = [...firms].sort((a, b) => a.name.localeCompare(b.name));
   const filteredFirms = sortedFirms.filter(
@@ -1132,16 +1133,30 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         <DialogFooter className="pt-2 border-t gap-2">
           {viewMode ? (
             <>
+              {confirmDeleteContact ? (
+                <>
+                  <span className="text-xs text-red-600 font-medium flex-1">Delete this contact?</span>
+                  <Button variant="outline" size="sm" onClick={() => setConfirmDeleteContact(false)}>Cancel</Button>
+                  <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white"
+                    onClick={() => deleteMutation.mutate(editingContact.id)} disabled={deleteMutation.isPending}>
+                    {deleteMutation.isPending ? "Deleting..." : "Yes, Delete"}
+                  </Button>
+                </>
+              ) : (
               <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50"
-                onClick={() => deleteMutation.mutate(editingContact.id)} disabled={deleteMutation.isPending}>
-                <Trash2 className="w-4 h-4 mr-1" />
-                {deleteMutation.isPending ? "Deleting..." : "Delete"}
+                onClick={() => setConfirmDeleteContact(true)}>
+                <Trash2 className="w-4 h-4 mr-1" /> Delete
               </Button>
-              <div className="flex-1" />
-              <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
-              <Button className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => setViewMode(false)}>
-                <Pencil className="w-4 h-4 mr-1" /> Edit
-              </Button>
+              )}
+              {!confirmDeleteContact && (
+                <>
+                  <div className="flex-1" />
+                  <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+                  <Button className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => setViewMode(false)}>
+                    <Pencil className="w-4 h-4 mr-1" /> Edit
+                  </Button>
+                </>
+              )}
             </>
           ) : (
             <>
