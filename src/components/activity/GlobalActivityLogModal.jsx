@@ -656,13 +656,12 @@ function TasksForm({ onSaved, onCancel, allFirms, allContacts }) {
 }
 
 // ── Main Modal ────────────────────────────────────────────────────────────────
-export default function GlobalActivityLogModal({ open, onClose, defaultTab = "activity" }) {
-  const [activeTab, setActiveTab] = useState(defaultTab);
+export default function GlobalActivityLogModal({ open, onClose }) {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    if (open) { setActiveTab(defaultTab); setSaved(false); }
-  }, [open, defaultTab]);
+    if (open) { setSaved(false); }
+  }, [open]);
 
   const { data: allFirms = [] } = useQuery({
     queryKey: ["all_firms_for_activities"],
@@ -689,22 +688,8 @@ export default function GlobalActivityLogModal({ open, onClose, defaultTab = "ac
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-sm font-bold text-gray-800">
-            {activeTab === "activity" ? "Log Activity" : "Add Follow-up Task"}
-          </h2>
+          <h2 className="text-sm font-bold text-gray-800">Log Activity</h2>
           <button type="button" onClick={onClose}><X className="w-4 h-4 text-gray-400 hover:text-gray-600" /></button>
-        </div>
-
-        {/* Tab switcher */}
-        <div className="flex gap-1 p-3 border-b border-gray-100 bg-gray-50">
-          <button type="button" onClick={() => setActiveTab("activity")}
-            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${activeTab === "activity" ? "bg-indigo-600 text-white shadow-sm" : "text-gray-500 hover:text-gray-700 hover:bg-white"}`}>
-            <FileText className="w-3.5 h-3.5" /> Activity Log
-          </button>
-          <button type="button" onClick={() => setActiveTab("task")}
-            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${activeTab === "task" ? "bg-indigo-600 text-white shadow-sm" : "text-gray-500 hover:text-gray-700 hover:bg-white"}`}>
-            <ClipboardList className="w-3.5 h-3.5" /> Follow-up Task
-          </button>
         </div>
 
         {/* Body */}
@@ -714,10 +699,8 @@ export default function GlobalActivityLogModal({ open, onClose, defaultTab = "ac
               <CheckCircle2 className="w-10 h-10 text-green-500" />
               <p className="text-sm font-semibold text-gray-700">Saved successfully!</p>
             </div>
-          ) : activeTab === "activity" ? (
-            <ActivityLogForm onSaved={handleSaved} onCancel={onClose} allFirms={allFirms} allContacts={allContacts} />
           ) : (
-            <TasksForm onSaved={handleSaved} onCancel={onClose} allFirms={allFirms} allContacts={allContacts} />
+            <ActivityLogForm onSaved={handleSaved} onCancel={onClose} allFirms={allFirms} allContacts={allContacts} />
           )}
         </div>
       </div>
