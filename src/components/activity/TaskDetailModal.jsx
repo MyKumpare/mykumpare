@@ -497,7 +497,7 @@ function AssignmentCard({ entry, allContacts, allFirms, onContactClick, onFirmCl
   const contacts = entry.contacts || [];
   
   return (
-    <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3 space-y-2">
+    <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 space-y-2">
       <button
         type="button"
         onClick={() => {
@@ -511,7 +511,7 @@ function AssignmentCard({ entry, allContacts, allFirms, onContactClick, onFirmCl
         <Building2 className="w-3.5 h-3.5" /> {entry.firm_name}
       </button>
       {contacts.length > 0 && (
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           {contacts.map(c => {
             const cStatus = c.status || "Not Started";
             const cStyle = STATUS_STYLES[cStatus] || STATUS_STYLES["Not Started"];
@@ -522,30 +522,34 @@ function AssignmentCard({ entry, allContacts, allFirms, onContactClick, onFirmCl
             const contactData = contact || { id: c.contact_id, first_name: c.contact_name.split(' ')[0], last_name: c.contact_name.split(' ').slice(1).join(' ') };
             
             return (
-              <div key={c.contact_id} className="rounded-lg bg-white border border-indigo-100 p-2.5 space-y-2">
-                <div className="flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (onContactClick) {
-                        onContactClick(contactData);
-                      }
-                    }}
-                    className="flex items-center gap-1.5 text-xs font-medium text-gray-700 hover:text-indigo-700 hover:bg-indigo-50 transition-colors flex-1 min-w-0 cursor-pointer px-2 py-1.5 rounded-lg -ml-2"
-                  >
-                    <User className="w-3 h-3 text-indigo-400 flex-shrink-0" /> 
-                    <span className="truncate">{c.contact_name}</span>
-                  </button>
-                  <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${cStyle.bg} ${cStyle.color}`}>
-                    <CIcon className="w-2.5 h-2.5" /> {cStatus}
+              <div key={c.contact_id} className="rounded-lg bg-white border border-gray-200 p-3 space-y-2">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onContactClick) {
+                      onContactClick(contactData);
+                    }
+                  }}
+                  className="w-full flex items-center justify-between gap-2 group"
+                >
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center flex-shrink-0">
+                      <User className="w-4 h-4 text-indigo-600" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-800 truncate group-hover:text-indigo-700 transition-colors">
+                      {c.contact_name}
+                    </span>
+                  </div>
+                  <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${cStyle.bg} ${cStyle.color} flex-shrink-0`}>
+                    <CIcon className="w-3.5 h-3.5" /> {cStatus}
                   </span>
-                </div>
+                </button>
                 {c.status_date && (
-                  <p className="text-[10px] text-gray-400">Status updated {fmt(c.status_date)}</p>
+                  <p className="text-[10px] text-gray-400 pl-10">Status updated {fmt(c.status_date)}</p>
                 )}
                 {c.notes && (
-                  <div className="quill-preview text-xs text-gray-600" dangerouslySetInnerHTML={{ __html: c.notes }} />
+                  <div className="quill-preview text-xs text-gray-600 pl-10" dangerouslySetInnerHTML={{ __html: c.notes }} />
                 )}
               </div>
             );
