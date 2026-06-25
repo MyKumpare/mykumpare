@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import SubjectPicker from "./SubjectPicker";
 import {
   Phone, Mail, Users, FileText, MoreHorizontal, ChevronDown, ChevronUp,
   Building2, User, Clock, AlertCircle, CheckCircle2, XCircle, Calendar,
@@ -736,7 +737,11 @@ function ActivityLogForm({ onSaved, onCancel, allFirms, allContacts, onFirmClick
 
       <div className="space-y-1">
         <Label className="text-xs font-medium text-gray-700">Subject</Label>
-        <Input placeholder="Brief subject..." value={subject} onChange={e => setSubject(e.target.value)} className="h-8 text-sm" />
+        <SubjectPicker
+          value={subject}
+          onChange={setSubject}
+          placeholder="Select or add subject..."
+        />
       </div>
 
       <div className="space-y-1">
