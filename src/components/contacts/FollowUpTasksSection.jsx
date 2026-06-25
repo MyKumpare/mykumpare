@@ -316,7 +316,15 @@ export default function FollowUpTasksSection({ contactId, contactName, contactFi
 
   const { data: assignedTasks = [], isLoading: loadingAssigned } = useQuery({
     queryKey: ["follow_up_tasks_assigned", contactId],
-    queryFn: () => base44.entities.FollowUpTask.filter({ assigned_to_contact_id: contactId }, "-due_date"),
+    queryFn: async () => {
+      // Get all tasks and filter by assignments array
+      const allTasks = await base44.entities.FollowUpTask.list();
+      return allTasks.filter(t => {
+        // Check if contact is in the assignments array
+        const isAssigned = (t.assignments || []).some(a => a.contact_id === contactId);
+        return isAssigned;
+      }).sort((a, b) => new Date(b.due_date) - new Date(a.due_date));
+    },
     enabled: !!contactId,
   });
 
