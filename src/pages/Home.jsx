@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -46,7 +46,6 @@ const FIRM_TYPES = [
 
 export default function Home() {
   const { isAuthenticated, user, navigateToLogin, logout } = useAuth();
-  const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingFirm, setEditingFirm] = useState(null);
   const [preselectedType, setPreselectedType] = useState(null);
@@ -348,8 +347,8 @@ export default function Home() {
     { label: "Firms", icon: Building, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => setFirmPickerOpen(true) },
     { label: "Products", icon: Package, ref: null, color: "text-violet-600", activeBg: "bg-violet-50", onClick: () => setProductPickerOpen(true) },
     { label: "Contacts", icon: User, ref: null, color: "text-pink-600", activeBg: "bg-pink-50", onClick: () => setContactPickerOpen(true) },
-    { label: "Activity", icon: ClipboardList, ref: null, color: "text-amber-600", activeBg: "bg-amber-50", onClick: () => navigate("/ActivityLog") },
-    { label: "Tasks", icon: LayoutList, ref: null, color: "text-orange-600", activeBg: "bg-orange-50", onClick: () => navigate("/ActivityLog") },
+    { label: "Activity", icon: ClipboardList, ref: null, color: "text-amber-600", activeBg: "bg-amber-50", onClick: () => setActivityPickerOpen(true) },
+    { label: "Tasks", icon: LayoutList, ref: null, color: "text-orange-600", activeBg: "bg-orange-50", onClick: () => setTaskPickerOpen(true) },
     { label: "Analytics", icon: LineChart, ref: analyticsRef, color: "text-cyan-600", activeBg: "bg-cyan-50", onClick: () => setAnalyticsLaunchOpen(true) },
     { label: "Utilities", icon: Wrench, ref: utilityRef, color: "text-gray-600", activeBg: "bg-gray-100" },
   ];
