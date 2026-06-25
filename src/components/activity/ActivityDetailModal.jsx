@@ -876,6 +876,19 @@ export default function ActivityDetailModal({ open, activity, onClose, onOpenCon
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs font-medium text-gray-700 flex items-center gap-1">
+                        <User className="w-3 h-3 text-indigo-500" /> Assign To (firms & contacts)
+                      </Label>
+                      <TaskAssigneeEditor
+                        value={taskAssignedFirms}
+                        onChange={setTaskAssignedFirms}
+                        allFirms={firms}
+                        allContacts={contacts}
+                        originatorFirmId={(contacts.find(c => c.id === activity.contact_id)?.firm_ids || [])[0]}
+                        originatorFirmName={firms.find(f => f.id === (contacts.find(c => c.id === activity.contact_id)?.firm_ids || [])[0])?.name}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-gray-700 flex items-center gap-1">
                         <Paperclip className="w-3 h-3 text-gray-400" /> Attachments
                       </Label>
                       <ActivityAttachmentsManager attachments={taskAttachments} onChange={setTaskAttachments} />
