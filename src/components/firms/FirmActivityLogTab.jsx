@@ -11,7 +11,7 @@ import {
   ChevronDown, ChevronUp, Building2, User,
   Clock, AlertCircle, CheckCircle2, XCircle, Calendar, Paperclip,
   Link2, Plus, X, ClipboardList, Trash2, UserPlus, Upload, Edit2, Check,
-  ChevronLeft, ChevronRight, Search, Filter, List, LayoutGrid
+  ChevronLeft, ChevronRight
 } from "lucide-react";
 import TaskAssigneeEditor from "@/components/activity/TaskAssigneeEditor";
 import TaskDetailModal from "@/components/activity/TaskDetailModal";
@@ -907,8 +907,6 @@ export default function FirmActivityLogTab({ firmId, firmName, onFirmClick, onCo
   const [detailActivity, setDetailActivity] = useState(null);
   
   // Filters
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filterActivityType, setFilterActivityType] = useState("");
   const [filterFirmType, setFilterFirmType] = useState("");
   const [filterFirmName, setFilterFirmName] = useState("");
   const [filterDateStart, setFilterDateStart] = useState("");
@@ -959,22 +957,6 @@ export default function FirmActivityLogTab({ firmId, firmName, onFirmClick, onCo
         return { ...a, contact_name: contact ? [contact.first_name, contact.last_name].filter(Boolean).join(" ") : null };
       });
 
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(a => 
-        a.activity_type.toLowerCase().includes(query) ||
-        (a.subject && a.subject.toLowerCase().includes(query)) ||
-        (a.contact_name && a.contact_name.toLowerCase().includes(query)) ||
-        (a.associated_firms_contacts || []).some(e => e.firm_name.toLowerCase().includes(query))
-      );
-    }
-
-    // Filter by activity type
-    if (filterActivityType) {
-      filtered = filtered.filter(a => a.activity_type === filterActivityType);
-    }
-
     // Filter by firm type
     if (filterFirmType) {
       filtered = filtered.filter(a => 
@@ -1011,7 +993,7 @@ export default function FirmActivityLogTab({ firmId, firmName, onFirmClick, onCo
     });
 
     return filtered;
-  }, [allActivities, firmContactIds, firmId, firmContacts, allFirms, searchQuery, filterActivityType, filterFirmType, filterFirmName, filterDateStart, filterDateEnd, sortOrder]);
+  }, [allActivities, firmContactIds, firmId, firmContacts, allFirms, filterFirmType, filterFirmName, filterDateStart, filterDateEnd, sortOrder]);
 
   const firmTasks = useMemo(() => {
     return allTasks.filter(t =>
@@ -1074,116 +1056,77 @@ export default function FirmActivityLogTab({ firmId, firmName, onFirmClick, onCo
 
         {/* Filters for activities */}
         {activeSection === "activities" && (
-          <div className="space-y-2">
-            {/* Search Bar */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                placeholder="Search by description, creator, assignee, status..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-10 pl-10 text-sm border-orange-300 focus:border-orange-500 rounded-lg"
-              />
+          <div className="flex flex-wrap gap-2 items-center p-2 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setViewMode("list")}
+                className={`px-2 py-1 text-xs rounded ${viewMode === "list" ? "bg-white shadow text-indigo-700" : "text-gray-500 hover:bg-gray-100"}`}
+              >
+                List
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("calendar")}
+                className={`px-2 py-1 text-xs rounded ${viewMode === "calendar" ? "bg-white shadow text-indigo-700" : "text-gray-500 hover:bg-gray-100"}`}
+              >
+                Calendar
+              </button>
             </div>
-
-            {/* Controls Row */}
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                {/* Status Filter */}
-                <select
-                  value={filterActivityType}
-                  onChange={(e) => setFilterActivityType(e.target.value)}
-                  className="h-8 px-2.5 text-xs rounded-md border border-gray-300 bg-white hover:border-gray-400 flex items-center gap-1"
-                >
-                  <option value="">All Activity Types</option>
-                  {ACTIVITY_TYPES.map(t => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-
-                {/* Firm Type Filter */}
-                <select
-                  value={filterFirmType}
-                  onChange={(e) => setFilterFirmType(e.target.value)}
-                  className="h-8 px-2.5 text-xs rounded-md border border-gray-300 bg-white hover:border-gray-400"
-                >
-                  <option value="">All Firms</option>
-                  {["Allocator", "Investment Consultant", "Investment Manager", "Manager of Managers", "Securities Brokerage", "Trade Organizations"].map(t => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-
-                {/* Sort Order */}
-                <select
-                  value={sortOrder}
-                  onChange={(e) => setSortOrder(e.target.value)}
-                  className="h-8 px-2.5 text-xs rounded-md border border-gray-300 bg-white hover:border-gray-400"
-                >
-                  <option value="desc">Newest First</option>
-                  <option value="asc">Oldest First</option>
-                </select>
-
-                {/* Date Range Filters */}
-                <Input
-                  type="date"
-                  value={filterDateStart}
-                  onChange={(e) => setFilterDateStart(e.target.value)}
-                  className="h-8 text-xs w-32 border-gray-300"
-                  placeholder="Start date"
-                />
-                <Input
-                  type="date"
-                  value={filterDateEnd}
-                  onChange={(e) => setFilterDateEnd(e.target.value)}
-                  className="h-8 text-xs w-32 border-gray-300"
-                  placeholder="End date"
-                />
-
-                {/* Clear Filters */}
-                {(searchQuery || filterActivityType || filterFirmType || filterDateStart || filterDateEnd) && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSearchQuery("");
-                      setFilterActivityType("");
-                      setFilterFirmType("");
-                      setFilterDateStart("");
-                      setFilterDateEnd("");
-                      setSortOrder("desc");
-                    }}
-                    className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1"
-                  >
-                    <X className="w-3 h-3" /> Clear
-                  </button>
-                )}
-              </div>
-
-              {/* View Toggle */}
-              <div className="flex items-center gap-0 border border-orange-300 rounded-md overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => setViewMode("list")}
-                  className={`px-3 py-1.5 text-xs flex items-center gap-1.5 ${
-                    viewMode === "list"
-                      ? "bg-orange-50 text-orange-700 border-r border-orange-300"
-                      : "bg-white text-gray-600 hover:bg-gray-50"
-                  }`}
-                >
-                  <List className="w-3.5 h-3.5" /> List
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setViewMode("calendar")}
-                  className={`px-3 py-1.5 text-xs flex items-center gap-1.5 ${
-                    viewMode === "calendar"
-                      ? "bg-orange-50 text-orange-700"
-                      : "bg-white text-gray-600 hover:bg-gray-50"
-                  }`}
-                >
-                  <LayoutGrid className="w-3.5 h-3.5" /> Calendar
-                </button>
-              </div>
-            </div>
+            <div className="h-4 w-px bg-gray-300" />
+            <select
+              value={filterFirmType}
+              onChange={(e) => setFilterFirmType(e.target.value)}
+              className="h-7 px-2 text-xs rounded border border-gray-300 bg-white"
+            >
+              <option value="">All Firm Types</option>
+              {["Allocator", "Investment Consultant", "Investment Manager", "Manager of Managers", "Securities Brokerage", "Trade Organizations"].map(t => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+            <Input
+              placeholder="Filter by firm name..."
+              value={filterFirmName}
+              onChange={(e) => setFilterFirmName(e.target.value)}
+              className="h-7 text-xs w-40"
+            />
+            <Input
+              type="date"
+              value={filterDateStart}
+              onChange={(e) => setFilterDateStart(e.target.value)}
+              className="h-7 text-xs w-32"
+              placeholder="Start date"
+            />
+            <Input
+              type="date"
+              value={filterDateEnd}
+              onChange={(e) => setFilterDateEnd(e.target.value)}
+              className="h-7 text-xs w-32"
+              placeholder="End date"
+            />
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value)}
+              className="h-7 px-2 text-xs rounded border border-gray-300 bg-white"
+            >
+              <option value="desc">Newest First</option>
+              <option value="asc">Oldest First</option>
+            </select>
+            {(filterFirmType || filterFirmName || filterDateStart || filterDateEnd) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setFilterFirmType("");
+                  setFilterFirmName("");
+                  setFilterDateStart("");
+                  setFilterDateEnd("");
+                  setSortOrder("desc");
+                }}
+                className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+              >
+                <X className="w-3 h-3" /> Clear
+              </button>
+            )}
           </div>
         )}
       </div>
