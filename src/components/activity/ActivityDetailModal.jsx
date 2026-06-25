@@ -337,6 +337,12 @@ export default function ActivityDetailModal({ open, activity, onClose, onOpenCon
     enabled: open && !!activity,
   });
 
+  const { data: linkedTasks = [] } = useQuery({
+    queryKey: ["tasks_for_activity", activity?.id],
+    queryFn: () => base44.entities.FollowUpTask.filter({ activity_id: activity.id }),
+    enabled: open && !!activity?.id,
+  });
+
   if (!open || !activity) return null;
 
   const contact = contacts.find(c => c.id === activity.contact_id);
@@ -596,6 +602,41 @@ export default function ActivityDetailModal({ open, activity, onClose, onOpenCon
                         )}
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Linked Follow-up Tasks */}
+              {linkedTasks.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                    <ClipboardList className="w-3 h-3" /> Follow-up Tasks
+                  </p>
+                  <div className="space-y-2">
+                    {linkedTasks.map((task) => {
+                      const statusColors = {
+                        "Not Started": "bg-gray-100 text-gray-600",
+                        "In-process": "bg-blue-50 text-blue-700",
+                        "Completed": "bg-green-50 text-green-700",
+                        "Cancelled": "bg-red-50 text-red-600",
+                      };
+                      return (
+                        <div key={task.id} className="rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="text-xs text-gray-700 quill-preview flex-1 min-w-0"
+                              dangerouslySetInnerHTML={{ __html: task.task_description }} />
+                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${statusColors[task.status] || "bg-gray-100 text-gray-600"}`}>
+                              {task.status}
+                            </span>
+                          </div>
+                          {task.due_date && (
+                            <p className="text-[10px] text-gray-400 flex items-center gap-1">
+                              <Calendar className="w-3 h-3" /> Due: {fmt(task.due_date)}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
