@@ -592,7 +592,51 @@ function getPrimaryAssignee(task) {
   return null;
 }
 
-// ── Individual assignment status card ─────────────────────────────────────────
+// ── View mode assignment card (from assignments array) ───────────────────────
+function AssignmentViewCard({ assignment, allContacts, allFirms, onFirmClick, onEdit }) {
+  const contactStatus = assignment.status || "Not Started";
+  const s = STATUS_STYLES[contactStatus] || STATUS_STYLES["Not Started"];
+  const StatusIcon = s.icon;
+  const contact = allContacts.find(x => x.id === assignment.contact_id);
+  
+  return (
+    <div className="rounded-lg bg-white border border-gray-200 p-3 space-y-2">
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          if (onEdit) {
+            onEdit();
+          }
+        }}
+        className="w-full flex items-center justify-between gap-2 group cursor-pointer"
+      >
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center flex-shrink-0">
+            <User className="w-4 h-4 text-indigo-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <span className="text-sm font-medium text-gray-800 truncate group-hover:text-indigo-700 transition-colors block">
+              {assignment.contact_name}
+            </span>
+            {contact?.title && <span className="text-[10px] text-gray-400 block">{contact.title}</span>}
+          </div>
+          <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${s.bg} ${s.color} flex-shrink-0`}>
+            <StatusIcon className="w-3.5 h-3.5" /> {contactStatus}
+          </span>
+        </div>
+      </button>
+      {assignment.status_date && (
+        <p className="text-[10px] text-gray-400 pl-10">Status updated {fmt(assignment.status_date)}</p>
+      )}
+      {assignment.notes && (
+        <div className="quill-preview text-xs text-gray-600 pl-10" dangerouslySetInnerHTML={{ __html: assignment.notes }} />
+      )}
+    </div>
+  );
+}
+
+// ── Individual assignment status card (legacy from assigned_firms_contacts) ───
 function AssignmentCard({ entry, allContacts, allFirms, onContactClick, onFirmClick, onEdit }) {
   const contacts = entry.contacts || [];
   
@@ -800,6 +844,8 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
   const s = STATUS_STYLES[task.status] || STATUS_STYLES["Not Started"];
   const StatusIcon = s.icon;
   const primaryAssignee = getPrimaryAssignee(task);
+  // Use assignments array if available, otherwise fall back to assigned_firms_contacts
+  const assignments = task.assignments || [];
   const assignedFirmsContacts = task.assigned_firms_contacts || (task.assigned_to_firm_id ? [{ firm_id: task.assigned_to_firm_id, firm_name: task.assigned_to_firm_name, contacts: task.assigned_to_contact_id ? [{ contact_id: task.assigned_to_contact_id, contact_name: task.assigned_to_contact_name }] : [] }] : []);
 
   return (
@@ -873,8 +919,24 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
                 </div>
               )}
 
-              {/* Assigned firms/contacts with individual statuses */}
-              {assignedFirmsContacts.length > 0 && (
+              {/* Assigned firms/contacts with individual statuses - prefer assignments array */}
+              {assignments.length > 0 ? (
+                <div>
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Assigned To</p>
+                  <div className="space-y-2">
+                    {assignments.map((assignment, i) => (
+                      <AssignmentViewCard
+                        key={i}
+                        assignment={assignment}
+                        allContacts={allContacts}
+                        allFirms={allFirms}
+                        onFirmClick={onFirmClick}
+                        onEdit={() => setEditMode(true)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : assignedFirmsContacts.length > 0 && (
                 <div>
                   <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Assigned To</p>
                   <div className="space-y-2">
