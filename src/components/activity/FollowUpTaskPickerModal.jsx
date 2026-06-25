@@ -2,11 +2,11 @@ import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import {
-  X, LayoutList, Search, ChevronDown, ChevronRight,
+  X, LayoutList, Search, ChevronDown, ChevronRight, ChevronLeft,
   Building2, Plus, Calendar, User, Clock, AlertCircle, CheckCircle2, XCircle,
-  Paperclip, Link2, FileText
+  Paperclip, Link2, FileText, Filter, SortAsc, SortDesc
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO } from "date-fns";
 
 const FIRM_TYPES_ORDER = [
   "Allocator", "Investment Consultant", "Investment Manager",
@@ -19,6 +19,8 @@ const STATUS_STYLES = {
   "Completed":   { color: "text-green-600", bg: "bg-green-50",  border: "border-green-100", icon: CheckCircle2 },
   "Cancelled":   { color: "text-red-500",   bg: "bg-red-50",    border: "border-red-100",   icon: XCircle },
 };
+
+const TASK_STATUSES = ["Not Started", "In-process", "Completed", "Cancelled"];
 
 function fmt(dateStr) {
   if (!dateStr) return "—";
@@ -35,6 +37,14 @@ export default function FollowUpTaskPickerModal({ open, onClose, onAddTask, onTa
   const [collapsedTypes, setCollapsedTypes] = useState({});
   const [collapsedFirms, setCollapsedFirms] = useState({});
   const [collapsedCreators, setCollapsedCreators] = useState({});
+  
+  // New filter states
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [firmFilter, setFirmFilter] = useState("");
+  const [contactFilter, setContactFilter] = useState("");
+  const [sortOrder, setSortOrder] = useState("desc");
+  const [viewMode, setViewMode] = useState("list");
+  const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const toggleType    = (k) => setCollapsedTypes(p    => ({ ...p, [k]: !p[k] }));
   const toggleFirm    = (k) => setCollapsedFirms(p    => ({ ...p, [k]: !p[k] }));
@@ -72,24 +82,51 @@ export default function FollowUpTaskPickerModal({ open, onClose, onAddTask, onTa
 
   const q = search.toLowerCase();
 
+  // Apply all filters
   const filtered = useMemo(() => {
-    if (!q) return tasks;
     return tasks.filter(t => {
+      // Search filter
       const desc = stripHtml(t.task_description).toLowerCase();
       const creator = (t.originator_contact_name || "").toLowerCase();
       const assignee = (t.assigned_to_contact_name || "").toLowerCase();
       const firmName = (t.assigned_to_firm_name || "").toLowerCase();
       const status = (t.status || "").toLowerCase();
-      return desc.includes(q) || creator.includes(q) || assignee.includes(q) || firmName.includes(q) || status.includes(q);
+      
+      const matchesSearch = !q || desc.includes(q) || creator.includes(q) || assignee.includes(q) || firmName.includes(q) || status.includes(q);
+      
+      // Status filter
+      const matchesStatus = statusFilter === "all" || t.status === statusFilter;
+      
+      // Firm filter
+      const originatorContact = contactMap[t.originator_contact_id];
+      const primaryFirmId = originatorContact ? (originatorContact.firm_ids || [])[0] : null;
+      const firm = primaryFirmId ? firmMap[primaryFirmId] : null;
+      const matchesFirm = !firmFilter || (firm && firm.id === firmFilter);
+      
+      // Contact filter
+      const matchesContact = !contactFilter || (
+        t.originator_contact_id === contactFilter || 
+        t.assigned_to_contact_id === contactFilter
+      );
+      
+      return matchesSearch && matchesStatus && matchesFirm && matchesContact;
     });
-  }, [tasks, q]);
+  }, [tasks, q, statusFilter, firmFilter, contactFilter, contactMap, firmMap]);
 
-  // Group: firm_type → firm_name → creator_name → assignee_name → tasks (sorted by due_date desc)
+  // Sort filtered tasks
+  const sorted = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      const dateA = a.due_date || "";
+      const dateB = b.due_date || "";
+      return sortOrder === "asc" ? dateA.localeCompare(dateB) : dateB.localeCompare(dateA);
+    });
+  }, [filtered, sortOrder]);
+
+  // Group: firm_type → firm_name → creator_name → assignee_name → tasks
   const grouped = useMemo(() => {
-    // For each task, determine the firm via originator contact's firm
     const result = {};
 
-    filtered.forEach(task => {
+    sorted.forEach(task => {
       const originatorContact = contactMap[task.originator_contact_id];
       const primaryFirmId = originatorContact ? (originatorContact.firm_ids || [])[0] : null;
       const firm = primaryFirmId ? firmMap[primaryFirmId] : null;
@@ -107,19 +144,8 @@ export default function FollowUpTaskPickerModal({ open, onClose, onAddTask, onTa
       });
     });
 
-    // Sort tasks within each assignee group by due_date desc
-    Object.values(result).forEach(firmGroups =>
-      Object.values(firmGroups).forEach(creators =>
-        Object.values(creators).forEach(assignees =>
-          Object.values(assignees).forEach(taskList =>
-            taskList.sort((a, b) => (b.due_date || "").localeCompare(a.due_date || ""))
-          )
-        )
-      )
-    );
-
     return result;
-  }, [filtered, contactMap, firmMap]);
+  }, [sorted, contactMap, firmMap]);
 
   const orderedTypes = useMemo(() => {
     const present = Object.keys(grouped);
@@ -128,27 +154,74 @@ export default function FollowUpTaskPickerModal({ open, onClose, onAddTask, onTa
     return [...ordered, ...others];
   }, [grouped]);
 
+  // Calendar view helpers
+  const calendarDays = useMemo(() => {
+    const start = startOfMonth(currentMonth);
+    const end = endOfMonth(currentMonth);
+    return eachDayOfInterval({ start, end });
+  }, [currentMonth]);
+
+  const getTasksForDate = (date) => {
+    return sorted.filter(task => {
+      if (!task.due_date) return false;
+      return isSameDay(parseISO(task.due_date), date);
+    });
+  };
+
+  const prevMonth = () => {
+    setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() - 1)));
+  };
+
+  const nextMonth = () => {
+    setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() + 1)));
+  };
+
+  // Get unique firms and contacts for filters
+  const uniqueFirms = useMemo(() => {
+    const firmSet = new Set();
+    tasks.forEach(t => {
+      const originatorContact = contactMap[t.originator_contact_id];
+      const primaryFirmId = originatorContact ? (originatorContact.firm_ids || [])[0] : null;
+      const firm = primaryFirmId ? firmMap[primaryFirmId] : null;
+      if (firm) firmSet.add(firm.id);
+    });
+    return firms.filter(f => firmSet.has(f.id)).sort((a, b) => a.name.localeCompare(b.name));
+  }, [tasks, contactMap, firmMap, firms]);
+
+  const uniqueContacts = useMemo(() => {
+    const contactSet = new Set();
+    tasks.forEach(t => {
+      if (t.originator_contact_id) contactSet.add(t.originator_contact_id);
+      if (t.assigned_to_contact_id) contactSet.add(t.assigned_to_contact_id);
+    });
+    return contacts.filter(c => contactSet.has(c.id)).sort((a, b) => {
+      const nameA = `${a.first_name} ${a.last_name}`;
+      const nameB = `${b.first_name} ${b.last_name}`;
+      return nameA.localeCompare(nameB);
+    });
+  }, [tasks, contacts]);
+
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 px-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-8 px-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[78vh] overflow-hidden flex flex-col">
-
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
             <LayoutList className="w-4 h-4 text-orange-600" />
             Follow-up Tasks
-            <span className="text-xs text-gray-400 font-normal">({filtered.length})</span>
+            <span className="text-xs text-gray-400 font-normal">({sorted.length})</span>
           </h2>
           <button type="button" onClick={onClose}>
             <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
           </button>
         </div>
 
-        {/* Search */}
-        <div className="px-4 py-3 border-b border-gray-100">
+        {/* Search and Filters */}
+        <div className="px-5 py-3 border-b border-gray-100 space-y-3">
+          {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
             <input
@@ -165,18 +238,129 @@ export default function FollowUpTaskPickerModal({ open, onClose, onAddTask, onTa
               </button>
             )}
           </div>
+
+          {/* Filter Row */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1">
+              <Filter className="w-3.5 h-3.5 text-gray-400" />
+              <select
+                value={statusFilter}
+                onChange={e => setStatusFilter(e.target.value)}
+                className="h-8 text-xs rounded-lg border border-gray-200 bg-white outline-none focus:border-orange-400"
+              >
+                <option value="all">All Statuses</option>
+                {TASK_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+
+            <select
+              value={firmFilter}
+              onChange={e => setFirmFilter(e.target.value)}
+              className="h-8 text-xs rounded-lg border border-gray-200 bg-white outline-none focus:border-orange-400"
+            >
+              <option value="">All Firms</option>
+              {uniqueFirms.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+            </select>
+
+            <select
+              value={contactFilter}
+              onChange={e => setContactFilter(e.target.value)}
+              className="h-8 text-xs rounded-lg border border-gray-200 bg-white outline-none focus:border-orange-400"
+            >
+              <option value="">All Contacts</option>
+              {uniqueContacts.map(c => <option key={c.id} value={c.id}>{c.first_name} {c.last_name}</option>)}
+            </select>
+
+            <button
+              type="button"
+              onClick={() => setSortOrder(prev => prev === "asc" ? "desc" : "asc")}
+              className="flex items-center gap-1 h-8 px-2 text-xs rounded-lg border border-gray-200 hover:bg-gray-50"
+            >
+              {sortOrder === "asc" ? <SortAsc className="w-3.5 h-3.5" /> : <SortDesc className="w-3.5 h-3.5" />}
+              Due Date
+            </button>
+
+            <div className="ml-auto flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setViewMode("list")}
+                className={`h-8 px-2 text-xs rounded-lg border ${viewMode === "list" ? "bg-orange-50 border-orange-300 text-orange-700" : "border-gray-200 hover:bg-gray-50"}`}
+              >
+                List
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("calendar")}
+                className={`h-8 px-2 text-xs rounded-lg border ${viewMode === "calendar" ? "bg-orange-50 border-orange-300 text-orange-700" : "border-gray-200 hover:bg-gray-50"}`}
+              >
+                Calendar
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* List */}
-        <div className="flex-1 overflow-y-auto py-2">
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto">
           {isLoading ? (
             <p className="text-sm text-gray-400 text-center py-8">Loading...</p>
-          ) : filtered.length === 0 ? (
+          ) : sorted.length === 0 ? (
             <p className="text-sm text-gray-400 italic text-center py-8">
-              {search ? "No tasks match your search." : "No follow-up tasks yet."}
+              {search || statusFilter !== "all" || firmFilter || contactFilter ? "No tasks match your filters." : "No follow-up tasks yet."}
             </p>
+          ) : viewMode === "calendar" ? (
+            /* Calendar View */
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-4">
+                <button onClick={prevMonth} className="p-1 hover:bg-gray-100 rounded">
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <h3 className="text-sm font-semibold text-gray-700">
+                  {format(currentMonth, "MMMM yyyy")}
+                </h3>
+                <button onClick={nextMonth} className="p-1 hover:bg-gray-100 rounded">
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="grid grid-cols-7 gap-1">
+                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
+                  <div key={day} className="text-[10px] font-semibold text-gray-400 text-center py-1">
+                    {day}
+                  </div>
+                ))}
+                {calendarDays.map((day, idx) => {
+                  const dayTasks = getTasksForDate(day);
+                  const isToday = isSameDay(day, new Date());
+                  return (
+                    <div
+                      key={idx}
+                      className={`min-h-[80px] p-1 border border-gray-100 rounded ${isToday ? "bg-orange-50 border-orange-200" : "bg-white"}`}
+                    >
+                      <p className={`text-[10px] font-medium mb-1 ${isToday ? "text-orange-700" : "text-gray-500"}`}>
+                        {format(day, "d")}
+                      </p>
+                      {dayTasks.slice(0, 3).map(task => {
+                        const s = STATUS_STYLES[task.status] || STATUS_STYLES["Not Started"];
+                        return (
+                          <button
+                            key={task.id}
+                            onClick={() => { onTaskClick(task); onClose(); }}
+                            className={`w-full text-left text-[9px] px-1 py-0.5 mb-0.5 rounded truncate ${s.bg} ${s.color} hover:opacity-80`}
+                          >
+                            {stripHtml(task.task_description).slice(0, 20)}...
+                          </button>
+                        );
+                      })}
+                      {dayTasks.length > 3 && (
+                        <p className="text-[9px] text-gray-400">+{dayTasks.length - 3} more</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           ) : (
-            <div>
+            /* List View */
+            <div className="py-2">
               {orderedTypes.map(type => {
                 const firmGroups = grouped[type];
                 const isTypeCollapsed = collapsedTypes[type];
@@ -186,7 +370,6 @@ export default function FollowUpTaskPickerModal({ open, onClose, onAddTask, onTa
 
                 return (
                   <div key={type}>
-                    {/* Firm Type Header */}
                     <button type="button" onClick={() => toggleType(type)}
                       className="w-full flex items-center gap-2 px-4 py-1.5 hover:bg-gray-50 transition-colors">
                       {isTypeCollapsed
@@ -207,7 +390,6 @@ export default function FollowUpTaskPickerModal({ open, onClose, onAddTask, onTa
 
                           return (
                             <div key={firmKey}>
-                              {/* Firm Sub-header */}
                               <button type="button" onClick={() => toggleFirm(firmKey)}
                                 className="w-full flex items-center gap-2 pl-8 pr-4 py-1 hover:bg-gray-50 transition-colors">
                                 {isFirmCollapsed
@@ -228,7 +410,6 @@ export default function FollowUpTaskPickerModal({ open, onClose, onAddTask, onTa
 
                                     return (
                                       <div key={creatorKey}>
-                                        {/* Creator Sub-header */}
                                         <button type="button" onClick={() => toggleCreator(creatorKey)}
                                           className="w-full flex items-center gap-2 pl-12 pr-4 py-1 hover:bg-gray-50 transition-colors">
                                           {isCreatorCollapsed
@@ -241,7 +422,6 @@ export default function FollowUpTaskPickerModal({ open, onClose, onAddTask, onTa
 
                                         {!isCreatorCollapsed && (
                                           <div className="pl-14 pr-4 pb-1 space-y-1">
-                                            {/* Group by assignee */}
                                             {Object.keys(assignees).sort((a, b) => a.localeCompare(b)).map(assigneeName => {
                                               const assigneeTasks = assignees[assigneeName];
                                               return (
@@ -318,7 +498,7 @@ export default function FollowUpTaskPickerModal({ open, onClose, onAddTask, onTa
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-3 border-t border-gray-100">
+        <div className="px-5 py-3 border-t border-gray-100">
           <button
             type="button"
             onClick={() => { onAddTask(); onClose(); }}
