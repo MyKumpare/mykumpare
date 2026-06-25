@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
-import { Check, X, Plus, ChevronDown, AlertTriangle } from "lucide-react";
+import { Check, X, Plus, ChevronDown, AlertTriangle, Trash2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Input } from "@/components/ui/input";
@@ -57,6 +57,7 @@ export default function SubjectPicker({ value = "", onChange, placeholder = "Sel
   const [newSubject, setNewSubject] = useState("");
   const [showWarning, setShowWarning] = useState(false);
   const [similarSubjects, setSimilarSubjects] = useState([]);
+  const [deletingSubject, setDeletingSubject] = useState(null);
   const ref = useRef(null);
 
   // Fetch all subject types from the ActivityType entity
@@ -162,6 +163,26 @@ export default function SubjectPicker({ value = "", onChange, placeholder = "Sel
     setAddingNew(false);
     setNewSubject("");
     setOpen(false);
+  };
+
+  const handleDeleteSubject = async (subjectToDelete) => {
+    try {
+      // Find the ActivityType record by name
+      const types = await base44.entities.ActivityType.list();
+      const typeToDelete = types.find(t => t.name === subjectToDelete);
+      if (typeToDelete) {
+        await base44.entities.ActivityType.delete(typeToDelete.id);
+        // Refetch to update the list
+        refetch();
+        // Clear the current value if it was the deleted subject
+        if (value === subjectToDelete) {
+          onChange("");
+        }
+      }
+    } catch (error) {
+      console.error("Failed to delete subject type:", error);
+    }
+    setDeletingSubject(null);
   };
 
   return (
@@ -314,25 +335,35 @@ export default function SubjectPicker({ value = "", onChange, placeholder = "Sel
                       {filteredSubjects.map(subject => {
                         const isSelected = value === subject;
                         return (
-                          <button
+                          <div
                             key={subject}
-                            type="button"
-                            onClick={() => handleSelectSubject(subject)}
-                            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-left transition-colors ${
-                              isSelected
-                                ? "bg-indigo-50 border border-indigo-200 text-indigo-700"
-                                : "bg-white border border-gray-100 hover:bg-gray-50 text-gray-700"
-                            }`}
+                            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-left transition-colors border border-gray-100 hover:bg-gray-50"
                           >
-                            <div
-                              className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
-                                isSelected ? "bg-indigo-600 border-indigo-600" : "border-gray-300"
+                            <button
+                              type="button"
+                              onClick={() => handleSelectSubject(subject)}
+                              className={`flex-1 flex items-center gap-2 ${
+                                isSelected ? "text-indigo-700" : "text-gray-700"
                               }`}
                             >
-                              {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
-                            </div>
-                            <span className="flex-1 truncate">{subject}</span>
-                          </button>
+                              <div
+                                className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
+                                  isSelected ? "bg-indigo-600 border-indigo-600" : "border-gray-300"
+                                }`}
+                              >
+                                {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
+                              </div>
+                              <span className="truncate">{subject}</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); setDeletingSubject(subject); }}
+                              className="p-1 text-gray-300 hover:text-red-500 transition-colors"
+                              title="Delete this subject type"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         );
                       })}
                     </div>
@@ -349,6 +380,40 @@ export default function SubjectPicker({ value = "", onChange, placeholder = "Sel
                 )}
               </div>
             </>
+          )}
+
+          {/* Delete confirmation dialog */}
+          {deletingSubject && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40">
+              <div className="bg-white rounded-xl shadow-xl p-4 w-[90%] max-w-xs mx-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-500" />
+                  <h4 className="text-sm font-semibold text-gray-800">Delete Subject Type?</h4>
+                </div>
+                <p className="text-xs text-gray-600 mb-4">
+                  Are you sure you want to delete "<span className="font-semibold">{deletingSubject}</span>"? This action cannot be undone.
+                </p>
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs"
+                    onClick={() => setDeletingSubject(null)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-8 text-xs bg-red-600 hover:bg-red-700 text-white"
+                    onClick={() => handleDeleteSubject(deletingSubject)}
+                  >
+                    Delete
+                  </Button>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       )}
