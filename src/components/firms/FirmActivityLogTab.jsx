@@ -260,8 +260,49 @@ function FirmPickerDropdown({ availableFirms, onSelect }) {
   );
 }
 
+// ── Inline new-contact form for AssociatedFirmsEditor ────────────────────────
+function InlineNewContactForm({ firmId, onCreated, onCancel }) {
+  const queryClient = useQueryClient();
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [title, setTitle] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!firstName.trim() || !lastName.trim()) return;
+    setSaving(true);
+    const created = await base44.entities.Contact.create({
+      first_name: firstName.trim(), last_name: lastName.trim(),
+      title: title.trim() || undefined, firm_ids: [firmId],
+    });
+    queryClient.invalidateQueries({ queryKey: ["all_contacts_for_activities"] });
+    queryClient.invalidateQueries({ queryKey: ["contacts_for_firm_activity", firmId] });
+    setSaving(false);
+    onCreated(created);
+  };
+
+  return (
+    <div className="rounded-lg border border-indigo-100 bg-indigo-50/30 p-2.5 space-y-2">
+      <div className="grid grid-cols-2 gap-2">
+        <Input value={firstName} onChange={e => setFirstName(e.target.value)} className="h-7 text-xs" placeholder="First name *" autoFocus />
+        <Input value={lastName} onChange={e => setLastName(e.target.value)} className="h-7 text-xs" placeholder="Last name *" />
+      </div>
+      <Input value={title} onChange={e => setTitle(e.target.value)} className="h-7 text-xs" placeholder="Title (optional)" />
+      <div className="flex gap-2 justify-end">
+        <Button type="button" variant="outline" size="sm" className="h-6 text-xs px-2" onClick={onCancel}>Cancel</Button>
+        <Button type="button" size="sm" className="h-6 text-xs px-2 bg-indigo-600 hover:bg-indigo-700 text-white"
+          disabled={!firstName.trim() || !lastName.trim() || saving} onClick={handleSave}>
+          {saving ? "Saving..." : "Add & Select"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // ── Associated Firms & Contacts editor (same as ContactActivitiesTab) ─────────
 function AssociatedFirmsEditor({ value = [], onChange, allFirms, allContacts }) {
+  const [addingContactForFirm, setAddingContactForFirm] = useState(null);
+
   const handleAddFirm = (firm) => {
     if (value.find(e => e.firm_id === firm.id)) return;
     onChange([...value, { firm_id: firm.id, firm_name: firm.name, contacts: [] }]);
@@ -288,6 +329,7 @@ function AssociatedFirmsEditor({ value = [], onChange, allFirms, allContacts }) 
     <div className="space-y-2">
       {value.map((entry) => {
         const firmContacts = allContacts.filter(c => !c.deleted_at && (c.firm_ids || []).includes(entry.firm_id) && !entry.contacts.find(ec => ec.contact_id === c.id));
+        const isAddingHere = addingContactForFirm === entry.firm_id;
         return (
           <div key={entry.firm_id} className="rounded-lg border border-gray-200 bg-white p-2.5 space-y-2">
             <div className="flex items-center justify-between">
@@ -323,6 +365,21 @@ function AssociatedFirmsEditor({ value = [], onChange, allFirms, allContacts }) 
                   ))}
                 </SelectContent>
               </Select>
+            )}
+            {firmContacts.length === 0 && !isAddingHere && (
+              <p className="text-xs text-gray-400 italic px-0.5">No contacts on file for this firm.</p>
+            )}
+            {isAddingHere ? (
+              <InlineNewContactForm
+                firmId={entry.firm_id}
+                onCreated={(created) => { handleAddContact(entry.firm_id, created); setAddingContactForFirm(null); }}
+                onCancel={() => setAddingContactForFirm(null)}
+              />
+            ) : (
+              <button type="button" onClick={() => setAddingContactForFirm(entry.firm_id)}
+                className="w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-dashed border-indigo-200 text-[10px] text-indigo-500 hover:bg-indigo-50 transition-colors">
+                <UserPlus className="w-3 h-3" /> Add new contact for this firm
+              </button>
             )}
           </div>
         );
