@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "mykumpare": {
+      "command": "node",
+      "args": ["mykumpare-mcp-server.js"],
+      "env": {
+        "BASE44_APP_ID": "${BASE44_APP_ID}",
+        "BASE44_SERVICE_TOKEN": "${BASE44_SERVICE_TOKEN}"
+      }
+    }
+  }
+}
