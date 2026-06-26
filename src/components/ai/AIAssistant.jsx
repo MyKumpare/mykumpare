@@ -46,9 +46,17 @@ Key Business Logic:
 - Activities can be linked to multiple firms and contacts
 - Contacts can be associated with multiple firms
 
+IMPORTANT RESPONSE GUIDELINES:
+1. **ALWAYS check the DATABASE SEARCH RESULTS section** in the context before answering
+2. If search results show entities were found, clearly state they exist and list them
+3. If search results show "❌ No firms found", then and only then say the entity doesn't exist
+4. Never say something doesn't exist if it appears in the search results
+5. Be definitive: "Yes, Xponance is in the database" or "No, I didn't find Xponance"
+6. Include specific details from search results (names, counts, types)
+
 When helping users:
 1. Be specific and actionable
-2. Offer to show relevant data when asked about entities
+2. Reference actual data from search results
 3. Suggest next steps (e.g., "Would you like me to create a follow-up task?")
 4. Use clear formatting with bullet points for lists
 5. Ask clarifying questions when requests are ambiguous
@@ -144,60 +152,123 @@ Always be helpful, professional, and concise.`;
     try {
       const q = userQuery.toLowerCase();
       
+      // Extract search terms - look for names after common query patterns
+      let searchTerms = [];
+      
+      // Pattern: "called xponance", "named xponance", "is there xponance"
+      const calledMatch = q.match(/(?:called|named)\s+["']?([a-z0-9\s.,&'-]+)["']?/i);
+      if (calledMatch) {
+        searchTerms.push(calledMatch[1].trim());
+      }
+      
+      // Pattern: "is there a firm called" or "is xponance in"
+      const isInMatch = q.match(/is\s+([a-z0-9\s.,&'-]+)\s+(?:in|at)/i);
+      if (isInMatch && !calledMatch) {
+        searchTerms.push(isInMatch[1].trim());
+      }
+      
+      // Pattern: "search for xponance", "find xponance"
+      const forMatch = q.match(/(?:search|find|look\s+for)\s+(?:a|an|the)?\s*([a-z0-9\s.,&'-]+)/i);
+      if (forMatch) {
+        searchTerms.push(forMatch[1].trim());
+      }
+      
+      // If no specific pattern matched, extract potential proper nouns (capitalized words in original)
+      if (searchTerms.length === 0) {
+        const properNouns = userQuery.match(/[A-Z][a-z]+/g);
+        if (properNouns) {
+          searchTerms.push(...properNouns);
+        }
+      }
+      
       // Detect what the user is asking about
-      const isAskingAboutFirms = /firm|company|manager|allocator|consultant|brokerage/i.test(q);
-      const isAskingAboutContacts = /contact|person|people|employee/i.test(q);
-      const isAskingAboutProducts = /product|fund|investment/i.test(q);
-      const isAskingAboutPortfolios = /portfolio|allocator/i.test(q);
+      const isAskingAboutFirms = /firm|company|manager|allocator|consultant|brokerage|business|organization/i.test(q);
+      const isAskingAboutContacts = /contact|person|people|employee|individual/i.test(q);
+      const isAskingAboutProducts = /product|fund|investment|portfolio\s+product/i.test(q);
+      const isAskingAboutPortfolios = /portfolio|allocator\s+portfolio/i.test(q);
       const isAskingAboutTasks = /task|follow.?up|assignment/i.test(q);
       const isAskingAboutActivities = /activity|call|email|meeting|log/i.test(q);
       const isAskingAboutBenchmarks = /benchmark|index|sp500|s&p/i.test(q);
-      
-      // Extract potential entity names from the query
-      const nameMatch = q.match(/(?:called|named|is there a|any|show me|find)\s+["']?([a-z0-9\s.,&'-]+)["']?(?:\s+(?:in|at|for|about))?/i);
-      const entityName = nameMatch ? nameMatch[1].trim() : null;
+
+      // If user mentions a specific name but doesn't specify type, search all entity types
+      const searchAll = searchTerms.length > 0 && !isAskingAboutFirms && !isAskingAboutContacts && 
+                        !isAskingAboutProducts && !isAskingAboutPortfolios && 
+                        !isAskingAboutTasks && !isAskingAboutActivities && !isAskingAboutBenchmarks;
 
       const [firms, contacts, products, portfolios, benchmarks, tasks, activities] = await Promise.all([
-        isAskingAboutFirms || entityName ? searchFirms(entityName) : Promise.resolve([]),
-        isAskingAboutContacts || entityName ? searchContacts(entityName) : Promise.resolve([]),
-        isAskingAboutProducts || entityName ? searchProducts(entityName) : Promise.resolve([]),
-        isAskingAboutPortfolios || entityName ? searchPortfolios(entityName) : Promise.resolve([]),
-        isAskingAboutBenchmarks || entityName ? searchBenchmarks(entityName) : Promise.resolve([]),
+        isAskingAboutFirms || searchAll ? searchFirms(searchTerms[0] || null) : Promise.resolve([]),
+        isAskingAboutContacts || searchAll ? searchContacts(searchTerms[0] || null) : Promise.resolve([]),
+        isAskingAboutProducts || searchAll ? searchProducts(searchTerms[0] || null) : Promise.resolve([]),
+        isAskingAboutPortfolios || searchAll ? searchPortfolios(searchTerms[0] || null) : Promise.resolve([]),
+        isAskingAboutBenchmarks || searchAll ? searchBenchmarks(searchTerms[0] || null) : Promise.resolve([]),
         isAskingAboutTasks ? searchTasks() : Promise.resolve([]),
         isAskingAboutActivities ? searchActivities() : Promise.resolve([])
       ]);
 
-      let context = "\nSearch Results from Database:\n";
+      let context = "\n=== DATABASE SEARCH RESULTS ===\n";
+      
+      if (searchTerms.length > 0) {
+        context += `\nSearching for: "${searchTerms.join(", ")}"\n`;
+      }
+      
       if (firms.length > 0) {
-        context += `- Firms found (${firms.length}): ${firms.slice(0, 5).map(f => f.name).join(", ")}${firms.length > 5 ? `... and ${firms.length - 5} more` : ""}\n`;
+        context += `\n✅ FIRMS FOUND (${firms.length}):\n`;
+        firms.forEach(f => {
+          context += `  • ${f.name} (${f.firm_types?.join(", ") || f.firm_type || "No type"})\n`;
+        });
+      } else if (isAskingAboutFirms || searchAll) {
+        context += `\n❌ No firms found matching your search.\n`;
       }
+      
       if (contacts.length > 0) {
-        context += `- Contacts found (${contacts.length}): ${contacts.slice(0, 5).map(c => `${c.first_name} ${c.last_name}`).join(", ")}${contacts.length > 5 ? `... and ${contacts.length - 5} more` : ""}\n`;
+        context += `\n✅ CONTACTS FOUND (${contacts.length}):\n`;
+        contacts.forEach(c => {
+          const fullName = [c.first_name, c.last_name].filter(Boolean).join(" ");
+          context += `  • ${fullName} (${c.title || "No title"})\n`;
+        });
       }
+      
       if (products.length > 0) {
-        context += `- Products found (${products.length}): ${products.slice(0, 5).map(p => p.name).join(", ")}${products.length > 5 ? `... and ${products.length - 5} more` : ""}\n`;
+        context += `\n✅ PRODUCTS FOUND (${products.length}):\n`;
+        products.forEach(p => {
+          context += `  • ${p.name} at ${p.firm_name}\n`;
+        });
       }
+      
       if (portfolios.length > 0) {
-        context += `- Portfolios found (${portfolios.length}): ${portfolios.slice(0, 5).map(p => p.portfolio_name).join(", ")}${portfolios.length > 5 ? `... and ${portfolios.length - 5} more` : ""}\n`;
+        context += `\n✅ PORTFOLIOS FOUND (${portfolios.length}):\n`;
+        portfolios.forEach(p => {
+          context += `  • ${p.portfolio_name}\n`;
+        });
       }
+      
       if (benchmarks.length > 0) {
-        context += `- Benchmarks found (${benchmarks.length}): ${benchmarks.slice(0, 5).map(b => b.name).join(", ")}${benchmarks.length > 5 ? `... and ${benchmarks.length - 5} more` : ""}\n`;
+        context += `\n✅ BENCHMARKS FOUND (${benchmarks.length}):\n`;
+        benchmarks.forEach(b => {
+          context += `  • ${b.name}\n`;
+        });
       }
+      
       if (tasks.length > 0) {
-        context += `- Active Tasks: ${tasks.length} pending\n`;
+        context += `\n📋 Active Tasks: ${tasks.length} pending\n`;
       }
+      
       if (activities.length > 0) {
-        context += `- Recent Activities: ${activities.length} logged\n`;
+        context += `\n📝 Recent Activities: ${activities.length} logged\n`;
       }
 
-      if (firms.length === 0 && contacts.length === 0 && products.length === 0 && portfolios.length === 0 && benchmarks.length === 0 && !entityName) {
+      if (firms.length === 0 && contacts.length === 0 && products.length === 0 && 
+          portfolios.length === 0 && benchmarks.length === 0 && searchTerms.length === 0) {
         // General overview
         const [allFirms, allContacts, allProducts] = await Promise.all([
           base44.entities.Firm.list(),
           base44.entities.Contact.list(),
           base44.entities.Product.list()
         ]);
-        context = `\nDatabase Overview:\n- Total Firms: ${allFirms.filter(f => !f.deleted_at).length}\n- Total Contacts: ${allContacts.filter(c => !c.deleted_at).length}\n- Total Products: ${allProducts.filter(p => !p.deleted_at).length}`;
+        const activeFirms = allFirms.filter(f => !f.deleted_at);
+        const activeContacts = allContacts.filter(c => !c.deleted_at);
+        const activeProducts = allProducts.filter(p => !p.deleted_at);
+        context = `\n=== DATABASE OVERVIEW ===\n- Total Firms: ${activeFirms.length}\n- Total Contacts: ${activeContacts.length}\n- Total Products: ${activeProducts.length}\n\nSample firms: ${activeFirms.slice(0, 10).map(f => f.name).join(", ")}${activeFirms.length > 10 ? `... and ${activeFirms.length - 10} more` : ""}`;
       }
 
       return context;
