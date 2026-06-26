@@ -676,6 +676,7 @@ function ActivityLogForm({ onSaved, onCancel, allFirms, allContacts, onFirmClick
   const [originator, setOriginator] = useState({ firmId: "", firmName: "", firmType: null, contactId: "", contactName: "" });
   const [activityType, setActivityType] = useState("Call");
   const [activityDate, setActivityDate] = useState(new Date().toISOString().split("T")[0]);
+  const [subject, setSubject] = useState("");
   const [notes, setNotes] = useState("");
   const [associatedFirmsContacts, setAssociatedFirmsContacts] = useState([]);
   const [addTask, setAddTask] = useState(false);
@@ -735,6 +736,11 @@ function ActivityLogForm({ onSaved, onCancel, allFirms, allContacts, onFirmClick
       </div>
 
       <div className="space-y-1">
+        <Label className="text-xs font-medium text-gray-700">Subject</Label>
+        <Input value={subject} onChange={e => setSubject(e.target.value)} className="h-8 text-sm" placeholder="Enter subject..." />
+      </div>
+
+      <div className="space-y-1">
         <Label className="text-xs font-medium text-gray-700">Notes</Label>
         <Textarea placeholder="Activity details..." value={notes} onChange={e => setNotes(e.target.value)} className="min-h-16 text-sm" />
       </div>
@@ -774,7 +780,7 @@ function ActivityLogForm({ onSaved, onCancel, allFirms, allContacts, onFirmClick
           disabled={!canSave || createMutation.isPending}
           onClick={() => createMutation.mutate({
             contact_id: originator.contactId, activity_type: activityType, activity_date: activityDate,
-            notes: notes.trim(), associated_firms_contacts: associatedFirmsContacts,
+            subject: subject.trim(), notes: notes.trim(), associated_firms_contacts: associatedFirmsContacts,
           })}>
           {createMutation.isPending ? "Saving..." : "Save Activity"}
         </Button>
