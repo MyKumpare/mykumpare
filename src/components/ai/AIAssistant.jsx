@@ -364,7 +364,14 @@ Always be helpful, professional, and concise.`;
       if (firms.length > 0) {
         context += `\n✅ FIRMS FOUND (${firms.length}):\n`;
         firms.forEach(f => {
-          context += `  • ${f.name} (${f.firm_types?.join(", ") || f.firm_type || "No type"})\n`;
+          const addresses = f.addresses || [];
+          const primaryAddress = addresses.find(a => a.is_headquarters) || addresses[0];
+          let addressStr = "";
+          if (primaryAddress) {
+            const parts = [primaryAddress.address_line1, primaryAddress.address_line2, primaryAddress.city, primaryAddress.state, primaryAddress.postal_code, primaryAddress.country].filter(Boolean);
+            addressStr = parts.length > 0 ? ` | Address: ${parts.join(", ")}` : "";
+          }
+          context += `  • ${f.name} (${f.firm_types?.join(", ") || f.firm_type || "No type"})${addressStr}\n`;
         });
       } else if (shouldSearchFirms && searchTerms.length > 0) {
         context += `\n❌ No firms found matching "${searchTerms[0]}".\n`;
