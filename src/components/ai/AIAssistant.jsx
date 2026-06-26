@@ -79,7 +79,7 @@ Always be helpful, professional, and concise.`;
 
   const searchFirms = async (query) => {
     try {
-      const allFirms = await base44.entities.Firm.list();
+      const allFirms = await base44.entities.Firm.list(null, 500);
       const activeFirms = allFirms.filter(f => !f.deleted_at);
       
       if (!query || query.trim() === '') {
@@ -127,7 +127,7 @@ Always be helpful, professional, and concise.`;
 
   const searchContacts = async (query) => {
     try {
-      const allContacts = await base44.entities.Contact.list();
+      const allContacts = await base44.entities.Contact.list(null, 500);
       const activeContacts = allContacts.filter(c => !c.deleted_at);
       if (!query) return activeContacts.slice(0, 20);
       const q = query.toLowerCase();
@@ -142,7 +142,7 @@ Always be helpful, professional, and concise.`;
 
   const searchProducts = async (query) => {
     try {
-      const allProducts = await base44.entities.Product.list();
+      const allProducts = await base44.entities.Product.list(null, 500);
       const activeProducts = allProducts.filter(p => !p.deleted_at);
       if (!query) return activeProducts.slice(0, 20);
       const q = query.toLowerCase();
