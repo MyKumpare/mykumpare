@@ -49,7 +49,7 @@ function levenshteinDistance(s1, s2) {
   return dp[m][n];
 }
 
-// Activity type picker with search-as-you-type and add-new functionality
+// Log type picker with search-as-you-type and add-new functionality
 export default function ActivityTypePicker({ value = "", onChange, placeholder = "Select type..." }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -60,9 +60,9 @@ export default function ActivityTypePicker({ value = "", onChange, placeholder =
   const [deletingType, setDeletingType] = useState(null);
   const ref = useRef(null);
 
-  // Fetch all activity types from the ActivityType entity
+  // Fetch all log types from the ActivityType entity
   const { data: allTypes = [], refetch } = useQuery({
-    queryKey: ["all_activity_types"],
+    queryKey: ["all_log_types"],
     queryFn: async () => {
       const types = await base44.entities.ActivityType.list();
       return types
@@ -106,7 +106,7 @@ export default function ActivityTypePicker({ value = "", onChange, placeholder =
     
     if (exactMatch) {
       // Exact duplicate exists - show error
-      alert(`Activity type "${exactMatch}" already exists. Please select it from the list instead.`);
+      alert(`Log type "${exactMatch}" already exists. Please select it from the list instead.`);
       return;
     }
     
@@ -131,7 +131,7 @@ export default function ActivityTypePicker({ value = "", onChange, placeholder =
       // Refetch to update the list
       refetch();
     } catch (error) {
-      console.error("Failed to save activity type:", error);
+      console.error("Failed to save log type:", error);
     }
     onChange(trimmedType);
     setAddingNew(false);
@@ -180,14 +180,14 @@ export default function ActivityTypePicker({ value = "", onChange, placeholder =
         }
       }
     } catch (error) {
-      console.error("Failed to delete activity type:", error);
+      console.error("Failed to delete log type:", error);
     }
     setDeletingType(null);
   };
 
   return (
     <div className="relative" ref={ref}>
-      {/* Selected type display */}
+      {/* Selected log type display */}
       {value && (
         <div className="flex items-center gap-2 mb-1">
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 border border-indigo-200 rounded-lg text-xs font-medium text-indigo-700">
@@ -208,7 +208,7 @@ export default function ActivityTypePicker({ value = "", onChange, placeholder =
         }`}
       >
         <span className={`truncate ${value ? "text-gray-400" : ""}`}>
-          {value ? "Change type..." : placeholder}
+          {value ? "Change log type..." : placeholder}
         </span>
         <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
@@ -222,7 +222,7 @@ export default function ActivityTypePicker({ value = "", onChange, placeholder =
                 <button type="button" onClick={() => setAddingNew(false)} className="text-gray-400 hover:text-gray-600">
                   <ChevronDown className="w-3 h-3 rotate-90" />
                 </button>
-                <p className="text-xs font-semibold text-gray-700">Add New Type</p>
+                <p className="text-xs font-semibold text-gray-700">Add New Log Type</p>
               </div>
               <Input
                 autoFocus
@@ -249,7 +249,7 @@ export default function ActivityTypePicker({ value = "", onChange, placeholder =
                   disabled={!newType.trim()}
                   className="px-3 py-1.5 rounded-lg bg-indigo-600 text-xs text-white hover:bg-indigo-700 disabled:opacity-50"
                 >
-                  Add Type
+                  Add Log Type
                 </button>
               </div>
             </div>
@@ -257,7 +257,7 @@ export default function ActivityTypePicker({ value = "", onChange, placeholder =
             <div className="p-4 space-y-3">
               <div className="flex items-center gap-2 mb-2">
                 <AlertTriangle className="w-5 h-5 text-amber-500" />
-                <h4 className="text-sm font-semibold text-gray-800">Similar Types Found</h4>
+                <h4 className="text-sm font-semibold text-gray-800">Similar Log Types Found</h4>
               </div>
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {similarTypes.map((type, idx) => (
@@ -277,7 +277,7 @@ export default function ActivityTypePicker({ value = "", onChange, placeholder =
                 ))}
               </div>
               <p className="text-xs text-gray-600">
-                Did you mean one of the above? Or you can add "<span className="font-semibold">{newType}</span>" as a new type.
+                Did you mean one of the above? Or you can add "<span className="font-semibold">{newType}</span>" as a new log type.
               </p>
               <div className="flex gap-2 justify-end pt-2 border-t border-gray-100">
                 <Button
@@ -308,7 +308,7 @@ export default function ActivityTypePicker({ value = "", onChange, placeholder =
                   type="text"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  placeholder="Search types..."
+                  placeholder="Search log types..."
                   className="w-full h-7 px-2.5 text-xs rounded-lg border border-gray-200 outline-none focus:border-indigo-400 bg-gray-50"
                 />
               </div>
@@ -318,14 +318,14 @@ export default function ActivityTypePicker({ value = "", onChange, placeholder =
                 {filteredTypes.length === 0 ? (
                   <div className="px-3 py-3 space-y-1">
                     <p className="text-xs text-gray-400 italic text-center">
-                      {search ? "No types found" : "No types yet"}
+                      {search ? "No log types found" : "No log types yet"}
                     </p>
                     <button
                       type="button"
                       onClick={() => setAddingNew(true)}
                       className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-indigo-300 text-xs text-indigo-600 hover:bg-indigo-50 transition-colors"
                     >
-                      <Plus className="w-3 h-3" /> Add new type
+                      <Plus className="w-3 h-3" /> Add new log type
                     </button>
                   </div>
                 ) : (
@@ -359,7 +359,7 @@ export default function ActivityTypePicker({ value = "", onChange, placeholder =
                               type="button"
                               onClick={(e) => { e.stopPropagation(); setDeletingType(type); }}
                               className="p-1 text-gray-300 hover:text-red-500 transition-colors"
-                              title="Delete this activity type"
+                              title="Delete this log type"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -373,7 +373,7 @@ export default function ActivityTypePicker({ value = "", onChange, placeholder =
                         onClick={() => setAddingNew(true)}
                         className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs text-indigo-600 hover:bg-indigo-50 transition-colors"
                       >
-                        <Plus className="w-3 h-3" /> Add new type
+                        <Plus className="w-3 h-3" /> Add new log type
                       </button>
                     </div>
                   </>
@@ -388,7 +388,7 @@ export default function ActivityTypePicker({ value = "", onChange, placeholder =
               <div className="bg-white rounded-xl shadow-xl p-4 w-[90%] max-w-xs mx-4">
                 <div className="flex items-center gap-2 mb-3">
                   <AlertTriangle className="w-5 h-5 text-amber-500" />
-                  <h4 className="text-sm font-semibold text-gray-800">Delete Activity Type?</h4>
+                  <h4 className="text-sm font-semibold text-gray-800">Delete Log Type?</h4>
                 </div>
                 <p className="text-xs text-gray-600 mb-4">
                   Are you sure you want to delete "<span className="font-semibold">{deletingType}</span>"? This action cannot be undone.
