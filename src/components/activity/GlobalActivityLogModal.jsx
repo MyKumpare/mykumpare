@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import SubjectPicker from "./SubjectPicker";
 import ActivityTypePicker from "./ActivityTypePicker";
 import {
   Phone, Mail, Users, FileText, MoreHorizontal, ChevronDown, ChevronUp,
@@ -677,7 +676,6 @@ function ActivityLogForm({ onSaved, onCancel, allFirms, allContacts, onFirmClick
   const [originator, setOriginator] = useState({ firmId: "", firmName: "", firmType: null, contactId: "", contactName: "" });
   const [activityType, setActivityType] = useState("Call");
   const [activityDate, setActivityDate] = useState(new Date().toISOString().split("T")[0]);
-  const [subject, setSubject] = useState("");
   const [notes, setNotes] = useState("");
   const [associatedFirmsContacts, setAssociatedFirmsContacts] = useState([]);
   const [addTask, setAddTask] = useState(false);
@@ -737,15 +735,6 @@ function ActivityLogForm({ onSaved, onCancel, allFirms, allContacts, onFirmClick
       </div>
 
       <div className="space-y-1">
-        <Label className="text-xs font-medium text-gray-700">Subject Type</Label>
-        <SubjectPicker
-          value={subject}
-          onChange={setSubject}
-          placeholder="Select or add subject type..."
-        />
-      </div>
-
-      <div className="space-y-1">
         <Label className="text-xs font-medium text-gray-700">Notes</Label>
         <Textarea placeholder="Activity details..." value={notes} onChange={e => setNotes(e.target.value)} className="min-h-16 text-sm" />
       </div>
@@ -785,7 +774,7 @@ function ActivityLogForm({ onSaved, onCancel, allFirms, allContacts, onFirmClick
           disabled={!canSave || createMutation.isPending}
           onClick={() => createMutation.mutate({
             contact_id: originator.contactId, activity_type: activityType, activity_date: activityDate,
-            subject: subject.trim(), notes: notes.trim(), associated_firms_contacts: associatedFirmsContacts,
+            notes: notes.trim(), associated_firms_contacts: associatedFirmsContacts,
           })}>
           {createMutation.isPending ? "Saving..." : "Save Activity"}
         </Button>
