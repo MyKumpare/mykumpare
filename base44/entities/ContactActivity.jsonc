@@ -22,13 +22,6 @@
       "format": "date",
       "description": "Date the activity took place"
     },
-    "categories": {
-      "type": "array",
-      "description": "Activity categories (multi-select)",
-      "items": {
-        "type": "string"
-      }
-    },
     "subject": {
       "type": "string",
       "description": "Short subject or title of the activity"
