@@ -1,0 +1,13 @@
+{
+  "name": "ActivitySubject",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the activity subject"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

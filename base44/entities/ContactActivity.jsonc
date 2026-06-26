@@ -22,9 +22,12 @@
       "format": "date",
       "description": "Date the activity took place"
     },
-    "subject": {
-      "type": "string",
-      "description": "Short subject or title of the activity"
+    "subjects": {
+      "type": "array",
+      "description": "Activity subjects (multi-select)",
+      "items": {
+        "type": "string"
+      }
     },
     "notes": {
       "type": "string",
