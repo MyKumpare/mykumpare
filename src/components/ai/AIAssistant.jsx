@@ -56,20 +56,154 @@ When helping users:
 Always be helpful, professional, and concise.`;
   };
 
-  const buildToolContext = async () => {
+  const searchFirms = async (query) => {
     try {
-      const [firms, contacts, tasks] = await Promise.all([
-        base44.entities.Firm.list().then(f => f.filter(f => !f.deleted_at).slice(0, 10)),
-        base44.entities.Contact.list().then(c => c.filter(c => !c.deleted_at).slice(0, 10)),
-        base44.entities.FollowUpTask.list().then(t => t.filter(t => !t.deleted_at && t.status !== "Completed").slice(0, 5))
+      const allFirms = await base44.entities.Firm.list();
+      const activeFirms = allFirms.filter(f => !f.deleted_at);
+      if (!query) return activeFirms.slice(0, 20);
+      const q = query.toLowerCase();
+      return activeFirms.filter(f => f.name.toLowerCase().includes(q));
+    } catch {
+      return [];
+    }
+  };
+
+  const searchContacts = async (query) => {
+    try {
+      const allContacts = await base44.entities.Contact.list();
+      const activeContacts = allContacts.filter(c => !c.deleted_at);
+      if (!query) return activeContacts.slice(0, 20);
+      const q = query.toLowerCase();
+      return activeContacts.filter(c => {
+        const fullName = [c.first_name, c.last_name].filter(Boolean).join(" ").toLowerCase();
+        return fullName.includes(q) || (c.email || "").toLowerCase().includes(q);
+      });
+    } catch {
+      return [];
+    }
+  };
+
+  const searchProducts = async (query) => {
+    try {
+      const allProducts = await base44.entities.Product.list();
+      const activeProducts = allProducts.filter(p => !p.deleted_at);
+      if (!query) return activeProducts.slice(0, 20);
+      const q = query.toLowerCase();
+      return activeProducts.filter(p => p.name.toLowerCase().includes(q));
+    } catch {
+      return [];
+    }
+  };
+
+  const searchPortfolios = async (query) => {
+    try {
+      const allPortfolios = await base44.entities.Portfolio.list();
+      const activePortfolios = allPortfolios.filter(p => !p.deleted_at);
+      if (!query) return activePortfolios.slice(0, 20);
+      const q = query.toLowerCase();
+      return activePortfolios.filter(p => p.portfolio_name.toLowerCase().includes(q));
+    } catch {
+      return [];
+    }
+  };
+
+  const searchBenchmarks = async (query) => {
+    try {
+      const allBenchmarks = await base44.entities.Benchmark.list();
+      if (!query) return allBenchmarks.slice(0, 20);
+      const q = query.toLowerCase();
+      return allBenchmarks.filter(b => b.name.toLowerCase().includes(q));
+    } catch {
+      return [];
+    }
+  };
+
+  const searchTasks = async (status) => {
+    try {
+      const allTasks = await base44.entities.FollowUpTask.list();
+      const activeTasks = allTasks.filter(t => !t.deleted_at);
+      if (status) {
+        return activeTasks.filter(t => t.status === status).slice(0, 20);
+      }
+      return activeTasks.filter(t => t.status !== "Completed").slice(0, 20);
+    } catch {
+      return [];
+    }
+  };
+
+  const searchActivities = async () => {
+    try {
+      const allActivities = await base44.entities.ContactActivity.list();
+      return allActivities.slice(0, 20);
+    } catch {
+      return [];
+    }
+  };
+
+  const buildToolContext = async (userQuery) => {
+    try {
+      const q = userQuery.toLowerCase();
+      
+      // Detect what the user is asking about
+      const isAskingAboutFirms = /firm|company|manager|allocator|consultant|brokerage/i.test(q);
+      const isAskingAboutContacts = /contact|person|people|employee/i.test(q);
+      const isAskingAboutProducts = /product|fund|investment/i.test(q);
+      const isAskingAboutPortfolios = /portfolio|allocator/i.test(q);
+      const isAskingAboutTasks = /task|follow.?up|assignment/i.test(q);
+      const isAskingAboutActivities = /activity|call|email|meeting|log/i.test(q);
+      const isAskingAboutBenchmarks = /benchmark|index|sp500|s&p/i.test(q);
+      
+      // Extract potential entity names from the query
+      const nameMatch = q.match(/(?:called|named|is there a|any|show me|find)\s+["']?([a-z0-9\s.,&'-]+)["']?(?:\s+(?:in|at|for|about))?/i);
+      const entityName = nameMatch ? nameMatch[1].trim() : null;
+
+      const [firms, contacts, products, portfolios, benchmarks, tasks, activities] = await Promise.all([
+        isAskingAboutFirms || entityName ? searchFirms(entityName) : Promise.resolve([]),
+        isAskingAboutContacts || entityName ? searchContacts(entityName) : Promise.resolve([]),
+        isAskingAboutProducts || entityName ? searchProducts(entityName) : Promise.resolve([]),
+        isAskingAboutPortfolios || entityName ? searchPortfolios(entityName) : Promise.resolve([]),
+        isAskingAboutBenchmarks || entityName ? searchBenchmarks(entityName) : Promise.resolve([]),
+        isAskingAboutTasks ? searchTasks() : Promise.resolve([]),
+        isAskingAboutActivities ? searchActivities() : Promise.resolve([])
       ]);
 
-      return `\nCurrent Context (sample of recent data):
-- Total Firms: ${firms.length} shown (e.g., ${firms.slice(0, 3).map(f => f.name).join(", ")})
-- Total Contacts: ${contacts.length} shown
-- Active Tasks: ${tasks.length} pending`;
-    } catch {
-      return "";
+      let context = "\nSearch Results from Database:\n";
+      if (firms.length > 0) {
+        context += `- Firms found (${firms.length}): ${firms.slice(0, 5).map(f => f.name).join(", ")}${firms.length > 5 ? `... and ${firms.length - 5} more` : ""}\n`;
+      }
+      if (contacts.length > 0) {
+        context += `- Contacts found (${contacts.length}): ${contacts.slice(0, 5).map(c => `${c.first_name} ${c.last_name}`).join(", ")}${contacts.length > 5 ? `... and ${contacts.length - 5} more` : ""}\n`;
+      }
+      if (products.length > 0) {
+        context += `- Products found (${products.length}): ${products.slice(0, 5).map(p => p.name).join(", ")}${products.length > 5 ? `... and ${products.length - 5} more` : ""}\n`;
+      }
+      if (portfolios.length > 0) {
+        context += `- Portfolios found (${portfolios.length}): ${portfolios.slice(0, 5).map(p => p.portfolio_name).join(", ")}${portfolios.length > 5 ? `... and ${portfolios.length - 5} more` : ""}\n`;
+      }
+      if (benchmarks.length > 0) {
+        context += `- Benchmarks found (${benchmarks.length}): ${benchmarks.slice(0, 5).map(b => b.name).join(", ")}${benchmarks.length > 5 ? `... and ${benchmarks.length - 5} more` : ""}\n`;
+      }
+      if (tasks.length > 0) {
+        context += `- Active Tasks: ${tasks.length} pending\n`;
+      }
+      if (activities.length > 0) {
+        context += `- Recent Activities: ${activities.length} logged\n`;
+      }
+
+      if (firms.length === 0 && contacts.length === 0 && products.length === 0 && portfolios.length === 0 && benchmarks.length === 0 && !entityName) {
+        // General overview
+        const [allFirms, allContacts, allProducts] = await Promise.all([
+          base44.entities.Firm.list(),
+          base44.entities.Contact.list(),
+          base44.entities.Product.list()
+        ]);
+        context = `\nDatabase Overview:\n- Total Firms: ${allFirms.filter(f => !f.deleted_at).length}\n- Total Contacts: ${allContacts.filter(c => !c.deleted_at).length}\n- Total Products: ${allProducts.filter(p => !p.deleted_at).length}`;
+      }
+
+      return context;
+    } catch (error) {
+      console.error("Error building context:", error);
+      return "\nUnable to retrieve current data.";
     }
   };
 
@@ -83,10 +217,11 @@ Always be helpful, professional, and concise.`;
     setIsLoading(true);
 
     try {
-      const toolContext = await buildToolContext();
+      // Build context based on what the user is asking about
+      const toolContext = await buildToolContext(userMessage);
       
       const response = await base44.integrations.Core.InvokeLLM({
-        prompt: `${buildSystemPrompt()}\n\n${toolContext}\n\nUser Question: ${userMessage}\n\nProvide a helpful, detailed response. If the user asks about specific data, explain what information you can access and offer to help them find it.`,
+        prompt: `${buildSystemPrompt()}\n\n${toolContext}\n\nUser Question: ${userMessage}\n\nProvide a helpful, detailed response based on the search results above. If specific entities were found, mention them by name. If nothing was found, clearly state that.`,
         add_context_from_internet: false,
         model: "automatic"
       });

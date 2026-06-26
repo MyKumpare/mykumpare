@@ -9,6 +9,8 @@
  * 3. Configure in your MCP client using mcp-config.json
  */
 
+/* eslint-env node */
+
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
