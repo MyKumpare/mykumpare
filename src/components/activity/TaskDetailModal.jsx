@@ -787,6 +787,14 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
   const [editAssignments, setEditAssignments] = useState([]);
   const [editAttachments, setEditAttachments] = useState([]);
 
+  // Auto-update status when assignments change in edit mode
+  useEffect(() => {
+    if (editMode && editAssignments && editAssignments.length > 0) {
+      const aggregated = computeAggregateStatus(editAssignments);
+      setEditStatus(aggregated);
+    }
+  }, [editAssignments, editMode]);
+
   const updateMutation = useMutation({
     mutationFn: async (data) => {
       console.log("Mutation function called with:", data);
