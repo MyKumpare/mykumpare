@@ -5,13 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { X, Plus, AlertTriangle, Check } from "lucide-react";
+import { X, Plus, AlertTriangle, Check, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 
 // Levenshtein distance for similarity check
@@ -50,6 +51,7 @@ export default function SubjectPicker({ value = [], onChange, placeholder = "Sel
   const [addingNew, setAddingNew] = useState(false);
   const [newSubject, setNewSubject] = useState("");
   const [similarMatch, setSimilarMatch] = useState(null);
+  const [deletingSubject, setDeletingSubject] = useState(null);
   const ref = useRef(null);
 
   const { data: subjects = [], refetch } = useQuery({
@@ -72,6 +74,14 @@ export default function SubjectPicker({ value = [], onChange, placeholder = "Sel
 
   const createMutation = useMutation({
     mutationFn: (name) => base44.entities.ActivitySubject.create({ name }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["activity_subjects"] });
+      refetch();
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.ActivitySubject.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["activity_subjects"] });
       refetch();
@@ -191,18 +201,34 @@ export default function SubjectPicker({ value = [], onChange, placeholder = "Sel
             {filtered.map(subject => {
               const selected = value.includes(subject.name);
               return (
-                <button
+                <div
                   key={subject.id}
-                  type="button"
-                  onClick={() => handleSelect(subject)}
-                  disabled={selected}
                   className={`w-full flex items-center justify-between px-3 py-2 text-xs transition-colors ${
-                    selected ? "bg-gray-50 text-gray-400 cursor-default" : "hover:bg-indigo-50 text-gray-700"
+                    selected ? "bg-gray-50" : "hover:bg-indigo-50"
                   }`}
                 >
-                  <span className="font-medium">{subject.name}</span>
-                  {selected && <Check className="w-3 h-3 text-green-500" />}
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSelect(subject)}
+                    disabled={selected}
+                    className={`flex-1 text-left font-medium ${
+                      selected ? "text-gray-400 cursor-default" : "text-gray-700"
+                    }`}
+                  >
+                    {subject.name}
+                  </button>
+                  <div className="flex items-center gap-2">
+                    {selected && <Check className="w-3 h-3 text-green-500" />}
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setDeletingSubject(subject); }}
+                      className="text-gray-300 hover:text-red-500 p-1"
+                      title="Delete subject"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
               );
             })}
 
@@ -288,6 +314,53 @@ export default function SubjectPicker({ value = [], onChange, placeholder = "Sel
               onClick={confirmSimilarAdd}
             >
               Add Anyway
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={!!deletingSubject} onOpenChange={() => setDeletingSubject(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-red-500" />
+              Delete Subject
+            </DialogTitle>
+            <DialogDescription className="text-xs text-gray-500">
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-3">
+            <p className="text-xs text-gray-600">
+              Are you sure you want to delete "<strong>{deletingSubject?.name}</strong>"?
+            </p>
+            <p className="text-xs text-amber-600 mt-2">
+              This will remove it from the list of available subjects.
+            </p>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setDeletingSubject(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="destructive"
+              disabled={deleteMutation.isPending}
+              onClick={() => {
+                if (deletingSubject) {
+                  deleteMutation.mutate(deletingSubject.id);
+                  setDeletingSubject(null);
+                }
+              }}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>
