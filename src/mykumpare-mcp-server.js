@@ -4,7 +4,7 @@
  * Provides AI assistants with tools to interact with the MyKumpare Base44 application.
  * 
  * Setup:
- * 1. Install dependencies: npm install @base44/sdk
+ * 1. Install dependencies: npm install @base44/sdk @modelcontextprotocol/sdk
  * 2. Set environment variables: BASE44_APP_ID, BASE44_SERVICE_TOKEN
  * 3. Configure in your MCP client using mcp-config.json
  */
@@ -19,8 +19,8 @@ import { createClient } from '@base44/sdk';
 
 // Initialize Base44 client
 const base44 = createClient({
-  appId: Deno.env.get("BASE44_APP_ID"),
-  serviceToken: Deno.env.get("BASE44_SERVICE_TOKEN"),
+  appId: process.env.BASE44_APP_ID,
+  serviceToken: process.env.BASE44_SERVICE_TOKEN,
 });
 
 // MCP Server instance
@@ -638,5 +638,5 @@ async function main() {
 
 main().catch((error) => {
   console.error('Fatal error:', error);
-  Deno.exit(1);
+  process.exit(1);
 });

@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import AIAssistant from "@/components/ai/AIAssistant";
 
 import AddFirmDialog from "../components/firms/AddFirmDialog";
 import DeleteConfirmDialog from "../components/firms/DeleteConfirmDialog";
@@ -824,6 +825,8 @@ export default function Home() {
         editingBenchmark={editingBenchmark}
       />
 
+      {/* AI Assistant */}
+      <AIAssistant />
     </div>
   );
 }
