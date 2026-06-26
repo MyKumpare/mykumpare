@@ -267,64 +267,42 @@ Always be helpful, professional, and concise.`;
     try {
       const q = userQuery.toLowerCase();
       
-      // Extract search terms - look for names after common query patterns
+      // Extract search terms: prefer proper nouns from the original query, then fall back to stop-word filtering
+      const stopWords = new Set(['what', 'where', 'when', 'who', 'why', 'how', 'the', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'shall', 'can', 'need', 'dare', 'ought', 'used', 'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by', 'from', 'as', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 'between', 'under', 'again', 'further', 'then', 'once', 'here', 'there', 'all', 'each', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 'just', 'and', 'but', 'if', 'or', 'because', 'until', 'while', 'although', 'though', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'which', 'whom', 'this', 'that', 'these', 'those', 'am', 'having', 'doing', 'a', 'an', 'against', 'up', 'down', 'out', 'off', 'over', 'any', 'both', 'now', 's', 't', 'don', 'provide', 'give', 'show', 'get', 'me', 'chief', 'officer', 'director', 'president', 'vice', 'senior', 'please', 'yes', 'no', 'name', 'named', 'called']);
+      
+      // Entity-type words to strip from search terms
+      const entityWords = /\b(firm|firms|company|companies|business|organization|manager|allocator|consultant|brokerage|investment|address|phone|email|contact|info|information|details|portfolio|product|fund|benchmark)\b/gi;
+      
       let searchTerms = [];
       
-      // Pattern: "provide me xponance's address" - extract possessive noun
-      const possessiveMatch = q.match(/(?:provide|give|show|get|find)\s+(?:me\s+)?([a-z0-9]+)'s/i);
-      if (possessiveMatch) {
-        searchTerms.push(possessiveMatch[1].trim());
+      // 1. Proper nouns from original (capitalized, not at sentence start, not in stopWords)
+      const words = userQuery.split(/\s+/);
+      const properNouns = words
+        .filter((w, i) => i > 0 && /^[A-Z]/.test(w) && !stopWords.has(w.toLowerCase().replace(/[^a-z]/g, '')))
+        .map(w => w.replace(/[^a-zA-Z0-9]/g, ''));
+      if (properNouns.length > 0) {
+        searchTerms = properNouns;
       }
       
-      // Pattern: "called xponance", "named xponance"
-      const calledMatch = q.match(/(?:called|named)\s+["']?([a-z0-9\s.,&'-]+)["']?/i);
-      if (calledMatch && !possessiveMatch) {
-        searchTerms.push(calledMatch[1].trim());
-      }
+      // 2. Possessive: "xponance's"
+      const possessiveMatch = userQuery.match(/([A-Za-z0-9]+)'s/);
+      if (possessiveMatch) searchTerms.unshift(possessiveMatch[1]);
       
-      // Pattern: "is there a firm called" or "is xponance in"
-      const isInMatch = q.match(/is\s+(?:there\s+(?:a|an)\s+)?([a-z0-9\s.,&'-]+?)\s+(?:in|at|for)/i);
-      if (isInMatch && !calledMatch && !possessiveMatch) {
-        searchTerms.push(isInMatch[1].trim());
-      }
-      
-      // Pattern: "search for xponance", "find xponance"
-      const forMatch = q.match(/(?:search|find|look\s+for)\s+(?:a|an|the)?\s*([a-z0-9\s.,&'-]+)/i);
-      if (forMatch && !possessiveMatch) {
-        searchTerms.push(forMatch[1].trim());
-      }
-      
-      // Pattern: "what is the address for xponance" - extract word after "for"
-      const forPattern2 = q.match(/(?:for|about)\s+([a-z0-9\s.,&'-]+)/i);
-      if (forPattern2 && searchTerms.length === 0 && !possessiveMatch) {
-        searchTerms.push(forPattern2[1].trim());
-      }
-      
-      // If no specific pattern matched, extract potential proper nouns (capitalized words in original)
+      // 3. After "at", "for", "about", "called", "named": pick the word(s) after
       if (searchTerms.length === 0) {
-        const properNouns = userQuery.match(/[A-Z][a-z]+(?:\s*[A-Z][a-z]+)*/g);
-        if (properNouns) {
-          searchTerms.push(...properNouns);
-        }
+        const afterKeyword = q.match(/\b(?:at|for|about|called|named)\s+([a-z0-9]+)/i);
+        if (afterKeyword) searchTerms.push(afterKeyword[1]);
       }
       
-      // If still no search terms but query has words, try extracting the most significant word
+      // 4. Fall back: any non-stop, non-entity word
       if (searchTerms.length === 0) {
-        const stopWords = new Set(['what', 'where', 'when', 'who', 'why', 'how', 'the', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'shall', 'can', 'need', 'dare', 'ought', 'used', 'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by', 'from', 'as', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 'between', 'under', 'again', 'further', 'then', 'once', 'here', 'there', 'all', 'each', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 'just', 'and', 'but', 'if', 'or', 'because', 'until', 'while', 'although', 'though', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'what', 'which', 'who', 'whom', 'this', 'that', 'these', 'those', 'am', 'having', 'doing', 'a', 'an', 'against', 'up', 'down', 'out', 'off', 'over', 'any', 'both', 'now', 's', 't', 'don', 'firm', 'firms', 'company', 'companies', 'business', 'organization', 'manager', 'allocator', 'consultant', 'brokerage', 'provide', 'give', 'show', 'get', 'me', 'address', 'phone', 'email', 'contact', 'info', 'information', 'details']);
-        const words = q.split(/\s+/).filter(w => w.length > 2 && !stopWords.has(w));
-        if (words.length > 0) {
-          // Take the most significant word (usually the name)
-          searchTerms.push(words[0]);
-        }
+        const fallback = q.replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 2 && !stopWords.has(w));
+        const cleaned = fallback.map(w => w.replace(entityWords, '').trim()).filter(Boolean);
+        if (cleaned.length > 0) searchTerms.push(cleaned[0]);
       }
       
-      // Clean up search terms - remove entity type words and possessives
-      searchTerms = searchTerms.map(term => {
-        let cleanTerm = term.replace(/\b(firm|firms|company|companies|business|organization|manager|allocator|consultant|brokerage)\b/gi, '').trim();
-        cleanTerm = cleanTerm.replace(/'s$/, '').trim(); // Remove possessive
-        cleanTerm = cleanTerm.replace(/[,.\-&"]/g, '').trim(); // Remove punctuation
-        return cleanTerm || term;
-      }).filter(t => t.length > 1);
+      // Deduplicate and clean
+      searchTerms = [...new Set(searchTerms)].filter(t => t.length > 1);
       
       // Detect what the user is asking about
       const isAskingAboutFirms = /firm|company|manager|allocator|consultant|brokerage|business|organization/i.test(q);
