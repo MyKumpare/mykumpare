@@ -32,31 +32,21 @@ function computeAggregateStatus(assignments) {
   
   if (allStatuses.length === 0) return "Not Started";
   
-  // If all are Not Started, task is Not Started
-  if (allStatuses.every(s => s === "Not Started")) return "Not Started";
-  
   // If all are Completed, task is Completed
   if (allStatuses.every(s => s === "Completed")) return "Completed";
   
   // If all are Cancelled, task is Cancelled
   if (allStatuses.every(s => s === "Cancelled")) return "Cancelled";
   
-  // If there's any mix of statuses (e.g., one Completed and one Not Started, or one In-process and one Not Started), task is In-process
-  const hasCompleted = allStatuses.some(s => s === "Completed");
-  const hasInProgress = allStatuses.some(s => s === "In-process");
-  const hasNotStarted = allStatuses.some(s => s === "Not Started");
+  // If all are Not Started, task is Not Started
+  if (allStatuses.every(s => s === "Not Started")) return "Not Started";
   
-  // If any assignee has started (Completed or In-process) while others haven't, or there's any mix, it's In-process
-  if ((hasCompleted || hasInProgress) && hasNotStarted) return "In-process";
-  if (hasCompleted && hasInProgress) return "In-process";
-  
-  // If any is In-process, task is In-process
-  if (hasInProgress) return "In-process";
-  
-  // If any is Completed (but not all), task is In-process
-  if (hasCompleted) return "In-process";
-  
-  return "Not Started";
+  // Any other mix means In-process:
+  // - One In-process + others Not Started => In-process
+  // - One Completed + others Not Started => In-process
+  // - One Completed + one In-process => In-process
+  // - Any combination that's not all the same => In-process
+  return "In-process";
 }
 
 const QUILL_MODULES = {
@@ -416,14 +406,15 @@ function AssigneeStatusEditor({ assignments = [], onChange, allContacts, allFirm
 
   const handleStatusChange = (assignmentId, newStatus) => {
     const today = todayStr();
-    onChange(assignments.map(a => {
+    const updated = assignments.map(a => {
       if (a.id !== assignmentId) return a;
       return {
         ...a,
         status: newStatus,
         status_date: newStatus !== a.status ? today : a.status_date,
       };
-    }));
+    });
+    onChange(updated);
   };
 
   const handleNotesChange = (assignmentId, newNotes) => {
@@ -768,6 +759,12 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
         });
       }
       setEditAssignments(assignmentsData);
+      
+      // Auto-update task status based on assignments
+      if (assignmentsData.length > 0) {
+        const aggregated = computeAggregateStatus(assignmentsData);
+        setEditStatus(aggregated);
+      }
     }
   }, [editMode, task]);
 
@@ -832,8 +829,8 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
 
   const handleSave = () => {
     const today = todayStr();
-    // Use editStatus directly (user's manual selection from dropdown)
-    const finalStatus = editStatus;
+    // Compute aggregate status from assignments
+    const finalStatus = computeAggregateStatus(editAssignments);
     const statusChanged = finalStatus !== task.status;
     
     console.log("Saving task:", {
