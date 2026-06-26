@@ -363,6 +363,15 @@ Always be helpful, professional, and concise.`;
       
       if (firms.length > 0) {
         context += `\n✅ FIRMS FOUND (${firms.length}):\n`;
+        const firmIds = firms.map(f => f.id);
+
+        // Also fetch contacts for these firms
+        let allContacts = [];
+        try {
+          const contactList = await base44.entities.Contact.list(null, 500);
+          allContacts = contactList.filter(c => !c.deleted_at && c.firm_ids && c.firm_ids.some(fid => firmIds.includes(fid)));
+        } catch {}
+
         firms.forEach(f => {
           const addresses = f.addresses || [];
           const primaryAddress = addresses.find(a => a.is_headquarters) || addresses[0];
@@ -372,6 +381,18 @@ Always be helpful, professional, and concise.`;
             addressStr = parts.length > 0 ? ` | Address: ${parts.join(", ")}` : "";
           }
           context += `  • ${f.name} (${f.firm_types?.join(", ") || f.firm_type || "No type"})${addressStr}\n`;
+
+          // Include contacts at this firm
+          const firmContacts = allContacts.filter(c => c.firm_ids && c.firm_ids.includes(f.id));
+          if (firmContacts.length > 0) {
+            context += `    Contacts at ${f.name}:\n`;
+            firmContacts.forEach(c => {
+              const fullName = [c.first_name, c.last_name].filter(Boolean).join(" ");
+              const roles = c.contact_roles?.join(", ") || "";
+              const title = c.title || "";
+              context += `      - ${fullName}${title ? ` | Title: ${title}` : ""}${roles ? ` | Roles: ${roles}` : ""}\n`;
+            });
+          }
         });
       } else if (shouldSearchFirms && searchTerms.length > 0) {
         context += `\n❌ No firms found matching "${searchTerms[0]}".\n`;
