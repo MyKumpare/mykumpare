@@ -543,8 +543,14 @@ Always be helpful, professional, and concise.`;
         systemPrompt += `\n\nANALYSIS REQUESTED: Use the performance metrics and growth of $100 data from the context to provide detailed analytical insights. Calculate comparisons between products and benchmarks when both are available.`;
       }
       
+      // Build conversation history for context
+      const conversationHistory = messages
+        .slice(-10) // last 10 messages for context window
+        .map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
+        .join('\n\n');
+
       const response = await base44.integrations.Core.InvokeLLM({
-        prompt: `${systemPrompt}\n\n${toolContext}\n\nUser Question: ${userMessage}\n\nProvide a helpful, detailed response based on the search results above. If specific entities were found, mention them by name. If nothing was found, clearly state that. For analytical questions, use the performance metrics provided. For creation requests, ask for missing details and offer to create the record.`,
+        prompt: `${systemPrompt}\n\n${toolContext}\n\n=== CONVERSATION HISTORY ===\n${conversationHistory}\n\nUser: ${userMessage}\n\nContinue the conversation naturally. If the user is responding to a question you asked (e.g. "yes", "proceed", "go ahead"), continue from where you left off using the conversation history above. Provide a helpful, detailed response based on the search results and conversation context.`,
         add_context_from_internet: false,
         model: "automatic"
       });
