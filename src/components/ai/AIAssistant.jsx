@@ -234,14 +234,14 @@ Always be helpful, professional, and concise.`;
       // Extract search terms - look for names after common query patterns
       let searchTerms = [];
       
-      // Pattern: "called xponance", "named xponance", "is there xponance"
+      // Pattern: "called xponance", "named xponance"
       const calledMatch = q.match(/(?:called|named)\s+["']?([a-z0-9\s.,&'-]+)["']?/i);
       if (calledMatch) {
         searchTerms.push(calledMatch[1].trim());
       }
       
       // Pattern: "is there a firm called" or "is xponance in"
-      const isInMatch = q.match(/is\s+([a-z0-9\s.,&'-]+)\s+(?:in|at)/i);
+      const isInMatch = q.match(/is\s+(?:there\s+(?:a|an)\s+)?([a-z0-9\s.,&'-]+?)\s+(?:in|at|for)/i);
       if (isInMatch && !calledMatch) {
         searchTerms.push(isInMatch[1].trim());
       }
@@ -252,11 +252,25 @@ Always be helpful, professional, and concise.`;
         searchTerms.push(forMatch[1].trim());
       }
       
+      // Pattern: "what is the address for xponance" - extract word after "for"
+      const forPattern2 = q.match(/(?:for|about)\s+([a-z0-9\s.,&'-]+)/i);
+      if (forPattern2 && searchTerms.length === 0) {
+        searchTerms.push(forPattern2[1].trim());
+      }
+      
       // If no specific pattern matched, extract potential proper nouns (capitalized words in original)
       if (searchTerms.length === 0) {
-        const properNouns = userQuery.match(/[A-Z][a-z]+/g);
+        const properNouns = userQuery.match(/[A-Z][a-z]+(?:\s*[A-Z][a-z]+)*/g);
         if (properNouns) {
           searchTerms.push(...properNouns);
+        }
+      }
+      
+      // If still no search terms but query has words, try extracting the last significant word/phrase
+      if (searchTerms.length === 0) {
+        const words = q.split(/\s+/).filter(w => w.length > 2 && !['what', 'where', 'when', 'who', 'why', 'how', 'the', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'shall', 'can', 'need', 'dare', 'ought', 'used', 'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by', 'from', 'as', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 'between', 'under', 'again', 'further', 'then', 'once', 'here', 'there', 'when', 'where', 'why', 'how', 'all', 'each', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 'just', 'and', 'but', 'if', 'or', 'because', 'until', 'while', 'although', 'though', 'after', 'before', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'what', 'which', 'who', 'whom', 'this', 'that', 'these', 'those', 'am', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'having', 'do', 'does', 'did', 'doing', 'a', 'an', 'the', 'and', 'but', 'if', 'or', 'because', 'as', 'until', 'while', 'of', 'at', 'by', 'for', 'with', 'about', 'against', 'between', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 'to', 'from', 'up', 'down', 'in', 'out', 'on', 'off', 'over', 'under', 'again', 'further', 'then', 'once', 'here', 'there', 'when', 'where', 'why', 'how', 'all', 'any', 'both', 'each', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 's', 't', 'can', 'will', 'just', 'don', 'should', 'now'].includes(w));
+        if (words.length > 0) {
+          searchTerms.push(words[words.length - 1]);
         }
       }
       
