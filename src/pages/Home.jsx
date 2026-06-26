@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import AIAssistant from "@/components/ai/AIAssistant";
 
@@ -355,57 +354,89 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50/80">
-      {/* Hero header */}
-      <div className="bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 text-white">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-10 pb-16 sm:pt-14 sm:pb-20">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
-                <Building className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">MyKumpare</h1>
-                {isAuthenticated && user?.email && (
-                  <p className="text-xs text-white/60 mt-0.5">{user.email}</p>
-                )}
-              </div>
+    <div className="min-h-screen bg-gray-50/80 flex flex-col">
+      {/* Compact top bar */}
+      <div className="bg-gradient-to-r from-indigo-600 via-indigo-700 to-violet-800 text-white shadow-md flex-shrink-0">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2.5 flex items-center gap-3">
+          {/* Logo + title */}
+          <div className="flex items-center gap-2 mr-3 flex-shrink-0">
+            <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center">
+              <Building className="w-4 h-4 text-white" />
             </div>
-            <div className="flex items-center gap-2">
-              {/* Desktop-only section nav (bottom nav covers mobile) */}
-              <div className="hidden sm:grid grid-cols-4 gap-1">
-              {mobileNavItems.map(({ label, icon: NavIcon, ref, onClick }) => (
-                <button key={label} onClick={() => onClick ? onClick() : scrollTo(ref)} title={label}
-                  className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg hover:bg-white/15 transition-colors group">
-                  <NavIcon className="w-4 h-4 text-white/80 group-hover:text-white" />
-                  <span className="text-[10px] text-white/70 group-hover:text-white font-medium">{label}</span>
-                </button>
-              ))}
-              </div>
-              <button
-                onClick={() => setAllExpanded(v => !v)}
-                title={allExpanded ? "Collapse all" : "Expand all"}
-                className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg hover:bg-white/15 transition-colors group"
-              >
-                {allExpanded
-                  ? <ChevronsDownUp className="w-4 h-4 text-white/80 group-hover:text-white" />
-                  : <ChevronsUpDown className="w-4 h-4 text-white/80 group-hover:text-white" />
-                }
-                <span className="text-[10px] text-white/70 group-hover:text-white font-medium">
-                  {allExpanded ? "Collapse" : "Expand"}
-                </span>
-              </button>
-            </div>
+            <span className="text-base font-bold tracking-tight hidden sm:block">MyKumpare</span>
           </div>
+
+          {/* Search bar inline in header */}
+          <div className="flex-1 relative max-w-xl">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/50" />
+            <input
+              type="text"
+              placeholder="Search firms, products, contacts, tasks..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
+              className="w-full pl-9 pr-3 h-8 rounded-lg bg-white/15 border border-white/20 text-white placeholder-white/50 text-sm focus:outline-none focus:bg-white/25 focus:border-white/40 transition-colors"
+            />
+            {searchFocused && searchQuery.trim() && (
+              <div className="absolute top-full left-0 right-0 mt-1 z-50">
+                <SearchResults
+                  query={searchQuery}
+                  firms={firms}
+                  products={products}
+                  contacts={contacts}
+                  portfolios={portfolios}
+                  analyses={analyses}
+                  activities={activities}
+                  followUpTasks={followUpTasks}
+                  onFirmClick={(firm) => { setSearchQuery(""); handleEdit(firm); }}
+                  onContactClick={(contact) => { setSearchQuery(""); setViewingContact(contact); }}
+                  onProductClick={(product) => { setSearchQuery(""); handleEditProduct(product); }}
+                  onPortfolioClick={(portfolio) => { setSearchQuery(""); setPreselectedAllocatorId(portfolio.firm_id); setPortfolioDialogOpen(true); }}
+                  onAnalysisClick={(analysis) => { setSearchQuery(""); setEditingAnalysis(analysis); }}
+                  onActivityClick={(activity) => { setSearchQuery(""); setViewingActivity(activity); }}
+                  onTaskClick={(task) => { setSearchQuery(""); setViewingTask(task); }}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Desktop nav — single row of icon buttons */}
+          <div className="hidden sm:flex items-center gap-0.5 ml-2">
+            {mobileNavItems.map(({ label, icon: NavIcon, ref, onClick }) => (
+              <button key={label} onClick={() => onClick ? onClick() : scrollTo(ref)} title={label}
+                className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg hover:bg-white/15 transition-colors group">
+                <NavIcon className="w-4 h-4 text-white/80 group-hover:text-white" />
+                <span className="text-[9px] text-white/70 group-hover:text-white font-medium leading-none">{label}</span>
+              </button>
+            ))}
+            <button
+              onClick={() => setAllExpanded(v => !v)}
+              title={allExpanded ? "Collapse all" : "Expand all"}
+              className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg hover:bg-white/15 transition-colors group ml-1 border-l border-white/20 pl-2"
+            >
+              {allExpanded
+                ? <ChevronsDownUp className="w-4 h-4 text-white/80 group-hover:text-white" />
+                : <ChevronsUpDown className="w-4 h-4 text-white/80 group-hover:text-white" />
+              }
+              <span className="text-[9px] text-white/70 group-hover:text-white font-medium leading-none">
+                {allExpanded ? "Collapse" : "Expand"}
+              </span>
+            </button>
+          </div>
+
+          {/* User email on far right */}
+          {isAuthenticated && user?.email && (
+            <span className="hidden lg:block text-[10px] text-white/50 ml-1 flex-shrink-0">{user.email}</span>
+          )}
         </div>
       </div>
 
-      {/* Main content — overlaps the header */}
-      {/* pb-24 on mobile to clear the fixed bottom nav; sm:pb-0 on desktop */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 -mt-8 pb-24 sm:pb-0">
+      {/* Main content — full width below header */}
+      <div className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 pt-4 pb-24 sm:pb-4">
         {/* Sign-in prompt for unauthenticated users */}
         {!isAuthenticated && (
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4 flex items-center justify-between gap-3">
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 flex items-center justify-between gap-3">
             <p className="text-sm text-amber-800">Sign in to view and manage your data.</p>
             <button
               onClick={() => navigateToLogin()}
@@ -416,40 +447,6 @@ export default function Home() {
             </button>
           </div>
         )}
-        {/* Search bar */}
-        <div className="bg-white rounded-2xl shadow-lg shadow-gray-200/50 border border-gray-100 p-4 sm:p-5 mb-8">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input
-              placeholder="Search firms, products, contacts, activities, tasks..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onFocus={() => setSearchFocused(true)}
-              onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
-              className="pl-10 h-11 bg-gray-50 border-gray-200"
-            />
-            {searchFocused && searchQuery.trim() && (
-              <SearchResults
-                query={searchQuery}
-                firms={firms}
-                products={products}
-                contacts={contacts}
-                portfolios={portfolios}
-                analyses={analyses}
-                activities={activities}
-                followUpTasks={followUpTasks}
-                onFirmClick={(firm) => { setSearchQuery(""); handleEdit(firm); }}
-                onContactClick={(contact) => { setSearchQuery(""); setViewingContact(contact); }}
-                onProductClick={(product) => { setSearchQuery(""); handleEditProduct(product); }}
-                onPortfolioClick={(portfolio) => { setSearchQuery(""); setPreselectedAllocatorId(portfolio.firm_id); setPortfolioDialogOpen(true); }}
-                onAnalysisClick={(analysis) => { setSearchQuery(""); setEditingAnalysis(analysis); }}
-                onActivityClick={(activity) => { setSearchQuery(""); setViewingActivity(activity); }}
-                onTaskClick={(task) => { setSearchQuery(""); setViewingTask(task); }}
-              />
-            )}
-          </div>
-        </div>
-
         {/* Portfolios section */}
         <div ref={portfoliosRef} />
         <PortfoliosSection
