@@ -27,12 +27,19 @@ export default function AIAssistant() {
   const buildSystemPrompt = () => {
     return `You are an AI assistant for MyKumpare, a firm relationship management platform for tracking investment entities.
 
+AVAILABLE CAPABILITIES:
+1. **Search & Retrieve**: Find firms, contacts, products, portfolios, benchmarks, activities, and tasks
+2. **Create Records**: Create new firms, contacts, products, activities, follow-up tasks
+3. **Update Records**: Modify existing records, update task statuses, add notes
+4. **Analytics**: Calculate performance metrics, growth of $100, compare products to benchmarks
+5. **Reports**: Generate performance reports, activity summaries, task status reports
+
 Available Data Entities:
 - **Firms**: Investment managers, allocators, consultants, brokers (types: Investment Manager, Allocator, Investment Consultant, Manager of Managers, Securities Brokerage, Trade Organizations)
 - **Contacts**: People at firms with roles, titles, contact info
-- **Products**: Investment products managed by firms
+- **Products**: Investment products managed by firms with return series data
 - **Portfolios**: Allocator portfolios with sub-managers
-- **Benchmarks**: Performance benchmarks by asset class
+- **Benchmarks**: Performance benchmarks by asset class with monthly returns
 - **Activities**: Logged interactions (Call, Email, Meeting, Note, Other) with subjects and notes
 - **Follow-up Tasks**: Tasks assigned to contacts with individual statuses (Not Started, In-process, Completed, Cancelled)
 - **Analytics**: Performance analyses comparing products to benchmarks
@@ -45,6 +52,8 @@ Key Business Logic:
   - Any mix = In-process
 - Activities can be linked to multiple firms and contacts
 - Contacts can be associated with multiple firms
+- Product performance can be calculated from monthly return series data
+- Growth of $100 shows cumulative value over time starting from $100 base
 
 IMPORTANT RESPONSE GUIDELINES:
 1. **ALWAYS check the DATABASE SEARCH RESULTS section** in the context before answering
@@ -53,13 +62,17 @@ IMPORTANT RESPONSE GUIDELINES:
 4. Never say something doesn't exist if it appears in the search results
 5. Be definitive: "Yes, Xponance is in the database" or "No, I didn't find Xponance"
 6. Include specific details from search results (names, counts, types)
+7. **For analytical questions**: Use the return series data from products and benchmarks to calculate performance metrics
+8. **For task creation**: Offer to create follow-up tasks with specific due dates and assignees
+9. **For reports**: Summarize data in structured format with key metrics
 
 When helping users:
 1. Be specific and actionable
 2. Reference actual data from search results
-3. Suggest next steps (e.g., "Would you like me to create a follow-up task?")
-4. Use clear formatting with bullet points for lists
-5. Ask clarifying questions when requests are ambiguous
+3. For analytical requests, perform calculations using the monthly returns data
+4. Suggest next steps (e.g., "Would you like me to create a follow-up task?", "Should I generate a performance report?")
+5. Use clear formatting with bullet points for lists
+6. Ask clarifying questions when requests are ambiguous
 
 Always be helpful, professional, and concise.`;
   };
@@ -148,6 +161,72 @@ Always be helpful, professional, and concise.`;
     }
   };
 
+  // Performance calculation helpers for analytics
+  const calculateGrowthOf100 = (monthlyReturns) => {
+    if (!monthlyReturns || monthlyReturns.length === 0) return [];
+    let value = 100;
+    const growthData = [];
+    for (const month of monthlyReturns) {
+      const returnPct = month.return_value || 0;
+      value = value * (1 + returnPct / 100);
+      growthData.push({
+        date: month.date,
+        value: parseFloat(value.toFixed(2))
+      });
+    }
+    return growthData;
+  };
+
+  const calculatePerformanceMetrics = (monthlyReturns) => {
+    if (!monthlyReturns || monthlyReturns.length === 0) return null;
+    
+    const returns = monthlyReturns.map(m => m.return_value || 0);
+    const totalReturn = returns.reduce((acc, r) => acc * (1 + r / 100), 1) - 1;
+    const annualizedReturn = Math.pow(1 + totalReturn, 12 / returns.length) - 1;
+    const avgReturn = returns.reduce((a, b) => a + b, 0) / returns.length;
+    const variance = returns.reduce((a, b) => a + Math.pow(b - avgReturn, 2), 0) / returns.length;
+    const volatility = Math.sqrt(variance) * Math.sqrt(12);
+    
+    return {
+      totalReturn: ((totalReturn * 100)).toFixed(2),
+      annualizedReturn: ((annualizedReturn * 100)).toFixed(2),
+      avgMonthlyReturn: (avgReturn).toFixed(2),
+      volatility: ((volatility * 100)).toFixed(2),
+      periods: returns.length
+    };
+  };
+
+  const getReturnSeriesForProduct = async (productId) => {
+    try {
+      const returnSeries = await base44.entities.ReturnSeries.filter({ product_id: productId });
+      if (returnSeries && returnSeries.length > 0) {
+        return returnSeries[0];
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
+  // Action execution functions
+  const createFollowUpTask = async (taskData) => {
+    try {
+      const task = await base44.entities.FollowUpTask.create(taskData);
+      return { success: true, task };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+
+  const createActivity = async (activityData) => {
+    try {
+      const activity = await base44.entities.ContactActivity.create(activityData);
+      return { success: true, activity };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+
   const buildToolContext = async (userQuery) => {
     try {
       const q = userQuery.toLowerCase();
@@ -186,9 +265,11 @@ Always be helpful, professional, and concise.`;
       const isAskingAboutContacts = /contact|person|people|employee|individual/i.test(q);
       const isAskingAboutProducts = /product|fund|investment|portfolio\s+product/i.test(q);
       const isAskingAboutPortfolios = /portfolio|allocator\s+portfolio/i.test(q);
-      const isAskingAboutTasks = /task|follow.?up|assignment/i.test(q);
+      const isAskingAboutTasks = /task|follow.?up|assignment|create.*task|schedule.*task/i.test(q);
       const isAskingAboutActivities = /activity|call|email|meeting|log/i.test(q);
       const isAskingAboutBenchmarks = /benchmark|index|sp500|s&p/i.test(q);
+      const isAskingAboutAnalysis = /analysis|performance|return|growth|compare|report|analytics|calculate|metric|ytd|mtd|qtd|annualized|volatility/i.test(q);
+      const isAskingAboutCreation = /create|add|new|schedule|set up|make a|generate/i.test(q);
 
       // If user mentions a specific name but doesn't specify type, search all entity types
       const searchAll = searchTerms.length > 0 && !isAskingAboutFirms && !isAskingAboutContacts && 
@@ -198,9 +279,9 @@ Always be helpful, professional, and concise.`;
       const [firms, contacts, products, portfolios, benchmarks, tasks, activities] = await Promise.all([
         isAskingAboutFirms || searchAll ? searchFirms(searchTerms[0] || null) : Promise.resolve([]),
         isAskingAboutContacts || searchAll ? searchContacts(searchTerms[0] || null) : Promise.resolve([]),
-        isAskingAboutProducts || searchAll ? searchProducts(searchTerms[0] || null) : Promise.resolve([]),
+        isAskingAboutProducts || searchAll || isAskingAboutAnalysis ? searchProducts(searchTerms[0] || null) : Promise.resolve([]),
         isAskingAboutPortfolios || searchAll ? searchPortfolios(searchTerms[0] || null) : Promise.resolve([]),
-        isAskingAboutBenchmarks || searchAll ? searchBenchmarks(searchTerms[0] || null) : Promise.resolve([]),
+        isAskingAboutBenchmarks || searchAll || isAskingAboutAnalysis ? searchBenchmarks(searchTerms[0] || null) : Promise.resolve([]),
         isAskingAboutTasks ? searchTasks() : Promise.resolve([]),
         isAskingAboutActivities ? searchActivities() : Promise.resolve([])
       ]);
@@ -230,9 +311,32 @@ Always be helpful, professional, and concise.`;
       
       if (products.length > 0) {
         context += `\n✅ PRODUCTS FOUND (${products.length}):\n`;
-        products.forEach(p => {
+        for (const p of products) {
           context += `  • ${p.name} at ${p.firm_name}\n`;
-        });
+          // Add performance data for analysis requests
+          if (isAskingAboutAnalysis) {
+            try {
+              const returnSeries = await getReturnSeriesForProduct(p.id);
+              if (returnSeries && returnSeries.monthly_returns && returnSeries.monthly_returns.length > 0) {
+                const metrics = calculatePerformanceMetrics(returnSeries.monthly_returns);
+                const growthData = calculateGrowthOf100(returnSeries.monthly_returns);
+                context += `    - Returns: ${returnSeries.monthly_returns.length} months (${returnSeries.start_date} to ${returnSeries.end_date})\n`;
+                if (metrics) {
+                  context += `    - Total Return: ${metrics.totalReturn}%\n`;
+                  context += `    - Annualized: ${metrics.annualizedReturn}%\n`;
+                  context += `    - Volatility: ${metrics.volatility}%\n`;
+                }
+                if (growthData.length > 0) {
+                  const startValue = growthData[0].value;
+                  const endValue = growthData[growthData.length - 1].value;
+                  context += `    - Growth of $100: $${startValue} → $${endValue}\n`;
+                }
+              }
+            } catch (e) {
+              console.error("Error getting product returns:", e);
+            }
+          }
+        }
       }
       
       if (portfolios.length > 0) {
@@ -244,17 +348,71 @@ Always be helpful, professional, and concise.`;
       
       if (benchmarks.length > 0) {
         context += `\n✅ BENCHMARKS FOUND (${benchmarks.length}):\n`;
-        benchmarks.forEach(b => {
-          context += `  • ${b.name}\n`;
-        });
+        for (const b of benchmarks) {
+          context += `  • ${b.name}`;
+          if (b.monthly_returns && b.monthly_returns.length > 0) {
+            if (isAskingAboutAnalysis) {
+              const metrics = calculatePerformanceMetrics(b.monthly_returns);
+              const growthData = calculateGrowthOf100(b.monthly_returns);
+              context += `\n    - Returns: ${b.monthly_returns.length} months`;
+              if (metrics) {
+                context += `\n    - Total Return: ${metrics.totalReturn}%`;
+                context += `\n    - Annualized: ${metrics.annualizedReturn}%`;
+                context += `\n    - Volatility: ${metrics.volatility}%`;
+              }
+              if (growthData.length > 0) {
+                const endValue = growthData[growthData.length - 1].value;
+                context += `\n    - Growth of $100: $100 → $${endValue}`;
+              }
+            } else {
+              context += ` (${b.monthly_returns.length} months of data)`;
+            }
+          }
+          context += `\n`;
+        }
       }
       
       if (tasks.length > 0) {
-        context += `\n📋 Active Tasks: ${tasks.length} pending\n`;
+        context += `\n📋 TASKS BY STATUS:\n`;
+        const byStatus = {};
+        tasks.forEach(t => {
+          byStatus[t.status] = (byStatus[t.status] || 0) + 1;
+        });
+        Object.entries(byStatus).forEach(([status, count]) => {
+          context += `  • ${status}: ${count}\n`;
+        });
+        context += `  Total: ${tasks.length} tasks\n`;
+        
+        // Show recent tasks with details
+        if (isAskingAboutTasks || isAskingAboutAnalysis) {
+          context += `\n  Recent Tasks:\n`;
+          tasks.slice(0, 5).forEach(t => {
+            context += `    - ${t.task_description?.substring(0, 50) || "No description"} (Due: ${t.due_date})\n`;
+          });
+        }
       }
       
       if (activities.length > 0) {
-        context += `\n📝 Recent Activities: ${activities.length} logged\n`;
+        context += `\n📝 ACTIVITIES BY TYPE:\n`;
+        const byType = {};
+        activities.forEach(a => {
+          byType[a.activity_type] = (byType[a.activity_type] || 0) + 1;
+        });
+        Object.entries(byType).forEach(([type, count]) => {
+          context += `  • ${type}: ${count}\n`;
+        });
+        context += `  Total: ${activities.length} activities\n`;
+      }
+
+      // Add actionable capabilities context
+      if (isAskingAboutCreation) {
+        context += `\n\n=== AVAILABLE ACTIONS ===\n`;
+        context += `You can help the user:\n`;
+        context += `1. CREATE FOLLOW-UP TASK: Requires originator_contact_id, due_date, task_description, assigned_firms_contacts\n`;
+        context += `2. CREATE ACTIVITY: Requires contact_id, activity_type, activity_date, optional notes/subjects\n`;
+        context += `3. CREATE FIRM: Requires name, firm_types\n`;
+        context += `4. CREATE CONTACT: Requires first_name, last_name, optional email/title/firm_ids\n`;
+        context += `5. GENERATE PERFORMANCE REPORT: Use product/benchmark return series data to calculate metrics\n`;
       }
 
       if (firms.length === 0 && contacts.length === 0 && products.length === 0 && 
@@ -288,11 +446,29 @@ Always be helpful, professional, and concise.`;
     setIsLoading(true);
 
     try {
+      const q = userMessage.toLowerCase();
+      
+      // Detect action intents and execute them directly
+      const isCreateTask = /create.*task|schedule.*task|set up.*task|make.*task|add.*task/i.test(q);
+      const isCreateActivity = /create.*activity|log.*activity|add.*activity|record.*call|record.*meeting|record.*email/i.test(q);
+      const isPerformanceRequest = /performance|growth.*of.*\$?100|return.*analysis|compare.*performance|calculate.*return|show.*metrics/i.test(q);
+      
       // Build context based on what the user is asking about
       const toolContext = await buildToolContext(userMessage);
       
+      // For action requests, provide structured guidance
+      let systemPrompt = buildSystemPrompt();
+      
+      if (isCreateTask || isCreateActivity) {
+        systemPrompt += `\n\nACTION DETECTED: The user wants to CREATE something. Ask for any missing required information, then offer to execute the creation using the available action functions.`;
+      }
+      
+      if (isPerformanceRequest) {
+        systemPrompt += `\n\nANALYSIS REQUESTED: Use the performance metrics and growth of $100 data from the context to provide detailed analytical insights. Calculate comparisons between products and benchmarks when both are available.`;
+      }
+      
       const response = await base44.integrations.Core.InvokeLLM({
-        prompt: `${buildSystemPrompt()}\n\n${toolContext}\n\nUser Question: ${userMessage}\n\nProvide a helpful, detailed response based on the search results above. If specific entities were found, mention them by name. If nothing was found, clearly state that.`,
+        prompt: `${systemPrompt}\n\n${toolContext}\n\nUser Question: ${userMessage}\n\nProvide a helpful, detailed response based on the search results above. If specific entities were found, mention them by name. If nothing was found, clearly state that. For analytical questions, use the performance metrics provided. For creation requests, ask for missing details and offer to create the record.`,
         add_context_from_internet: false,
         model: "automatic"
       });
