@@ -82,8 +82,30 @@ Always be helpful, professional, and concise.`;
       const allFirms = await base44.entities.Firm.list();
       const activeFirms = allFirms.filter(f => !f.deleted_at);
       if (!query) return activeFirms.slice(0, 20);
-      const q = query.toLowerCase();
-      return activeFirms.filter(f => f.name.toLowerCase().includes(q));
+      const q = query.toLowerCase().trim();
+      
+      // Try exact match first
+      let results = activeFirms.filter(f => f.name.toLowerCase().includes(q));
+      
+      // If no results and query has multiple words, try matching any word
+      if (results.length === 0 && q.split(' ').length > 1) {
+        const words = q.split(' ').filter(w => w.length > 2);
+        results = activeFirms.filter(f => {
+          const name = f.name.toLowerCase();
+          return words.some(word => name.includes(word));
+        });
+      }
+      
+      // If still no results, try fuzzy match (remove punctuation and try again)
+      if (results.length === 0) {
+        const cleanQ = q.replace(/[,.\-&"]/g, '').trim();
+        results = activeFirms.filter(f => {
+          const cleanName = f.name.toLowerCase().replace(/[,.\-&"]/g, '');
+          return cleanName.includes(cleanQ) || cleanName.includes(cleanQ.split(' ')[0]);
+        });
+      }
+      
+      return results.slice(0, 20);
     } catch {
       return [];
     }
@@ -268,11 +290,19 @@ Always be helpful, professional, and concise.`;
       
       // If still no search terms but query has words, try extracting the last significant word/phrase
       if (searchTerms.length === 0) {
-        const words = q.split(/\s+/).filter(w => w.length > 2 && !['what', 'where', 'when', 'who', 'why', 'how', 'the', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'shall', 'can', 'need', 'dare', 'ought', 'used', 'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by', 'from', 'as', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 'between', 'under', 'again', 'further', 'then', 'once', 'here', 'there', 'when', 'where', 'why', 'how', 'all', 'each', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 'just', 'and', 'but', 'if', 'or', 'because', 'until', 'while', 'although', 'though', 'after', 'before', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'what', 'which', 'who', 'whom', 'this', 'that', 'these', 'those', 'am', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'having', 'do', 'does', 'did', 'doing', 'a', 'an', 'the', 'and', 'but', 'if', 'or', 'because', 'as', 'until', 'while', 'of', 'at', 'by', 'for', 'with', 'about', 'against', 'between', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 'to', 'from', 'up', 'down', 'in', 'out', 'on', 'off', 'over', 'under', 'again', 'further', 'then', 'once', 'here', 'there', 'when', 'where', 'why', 'how', 'all', 'any', 'both', 'each', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 's', 't', 'can', 'will', 'just', 'don', 'should', 'now'].includes(w));
+        const stopWords = new Set(['what', 'where', 'when', 'who', 'why', 'how', 'the', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'shall', 'can', 'need', 'dare', 'ought', 'used', 'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by', 'from', 'as', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 'between', 'under', 'again', 'further', 'then', 'once', 'here', 'there', 'all', 'each', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 'just', 'and', 'but', 'if', 'or', 'because', 'until', 'while', 'although', 'though', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'what', 'which', 'who', 'whom', 'this', 'that', 'these', 'those', 'am', 'having', 'doing', 'a', 'an', 'against', 'up', 'down', 'out', 'off', 'over', 'any', 'both', 'now', 's', 't', 'don', 'firm', 'firms', 'company', 'companies', 'business', 'organization', 'manager', 'allocator', 'consultant', 'brokerage']);
+        const words = q.split(/\s+/).filter(w => w.length > 2 && !stopWords.has(w));
         if (words.length > 0) {
-          searchTerms.push(words[words.length - 1]);
+          // Take the last meaningful word(s) - usually the name
+          searchTerms.push(words.slice(-2).join(' '));
         }
       }
+      
+      // Clean up search terms - remove entity type words
+      searchTerms = searchTerms.map(term => {
+        const cleanTerm = term.replace(/\b(firm|firms|company|companies|business|organization|manager|allocator|consultant|brokerage)\b/gi, '').trim();
+        return cleanTerm || term;
+      }).filter(t => t.length > 0);
       
       // Detect what the user is asking about
       const isAskingAboutFirms = /firm|company|manager|allocator|consultant|brokerage|business|organization/i.test(q);
@@ -289,9 +319,12 @@ Always be helpful, professional, and concise.`;
       const searchAll = searchTerms.length > 0 && !isAskingAboutFirms && !isAskingAboutContacts && 
                         !isAskingAboutProducts && !isAskingAboutPortfolios && 
                         !isAskingAboutTasks && !isAskingAboutActivities && !isAskingAboutBenchmarks;
+      
+      // ALWAYS search firms if there's a proper noun/name in the query (even if asking about other things)
+      const shouldSearchFirms = isAskingAboutFirms || searchAll || (searchTerms.length > 0 && !isAskingAboutContacts && !isAskingAboutProducts && !isAskingAboutPortfolios && !isAskingAboutTasks && !isAskingAboutActivities && !isAskingAboutBenchmarks);
 
       const [firms, contacts, products, portfolios, benchmarks, tasks, activities] = await Promise.all([
-        isAskingAboutFirms || searchAll ? searchFirms(searchTerms[0] || null) : Promise.resolve([]),
+        shouldSearchFirms ? searchFirms(searchTerms[0] || '') : Promise.resolve([]),
         isAskingAboutContacts || searchAll ? searchContacts(searchTerms[0] || null) : Promise.resolve([]),
         isAskingAboutProducts || searchAll || isAskingAboutAnalysis ? searchProducts(searchTerms[0] || null) : Promise.resolve([]),
         isAskingAboutPortfolios || searchAll ? searchPortfolios(searchTerms[0] || null) : Promise.resolve([]),
@@ -311,8 +344,8 @@ Always be helpful, professional, and concise.`;
         firms.forEach(f => {
           context += `  • ${f.name} (${f.firm_types?.join(", ") || f.firm_type || "No type"})\n`;
         });
-      } else if (isAskingAboutFirms || searchAll) {
-        context += `\n❌ No firms found matching your search.\n`;
+      } else if (shouldSearchFirms && searchTerms.length > 0) {
+        context += `\n❌ No firms found matching "${searchTerms[0]}".\n`;
       }
       
       if (contacts.length > 0) {
