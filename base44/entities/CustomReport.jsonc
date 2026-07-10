@@ -1,0 +1,145 @@
+{
+  "name": "CustomReport",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the custom report"
+    },
+    "description": {
+      "type": "string",
+      "description": "Free-text description of what the report should contain"
+    },
+    "data_source": {
+      "type": "string",
+      "enum": [
+        "Firm",
+        "Contact",
+        "Product",
+        "Portfolio",
+        "Benchmark",
+        "ContactActivity",
+        "FollowUpTask"
+      ],
+      "description": "Primary data source entity"
+    },
+    "selected_fields": {
+      "type": "array",
+      "description": "Data fields to include in the report",
+      "items": {
+        "type": "string"
+      }
+    },
+    "computations": {
+      "type": "array",
+      "description": "Computations to perform on the data",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "count",
+              "sum",
+              "average",
+              "min",
+              "max",
+              "percentage",
+              "growth"
+            ]
+          },
+          "target_field": {
+            "type": "string"
+          },
+          "group_by": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "format_type": {
+      "type": "string",
+      "enum": [
+        "table",
+        "chart",
+        "mixed"
+      ],
+      "description": "Primary report format"
+    },
+    "chart_type": {
+      "type": "string",
+      "enum": [
+        "bar",
+        "line",
+        "pie",
+        "area",
+        "scatter"
+      ],
+      "description": "Chart visualization type"
+    },
+    "group_by": {
+      "type": "string",
+      "description": "Field to group results by"
+    },
+    "sort_by": {
+      "type": "string",
+      "description": "Field to sort results by"
+    },
+    "sort_order": {
+      "type": "string",
+      "enum": [
+        "asc",
+        "desc"
+      ],
+      "default": "asc",
+      "description": "Sort order"
+    },
+    "filters_description": {
+      "type": "string",
+      "description": "Free-text description of filters to apply"
+    },
+    "output_formats": {
+      "type": "array",
+      "description": "Available output formats",
+      "items": {
+        "type": "string",
+        "enum": [
+          "pdf",
+          "csv",
+          "print"
+        ]
+      }
+    },
+    "page_orientation": {
+      "type": "string",
+      "enum": [
+        "portrait",
+        "landscape"
+      ],
+      "default": "landscape",
+      "description": "PDF page orientation"
+    },
+    "include_summary": {
+      "type": "boolean",
+      "default": true,
+      "description": "Include a summary section"
+    },
+    "include_cover_page": {
+      "type": "boolean",
+      "default": false,
+      "description": "Include a cover page in PDF"
+    },
+    "include_page_numbers": {
+      "type": "boolean",
+      "default": true,
+      "description": "Include page numbers in PDF"
+    }
+  },
+  "required": [
+    "name",
+    "data_source"
+  ]
+}
