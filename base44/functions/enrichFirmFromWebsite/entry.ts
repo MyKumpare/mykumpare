@@ -19,6 +19,30 @@ const COMMON_PATHS = [
   '/approach',
 ];
 
+// Common cookie consent cookies that signal "user accepted all cookies".
+// Many cookie consent platforms (OneTrust, Cookiebot, Quantcast, TrustArc, etc.)
+// check for these on the server side and return full content when present.
+const CONSENT_COOKIES = [
+  // Cookiebot
+  'CookieConsent={stamp%3D%27-consented%27%2Cnecessary%3Atrue%2Cpreferences%3Atrue%2Cstatistics%3Atrue%2Cmarketing%3Atrue%2Cmethod%3A%27explicit%27%2Cver%3A1}',
+  // OneTrust / Optanon
+  'OptanonConsent=isIABGlobal=false&datestamp=Mon+Jan+01+2024+00%3A00%3A00+GMT-0000&version=6.30.0&consentId=consent&interactionCount=1&landingPath=NotLandingPage&groups=C0001%3A1%2CC0002%3A1%2CC0003%3A1%2CC0004%3A1%2CC0005%3A1',
+  'eupubconsent-v2=CP-xxx',
+  // Quantcast Choice
+  'qcSxc=1',
+  // TrustArc
+  'notice_preferences=2:',
+  'cmapi_cookie_privacy=permit%201,2,3,4',
+  // Generic / custom banners
+  'cookieconsent_status=allow',
+  'cookies_accepted=true',
+  'accept_cookies=true',
+  'gdpr-consent=1',
+  'hasConsented=true',
+  'privacy_consent=1',
+  'viewed_cookie_policy=true',
+].join('; ');
+
 async function fetchPage(url: string, maxRedirects = 3): Promise<string> {
   try {
     const response = await fetch(url, {
@@ -26,6 +50,8 @@ async function fetchPage(url: string, maxRedirects = 3): Promise<string> {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml',
         'Accept-Language': 'en-US,en;q=0.9',
+        'Cookie': CONSENT_COOKIES,
+        'DNT': '0',
       },
       redirect: 'follow',
     });
