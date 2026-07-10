@@ -23,6 +23,7 @@ import ProductsSection from "../components/products/ProductsSection";
 import ContactsSection from "../components/contacts/ContactsSection";
 import UtilitySection from "../components/utility/UtilitySection";
 import ReportsSection from "../components/reports/ReportsSection";
+import ReportsPickerModal from "../components/reports/ReportsPickerModal";
 import AddBenchmarkDialog from "../components/utility/AddBenchmarkDialog";
 import AnalyticsSection from "../components/analytics/AnalyticsSection";
 import EditAnalysisDialog from "../components/analytics/EditAnalysisDialog";
@@ -88,6 +89,7 @@ export default function Home() {
   const [returnToActivity, setReturnToActivity] = useState(null); // activity to reopen when contact closes
   const [taskPickerOpen, setTaskPickerOpen] = useState(false);
   const [viewingTask, setViewingTask] = useState(null);
+  const [reportsPickerOpen, setReportsPickerOpen] = useState(false);
 
   const portfoliosRef = useRef(null);
   const firmsRef = useRef(null);
@@ -352,7 +354,7 @@ export default function Home() {
     { label: "Activity", icon: ClipboardList, ref: null, color: "text-amber-600", activeBg: "bg-amber-50", onClick: () => setActivityPickerOpen(true) },
     { label: "Tasks", icon: LayoutList, ref: null, color: "text-orange-600", activeBg: "bg-orange-50", onClick: () => setTaskPickerOpen(true) },
     { label: "Analytics", icon: LineChart, ref: analyticsRef, color: "text-cyan-600", activeBg: "bg-cyan-50", onClick: () => setAnalyticsLaunchOpen(true) },
-    { label: "Reports", icon: FileText, ref: reportsRef, color: "text-blue-600", activeBg: "bg-blue-50" },
+    { label: "Reports", icon: FileText, ref: reportsRef, color: "text-blue-600", activeBg: "bg-blue-50", onClick: () => setReportsPickerOpen(true) },
     { label: "Utilities", icon: Wrench, ref: utilityRef, color: "text-gray-600", activeBg: "bg-gray-100" },
   ];
 
@@ -778,6 +780,11 @@ export default function Home() {
         onClose={() => setActivityPickerOpen(false)}
         onAddActivity={() => { setActivityLogDefaultTab("activity"); setActivityLogModalOpen(true); }}
         onActivityClick={(activity) => setViewingActivity(activity)}
+      />
+
+      <ReportsPickerModal
+        open={reportsPickerOpen}
+        onClose={() => setReportsPickerOpen(false)}
       />
 
       <ActivityDetailModal
