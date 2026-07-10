@@ -9,8 +9,10 @@ const CONTACT_TYPES = [
   "Trade Organization Representative",
 ];
 
-const getFullName = (c) =>
-  [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ");
+const getFullName = (c) => {
+  const name = [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ");
+  return c.designations?.length ? `${name}, ${c.designations.join(", ")}` : name;
+};
 
 export default function ContactPickerModal({ open, onClose, contacts, firms, onContactClick, onAddContact }) {
   const [search, setSearch] = useState("");

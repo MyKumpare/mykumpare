@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import AIAssistant from "@/components/ai/AIAssistant";
 import { parsePhoneString } from "@/components/ai/firmEnrichment";
+import { detectDesignations } from "@/components/contacts/designationDetector";
 
 import AddFirmDialog from "../components/firms/AddFirmDialog";
 import DeleteConfirmDialog from "../components/firms/DeleteConfirmDialog";
@@ -212,6 +213,10 @@ export default function Home() {
       const firm = await base44.entities.Firm.create(firmData);
       if (pending_contacts?.length) {
         for (const person of pending_contacts) {
+          const fullName = `${person.first_name || ""} ${person.last_name || ""}`.trim();
+          const designations = person.designations?.length > 0
+            ? person.designations
+            : detectDesignations(fullName, person.biography);
           const contactData = {
             first_name: person.first_name || "",
             last_name: person.last_name || "",
@@ -222,6 +227,7 @@ export default function Home() {
             photo_url: person.photo_url || "",
             firm_ids: [firm.id],
           };
+          if (designations.length > 0) contactData.designations = designations;
           const parsedPhone = person.phone ? parsePhoneString(person.phone) : null;
           if (parsedPhone) contactData.phones = [parsedPhone];
           try { await base44.entities.Contact.create(contactData); } catch {}

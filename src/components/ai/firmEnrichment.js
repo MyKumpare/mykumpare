@@ -1,4 +1,5 @@
 import { base44 } from "@/api/base44Client";
+import { detectDesignations } from "@/components/contacts/designationDetector";
 
 const COUNTRY_NAME_TO_CODE = {
   "united states": "US", "usa": "US", "u.s.": "US", "u.s.a.": "US", "america": "US",
@@ -481,6 +482,8 @@ export async function createFirmFromEnrichment(enrichedData) {
   const people = (enrichedData.people || []).filter((p) => p.first_name || p.last_name);
   for (const person of people) {
     try {
+      const fullName = `${person.first_name || ""} ${person.last_name || ""}`.trim();
+      const designations = detectDesignations(fullName, person.biography);
       const contactData = {
         first_name: person.first_name || "",
         last_name: person.last_name || "",
@@ -491,6 +494,7 @@ export async function createFirmFromEnrichment(enrichedData) {
         photo_url: person.photo_url || "",
         firm_ids: [createdFirm.id],
       };
+      if (designations.length > 0) contactData.designations = designations;
       const parsedPhone = person.phone ? parsePhoneString(person.phone) : null;
       if (parsedPhone) contactData.phones = [parsedPhone];
       await base44.entities.Contact.create(contactData);

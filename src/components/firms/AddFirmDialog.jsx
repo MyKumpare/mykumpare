@@ -16,6 +16,7 @@ import { Pencil, Building2, Plus, Upload, X, Globe, AlertTriangle } from "lucide
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { findContactDuplicates } from "@/components/contacts/contactDuplicateCheck";
+import { detectDesignations } from "@/components/contacts/designationDetector";
 import FirmEnrichmentPanel from "./FirmEnrichmentPanel";
 import AddressForm from "./AddressForm";
 import PhoneForm from "./PhoneForm";
@@ -347,6 +348,8 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
           if (dups.length > 0) {
             skipped.push({ person, duplicates: dups });
           } else {
+            const fullName = `${person.first_name || ""} ${person.last_name || ""}`.trim();
+            const designations = detectDesignations(fullName, person.biography);
             newPending.push({
               first_name: person.first_name || "",
               last_name: person.last_name || "",
@@ -356,6 +359,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               biography: person.biography || "",
               photo_url: person.photo_url || "",
               phone: person.phone || "",
+              designations: designations.length > 0 ? designations : undefined,
             });
           }
         }

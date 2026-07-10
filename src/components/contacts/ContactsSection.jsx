@@ -20,6 +20,11 @@ const GROUP_COLORS = {
   "Trade Organizations": "bg-gray-100 text-gray-700",
 };
 
+function formatContactName(c) {
+  const name = [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ");
+  return c.designations?.length ? `${name}, ${c.designations.join(", ")}` : name;
+}
+
 function ContactAvatar({ contact }) {
   if (contact.photo_url) {
     return (
@@ -182,7 +187,7 @@ export default function ContactsSection({ contacts, firms, onContactClick, onAdd
                              >
                                <ContactAvatar contact={contact} />
                                <span className="text-sm text-gray-800 group-hover:text-pink-700 font-medium truncate">
-                                 {[contact.first_name, contact.last_name].filter(Boolean).join(" ")}
+                                 {formatContactName(contact)}
                                </span>
                                {contact.title && (
                                  <span className="ml-auto text-xs text-gray-400 flex-shrink-0 truncate max-w-[160px]">
@@ -230,7 +235,7 @@ export default function ContactsSection({ contacts, firms, onContactClick, onAdd
                     >
                       <ContactAvatar contact={contact} />
                       <span className="text-sm text-gray-800 group-hover:text-pink-700 font-medium truncate">
-                        {[contact.first_name, contact.last_name].filter(Boolean).join(" ")}
+                        {formatContactName(contact)}
                       </span>
                       {contact.title && (
                         <span className="ml-auto text-xs text-gray-400 flex-shrink-0 truncate max-w-[160px]">
