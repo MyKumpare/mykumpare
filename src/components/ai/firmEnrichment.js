@@ -1,5 +1,48 @@
 import { base44 } from "@/api/base44Client";
 
+const COUNTRY_NAME_TO_CODE = {
+  "united states": "US", "usa": "US", "u.s.": "US", "u.s.a.": "US", "america": "US",
+  "canada": "CA",
+  "united kingdom": "GB", "uk": "GB", "u.k.": "GB", "britain": "GB", "england": "GB",
+  "australia": "AU",
+  "germany": "DE",
+  "france": "FR",
+  "japan": "JP",
+  "singapore": "SG",
+  "hong kong": "HK",
+  "switzerland": "CH",
+  "netherlands": "NL", "holland": "NL",
+  "sweden": "SE",
+  "norway": "NO",
+  "denmark": "DK",
+  "finland": "FI",
+  "ireland": "IE",
+  "italy": "IT",
+  "spain": "ES",
+  "portugal": "PT",
+  "brazil": "BR",
+  "mexico": "MX",
+  "india": "IN",
+  "china": "CN",
+  "south korea": "KR", "korea": "KR",
+  "new zealand": "NZ",
+};
+
+function normalizeCountryToCode(raw) {
+  if (!raw || typeof raw !== "string") return raw;
+  const code = raw.trim().toUpperCase();
+  if (code.length === 2 && COUNTRY_NAME_TO_CODE[code.toLowerCase()]) return code;
+  const key = raw.trim().toLowerCase();
+  if (COUNTRY_NAME_TO_CODE[key]) return COUNTRY_NAME_TO_CODE[key];
+  const partial = Object.keys(COUNTRY_NAME_TO_CODE).find((k) => key.includes(k) || k.includes(key));
+  return partial ? COUNTRY_NAME_TO_CODE[partial] : raw;
+}
+
+function normalizeAddresses(data) {
+  if (!data.addresses) return;
+  data.addresses = data.addresses.map((a) => (a.country ? { ...a, country: normalizeCountryToCode(a.country) } : a));
+}
+
 const ENRICHMENT_SCHEMA = {
   type: "object",
   properties: {
@@ -180,6 +223,7 @@ IMPORTANT:
     data = {};
   }
 
+  normalizeAddresses(data);
   if (!data.name) data.name = firmName;
   return data;
 }
