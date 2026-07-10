@@ -78,9 +78,10 @@ export default function AIAssistant() {
           (enrichedData.description || enrichedData.website || enrichedData.addresses?.length || enrichedData.phones?.length);
 
         if (!hasData) {
+          const createdFirm = await createFirmFromEnrichment({ name: firmName });
           return {
             role: "assistant",
-            content: `I couldn't find a firm named "**${firmName}**" in your database, and I wasn't able to find enough public information about them online. Could you verify the firm name or provide their website URL?`,
+            content: `I created a new firm record for **${firmName}**. I wasn't able to find public information to auto-populate, so you can add details manually in the Firms section.`,
           };
         }
 
