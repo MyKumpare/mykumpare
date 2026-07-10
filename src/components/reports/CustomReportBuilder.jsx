@@ -7,10 +7,12 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Save, Database, Columns3, Calculator, LayoutTemplate, Printer, X } from "lucide-react";
+import { Plus, Trash2, Save, Database, Columns3, Calculator, LayoutTemplate, Printer, X, Play, Loader2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { DATA_SOURCES, COMPUTATION_TYPES, CHART_TYPES, OUTPUT_FORMATS } from "./reportConfig";
+import { fetchReportData } from "./reportEngine";
+import ReportResults from "./ReportResults";
 
 const EMPTY_FORM = {
   name: "",
@@ -232,10 +234,15 @@ function OutputOptions({ form, update }) {
 
 export default function CustomReportBuilder({ open, onClose, editingReport, prefillConfig }) {
   const [form, setForm] = useState(EMPTY_FORM);
+  const [resultsData, setResultsData] = useState(null);
+  const [generating, setGenerating] = useState(false);
+  const [genError, setGenError] = useState(null);
   const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!open) return;
+    setResultsData(null);
+    setGenError(null);
     if (editingReport) {
       setForm({ ...EMPTY_FORM, ...editingReport });
     } else if (prefillConfig) {
@@ -265,187 +272,223 @@ export default function CustomReportBuilder({ open, onClose, editingReport, pref
     saveMutation.mutate(form);
   };
 
+  const handleGenerate = async () => {
+    if (!form.data_source) return;
+    setGenerating(true);
+    setGenError(null);
+    try {
+      const data = await fetchReportData(form.data_source);
+      setResultsData(data);
+    } catch (err) {
+      setGenError(err.message || "Failed to generate report");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   const fields = form.data_source ? DATA_SOURCES[form.data_source].fields : [];
   const showChartType = form.format_type === "chart" || form.format_type === "mixed";
   const canSave = form.name.trim() && form.data_source;
+  const canGenerate = form.data_source && (form.selected_fields.length > 0 || form.computations.length > 0);
+  const isResults = !!resultsData;
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className={isResults ? "max-w-5xl max-h-[90vh] overflow-y-auto" : "max-w-3xl max-h-[90vh] overflow-y-auto"}>
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
-            <span>{editingReport ? "Edit Custom Report" : "Create Custom Report"}</span>
+            <span>{isResults ? (form.name || "Report Results") : editingReport ? "Edit Custom Report" : "Create Custom Report"}</span>
             <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 text-gray-400">
               <X className="w-4 h-4" />
             </button>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-5">
-          {/* Report Details */}
-          <section>
-            <SectionHeader icon={LayoutTemplate} title="Report Details" subtitle="Name and describe what this report should contain" />
-            <div className="space-y-2.5">
-              <div>
-                <Label className="text-xs text-gray-500">Report Name *</Label>
-                <Input
-                  value={form.name}
-                  onChange={(e) => update("name", e.target.value)}
-                  placeholder="e.g. Quarterly Firm Overview"
-                  className="h-9"
-                />
-              </div>
-              <div>
-                <Label className="text-xs text-gray-500">Description</Label>
-                <Textarea
-                  value={form.description}
-                  onChange={(e) => update("description", e.target.value)}
-                  placeholder="Describe what you want this report to show — what data, what insights, what time period, etc."
-                  className="min-h-[70px] text-sm"
-                />
-              </div>
+        {isResults ? (
+          <ReportResults config={form} data={resultsData} onBack={() => setResultsData(null)} />
+        ) : (
+          <>
+            <div className="space-y-5">
+              {/* Report Details */}
+              <section>
+                <SectionHeader icon={LayoutTemplate} title="Report Details" subtitle="Name and describe what this report should contain" />
+                <div className="space-y-2.5">
+                  <div>
+                    <Label className="text-xs text-gray-500">Report Name *</Label>
+                    <Input
+                      value={form.name}
+                      onChange={(e) => update("name", e.target.value)}
+                      placeholder="e.g. Quarterly Firm Overview"
+                      className="h-9"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">Description</Label>
+                    <Textarea
+                      value={form.description}
+                      onChange={(e) => update("description", e.target.value)}
+                      placeholder="Describe what you want this report to show — what data, what insights, what time period, etc."
+                      className="min-h-[70px] text-sm"
+                    />
+                  </div>
+                </div>
+              </section>
+
+              {/* Data Source */}
+              <section>
+                <SectionHeader icon={Database} title="Data Source" subtitle="Select the primary entity to pull data from" />
+                <Select value={form.data_source} onValueChange={(v) => update("data_source", v)}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Select a data source..." /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(DATA_SOURCES).map(([key, src]) => (
+                      <SelectItem key={key} value={key}>{src.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </section>
+
+              {/* Fields to Include */}
+              {form.data_source && (
+                <section>
+                  <SectionHeader icon={Columns3} title="Fields to Include" subtitle="Select which data fields appear in the report" />
+                  <FieldSelector fields={fields} selected={form.selected_fields} onChange={(v) => update("selected_fields", v)} />
+                </section>
+              )}
+
+              {/* Computations */}
+              {form.data_source && (
+                <section>
+                  <SectionHeader icon={Calculator} title="Computations" subtitle="Define calculations to perform on the data" />
+                  <ComputationEditor computations={form.computations} onChange={(v) => update("computations", v)} fields={fields} />
+                </section>
+              )}
+
+              {/* Format & Layout */}
+              {form.data_source && (
+                <section>
+                  <SectionHeader icon={LayoutTemplate} title="Format & Layout" subtitle="Choose how the report is presented" />
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { value: "table", label: "Table" },
+                        { value: "chart", label: "Chart" },
+                        { value: "mixed", label: "Mixed" },
+                      ].map((opt) => (
+                        <button
+                          key={opt.value}
+                          onClick={() => update("format_type", opt.value)}
+                          className={`p-2.5 rounded-lg border text-sm font-medium transition-colors ${
+                            form.format_type === opt.value
+                              ? "border-blue-300 bg-blue-50 text-blue-700"
+                              : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {showChartType && (
+                      <div>
+                        <Label className="text-xs text-gray-500">Chart Type</Label>
+                        <Select value={form.chart_type} onValueChange={(v) => update("chart_type", v)}>
+                          <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {CHART_TYPES.map((c) => (
+                              <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <Label className="text-xs text-gray-500">Group By</Label>
+                        <Select value={form.group_by || "_none"} onValueChange={(v) => update("group_by", v === "_none" ? "" : v)}>
+                          <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="None" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="_none">None</SelectItem>
+                            {fields.map((f) => (
+                              <SelectItem key={f.key} value={f.key}>{f.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-500">Sort By</Label>
+                        <Select value={form.sort_by || "_none"} onValueChange={(v) => update("sort_by", v === "_none" ? "" : v)}>
+                          <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="None" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="_none">None</SelectItem>
+                            {fields.map((f) => (
+                              <SelectItem key={f.key} value={f.key}>{f.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-500">Sort Order</Label>
+                        <Select value={form.sort_order} onValueChange={(v) => update("sort_order", v)}>
+                          <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="asc">Ascending</SelectItem>
+                            <SelectItem value="desc">Descending</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-xs text-gray-500">Filters (describe in words)</Label>
+                      <Textarea
+                        value={form.filters_description}
+                        onChange={(e) => update("filters_description", e.target.value)}
+                        placeholder="e.g. Only active firms founded after 2010, grouped by firm type"
+                        className="min-h-[50px] text-sm"
+                      />
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {/* Output & Print Options */}
+              {form.data_source && (
+                <section>
+                  <SectionHeader icon={Printer} title="Print & Download Options" subtitle="Configure available output formats and page settings" />
+                  <OutputOptions form={form} update={update} />
+                </section>
+              )}
             </div>
-          </section>
 
-          {/* Data Source */}
-          <section>
-            <SectionHeader icon={Database} title="Data Source" subtitle="Select the primary entity to pull data from" />
-            <Select value={form.data_source} onValueChange={(v) => update("data_source", v)}>
-              <SelectTrigger className="h-9"><SelectValue placeholder="Select a data source..." /></SelectTrigger>
-              <SelectContent>
-                {Object.entries(DATA_SOURCES).map(([key, src]) => (
-                  <SelectItem key={key} value={key}>{src.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </section>
-
-          {/* Fields to Include */}
-          {form.data_source && (
-            <section>
-              <SectionHeader icon={Columns3} title="Fields to Include" subtitle="Select which data fields appear in the report" />
-              <FieldSelector fields={fields} selected={form.selected_fields} onChange={(v) => update("selected_fields", v)} />
-            </section>
-          )}
-
-          {/* Computations */}
-          {form.data_source && (
-            <section>
-              <SectionHeader icon={Calculator} title="Computations" subtitle="Define calculations to perform on the data" />
-              <ComputationEditor computations={form.computations} onChange={(v) => update("computations", v)} fields={fields} />
-            </section>
-          )}
-
-          {/* Format & Layout */}
-          {form.data_source && (
-            <section>
-              <SectionHeader icon={LayoutTemplate} title="Format & Layout" subtitle="Choose how the report is presented" />
-              <div className="space-y-3">
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { value: "table", label: "Table" },
-                    { value: "chart", label: "Chart" },
-                    { value: "mixed", label: "Mixed" },
-                  ].map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => update("format_type", opt.value)}
-                      className={`p-2.5 rounded-lg border text-sm font-medium transition-colors ${
-                        form.format_type === opt.value
-                          ? "border-blue-300 bg-blue-50 text-blue-700"
-                          : "border-gray-200 text-gray-600 hover:bg-gray-50"
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-
-                {showChartType && (
-                  <div>
-                    <Label className="text-xs text-gray-500">Chart Type</Label>
-                    <Select value={form.chart_type} onValueChange={(v) => update("chart_type", v)}>
-                      <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {CHART_TYPES.map((c) => (
-                          <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <Label className="text-xs text-gray-500">Group By</Label>
-                    <Select value={form.group_by || "_none"} onValueChange={(v) => update("group_by", v === "_none" ? "" : v)}>
-                      <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="None" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="_none">None</SelectItem>
-                        {fields.map((f) => (
-                          <SelectItem key={f.key} value={f.key}>{f.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-gray-500">Sort By</Label>
-                    <Select value={form.sort_by || "_none"} onValueChange={(v) => update("sort_by", v === "_none" ? "" : v)}>
-                      <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="None" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="_none">None</SelectItem>
-                        {fields.map((f) => (
-                          <SelectItem key={f.key} value={f.key}>{f.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-gray-500">Sort Order</Label>
-                    <Select value={form.sort_order} onValueChange={(v) => update("sort_order", v)}>
-                      <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="asc">Ascending</SelectItem>
-                        <SelectItem value="desc">Descending</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div>
-                  <Label className="text-xs text-gray-500">Filters (describe in words)</Label>
-                  <Textarea
-                    value={form.filters_description}
-                    onChange={(e) => update("filters_description", e.target.value)}
-                    placeholder="e.g. Only active firms founded after 2010, grouped by firm type"
-                    className="min-h-[50px] text-sm"
-                  />
-                </div>
+            {genError && (
+              <div className="mt-3 p-3 rounded-lg bg-red-50 border border-red-200">
+                <p className="text-sm text-red-600">{genError}</p>
               </div>
-            </section>
-          )}
+            )}
 
-          {/* Output & Print Options */}
-          {form.data_source && (
-            <section>
-              <SectionHeader icon={Printer} title="Print & Download Options" subtitle="Configure available output formats and page settings" />
-              <OutputOptions form={form} update={update} />
-            </section>
-          )}
-        </div>
-
-        <DialogFooter className="gap-2">
-          <div className="flex items-center gap-1.5 mr-auto">
-            {form.data_source && <Badge variant="secondary" className="text-[10px]">{DATA_SOURCES[form.data_source].label}</Badge>}
-            {form.selected_fields.length > 0 && <Badge variant="secondary" className="text-[10px]">{form.selected_fields.length} fields</Badge>}
-            {form.computations.length > 0 && <Badge variant="secondary" className="text-[10px]">{form.computations.length} computations</Badge>}
-          </div>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSave} disabled={!canSave || saveMutation.isPending}>
-            <Save className="w-4 h-4" />
-            {saveMutation.isPending ? "Saving..." : editingReport ? "Update Report" : "Save Report"}
-          </Button>
-        </DialogFooter>
+            <DialogFooter className="gap-2">
+              <div className="flex items-center gap-1.5 mr-auto">
+                {form.data_source && <Badge variant="secondary" className="text-[10px]">{DATA_SOURCES[form.data_source].label}</Badge>}
+                {form.selected_fields.length > 0 && <Badge variant="secondary" className="text-[10px]">{form.selected_fields.length} fields</Badge>}
+                {form.computations.length > 0 && <Badge variant="secondary" className="text-[10px]">{form.computations.length} computations</Badge>}
+              </div>
+              <Button variant="outline" onClick={onClose}>Cancel</Button>
+              <Button
+                variant="secondary"
+                onClick={handleGenerate}
+                disabled={!canGenerate || generating}
+              >
+                {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+                {generating ? "Generating..." : "Generate Report"}
+              </Button>
+              <Button onClick={handleSave} disabled={!canSave || saveMutation.isPending}>
+                <Save className="w-4 h-4" />
+                {saveMutation.isPending ? "Saving..." : editingReport ? "Update Report" : "Save Report"}
+              </Button>
+            </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
