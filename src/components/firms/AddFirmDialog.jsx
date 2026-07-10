@@ -11,8 +11,9 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Pencil, Building2, Plus, Upload, X } from "lucide-react";
+import { Pencil, Building2, Plus, Upload, X, Globe } from "lucide-react";
 import { base44 } from "@/api/base44Client";
+import FirmEnrichmentPanel from "./FirmEnrichmentPanel";
 import AddressForm from "./AddressForm";
 import PhoneForm from "./PhoneForm";
 import ContactsTab from "../contacts/ContactsTab";
@@ -97,6 +98,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const [phones, setPhones] = useState([]);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [expandedPhoneId, setExpandedPhoneId] = useState(null);
+  const [showEnrichment, setShowEnrichment] = useState(false);
   const nameInputRef = useRef(null);
   const logoInputRef = useRef(null);
 
@@ -131,6 +133,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         setDescription("");
         setAddresses([]);
         setPhones([]);
+        setShowEnrichment(false);
         setIsEditing(true);
       }
     }
@@ -246,9 +249,40 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     setFirmTypes([]); setFirmName(""); setLogoUrl(""); setWebsite(""); setLinkedinUrl(""); setYearFounded(""); setDescription(""); setAddresses([]); setPhones([]);
   };
 
+  const handleApplyEnrichment = (selected) => {
+    if (selected.description !== undefined) setDescription(selected.description);
+    if (selected.website !== undefined) setWebsite(selected.website);
+    if (selected.linkedin_url !== undefined) setLinkedinUrl(selected.linkedin_url);
+    if (selected.year_founded !== undefined) setYearFounded(String(selected.year_founded));
+    if (selected.firm_types !== undefined) {
+      const merged = [...new Set([...firmTypes, ...selected.firm_types])];
+      setFirmTypes(merged);
+    }
+    if (selected.addresses?.length) {
+      const existingIds = new Set(addresses.map((a) => `${a.address_line1}|${a.city}`));
+      const newAddrs = selected.addresses.filter((a) => !existingIds.has(`${a.address_line1}|${a.city}`));
+      if (addresses.length === 0 && newAddrs.length > 0) newAddrs[0].is_headquarters = true;
+      setAddresses([...addresses, ...newAddrs]);
+    }
+    if (selected.phones?.length) {
+      const existingNums = new Set(phones.map((p) => `${p.area_code}${p.number_mid}${p.number_last}`));
+      const newPhs = selected.phones.filter((p) => !existingNums.has(`${p.area_code}${p.number_mid}${p.number_last}`));
+      if (phones.length === 0 && newPhs.length > 0) newPhs[0].is_default = true;
+      if (addresses.length > 0) {
+        newPhs.forEach((p) => {
+          if (!p.address_id) p.address_id = addresses[0].id;
+          if (!p.country_code) p.country_code = getCountryCodeFromCountryName(addresses[0].country);
+        });
+      }
+      setPhones([...phones, ...newPhs]);
+    }
+    setShowEnrichment(false);
+  };
+
   const handleClose = () => {
     onOpenChange(false);
     setIsEditing(false);
+    setShowEnrichment(false);
   };
 
   const handleCancelEdit = () => {
@@ -303,6 +337,16 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         </DialogHeader>
 
         <div className="overflow-y-auto flex-1 pr-1 space-y-5 py-2">
+
+          {/* Enrichment Panel */}
+          {activelyEditing && showEnrichment && firmName.trim() && (
+            <FirmEnrichmentPanel
+              firmName={firmName.trim()}
+              website={website}
+              onApply={handleApplyEnrichment}
+              onClose={() => setShowEnrichment(false)}
+            />
+          )}
 
           {/* Logo + Firm Name row */}
           <div className="flex items-end gap-4">
@@ -378,7 +422,20 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
               {/* Firm Name */}
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-gray-700">Firm Name</Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium text-gray-700">Firm Name</Label>
+                  {activelyEditing && firmName.trim() && !showEnrichment && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs"
+                      onClick={() => setShowEnrichment(true)}
+                    >
+                      <Globe className="w-3.5 h-3.5" /> Auto-fill from Web
+                    </Button>
+                  )}
+                </div>
                 {!activelyEditing ? (
                   <div className="h-9 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-900 font-medium">
                     {firmName}
