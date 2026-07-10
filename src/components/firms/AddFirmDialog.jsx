@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -102,6 +103,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const [pendingContacts, setPendingContacts] = useState([]);
   const nameInputRef = useRef(null);
   const logoInputRef = useRef(null);
+  const queryClient = useQueryClient();
 
   const isAddMode = !editingFirm;
   const activelyEditing = isAddMode || isEditing;
@@ -295,6 +297,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
           if (person.phone) contactData.notes = `Phone: ${person.phone}`;
           try { await base44.entities.Contact.create(contactData); } catch {}
         }
+        queryClient.invalidateQueries({ queryKey: ["contacts"] });
       } else {
         setPendingContacts([...pendingContacts, ...selected.people]);
       }
