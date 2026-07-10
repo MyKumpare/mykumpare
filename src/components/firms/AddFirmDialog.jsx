@@ -92,6 +92,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const [firmName, setFirmName] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [website, setWebsite] = useState("");
+  const [email, setEmail] = useState("");
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [yearFounded, setYearFounded] = useState("");
   const [description, setDescription] = useState("");
@@ -120,6 +121,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         setFirmName(editingFirm.name || "");
         setLogoUrl(editingFirm.logo_url || "");
         setWebsite(editingFirm.website || "");
+        setEmail(editingFirm.email || "");
         setLinkedinUrl(editingFirm.linkedin_url || "");
         setYearFounded(editingFirm.year_founded ? String(editingFirm.year_founded) : "");
         setDescription(editingFirm.description || "");
@@ -132,6 +134,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         setFirmName("");
         setLogoUrl("");
         setWebsite("");
+        setEmail("");
         setLinkedinUrl("");
         setYearFounded("");
         setDescription("");
@@ -250,14 +253,15 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
   const handleSubmit = () => {
     if (!isValid) return;
-    onSubmit({ firm_type: firmTypes[0] || "", firm_types: firmTypes, name: firmName.trim(), logo_url: logoUrl, website, linkedin_url: linkedinUrl, year_founded: yearFounded ? parseInt(yearFounded) : null, description, addresses, phones, pending_contacts: pendingContacts.length > 0 ? pendingContacts : undefined });
-    setFirmTypes([]); setFirmName(""); setLogoUrl(""); setWebsite(""); setLinkedinUrl(""); setYearFounded(""); setDescription(""); setAddresses([]); setPhones([]); setPendingContacts([]);
+    onSubmit({ firm_type: firmTypes[0] || "", firm_types: firmTypes, name: firmName.trim(), logo_url: logoUrl, website, email, linkedin_url: linkedinUrl, year_founded: yearFounded ? parseInt(yearFounded) : null, description, addresses, phones, pending_contacts: pendingContacts.length > 0 ? pendingContacts : undefined });
+    setFirmTypes([]); setFirmName(""); setLogoUrl(""); setWebsite(""); setEmail(""); setLinkedinUrl(""); setYearFounded(""); setDescription(""); setAddresses([]); setPhones([]); setPendingContacts([]);
   };
 
   const handleApplyEnrichment = async (selected) => {
     if (selected.logo_url !== undefined) setLogoUrl(selected.logo_url);
     if (selected.description !== undefined) setDescription(selected.description);
     if (selected.website !== undefined) setWebsite(selected.website);
+    if (selected.email !== undefined) setEmail(selected.email);
     if (selected.linkedin_url !== undefined) setLinkedinUrl(selected.linkedin_url);
     if (selected.year_founded !== undefined) setYearFounded(String(selected.year_founded));
     if (selected.firm_types !== undefined) {
@@ -316,6 +320,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     setFirmName(editingFirm.name);
     setLogoUrl(editingFirm.logo_url || "");
     setWebsite(editingFirm.website || "");
+    setEmail(editingFirm.email || "");
     setLinkedinUrl(editingFirm.linkedin_url || "");
     setYearFounded(editingFirm.year_founded ? String(editingFirm.year_founded) : "");
     setDescription(editingFirm.description || "");
@@ -496,6 +501,23 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                     placeholder="https://example.com"
                     value={website}
                     onChange={(e) => setWebsite(e.target.value)}
+                    className="h-9"
+                  />
+                )}
+              </div>
+
+              {/* Email */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Email</Label>
+                {!activelyEditing ? (
+                  <div className="h-9 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-600">
+                    {email ? <a href={`mailto:${email}`} className="text-indigo-600 hover:underline">{email}</a> : <span className="text-gray-400">—</span>}
+                  </div>
+                ) : (
+                  <Input
+                    placeholder="info@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     className="h-9"
                   />
                 )}

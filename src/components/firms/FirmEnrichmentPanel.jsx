@@ -106,6 +106,7 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
       const initial = {};
       if (data.description) initial.description = true;
       if (data.website) initial.website = true;
+      if (data.email) initial.email = true;
       if (data.linkedin_url) initial.linkedin_url = true;
       if (data.year_founded) initial.year_founded = true;
       if (data.firm_types?.length) initial.firm_types = true;
@@ -130,6 +131,7 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
     if (enrichedData) {
       if (acceptedFields.description && enrichedData.description) selected.description = enrichedData.description;
       if (acceptedFields.website && enrichedData.website) selected.website = enrichedData.website;
+      if (acceptedFields.email && enrichedData.email) selected.email = enrichedData.email;
       if (acceptedFields.linkedin_url && enrichedData.linkedin_url) selected.linkedin_url = enrichedData.linkedin_url;
       if (acceptedFields.year_founded && enrichedData.year_founded) selected.year_founded = enrichedData.year_founded;
       if (acceptedFields.firm_types && enrichedData.firm_types?.length) selected.firm_types = enrichedData.firm_types;
@@ -205,6 +207,7 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
   const hasData = enrichedData && (
     enrichedData.description ||
     enrichedData.website ||
+    enrichedData.email ||
     enrichedData.linkedin_url ||
     enrichedData.year_founded ||
     enrichedData.firm_types?.length ||
@@ -243,6 +246,7 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
         <LogoRow logoUrl={enrichedData.logo_url} accepted={acceptedFields.logo_url} onToggle={() => toggleField("logo_url")} />
         <FieldRow label="Description" value={enrichedData.description} accepted={acceptedFields.description} onToggle={() => toggleField("description")} />
         <FieldRow label="Website" value={enrichedData.website} accepted={acceptedFields.website} onToggle={() => toggleField("website")} />
+        <FieldRow label="Email" value={enrichedData.email} accepted={acceptedFields.email} onToggle={() => toggleField("email")} />
         <FieldRow label="LinkedIn" value={enrichedData.linkedin_url} accepted={acceptedFields.linkedin_url} onToggle={() => toggleField("linkedin_url")} />
         <FieldRow label="Year Founded" value={enrichedData.year_founded} accepted={acceptedFields.year_founded} onToggle={() => toggleField("year_founded")} />
         <FieldRow label="Firm Types" value={enrichedData.firm_types} accepted={acceptedFields.firm_types} onToggle={() => toggleField("firm_types")} />

@@ -45,6 +45,10 @@
       "type": "string",
       "description": "LinkedIn profile URL of the firm"
     },
+    "email": {
+      "type": "string",
+      "description": "General contact email address of the firm"
+    },
     "year_founded": {
       "type": "integer",
       "description": "Year the firm was founded"

@@ -7,6 +7,7 @@ const ENRICHMENT_SCHEMA = {
     logo_url: { type: "string" },
     description: { type: "string" },
     website: { type: "string" },
+    email: { type: "string" },
     linkedin_url: { type: "string" },
     year_founded: { type: "integer" },
     firm_types: {
@@ -144,6 +145,7 @@ Extract the following information from their public website and any related publ
 - Office addresses (street address, city, state, postal code, country) — include all locations found
 - Phone numbers — for US numbers split into: country_code (e.g. "1"), area_code (3 digits), number_mid (3 digits), number_last (4 digits)
 - LinkedIn URL
+- General contact email address
 - Website URL
 - Firm type(s): classify as one or more of "Investment Manager", "Allocator", "Investment Consultant", "Manager of Managers", "Securities Brokerage", "Trade Organizations"
 - Firm logo: the full URL of their logo image (must start with http)
@@ -198,6 +200,10 @@ export function mergeEnrichmentData(existingFirm, enrichedData) {
     updates.website = enrichedData.website;
     updatedFields.push("Website");
   }
+  if (!existingFirm.email && enrichedData.email) {
+    updates.email = enrichedData.email;
+    updatedFields.push("Email");
+  }
   if (!existingFirm.linkedin_url && enrichedData.linkedin_url) {
     updates.linkedin_url = enrichedData.linkedin_url;
     updatedFields.push("LinkedIn");
@@ -244,6 +250,7 @@ export function enrichmentToTable(enrichedData, updatedFields) {
   rows.push(["Description", desc.length > 100 ? desc.substring(0, 100) + "..." : desc]);
 
   rows.push(["Website", String(enrichedData.website || "")]);
+  rows.push(["Email", String(enrichedData.email || "")]);
   rows.push(["LinkedIn", String(enrichedData.linkedin_url || "")]);
   rows.push(["Year Founded", enrichedData.year_founded ? String(enrichedData.year_founded) : ""]);
   rows.push(["Firm Types", (enrichedData.firm_types || []).join(", ")]);
@@ -282,6 +289,7 @@ export async function createFirmFromEnrichment(enrichedData) {
     name: enrichedData.name,
     description: enrichedData.description || "",
     website: enrichedData.website || "",
+    email: enrichedData.email || "",
     linkedin_url: enrichedData.linkedin_url || "",
     logo_url: enrichedData.logo_url || "",
   };
