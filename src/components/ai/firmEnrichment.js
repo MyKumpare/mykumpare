@@ -277,7 +277,7 @@ Extract the following information from their public website and any related publ
 - Website URL
 - Firm type(s): classify as one or more of "Investment Manager", "Allocator", "Investment Consultant", "Manager of Managers", "Securities Brokerage", "Trade Organizations"
 - Firm logo: the full URL of their logo image (must start with http)
-- Key personnel/employees: for each key person found on the website (executives, founders, portfolio managers, partners), include first name, last name, job title, email, LinkedIn URL, phone, a short biography, and photo_url (the full URL of their headshot/profile photo from the firm website, LinkedIn, or other public source — must start with http)
+- Key personnel/employees: for each key person found on the website (executives, founders, portfolio managers, partners), include first name, last name, job title, email, LinkedIn URL, phone, their full complete biography (copy the entire biography text exactly as it appears on their website bio page — do NOT summarize, truncate, or shorten it), and photo_url (the full URL of their headshot/profile photo from the firm website — must start with http)
 
 IMPORTANT:
 - Only include information you actually find from reliable public sources
@@ -288,7 +288,8 @@ IMPORTANT:
 - For alternate_names, only include real firm name variations found on public sources — do not fabricate. Only populate if "${firmName}" does not exactly match the publicly available official name.
 - For people, only include real individuals found on their website — do not fabricate names
 - For person phone numbers, put the full number as a string in the "phone" field
-- For photo_url of people, extract the full image URL from their bio/headshot on the firm website, their LinkedIn profile photo, or other public source. Only include a full URL starting with http — no relative paths. Leave empty if no photo is found.`;
+- For photo_url of people, extract the full absolute image URL (starting with http:// or https://) of their headshot/profile photo from their bio page on the firm website. Do NOT use relative paths — if the image src is relative, construct the full URL using the website's base URL. Leave empty only if absolutely no photo is found.
+- For biography of people, you MUST copy the COMPLETE biography text from their website profile page. Do NOT summarize, shorten, or truncate — include every paragraph exactly as written on the website.`;
 
   const response = await base44.integrations.Core.InvokeLLM({
     prompt,

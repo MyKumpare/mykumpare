@@ -304,6 +304,8 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         const toCreate = [];
         const duplicates = [];
         for (const person of selected.people) {
+          const fullName = `${person.first_name || ""} ${person.last_name || ""}`.trim();
+          const designations = detectDesignations(fullName, person.biography);
           const contactData = {
             first_name: person.first_name || "",
             last_name: person.last_name || "",
@@ -314,6 +316,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
             photo_url: person.photo_url || "",
             firm_ids: [editingFirm.id],
           };
+          if (designations.length > 0) contactData.designations = designations;
           const parsedPhone = person.phone ? parsePhoneString(person.phone) : null;
           if (parsedPhone) contactData.phones = [parsedPhone];
 

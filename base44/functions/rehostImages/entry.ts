@@ -20,34 +20,40 @@ Deno.serve(async (req) => {
       }
 
       let absoluteUrl = rawUrl.trim();
+      let refererUrl = website || '';
 
-      // Fix relative URLs by prepending website base
+      // Fix relative URLs by resolving against the website base
       if (!absoluteUrl.startsWith('http://') && !absoluteUrl.startsWith('https://')) {
         if (absoluteUrl.startsWith('//')) {
           absoluteUrl = 'https:' + absoluteUrl;
-        } else if (absoluteUrl.startsWith('/')) {
-          let baseUrl = website || '';
+        } else if (website) {
           try {
-            const u = new URL(website);
-            baseUrl = u.origin;
+            absoluteUrl = new URL(absoluteUrl, website).href;
           } catch {
-            // If website is not a valid URL, skip
-            results.push({ original: rawUrl, rehosted: null, error: 'relative url without valid website base' });
+            results.push({ original: rawUrl, rehosted: null, error: 'could not resolve relative url' });
             continue;
           }
-          absoluteUrl = baseUrl + absoluteUrl;
         } else {
-          // No protocol and not starting with / — try prepending https://
+          // No website base — try prepending https://
           absoluteUrl = 'https://' + absoluteUrl;
         }
       }
 
+      // Extract origin for Referer header to bypass hotlink protection
       try {
-        // Download the image
+        const u = new URL(absoluteUrl);
+        refererUrl = u.origin + '/';
+      } catch {
+        // keep default
+      }
+
+      try {
+        // Download the image — include Referer header to bypass hotlink protection
         const fetchResponse = await fetch(absoluteUrl, {
           headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Accept': 'image/*,*/*;q=0.8',
+            'Referer': refererUrl,
           },
           redirect: 'follow',
         });
@@ -58,18 +64,31 @@ Deno.serve(async (req) => {
         }
 
         const contentType = fetchResponse.headers.get('content-type') || '';
-        if (!contentType.startsWith('image/')) {
+        // Accept image/* and also application/octet-stream (some servers use this for images)
+        const isImage = contentType.startsWith('image/') || contentType === 'application/octet-stream';
+        if (!isImage) {
           results.push({ original: rawUrl, rehosted: null, error: `not an image: ${contentType}` });
           continue;
         }
 
+        // For octet-stream, try to infer type from URL extension
+        let finalContentType = contentType;
+        if (contentType === 'application/octet-stream') {
+          const ext = absoluteUrl.split('.').pop()?.toLowerCase().split('?')[0] || '';
+          if (ext === 'png') finalContentType = 'image/png';
+          else if (ext === 'webp') finalContentType = 'image/webp';
+          else if (ext === 'gif') finalContentType = 'image/gif';
+          else if (ext === 'svg') finalContentType = 'image/svg+xml';
+          else finalContentType = 'image/jpeg';
+        }
+
         const arrayBuffer = await fetchResponse.arrayBuffer();
-        const blob = new Blob([arrayBuffer], { type: contentType });
+        const blob = new Blob([arrayBuffer], { type: finalContentType });
 
         // Determine file extension
-        const ext = contentType.split('/')[1]?.split(';')[0] || 'jpg';
+        const ext = finalContentType.split('/')[1]?.split(';')[0] || 'jpg';
         const filename = `photo_${Date.now()}.${ext}`;
-        const file = new File([blob], filename, { type: contentType });
+        const file = new File([blob], filename, { type: finalContentType });
 
         // Upload to Base44 storage
         const { file_url } = await base44.asServiceRole.integrations.Core.UploadFile({ file });
