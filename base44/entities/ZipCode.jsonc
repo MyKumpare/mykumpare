@@ -1,0 +1,27 @@
+{
+  "name": "ZipCode",
+  "type": "object",
+  "properties": {
+    "zip_code": {
+      "type": "string",
+      "description": "Postal/zip code"
+    },
+    "city": {
+      "type": "string",
+      "description": "City name associated with this zip code"
+    },
+    "state": {
+      "type": "string",
+      "description": "State or province code"
+    },
+    "country": {
+      "type": "string",
+      "description": "Country code (ISO 2-letter)"
+    }
+  },
+  "required": [
+    "zip_code",
+    "city",
+    "country"
+  ]
+}

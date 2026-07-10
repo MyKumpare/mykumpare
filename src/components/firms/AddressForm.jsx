@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { MapPin, Trash2, Star, ExternalLink } from "lucide-react";
-import { COUNTRIES, getStatesForCountry, getCitiesForState, lookupZipCode } from "./geoData";
+import { COUNTRIES, getStatesForCountry } from "./geoData";
+import { useZipCodeLookup } from "./useZipCodeLookup";
 
 function buildMapsUrl(address) {
   const parts = [
@@ -23,38 +24,51 @@ function buildMapsUrl(address) {
 }
 
 export default function AddressForm({ address, onChange, onDelete, onSetHeadquarters, isHeadquarters, isEditing, isOnly }) {
-  const [cityOptions, setCityOptions] = useState([]);
+  const [manualCity, setManualCity] = useState(false);
+  const { lookupZip, getCitiesForState, saveZipMapping } = useZipCodeLookup();
 
   const states = getStatesForCountry(address.country || "");
   const hasStates = states.length > 0;
-
-  useEffect(() => {
-    if (address.state) {
-      setCityOptions(getCitiesForState(address.state));
-    } else {
-      setCityOptions([]);
-    }
-  }, [address.state]);
+  const cityOptions = getCitiesForState(address.state || "");
 
   const handleCountryChange = (val) => {
     onChange({ ...address, country: val, state: "", city: "", postal_code: "" });
+    setManualCity(false);
   };
 
   const handleStateChange = (val) => {
     onChange({ ...address, state: val, city: "" });
+    setManualCity(false);
   };
 
   const handlePostalChange = (e) => {
     const zip = e.target.value;
     const updated = { ...address, postal_code: zip };
-    if (address.country === "US" && zip.length >= 3) {
-      const lookup = lookupZipCode(zip);
+    if (zip.length >= 3) {
+      const lookup = lookupZip(zip, address.country);
       if (lookup) {
         updated.city = lookup.city;
         updated.state = lookup.state;
+        setManualCity(false);
       }
     }
     onChange(updated);
+  };
+
+  const handleCitySelect = (val) => {
+    if (val === "__manual__") {
+      setManualCity(true);
+      onChange({ ...address, city: "" });
+    } else {
+      setManualCity(false);
+      onChange({ ...address, city: val });
+    }
+  };
+
+  const handleCityBlur = () => {
+    if (address.postal_code && address.city) {
+      saveZipMapping(address.postal_code, address.city, address.state, address.country);
+    }
   };
 
   const field = (label, children) => (
@@ -217,8 +231,8 @@ export default function AddressForm({ address, onChange, onDelete, onSetHeadquar
 
           {/* City */}
           {field("City",
-            cityOptions.length > 0 ? (
-              <Select value={address.city || ""} onValueChange={(val) => onChange({ ...address, city: val })}>
+            cityOptions.length > 0 && !manualCity && (!address.city || cityOptions.includes(address.city)) ? (
+              <Select value={address.city || ""} onValueChange={handleCitySelect}>
                 <SelectTrigger className="h-9 bg-white">
                   <SelectValue placeholder="Select city..." />
                 </SelectTrigger>
@@ -226,15 +240,31 @@ export default function AddressForm({ address, onChange, onDelete, onSetHeadquar
                   {cityOptions.map((city) => (
                     <SelectItem key={city} value={city}>{city}</SelectItem>
                   ))}
+                  <SelectItem value="__manual__">✏️ Enter manually...</SelectItem>
                 </SelectContent>
               </Select>
             ) : (
-              <Input
-                className="h-9 bg-white"
-                placeholder="City"
-                value={address.city || ""}
-                onChange={(e) => onChange({ ...address, city: e.target.value })}
-              />
+              <div className="flex gap-1.5">
+                <Input
+                  className="h-9 bg-white"
+                  placeholder="City"
+                  value={address.city || ""}
+                  onChange={(e) => onChange({ ...address, city: e.target.value })}
+                  onBlur={handleCityBlur}
+                />
+                {cityOptions.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-9 px-2 text-xs shrink-0"
+                    onClick={() => setManualCity(false)}
+                    title="Choose from list"
+                  >
+                    List
+                  </Button>
+                )}
+              </div>
             )
           )}
 
