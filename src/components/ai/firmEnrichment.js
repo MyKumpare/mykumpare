@@ -117,7 +117,7 @@ export function detectEnrichmentIntent(query) {
   const q = query.toLowerCase();
 
   const hasEnrichmentKeyword =
-    /populate|enrich|fill\s+in|look\s+up\s+(?:online|web)|search\s+(?:the\s+)?web|fetch\s+(?:from|web)|get\s+(?:info|data|details)\s+(?:from|online)|from\s+(?:their\s+)?(?:website|web|public\s+website|public\s+site)|(?:add|create)\s+(?:a\s+)?(?:new\s+)?(?:firm|company)/i.test(
+    /populate|enrich|fill\s+in|look\s+up\s+(?:online|web)|search\s+(?:the\s+)?web|fetch\s+(?:from|web)|get\s+(?:info|data|details)\s+(?:from|online)|from\s+(?:their\s+)?(?:website|web|public\s+website|public\s+site)|(?:add|create)\s+(?:a\s+)?(?:new\s+)?(?:firm|company|investment\s+manager|allocator|investment\s+consultant|manager\s+of\s+managers|securities\s+brokerage|trade\s+organization)/i.test(
       q
     );
 
@@ -129,7 +129,7 @@ export function detectEnrichmentIntent(query) {
     /(?:look\s+up|search|fetch|get)\s+(.+?)\s+(?:from|on|via|online|web)/i,
     /fill\s+in\s+(.+?)(?:\s+(?:from|with|using)\s+|\s*$)/i,
     /update\s+(.+?)\s+(?:from|with|using|info|information)/i,
-    /(?:add|create)\s+(?:a\s+)?(?:new\s+)?(?:firm|company)\s+(?:called\s+|named\s+)?(.+?)(?:\s+(?:from|with|using)\s+|\s*$)/i,
+    /(?:add|create)\s+(?:a\s+)?(?:new\s+)?(?:firm|company|investment\s+manager|allocator|investment\s+consultant|manager\s+of\s+managers|securities\s+brokerage|trade\s+organization)\s+(?:called\s+|named\s+)?(.+?)(?:\s+(?:from|with|using)\s+|\s*$)/i,
   ];
 
   let firmName = null;
@@ -148,6 +148,8 @@ export function detectEnrichmentIntent(query) {
       "website", "public", "their", "firm", "company", "information",
       "about", "for", "with", "and", "update", "using", "internet", "a", "an", "of",
       "add", "create", "new", "called", "named",
+      "investment", "manager", "allocator", "consultant", "brokerage",
+      "trade", "organization", "securities",
     ]);
     const words = query.split(/\s+/);
     const properNouns = words
