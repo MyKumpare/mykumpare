@@ -56,6 +56,7 @@ function getCountryCodeFromCountryName(countryName) {
 }
 
 import { parsePhoneString } from "../ai/firmEnrichment";
+import { toast } from "@/components/ui/use-toast";
 
 const FIRM_TYPES = [
   "Manager of Managers",
@@ -220,14 +221,6 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     setPhones(phones.map((p, i) => ({ ...p, is_default: i === index })));
   };
 
-  const isDuplicate = firmName.trim().length > 0 &&
-    existingFirms.some((f) => {
-      if (f.id === editingFirm?.id) return false;
-      const existing = f.name.toLowerCase();
-      const input = firmName.trim().toLowerCase();
-      return existing.includes(input) || input.includes(existing);
-    });
-
   const existingTypes = editingFirm?.firm_types?.length
     ? editingFirm.firm_types
     : editingFirm?.firm_type ? [editingFirm.firm_type] : [];
@@ -246,7 +239,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
   const phonesValid = phones.length === 0 || phones.every(p => p.address_id && p.phone_type && p.country_code && p.area_code && p.number_mid && p.number_last);
 
-  const isValid = firmTypes.length > 0 && firmName.trim() && !isDuplicate && phonesValid;
+  const isValid = firmTypes.length > 0 && firmName.trim() && phonesValid;
 
   const NON_PRODUCT_TYPES = ["Allocator", "Trade Organizations"];
   const hideProductTabs = firmTypes.length > 0 && firmTypes.every(t => NON_PRODUCT_TYPES.includes(t));
@@ -260,36 +253,46 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   };
 
   const handleApplyEnrichment = async (selected) => {
-    if (selected.logo_url !== undefined) setLogoUrl(selected.logo_url);
-    if (selected.description !== undefined) setDescription(selected.description);
-    if (selected.website !== undefined) setWebsite(selected.website);
-    if (selected.email !== undefined) setEmail(selected.email);
-    if (selected.linkedin_url !== undefined) setLinkedinUrl(selected.linkedin_url);
-    if (selected.year_founded !== undefined) setYearFounded(String(selected.year_founded));
-    if (selected.firm_types !== undefined) {
+    const applied = [];
+
+    if (selected.logo_url && !logoUrl) { setLogoUrl(selected.logo_url); applied.push("Logo"); }
+    if (selected.description && !description) { setDescription(selected.description); applied.push("Description"); }
+    if (selected.website && !website) { setWebsite(selected.website); applied.push("Website"); }
+    if (selected.email && !email) { setEmail(selected.email); applied.push("Email"); }
+    if (selected.linkedin_url && !linkedinUrl) { setLinkedinUrl(selected.linkedin_url); applied.push("LinkedIn"); }
+    if (selected.year_founded && !yearFounded) { setYearFounded(String(selected.year_founded)); applied.push("Year Founded"); }
+    if (selected.firm_types?.length) {
       const merged = [...new Set([...firmTypes, ...selected.firm_types])];
-      setFirmTypes(merged);
+      const added = merged.length - firmTypes.length;
+      if (added > 0) { setFirmTypes(merged); applied.push("Firm Types"); }
     }
     if (selected.addresses?.length) {
       const existingIds = new Set(addresses.map((a) => `${a.address_line1}|${a.city}`));
       const newAddrs = selected.addresses.filter((a) => !existingIds.has(`${a.address_line1}|${a.city}`));
-      if (addresses.length === 0 && newAddrs.length > 0) newAddrs[0].is_headquarters = true;
-      setAddresses([...addresses, ...newAddrs]);
+      if (newAddrs.length > 0) {
+        if (addresses.length === 0) newAddrs[0].is_headquarters = true;
+        setAddresses([...addresses, ...newAddrs]);
+        applied.push(`${newAddrs.length} Address(es)`);
+      }
     }
     if (selected.phones?.length) {
       const existingNums = new Set(phones.map((p) => `${p.area_code}${p.number_mid}${p.number_last}`));
       const newPhs = selected.phones.filter((p) => !existingNums.has(`${p.area_code}${p.number_mid}${p.number_last}`));
-      if (phones.length === 0 && newPhs.length > 0) newPhs[0].is_default = true;
-      if (addresses.length > 0) {
-        newPhs.forEach((p) => {
-          if (!p.address_id) p.address_id = addresses[0].id;
-          if (!p.country_code) p.country_code = getCountryCodeFromCountryName(addresses[0].country);
-        });
+      if (newPhs.length > 0) {
+        if (phones.length === 0) newPhs[0].is_default = true;
+        if (addresses.length > 0) {
+          newPhs.forEach((p) => {
+            if (!p.address_id) p.address_id = addresses[0].id;
+            if (!p.country_code) p.country_code = getCountryCodeFromCountryName(addresses[0].country);
+          });
+        }
+        setPhones([...phones, ...newPhs]);
+        applied.push(`${newPhs.length} Phone(s)`);
       }
-      setPhones([...phones, ...newPhs]);
     }
     if (selected.people?.length) {
       if (editingFirm) {
+        let created = 0;
         for (const person of selected.people) {
           const contactData = {
             first_name: person.first_name || "",
@@ -303,14 +306,21 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
           };
           const parsedPhone = person.phone ? parsePhoneString(person.phone) : null;
           if (parsedPhone) contactData.phones = [parsedPhone];
-          try { await base44.entities.Contact.create(contactData); } catch {}
+          try { await base44.entities.Contact.create(contactData); created++; } catch {}
         }
-        queryClient.invalidateQueries({ queryKey: ["contacts"] });
+        if (created > 0) { queryClient.invalidateQueries({ queryKey: ["contacts"] }); applied.push(`${created} Contact(s)`); }
       } else {
         setPendingContacts([...pendingContacts, ...selected.people]);
+        applied.push(`${selected.people.length} Contact(s)`);
       }
     }
+
     setShowEnrichment(false);
+    if (applied.length > 0) {
+      toast({ title: "✅ New information added", description: applied.join(", ") + " populated from web." });
+    } else {
+      toast({ title: "No new information", description: "All fields are already populated." });
+    }
   };
 
   const handleClose = () => {
@@ -482,13 +492,10 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                       placeholder="Enter firm name..."
                       value={firmName}
                       onChange={(e) => setFirmName(e.target.value)}
-                      className={`h-9 ${isDuplicate ? "border-red-400 focus-visible:ring-red-400" : ""}`}
+                      className="h-9"
                       onKeyDown={(e) => e.key === "Enter" && isValid && handleSubmit()}
                       spellCheck autoCorrect="on" autoCapitalize="words" lang="en"
                     />
-                    {isDuplicate && (
-                      <p className="text-xs text-red-500">The Firm is Already in the System.</p>
-                    )}
                   </>
                 )}
               </div>

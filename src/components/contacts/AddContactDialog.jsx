@@ -14,6 +14,7 @@ import {
 import { X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload, TrendingUp, Tag, GraduationCap, Briefcase, Activity, Package, AlertTriangle } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
+import { toast } from "@/components/ui/use-toast";
 import QuickAddFirmForm from "./QuickAddFirmForm";
 import ContactPhoneForm from "./ContactPhoneForm";
 import ContactAddressForm from "./ContactAddressForm";
@@ -218,27 +219,6 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
       createMutation.mutate(data);
     }
   };
-
-  const { data: allContacts = [] } = useQuery({
-    queryKey: ["contacts"],
-    queryFn: () => base44.entities.Contact.list(),
-    enabled: !viewMode && !editingContact,
-  });
-
-  // Detect duplicate contacts in the same firm(s)
-  const duplicateContacts = useMemo(() => {
-    if (viewMode || editingContact) return [];
-    const fn = firstName.trim().toLowerCase();
-    const ln = lastName.trim().toLowerCase();
-    if (!fn || !ln) return [];
-    return allContacts.filter((c) => {
-      const sameName =
-        c.first_name?.toLowerCase() === fn && c.last_name?.toLowerCase() === ln;
-      if (!sameName) return false;
-      // check if shares any firm with the current form
-      return (c.firm_ids || []).some((fid) => firmIds.includes(fid));
-    });
-  }, [allContacts, firstName, lastName, firmIds, viewMode, editingContact]);
 
   const { data: allOwnerships = [] } = useQuery({
     queryKey: ["ownership"],
@@ -489,7 +469,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                 <div className="space-y-1.5">
                   <Label className="text-xs font-medium text-gray-700">First Name *</Label>
                   {viewMode ? ro(firstName) : (
-                    <Input placeholder="First name" value={firstName} onChange={(e) => setFirstName(e.target.value)} className={`h-9 ${duplicateContacts.length > 0 ? "border-amber-400 focus-visible:ring-amber-400" : ""}`} />
+                    <Input placeholder="First name" value={firstName} onChange={(e) => setFirstName(e.target.value)} className="h-9" />
                   )}
                 </div>
                 <div className="space-y-1.5">
@@ -505,7 +485,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                 <div className="col-span-2 space-y-1.5">
                   <Label className="text-xs font-medium text-gray-700">Last Name *</Label>
                   {viewMode ? ro(lastName) : (
-                    <Input placeholder="Last name" value={lastName} onChange={(e) => setLastName(e.target.value)} className={`h-9 ${duplicateContacts.length > 0 ? "border-amber-400 focus-visible:ring-amber-400" : ""}`} />
+                    <Input placeholder="Last name" value={lastName} onChange={(e) => setLastName(e.target.value)} className="h-9" />
                   )}
                 </div>
                 <div className="space-y-1.5">
@@ -521,35 +501,6 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                   )}
                 </div>
               </div>
-
-              {/* Duplicate warning */}
-              {duplicateContacts.length > 0 && (
-                <div className="space-y-1.5">
-                  <p className="text-xs font-medium text-amber-600">
-                    Similar contact{duplicateContacts.length > 1 ? "s" : ""} already associated with this firm:
-                  </p>
-                  {duplicateContacts.map((c) => (
-                    <div key={c.id} className="flex items-center gap-3 px-3 py-2 rounded-md bg-amber-50 border border-amber-200">
-                      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center overflow-hidden flex-shrink-0">
-                        {c.photo_url ? (
-                          <img src={c.photo_url} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <User className="w-4 h-4 text-indigo-400" />
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-800 truncate">
-                          {[c.salutation, c.first_name, c.last_name, c.suffix].filter(Boolean).join(" ")}
-                        </p>
-                        {c.title && <p className="text-xs text-gray-500 truncate">{c.title}</p>}
-                        {(c.firm_ids || []).filter(fid => firmIds.includes(fid)).map(fid => (
-                          <p key={fid} className="text-xs text-gray-400 truncate">{getFirmName(fid)}</p>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
 
               {/* Title */}
               <div className="space-y-1.5">
