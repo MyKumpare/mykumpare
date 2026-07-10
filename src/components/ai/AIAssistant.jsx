@@ -67,7 +67,7 @@ export default function AIAssistant() {
     scrollToBottom();
   }, [messages]);
 
-  const handleFirmEnrichment = async (firmName) => {
+  const handleFirmEnrichment = async (firmName, { skipAlternates = false } = {}) => {
     try {
       const firm = await findFirmByName(firmName);
 
@@ -81,6 +81,21 @@ export default function AIAssistant() {
           return {
             role: "assistant",
             content: `I couldn't find a firm named "**${firmName}**" in your database, and I wasn't able to find enough public information about them online. Could you verify the firm name or provide their website URL?`,
+          };
+        }
+
+        const alternates = !skipAlternates
+          ? (enrichedData.alternate_names || [])
+              .filter((n) => n && n.trim())
+              .filter((n) => n.toLowerCase().trim() !== firmName.toLowerCase().trim())
+          : [];
+
+        if (alternates.length > 0) {
+          const uniqueAlternates = [...new Set([firmName, ...alternates])];
+          return {
+            role: "assistant",
+            content: `I searched the web for "**${firmName}**" but the exact name doesn't match what's publicly available. I found these similar firms — which one did you mean?`,
+            options: uniqueAlternates,
           };
         }
 
@@ -138,6 +153,22 @@ export default function AIAssistant() {
         role: "assistant",
         content: `I encountered an error while searching the web for firm data: ${error.message}. Please try again.`,
       };
+    }
+  };
+
+  const handleSelectFirmOption = async (selectedName) => {
+    setMessages((prev) => [...prev, { role: "user", content: selectedName }]);
+    setIsLoading(true);
+    try {
+      const result = await handleFirmEnrichment(selectedName, { skipAlternates: true });
+      setMessages((prev) => [...prev, result]);
+    } catch (error) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: `I encountered an error: ${error.message}. Please try again.` },
+      ]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -244,7 +275,7 @@ export default function AIAssistant() {
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
             {messages.map((message, idx) => (
-              <AIAssistantMessage key={idx} message={message} />
+              <AIAssistantMessage key={idx} message={message} onSelectOption={handleSelectFirmOption} />
             ))}
             {isLoading && (
               <div className="flex items-start gap-3">

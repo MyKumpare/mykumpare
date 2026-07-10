@@ -47,6 +47,10 @@ const ENRICHMENT_SCHEMA = {
   type: "object",
   properties: {
     name: { type: "string" },
+    alternate_names: {
+      type: "array",
+      items: { type: "string" },
+    },
     logo_url: { type: "string" },
     description: { type: "string" },
     website: { type: "string" },
@@ -184,6 +188,7 @@ export async function enrichFirmFromWeb(firmName, websiteUrl) {
 ${websiteUrl ? `Their official website is ${websiteUrl}. Focus on extracting data from this website.` : "Find their official website and extract data from it."}
 
 Extract the following information from their public website and any related public sources:
+- Official firm name: the exact name as it appears publicly. If it differs from "${firmName}", set alternate_names to a list of similar official name variations you found on the web (e.g. "Acme Capital Partners", "Acme Capital Management LLC", "Acme Capital, LLC"). Include 2-5 variations if the exact name "${firmName}" does not match. Leave alternate_names empty if "${firmName}" matches exactly.
 - Company description (2-3 sentences about what they do, their investment approach, etc.)
 - Year the firm was founded
 - Office addresses (street address, city, state, postal code, country) — include all locations found
@@ -201,6 +206,7 @@ IMPORTANT:
 - Leave fields empty/null if you cannot find them
 - For non-US phone numbers, put the full number in country_code and leave other phone sub-fields empty
 - For logo_url, only include a full URL starting with http — no relative paths
+- For alternate_names, only include real firm name variations found on public sources — do not fabricate. Only populate if "${firmName}" does not exactly match the publicly available official name.
 - For people, only include real individuals found on their website — do not fabricate names
 - For person phone numbers, put the full number as a string in the "phone" field
 - For photo_url of people, extract the full image URL from their bio/headshot on the firm website, their LinkedIn profile photo, or other public source. Only include a full URL starting with http — no relative paths. Leave empty if no photo is found.`;

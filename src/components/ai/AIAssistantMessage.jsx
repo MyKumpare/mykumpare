@@ -105,7 +105,7 @@ function DataChart({ chart }) {
   );
 }
 
-export default function AIAssistantMessage({ message }) {
+export default function AIAssistantMessage({ message, onSelectOption }) {
   const isUser = message.role === "user";
   return (
     <div className={`flex items-start gap-3 ${isUser ? "flex-row-reverse" : ""}`}>
@@ -134,6 +134,19 @@ export default function AIAssistantMessage({ message }) {
         {!isUser && message.charts?.map((chart, i) => (
           <DataChart key={`c-${i}`} chart={chart} />
         ))}
+        {!isUser && message.options?.length > 0 && (
+          <div className="mt-2 space-y-1.5">
+            {message.options.map((opt, i) => (
+              <button
+                key={i}
+                onClick={() => onSelectOption?.(opt)}
+                className="w-full text-left px-3 py-2 text-sm rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300 transition-colors"
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
