@@ -44,6 +44,13 @@ export default function ContactPhoneForm({ phone, onChange, onDelete, onSetDefau
     return parts.join(" ") || "—";
   };
 
+  const getTelLink = () => {
+    if (phone.country_code && phone.area_code && phone.number_mid && phone.number_last) {
+      return `tel:+${phone.country_code}${phone.area_code}${phone.number_mid}${phone.number_last}`;
+    }
+    return null;
+  };
+
   const viewText = (val) => (
     <div className="h-9 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-800">
       {val || <span className="text-gray-400">—</span>}
@@ -155,7 +162,15 @@ export default function ContactPhoneForm({ phone, onChange, onDelete, onSetDefau
           </div>
           <div className="space-y-1">
             <Label className="text-xs font-medium text-gray-500">Number</Label>
-            {viewText(displayNumber())}
+            {(() => {
+              const tel = getTelLink();
+              if (tel) return (
+                <a href={tel} className="h-9 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-indigo-600 hover:underline hover:bg-indigo-50 transition-colors">
+                  {displayNumber()}
+                </a>
+              );
+              return viewText(displayNumber());
+            })()}
           </div>
         </div>
       )}

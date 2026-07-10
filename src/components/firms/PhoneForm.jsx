@@ -263,9 +263,17 @@ export default function PhoneForm({ phone, onChange, onDelete, onSetDefault, isD
               {viewText(phone.phone_type)}
             </div>
             <div className="space-y-1">
-              <Label className="text-xs font-medium text-gray-500">Number</Label>
-              {viewText(displayNumber())}
-            </div>
+               <Label className="text-xs font-medium text-gray-500">Number</Label>
+               {(() => {
+                 const tel = getTelLink();
+                 if (tel) return (
+                   <a href={tel} className="h-9 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-indigo-600 hover:underline hover:bg-indigo-50 transition-colors">
+                     {displayNumber()}
+                   </a>
+                 );
+                 return viewText(displayNumber());
+               })()}
+             </div>
           </div>
         </div>
       )}

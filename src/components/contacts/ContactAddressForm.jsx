@@ -116,7 +116,8 @@ export default function ContactAddressForm({ address, onChange, onDelete, onSetP
           const country = countryName;
           const hasAny = line1 || line2 || city || state || zip || country;
           if (!hasAny) return <div className="text-sm text-gray-400 italic px-1">No address on file</div>;
-          return (
+          const addrMapsUrl = buildMapsUrl(address);
+          const addressBlock = (
             <div className="text-sm text-gray-800 space-y-0.5 px-1">
               {line1 && <div>{line1}</div>}
               {line2 && <div>{line2}</div>}
@@ -126,6 +127,13 @@ export default function ContactAddressForm({ address, onChange, onDelete, onSetP
               {country && <div>{country}</div>}
             </div>
           );
+          if (addrMapsUrl) return (
+            <a href={addrMapsUrl} target="_blank" rel="noopener noreferrer"
+              className="block text-indigo-600 hover:underline hover:bg-indigo-50 rounded-md -mx-1 px-1 py-0.5 transition-colors">
+              {addressBlock}
+            </a>
+          );
+          return addressBlock;
         })()
       ) : (
         <>
