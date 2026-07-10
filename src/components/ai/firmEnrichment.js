@@ -1,5 +1,6 @@
 import { base44 } from "@/api/base44Client";
 import { detectDesignations } from "@/components/contacts/designationDetector";
+import { findContactDuplicates } from "@/components/contacts/contactDuplicateCheck";
 
 const COUNTRY_NAME_TO_CODE = {
   "united states": "US", "usa": "US", "u.s.": "US", "u.s.a.": "US", "america": "US",
@@ -408,6 +409,108 @@ export function mergeEnrichmentData(existingFirm, enrichedData) {
   }
 
   return { updates, updatedFields };
+}
+
+/**
+ * Compute field-level updates for an existing contact based on enriched person data.
+ * Only fills in fields that are empty/missing on the existing contact — never overwrites existing data.
+ */
+export function computeContactUpdates(existingContact, person, firmId) {
+  const updates = {};
+  const updatedFields = [];
+
+  if (!existingContact.photo_url && person.photo_url) {
+    updates.photo_url = person.photo_url;
+    updatedFields.push("Photo");
+  }
+  if (!existingContact.title && person.title) {
+    updates.title = person.title;
+    updatedFields.push("Title");
+  }
+  if (!existingContact.email && person.email) {
+    updates.email = person.email;
+    updatedFields.push("Email");
+  }
+  if (!existingContact.linkedin_url && person.linkedin_url) {
+    updates.linkedin_url = person.linkedin_url;
+    updatedFields.push("LinkedIn");
+  }
+  if (!existingContact.biography && person.biography) {
+    updates.biography = person.biography;
+    updatedFields.push("Biography");
+  }
+
+  // Designations: merge any new ones not already present
+  const existingDesignations = existingContact.designations || [];
+  const fullName = `${person.first_name || ""} ${person.last_name || ""}`.trim();
+  const personDesignations = detectDesignations(fullName, person.biography);
+  const newDesignations = personDesignations.filter((d) => !existingDesignations.includes(d));
+  if (newDesignations.length > 0) {
+    updates.designations = [...existingDesignations, ...newDesignations];
+    updatedFields.push("Designations");
+  }
+
+  // Phones: add new ones not already present
+  const existingPhones = existingContact.phones || [];
+  const existingPhoneKeys = new Set(
+    existingPhones.map((p) => `${p.country_code || ""}${p.area_code || ""}${p.number_mid || ""}${p.number_last || ""}`)
+  );
+  const parsedPhone = person.phone ? parsePhoneString(person.phone) : null;
+  if (parsedPhone) {
+    const key = `${parsedPhone.country_code || ""}${parsedPhone.area_code || ""}${parsedPhone.number_mid || ""}${parsedPhone.number_last || ""}`;
+    if (key && !existingPhoneKeys.has(key)) {
+      updates.phones = [...existingPhones, parsedPhone];
+      updatedFields.push("Phone");
+    }
+  }
+
+  // Firm association: ensure the contact is linked to this firm
+  if (firmId) {
+    const existingFirmIds = existingContact.firm_ids || [];
+    if (!existingFirmIds.includes(firmId)) {
+      updates.firm_ids = [...existingFirmIds, firmId];
+      updatedFields.push("Firm Association");
+    }
+  }
+
+  return { updates, updatedFields };
+}
+
+/**
+ * Match enriched people against existing contacts.
+ * For matches: compute field-level updates (fills only empty fields).
+ * For non-matches: return as newPeople to be created.
+ */
+export function mergeContactEnrichment(people, existingContacts, firmId) {
+  const contactUpdates = [];
+  const newPeople = [];
+  const allUpdatedFields = [];
+
+  for (const person of (people || [])) {
+    if (!person.first_name && !person.last_name) continue;
+
+    const contactData = {
+      first_name: person.first_name || "",
+      last_name: person.last_name || "",
+      email: person.email || "",
+    };
+
+    const dups = findContactDuplicates(contactData, existingContacts);
+
+    if (dups.length > 0) {
+      const bestMatch = dups[0].contact;
+      const { updates, updatedFields } = computeContactUpdates(bestMatch, person, firmId);
+      if (Object.keys(updates).length > 0) {
+        const contactName = `${bestMatch.first_name || ""} ${bestMatch.last_name || ""}`.trim();
+        contactUpdates.push({ id: bestMatch.id, updates, updatedFields, contactName });
+        allUpdatedFields.push(`${contactName}: ${updatedFields.join(", ")}`);
+      }
+    } else {
+      newPeople.push(person);
+    }
+  }
+
+  return { contactUpdates, newPeople, allUpdatedFields };
 }
 
 export function enrichmentToTable(enrichedData, updatedFields) {

@@ -58,7 +58,7 @@ function getCountryCodeFromCountryName(countryName) {
   return match ? match.code : "";
 }
 
-import { parsePhoneString } from "../ai/firmEnrichment";
+import { parsePhoneString, computeContactUpdates } from "../ai/firmEnrichment";
 import { toast } from "@/components/ui/use-toast";
 
 const FIRM_TYPES = [
@@ -302,7 +302,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     if (selected.people?.length) {
       if (editingFirm) {
         const toCreate = [];
-        const duplicates = [];
+        const updatedContacts = [];
         for (const person of selected.people) {
           const fullName = `${person.first_name || ""} ${person.last_name || ""}`.trim();
           const designations = detectDesignations(fullName, person.biography);
@@ -322,7 +322,15 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
           const dups = findContactDuplicates(contactData, allContacts);
           if (dups.length > 0) {
-            duplicates.push({ contactData, duplicates: dups });
+            // Existing contact found — update their missing fields with new info from the web
+            const bestMatch = dups[0].contact;
+            const { updates, updatedFields } = computeContactUpdates(bestMatch, person, editingFirm.id);
+            if (Object.keys(updates).length > 0) {
+              try {
+                await base44.entities.Contact.update(bestMatch.id, updates);
+                updatedContacts.push({ name: fullName, fields: updatedFields });
+              } catch {}
+            }
           } else {
             toCreate.push(contactData);
           }
@@ -332,10 +340,12 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         for (const contactData of toCreate) {
           try { await base44.entities.Contact.create(contactData); created++; } catch {}
         }
-        if (created > 0) { queryClient.invalidateQueries({ queryKey: ["contacts"] }); applied.push(`${created} Contact(s)`); }
-
-        if (duplicates.length > 0) {
-          setContactDuplicateWarning({ duplicates, firmId: editingFirm.id });
+        if (created > 0 || updatedContacts.length > 0) {
+          queryClient.invalidateQueries({ queryKey: ["contacts"] });
+        }
+        if (created > 0) applied.push(`${created} New Contact(s)`);
+        if (updatedContacts.length > 0) {
+          applied.push(`Updated ${updatedContacts.length} Contact(s) (${updatedContacts.map((c) => c.name).join(", ")})`);
         }
       } else {
         const newPending = [...pendingContacts];

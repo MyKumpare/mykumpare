@@ -9,6 +9,7 @@ import {
   findFirmByName,
   enrichFirmFromWeb,
   mergeEnrichmentData,
+  mergeContactEnrichment,
   enrichmentToTable,
   createFirmFromEnrichment,
   validateFirmData,
@@ -141,9 +142,24 @@ export default function AIAssistant() {
       }
 
       const { updates, updatedFields } = mergeEnrichmentData(firm, enrichedData);
-      const table = enrichmentToTable(enrichedData, updatedFields);
 
-      if (Object.keys(updates).length === 0) {
+      // Also check for contact updates — match enriched people against existing contacts
+      let contactUpdates = [];
+      let newPeople = [];
+      let contactUpdatedFields = [];
+      if (enrichedData.people?.length > 0) {
+        const allContacts = await base44.entities.Contact.list(null, 500);
+        const firmContacts = allContacts.filter((c) => !c.deleted_at);
+        const contactResult = mergeContactEnrichment(enrichedData.people, firmContacts, firm.id);
+        contactUpdates = contactResult.contactUpdates;
+        newPeople = contactResult.newPeople;
+        contactUpdatedFields = contactResult.allUpdatedFields;
+      }
+
+      const allUpdatedFields = [...updatedFields, ...contactUpdatedFields];
+      const table = enrichmentToTable(enrichedData, allUpdatedFields);
+
+      if (Object.keys(updates).length === 0 && contactUpdates.length === 0 && newPeople.length === 0) {
         return {
           role: "assistant",
           content: `I found **${firm.name}** in your database and searched their public website. All fields are already populated — no updates were needed.`,
@@ -153,11 +169,16 @@ export default function AIAssistant() {
 
       const validation = validateFirmData(enrichedData);
 
+      const summaryParts = [];
+      if (updatedFields.length > 0) summaryParts.push(`${updatedFields.length} firm field(s): ${updatedFields.join(", ")}`);
+      if (contactUpdates.length > 0) summaryParts.push(`${contactUpdates.length} contact(s) updated: ${contactUpdates.map((c) => `${c.contactName} (${c.updatedFields.join(", ")})`).join("; ")}`);
+      if (newPeople.length > 0) summaryParts.push(`${newPeople.length} new contact(s) to create`);
+
       return {
         role: "assistant",
-        content: `I found **${firm.name}** in your database and searched their public website. I can populate ${updatedFields.length} new field(s): **${updatedFields.join(", ")}**.${validation.issues.length ? `\n\n⚠️ **Validation notes:**\n${validation.issues.map((i) => `- ${i}`).join("\n")}` : ""}\n\nPlease confirm to apply these updates.`,
+        content: `I found **${firm.name}** in your database and searched their public website. I can update:\n\n${summaryParts.map((s) => `- ${s}`).join("\n")}${validation.issues.length ? `\n\n⚠️ **Validation notes:**\n${validation.issues.map((i) => `- ${i}`).join("\n")}` : ""}\n\nPlease confirm to apply these updates.`,
         tables: [table],
-        pending_creation: { type: "update_firm", firmId: firm.id, updates, updatedFields },
+        pending_creation: { type: "update_firm", firmId: firm.id, updates, updatedFields, contactUpdates, newPeople },
       };
     } catch (error) {
       return {
@@ -178,10 +199,42 @@ export default function AIAssistant() {
           content: `✅ **Firm "${createdFirm.name}" created successfully.** You can review and edit the details in the Firms section.`,
         }]);
       } else if (pendingCreation.type === "update_firm") {
-        await base44.entities.Firm.update(pendingCreation.firmId, pendingCreation.updates);
+        if (Object.keys(pendingCreation.updates || {}).length > 0) {
+          await base44.entities.Firm.update(pendingCreation.firmId, pendingCreation.updates);
+        }
+        // Update existing contacts with new info
+        let contactsUpdated = 0;
+        for (const cu of (pendingCreation.contactUpdates || [])) {
+          try {
+            await base44.entities.Contact.update(cu.id, cu.updates);
+            contactsUpdated++;
+          } catch {}
+        }
+        // Create new contacts that didn't match any existing ones
+        let contactsCreated = 0;
+        for (const person of (pendingCreation.newPeople || [])) {
+          try {
+            const contactData = {
+              first_name: person.first_name || "",
+              last_name: person.last_name || "",
+              title: person.title || "",
+              email: person.email || "",
+              linkedin_url: person.linkedin_url || "",
+              biography: person.biography || "",
+              photo_url: person.photo_url || "",
+              firm_ids: [pendingCreation.firmId],
+            };
+            await base44.entities.Contact.create(contactData);
+            contactsCreated++;
+          } catch {}
+        }
+        const parts = [];
+        if (pendingCreation.updatedFields?.length > 0) parts.push(`${pendingCreation.updatedFields.length} firm field(s)`);
+        if (contactsUpdated > 0) parts.push(`${contactsUpdated} contact(s) updated`);
+        if (contactsCreated > 0) parts.push(`${contactsCreated} new contact(s) created`);
         setMessages((prev) => [...prev, {
           role: "assistant",
-          content: `✅ **Updated ${pendingCreation.updatedFields.length} field(s):** ${pendingCreation.updatedFields.join(", ")}`,
+          content: `✅ **Updates applied:** ${parts.join(", ") || "no changes needed"}`,
         }]);
       }
     } catch (error) {
