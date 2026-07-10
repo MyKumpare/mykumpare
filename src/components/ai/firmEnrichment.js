@@ -264,6 +264,34 @@ export async function findFirmByName(firmName) {
 }
 
 export async function enrichFirmFromWeb(firmName, websiteUrl) {
+  // If no website URL was provided, try to discover it first via a targeted web search.
+  // This significantly improves enrichment success for firms whose name alone may not
+  // return enough structured data from a single LLM web-search call.
+  if (!websiteUrl) {
+    try {
+      const discoveryResponse = await base44.integrations.Core.InvokeLLM({
+        prompt: `Search the web for the investment firm "${firmName}". Find their official website URL. Return the full URL including https://. If you cannot find it, return an empty string for the website field.`,
+        add_context_from_internet: true,
+        model: "gemini_3_flash",
+        response_json_schema: {
+          type: "object",
+          properties: {
+            website: { type: "string" },
+            confidence: { type: "string" },
+          },
+        },
+      });
+      const foundWebsite =
+        discoveryResponse?.website ||
+        (typeof discoveryResponse === "string" ? discoveryResponse.trim() : "");
+      if (foundWebsite && /^https?:\/\/.+/.test(foundWebsite)) {
+        websiteUrl = foundWebsite;
+      }
+    } catch {
+      // If website discovery fails, continue with the original flow (no URL hint)
+    }
+  }
+
   const prompt = `Search the web for information about the investment firm "${firmName}".
 ${websiteUrl ? `Their official website is ${websiteUrl}. Focus on extracting data from this website.` : "Find their official website and extract data from it."}
 

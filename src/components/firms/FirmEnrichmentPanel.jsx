@@ -227,8 +227,11 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
           <X className="w-4 h-4 text-amber-500" />
           <p className="text-sm font-medium text-amber-700">No data found</p>
         </div>
-        <p className="text-xs text-gray-600">Could not find enough public information for <strong>{firmName}</strong>. Try adding a website URL first.</p>
-        <Button size="sm" variant="ghost" onClick={onClose} className="h-8 text-xs text-gray-500">Close</Button>
+        <p className="text-xs text-gray-600">Could not find enough public information for <strong>{firmName}</strong>. You can try again, or enter the website URL in the form above and retry for better results.</p>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={handleFetch} className="h-8 text-xs">Try Again</Button>
+          <Button size="sm" variant="ghost" onClick={onClose} className="h-8 text-xs text-gray-500">Close</Button>
+        </div>
       </div>
     );
   }
