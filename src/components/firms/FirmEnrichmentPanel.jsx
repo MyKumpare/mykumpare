@@ -119,7 +119,8 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
       (data.people || []).forEach((_, i) => (initial[`person_${i}`] = true));
       setAcceptedFields(initial);
     } catch (err) {
-      setError(err.message || "Failed to fetch data from the web");
+      const msg = err.message || "Failed to fetch data from the web";
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -227,7 +228,7 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
           <X className="w-4 h-4 text-amber-500" />
           <p className="text-sm font-medium text-amber-700">No data found</p>
         </div>
-        <p className="text-xs text-gray-600">Could not find enough public information for <strong>{firmName}</strong>. You can try again, or enter the website URL in the form above and retry for better results.</p>
+        <p className="text-xs text-gray-600">Could not extract enough information for <strong>{firmName}</strong>{website ? ` from ${website}` : ""}. Please verify the website URL is correct, or try again.</p>
         <div className="flex gap-2">
           <Button size="sm" variant="outline" onClick={handleFetch} className="h-8 text-xs">Try Again</Button>
           <Button size="sm" variant="ghost" onClick={onClose} className="h-8 text-xs text-gray-500">Close</Button>

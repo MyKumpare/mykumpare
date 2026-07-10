@@ -1,0 +1,274 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+
+/**
+ * Fetches a website's content directly (homepage + common sub-pages like /about, /team)
+ * and passes it to the LLM for structured extraction.
+ * This is more reliable than relying solely on add_context_from_internet web search.
+ */
+
+const COMMON_PATHS = [
+  '/about',
+  '/about/firm',
+  '/about/our-team',
+  '/team',
+  '/our-team',
+  '/contact',
+  '/about-us',
+  '/company',
+  '/philosophy',
+  '/approach',
+];
+
+async function fetchPage(url: string, maxRedirects = 3): Promise<string> {
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+      redirect: 'follow',
+    });
+    if (!response.ok) return '';
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('text') && !contentType.includes('html')) return '';
+    const html = await response.text();
+    return htmlToText(html);
+  } catch {
+    return '';
+  }
+}
+
+function htmlToText(html: string): string {
+  // Remove scripts, styles, and HTML tags to get readable text
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<nav[\s\S]*?<\/nav>/gi, '')
+    .replace(/<footer[\s\S]*?<\/footer>/gi, '')
+    .replace(/<header[\s\S]*?<\/header>/gi, '')
+    .replace(/<img[^>]*>/gi, '')
+    .replace(/<svg[\s\S]*?<\/svg>/gi, '')
+    .replace(/<\/?(div|p|br|h[1-6]|li|ul|ol|span|a|td|tr|table|section|article|main)[^>]*>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/[ \t]+/g, ' ')
+    .trim();
+}
+
+function resolveUrl(base: string, path: string): string {
+  try {
+    return new URL(path, base).href;
+  } catch {
+    return '';
+  }
+}
+
+Deno.serve(async (req) => {
+  try {
+    const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me();
+    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const body = await req.json();
+    const { firm_name, website_url } = body;
+
+    if (!firm_name) return Response.json({ error: 'firm_name is required' }, { status: 400 });
+
+    let website = website_url || '';
+
+    // If no website provided, try web search to find it
+    if (!website) {
+      try {
+        const discovery = await base44.integrations.Core.InvokeLLM({
+          prompt: `Search the web for the investment firm "${firm_name}". Find their official website URL. Return only the full URL including https://. If you cannot find it, return an empty string.`,
+          add_context_from_internet: true,
+          response_json_schema: {
+            type: 'object',
+            properties: {
+              website: { type: 'string' },
+            },
+          },
+        });
+        const found = discovery?.website || '';
+        if (found && /^https?:\/\/.+/.test(found)) {
+          website = found;
+        }
+      } catch {
+        // continue without website
+      }
+    }
+
+    if (!website) {
+      return Response.json({ error: 'Could not find a website for this firm. Please enter the website URL manually.' }, { status: 404 });
+    }
+
+    // Normalize the URL
+    if (!website.startsWith('http')) {
+      website = 'https://' + website;
+    }
+
+    // Fetch homepage + common sub-pages
+    const pageContents: { url: string; text: string }[] = [];
+    const homepageText = await fetchPage(website);
+    if (homepageText) {
+      pageContents.push({ url: website, text: homepageText.substring(0, 8000) });
+    }
+
+    // Fetch sub-pages in parallel
+    const subPagePromises = COMMON_PATHS.map(async (path) => {
+      const fullUrl = resolveUrl(website, path);
+      if (!fullUrl || fullUrl === website) return null;
+      const text = await fetchPage(fullUrl);
+      if (text && text.length > 100) {
+        return { url: fullUrl, text: text.substring(0, 6000) };
+      }
+      return null;
+    });
+
+    const subPages = await Promise.all(subPagePromises);
+    for (const page of subPages) {
+      if (page) pageContents.push(page);
+    }
+
+    const combinedContent = pageContents.map((p) => `[Page: ${p.url}]\n${p.text}`).join('\n\n---\n\n');
+
+    if (!combinedContent || combinedContent.length < 50) {
+      return Response.json({ error: `Could not fetch content from ${website}. The site may be blocking automated access.` }, { status: 502 });
+    }
+
+    // Now pass the fetched content to the LLM for structured extraction
+    const extractionPrompt = `You are extracting information about the investment firm "${firm_name}" from their website content below.
+
+Website content (combined from multiple pages):
+---
+${combinedContent.substring(0, 30000)}
+---
+
+Extract the following information from this website content:
+- Official firm name (exact name as it appears on the website)
+- Company description (2-3 sentences about what they do, their investment approach, etc.)
+- Year the firm was founded
+- Website URL
+- LinkedIn URL
+- General contact email address
+- Firm type(s): classify as one or more of "Investment Manager", "Allocator", "Investment Consultant", "Manager of Managers", "Securities Brokerage", "Trade Organizations"
+- Firm logo URL (full URL starting with http)
+- Office addresses (street address, city, state, postal code, country)
+- Phone numbers (for US numbers: country_code, area_code, number_mid, number_last)
+- Key personnel: for each person found, include first_name, last_name, title, email, linkedin_url, phone, biography (full text), and photo_url (full URL starting with http)
+
+IMPORTANT:
+- Only include information you actually find in the content above
+- Do not fabricate or guess
+- Leave fields empty/null if not found
+- For logo_url and photo_url, construct full URLs using the website base URL if relative paths are used
+- For biography, copy the complete text — do not summarize`;
+
+    const enrichedData = await base44.integrations.Core.InvokeLLM({
+      prompt: extractionPrompt,
+      response_json_schema: {
+        type: 'object',
+        properties: {
+          name: { type: 'string' },
+          description: { type: 'string' },
+          website: { type: 'string' },
+          email: { type: 'string' },
+          linkedin_url: { type: 'string' },
+          year_founded: { type: 'integer' },
+          firm_types: {
+            type: 'array',
+            items: {
+              type: 'string',
+              enum: ['Investment Manager', 'Allocator', 'Investment Consultant', 'Manager of Managers', 'Securities Brokerage', 'Trade Organizations'],
+            },
+          },
+          logo_url: { type: 'string' },
+          addresses: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                is_headquarters: { type: 'boolean' },
+                country: { type: 'string' },
+                state: { type: 'string' },
+                city: { type: 'string' },
+                postal_code: { type: 'string' },
+                address_line1: { type: 'string' },
+                address_line2: { type: 'string' },
+              },
+            },
+          },
+          phones: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                phone_type: { type: 'string' },
+                country_code: { type: 'string' },
+                area_code: { type: 'string' },
+                number_mid: { type: 'string' },
+                number_last: { type: 'string' },
+              },
+            },
+          },
+          people: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                first_name: { type: 'string' },
+                last_name: { type: 'string' },
+                title: { type: 'string' },
+                email: { type: 'string' },
+                linkedin_url: { type: 'string' },
+                biography: { type: 'string' },
+                phone: { type: 'string' },
+                photo_url: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!enrichedData.name) enrichedData.name = firm_name;
+
+    // Rehost images
+    try {
+      const imageUrls: string[] = [];
+      if (enrichedData.logo_url) imageUrls.push(enrichedData.logo_url);
+      for (const person of enrichedData.people || []) {
+        if (person.photo_url) imageUrls.push(person.photo_url);
+      }
+
+      if (imageUrls.length > 0) {
+        const rehostResponse = await base44.functions.invoke('rehostImages', {
+          image_urls: imageUrls,
+          website: website,
+        });
+        const results = rehostResponse?.data?.results || [];
+        for (const r of results) {
+          if (r.rehosted) {
+            if (enrichedData.logo_url === r.original) enrichedData.logo_url = r.rehosted;
+            for (const person of enrichedData.people || []) {
+              if (person.photo_url === r.original) person.photo_url = r.rehosted;
+            }
+          }
+        }
+      }
+    } catch {
+      // keep original URLs if rehosting fails
+    }
+
+    return Response.json(enrichedData);
+  } catch (error) {
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+});

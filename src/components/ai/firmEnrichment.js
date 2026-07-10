@@ -264,125 +264,30 @@ export async function findFirmByName(firmName) {
 }
 
 export async function enrichFirmFromWeb(firmName, websiteUrl) {
-  // If no website URL was provided, try to discover it first via a targeted web search.
-  // This significantly improves enrichment success for firms whose name alone may not
-  // return enough structured data from a single LLM web-search call.
-  if (!websiteUrl) {
-    try {
-      const discoveryResponse = await base44.integrations.Core.InvokeLLM({
-        prompt: `Search the web for the investment firm "${firmName}". Find their official website URL. Return the full URL including https://. If you cannot find it, return an empty string for the website field.`,
-        add_context_from_internet: true,
-        model: "gemini_3_flash",
-        response_json_schema: {
-          type: "object",
-          properties: {
-            website: { type: "string" },
-            confidence: { type: "string" },
-          },
-        },
-      });
-      const foundWebsite =
-        discoveryResponse?.website ||
-        (typeof discoveryResponse === "string" ? discoveryResponse.trim() : "");
-      if (foundWebsite && /^https?:\/\/.+/.test(foundWebsite)) {
-        websiteUrl = foundWebsite;
-      }
-    } catch {
-      // If website discovery fails, continue with the original flow (no URL hint)
-    }
-  }
-
-  const prompt = `Search the web for information about the investment firm "${firmName}".
-${websiteUrl ? `Their official website is ${websiteUrl}. Focus on extracting data from this website.` : "Find their official website and extract data from it."}
-
-Extract the following information from their public website and any related public sources:
-- Official firm name: the exact name as it appears publicly. If it differs from "${firmName}", set alternate_names to a list of similar official name variations you found on the web (e.g. "Acme Capital Partners", "Acme Capital Management LLC", "Acme Capital, LLC"). Include 2-5 variations if the exact name "${firmName}" does not match. Leave alternate_names empty if "${firmName}" matches exactly.
-- Company description (2-3 sentences about what they do, their investment approach, etc.)
-- Year the firm was founded
-- Office addresses (street address, city, state, postal code, country) — include all locations found
-- Phone numbers — for US numbers split into: country_code (e.g. "1"), area_code (3 digits), number_mid (3 digits), number_last (4 digits)
-- LinkedIn URL
-- General contact email address
-- Website URL
-- Firm type(s): classify as one or more of "Investment Manager", "Allocator", "Investment Consultant", "Manager of Managers", "Securities Brokerage", "Trade Organizations"
-- Firm logo: the full URL of their logo image (must start with http)
-- Key personnel/employees: for each key person found on the website (executives, founders, portfolio managers, partners), include first name, last name, job title, email, LinkedIn URL, phone, their full complete biography (copy the entire biography text exactly as it appears on their website bio page — do NOT summarize, truncate, or shorten it), and photo_url (the full URL of their headshot/profile photo from the firm website — must start with http)
-
-IMPORTANT:
-- Only include information you actually find from reliable public sources
-- Do not fabricate or guess information
-- Leave fields empty/null if you cannot find them
-- For non-US phone numbers, put the full number in country_code and leave other phone sub-fields empty
-- For logo_url, only include a full URL starting with http — no relative paths
-- For alternate_names, only include real firm name variations found on public sources — do not fabricate. Only populate if "${firmName}" does not exactly match the publicly available official name.
-- For people, only include real individuals found on their website — do not fabricate names
-- For person phone numbers, put the full number as a string in the "phone" field
-- For photo_url of people, extract the full absolute image URL (starting with http:// or https://) of their headshot/profile photo from their bio page on the firm website. Do NOT use relative paths — if the image src is relative, construct the full URL using the website's base URL. Leave empty only if absolutely no photo is found.
-- For biography of people, you MUST copy the COMPLETE biography text from their website profile page. Do NOT summarize, shorten, or truncate — include every paragraph exactly as written on the website.`;
-
-  const response = await base44.integrations.Core.InvokeLLM({
-    prompt,
-    add_context_from_internet: true,
-    model: "gemini_3_flash",
-    response_json_schema: ENRICHMENT_SCHEMA,
+  // Use the backend function that fetches the website directly and extracts data.
+  // This is more reliable than relying on LLM web search alone, which often returns
+  // empty results for smaller firms.
+  const response = await base44.functions.invoke('enrichFirmFromWebsite', {
+    firm_name: firmName,
+    website_url: websiteUrl || '',
   });
 
   let data;
-  if (typeof response === "string") {
-    try {
-      data = JSON.parse(response);
-    } catch {
-      data = { name: firmName, description: response };
-    }
-  } else if (typeof response === "object" && response !== null) {
-    data = response.data && typeof response.data === "object" ? response.data : response;
+  if (response.data && typeof response.data === 'object') {
+    data = response.data;
+  } else if (typeof response.data === 'string') {
+    try { data = JSON.parse(response.data); } catch { data = { name: firmName }; }
   } else {
-    data = {};
+    data = response;
   }
+
+  // If the backend returned an error, throw it so the UI can display it
+  if (data.error) throw new Error(data.error);
 
   normalizeAddresses(data);
   if (!data.name) data.name = firmName;
 
-  // Rehost all image URLs (logo + people photos) to Base44 storage
-  // so they persist and aren't subject to hotlink protection or relative URL issues
-  try {
-    const imageUrls = [];
-    const urlMap = {};
-
-    if (data.logo_url && /^https?:\/\/.+/.test(data.logo_url)) {
-      imageUrls.push(data.logo_url);
-    } else if (data.logo_url) {
-      imageUrls.push(data.logo_url);
-    }
-
-    for (const person of data.people || []) {
-      if (person.photo_url) {
-        imageUrls.push(person.photo_url);
-      }
-    }
-
-    if (imageUrls.length > 0) {
-      const response = await base44.functions.invoke('rehostImages', {
-        image_urls: imageUrls,
-        website: websiteUrl || data.website || '',
-      });
-      const results = response.data?.results || [];
-      for (const r of results) {
-        if (r.rehosted) urlMap[r.original] = r.rehosted;
-      }
-
-      if (data.logo_url && urlMap[data.logo_url]) {
-        data.logo_url = urlMap[data.logo_url];
-      }
-      for (const person of data.people || []) {
-        if (person.photo_url && urlMap[person.photo_url]) {
-          person.photo_url = urlMap[person.photo_url];
-        }
-      }
-    }
-  } catch {
-    // If rehosting fails, keep original URLs
-  }
+  // Image rehosting is handled by the backend function
 
   return data;
 }
