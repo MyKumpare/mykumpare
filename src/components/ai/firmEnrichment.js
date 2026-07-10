@@ -4,6 +4,7 @@ const ENRICHMENT_SCHEMA = {
   type: "object",
   properties: {
     name: { type: "string" },
+    logo_url: { type: "string" },
     description: { type: "string" },
     website: { type: "string" },
     linkedin_url: { type: "string" },
@@ -40,6 +41,21 @@ const ENRICHMENT_SCHEMA = {
           area_code: { type: "string" },
           number_mid: { type: "string" },
           number_last: { type: "string" },
+        },
+      },
+    },
+    people: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          first_name: { type: "string" },
+          last_name: { type: "string" },
+          title: { type: "string" },
+          email: { type: "string" },
+          linkedin_url: { type: "string" },
+          biography: { type: "string" },
+          phone: { type: "string" },
         },
       },
     },
@@ -130,12 +146,17 @@ Extract the following information from their public website and any related publ
 - LinkedIn URL
 - Website URL
 - Firm type(s): classify as one or more of "Investment Manager", "Allocator", "Investment Consultant", "Manager of Managers", "Securities Brokerage", "Trade Organizations"
+- Firm logo: the full URL of their logo image (must start with http)
+- Key personnel/employees: for each key person found on the website (executives, founders, portfolio managers, partners), include first name, last name, job title, email, LinkedIn URL, phone, and a short biography
 
 IMPORTANT:
 - Only include information you actually find from reliable public sources
 - Do not fabricate or guess information
 - Leave fields empty/null if you cannot find them
-- For non-US phone numbers, put the full number in country_code and leave other phone sub-fields empty`;
+- For non-US phone numbers, put the full number in country_code and leave other phone sub-fields empty
+- For logo_url, only include a full URL starting with http — no relative paths
+- For people, only include real individuals found on their website — do not fabricate names
+- For person phone numbers, put the full number as a string in the "phone" field`;
 
   const response = await base44.integrations.Core.InvokeLLM({
     prompt,
@@ -165,6 +186,10 @@ export function mergeEnrichmentData(existingFirm, enrichedData) {
   const updates = {};
   const updatedFields = [];
 
+  if (!existingFirm.logo_url && enrichedData.logo_url) {
+    updates.logo_url = enrichedData.logo_url;
+    updatedFields.push("Logo");
+  }
   if (!existingFirm.description && enrichedData.description) {
     updates.description = enrichedData.description;
     updatedFields.push("Description");
@@ -211,6 +236,10 @@ export function enrichmentToTable(enrichedData, updatedFields) {
 
   rows.push(["Name", String(enrichedData.name || "")]);
 
+  if (enrichedData.logo_url) {
+    rows.push(["Logo URL", enrichedData.logo_url.length > 80 ? enrichedData.logo_url.substring(0, 80) + "..." : enrichedData.logo_url]);
+  }
+
   const desc = enrichedData.description || "";
   rows.push(["Description", desc.length > 100 ? desc.substring(0, 100) + "..." : desc]);
 
@@ -237,6 +266,10 @@ export function enrichmentToTable(enrichedData, updatedFields) {
     rows.push(["Phone", phoneStr]);
   }
 
+  if (enrichedData.people?.length > 0) {
+    rows.push(["Key Personnel", enrichedData.people.map(p => `${p.first_name || ""} ${p.last_name || ""}`.trim() + (p.title ? ` (${p.title})` : "")).join("; ")]);
+  }
+
   if (updatedFields && updatedFields.length > 0) {
     rows.push(["✅ Updated", updatedFields.join(", ")]);
   }
@@ -250,6 +283,7 @@ export async function createFirmFromEnrichment(enrichedData) {
     description: enrichedData.description || "",
     website: enrichedData.website || "",
     linkedin_url: enrichedData.linkedin_url || "",
+    logo_url: enrichedData.logo_url || "",
   };
 
   if (enrichedData.year_founded) firmData.year_founded = enrichedData.year_founded;

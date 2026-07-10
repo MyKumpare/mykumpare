@@ -99,6 +99,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [expandedPhoneId, setExpandedPhoneId] = useState(null);
   const [showEnrichment, setShowEnrichment] = useState(false);
+  const [pendingContacts, setPendingContacts] = useState([]);
   const nameInputRef = useRef(null);
   const logoInputRef = useRef(null);
 
@@ -122,6 +123,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         setDescription(editingFirm.description || "");
         setAddresses(editingFirm.addresses?.length ? editingFirm.addresses : []);
         setPhones(editingFirm.phones?.length ? editingFirm.phones : []);
+        setPendingContacts([]);
         setIsEditing(false);
       } else {
         setFirmTypes(preselectedType ? [preselectedType] : []);
@@ -134,6 +136,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         setAddresses([]);
         setPhones([]);
         setShowEnrichment(false);
+        setPendingContacts([]);
         setIsEditing(true);
       }
     }
@@ -245,11 +248,12 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
   const handleSubmit = () => {
     if (!isValid) return;
-    onSubmit({ firm_type: firmTypes[0] || "", firm_types: firmTypes, name: firmName.trim(), logo_url: logoUrl, website, linkedin_url: linkedinUrl, year_founded: yearFounded ? parseInt(yearFounded) : null, description, addresses, phones });
-    setFirmTypes([]); setFirmName(""); setLogoUrl(""); setWebsite(""); setLinkedinUrl(""); setYearFounded(""); setDescription(""); setAddresses([]); setPhones([]);
+    onSubmit({ firm_type: firmTypes[0] || "", firm_types: firmTypes, name: firmName.trim(), logo_url: logoUrl, website, linkedin_url: linkedinUrl, year_founded: yearFounded ? parseInt(yearFounded) : null, description, addresses, phones, pending_contacts: pendingContacts.length > 0 ? pendingContacts : undefined });
+    setFirmTypes([]); setFirmName(""); setLogoUrl(""); setWebsite(""); setLinkedinUrl(""); setYearFounded(""); setDescription(""); setAddresses([]); setPhones([]); setPendingContacts([]);
   };
 
-  const handleApplyEnrichment = (selected) => {
+  const handleApplyEnrichment = async (selected) => {
+    if (selected.logo_url !== undefined) setLogoUrl(selected.logo_url);
     if (selected.description !== undefined) setDescription(selected.description);
     if (selected.website !== undefined) setWebsite(selected.website);
     if (selected.linkedin_url !== undefined) setLinkedinUrl(selected.linkedin_url);
@@ -275,6 +279,25 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         });
       }
       setPhones([...phones, ...newPhs]);
+    }
+    if (selected.people?.length) {
+      if (editingFirm) {
+        for (const person of selected.people) {
+          const contactData = {
+            first_name: person.first_name || "",
+            last_name: person.last_name || "",
+            title: person.title || "",
+            email: person.email || "",
+            linkedin_url: person.linkedin_url || "",
+            biography: person.biography || "",
+            firm_ids: [editingFirm.id],
+          };
+          if (person.phone) contactData.notes = `Phone: ${person.phone}`;
+          try { await base44.entities.Contact.create(contactData); } catch {}
+        }
+      } else {
+        setPendingContacts([...pendingContacts, ...selected.people]);
+      }
     }
     setShowEnrichment(false);
   };

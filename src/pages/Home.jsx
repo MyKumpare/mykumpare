@@ -206,9 +206,29 @@ export default function Home() {
   };
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Firm.create(data),
+    mutationFn: async (data) => {
+      const { pending_contacts, ...firmData } = data;
+      const firm = await base44.entities.Firm.create(firmData);
+      if (pending_contacts?.length) {
+        for (const person of pending_contacts) {
+          const contactData = {
+            first_name: person.first_name || "",
+            last_name: person.last_name || "",
+            title: person.title || "",
+            email: person.email || "",
+            linkedin_url: person.linkedin_url || "",
+            biography: person.biography || "",
+            firm_ids: [firm.id],
+          };
+          if (person.phone) contactData.notes = `Phone: ${person.phone}`;
+          try { await base44.entities.Contact.create(contactData); } catch {}
+        }
+      }
+      return firm;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["firms"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
       setDialogOpen(false);
     },
   });

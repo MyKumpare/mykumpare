@@ -54,6 +54,41 @@ function PhoneRow({ phone, index, accepted, onToggle }) {
   );
 }
 
+function LogoRow({ logoUrl, accepted, onToggle }) {
+  if (!logoUrl) return null;
+  return (
+    <div className="flex items-start gap-2 py-1.5 px-2 rounded-md hover:bg-gray-50 border border-transparent hover:border-gray-100">
+      <Checkbox checked={accepted} onCheckedChange={onToggle} className="mt-0.5" />
+      <div className="flex-1 min-w-0 flex items-center gap-2">
+        <img src={logoUrl} alt="Logo" className="w-10 h-10 object-contain rounded border border-gray-200 flex-shrink-0" onError={(e) => { e.target.style.display = 'none'; }} />
+        <div className="min-w-0">
+          <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Firm Logo</p>
+          <p className="text-xs text-gray-500 truncate">{logoUrl}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PersonRow({ person, index, accepted, onToggle }) {
+  if (!person || (!person.first_name && !person.last_name)) return null;
+  const fullName = [person.first_name, person.last_name].filter(Boolean).join(" ");
+  const bio = person.biography || "";
+  return (
+    <div className="flex items-start gap-2 py-1.5 px-2 rounded-md hover:bg-gray-50 border border-transparent hover:border-gray-100">
+      <Checkbox checked={accepted} onCheckedChange={onToggle} className="mt-0.5" />
+      <div className="flex-1 min-w-0">
+        <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Person #{index + 1}</p>
+        <p className="text-sm text-gray-800 font-medium">{fullName}{person.title ? ` — ${person.title}` : ""}</p>
+        {person.email && <p className="text-xs text-gray-500">{person.email}</p>}
+        {person.phone && <p className="text-xs text-gray-500">{person.phone}</p>}
+        {person.linkedin_url && <p className="text-xs text-indigo-500 truncate">{person.linkedin_url}</p>}
+        {bio && <p className="text-xs text-gray-600 mt-0.5">{bio.length > 100 ? bio.substring(0, 100) + "..." : bio}</p>}
+      </div>
+    </div>
+  );
+}
+
 export default function FirmEnrichmentPanel({ firmName, website, onApply, onClose }) {
   const [loading, setLoading] = useState(false);
   const [enrichedData, setEnrichedData] = useState(null);
@@ -76,6 +111,8 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
       if (data.firm_types?.length) initial.firm_types = true;
       (data.addresses || []).forEach((_, i) => (initial[`address_${i}`] = true));
       (data.phones || []).forEach((_, i) => (initial[`phone_${i}`] = true));
+      if (data.logo_url) initial.logo_url = true;
+      (data.people || []).forEach((_, i) => (initial[`person_${i}`] = true));
       setAcceptedFields(initial);
     } catch (err) {
       setError(err.message || "Failed to fetch data from the web");
@@ -104,6 +141,11 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
         .filter((_, i) => acceptedFields[`phone_${i}`])
         .map((p) => ({ ...p, id: crypto.randomUUID() }));
       if (selPhones.length) selected.phones = selPhones;
+      if (acceptedFields.logo_url && enrichedData.logo_url) selected.logo_url = enrichedData.logo_url;
+      const selPeople = (enrichedData.people || [])
+        .filter((_, i) => acceptedFields[`person_${i}`])
+        .filter((p) => p.first_name || p.last_name);
+      if (selPeople.length) selected.people = selPeople;
     }
     onApply(selected);
   };
@@ -118,7 +160,7 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
           <p className="text-sm font-medium text-indigo-700">Auto-fill from Web</p>
         </div>
         <p className="text-xs text-gray-600">
-          Search the web for <strong>{firmName}</strong>'s public website and automatically fill in fields like description, address, phone, LinkedIn, and more.
+          Search the web for <strong>{firmName}</strong>'s public website and automatically fill in fields like logo, description, address, phone, LinkedIn, key personnel, and more.
         </p>
         <div className="flex gap-2">
           <Button size="sm" onClick={handleFetch} className="h-8 text-xs bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5">
@@ -167,7 +209,9 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
     enrichedData.year_founded ||
     enrichedData.firm_types?.length ||
     enrichedData.addresses?.length ||
-    enrichedData.phones?.length
+    enrichedData.phones?.length ||
+    enrichedData.logo_url ||
+    enrichedData.people?.length
   );
 
   if (!hasData) {
@@ -196,6 +240,7 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
       </div>
 
       <div className="max-h-60 overflow-y-auto space-y-0.5">
+        <LogoRow logoUrl={enrichedData.logo_url} accepted={acceptedFields.logo_url} onToggle={() => toggleField("logo_url")} />
         <FieldRow label="Description" value={enrichedData.description} accepted={acceptedFields.description} onToggle={() => toggleField("description")} />
         <FieldRow label="Website" value={enrichedData.website} accepted={acceptedFields.website} onToggle={() => toggleField("website")} />
         <FieldRow label="LinkedIn" value={enrichedData.linkedin_url} accepted={acceptedFields.linkedin_url} onToggle={() => toggleField("linkedin_url")} />
@@ -206,6 +251,9 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
         ))}
         {(enrichedData.phones || []).map((phone, i) => (
           <PhoneRow key={`ph-${i}`} phone={phone} index={i} accepted={acceptedFields[`phone_${i}`]} onToggle={() => toggleField(`phone_${i}`)} />
+        ))}
+        {(enrichedData.people || []).map((person, i) => (
+          <PersonRow key={`ppl-${i}`} person={person} index={i} accepted={acceptedFields[`person_${i}`]} onToggle={() => toggleField(`person_${i}`)} />
         ))}
       </div>
 
