@@ -98,10 +98,15 @@ export default function AIAssistant() {
       const hasData =
         enrichedData &&
         (enrichedData.description ||
+          enrichedData.website ||
           enrichedData.addresses?.length ||
           enrichedData.phones?.length ||
           enrichedData.linkedin_url ||
-          enrichedData.year_founded);
+          enrichedData.year_founded ||
+          enrichedData.email ||
+          enrichedData.logo_url ||
+          enrichedData.firm_types?.length ||
+          enrichedData.people?.length);
 
       if (!hasData) {
         return {
