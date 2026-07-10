@@ -4,6 +4,14 @@ import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
 import AIAssistantMessage from "./AIAssistantMessage";
 import { buildSystemPrompt, buildToolContext } from "./aiContextBuilder";
+import {
+  detectEnrichmentIntent,
+  findFirmByName,
+  enrichFirmFromWeb,
+  mergeEnrichmentData,
+  enrichmentToTable,
+  createFirmFromEnrichment,
+} from "./firmEnrichment";
 
 const RESPONSE_SCHEMA = {
   type: "object",
@@ -43,7 +51,7 @@ export default function AIAssistant() {
   const [messages, setMessages] = useState([
     {
       role: "assistant",
-      content: "Hello! I'm your MyKumpare AI assistant. I can help you:\n\n- **Browse All Data**: View firms, contacts, products, portfolios, benchmarks, activities, and tasks\n- **Analyze & Summarize**: Get counts, distributions, performance metrics, and custom computations\n- **Visualize Results**: See data as **tables**, **charts**, or **text** — or all three at once\n\nTry asking:\n- \"Show all firms\"\n- \"Chart of firms by type\"\n- \"Summarize the entire database\"\n- \"Show task status distribution\"\n- \"Show performance data for all products\"\n\nWhat would you like to see?",
+      content: "Hello! I'm your MyKumpare AI assistant. I can help you:\n\n- **Browse All Data**: View firms, contacts, products, portfolios, benchmarks, activities, and tasks\n- **Analyze & Summarize**: Get counts, distributions, performance metrics, and custom computations\n- **Visualize Results**: See data as **tables**, **charts**, or **text** — or all three at once — plus populate firms from their public websites\n\nTry asking:\n- \"Show all firms\"\n- \"Chart of firms by type\"\n- \"Summarize the entire database\"\n- \"Populate a firm from their website\"\n- \"Show performance data for all products\"\n\nWhat would you like to see?",
     },
   ]);
   const [input, setInput] = useState("");
@@ -59,6 +67,75 @@ export default function AIAssistant() {
     scrollToBottom();
   }, [messages]);
 
+  const handleFirmEnrichment = async (firmName) => {
+    try {
+      const firm = await findFirmByName(firmName);
+
+      if (!firm) {
+        const enrichedData = await enrichFirmFromWeb(firmName, null);
+        const hasData =
+          enrichedData &&
+          (enrichedData.description || enrichedData.website || enrichedData.addresses?.length || enrichedData.phones?.length);
+
+        if (!hasData) {
+          return {
+            role: "assistant",
+            content: `I couldn't find a firm named "**${firmName}**" in your database, and I wasn't able to find enough public information about them online. Could you verify the firm name or provide their website URL?`,
+          };
+        }
+
+        const createdFirm = await createFirmFromEnrichment(enrichedData);
+        const table = enrichmentToTable(enrichedData, null);
+
+        return {
+          role: "assistant",
+          content: `I couldn't find **${firmName}** in your database, so I searched the web and created a new firm record with the following information:\n\n✅ **Firm created successfully**\n\nYou can review and edit the details in the Firms section.`,
+          tables: [table],
+        };
+      }
+
+      const enrichedData = await enrichFirmFromWeb(firm.name, firm.website);
+      const hasData =
+        enrichedData &&
+        (enrichedData.description ||
+          enrichedData.addresses?.length ||
+          enrichedData.phones?.length ||
+          enrichedData.linkedin_url ||
+          enrichedData.year_founded);
+
+      if (!hasData) {
+        return {
+          role: "assistant",
+          content: `I found **${firm.name}** in your database, but I wasn't able to extract additional information from their public website.${firm.website ? `\n\n**Website on file:** ${firm.website}` : "\n\nNo website is on file for this firm. You can add one in the Firms section and try again."}`,
+        };
+      }
+
+      const { updates, updatedFields } = mergeEnrichmentData(firm, enrichedData);
+
+      let summary = `I found **${firm.name}** in your database and searched their public website for information.\n\n`;
+
+      if (Object.keys(updates).length > 0) {
+        await base44.entities.Firm.update(firm.id, updates);
+        summary += `✅ **Populated ${updatedFields.length} field(s):** ${updatedFields.join(", ")}`;
+      } else {
+        summary += `ℹ️ All fields are already populated — no updates were needed.`;
+      }
+
+      const table = enrichmentToTable(enrichedData, updatedFields);
+
+      return {
+        role: "assistant",
+        content: summary,
+        tables: [table],
+      };
+    } catch (error) {
+      return {
+        role: "assistant",
+        content: `I encountered an error while searching the web for firm data: ${error.message}. Please try again.`,
+      };
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
@@ -69,6 +146,13 @@ export default function AIAssistant() {
     setIsLoading(true);
 
     try {
+      const enrichmentIntent = detectEnrichmentIntent(userMessage);
+      if (enrichmentIntent.isEnrichment) {
+        const result = await handleFirmEnrichment(enrichmentIntent.firmName);
+        setMessages((prev) => [...prev, result]);
+        return;
+      }
+
       const toolContext = await buildToolContext(userMessage);
       const systemPrompt = buildSystemPrompt();
 
