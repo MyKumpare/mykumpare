@@ -100,6 +100,7 @@ const ENRICHMENT_SCHEMA = {
           linkedin_url: { type: "string" },
           biography: { type: "string" },
           phone: { type: "string" },
+          photo_url: { type: "string" },
         },
       },
     },
@@ -192,7 +193,7 @@ Extract the following information from their public website and any related publ
 - Website URL
 - Firm type(s): classify as one or more of "Investment Manager", "Allocator", "Investment Consultant", "Manager of Managers", "Securities Brokerage", "Trade Organizations"
 - Firm logo: the full URL of their logo image (must start with http)
-- Key personnel/employees: for each key person found on the website (executives, founders, portfolio managers, partners), include first name, last name, job title, email, LinkedIn URL, phone, and a short biography
+- Key personnel/employees: for each key person found on the website (executives, founders, portfolio managers, partners), include first name, last name, job title, email, LinkedIn URL, phone, a short biography, and photo_url (the full URL of their headshot/profile photo from the firm website, LinkedIn, or other public source — must start with http)
 
 IMPORTANT:
 - Only include information you actually find from reliable public sources
@@ -201,7 +202,8 @@ IMPORTANT:
 - For non-US phone numbers, put the full number in country_code and leave other phone sub-fields empty
 - For logo_url, only include a full URL starting with http — no relative paths
 - For people, only include real individuals found on their website — do not fabricate names
-- For person phone numbers, put the full number as a string in the "phone" field`;
+- For person phone numbers, put the full number as a string in the "phone" field
+- For photo_url of people, extract the full image URL from their bio/headshot on the firm website, their LinkedIn profile photo, or other public source. Only include a full URL starting with http — no relative paths. Leave empty if no photo is found.`;
 
   const response = await base44.integrations.Core.InvokeLLM({
     prompt,

@@ -77,6 +77,9 @@ function PersonRow({ person, index, accepted, onToggle }) {
   return (
     <div className="flex items-start gap-2 py-1.5 px-2 rounded-md hover:bg-gray-50 border border-transparent hover:border-gray-100">
       <Checkbox checked={accepted} onCheckedChange={onToggle} className="mt-0.5" />
+      {person.photo_url ? (
+        <img src={person.photo_url} alt={fullName} className="w-8 h-8 rounded-full object-cover border border-gray-200 flex-shrink-0 mt-0.5" onError={(e) => { e.target.style.display = 'none'; }} />
+      ) : null}
       <div className="flex-1 min-w-0">
         <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Person #{index + 1}</p>
         <p className="text-sm text-gray-800 font-medium">{fullName}{person.title ? ` — ${person.title}` : ""}</p>

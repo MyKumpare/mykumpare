@@ -218,6 +218,7 @@ export default function Home() {
             email: person.email || "",
             linkedin_url: person.linkedin_url || "",
             biography: person.biography || "",
+            photo_url: person.photo_url || "",
             firm_ids: [firm.id],
           };
           if (person.phone) contactData.notes = `Phone: ${person.phone}`;
