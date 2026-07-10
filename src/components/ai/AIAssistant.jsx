@@ -72,7 +72,14 @@ export default function AIAssistant() {
       const firm = await findFirmByName(firmName);
 
       if (!firm) {
-        const enrichedData = await enrichFirmFromWeb(firmName, null);
+        let enrichedData = null;
+        let enrichmentError = null;
+        try {
+          enrichedData = await enrichFirmFromWeb(firmName, null);
+        } catch (err) {
+          enrichmentError = err.message;
+        }
+
         const hasData =
           enrichedData &&
           (enrichedData.description || enrichedData.website || enrichedData.addresses?.length || enrichedData.phones?.length);
@@ -81,7 +88,7 @@ export default function AIAssistant() {
           const createdFirm = await createFirmFromEnrichment({ name: firmName });
           return {
             role: "assistant",
-            content: `I created a new firm record for **${firmName}**. I wasn't able to find public information to auto-populate, so you can add details manually in the Firms section.`,
+            content: `✅ I created a new firm record for **${firmName}**.${enrichmentError ? " I wasn't able to find public information to auto-populate, so you can add details manually in the Firms section." : " You can add details manually in the Firms section."}`,
           };
         }
 
