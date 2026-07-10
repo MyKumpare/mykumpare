@@ -23,6 +23,7 @@ import ContactProfessionalExperienceTab from "./ContactProfessionalExperienceTab
 import ContactActivitiesTab from "./ContactActivitiesTab";
 import ContactProductsTab from "./ContactProductsTab";
 import ContactRolePicker from "./ContactRolePicker";
+import { findContactDuplicates } from "./contactDuplicateCheck";
 
 const SALUTATIONS = ["Mr.", "Ms.", "Mrs.", "Dr.", "Prof.", "Hon."];
 const SUFFIXES = ["Jr.", "Sr.", "II", "III", "IV", "Esq.", "CFA", "CPA", "MBA", "PhD", "MD"];
@@ -76,8 +77,14 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [professionalExperience, setProfessionalExperience] = useState([]);
   const [phones, setPhones] = useState([newPhone()]);
   const [addresses, setAddresses] = useState([newAddress()]);
+  const [duplicateWarning, setDuplicateWarning] = useState(null);
 
   const queryClient = useQueryClient();
+
+  const { data: allContacts = [] } = useQuery({
+    queryKey: ["contacts"],
+    queryFn: () => base44.entities.Contact.list("-created_date", 500),
+  });
 
   useEffect(() => {
     if (open) {
@@ -216,8 +223,20 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
     if (editingContact) {
       updateMutation.mutate({ id: editingContact.id, data });
     } else {
+      const duplicates = findContactDuplicates(data, allContacts);
+      if (duplicates.length > 0) {
+        setDuplicateWarning({ data, duplicates });
+        return;
+      }
       createMutation.mutate(data);
     }
+  };
+
+  const handleForceCreate = () => {
+    if (duplicateWarning?.data) {
+      createMutation.mutate(duplicateWarning.data);
+    }
+    setDuplicateWarning(null);
   };
 
   const { data: allOwnerships = [] } = useQuery({
@@ -1119,6 +1138,49 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
           )}
         </DialogFooter>
       </DialogContent>
+
+      {duplicateWarning && (
+        <Dialog open={true} onOpenChange={() => setDuplicateWarning(null)}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-500" />
+                Potential Duplicate Contact
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              <p className="text-sm text-gray-600">
+                The following existing contact(s) appear to be similar to the one you're about to create. Please review before proceeding.
+              </p>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {duplicateWarning.duplicates.map((dup, i) => (
+                  <div key={i} className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                    <p className="font-semibold text-sm text-gray-800">{dup.name}</p>
+                    {dup.email && <p className="text-xs text-gray-500">{dup.email}</p>}
+                    <ul className="mt-1.5 space-y-0.5">
+                      {dup.reasons.map((r, ri) => (
+                        <li key={ri} className="text-xs text-amber-700 flex items-start gap-1">
+                          <span className="text-amber-500 mt-0.5">⚠</span> {r}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDuplicateWarning(null)}>Cancel</Button>
+              <Button
+                className="bg-amber-600 hover:bg-amber-700 text-white"
+                onClick={handleForceCreate}
+                disabled={createMutation.isPending}
+              >
+                {createMutation.isPending ? "Creating..." : "Create Anyway"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </Dialog>
     </>
   );

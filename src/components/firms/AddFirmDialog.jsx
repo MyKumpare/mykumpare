@@ -12,8 +12,10 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Pencil, Building2, Plus, Upload, X, Globe } from "lucide-react";
+import { Pencil, Building2, Plus, Upload, X, Globe, AlertTriangle } from "lucide-react";
 import { base44 } from "@/api/base44Client";
+import { useQuery } from "@tanstack/react-query";
+import { findContactDuplicates } from "@/components/contacts/contactDuplicateCheck";
 import FirmEnrichmentPanel from "./FirmEnrichmentPanel";
 import AddressForm from "./AddressForm";
 import PhoneForm from "./PhoneForm";
@@ -105,7 +107,13 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const [expandedPhoneId, setExpandedPhoneId] = useState(null);
   const [showEnrichment, setShowEnrichment] = useState(false);
   const [pendingContacts, setPendingContacts] = useState([]);
+  const [contactDuplicateWarning, setContactDuplicateWarning] = useState(null);
   const nameInputRef = useRef(null);
+
+  const { data: allContacts = [] } = useQuery({
+    queryKey: ["contacts"],
+    queryFn: () => base44.entities.Contact.list("-created_date", 500),
+  });
   const logoInputRef = useRef(null);
   const queryClient = useQueryClient();
 
@@ -292,7 +300,8 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     }
     if (selected.people?.length) {
       if (editingFirm) {
-        let created = 0;
+        const toCreate = [];
+        const duplicates = [];
         for (const person of selected.people) {
           const contactData = {
             first_name: person.first_name || "",
@@ -306,12 +315,53 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
           };
           const parsedPhone = person.phone ? parsePhoneString(person.phone) : null;
           if (parsedPhone) contactData.phones = [parsedPhone];
+
+          const dups = findContactDuplicates(contactData, allContacts);
+          if (dups.length > 0) {
+            duplicates.push({ contactData, duplicates: dups });
+          } else {
+            toCreate.push(contactData);
+          }
+        }
+
+        let created = 0;
+        for (const contactData of toCreate) {
           try { await base44.entities.Contact.create(contactData); created++; } catch {}
         }
         if (created > 0) { queryClient.invalidateQueries({ queryKey: ["contacts"] }); applied.push(`${created} Contact(s)`); }
+
+        if (duplicates.length > 0) {
+          setContactDuplicateWarning({ duplicates, firmId: editingFirm.id });
+        }
       } else {
-        setPendingContacts([...pendingContacts, ...selected.people]);
-        applied.push(`${selected.people.length} Contact(s)`);
+        const newPending = [...pendingContacts];
+        const skipped = [];
+        for (const person of selected.people) {
+          const contactData = {
+            first_name: person.first_name || "",
+            last_name: person.last_name || "",
+            email: person.email || "",
+            phone: person.phone || "",
+          };
+          const dups = findContactDuplicates(contactData, allContacts);
+          if (dups.length > 0) {
+            skipped.push({ person, duplicates: dups });
+          } else {
+            newPending.push(person);
+          }
+        }
+        setPendingContacts(newPending);
+        applied.push(`${newPending.length - pendingContacts.length} Contact(s)`);
+        if (skipped.length > 0) {
+          setContactDuplicateWarning({ duplicates: skipped.map(s => ({
+            contactData: {
+              first_name: s.person.first_name || "",
+              last_name: s.person.last_name || "",
+              email: s.person.email || "",
+            },
+            duplicates: s.duplicates,
+          })), isPending: true, people: skipped.map(s => s.person) });
+        }
       }
     }
 
@@ -909,6 +959,61 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
           </div>
         </DialogFooter>
       </DialogContent>
+
+      {contactDuplicateWarning && (
+        <Dialog open={true} onOpenChange={() => setContactDuplicateWarning(null)}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-500" />
+                Potential Duplicate Contacts
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              <p className="text-sm text-gray-600">
+                {contactDuplicateWarning.duplicates.length} contact(s) from the web enrichment appear to match existing records. Would you like to create them anyway?
+              </p>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {contactDuplicateWarning.duplicates.map((dup, i) => (
+                  <div key={i} className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                    <p className="font-semibold text-sm text-gray-800">
+                      {[dup.contactData.first_name, dup.contactData.last_name].filter(Boolean).join(" ")}
+                    </p>
+                    {dup.contactData.email && <p className="text-xs text-gray-500">{dup.contactData.email}</p>}
+                    <ul className="mt-1.5 space-y-0.5">
+                      {dup.duplicates.map((d, di) => (
+                        <li key={di} className="text-xs text-amber-700">
+                          ⚠ Matches: <span className="font-medium">{d.name}</span>{d.email ? ` (${d.email})` : ""} — {d.reasons.join(", ")}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setContactDuplicateWarning(null)}>Skip These</Button>
+              <Button
+                className="bg-amber-600 hover:bg-amber-700 text-white"
+                onClick={async () => {
+                  const dups = contactDuplicateWarning.duplicates;
+                  setContactDuplicateWarning(null);
+                  let created = 0;
+                  for (const dup of dups) {
+                    try { await base44.entities.Contact.create(dup.contactData); created++; } catch {}
+                  }
+                  if (created > 0) {
+                    queryClient.invalidateQueries({ queryKey: ["contacts"] });
+                    toast({ title: "✅ Contacts created", description: `${created} duplicate contact(s) created.` });
+                  }
+                }}
+              >
+                Create Anyway
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </Dialog>
   );
 }
