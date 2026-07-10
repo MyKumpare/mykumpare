@@ -167,7 +167,8 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   });
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Contact.update(id, { deleted_at: new Date().toISOString() }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["contacts"] }); queryClient.invalidateQueries({ queryKey: ["deletedContacts"] }); onOpenChange(false); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["contacts"] }); queryClient.invalidateQueries({ queryKey: ["deletedContacts"] }); onOpenChange(false); toast({ title: "✅ Contact deleted" }); },
+    onError: (err) => { toast({ title: "Delete failed", description: err.message || "Could not delete this contact.", variant: "destructive" }); },
   });
 
   const handlePhotoUpload = async (e) => {
