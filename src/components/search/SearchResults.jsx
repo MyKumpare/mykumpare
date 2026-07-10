@@ -128,45 +128,6 @@ export default function SearchResults({ query, firms, products, contacts, portfo
   return (
     <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-[70vh] overflow-y-auto divide-y divide-gray-100">
 
-      {/* Contact Results */}
-      {matchedContacts.length > 0 && (
-        <div>
-          <div className="px-4 pt-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-            <User className="w-3.5 h-3.5" /> Contacts
-          </div>
-          {matchedContacts.map((contact) => {
-            const assocFirms = contactFirms(contact);
-            return (
-              <button
-                key={contact.id}
-                className="w-full text-left px-4 py-3 hover:bg-indigo-50 transition-colors"
-                onClick={() => onContactClick(contact)}
-              >
-                <div className="flex items-start gap-3">
-                  <ContactAvatar contact={contact} />
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium text-gray-900 truncate">
-                      {getContactFullName(contact)}
-                    </div>
-                    {contact.title && <div className="text-xs text-gray-500 truncate">{contact.title}</div>}
-                    {assocFirms.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mt-1.5">
-                        {assocFirms.map(f => (
-                          <span key={f.id} className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-600 rounded-md px-1.5 py-0.5">
-                            {f.logo_url ? <img src={f.logo_url} alt="" className="w-3 h-3 object-contain" /> : <Building2 className="w-3 h-3" />}
-                            {f.name}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
-
       {/* Firm Results */}
       {matchedFirms.length > 0 && (
         <div>
@@ -196,6 +157,45 @@ export default function SearchResults({ query, firms, products, contacts, portfo
                                 : <User className="w-2.5 h-2.5 text-indigo-400 m-auto" />}
                             </div>
                             {c.first_name} {c.last_name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Contact Results */}
+      {matchedContacts.length > 0 && (
+        <div>
+          <div className="px-4 pt-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+            <User className="w-3.5 h-3.5" /> Contacts
+          </div>
+          {matchedContacts.map((contact) => {
+            const assocFirms = contactFirms(contact);
+            return (
+              <button
+                key={contact.id}
+                className="w-full text-left px-4 py-3 hover:bg-indigo-50 transition-colors"
+                onClick={() => onContactClick(contact)}
+              >
+                <div className="flex items-start gap-3">
+                  <ContactAvatar contact={contact} />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium text-gray-900 truncate">
+                      {getContactFullName(contact)}
+                    </div>
+                    {contact.title && <div className="text-xs text-gray-500 truncate">{contact.title}</div>}
+                    {assocFirms.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-1.5">
+                        {assocFirms.map(f => (
+                          <span key={f.id} className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-600 rounded-md px-1.5 py-0.5">
+                            {f.logo_url ? <img src={f.logo_url} alt="" className="w-3 h-3 object-contain" /> : <Building2 className="w-3 h-3" />}
+                            {f.name}
                           </span>
                         ))}
                       </div>
