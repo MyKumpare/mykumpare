@@ -996,15 +996,20 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               <Button
                 className="bg-amber-600 hover:bg-amber-700 text-white"
                 onClick={async () => {
-                  const dups = contactDuplicateWarning.duplicates;
+                  const warning = contactDuplicateWarning;
                   setContactDuplicateWarning(null);
-                  let created = 0;
-                  for (const dup of dups) {
-                    try { await base44.entities.Contact.create(dup.contactData); created++; } catch {}
-                  }
-                  if (created > 0) {
-                    queryClient.invalidateQueries({ queryKey: ["contacts"] });
-                    toast({ title: "✅ Contacts created", description: `${created} duplicate contact(s) created.` });
+                  if (warning.isPending) {
+                    setPendingContacts(prev => [...prev, ...(warning.people || [])]);
+                    toast({ title: "Contacts added", description: `${(warning.people || []).length} duplicate contact(s) will be created with this firm.` });
+                  } else {
+                    let created = 0;
+                    for (const dup of warning.duplicates) {
+                      try { await base44.entities.Contact.create(dup.contactData); created++; } catch {}
+                    }
+                    if (created > 0) {
+                      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+                      toast({ title: "✅ Contacts created", description: `${created} duplicate contact(s) created.` });
+                    }
                   }
                 }}
               >
