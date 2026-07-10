@@ -113,6 +113,46 @@ const ENRICHMENT_SCHEMA = {
   },
 };
 
+export function parsePhoneString(phoneStr) {
+  if (!phoneStr || typeof phoneStr !== "string") return null;
+  const digits = phoneStr.replace(/\D/g, "");
+  if (!digits) return null;
+
+  // US number: 10 digits, or 11 starting with 1
+  if (digits.length === 10) {
+    return {
+      id: crypto.randomUUID(),
+      phone_type: "Work",
+      country_code: "1",
+      area_code: digits.slice(0, 3),
+      number_mid: digits.slice(3, 6),
+      number_last: digits.slice(6, 10),
+      is_default: true,
+    };
+  }
+  if (digits.length === 11 && digits[0] === "1") {
+    return {
+      id: crypto.randomUUID(),
+      phone_type: "Work",
+      country_code: "1",
+      area_code: digits.slice(1, 4),
+      number_mid: digits.slice(4, 7),
+      number_last: digits.slice(7, 11),
+      is_default: true,
+    };
+  }
+  // Non-US or unparseable: store full number in country_code per enrichment convention
+  return {
+    id: crypto.randomUUID(),
+    phone_type: "Work",
+    country_code: phoneStr.trim(),
+    area_code: "",
+    number_mid: "",
+    number_last: "",
+    is_default: true,
+  };
+}
+
 export function detectEnrichmentIntent(query) {
   const q = query.toLowerCase();
 

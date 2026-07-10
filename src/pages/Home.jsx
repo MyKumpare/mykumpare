@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import AIAssistant from "@/components/ai/AIAssistant";
+import { parsePhoneString } from "@/components/ai/firmEnrichment";
 
 import AddFirmDialog from "../components/firms/AddFirmDialog";
 import DeleteConfirmDialog from "../components/firms/DeleteConfirmDialog";
@@ -221,7 +222,8 @@ export default function Home() {
             photo_url: person.photo_url || "",
             firm_ids: [firm.id],
           };
-          if (person.phone) contactData.notes = `Phone: ${person.phone}`;
+          const parsedPhone = person.phone ? parsePhoneString(person.phone) : null;
+          if (parsedPhone) contactData.phones = [parsedPhone];
           try { await base44.entities.Contact.create(contactData); } catch {}
         }
       }

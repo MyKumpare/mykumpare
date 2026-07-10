@@ -55,6 +55,8 @@ function getCountryCodeFromCountryName(countryName) {
   return match ? match.code : "";
 }
 
+import { parsePhoneString } from "../ai/firmEnrichment";
+
 const FIRM_TYPES = [
   "Manager of Managers",
   "Investment Manager",
@@ -299,7 +301,8 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
             photo_url: person.photo_url || "",
             firm_ids: [editingFirm.id],
           };
-          if (person.phone) contactData.notes = `Phone: ${person.phone}`;
+          const parsedPhone = person.phone ? parsePhoneString(person.phone) : null;
+          if (parsedPhone) contactData.phones = [parsedPhone];
           try { await base44.entities.Contact.create(contactData); } catch {}
         }
         queryClient.invalidateQueries({ queryKey: ["contacts"] });
