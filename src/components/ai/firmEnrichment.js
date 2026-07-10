@@ -311,6 +311,48 @@ IMPORTANT:
 
   normalizeAddresses(data);
   if (!data.name) data.name = firmName;
+
+  // Rehost all image URLs (logo + people photos) to Base44 storage
+  // so they persist and aren't subject to hotlink protection or relative URL issues
+  try {
+    const imageUrls = [];
+    const urlMap = {};
+
+    if (data.logo_url && /^https?:\/\/.+/.test(data.logo_url)) {
+      imageUrls.push(data.logo_url);
+    } else if (data.logo_url) {
+      imageUrls.push(data.logo_url);
+    }
+
+    for (const person of data.people || []) {
+      if (person.photo_url) {
+        imageUrls.push(person.photo_url);
+      }
+    }
+
+    if (imageUrls.length > 0) {
+      const response = await base44.functions.invoke('rehostImages', {
+        image_urls: imageUrls,
+        website: websiteUrl || data.website || '',
+      });
+      const results = response.data?.results || [];
+      for (const r of results) {
+        if (r.rehosted) urlMap[r.original] = r.rehosted;
+      }
+
+      if (data.logo_url && urlMap[data.logo_url]) {
+        data.logo_url = urlMap[data.logo_url];
+      }
+      for (const person of data.people || []) {
+        if (person.photo_url && urlMap[person.photo_url]) {
+          person.photo_url = urlMap[person.photo_url];
+        }
+      }
+    }
+  } catch {
+    // If rehosting fails, keep original URLs
+  }
+
   return data;
 }
 
@@ -433,5 +475,27 @@ export async function createFirmFromEnrichment(enrichedData) {
   const phones = (enrichedData.phones || []).filter((p) => p.area_code || p.number_last || p.country_code);
   if (phones.length > 0) firmData.phones = phones.map((p) => ({ ...p, id: crypto.randomUUID() }));
 
-  return await base44.entities.Firm.create(firmData);
+  const createdFirm = await base44.entities.Firm.create(firmData);
+
+  // Create contacts from enrichment people data
+  const people = (enrichedData.people || []).filter((p) => p.first_name || p.last_name);
+  for (const person of people) {
+    try {
+      const contactData = {
+        first_name: person.first_name || "",
+        last_name: person.last_name || "",
+        title: person.title || "",
+        email: person.email || "",
+        linkedin_url: person.linkedin_url || "",
+        biography: person.biography || "",
+        photo_url: person.photo_url || "",
+        firm_ids: [createdFirm.id],
+      };
+      const parsedPhone = person.phone ? parsePhoneString(person.phone) : null;
+      if (parsedPhone) contactData.phones = [parsedPhone];
+      await base44.entities.Contact.create(contactData);
+    } catch {}
+  }
+
+  return createdFirm;
 }

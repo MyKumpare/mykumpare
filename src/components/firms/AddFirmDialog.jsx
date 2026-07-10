@@ -347,7 +347,16 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
           if (dups.length > 0) {
             skipped.push({ person, duplicates: dups });
           } else {
-            newPending.push(person);
+            newPending.push({
+              first_name: person.first_name || "",
+              last_name: person.last_name || "",
+              title: person.title || "",
+              email: person.email || "",
+              linkedin_url: person.linkedin_url || "",
+              biography: person.biography || "",
+              photo_url: person.photo_url || "",
+              phone: person.phone || "",
+            });
           }
         }
         setPendingContacts(newPending);
