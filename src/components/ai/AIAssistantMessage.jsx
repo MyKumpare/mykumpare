@@ -105,7 +105,7 @@ function DataChart({ chart }) {
   );
 }
 
-export default function AIAssistantMessage({ message, onSelectOption }) {
+export default function AIAssistantMessage({ message, onSelectOption, onConfirmCreation, onCancelCreation, isLoading }) {
   const isUser = message.role === "user";
   return (
     <div className={`flex items-start gap-3 ${isUser ? "flex-row-reverse" : ""}`}>
@@ -145,6 +145,24 @@ export default function AIAssistantMessage({ message, onSelectOption }) {
                 {opt}
               </button>
             ))}
+          </div>
+        )}
+        {!isUser && message.pending_creation && (
+          <div className="mt-2 flex gap-2">
+            <button
+              onClick={() => onConfirmCreation?.(message.pending_creation)}
+              disabled={isLoading}
+              className="px-3 py-1.5 text-sm rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
+            >
+              {message.pending_creation.type === "update_firm" ? "✅ Apply Updates" : "✅ Confirm & Create"}
+            </button>
+            <button
+              onClick={() => onCancelCreation?.()}
+              disabled={isLoading}
+              className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
           </div>
         )}
       </div>

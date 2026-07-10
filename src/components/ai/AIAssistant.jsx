@@ -11,6 +11,7 @@ import {
   mergeEnrichmentData,
   enrichmentToTable,
   createFirmFromEnrichment,
+  validateFirmData,
 } from "./firmEnrichment";
 
 const RESPONSE_SCHEMA = {
@@ -85,10 +86,10 @@ export default function AIAssistant() {
           (enrichedData.description || enrichedData.website || enrichedData.addresses?.length || enrichedData.phones?.length);
 
         if (!hasData) {
-          const createdFirm = await createFirmFromEnrichment({ name: firmName });
           return {
             role: "assistant",
-            content: `✅ I created a new firm record for **${firmName}**.${enrichmentError ? " I wasn't able to find public information to auto-populate, so you can add details manually in the Firms section." : " You can add details manually in the Firms section."}`,
+            content: `I couldn't find public information for **${firmName}**.${enrichmentError ? " The web search encountered an issue." : ""} Would you like me to create a minimal firm record with just the name? You can add details manually in the Firms section later.`,
+            pending_creation: { type: "create_firm", data: { name: firmName } },
           };
         }
 
@@ -107,13 +108,14 @@ export default function AIAssistant() {
           };
         }
 
-        const createdFirm = await createFirmFromEnrichment(enrichedData);
         const table = enrichmentToTable(enrichedData, null);
+        const validation = validateFirmData(enrichedData);
 
         return {
           role: "assistant",
-          content: `I couldn't find **${firmName}** in your database, so I searched the web and created a new firm record with the following information:\n\n✅ **Firm created successfully**\n\nYou can review and edit the details in the Firms section.`,
+          content: `I searched the web and found the following information for **${firmName}**. Please review and confirm if you'd like me to create this firm.${validation.issues.length ? `\n\n⚠️ **Validation notes:**\n${validation.issues.map((i) => `- ${i}`).join("\n")}` : ""}`,
           tables: [table],
+          pending_creation: { type: "create_firm", data: enrichedData },
         };
       }
 
@@ -139,22 +141,23 @@ export default function AIAssistant() {
       }
 
       const { updates, updatedFields } = mergeEnrichmentData(firm, enrichedData);
+      const table = enrichmentToTable(enrichedData, updatedFields);
 
-      let summary = `I found **${firm.name}** in your database and searched their public website for information.\n\n`;
-
-      if (Object.keys(updates).length > 0) {
-        await base44.entities.Firm.update(firm.id, updates);
-        summary += `✅ **Populated ${updatedFields.length} field(s):** ${updatedFields.join(", ")}`;
-      } else {
-        summary += `ℹ️ All fields are already populated — no updates were needed.`;
+      if (Object.keys(updates).length === 0) {
+        return {
+          role: "assistant",
+          content: `I found **${firm.name}** in your database and searched their public website. All fields are already populated — no updates were needed.`,
+          tables: [table],
+        };
       }
 
-      const table = enrichmentToTable(enrichedData, updatedFields);
+      const validation = validateFirmData(enrichedData);
 
       return {
         role: "assistant",
-        content: summary,
+        content: `I found **${firm.name}** in your database and searched their public website. I can populate ${updatedFields.length} new field(s): **${updatedFields.join(", ")}**.${validation.issues.length ? `\n\n⚠️ **Validation notes:**\n${validation.issues.map((i) => `- ${i}`).join("\n")}` : ""}\n\nPlease confirm to apply these updates.`,
         tables: [table],
+        pending_creation: { type: "update_firm", firmId: firm.id, updates, updatedFields },
       };
     } catch (error) {
       return {
@@ -162,6 +165,41 @@ export default function AIAssistant() {
         content: `I encountered an error while searching the web for firm data: ${error.message}. Please try again.`,
       };
     }
+  };
+
+  const handleConfirmCreation = async (pendingCreation) => {
+    setMessages((prev) => [...prev, { role: "user", content: pendingCreation.type === "update_firm" ? "Yes, apply updates" : "Yes, create it" }]);
+    setIsLoading(true);
+    try {
+      if (pendingCreation.type === "create_firm") {
+        const createdFirm = await createFirmFromEnrichment(pendingCreation.data);
+        setMessages((prev) => [...prev, {
+          role: "assistant",
+          content: `✅ **Firm "${createdFirm.name}" created successfully.** You can review and edit the details in the Firms section.`,
+        }]);
+      } else if (pendingCreation.type === "update_firm") {
+        await base44.entities.Firm.update(pendingCreation.firmId, pendingCreation.updates);
+        setMessages((prev) => [...prev, {
+          role: "assistant",
+          content: `✅ **Updated ${pendingCreation.updatedFields.length} field(s):** ${pendingCreation.updatedFields.join(", ")}`,
+        }]);
+      }
+    } catch (error) {
+      setMessages((prev) => [...prev, {
+        role: "assistant",
+        content: `I encountered an error: ${error.message}. Please try again.`,
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCancelCreation = () => {
+    setMessages((prev) => [...prev, { role: "user", content: "Cancel" }]);
+    setMessages((prev) => [...prev, {
+      role: "assistant",
+      content: "Creation cancelled. Let me know if you'd like to try something else.",
+    }]);
   };
 
   const handleSelectFirmOption = async (selectedName) => {
@@ -283,7 +321,7 @@ export default function AIAssistant() {
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
             {messages.map((message, idx) => (
-              <AIAssistantMessage key={idx} message={message} onSelectOption={handleSelectFirmOption} />
+              <AIAssistantMessage key={idx} message={message} onSelectOption={handleSelectFirmOption} onConfirmCreation={handleConfirmCreation} onCancelCreation={handleCancelCreation} isLoading={isLoading} />
             ))}
             {isLoading && (
               <div className="flex items-start gap-3">

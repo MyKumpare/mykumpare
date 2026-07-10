@@ -153,6 +153,40 @@ export function parsePhoneString(phoneStr) {
   };
 }
 
+export function validateFirmData(data) {
+  const issues = [];
+
+  if (!data.name || !data.name.trim()) {
+    issues.push("Firm name is required");
+  }
+
+  if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+    issues.push(`Email "${data.email}" doesn't look like a valid email address`);
+  }
+
+  if (data.website && !/^https?:\/\/.+/.test(data.website)) {
+    issues.push("Website URL doesn't start with http:// or https://");
+  }
+
+  if (data.linkedin_url && !/^https?:\/\/.+/.test(data.linkedin_url)) {
+    issues.push("LinkedIn URL doesn't start with http:// or https://");
+  }
+
+  if (data.logo_url && !/^https?:\/\/.+/.test(data.logo_url)) {
+    issues.push("Logo URL doesn't start with http:// or https://");
+  }
+
+  if (data.year_founded) {
+    const year = parseInt(data.year_founded);
+    const currentYear = new Date().getFullYear();
+    if (isNaN(year) || year < 1800 || year > currentYear + 1) {
+      issues.push(`Year founded "${data.year_founded}" is not a valid year`);
+    }
+  }
+
+  return { valid: issues.length === 0, issues };
+}
+
 export function detectEnrichmentIntent(query) {
   const q = query.toLowerCase();
 
