@@ -327,18 +327,32 @@ export function mergeEnrichmentData(existingFirm, enrichedData) {
     updatedFields.push("Firm Types");
   }
 
+  // Addresses: add only new (non-duplicate) addresses, keeping existing ones
   const existingAddresses = existingFirm.addresses || [];
-  const newAddresses = (enrichedData.addresses || []).filter((a) => a.address_line1 || a.city);
-  if (existingAddresses.length === 0 && newAddresses.length > 0) {
-    updates.addresses = newAddresses.map((a) => ({ ...a, id: crypto.randomUUID() }));
-    updatedFields.push("Addresses");
+  const candidateAddresses = (enrichedData.addresses || []).filter((a) => a.address_line1 || a.city);
+  const existingAddrKeys = new Set(existingAddresses.map((a) => `${(a.address_line1 || "").toLowerCase()}|${(a.city || "").toLowerCase()}`));
+  const uniqueNewAddrs = candidateAddresses.filter((a) => {
+    const key = `${(a.address_line1 || "").toLowerCase()}|${(a.city || "").toLowerCase()}`;
+    return !existingAddrKeys.has(key);
+  });
+  if (uniqueNewAddrs.length > 0) {
+    if (existingAddresses.length === 0 && uniqueNewAddrs[0]) uniqueNewAddrs[0].is_headquarters = true;
+    updates.addresses = [...existingAddresses, ...uniqueNewAddrs.map((a) => ({ ...a, id: crypto.randomUUID() }))];
+    updatedFields.push(`${uniqueNewAddrs.length} Address(es)`);
   }
 
+  // Phones: add only new (non-duplicate) phones, keeping existing ones
   const existingPhones = existingFirm.phones || [];
-  const newPhones = (enrichedData.phones || []).filter((p) => p.area_code || p.number_last || p.country_code);
-  if (existingPhones.length === 0 && newPhones.length > 0) {
-    updates.phones = newPhones.map((p) => ({ ...p, id: crypto.randomUUID() }));
-    updatedFields.push("Phones");
+  const candidatePhones = (enrichedData.phones || []).filter((p) => p.area_code || p.number_last || p.country_code);
+  const existingPhoneKeys = new Set(existingPhones.map((p) => `${p.country_code || ""}${p.area_code || ""}${p.number_mid || ""}${p.number_last || ""}`));
+  const uniqueNewPhones = candidatePhones.filter((p) => {
+    const key = `${p.country_code || ""}${p.area_code || ""}${p.number_mid || ""}${p.number_last || ""}`;
+    return key && !existingPhoneKeys.has(key);
+  });
+  if (uniqueNewPhones.length > 0) {
+    if (existingPhones.length === 0 && uniqueNewPhones[0]) uniqueNewPhones[0].is_default = true;
+    updates.phones = [...existingPhones, ...uniqueNewPhones.map((p) => ({ ...p, id: crypto.randomUUID() }))];
+    updatedFields.push(`${uniqueNewPhones.length} Phone(s)`);
   }
 
   return { updates, updatedFields };

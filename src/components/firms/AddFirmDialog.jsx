@@ -26,6 +26,7 @@ import OrgChartTab from "./OrgChartTab";
 import FirmProductsTab from "./FirmProductsTab";
 import FirmPortfoliosTab from "./FirmPortfoliosTab";
 import FirmActivityLogTab from "./FirmActivityLogTab";
+import EnrichmentApprovalDialog from "./EnrichmentApprovalDialog";
 
 function getCountryCodeFromCountryName(countryName) {
   if (!countryName) return "";
@@ -110,6 +111,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const [enrichmentLoading, setEnrichmentLoading] = useState(false);
   const [pendingContacts, setPendingContacts] = useState([]);
   const [contactDuplicateWarning, setContactDuplicateWarning] = useState(null);
+  const [enrichmentApproval, setEnrichmentApproval] = useState(null);
   const nameInputRef = useRef(null);
 
   const { data: allContacts = [] } = useQuery({
@@ -303,8 +305,8 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     }
     if (selected.people?.length) {
       if (editingFirm) {
-        const toCreate = [];
-        const updatedContacts = [];
+        const contactUpdates = [];
+        const newContacts = [];
         for (const person of selected.people) {
           const fullName = `${person.first_name || ""} ${person.last_name || ""}`.trim();
           const designations = detectDesignations(fullName, person.biography);
@@ -324,33 +326,23 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
           const dups = findContactDuplicates(contactData, allContacts);
           if (dups.length > 0) {
-            // Existing contact found — update their missing fields with new info from the web
             const bestMatch = dups[0].contact;
             const { updates, updatedFields } = computeContactUpdates(bestMatch, person, editingFirm.id);
             if (Object.keys(updates).length > 0) {
-              try {
-                await base44.entities.Contact.update(bestMatch.id, updates);
-                updatedContacts.push({ name: fullName, fields: updatedFields });
-              } catch {}
+              contactUpdates.push({ id: bestMatch.id, updates, updatedFields, contactName: fullName });
             }
           } else {
-            toCreate.push(contactData);
+            newContacts.push(contactData);
           }
         }
 
-        let created = 0;
-        for (const contactData of toCreate) {
-          try { await base44.entities.Contact.create(contactData); created++; } catch {}
-        }
-        if (created > 0 || updatedContacts.length > 0) {
-          queryClient.invalidateQueries({ queryKey: ["contacts"] });
-        }
-        if (created > 0) applied.push(`${created} New Contact(s)`);
-        if (updatedContacts.length > 0) {
-          applied.push(`Updated ${updatedContacts.length} Contact(s) (${updatedContacts.map((c) => c.name).join(", ")})`);
+        if (contactUpdates.length > 0 || newContacts.length > 0) {
+          setShowEnrichment(false);
+          setEnrichmentApproval({ contactUpdates, newContacts, firmFieldsApplied: applied });
+          return;
         }
       } else {
-        const newPending = [...pendingContacts];
+        const newPending = [];
         const skipped = [];
         for (const person of selected.people) {
           const contactData = {
@@ -360,8 +352,11 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
             phone: person.phone || "",
           };
           const dups = findContactDuplicates(contactData, allContacts);
+          const pendingDups = findContactDuplicates(contactData, pendingContacts);
           if (dups.length > 0) {
             skipped.push({ person, duplicates: dups });
+          } else if (pendingDups.length > 0) {
+            // Already in pending list — skip to avoid duplicates
           } else {
             const fullName = `${person.first_name || ""} ${person.last_name || ""}`.trim();
             const designations = detectDesignations(fullName, person.biography);
@@ -378,8 +373,10 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
             });
           }
         }
-        setPendingContacts(newPending);
-        applied.push(`${newPending.length - pendingContacts.length} Contact(s)`);
+        if (newPending.length > 0) {
+          setPendingContacts(prev => [...prev, ...newPending]);
+          applied.push(`${newPending.length} Contact(s)`);
+        }
         if (skipped.length > 0) {
           setContactDuplicateWarning({ duplicates: skipped.map(s => ({
             contactData: {
@@ -401,11 +398,39 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     }
   };
 
+  const handleConfirmEnrichmentContacts = async () => {
+    if (!enrichmentApproval) return;
+    const { contactUpdates, newContacts, firmFieldsApplied } = enrichmentApproval;
+    const applied = [...firmFieldsApplied];
+
+    let updated = 0;
+    for (const cu of contactUpdates) {
+      try { await base44.entities.Contact.update(cu.id, cu.updates); updated++; } catch {}
+    }
+    let created = 0;
+    for (const contactData of newContacts) {
+      try { await base44.entities.Contact.create(contactData); created++; } catch {}
+    }
+    if (created > 0 || updated > 0) {
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+    }
+    if (created > 0) applied.push(`${created} New Contact(s)`);
+    if (updated > 0) {
+      applied.push(`Updated ${updated} Contact(s) (${contactUpdates.map((c) => c.contactName).join(", ")})`);
+    }
+
+    setEnrichmentApproval(null);
+    if (applied.length > 0) {
+      toast({ title: "✅ New information added", description: applied.join(", ") + " populated from web." });
+    }
+  };
+
   const handleClose = () => {
     onOpenChange(false);
     setIsEditing(false);
     setShowEnrichment(false);
     setEnrichmentLoading(false);
+    setEnrichmentApproval(null);
   };
 
   const handleCancelEdit = () => {
@@ -1053,6 +1078,15 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
           </DialogContent>
         </Dialog>
       )}
+
+      <EnrichmentApprovalDialog
+        open={!!enrichmentApproval}
+        onOpenChange={(v) => { if (!v) setEnrichmentApproval(null); }}
+        onConfirm={handleConfirmEnrichmentContacts}
+        contactUpdates={enrichmentApproval?.contactUpdates || []}
+        newContacts={enrichmentApproval?.newContacts || []}
+        firmFieldsApplied={enrichmentApproval?.firmFieldsApplied || []}
+      />
     </Dialog>
   );
 }
