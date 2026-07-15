@@ -107,6 +107,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [expandedPhoneId, setExpandedPhoneId] = useState(null);
   const [showEnrichment, setShowEnrichment] = useState(false);
+  const [enrichmentLoading, setEnrichmentLoading] = useState(false);
   const [pendingContacts, setPendingContacts] = useState([]);
   const [contactDuplicateWarning, setContactDuplicateWarning] = useState(null);
   const nameInputRef = useRef(null);
@@ -153,6 +154,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         setAddresses([]);
         setPhones([]);
         setShowEnrichment(false);
+        setEnrichmentLoading(false);
         setPendingContacts([]);
         setIsEditing(true);
       }
@@ -403,6 +405,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     onOpenChange(false);
     setIsEditing(false);
     setShowEnrichment(false);
+    setEnrichmentLoading(false);
   };
 
   const handleCancelEdit = () => {
@@ -421,7 +424,11 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
+      <DialogContent
+        className="sm:max-w-lg max-h-[90vh] flex flex-col"
+        onInteractOutside={(e) => { if (enrichmentLoading) e.preventDefault(); }}
+        onEscapeKeyDown={(e) => { if (enrichmentLoading) e.preventDefault(); }}
+      >
         <DialogHeader>
           <div className="flex items-center justify-between pr-6">
             {!isAddMode && !isEditing ? (
@@ -466,6 +473,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               website={website}
               onApply={handleApplyEnrichment}
               onClose={() => setShowEnrichment(false)}
+              onLoadingChange={setEnrichmentLoading}
             />
           )}
 

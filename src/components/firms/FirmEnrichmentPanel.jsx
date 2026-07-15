@@ -92,7 +92,7 @@ function PersonRow({ person, index, accepted, onToggle }) {
   );
 }
 
-export default function FirmEnrichmentPanel({ firmName, website, onApply, onClose }) {
+export default function FirmEnrichmentPanel({ firmName, website, onApply, onClose, onLoadingChange }) {
   const [loading, setLoading] = useState(false);
   const [enrichedData, setEnrichedData] = useState(null);
   const [error, setError] = useState(null);
@@ -100,6 +100,7 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
 
   const handleFetch = async () => {
     setLoading(true);
+    onLoadingChange?.(true);
     setError(null);
     setEnrichedData(null);
     try {
@@ -123,6 +124,7 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
       setError(msg);
     } finally {
       setLoading(false);
+      onLoadingChange?.(false);
     }
   };
 
