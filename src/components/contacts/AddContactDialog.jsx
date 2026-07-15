@@ -193,7 +193,8 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
       const res = await base44.functions.invoke("linkedinContactLookup", {
         first_name: firstName.trim(),
         last_name: lastName.trim(),
-        firm_name: firm?.name || "",
+        firm_id: firm?.id || "",
+        website: firm?.website || "",
         current_title: title.trim(),
       });
       if (res.data?.linkedin_url) {
