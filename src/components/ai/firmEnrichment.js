@@ -366,9 +366,10 @@ export function computeContactUpdates(existingContact, person, firmId) {
   const updates = {};
   const updatedFields = [];
 
-  if (!existingContact.photo_url && person.photo_url) {
+  // Photo: update if empty, OR if enrichment has a different photo (user approves via dialog)
+  if (person.photo_url && person.photo_url !== existingContact.photo_url) {
     updates.photo_url = person.photo_url;
-    updatedFields.push("Photo");
+    updatedFields.push(existingContact.photo_url ? "Photo (replace)" : "Photo");
   }
   if (!existingContact.title && person.title) {
     updates.title = person.title;

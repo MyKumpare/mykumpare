@@ -38,14 +38,24 @@ export default function EnrichmentApprovalDialog({
               <p className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
                 <UserCog className="w-3.5 h-3.5" /> Update existing contacts ({contactUpdates.length}):
               </p>
-              {contactUpdates.map((cu, i) => (
-                <div key={i} className="rounded-lg border border-blue-200 bg-blue-50 p-2.5">
-                  <p className="font-medium text-sm text-gray-800">{cu.contactName}</p>
-                  <p className="text-xs text-blue-700 mt-0.5">
-                    New: {cu.updatedFields.join(", ")}
-                  </p>
-                </div>
-              ))}
+              {contactUpdates.map((cu, i) => {
+                const newPhoto = cu.updates?.photo_url;
+                return (
+                  <div key={i} className="rounded-lg border border-blue-200 bg-blue-50 p-2.5">
+                    <div className="flex items-center gap-2.5">
+                      {newPhoto && (
+                        <img src={newPhoto} alt={cu.contactName} className="w-10 h-10 rounded-full object-cover border border-gray-200 flex-shrink-0" />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm text-gray-800">{cu.contactName}</p>
+                        <p className="text-xs text-blue-700 mt-0.5">
+                          New: {cu.updatedFields.join(", ")}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
           {newContacts.length > 0 && (
@@ -57,11 +67,18 @@ export default function EnrichmentApprovalDialog({
                 const name = [nc.first_name, nc.last_name].filter(Boolean).join(" ");
                 return (
                   <div key={i} className="rounded-lg border border-green-200 bg-green-50 p-2.5">
-                    <p className="font-medium text-sm text-gray-800">
-                      {name}
-                      {nc.title ? ` — ${nc.title}` : ""}
-                    </p>
-                    {nc.email && <p className="text-xs text-gray-500 mt-0.5">{nc.email}</p>}
+                    <div className="flex items-center gap-2.5">
+                      {nc.photo_url && (
+                        <img src={nc.photo_url} alt={name} className="w-10 h-10 rounded-full object-cover border border-gray-200 flex-shrink-0" />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm text-gray-800">
+                          {name}
+                          {nc.title ? ` — ${nc.title}` : ""}
+                        </p>
+                        {nc.email && <p className="text-xs text-gray-500 mt-0.5">{nc.email}</p>}
+                      </div>
+                    </div>
                   </div>
                 );
               })}
