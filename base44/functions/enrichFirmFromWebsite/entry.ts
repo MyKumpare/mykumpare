@@ -187,19 +187,30 @@ Deno.serve(async (req) => {
     }
 
     // Fetch sub-pages in parallel
+    // Team/people pages often contain many staff across tabbed sections — give them a larger
+    // content budget so contacts from every tab are captured rather than truncated.
     const subPagePromises = COMMON_PATHS.map(async (path) => {
       const fullUrl = resolveUrl(website, path);
       if (!fullUrl || fullUrl === website) return null;
       const text = await fetchPage(fullUrl);
       if (text && text.length > 100) {
-        return { url: fullUrl, text: text.substring(0, 6000) };
+        const isPeoplePage = /\/(people|our-people|team|our-team|leadership|staff)\b/i.test(path);
+        const limit = isPeoplePage ? 18000 : 6000;
+        return { url: fullUrl, text: text.substring(0, limit) };
       }
       return null;
     });
 
-    const subPages = await Promise.all(subPagePromises);
+    // Sort so people/team pages come first (most important for contact extraction),
+    // keeping homepage at the front.
+    const subPages = (await Promise.all(subPagePromises)).filter(Boolean);
+    subPages.sort((a, b) => {
+      const aPeople = /\/(people|our-people|team|our-team|leadership|staff)\b/i.test(a.url) ? 0 : 1;
+      const bPeople = /\/(people|our-people|team|our-team|leadership|staff)\b/i.test(b.url) ? 0 : 1;
+      return aPeople - bPeople;
+    });
     for (const page of subPages) {
-      if (page) pageContents.push(page);
+      pageContents.push(page);
     }
 
     const combinedContent = pageContents.map((p) => `[Page: ${p.url}]\n${p.text}`).join('\n\n---\n\n');
@@ -213,7 +224,7 @@ Deno.serve(async (req) => {
 
 Website content (combined from multiple pages):
 ---
-${combinedContent.substring(0, 30000)}
+${combinedContent.substring(0, 40000)}
 ---
 
 Extract the following information from this website content:
