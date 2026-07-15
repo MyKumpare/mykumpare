@@ -107,7 +107,21 @@ function htmlToText(html: string, baseUrl: string): string {
     return images.length > 0 ? '\n' + images.join('\n') : '';
   });
 
-  // Step 3: Remove scripts, styles, SVGs and remaining tags
+  // Step 3: Convert <a href="...">text</a> into "text [LINK: url]" so the LLM
+  // can see and extract LinkedIn profile URLs and other link targets that
+  // would otherwise be lost when tags are stripped.
+  result = result.replace(/<a\s[^>]*?href\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi, (_m, href, text) => {
+    const cleanText = text.replace(/<[^>]+>/g, '').trim();
+    const url = resolveUrl(baseUrl, href.trim());
+    if (!url) return cleanText;
+    // LinkedIn and other social links: show the URL alongside the text
+    if (/linkedin|twitter|x\.com|facebook|instagram|youtube/i.test(url)) {
+      return `${cleanText} [LINK: ${url}]`;
+    }
+    return cleanText;
+  });
+
+  // Step 4: Remove scripts, styles, SVGs and remaining tags
   result = result
     .replace(/<script[\s\S]*?<\/script>/gi, '')
     .replace(/<style[\s\S]*?<\/style>/gi, '')
@@ -245,6 +259,10 @@ IMPORTANT:
   - The firm logo is typically one of the first images (often in the header/nav section) — look at the alt text and position to identify it. Set logo_url to that image's src URL.
   - For each person, find the [IMAGE: ...] marker that appears closest to that person's name and bio. Set that person's photo_url to the image's src URL.
   - Only use the exact src URL from the [IMAGE: ...] marker — do not modify or construct URLs yourself; the URLs are already absolute.
+- Links appear as [LINK: https://...] markers next to their link text.
+  - For the firm's linkedin_url, find a LinkedIn link (e.g. linkedin.com/company/...) — usually in the footer or header. Use the exact URL from the [LINK: ...] marker.
+  - For each person's linkedin_url, find the [LINK: linkedin.com/in/...] marker that appears closest to that person's name. Set that person's linkedin_url to the exact URL from that marker.
+  - Only use the exact URL from the [LINK: ...] marker — do not modify or construct URLs yourself.
 - Only include information you actually find in the content above
 - Do not fabricate or guess
 - Leave fields empty/null if not found
