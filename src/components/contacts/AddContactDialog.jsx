@@ -24,7 +24,6 @@ import ContactActivitiesTab from "./ContactActivitiesTab";
 import ContactProductsTab from "./ContactProductsTab";
 import ContactRolePicker from "./ContactRolePicker";
 import { findContactDuplicates } from "./contactDuplicateCheck";
-import LinkedInConnectionButton from "./LinkedInConnectionButton";
 
 const SALUTATIONS = ["Mr.", "Ms.", "Mrs.", "Dr.", "Prof.", "Hon."];
 const SUFFIXES = ["Jr.", "Sr.", "II", "III", "IV", "Esq.", "CFA", "CPA", "MBA", "PhD", "MD"];
@@ -575,7 +574,6 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <Label className="text-sm font-medium text-gray-700">LinkedIn</Label>
-                  <LinkedInConnectionButton compact />
                 </div>
                 {viewMode ? (
                   <div className="text-sm px-1">
