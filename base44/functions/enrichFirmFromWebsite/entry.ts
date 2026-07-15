@@ -59,21 +59,53 @@ async function fetchPage(url: string, maxRedirects = 3): Promise<string> {
     const contentType = response.headers.get('content-type') || '';
     if (!contentType.includes('text') && !contentType.includes('html')) return '';
     const html = await response.text();
-    return htmlToText(html);
+    return htmlToText(html, url);
   } catch {
     return '';
   }
 }
 
-function htmlToText(html: string): string {
-  // Remove scripts, styles, and HTML tags to get readable text
-  return html
+function extractImgUrl(imgTag: string, baseUrl: string): string {
+  // Try standard src, then common lazy-loading attributes
+  const srcMatch =
+    imgTag.match(/\ssrc\s*=\s*["']([^"']+)["']/i) ||
+    imgTag.match(/\sdata-src\s*=\s*["']([^"']+)["']/i) ||
+    imgTag.match(/\sdata-lazy-src\s*=\s*["']([^"']+)["']/i) ||
+    imgTag.match(/\sdata-original\s*=\s*["']([^"']+)["']/i);
+  let src = srcMatch ? srcMatch[1].trim() : '';
+  // Fallback: first URL in srcset (responsive images)
+  if (!src) {
+    const srcsetMatch = imgTag.match(/\ssrcset\s*=\s*["']([^"']+)["']/i);
+    if (srcsetMatch) {
+      src = srcsetMatch[1].split(',')[0].trim().split(/\s+/)[0];
+    }
+  }
+  if (!src || src.startsWith('data:')) return '';
+  return resolveUrl(baseUrl, src);
+}
+
+function htmlToText(html: string, baseUrl: string): string {
+  // Step 1: Convert all <img> tags into text markers with resolved absolute URLs
+  // so the LLM can see and extract photo/logo URLs (images are normally stripped)
+  let result = html.replace(/<img[^>]*>/gi, (match) => {
+    const src = extractImgUrl(match, baseUrl);
+    const altMatch = match.match(/\salt\s*=\s*["']([^"']*)["']/i);
+    const alt = altMatch ? altMatch[1] : '';
+    if (!src) return '';
+    return `\n[IMAGE: alt="${alt}" src="${src}"]\n`;
+  });
+
+  // Step 2: For nav/footer/header sections, keep only the [IMAGE: ...] markers
+  // (logos are commonly in the header; strip the nav link noise)
+  result = result.replace(/<(nav|footer|header)[^>]*>([\s\S]*?)<\/\1>/gi, (_m, _tag, inner) => {
+    const images = inner.match(/\[IMAGE:[^\]]*\]/g) || [];
+    return images.length > 0 ? '\n' + images.join('\n') : '';
+  });
+
+  // Step 3: Remove scripts, styles, SVGs and remaining tags
+  result = result
     .replace(/<script[\s\S]*?<\/script>/gi, '')
     .replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<nav[\s\S]*?<\/nav>/gi, '')
-    .replace(/<footer[\s\S]*?<\/footer>/gi, '')
-    .replace(/<header[\s\S]*?<\/header>/gi, '')
-    .replace(/<img[^>]*>/gi, '')
     .replace(/<svg[\s\S]*?<\/svg>/gi, '')
     .replace(/<\/?(div|p|br|h[1-6]|li|ul|ol|span|a|td|tr|table|section|article|main)[^>]*>/gi, '\n')
     .replace(/<[^>]+>/g, '')
@@ -86,6 +118,8 @@ function htmlToText(html: string): string {
     .replace(/\n{3,}/g, '\n\n')
     .replace(/[ \t]+/g, ' ')
     .trim();
+
+  return result;
 }
 
 function resolveUrl(base: string, path: string): string {
@@ -191,10 +225,13 @@ Extract the following information from this website content:
 - Key personnel: for each person found, include first_name, last_name, title, email, linkedin_url, phone, biography (full text), and photo_url (full URL starting with http)
 
 IMPORTANT:
+- Images on the page appear as [IMAGE: alt="..." src="https://..."] markers.
+  - The firm logo is typically one of the first images (often in the header/nav section) — look at the alt text and position to identify it. Set logo_url to that image's src URL.
+  - For each person, find the [IMAGE: ...] marker that appears closest to that person's name and bio. Set that person's photo_url to the image's src URL.
+  - Only use the exact src URL from the [IMAGE: ...] marker — do not modify or construct URLs yourself; the URLs are already absolute.
 - Only include information you actually find in the content above
 - Do not fabricate or guess
 - Leave fields empty/null if not found
-- For logo_url and photo_url, construct full URLs using the website base URL if relative paths are used
 - For biography, copy the complete text — do not summarize`;
 
     const enrichedData = await base44.integrations.Core.InvokeLLM({
