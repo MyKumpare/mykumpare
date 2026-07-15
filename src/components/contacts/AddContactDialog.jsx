@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload, TrendingUp, Tag, GraduationCap, Briefcase, Activity, Package, AlertTriangle } from "lucide-react";
+import { X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload, TrendingUp, Tag, GraduationCap, Briefcase, Activity, Package, AlertTriangle, Linkedin, Loader2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "@/components/ui/use-toast";
@@ -24,6 +24,7 @@ import ContactActivitiesTab from "./ContactActivitiesTab";
 import ContactProductsTab from "./ContactProductsTab";
 import ContactRolePicker from "./ContactRolePicker";
 import { findContactDuplicates } from "./contactDuplicateCheck";
+import LinkedInConnectionButton from "./LinkedInConnectionButton";
 
 const SALUTATIONS = ["Mr.", "Ms.", "Mrs.", "Dr.", "Prof.", "Hon."];
 const SUFFIXES = ["Jr.", "Sr.", "II", "III", "IV", "Esq.", "CFA", "CPA", "MBA", "PhD", "MD"];
@@ -78,6 +79,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [phones, setPhones] = useState([newPhone()]);
   const [addresses, setAddresses] = useState([newAddress()]);
   const [duplicateWarning, setDuplicateWarning] = useState(null);
+  const [linkedinLookupLoading, setLinkedinLookupLoading] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -178,6 +180,32 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
     const { file_url } = await base44.integrations.Core.UploadFile({ file });
     setPhotoUrl(file_url);
     setUploadingPhoto(false);
+  };
+
+  const handleLinkedInLookup = async () => {
+    if (!firstName.trim() || !lastName.trim()) {
+      toast({ title: "Name required", description: "Enter the contact's first and last name first.", variant: "destructive" });
+      return;
+    }
+    const firm = firms.find((f) => firmIds.includes(f.id));
+    setLinkedinLookupLoading(true);
+    try {
+      const res = await base44.functions.invoke("linkedinContactLookup", {
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        firm_name: firm?.name || "",
+        current_title: title.trim(),
+      });
+      if (res.data?.linkedin_url) {
+        setLinkedinUrl(res.data.linkedin_url);
+        toast({ title: "✅ LinkedIn profile found", description: res.data.linkedin_url });
+      } else {
+        toast({ title: "No profile found", description: res.data?.message || "Could not find a LinkedIn profile for this contact." });
+      }
+    } catch (err) {
+      toast({ title: "LinkedIn lookup failed", description: err.response?.data?.error || err.message || "Please connect your LinkedIn account first.", variant: "destructive" });
+    }
+    setLinkedinLookupLoading(false);
   };
 
   const isValid = firstName.trim() && lastName.trim();
@@ -544,13 +572,30 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
 
               {/* LinkedIn URL */}
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-gray-700">LinkedIn</Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium text-gray-700">LinkedIn</Label>
+                  <LinkedInConnectionButton compact />
+                </div>
                 {viewMode ? (
                   <div className="text-sm px-1">
                     {linkedinUrl ? <a href={linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">View LinkedIn</a> : <span className="text-gray-400 italic">—</span>}
                   </div>
                 ) : (
-                  <Input type="url" placeholder="https://linkedin.com/in/..." value={linkedinUrl} onChange={(e) => setLinkedinUrl(e.target.value)} className="h-9" />
+                  <div className="flex gap-1.5">
+                    <Input type="url" placeholder="https://linkedin.com/in/..." value={linkedinUrl} onChange={(e) => setLinkedinUrl(e.target.value)} className="h-9 flex-1" />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-9 px-2 text-[#0A66C2] border-[#0A66C2]/30 hover:bg-[#0A66C2]/10 gap-1"
+                      onClick={handleLinkedInLookup}
+                      disabled={linkedinLookupLoading || !firstName.trim() || !lastName.trim()}
+                      title="Find LinkedIn profile"
+                    >
+                      {linkedinLookupLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Linkedin className="w-4 h-4" />}
+                      <span className="text-xs">Find</span>
+                    </Button>
+                  </div>
                 )}
               </div>
 
