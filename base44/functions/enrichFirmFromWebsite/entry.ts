@@ -319,6 +319,20 @@ IMPORTANT:
 
     if (!enrichedData.name) enrichedData.name = firm_name;
 
+    // Clean up string "null" values that the LLM sometimes returns for missing fields
+    const cleanStr = (v: any): any => (v === 'null' || v === 'undefined' ? '' : v);
+    enrichedData.logo_url = cleanStr(enrichedData.logo_url) || '';
+    enrichedData.email = cleanStr(enrichedData.email) || '';
+    enrichedData.linkedin_url = cleanStr(enrichedData.linkedin_url) || '';
+    enrichedData.website = cleanStr(enrichedData.website) || '';
+    enrichedData.description = cleanStr(enrichedData.description) || '';
+    for (const person of enrichedData.people || []) {
+      person.photo_url = cleanStr(person.photo_url) || '';
+      person.email = cleanStr(person.email) || '';
+      person.linkedin_url = cleanStr(person.linkedin_url) || '';
+      person.biography = cleanStr(person.biography) || '';
+    }
+
     // Rehost images
     try {
       const imageUrls: string[] = [];

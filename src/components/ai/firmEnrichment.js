@@ -284,10 +284,22 @@ export async function enrichFirmFromWeb(firmName, websiteUrl) {
   // If the backend returned an error, throw it so the UI can display it
   if (data.error) throw new Error(data.error);
 
+  // Safety net: clean up string "null" values the LLM sometimes returns
+  const cleanStr = (v) => (v === 'null' || v === 'undefined' ? '' : v);
+  data.logo_url = cleanStr(data.logo_url) || '';
+  data.email = cleanStr(data.email) || '';
+  data.linkedin_url = cleanStr(data.linkedin_url) || '';
+  data.website = cleanStr(data.website) || '';
+  data.description = cleanStr(data.description) || '';
+  for (const person of data.people || []) {
+    person.photo_url = cleanStr(person.photo_url) || '';
+    person.email = cleanStr(person.email) || '';
+    person.linkedin_url = cleanStr(person.linkedin_url) || '';
+    person.biography = cleanStr(person.biography) || '';
+  }
+
   normalizeAddresses(data);
   if (!data.name) data.name = firmName;
-
-  // Image rehosting is handled by the backend function
 
   return data;
 }
