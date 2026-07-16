@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
-import { X, Plus } from "lucide-react";
+import { X, Plus, AlertTriangle } from "lucide-react";
 
 export const CONTACT_ROLE_OPTIONS = [
   "Board Member",
@@ -52,9 +52,33 @@ export const CONTACT_ROLE_OPTIONS = [
   "Junior Information Technology Analyst",
 ];
 
+const normalizeRole = (s) => s.toLowerCase().trim().replace(/\s+/g, " ").replace(/[^a-z0-9\s]/g, "");
+
+// Levenshtein distance for fuzzy "variation" detection
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  if (!m) return n;
+  if (!n) return m;
+  let prev = Array.from({ length: n + 1 }, (_, i) => i);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n; j++) {
+      cur.push(Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)));
+    }
+    prev = cur;
+  }
+  return prev[n];
+}
+
+const similarity = (a, b) => {
+  const maxLen = Math.max(a.length, b.length);
+  return maxLen === 0 ? 1 : 1 - levenshtein(a, b) / maxLen;
+};
+
 export default function ContactRolePicker({ value = [], onChange, viewMode = false }) {
   const [search, setSearch] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
+  const [pendingCustom, setPendingCustom] = useState(null); // { val, matches }
   const containerRef = useRef(null);
 
   useEffect(() => {
@@ -79,7 +103,6 @@ export default function ContactRolePicker({ value = [], onChange, viewMode = fal
   }, [allOptions, search]);
 
   const trimmed = search.trim();
-  const exactMatch = allOptions.some(o => o.toLowerCase() === trimmed.toLowerCase());
   const alreadySelected = value.some(v => v.toLowerCase() === trimmed.toLowerCase());
 
   const toggle = (role) => {
@@ -91,14 +114,42 @@ export default function ContactRolePicker({ value = [], onChange, viewMode = fal
     // Keep the dropdown open so users can select several roles in a row.
   };
 
-  const addCustom = () => {
-    const val = trimmed;
-    if (!val || alreadySelected) return;
-    // Case-insensitive duplicate check across all options
+  // Find existing roles that are an exact match or a close variation of the typed value.
+  const findSimilarRoles = (val) => {
+    const target = normalizeRole(val);
+    if (!target) return [];
+    const seen = new Set();
+    const matches = [];
+    for (const o of allOptions) {
+      const n = normalizeRole(o);
+      if (seen.has(n)) continue;
+      seen.add(n);
+      const isExact = n === target;
+      const isSubstring = n.includes(target) || target.includes(n);
+      const isFuzzy = similarity(n, target) >= 0.82;
+      if (isExact || isSubstring || isFuzzy) matches.push(o);
+    }
+    return matches;
+  };
+
+  const confirmAddCustom = (val) => {
     if (!value.some(v => v.toLowerCase() === val.toLowerCase())) {
       onChange([...value, val]);
     }
+    setPendingCustom(null);
     setSearch("");
+  };
+
+  const attemptAddCustom = () => {
+    const val = trimmed;
+    if (!val || alreadySelected) return;
+    const matches = findSimilarRoles(val);
+    if (matches.length > 0) {
+      // Warn the user and require explicit confirmation before adding.
+      setPendingCustom({ val, matches });
+      return;
+    }
+    confirmAddCustom(val);
   };
 
   if (viewMode) {
@@ -139,11 +190,15 @@ export default function ContactRolePicker({ value = [], onChange, viewMode = fal
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
+              if (pendingCustom) {
+                confirmAddCustom(pendingCustom.val);
+                return;
+              }
               const unselectedFiltered = filtered.filter(o => !value.includes(o));
               if (unselectedFiltered.length === 1) toggle(unselectedFiltered[0]);
-              else if (!exactMatch && trimmed && !alreadySelected) addCustom();
+              else if (trimmed && !alreadySelected) attemptAddCustom();
             }
-            if (e.key === "Escape") setShowDropdown(false);
+            if (e.key === "Escape") { setShowDropdown(false); setPendingCustom(null); }
           }}
           className="h-8 text-xs"
         />
@@ -164,19 +219,45 @@ export default function ContactRolePicker({ value = [], onChange, viewMode = fal
                 </button>
               );
             })}
-            {trimmed && alreadySelected && (
+            {trimmed && alreadySelected && !pendingCustom && (
               <div className="px-3 py-2 text-xs text-amber-600 italic border-t border-gray-100 flex items-center gap-1">
                 "{trimmed}" is already added
               </div>
             )}
-            {!exactMatch && trimmed && !alreadySelected && (
-              <button
-                type="button"
-                onMouseDown={(e) => { e.preventDefault(); addCustom(); }}
-                className="w-full text-left px-3 py-1.5 text-xs text-indigo-600 hover:bg-indigo-50 flex items-center gap-1 border-t border-gray-100 font-medium"
-              >
-                <Plus className="w-3 h-3" /> Add "{trimmed}"
-              </button>
+            {pendingCustom ? (
+              <div className="border-t border-amber-200 bg-amber-50 px-3 py-2.5 space-y-1.5">
+                <p className="text-xs font-medium text-amber-800 flex items-center gap-1">
+                  <AlertTriangle className="w-3.5 h-3.5" /> Similar role{pendingCustom.matches.length > 1 ? "s" : ""} already exist{pendingCustom.matches.length === 1 ? "s" : ""}:
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {pendingCustom.matches.map(m => (
+                    <span key={m} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">{m}</span>
+                  ))}
+                </div>
+                <p className="text-xs text-amber-700">Add "{pendingCustom.val}" anyway?</p>
+                <div className="flex gap-2 pt-0.5">
+                  <button type="button"
+                    onMouseDown={(e) => { e.preventDefault(); confirmAddCustom(pendingCustom.val); }}
+                    className="px-2.5 py-1 rounded-md text-xs font-medium bg-amber-600 text-white hover:bg-amber-700">
+                    Add anyway
+                  </button>
+                  <button type="button"
+                    onMouseDown={(e) => { e.preventDefault(); setPendingCustom(null); }}
+                    className="px-2.5 py-1 rounded-md text-xs font-medium bg-white text-gray-700 border border-gray-300 hover:bg-gray-50">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              trimmed && !alreadySelected && (
+                <button
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); attemptAddCustom(); }}
+                  className="w-full text-left px-3 py-1.5 text-xs text-indigo-600 hover:bg-indigo-50 flex items-center gap-1 border-t border-gray-100 font-medium"
+                >
+                  <Plus className="w-3 h-3" /> Add "{trimmed}"
+                </button>
+              )
             )}
             {filtered.length === 0 && !trimmed && (
               <div className="px-3 py-2 text-xs text-gray-400 italic">Type to search roles...</div>
