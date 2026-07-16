@@ -28,8 +28,7 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
   const [effectiveDate, setEffectiveDate] = useState(new Date());
   const [owners, setOwners] = useState([]);
   const [selectedOwnerType, setSelectedOwnerType] = useState("Employee");
-  const [selectedContactId, setSelectedContactId] = useState("");
-  const [ownershipPercentage, setOwnershipPercentage] = useState("");
+  const [selectedContactIds, setSelectedContactIds] = useState([]);
   const [showAddContact, setShowAddContact] = useState(false);
   const [addContactType, setAddContactType] = useState("Employee");
   const [selectedOwnership, setSelectedOwnership] = useState(null);
@@ -85,24 +84,32 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
   // Get firm contacts
   const firmContacts = allContacts.filter(c => c.firm_ids?.includes(firmId));
 
-  // Live preview of the owner currently being added (before "Add Owner" is clicked),
-  // so the allocation bar + ownership summary update as the user selects a contact / types a percentage.
-  const pendingOwner = useMemo(() => {
-    if (!selectedContactId || !ownershipPercentage) return null;
-    const contact = allContacts.find(c => c.id === selectedContactId);
-    if (!contact) return null;
-    return {
-      id: "__pending__",
-      contact_id: selectedContactId,
-      owner_type: selectedOwnerType,
-      ownership_percentage: parseFloat(ownershipPercentage) || 0,
-      contact_photo_url: contact.photo_url || "",
-      contact_full_name: [contact.salutation, contact.first_name, contact.middle_name, contact.last_name, contact.suffix].filter(Boolean).join(" "),
-    };
-  }, [selectedContactId, ownershipPercentage, selectedOwnerType, allContacts]);
+  // Committed total from owners already added
+  const committedTotal = owners.reduce((sum, o) => sum + (parseFloat(o.ownership_percentage) || 0), 0);
 
-  const previewOwners = pendingOwner ? [...owners, pendingOwner] : owners;
-  const hasPending = !!pendingOwner;
+  // Live preview of owners being added (before "Add Selected" is clicked):
+  // each selected contact gets an equal share of the remaining available %,
+  // so the allocation bar + ownership summary update as the user picks contacts.
+  const pendingOwners = useMemo(() => {
+    if (selectedContactIds.length === 0) return [];
+    const remaining = Math.max(0, 100 - committedTotal);
+    const share = remaining / selectedContactIds.length;
+    return selectedContactIds.map((cid) => {
+      const contact = allContacts.find(c => c.id === cid);
+      if (!contact) return null;
+      return {
+        id: `__pending__${cid}`,
+        contact_id: cid,
+        owner_type: selectedOwnerType,
+        ownership_percentage: parseFloat(share.toFixed(2)),
+        contact_photo_url: contact.photo_url || "",
+        contact_full_name: [contact.salutation, contact.first_name, contact.middle_name, contact.last_name, contact.suffix].filter(Boolean).join(" "),
+      };
+    }).filter(Boolean);
+  }, [selectedContactIds, selectedOwnerType, allContacts, committedTotal]);
+
+  const previewOwners = [...owners, ...pendingOwners];
+  const hasPending = pendingOwners.length > 0;
 
   // Filter contacts by owner type
   const getAvailableContacts = (type) => {
@@ -112,7 +119,6 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
     });
   };
 
-  const committedTotal = owners.reduce((sum, o) => sum + (parseFloat(o.ownership_percentage) || 0), 0);
   const totalOwnershipPercentage = previewOwners.reduce((sum, o) => sum + (parseFloat(o.ownership_percentage) || 0), 0);
   const isValidPercentage = committedTotal > 0;
   const percentageWarning = totalOwnershipPercentage !== 100;
@@ -353,8 +359,7 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
       setShowUpdateForm(false);
       setSelectedOwnership(null);
       setOwners([]);
-      setSelectedContactId("");
-      setOwnershipPercentage("");
+      setSelectedContactIds([]);
       setViewMode(true);
     },
   });
@@ -365,8 +370,7 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
       queryClient.invalidateQueries({ queryKey: ["ownership", firmId] });
       setSelectedOwnership(null);
       setOwners([]);
-      setSelectedContactId("");
-      setOwnershipPercentage("");
+      setSelectedContactIds([]);
       setViewMode(true);
     },
   });
@@ -384,24 +388,24 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
     },
   });
 
-  const handleAddOwner = () => {
-    if (!selectedContactId || !ownershipPercentage) return;
-
-    const contact = allContacts.find(c => c.id === selectedContactId);
-    if (!contact) return;
-
-    const newOwner = {
-      id: crypto.randomUUID(),
-      contact_id: selectedContactId,
-      owner_type: selectedOwnerType,
-      ownership_percentage: parseFloat(ownershipPercentage),
-      contact_photo_url: contact.photo_url || "",
-      contact_full_name: [contact.salutation, contact.first_name, contact.middle_name, contact.last_name, contact.suffix].filter(Boolean).join(" "),
-    };
-
-    setOwners([...owners, newOwner]);
-    setSelectedContactId("");
-    setOwnershipPercentage("");
+  const handleAddSelectedOwners = () => {
+    if (selectedContactIds.length === 0) return;
+    const remaining = Math.max(0, 100 - committedTotal);
+    const share = remaining / selectedContactIds.length;
+    const newOwners = selectedContactIds.map((cid) => {
+      const contact = allContacts.find(c => c.id === cid);
+      if (!contact) return null;
+      return {
+        id: crypto.randomUUID(),
+        contact_id: cid,
+        owner_type: selectedOwnerType,
+        ownership_percentage: parseFloat(share.toFixed(2)),
+        contact_photo_url: contact.photo_url || "",
+        contact_full_name: [contact.salutation, contact.first_name, contact.middle_name, contact.last_name, contact.suffix].filter(Boolean).join(" "),
+      };
+    }).filter(Boolean);
+    setOwners([...owners, ...newOwners]);
+    setSelectedContactIds([]);
   };
 
   const handleRemoveOwner = (ownerId) => {
@@ -643,10 +647,10 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
             )}
           </div>
 
-          {/* Add Owner Section - only show in edit mode */}
+          {/* Add Owners Section - only show in edit mode */}
           {!viewMode && (
             <div className="space-y-3 rounded-lg border border-white bg-white p-3">
-              <h4 className="text-xs font-semibold text-gray-900">Add Owner</h4>
+              <h4 className="text-xs font-semibold text-gray-900">Add Owners</h4>
 
               {/* Owner Type Selection */}
               <div className="space-y-1.5">
@@ -658,7 +662,7 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
                       type="button"
                       onClick={() => {
                         setSelectedOwnerType(type);
-                        setSelectedContactId("");
+                        setSelectedContactIds([]);
                       }}
                       className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${
                         selectedOwnerType === type
@@ -672,65 +676,82 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
                 </div>
               </div>
 
-              {/* Contact Selection */}
+              {/* Multi-select Contact List */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-gray-700">Contact</Label>
-                <div className="flex gap-2">
-                  <Select value={selectedContactId} onValueChange={setSelectedContactId}>
-                    <SelectTrigger className="h-9 text-sm flex-1">
-                      <SelectValue placeholder="Select contact..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableContacts.length === 0 ? (
-                        <div className="px-2 py-1.5 text-xs text-gray-500">No {selectedOwnerType.toLowerCase()}s available</div>
-                      ) : (
-                        availableContacts.map((contact) => (
-                          <SelectItem key={contact.id} value={contact.id}>
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-medium text-gray-700">Contacts</Label>
+                  {availableContacts.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const allIds = availableContacts.map(c => c.id);
+                        const allSelected = allIds.every(id => selectedContactIds.includes(id));
+                        setSelectedContactIds(allSelected ? [] : allIds);
+                      }}
+                      className="text-xs font-medium text-indigo-600 hover:text-indigo-700"
+                    >
+                      {availableContacts.every(c => selectedContactIds.includes(c.id)) ? "Clear all" : "Select all"}
+                    </button>
+                  )}
+                </div>
+                <div className="max-h-40 overflow-y-auto rounded-md border border-gray-200 divide-y divide-gray-100">
+                  {availableContacts.length === 0 ? (
+                    <div className="px-3 py-2 text-xs text-gray-500">No {selectedOwnerType.toLowerCase()}s available</div>
+                  ) : (
+                    availableContacts.map((contact) => {
+                      const checked = selectedContactIds.includes(contact.id);
+                      return (
+                        <label key={contact.id} className="flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-indigo-50">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => {
+                              setSelectedContactIds(checked
+                                ? selectedContactIds.filter(id => id !== contact.id)
+                                : [...selectedContactIds, contact.id]);
+                            }}
+                            className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <span className="text-xs text-gray-700">
                             {[contact.first_name, contact.middle_name, contact.last_name].filter(Boolean).join(" ")}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-9 px-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50 gap-1"
-                    onClick={() => {
-                      setAddContactType(selectedOwnerType);
-                      setShowAddContact(true);
-                    }}
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    New
-                  </Button>
+                          </span>
+                        </label>
+                      );
+                    })
+                  )}
                 </div>
               </div>
 
-              {/* Ownership Percentage */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-gray-700">Ownership %</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={ownershipPercentage}
-                  onChange={(e) => setOwnershipPercentage(e.target.value)}
-                  className="h-9 text-sm"
-                />
-              </div>
+              {selectedContactIds.length > 0 && (
+                <p className="text-xs text-indigo-600">
+                  {selectedContactIds.length} selected — each gets{" "}
+                  {(Math.max(0, 100 - committedTotal) / selectedContactIds.length).toFixed(2)}% of remaining allocation
+                </p>
+              )}
 
-              <Button
-                type="button"
-                onClick={handleAddOwner}
-                disabled={!selectedContactId || !ownershipPercentage}
-                className="w-full h-8 text-sm bg-indigo-600 hover:bg-indigo-700 text-white"
-              >
-                Add Owner
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 px-2 text-xs text-indigo-600 border-indigo-200 hover:bg-indigo-50 gap-1"
+                  onClick={() => {
+                    setAddContactType(selectedOwnerType);
+                    setShowAddContact(true);
+                  }}
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  New
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleAddSelectedOwners}
+                  disabled={selectedContactIds.length === 0}
+                  className="flex-1 h-8 text-sm bg-indigo-600 hover:bg-indigo-700 text-white"
+                >
+                  Add {selectedContactIds.length > 0 ? `${selectedContactIds.length} ` : ""}Owner{selectedContactIds.length === 1 ? "" : "s"}
+                </Button>
+              </div>
             </div>
           )}
 
@@ -781,15 +802,17 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
             )}
             {hasPending && (
               <p className="text-xs text-indigo-600 italic">
-                Includes pending: {pendingOwner.contact_full_name} ({pendingOwner.ownership_percentage}%) — click "Add Owner" to confirm
+                Includes {pendingOwners.length} pending — click "Add" to confirm
               </p>
             )}
           </div>
 
           {/* Current Owners List */}
-          {(owners.length > 0 || pendingOwner) && (
+          {(owners.length > 0 || hasPending) && (
             <div className="space-y-2 rounded-lg border border-white bg-white p-3">
-              <h4 className="text-xs font-semibold text-gray-900">Owners ({owners.length})</h4>
+              <h4 className="text-xs font-semibold text-gray-900">
+                Owners ({owners.length}){hasPending && <span className="text-indigo-500 font-normal"> + {pendingOwners.length} pending</span>}
+              </h4>
 
               {/* Mismatch warnings */}
               {ownerTypeMismatches.length > 0 && (
@@ -897,23 +920,23 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
                     </div>
                   );
                 })}
-                {pendingOwner && (
-                  <div className="flex items-start justify-between bg-indigo-50 rounded-lg p-2 border border-dashed border-indigo-300">
+                {pendingOwners.map((po) => (
+                  <div key={po.id} className="flex items-start justify-between bg-indigo-50 rounded-lg p-2 border border-dashed border-indigo-300">
                     <div className="flex items-start gap-2 flex-1 min-w-0">
                       <Avatar className="h-6 w-6 flex-shrink-0 mt-0.5">
-                        <AvatarImage src={pendingOwner.contact_photo_url} alt={pendingOwner.contact_full_name} />
-                        <AvatarFallback className="text-xs">{pendingOwner.contact_full_name?.charAt(0)}</AvatarFallback>
+                        <AvatarImage src={po.contact_photo_url} alt={po.contact_full_name} />
+                        <AvatarFallback className="text-xs">{po.contact_full_name?.charAt(0)}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <span className="text-xs font-medium text-indigo-700">{pendingOwner.contact_full_name}</span>
-                        <p className="text-xs text-indigo-500 italic">Pending — click "Add Owner" to confirm</p>
+                        <span className="text-xs font-medium text-indigo-700">{po.contact_full_name}</span>
+                        <p className="text-xs text-indigo-500 italic">Pending — click "Add" to confirm</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                      <span className="text-xs font-medium text-indigo-600">{pendingOwner.ownership_percentage}%</span>
+                      <span className="text-xs font-medium text-indigo-600">{po.ownership_percentage}%</span>
                     </div>
                   </div>
-                )}
+                ))}
               </div>
             </div>
           )}
