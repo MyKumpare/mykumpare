@@ -87,9 +87,8 @@ export default function ContactRolePicker({ value = [], onChange, viewMode = fal
       onChange(value.filter(r => r !== role));
     } else {
       onChange([...value, role]);
-      setSearch("");
-      setShowDropdown(false);
     }
+    // Keep the dropdown open so users can select several roles in a row.
   };
 
   const addCustom = () => {
@@ -100,7 +99,6 @@ export default function ContactRolePicker({ value = [], onChange, viewMode = fal
       onChange([...value, val]);
     }
     setSearch("");
-    setShowDropdown(false);
   };
 
   if (viewMode) {
