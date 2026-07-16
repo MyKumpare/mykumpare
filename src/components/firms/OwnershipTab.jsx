@@ -113,11 +113,12 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
   const previewOwners = [...owners, ...pendingOwners];
   const hasPending = pendingOwners.length > 0;
 
-  // Filter contacts by owner type
+  // Filter contacts by owner type (matching employee_status) and exclude existing owners
   const getAvailableContacts = (type) => {
     return firmContacts.filter(c => {
       const isAlreadyOwner = owners.some(o => o.contact_id === c.id);
-      return !isAlreadyOwner;
+      if (isAlreadyOwner) return false;
+      return c.employee_status === type;
     });
   };
 
