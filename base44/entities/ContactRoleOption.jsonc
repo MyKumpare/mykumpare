@@ -1,0 +1,13 @@
+{
+  "name": "ContactRoleOption",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of a custom contact role added by a user (reusable across contacts)"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

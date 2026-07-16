@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { X, Plus, AlertTriangle } from "lucide-react";
+import { base44 } from "@/api/base44Client";
 
 export const CONTACT_ROLE_OPTIONS = [
   "Board Member",
@@ -79,7 +80,17 @@ export default function ContactRolePicker({ value = [], onChange, viewMode = fal
   const [search, setSearch] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [pendingCustom, setPendingCustom] = useState(null); // { val, matches }
+  const [savedOptions, setSavedOptions] = useState([]);
   const containerRef = useRef(null);
+
+  // Load globally-persisted custom roles so they're reusable across all contacts.
+  useEffect(() => {
+    let active = true;
+    base44.entities.ContactRoleOption.list("-created_date", 200)
+      .then((rows) => { if (active) setSavedOptions(rows.map(r => r.name).filter(Boolean)); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     const handler = (e) => {
@@ -92,9 +103,15 @@ export default function ContactRolePicker({ value = [], onChange, viewMode = fal
   }, []);
 
   const allOptions = useMemo(() => {
-    const custom = value.filter(v => !CONTACT_ROLE_OPTIONS.includes(v));
-    return [...CONTACT_ROLE_OPTIONS, ...custom];
-  }, [value]);
+    const merged = [...CONTACT_ROLE_OPTIONS];
+    const seen = new Set(merged.map(o => o.toLowerCase()));
+    const customs = [...value, ...savedOptions].filter(v => !CONTACT_ROLE_OPTIONS.includes(v));
+    for (const c of customs) {
+      const k = c.toLowerCase();
+      if (!seen.has(k)) { merged.push(c); seen.add(k); }
+    }
+    return merged;
+  }, [value, savedOptions]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return allOptions;
@@ -138,6 +155,14 @@ export default function ContactRolePicker({ value = [], onChange, viewMode = fal
     }
     setPendingCustom(null);
     setSearch("");
+    // Persist globally so this custom role is reusable for other contacts too.
+    const isPreset = CONTACT_ROLE_OPTIONS.some(o => o.toLowerCase() === val.toLowerCase());
+    const alreadySaved = savedOptions.some(o => o.toLowerCase() === val.toLowerCase());
+    if (!isPreset && !alreadySaved) {
+      base44.entities.ContactRoleOption.create({ name: val })
+        .then(() => setSavedOptions(prev => prev.includes(val) ? prev : [...prev, val]))
+        .catch(() => {});
+    }
   };
 
   const attemptAddCustom = () => {
