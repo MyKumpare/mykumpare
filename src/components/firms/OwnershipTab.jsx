@@ -6,11 +6,12 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Plus, X, AlertCircle, CalendarIcon, Trash2 } from "lucide-react";
+import { Plus, X, AlertCircle, CalendarIcon, Trash2, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import AddContactDialog from "../contacts/AddContactDialog";
+import { useToast } from "@/components/ui/use-toast";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,7 +23,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-export default function OwnershipTab({ firmId, firmName, defaultOwnershipId }) {
+export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwnershipId }) {
   const [showUpdateForm, setShowUpdateForm] = useState(false);
   const [effectiveDate, setEffectiveDate] = useState(new Date());
   const [owners, setOwners] = useState([]);
@@ -37,8 +38,10 @@ export default function OwnershipTab({ firmId, firmName, defaultOwnershipId }) {
   const [expandedSummaryRow, setExpandedSummaryRow] = useState(null);
   const [expandedEthnicity, setExpandedEthnicity] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [refreshingPhotos, setRefreshingPhotos] = useState(false);
 
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   // Fetch contacts for the firm
   const { data: allContacts = [] } = useQuery({
@@ -425,12 +428,59 @@ export default function OwnershipTab({ firmId, firmName, defaultOwnershipId }) {
     setOwners(owners.map(o => o.id === ownerId ? { ...o, owner_type: newType } : o));
   };
 
+  const handleRefreshPhotos = async () => {
+    setRefreshingPhotos(true);
+    try {
+      const res = await base44.functions.invoke('refreshFirmContactPhotos', {
+        firm_id: firmId,
+        website: firmWebsite,
+        firm_name: firmName,
+      });
+      const data = res?.data || res;
+      if (data.updated > 0) {
+        queryClient.invalidateQueries({ queryKey: ["contacts"] });
+        queryClient.invalidateQueries({ queryKey: ["ownership", firmId] });
+      }
+      return data;
+    } catch (e) {
+      throw e;
+    } finally {
+      setRefreshingPhotos(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Ownership History */}
       {ownershipHistory.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-gray-900">Ownership History</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-900">Ownership History</h3>
+            {firmWebsite && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  try {
+                    const data = await handleRefreshPhotos();
+                    if (data?.updated > 0) {
+                      toast({ title: "Photos refreshed", description: `Updated ${data.updated} contact photo${data.updated === 1 ? "" : "s"} from ${firmName} website.` });
+                    } else {
+                      toast({ title: "No photo updates", description: "No new photos were found on the firm website." });
+                    }
+                  } catch (e) {
+                    toast({ title: "Refresh failed", description: e.message || "Could not refresh photos.", variant: "destructive" });
+                  }
+                }}
+                disabled={refreshingPhotos}
+                className="h-7 text-xs gap-1.5 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+              >
+                  <RefreshCw className={`w-3.5 h-3.5 ${refreshingPhotos ? "animate-spin" : ""}`} />
+                  {refreshingPhotos ? "Refreshing..." : "Refresh Photos"}
+                </Button>
+            )}
+          </div>
           {ownershipHistory.map((breakdown) => (
             <div
               key={breakdown.id}
