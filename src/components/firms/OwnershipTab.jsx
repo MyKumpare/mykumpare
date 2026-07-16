@@ -43,10 +43,10 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Fetch contacts for the firm
+  // Fetch contacts for the firm (higher limit so owner lookups don't miss anyone)
   const { data: allContacts = [] } = useQuery({
     queryKey: ["contacts"],
-    queryFn: () => base44.entities.Contact.list(),
+    queryFn: () => base44.entities.Contact.list("-created_date", 500),
   });
 
   // Fetch ownership history
