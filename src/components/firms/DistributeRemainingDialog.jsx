@@ -57,7 +57,20 @@ export default function DistributeRemainingDialog({ open, onOpenChange, owners =
                 <input
                   type="checkbox"
                   checked={isSel}
-                  onChange={() => setSelected((prev) => ({ ...prev, [o.id]: !prev[o.id] }))}
+                  onChange={() => {
+                    setSelected((prev) => {
+                      const next = { ...prev, [o.id]: !prev[o.id] };
+                      // Redistribute the full remaining amount equally across all selected owners
+                      const selectedIds = owners.filter((ow) => next[ow.id]).map((ow) => ow.id);
+                      const share = selectedIds.length > 0 ? +(remaining / selectedIds.length).toFixed(2) : 0;
+                      const nextWeights = {};
+                      owners.forEach((ow) => {
+                        nextWeights[ow.id] = selectedIds.includes(ow.id) ? share : 0;
+                      });
+                      setWeights(nextWeights);
+                      return next;
+                    });
+                  }}
                   className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                 />
                 <Avatar className="h-6 w-6 flex-shrink-0">
