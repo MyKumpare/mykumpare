@@ -408,6 +408,19 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
     setOwners(owners.filter(o => o.id !== ownerId));
   };
 
+  // Distribute the remaining unallocated percentage across existing owners,
+  // proportionally to their current ownership weights.
+  const handleDistributeRemaining = () => {
+    if (owners.length === 0 || committedTotal >= 100) return;
+    const remaining = Math.max(0, 100 - committedTotal);
+    const updated = owners.map((o) => {
+      const weight = committedTotal > 0 ? (o.ownership_percentage / committedTotal) * remaining : remaining / owners.length;
+      const next = parseFloat((parseFloat(o.ownership_percentage || 0) + weight).toFixed(2));
+      return { ...o, ownership_percentage: next };
+    });
+    setOwners(updated);
+  };
+
   const handleSaveOwnership = () => {
     if (!isValidPercentage) return;
 
@@ -739,7 +752,29 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
               <p className="text-xs text-red-600 font-medium">⚠️ Ownership exceeds 100% by {(totalOwnershipPercentage - 100).toFixed(2)}%</p>
             )}
             {!exceedsMax && totalOwnershipPercentage < 100 && (
-              <p className="text-xs text-amber-600">{remainingToAllocate.toFixed(2)}% remaining to allocate</p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs text-amber-600">{remainingToAllocate.toFixed(2)}% remaining to allocate</p>
+                {!viewMode && owners.length > 0 && committedTotal > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleDistributeRemaining}
+                    className="text-xs font-medium text-indigo-600 hover:text-indigo-700 hover:underline whitespace-nowrap"
+                    title="Distribute remaining % proportionally to current owner weights"
+                  >
+                    Distribute remaining by weights
+                  </button>
+                )}
+              </div>
+            )}
+            {!exceedsMax && totalOwnershipPercentage < 100 && !viewMode && owners.length > 0 && committedTotal === 0 && (
+              <button
+                type="button"
+                onClick={handleDistributeRemaining}
+                className="text-xs font-medium text-indigo-600 hover:text-indigo-700 hover:underline"
+                title="Split 100% equally across owners"
+              >
+                Split equally
+              </button>
             )}
             {totalOwnershipPercentage === 100 && !hasPending && (
               <p className="text-xs text-green-600 font-medium">✓ Ownership fully allocated</p>
