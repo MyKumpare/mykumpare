@@ -85,6 +85,25 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
   // Get firm contacts
   const firmContacts = allContacts.filter(c => c.firm_ids?.includes(firmId));
 
+  // Live preview of the owner currently being added (before "Add Owner" is clicked),
+  // so the allocation bar + ownership summary update as the user selects a contact / types a percentage.
+  const pendingOwner = useMemo(() => {
+    if (!selectedContactId || !ownershipPercentage) return null;
+    const contact = allContacts.find(c => c.id === selectedContactId);
+    if (!contact) return null;
+    return {
+      id: "__pending__",
+      contact_id: selectedContactId,
+      owner_type: selectedOwnerType,
+      ownership_percentage: parseFloat(ownershipPercentage) || 0,
+      contact_photo_url: contact.photo_url || "",
+      contact_full_name: [contact.salutation, contact.first_name, contact.middle_name, contact.last_name, contact.suffix].filter(Boolean).join(" "),
+    };
+  }, [selectedContactId, ownershipPercentage, selectedOwnerType, allContacts]);
+
+  const previewOwners = pendingOwner ? [...owners, pendingOwner] : owners;
+  const hasPending = !!pendingOwner;
+
   // Filter contacts by owner type
   const getAvailableContacts = (type) => {
     return firmContacts.filter(c => {
@@ -93,8 +112,9 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
     });
   };
 
-  const totalOwnershipPercentage = owners.reduce((sum, o) => sum + (parseFloat(o.ownership_percentage) || 0), 0);
-  const isValidPercentage = totalOwnershipPercentage > 0;
+  const committedTotal = owners.reduce((sum, o) => sum + (parseFloat(o.ownership_percentage) || 0), 0);
+  const totalOwnershipPercentage = previewOwners.reduce((sum, o) => sum + (parseFloat(o.ownership_percentage) || 0), 0);
+  const isValidPercentage = committedTotal > 0;
   const percentageWarning = totalOwnershipPercentage !== 100;
   const remainingToAllocate = Math.max(0, 100 - totalOwnershipPercentage);
   const exceedsMax = totalOwnershipPercentage > 100;
@@ -113,7 +133,7 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
       ethnicMinorityAndWomenAndDisabledVeteranOwned: { employee: 0, nonEmployee: 0 },
     };
 
-    owners.forEach((owner) => {
+    previewOwners.forEach((owner) => {
       const contact = allContacts.find(c => c.id === owner.contact_id);
       if (!contact) return;
 
@@ -174,11 +194,11 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
     return summary;
   };
 
-  const ownershipSummary = useMemo(() => calculateOwnershipSummary(), [owners, allContacts]);
+  const ownershipSummary = useMemo(() => calculateOwnershipSummary(), [previewOwners, allContacts]);
 
   // Helper function to get owners by specific ethnicity and category
   const getOwnersByEthnicityAndCategory = (ethnicity, category) => {
-    return owners.filter((owner) => {
+    return previewOwners.filter((owner) => {
       const contact = allContacts.find(c => c.id === owner.contact_id);
       if (!contact) return false;
       
@@ -234,7 +254,7 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
   // Get ethnicities breakdown for a category
   const getEthnicityBreakdownForCategory = (category) => {
     const ethnicityMap = {};
-    const categoryOwners = owners.filter((owner) => {
+    const categoryOwners = previewOwners.filter((owner) => {
       const contact = allContacts.find(c => c.id === owner.contact_id);
       if (!contact) return false;
 
@@ -283,7 +303,7 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
 
   // Helper function to get ownership composition for a specific category
   const getOwnershipComposition = (category) => {
-    const categoryOwners = owners.filter((owner) => {
+    const categoryOwners = previewOwners.filter((owner) => {
       const contact = allContacts.find(c => c.id === owner.contact_id);
       if (!contact) return false;
 
@@ -721,13 +741,18 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
             {!exceedsMax && totalOwnershipPercentage < 100 && (
               <p className="text-xs text-amber-600">{remainingToAllocate.toFixed(2)}% remaining to allocate</p>
             )}
-            {totalOwnershipPercentage === 100 && (
+            {totalOwnershipPercentage === 100 && !hasPending && (
               <p className="text-xs text-green-600 font-medium">✓ Ownership fully allocated</p>
+            )}
+            {hasPending && (
+              <p className="text-xs text-indigo-600 italic">
+                Includes pending: {pendingOwner.contact_full_name} ({pendingOwner.ownership_percentage}%) — click "Add Owner" to confirm
+              </p>
             )}
           </div>
 
           {/* Current Owners List */}
-          {owners.length > 0 && (
+          {(owners.length > 0 || pendingOwner) && (
             <div className="space-y-2 rounded-lg border border-white bg-white p-3">
               <h4 className="text-xs font-semibold text-gray-900">Owners ({owners.length})</h4>
 
@@ -837,14 +862,33 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
                     </div>
                   );
                 })}
+                {pendingOwner && (
+                  <div className="flex items-start justify-between bg-indigo-50 rounded-lg p-2 border border-dashed border-indigo-300">
+                    <div className="flex items-start gap-2 flex-1 min-w-0">
+                      <Avatar className="h-6 w-6 flex-shrink-0 mt-0.5">
+                        <AvatarImage src={pendingOwner.contact_photo_url} alt={pendingOwner.contact_full_name} />
+                        <AvatarFallback className="text-xs">{pendingOwner.contact_full_name?.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-xs font-medium text-indigo-700">{pendingOwner.contact_full_name}</span>
+                        <p className="text-xs text-indigo-500 italic">Pending — click "Add Owner" to confirm</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                      <span className="text-xs font-medium text-indigo-600">{pendingOwner.ownership_percentage}%</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
 
           {/* Ownership Summary Table */}
-          {owners.length > 0 && (
+          {previewOwners.length > 0 && (
             <div className="space-y-2 rounded-lg border border-white bg-white p-3 overflow-x-auto">
-              <h4 className="text-xs font-semibold text-gray-900">Ownership Summary</h4>
+              <h4 className="text-xs font-semibold text-gray-900">
+                Ownership Summary {hasPending && <span className="text-indigo-500 font-normal italic">(live preview)</span>}
+              </h4>
               <table className="w-full text-xs border-collapse">
                 <thead>
                   <tr>
