@@ -114,10 +114,17 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
   const hasPending = pendingOwners.length > 0;
 
   // Filter contacts by owner type (matching employee_status) and exclude existing owners
+  // Match by contact_id, or by full name as a fallback for owner records without a stored contact_id.
   const getAvailableContacts = (type) => {
+    const ownerContactIds = new Set(owners.map(o => o.contact_id).filter(Boolean));
+    const ownerNames = new Set(
+      owners.map(o => (o.contact_full_name || "").trim().toLowerCase()).filter(Boolean)
+    );
     return firmContacts.filter(c => {
-      const isAlreadyOwner = owners.some(o => o.contact_id === c.id);
-      if (isAlreadyOwner) return false;
+      if (ownerContactIds.has(c.id)) return false;
+      const fullName = [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix]
+        .filter(Boolean).join(" ").trim().toLowerCase();
+      if (fullName && ownerNames.has(fullName)) return false;
       return c.employee_status === type;
     });
   };
