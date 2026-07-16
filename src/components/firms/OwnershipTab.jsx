@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import AddContactDialog from "../contacts/AddContactDialog";
+import DistributeRemainingDialog from "./DistributeRemainingDialog";
 import { useToast } from "@/components/ui/use-toast";
 import {
   AlertDialog,
@@ -38,6 +39,7 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
   const [expandedEthnicity, setExpandedEthnicity] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [refreshingPhotos, setRefreshingPhotos] = useState(false);
+  const [showDistributeDialog, setShowDistributeDialog] = useState(false);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -778,11 +780,11 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
                 {!viewMode && owners.length > 0 && committedTotal > 0 && (
                   <button
                     type="button"
-                    onClick={handleDistributeRemaining}
+                    onClick={() => setShowDistributeDialog(true)}
                     className="text-xs font-medium text-indigo-600 hover:text-indigo-700 hover:underline whitespace-nowrap"
-                    title="Distribute remaining % proportionally to current owner weights"
+                    title="Choose owners and enter weights for the remaining %"
                   >
-                    Distribute remaining by weights
+                    Distribute remaining weights
                   </button>
                 )}
               </div>
@@ -1571,6 +1573,24 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
           firms={[]}
         />
       )}
+
+      {/* Distribute Remaining Weights Dialog */}
+      <DistributeRemainingDialog
+        open={showDistributeDialog}
+        onOpenChange={setShowDistributeDialog}
+        owners={owners}
+        remaining={Math.max(0, 100 - committedTotal)}
+        onConfirm={(additions) => {
+          setOwners((prev) =>
+            prev.map((o) =>
+              additions[o.id]
+                ? { ...o, ownership_percentage: parseFloat((parseFloat(o.ownership_percentage || 0) + additions[o.id]).toFixed(2)) }
+                : o
+            )
+          );
+          setShowDistributeDialog(false);
+        }}
+      />
 
       {/* Delete Ownership Confirmation */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
