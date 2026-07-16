@@ -6,11 +6,21 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Plus, X, AlertCircle, CalendarIcon } from "lucide-react";
+import { Plus, X, AlertCircle, CalendarIcon, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import AddContactDialog from "../contacts/AddContactDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function OwnershipTab({ firmId, firmName, defaultOwnershipId }) {
   const [showUpdateForm, setShowUpdateForm] = useState(false);
@@ -26,6 +36,7 @@ export default function OwnershipTab({ firmId, firmName, defaultOwnershipId }) {
   const [selectedContact, setSelectedContact] = useState(null);
   const [expandedSummaryRow, setExpandedSummaryRow] = useState(null);
   const [expandedEthnicity, setExpandedEthnicity] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const queryClient = useQueryClient();
 
@@ -337,6 +348,19 @@ export default function OwnershipTab({ firmId, firmName, defaultOwnershipId }) {
     },
   });
 
+  const deleteOwnershipMutation = useMutation({
+    mutationFn: (id) => base44.entities.Ownership.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ownership", firmId] });
+      if (selectedOwnership?.id === deleteTarget?.id) {
+        setSelectedOwnership(null);
+        setOwners([]);
+        setViewMode(true);
+      }
+      setDeleteTarget(null);
+    },
+  });
+
   const handleAddOwner = () => {
     if (!selectedContactId || !ownershipPercentage) return;
 
@@ -408,35 +432,54 @@ export default function OwnershipTab({ firmId, firmName, defaultOwnershipId }) {
         <div className="space-y-3">
           <h3 className="text-sm font-semibold text-gray-900">Ownership History</h3>
           {ownershipHistory.map((breakdown) => (
-            <button
+            <div
               key={breakdown.id}
-              type="button"
+              role="button"
+              tabIndex={0}
               onClick={() => setSelectedOwnership(breakdown)}
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 hover:border-indigo-300 transition-colors p-3 space-y-2 text-left"
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedOwnership(breakdown); } }}
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 hover:border-indigo-300 transition-colors p-3 space-y-2 text-left cursor-pointer"
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-gray-600">
                   {format(new Date(breakdown.effective_date), "MMM d, yyyy")}
                 </span>
-                {breakdown.id === mostRecentOwnership?.id && (
-                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
-                    Most Recent
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  {breakdown.id === mostRecentOwnership?.id && (
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                      Most Recent
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setDeleteTarget(breakdown); }}
+                    className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-red-50"
+                    title="Delete this ownership record"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
               <div className="flex flex-wrap gap-2">
-                {breakdown.owners?.map((owner) => (
-                  <div key={owner.id} className="flex items-center gap-1.5 bg-white rounded-full pl-1.5 pr-2.5 py-0.5 border border-gray-200">
-                    <Avatar className="h-5 w-5 flex-shrink-0">
-                      <AvatarImage src={owner.contact_photo_url} alt={owner.contact_full_name} />
-                      <AvatarFallback className="text-xs">{owner.contact_full_name?.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <span className="text-xs text-gray-700">{owner.contact_full_name}</span>
-                    <span className="text-xs font-medium text-indigo-600">{owner.ownership_percentage}%</span>
-                  </div>
-                ))}
+                {breakdown.owners?.map((owner) => {
+                  const ownerContact = allContacts.find((c) => c.id === owner.contact_id);
+                  const displayName = ownerContact
+                    ? [ownerContact.salutation, ownerContact.first_name, ownerContact.middle_name, ownerContact.last_name, ownerContact.suffix].filter(Boolean).join(" ")
+                    : owner.contact_full_name;
+                  const displayPhoto = ownerContact?.photo_url || owner.contact_photo_url;
+                  return (
+                    <div key={owner.id} className="flex items-center gap-1.5 bg-white rounded-full pl-1.5 pr-2.5 py-0.5 border border-gray-200">
+                      <Avatar className="h-5 w-5 flex-shrink-0">
+                        <AvatarImage src={displayPhoto} alt={displayName} />
+                        <AvatarFallback className="text-xs">{displayName?.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <span className="text-xs text-gray-700">{displayName}</span>
+                      <span className="text-xs font-medium text-indigo-600">{owner.ownership_percentage}%</span>
+                    </div>
+                  );
+                })}
               </div>
-            </button>
+            </div>
           ))}
         </div>
       )}
@@ -1376,6 +1419,30 @@ export default function OwnershipTab({ firmId, firmName, defaultOwnershipId }) {
           firms={[]}
         />
       )}
+
+      {/* Delete Ownership Confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete ownership record?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the ownership breakdown for{" "}
+              <strong>{deleteTarget ? format(new Date(deleteTarget.effective_date), "MMM d, yyyy") : ""}</strong>.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteTarget && deleteOwnershipMutation.mutate(deleteTarget.id)}
+              disabled={deleteOwnershipMutation.isPending}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deleteOwnershipMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
