@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
-import { X, Plus, AlertTriangle } from "lucide-react";
+import { X, Plus, AlertTriangle, Trash2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
+import DeleteOptionDialog from "./DeleteOptionDialog";
 
 export const CONTACT_ROLE_OPTIONS = [
   "Board Member",
@@ -80,14 +81,17 @@ export default function ContactRolePicker({ value = [], onChange, viewMode = fal
   const [search, setSearch] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [pendingCustom, setPendingCustom] = useState(null); // { val, matches }
-  const [savedOptions, setSavedOptions] = useState([]);
+  const [savedOptions, setSavedOptions] = useState([]); // [{id, name}]
+  const [pendingDelete, setPendingDelete] = useState(null); // {id, name}
   const containerRef = useRef(null);
 
   // Load globally-persisted custom roles so they're reusable across all contacts.
   useEffect(() => {
     let active = true;
     base44.entities.ContactRoleOption.list("-created_date", 200)
-      .then((rows) => { if (active) setSavedOptions(rows.map(r => r.name).filter(Boolean)); })
+      .then((rows) => {
+        if (active) setSavedOptions(rows.map((r) => ({ id: r.id, name: r.name })).filter((o) => o.name));
+      })
       .catch(() => {});
     return () => { active = false; };
   }, []);
@@ -102,10 +106,16 @@ export default function ContactRolePicker({ value = [], onChange, viewMode = fal
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  const savedByName = useMemo(() => {
+    const m = {};
+    savedOptions.forEach((o) => { m[o.name.toLowerCase()] = o; });
+    return m;
+  }, [savedOptions]);
+
   const allOptions = useMemo(() => {
     const merged = [...CONTACT_ROLE_OPTIONS];
-    const seen = new Set(merged.map(o => o.toLowerCase()));
-    const customs = [...value, ...savedOptions].filter(v => !CONTACT_ROLE_OPTIONS.includes(v));
+    const seen = new Set(merged.map((o) => o.toLowerCase()));
+    const customs = [...value, ...savedOptions.map((o) => o.name)].filter((v) => !CONTACT_ROLE_OPTIONS.includes(v));
     for (const c of customs) {
       const k = c.toLowerCase();
       if (!seen.has(k)) { merged.push(c); seen.add(k); }
@@ -116,15 +126,15 @@ export default function ContactRolePicker({ value = [], onChange, viewMode = fal
   const filtered = useMemo(() => {
     if (!search.trim()) return allOptions;
     const q = search.toLowerCase();
-    return allOptions.filter(o => o.toLowerCase().includes(q));
+    return allOptions.filter((o) => o.toLowerCase().includes(q));
   }, [allOptions, search]);
 
   const trimmed = search.trim();
-  const alreadySelected = value.some(v => v.toLowerCase() === trimmed.toLowerCase());
+  const alreadySelected = value.some((v) => v.toLowerCase() === trimmed.toLowerCase());
 
   const toggle = (role) => {
     if (value.includes(role)) {
-      onChange(value.filter(r => r !== role));
+      onChange(value.filter((r) => r !== role));
     } else {
       onChange([...value, role]);
     }
@@ -150,17 +160,17 @@ export default function ContactRolePicker({ value = [], onChange, viewMode = fal
   };
 
   const confirmAddCustom = (val) => {
-    if (!value.some(v => v.toLowerCase() === val.toLowerCase())) {
+    if (!value.some((v) => v.toLowerCase() === val.toLowerCase())) {
       onChange([...value, val]);
     }
     setPendingCustom(null);
     setSearch("");
     // Persist globally so this custom role is reusable for other contacts too.
-    const isPreset = CONTACT_ROLE_OPTIONS.some(o => o.toLowerCase() === val.toLowerCase());
-    const alreadySaved = savedOptions.some(o => o.toLowerCase() === val.toLowerCase());
+    const isPreset = CONTACT_ROLE_OPTIONS.some((o) => o.toLowerCase() === val.toLowerCase());
+    const alreadySaved = savedOptions.some((o) => o.name.toLowerCase() === val.toLowerCase());
     if (!isPreset && !alreadySaved) {
       base44.entities.ContactRoleOption.create({ name: val })
-        .then(() => setSavedOptions(prev => prev.includes(val) ? prev : [...prev, val]))
+        .then((row) => setSavedOptions((prev) => (prev.some((o) => o.name.toLowerCase() === val.toLowerCase()) ? prev : [...prev, { id: row.id, name: val }])))
         .catch(() => {});
     }
   };
@@ -177,11 +187,23 @@ export default function ContactRolePicker({ value = [], onChange, viewMode = fal
     confirmAddCustom(val);
   };
 
+  const isDeletable = (option) =>
+    !CONTACT_ROLE_OPTIONS.includes(option) && !!savedByName[option.toLowerCase()];
+
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
+    try {
+      await base44.entities.ContactRoleOption.delete(pendingDelete.id);
+      setSavedOptions((prev) => prev.filter((o) => o.id !== pendingDelete.id));
+    } catch {}
+    setPendingDelete(null);
+  };
+
   if (viewMode) {
     return (
       <div className="flex flex-wrap gap-1.5 px-1">
         {value.length > 0
-          ? value.map(r => (
+          ? value.map((r) => (
               <span key={r} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">{r}</span>
             ))
           : <span className="text-gray-400 italic">—</span>}
@@ -194,10 +216,10 @@ export default function ContactRolePicker({ value = [], onChange, viewMode = fal
       {/* Selected badges */}
       {value.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
-          {value.map(r => (
+          {value.map((r) => (
             <span key={r} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-600 text-white">
               {r}
-              <button type="button" onClick={() => onChange(value.filter(x => x !== r))} className="hover:opacity-70">
+              <button type="button" onClick={() => onChange(value.filter((x) => x !== r))} className="hover:opacity-70">
                 <X className="w-3 h-3" />
               </button>
             </span>
@@ -219,7 +241,7 @@ export default function ContactRolePicker({ value = [], onChange, viewMode = fal
                 confirmAddCustom(pendingCustom.val);
                 return;
               }
-              const unselectedFiltered = filtered.filter(o => !value.includes(o));
+              const unselectedFiltered = filtered.filter((o) => !value.includes(o));
               if (unselectedFiltered.length === 1) toggle(unselectedFiltered[0]);
               else if (trimmed && !alreadySelected) attemptAddCustom();
             }
@@ -230,18 +252,33 @@ export default function ContactRolePicker({ value = [], onChange, viewMode = fal
 
         {showDropdown && (
           <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-            {filtered.map(option => {
+            {filtered.map((option) => {
               const selected = value.includes(option);
+              const deletable = isDeletable(option);
               return (
-                <button
+                <div
                   key={option}
-                  type="button"
-                  onMouseDown={(e) => { e.preventDefault(); toggle(option); }}
-                  className={`w-full text-left px-3 py-1.5 text-xs transition-colors flex items-center justify-between ${selected ? "bg-indigo-50 text-indigo-700 font-medium" : "hover:bg-gray-50 text-gray-700"}`}
+                  className={`flex items-center justify-between text-xs transition-colors ${selected ? "bg-indigo-50 text-indigo-700 font-medium" : "hover:bg-gray-50 text-gray-700"}`}
                 >
-                  {option}
-                  {selected && <span className="text-indigo-400 text-xs">✓</span>}
-                </button>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); toggle(option); }}
+                    className="flex-1 text-left px-3 py-1.5"
+                  >
+                    {option}
+                  </button>
+                  {selected && <span className="text-indigo-400 text-xs pr-1">✓</span>}
+                  {deletable && (
+                    <button
+                      type="button"
+                      title="Delete from master list"
+                      onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setPendingDelete({ id: savedByName[option.toLowerCase()].id, name: option }); }}
+                      className="px-2 py-1.5 text-gray-400 hover:text-red-500"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
               );
             })}
             {trimmed && alreadySelected && !pendingCustom && (
@@ -255,7 +292,7 @@ export default function ContactRolePicker({ value = [], onChange, viewMode = fal
                   <AlertTriangle className="w-3.5 h-3.5" /> Similar role{pendingCustom.matches.length > 1 ? "s" : ""} already exist{pendingCustom.matches.length === 1 ? "s" : ""}:
                 </p>
                 <div className="flex flex-wrap gap-1">
-                  {pendingCustom.matches.map(m => (
+                  {pendingCustom.matches.map((m) => (
                     <span key={m} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">{m}</span>
                   ))}
                 </div>
@@ -290,6 +327,12 @@ export default function ContactRolePicker({ value = [], onChange, viewMode = fal
           </div>
         )}
       </div>
+
+      <DeleteOptionDialog
+        optionName={pendingDelete?.name}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }

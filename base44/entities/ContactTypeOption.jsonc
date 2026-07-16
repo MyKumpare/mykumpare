@@ -1,0 +1,13 @@
+{
+  "name": "ContactTypeOption",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of an active contact type option (managed master list)"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

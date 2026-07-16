@@ -23,6 +23,8 @@ import ContactProfessionalExperienceTab from "./ContactProfessionalExperienceTab
 import ContactActivitiesTab from "./ContactActivitiesTab";
 import ContactProductsTab from "./ContactProductsTab";
 import ContactRolePicker from "./ContactRolePicker";
+import ContactDepartmentPicker from "./ContactDepartmentPicker";
+import ContactTypePicker from "./ContactTypePicker";
 import { findContactDuplicates } from "./contactDuplicateCheck";
 
 const SALUTATIONS = ["Mr.", "Ms.", "Mrs.", "Dr.", "Prof.", "Hon."];
@@ -62,7 +64,6 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [contactType, setContactType] = useState("");
   const [contactRoles, setContactRoles] = useState([]);
   const [contactFirmRoles, setContactFirmRoles] = useState([]);
-  const [newRoleInput, setNewRoleInput] = useState("");
   const [gender, setGender] = useState("Undetermined");
   const [ethnicity, setEthnicity] = useState([]);
   const [veteranStatus, setVeteranStatus] = useState("Undetermined");
@@ -299,25 +300,11 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
 
   // Firm types that show Contact Role and Contact Department
   const CONTACT_ROLE_FIRM_TYPES = ["Manager of Managers", "Investment Manager", "Allocator", "Investment Consultant"];
-  const DEFAULT_CONTACT_FIRM_ROLES = [
-    "Administration",
-    "Board Member",
-    "Compliance and Legal",
-    "Executive",
-    "Investments",
-    "Marketing and Client Services",
-    "Operations",
-    "Others",
-  ];
   const associatedFirmTypes = firmIds.flatMap(fid => {
     const firm = firms.find(f => f.id === fid);
     return firm?.firm_types || (firm?.firm_type ? [firm.firm_type] : []);
   });
   const showContactFirmRoles = associatedFirmTypes.some(t => CONTACT_ROLE_FIRM_TYPES.includes(t));
-  const allContactFirmRoleOptions = [...new Set([
-    ...DEFAULT_CONTACT_FIRM_ROLES,
-    ...contactFirmRoles.filter(r => !DEFAULT_CONTACT_FIRM_ROLES.includes(r)),
-  ])].sort();
 
   const [firmRemoveWarning, setFirmRemoveWarning] = useState(null); // firmId pending removal
   const [confirmDeleteContact, setConfirmDeleteContact] = useState(false);
@@ -897,16 +884,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                     ) : <span className="text-gray-400 italic">—</span>}
                   </div>
                 ) : (
-                  <Select value={contactType} onValueChange={(v) => setContactType(v === contactType ? "" : v)}>
-                    <SelectTrigger className="h-9">
-                      <SelectValue placeholder="Select type..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {["Allocator", "Investment Consultant", "Investment Manager", "Securities Broker", "Trade Organization Representative"].map(t => (
-                        <SelectItem key={t} value={t}>{t}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <ContactTypePicker value={contactType} onChange={setContactType} />
                 )}
               </div>
 
@@ -914,59 +892,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
               {(showContactFirmRoles || contactFirmRoles.length > 0) && (
                 <div className="space-y-1.5">
                   <Label className="text-sm font-medium text-gray-700">Contact Department</Label>
-                  {viewMode ? (
-                    <div className="flex flex-wrap gap-1.5 px-1">
-                      {contactFirmRoles.length > 0
-                        ? contactFirmRoles.map(r => (
-                            <span key={r} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">{r}</span>
-                          ))
-                        : <span className="text-gray-400 italic">—</span>}
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap gap-1.5">
-                        {allContactFirmRoleOptions.map(role => {
-                          const selected = contactFirmRoles.includes(role);
-                          return (
-                            <button key={role} type="button"
-                              onClick={() => setContactFirmRoles(selected
-                                ? contactFirmRoles.filter(r => r !== role)
-                                : [...contactFirmRoles, role]
-                              )}
-                              className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${selected
-                                ? "bg-indigo-600 text-white border-indigo-600"
-                                : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-indigo-600"}`}>
-                              {role}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <div className="flex gap-2">
-                        <Input
-                          placeholder="Add custom role..."
-                          value={newRoleInput}
-                          onChange={(e) => setNewRoleInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && newRoleInput.trim()) {
-                              e.preventDefault();
-                              const val = newRoleInput.trim();
-                              if (!contactFirmRoles.includes(val)) setContactFirmRoles([...contactFirmRoles, val]);
-                              setNewRoleInput("");
-                            }
-                          }}
-                          className="h-8 text-xs"
-                        />
-                        <Button type="button" size="sm" variant="outline" className="h-8 text-xs px-3 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
-                          onClick={() => {
-                            const val = newRoleInput.trim();
-                            if (val && !contactFirmRoles.includes(val)) setContactFirmRoles([...contactFirmRoles, val]);
-                            setNewRoleInput("");
-                          }}>
-                          <Plus className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
+                  <ContactDepartmentPicker value={contactFirmRoles} onChange={setContactFirmRoles} viewMode={viewMode} />
                 </div>
               )}
 
