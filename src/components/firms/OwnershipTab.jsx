@@ -113,18 +113,29 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
   const previewOwners = [...owners, ...pendingOwners];
   const hasPending = pendingOwners.length > 0;
 
-  // Filter contacts by owner type (matching employee_status) and exclude existing owners
-  // Match by contact_id, or by full name as a fallback for owner records without a stored contact_id.
+  // Filter contacts by owner type (matching employee_status) and exclude existing owners.
+  // Match by contact_id first; fall back to a normalized core name (first/middle/last,
+  // salutations & suffixes stripped) so owners stored without a contact_id are still excluded.
+  const SALUTATIONS = ["mr", "ms", "mrs", "dr", "prof", "hon"];
+  const SUFFIXES = ["jr", "sr", "ii", "iii", "iv", "esq", "cfa", "cpa", "mba", "phd", "md"];
+  const normalizeName = (name) => {
+    if (!name) return "";
+    return name.toLowerCase()
+      .split(/\s+/)
+      .map((t) => t.replace(/[.,]/g, ""))
+      .filter((t) => t && !SALUTATIONS.includes(t) && !SUFFIXES.includes(t))
+      .join(" ")
+      .trim();
+  };
   const getAvailableContacts = (type) => {
-    const ownerContactIds = new Set(owners.map(o => o.contact_id).filter(Boolean));
+    const ownerContactIds = new Set(owners.map((o) => o.contact_id).filter(Boolean));
     const ownerNames = new Set(
-      owners.map(o => (o.contact_full_name || "").trim().toLowerCase()).filter(Boolean)
+      owners.map((o) => normalizeName(o.contact_full_name)).filter(Boolean)
     );
-    return firmContacts.filter(c => {
+    return firmContacts.filter((c) => {
       if (ownerContactIds.has(c.id)) return false;
-      const fullName = [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix]
-        .filter(Boolean).join(" ").trim().toLowerCase();
-      if (fullName && ownerNames.has(fullName)) return false;
+      const coreName = normalizeName([c.first_name, c.middle_name, c.last_name].filter(Boolean).join(" "));
+      if (coreName && ownerNames.has(coreName)) return false;
       return c.employee_status === type;
     });
   };
