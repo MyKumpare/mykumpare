@@ -120,6 +120,19 @@ export function findContactDuplicates(newContact, existingContacts) {
       score = Math.max(score, 0.75);
     }
 
+    // Photo matching — same photo URL + same first name strongly implies the
+    // same person even when last names differ (maiden/married names). Rehosted
+    // URLs differ, so we compare the raw stored photo_url strings.
+    if (newContact.photo_url && existing.photo_url && newContact.photo_url === existing.photo_url) {
+      if (newFirst && newFirst === existingFirst) {
+        reasons.push(`Same profile photo and first name as "${existingName}"`);
+        score = Math.max(score, 0.8);
+      } else {
+        reasons.push(`Same profile photo as "${existingName}"`);
+        score = Math.max(score, 0.7);
+      }
+    }
+
     // Email matching
     if (newEmail && existing.email) {
       const existingEmail = normalizeEmail(existing.email);

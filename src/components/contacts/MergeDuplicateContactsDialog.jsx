@@ -51,6 +51,10 @@ export default function MergeDuplicateContactsDialog({ open, onOpenChange, conta
   // For each cluster, pick the "keep" index (primary). Default to most complete.
   const [keepIndex, setKeepIndex] = useState({});
   const [merging, setMerging] = useState(false);
+  // Manual merge mode — pick any two contacts to merge regardless of auto-detection
+  const [manualMode, setManualMode] = useState(false);
+  const [manualPrimary, setManualPrimary] = useState("");
+  const [manualSecondary, setManualSecondary] = useState("");
 
   const getKeepId = (cluster, ci) => {
     const idx = keepIndex[ci];
@@ -92,6 +96,38 @@ export default function MergeDuplicateContactsDialog({ open, onOpenChange, conta
     }
   };
 
+  const sortedContacts = useMemo(
+    () => [...contacts].sort((a, b) => contactName(a).localeCompare(contactName(b))),
+    [contacts]
+  );
+
+  const handleManualMerge = async () => {
+    if (!manualPrimary || !manualSecondary || manualPrimary === manualSecondary) return;
+    setMerging(true);
+    try {
+      const res = await base44.functions.invoke("mergeContacts", {
+        primary_id: manualPrimary,
+        secondary_id: manualSecondary,
+      });
+      if (res?.data?.success) {
+        await queryClient.invalidateQueries({ queryKey: ["contacts"] });
+        await queryClient.invalidateQueries({ queryKey: ["orgchart"] });
+        await queryClient.invalidateQueries({ queryKey: ["ownership"] });
+        onMerged?.(1);
+        onOpenChange(false);
+        setManualMode(false);
+        setManualPrimary("");
+        setManualSecondary("");
+      } else {
+        onMerged?.(0);
+      }
+    } catch {
+      onMerged?.(0);
+    } finally {
+      setMerging(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!merging) onOpenChange(v); }}>
       <DialogContent className="max-w-2xl">
@@ -102,8 +138,62 @@ export default function MergeDuplicateContactsDialog({ open, onOpenChange, conta
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-3 py-2 max-h-[60vh] overflow-y-auto">
+          {/* Manual merge toggle */}
+          <div className="rounded-lg border border-gray-200 bg-gray-50/60 p-3">
+            <button
+              type="button"
+              onClick={() => setManualMode((v) => !v)}
+              className="flex items-center justify-between w-full text-left"
+            >
+              <span className="text-sm font-medium text-gray-700">Merge two contacts manually</span>
+              <span className="text-xs text-indigo-600">{manualMode ? "Hide" : "Show"}</span>
+            </button>
+            {manualMode && (
+              <div className="mt-3 space-y-2">
+                <p className="text-xs text-gray-500">Pick any two contacts to merge — useful when names differ (e.g. maiden vs married) but it's the same person.</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Keep (primary)</label>
+                    <select
+                      value={manualPrimary}
+                      onChange={(e) => setManualPrimary(e.target.value)}
+                      className="w-full h-8 rounded-md border border-input bg-background px-2 text-xs"
+                    >
+                      <option value="">Select contact…</option>
+                      {sortedContacts.map((c) => (
+                        <option key={c.id} value={c.id}>{contactName(c)}{c.title ? ` — ${c.title}` : ""}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Merge & remove (secondary)</label>
+                    <select
+                      value={manualSecondary}
+                      onChange={(e) => setManualSecondary(e.target.value)}
+                      className="w-full h-8 rounded-md border border-input bg-background px-2 text-xs"
+                    >
+                      <option value="">Select contact…</option>
+                      {sortedContacts.map((c) => (
+                        <option key={c.id} value={c.id} disabled={c.id === manualPrimary}>{contactName(c)}{c.title ? ` — ${c.title}` : ""}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  className="w-full mt-1 gap-1.5"
+                  onClick={handleManualMerge}
+                  disabled={merging || !manualPrimary || !manualSecondary || manualPrimary === manualSecondary}
+                >
+                  {merging ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRightLeft className="w-4 h-4" />}
+                  {merging ? "Merging…" : "Merge selected"}
+                </Button>
+              </div>
+            )}
+          </div>
+
           {clusters.length === 0 ? (
-            <p className="text-sm text-gray-500 py-6 text-center">No duplicate contacts detected.</p>
+            <p className="text-sm text-gray-500 py-6 text-center">No auto-detected duplicates. Use the manual option above to merge any two contacts.</p>
           ) : (
             <>
               <p className="text-sm text-gray-600">
