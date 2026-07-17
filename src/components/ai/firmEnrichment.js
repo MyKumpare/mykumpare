@@ -1,6 +1,7 @@
 import { base44 } from "@/api/base44Client";
 import { detectDesignations } from "@/components/contacts/designationDetector";
 import { findContactDuplicates } from "@/components/contacts/contactDuplicateCheck";
+import { addressesAreExact } from "@/components/addressDuplicateCheck";
 
 const COUNTRY_NAME_TO_CODE = {
   "united states": "US", "usa": "US", "u.s.": "US", "u.s.a.": "US", "america": "US",
@@ -339,14 +340,14 @@ export function mergeEnrichmentData(existingFirm, enrichedData) {
     updatedFields.push("Firm Types");
   }
 
-  // Addresses: add only new (non-duplicate) addresses, keeping existing ones
+  // Addresses: add only new (non-duplicate) addresses, keeping existing ones.
+  // Use the robust normalized comparison so case/abbreviation/country-code
+  // differences don't let an exact duplicate slip through.
   const existingAddresses = existingFirm.addresses || [];
   const candidateAddresses = (enrichedData.addresses || []).filter((a) => a.address_line1 || a.city);
-  const existingAddrKeys = new Set(existingAddresses.map((a) => `${(a.address_line1 || "").toLowerCase()}|${(a.city || "").toLowerCase()}`));
-  const uniqueNewAddrs = candidateAddresses.filter((a) => {
-    const key = `${(a.address_line1 || "").toLowerCase()}|${(a.city || "").toLowerCase()}`;
-    return !existingAddrKeys.has(key);
-  });
+  const uniqueNewAddrs = candidateAddresses.filter((a) =>
+    !existingAddresses.some((ex) => addressesAreExact(a, ex))
+  );
   if (uniqueNewAddrs.length > 0) {
     if (existingAddresses.length === 0 && uniqueNewAddrs[0]) uniqueNewAddrs[0].is_headquarters = true;
     updates.addresses = [...existingAddresses, ...uniqueNewAddrs.map((a) => ({ ...a, id: crypto.randomUUID() }))];

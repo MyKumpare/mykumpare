@@ -28,7 +28,7 @@ import FirmPortfoliosTab from "./FirmPortfoliosTab";
 import FirmActivityLogTab from "./FirmActivityLogTab";
 import EnrichmentApprovalDialog from "./EnrichmentApprovalDialog";
 import SimilarAddressDialog from "../SimilarAddressDialog";
-import { findAddressIssues } from "../addressDuplicateCheck";
+import { findAddressIssues, addressesAreExact } from "../addressDuplicateCheck";
 
 function getCountryCodeFromCountryName(countryName) {
   if (!countryName) return "";
@@ -309,8 +309,13 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
       if (added > 0) { setFirmTypes(merged); applied.push("Firm Types"); }
     }
     if (selected.addresses?.length) {
-      const existingIds = new Set(addresses.map((a) => `${a.address_line1}|${a.city}`));
-      const newAddrs = selected.addresses.filter((a) => !existingIds.has(`${a.address_line1}|${a.city}`));
+      const newAddrs = selected.addresses.filter((a) => {
+        // Robust duplicate check (normalized street/city/state/zip/country),
+        // so case or abbreviation differences don't slip a duplicate in.
+        const hasContent = !!(a.address_line1 || a.city || a.postal_code);
+        if (!hasContent) return false;
+        return !addresses.some((ex) => addressesAreExact(a, ex));
+      });
       if (newAddrs.length > 0) {
         if (addresses.length === 0) newAddrs[0].is_headquarters = true;
         setAddresses([...addresses, ...newAddrs]);

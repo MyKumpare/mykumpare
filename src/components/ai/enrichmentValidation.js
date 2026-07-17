@@ -40,9 +40,14 @@ function stringSimilarity(a, b) {
   return 1 - levenshtein(na, nb) / maxLen;
 }
 
-function normalizeUrl(url) {
+function normalizeUrl(url, { hostOnly = false } = {}) {
   if (!url) return "";
-  return url.toLowerCase().trim().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/+$/, "");
+  let v = url.toLowerCase().trim().replace(/^https?:\/\//, "").replace(/^www\./, "");
+  // Strip query strings and fragments before comparing identity.
+  v = v.split(/[?#]/)[0];
+  if (hostOnly) v = v.split("/")[0];
+  v = v.replace(/\/+$/, "");
+  return v;
 }
 
 function normalizeText(text) {
@@ -65,12 +70,34 @@ export function compareScalar(field, existingValue, incomingValue) {
   if (!incoming) return { status: "new", similarity: 0, existing };
 
   if (URL_FIELDS.has(field)) {
-    const a = normalizeUrl(existing);
-    const b = normalizeUrl(incoming);
-    if (!a) return { status: "new", similarity: 0, existing };
-    if (a === b) return { status: "exact", similarity: 1, existing };
-    const sim = stringSimilarity(a, b);
-    return { status: sim >= 0.85 ? "similar" : "new", similarity: sim, existing };
+    // Website identity is the domain (host): locale/marketing paths like
+    // /en-us should not count as a different site. Compare by host.
+    if (field === "website") {
+      const a = normalizeUrl(existing, { hostOnly: true });
+      const b = normalizeUrl(incoming, { hostOnly: true });
+      if (!a) return { status: "new", similarity: 0, existing };
+      if (a === b) return { status: "exact", similarity: 1, existing };
+      const sim = stringSimilarity(a, b);
+      return { status: sim >= 0.85 ? "similar" : "new", similarity: sim, existing };
+    }
+    // LinkedIn identity is host + company slug (path); strip query/fragment.
+    if (field === "linkedin_url") {
+      const a = normalizeUrl(existing);
+      const b = normalizeUrl(incoming);
+      if (!a) return { status: "new", similarity: 0, existing };
+      if (a === b) return { status: "exact", similarity: 1, existing };
+      const sim = stringSimilarity(a, b);
+      return { status: sim >= 0.85 ? "similar" : "new", similarity: sim, existing };
+    }
+    // Logo URLs are re-hosted on each enrichment, so the stored and incoming
+    // URLs are always different even for the same image. We cannot verify
+    // image equality from URLs, so if the firm already has a logo, treat the
+    // incoming one as "already exists" (do not flag as new / do not overwrite).
+    if (field === "logo_url") {
+      const a = normalizeUrl(existing);
+      if (!a) return { status: "new", similarity: 0, existing };
+      return { status: "exact", similarity: 1, existing };
+    }
   }
 
   if (field === "year_founded") {

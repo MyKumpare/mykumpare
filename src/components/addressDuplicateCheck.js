@@ -21,13 +21,59 @@ function normalizeStreet(s) {
   return v.replace(/\s+/g, " ").trim();
 }
 
+// Map common country names → ISO 2-letter code so "United States" and "US"
+// are treated as the same value when comparing addresses.
+const COUNTRY_NAME_TO_CODE = {
+  "united states": "US", "usa": "US", "u.s.": "US", "u.s.a.": "US", "america": "US",
+  "canada": "CA",
+  "united kingdom": "GB", "uk": "GB", "u.k.": "GB", "britain": "GB", "england": "GB",
+  "australia": "AU", "germany": "DE", "france": "FR", "japan": "JP",
+  "singapore": "SG", "hong kong": "HK", "switzerland": "CH",
+  "netherlands": "NL", "holland": "NL", "sweden": "SE", "norway": "NO",
+  "denmark": "DK", "finland": "FI", "ireland": "IE", "italy": "IT",
+  "spain": "ES", "portugal": "PT", "brazil": "BR", "mexico": "MX",
+  "india": "IN", "china": "CN", "south korea": "KR", "korea": "KR",
+  "new zealand": "NZ",
+};
+
+function normalizeCountryValue(v) {
+  const key = norm(v);
+  if (!key) return "";
+  if (key.length === 2) return key.toUpperCase();
+  return COUNTRY_NAME_TO_CODE[key] || key;
+}
+
+// Map common US/CA state names → 2-letter code so "New York" and "NY" match.
+const STATE_NAME_TO_CODE = {
+  "alabama": "AL", "alaska": "AK", "arizona": "AZ", "arkansas": "AR",
+  "california": "CA", "colorado": "CO", "connecticut": "CT", "delaware": "DE",
+  "florida": "FL", "georgia": "GA", "hawaii": "HI", "idaho": "ID",
+  "illinois": "IL", "indiana": "IN", "iowa": "IA", "kansas": "KS",
+  "kentucky": "KY", "louisiana": "LA", "maine": "ME", "maryland": "MD",
+  "massachusetts": "MA", "michigan": "MI", "minnesota": "MN", "mississippi": "MS",
+  "missouri": "MO", "montana": "MT", "nebraska": "NE", "nevada": "NV",
+  "new hampshire": "NH", "new jersey": "NJ", "new mexico": "NM", "new york": "NY",
+  "north carolina": "NC", "north dakota": "ND", "ohio": "OH", "oklahoma": "OK",
+  "oregon": "OR", "pennsylvania": "PA", "rhode island": "RI", "south carolina": "SC",
+  "south dakota": "SD", "tennessee": "TN", "texas": "TX", "utah": "UT",
+  "vermont": "VT", "virginia": "VA", "washington": "WA", "west virginia": "WV",
+  "wisconsin": "WI", "wyoming": "WY", "district of columbia": "DC",
+};
+
+function normalizeStateValue(v) {
+  const key = norm(v);
+  if (!key) return "";
+  if (key.length === 2) return key.toUpperCase();
+  return STATE_NAME_TO_CODE[key] || key;
+}
+
 function addressKey(a) {
   return [
     normalizeStreet(a.address_line1),
     norm(a.city),
-    norm(a.state),
+    normalizeStateValue(a.state),
     norm(a.postal_code),
-    norm(a.country),
+    normalizeCountryValue(a.country),
   ].join("|");
 }
 
