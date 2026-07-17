@@ -499,6 +499,12 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               onApply={handleApplyEnrichment}
               onClose={() => setShowEnrichment(false)}
               onLoadingChange={setEnrichmentLoading}
+              existingFirm={editingFirm || {
+                name: firmName, logo_url: logoUrl, description, website, email,
+                linkedin_url: linkedinUrl, year_founded: yearFounded ? parseInt(yearFounded) : null,
+                firm_types: firmTypes, addresses, phones,
+              }}
+              existingContacts={allContacts}
             />
           )}
 

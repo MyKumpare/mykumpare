@@ -1,102 +1,155 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, Globe, Check, X, Sparkles } from "lucide-react";
+import { Loader2, Globe, Check, X, Sparkles, AlertTriangle, ShieldCheck } from "lucide-react";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+} from "@/components/ui/dialog";
 import { enrichFirmFromWeb } from "../ai/firmEnrichment";
+import { validateEnrichment } from "../ai/enrichmentValidation";
 
-function FieldRow({ label, value, accepted, onToggle }) {
+// ─── Status badge ───
+function StatusBadge({ status }) {
+  if (status === "exact") {
+    return (
+      <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+        <X className="w-2.5 h-2.5" /> Already exists
+      </span>
+    );
+  }
+  if (status === "similar") {
+    return (
+      <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">
+        <AlertTriangle className="w-2.5 h-2.5" /> Similar to existing
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-green-700 bg-green-100 px-1.5 py-0.5 rounded">
+      <ShieldCheck className="w-2.5 h-2.5" /> New
+    </span>
+  );
+}
+
+// ─── Row wrappers (now accept a `status` + disabled state) ───
+
+function RowShell({ label, display, accepted, onToggle, status, children }) {
+  const isDuplicate = status === "exact";
+  return (
+    <div className={`flex items-start gap-2 py-1.5 px-2 rounded-md border border-transparent hover:border-gray-100 ${isDuplicate ? "bg-gray-50 opacity-60" : "hover:bg-gray-50"}`}>
+      <Checkbox checked={isDuplicate ? false : accepted} onCheckedChange={onToggle} disabled={isDuplicate} className="mt-0.5" />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">{label}</p>
+          <StatusBadge status={status} />
+        </div>
+        {children || <p className="text-sm text-gray-800 break-words">{display}</p>}
+      </div>
+    </div>
+  );
+}
+
+function FieldRow({ label, value, accepted, onToggle, status }) {
   if (value == null || value === "" || (Array.isArray(value) && value.length === 0)) return null;
   const display = Array.isArray(value) ? value.join(", ") : typeof value === "object" ? JSON.stringify(value) : String(value);
-  if (!display.trim()) return null;
-
-  return (
-    <div className="flex items-start gap-2 py-1.5 px-2 rounded-md hover:bg-gray-50 border border-transparent hover:border-gray-100">
-      <Checkbox checked={accepted} onCheckedChange={onToggle} className="mt-0.5" />
-      <div className="flex-1 min-w-0">
-        <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">{label}</p>
-        <p className="text-sm text-gray-800 break-words">{display.length > 120 ? display.substring(0, 120) + "..." : display}</p>
-      </div>
-    </div>
-  );
+  if (!display || !display.trim()) return null;
+  const truncated = display.length > 120 ? display.substring(0, 120) + "..." : display;
+  return <RowShell label={label} display={truncated} accepted={accepted} onToggle={onToggle} status={status} />;
 }
 
-function AddressRow({ address, index, accepted, onToggle }) {
+function AddressRow({ address, index, accepted, onToggle, status }) {
   if (!address || (!address.address_line1 && !address.city)) return null;
   const parts = [address.address_line1, address.address_line2, address.city, address.state, address.postal_code, address.country].filter(Boolean);
-
   return (
-    <div className="flex items-start gap-2 py-1.5 px-2 rounded-md hover:bg-gray-50 border border-transparent hover:border-gray-100">
-      <Checkbox checked={accepted} onCheckedChange={onToggle} className="mt-0.5" />
-      <div className="flex-1 min-w-0">
-        <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Address {address.is_headquarters ? "(HQ)" : `#${index + 1}`}</p>
-        <p className="text-sm text-gray-800 break-words">{parts.join(", ")}</p>
-      </div>
-    </div>
+    <RowShell label={`Address ${address.is_headquarters ? "(HQ)" : `#${index + 1}`}`} accepted={accepted} onToggle={onToggle} status={status}>
+      <p className="text-sm text-gray-800 break-words">{parts.join(", ")}</p>
+    </RowShell>
   );
 }
 
-function PhoneRow({ phone, index, accepted, onToggle }) {
+function PhoneRow({ phone, index, accepted, onToggle, status }) {
   if (!phone) return null;
   const hasParts = phone.area_code && phone.number_mid && phone.number_last;
   const display = hasParts
     ? `+${phone.country_code || "1"} (${phone.area_code}) ${phone.number_mid}-${phone.number_last}`
     : phone.country_code || "";
   if (!display.trim()) return null;
-
-  return (
-    <div className="flex items-start gap-2 py-1.5 px-2 rounded-md hover:bg-gray-50 border border-transparent hover:border-gray-100">
-      <Checkbox checked={accepted} onCheckedChange={onToggle} className="mt-0.5" />
-      <div className="flex-1 min-w-0">
-        <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Phone {phone.phone_type ? `(${phone.phone_type})` : `#${index + 1}`}</p>
-        <p className="text-sm text-gray-800">{display}</p>
-      </div>
-    </div>
-  );
+  return <RowShell label={`Phone ${phone.phone_type ? `(${phone.phone_type})` : `#${index + 1}`}`} display={display} accepted={accepted} onToggle={onToggle} status={status} />;
 }
 
-function LogoRow({ logoUrl, accepted, onToggle }) {
+function LogoRow({ logoUrl, accepted, onToggle, status }) {
   if (!logoUrl) return null;
   return (
-    <div className="flex items-start gap-2 py-1.5 px-2 rounded-md hover:bg-gray-50 border border-transparent hover:border-gray-100">
-      <Checkbox checked={accepted} onCheckedChange={onToggle} className="mt-0.5" />
-      <div className="flex-1 min-w-0 flex items-center gap-2">
+    <RowShell label="Firm Logo" accepted={accepted} onToggle={onToggle} status={status}>
+      <div className="flex items-center gap-2">
         <img src={logoUrl} alt="Logo" className="w-10 h-10 object-contain rounded border border-gray-200 flex-shrink-0" onError={(e) => { e.target.style.display = 'none'; }} />
-        <div className="min-w-0">
-          <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Firm Logo</p>
-          <p className="text-xs text-gray-500 truncate">{logoUrl}</p>
-        </div>
+        <p className="text-xs text-gray-500 truncate">{logoUrl}</p>
       </div>
-    </div>
+    </RowShell>
   );
 }
 
-function PersonRow({ person, index, accepted, onToggle }) {
+function PersonRow({ person, index, accepted, onToggle, status }) {
   if (!person || (!person.first_name && !person.last_name)) return null;
   const fullName = [person.first_name, person.last_name].filter(Boolean).join(" ");
   const bio = person.biography || "";
   return (
-    <div className="flex items-start gap-2 py-1.5 px-2 rounded-md hover:bg-gray-50 border border-transparent hover:border-gray-100">
-      <Checkbox checked={accepted} onCheckedChange={onToggle} className="mt-0.5" />
+    <RowShell label={`Person ${status === "exact" ? "(existing)" : `#${index + 1}`}`} accepted={accepted} onToggle={onToggle} status={status}>
       {person.photo_url ? (
-        <img src={person.photo_url} alt={fullName} className="w-8 h-8 rounded-full object-cover border border-gray-200 flex-shrink-0 mt-0.5" onError={(e) => { e.target.style.display = 'none'; }} />
+        <img src={person.photo_url} alt={fullName} className="w-8 h-8 rounded-full object-cover border border-gray-200 flex-shrink-0 mb-1" onError={(e) => { e.target.style.display = 'none'; }} />
       ) : null}
-      <div className="flex-1 min-w-0">
-        <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Person #{index + 1}</p>
-        <p className="text-sm text-gray-800 font-medium">{fullName}{person.title ? ` — ${person.title}` : ""}</p>
-        {person.email && <p className="text-xs text-gray-500">{person.email}</p>}
-        {person.phone && <p className="text-xs text-gray-500">{person.phone}</p>}
-        {person.linkedin_url && <p className="text-xs text-indigo-500 truncate">{person.linkedin_url}</p>}
-        {bio && <p className="text-xs text-gray-600 mt-0.5">{bio.length > 100 ? bio.substring(0, 100) + "..." : bio}</p>}
-      </div>
-    </div>
+      <p className="text-sm text-gray-800 font-medium">{fullName}{person.title ? ` — ${person.title}` : ""}</p>
+      {person.email && <p className="text-xs text-gray-500">{person.email}</p>}
+      {person.phone && <p className="text-xs text-gray-500">{person.phone}</p>}
+      {person.linkedin_url && <p className="text-xs text-indigo-500 truncate">{person.linkedin_url}</p>}
+      {bio && <p className="text-xs text-gray-600 mt-0.5">{bio.length > 100 ? bio.substring(0, 100) + "..." : bio}</p>}
+    </RowShell>
   );
 }
 
-export default function FirmEnrichmentPanel({ firmName, website, onApply, onClose, onLoadingChange }) {
+// ─── Similar-items confirmation dialog ───
+function SimilarConfirmDialog({ open, onOpenChange, items, onConfirm }) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-amber-500" />
+            Similar to existing data
+          </DialogTitle>
+          <DialogDescription>
+            The following items look similar to data you already have. Would you like to add them?
+            Exact duplicates are already blocked automatically.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2 py-2 max-h-[45vh] overflow-y-auto">
+          {items.map((it, i) => (
+            <div key={i} className="rounded-lg border border-amber-200 bg-amber-50 p-2.5">
+              <p className="text-xs font-semibold text-amber-700">{it.label}</p>
+              {it.detail && <p className="text-xs text-gray-600 mt-0.5">{it.detail}</p>}
+            </div>
+          ))}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Skip similar</Button>
+          <Button className="bg-amber-600 hover:bg-amber-700 text-white" onClick={() => { onConfirm(); onOpenChange(false); }}>
+            Accept &amp; add
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Main panel ───
+
+export default function FirmEnrichmentPanel({ firmName, website, onApply, onClose, onLoadingChange, existingFirm, existingContacts = [] }) {
   const [loading, setLoading] = useState(false);
   const [enrichedData, setEnrichedData] = useState(null);
   const [error, setError] = useState(null);
   const [acceptedFields, setAcceptedFields] = useState({});
+  const [statusMap, setStatusMap] = useState({});
+  const [similarConfirm, setSimilarConfirm] = useState(null);
 
   const handleFetch = async () => {
     setLoading(true);
@@ -107,17 +160,17 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
       const data = await enrichFirmFromWeb(firmName, website);
       setEnrichedData(data);
 
+      // Run global duplicate validation against existing firm + contacts.
+      const { items } = validateEnrichment(data, existingFirm || {}, existingContacts);
+      const smap = {};
       const initial = {};
-      if (data.description) initial.description = true;
-      if (data.website) initial.website = true;
-      if (data.email) initial.email = true;
-      if (data.linkedin_url) initial.linkedin_url = true;
-      if (data.year_founded) initial.year_founded = true;
-      if (data.firm_types?.length) initial.firm_types = true;
-      (data.addresses || []).forEach((_, i) => (initial[`address_${i}`] = true));
-      (data.phones || []).forEach((_, i) => (initial[`phone_${i}`] = true));
-      if (data.logo_url) initial.logo_url = true;
-      (data.people || []).forEach((_, i) => (initial[`person_${i}`] = true));
+      for (const it of items) {
+        smap[it.key] = it.status;
+        // Exact duplicates are blocked (forced off). New + similar default on so
+        // the user can review; similar items prompt for explicit confirmation on apply.
+        initial[it.key] = it.status !== "exact";
+      }
+      setStatusMap(smap);
       setAcceptedFields(initial);
     } catch (err) {
       const msg = err.message || "Failed to fetch data from the web";
@@ -129,36 +182,74 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
   };
 
   const toggleField = (key) => {
+    if (statusMap[key] === "exact") return; // blocked
     setAcceptedFields((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const handleApply = () => {
+  const buildSelected = () => {
     const selected = {};
-    if (enrichedData) {
-      if (acceptedFields.description && enrichedData.description) selected.description = enrichedData.description;
-      if (acceptedFields.website && enrichedData.website) selected.website = enrichedData.website;
-      if (acceptedFields.email && enrichedData.email) selected.email = enrichedData.email;
-      if (acceptedFields.linkedin_url && enrichedData.linkedin_url) selected.linkedin_url = enrichedData.linkedin_url;
-      if (acceptedFields.year_founded && enrichedData.year_founded) selected.year_founded = enrichedData.year_founded;
-      if (acceptedFields.firm_types && enrichedData.firm_types?.length) selected.firm_types = enrichedData.firm_types;
-      const selAddresses = (enrichedData.addresses || [])
-        .filter((_, i) => acceptedFields[`address_${i}`])
-        .map((a) => ({ ...a, id: crypto.randomUUID() }));
-      if (selAddresses.length) selected.addresses = selAddresses;
-      const selPhones = (enrichedData.phones || [])
-        .filter((_, i) => acceptedFields[`phone_${i}`])
-        .map((p) => ({ ...p, id: crypto.randomUUID() }));
-      if (selPhones.length) selected.phones = selPhones;
-      if (acceptedFields.logo_url && enrichedData.logo_url) selected.logo_url = enrichedData.logo_url;
-      const selPeople = (enrichedData.people || [])
-        .filter((_, i) => acceptedFields[`person_${i}`])
-        .filter((p) => p.first_name || p.last_name);
-      if (selPeople.length) selected.people = selPeople;
-    }
-    onApply(selected);
+    if (!enrichedData) return selected;
+    if (acceptedFields.description && enrichedData.description) selected.description = enrichedData.description;
+    if (acceptedFields.website && enrichedData.website) selected.website = enrichedData.website;
+    if (acceptedFields.email && enrichedData.email) selected.email = enrichedData.email;
+    if (acceptedFields.linkedin_url && enrichedData.linkedin_url) selected.linkedin_url = enrichedData.linkedin_url;
+    if (acceptedFields.year_founded && enrichedData.year_founded) selected.year_founded = enrichedData.year_founded;
+    if (acceptedFields.firm_types && enrichedData.firm_types?.length) selected.firm_types = enrichedData.firm_types;
+    const selAddresses = (enrichedData.addresses || [])
+      .filter((_, i) => acceptedFields[`address_${i}`])
+      .map((a) => ({ ...a, id: crypto.randomUUID() }));
+    if (selAddresses.length) selected.addresses = selAddresses;
+    const selPhones = (enrichedData.phones || [])
+      .filter((_, i) => acceptedFields[`phone_${i}`])
+      .map((p) => ({ ...p, id: crypto.randomUUID() }));
+    if (selPhones.length) selected.phones = selPhones;
+    if (acceptedFields.logo_url && enrichedData.logo_url) selected.logo_url = enrichedData.logo_url;
+    const selPeople = (enrichedData.people || [])
+      .filter((_, i) => acceptedFields[`person_${i}`])
+      .filter((p) => p.first_name || p.last_name);
+    if (selPeople.length) selected.people = selPeople;
+    return selected;
   };
 
-  const hasAccepted = Object.values(acceptedFields).some(Boolean);
+  const selectedSimilar = useMemo(() => {
+    if (!enrichedData) return [];
+    const out = [];
+    const push = (key, label, detail) => {
+      if (acceptedFields[key] && statusMap[key] === "similar") out.push({ key, label, detail });
+    };
+    if (acceptedFields.logo_url && statusMap.logo_url === "similar") out.push({ key: "logo_url", label: "Firm Logo", detail: enrichedData.logo_url });
+    if (acceptedFields.description && statusMap.description === "similar") out.push({ key: "description", label: "Description", detail: (enrichedData.description || "").substring(0, 100) + "..." });
+    if (acceptedFields.website && statusMap.website === "similar") out.push({ key: "website", label: "Website", detail: enrichedData.website });
+    if (acceptedFields.email && statusMap.email === "similar") out.push({ key: "email", label: "Email", detail: enrichedData.email });
+    if (acceptedFields.linkedin_url && statusMap.linkedin_url === "similar") out.push({ key: "linkedin_url", label: "LinkedIn", detail: enrichedData.linkedin_url });
+    if (acceptedFields.year_founded && statusMap.year_founded === "similar") out.push({ key: "year_founded", label: "Year Founded", detail: String(enrichedData.year_founded) });
+    if (acceptedFields.firm_types && statusMap.firm_types === "similar") out.push({ key: "firm_types", label: "Firm Types", detail: (enrichedData.firm_types || []).join(", ") });
+    (enrichedData.addresses || []).forEach((a, i) => push(`address_${i}`, `Address: ${[a.address_line1, a.city].filter(Boolean).join(", ")}`, null));
+    (enrichedData.phones || []).forEach((p, i) => push(`phone_${i}`, `Phone: ${p.country_code || ""} ${p.area_code || ""}${p.number_mid || ""}${p.number_last || ""}`, null));
+    (enrichedData.people || []).forEach((person, i) => {
+      if (acceptedFields[`person_${i}`] && statusMap[`person_${i}`] === "similar") {
+        const fullName = [person.first_name, person.last_name].filter(Boolean).join(" ");
+        out.push({ key: `person_${i}`, label: `Person: ${fullName}${person.title ? ` — ${person.title}` : ""}`, detail: person.email || "" });
+      }
+    });
+    return out;
+  }, [acceptedFields, statusMap, enrichedData]);
+
+  const handleApply = () => {
+    // If the user has selected any "similar" items, prompt for explicit
+    // confirmation before adding them (standard global validation process).
+    if (selectedSimilar.length > 0) {
+      setSimilarConfirm({ items: selectedSimilar });
+      return;
+    }
+    onApply(buildSelected());
+  };
+
+  const handleConfirmSimilar = () => {
+    onApply(buildSelected());
+  };
+
+  const hasAccepted = Object.entries(acceptedFields).some(([k, v]) => v && statusMap[k] !== "exact");
 
   if (!enrichedData && !loading && !error) {
     return (
@@ -168,7 +259,7 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
           <p className="text-sm font-medium text-indigo-700">Auto-fill from Web</p>
         </div>
         <p className="text-xs text-gray-600">
-          Search the web for <strong>{firmName}</strong>'s public website and automatically fill in fields like logo, description, address, phone, LinkedIn, key personnel, and more.
+          Search the web for <strong>{firmName}</strong>'s public website and automatically fill in fields like logo, description, address, phone, LinkedIn, key personnel, and more. Exact duplicates are blocked automatically; similar data will ask for your confirmation.
         </p>
         <div className="flex gap-2">
           <Button size="sm" onClick={handleFetch} className="h-8 text-xs bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5">
@@ -239,8 +330,19 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
     );
   }
 
+  const exactCount = Object.values(statusMap).filter((s) => s === "exact").length;
+  const similarCount = Object.values(statusMap).filter((s) => s === "similar").length;
+
   return (
     <div className="rounded-lg border border-indigo-200 bg-white p-3 space-y-2">
+      {similarConfirm && (
+        <SimilarConfirmDialog
+          open={!!similarConfirm}
+          onOpenChange={(v) => { if (!v) setSimilarConfirm(null); }}
+          items={similarConfirm.items}
+          onConfirm={handleConfirmSimilar}
+        />
+      )}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Check className="w-4 h-4 text-green-600" />
@@ -251,22 +353,29 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
         </button>
       </div>
 
+      {(exactCount > 0 || similarCount > 0) && (
+        <div className="flex items-center gap-3 text-[11px] text-gray-500 flex-wrap">
+          {exactCount > 0 && <span className="inline-flex items-center gap-1"><X className="w-3 h-3" /> {exactCount} exact duplicate(s) blocked</span>}
+          {similarCount > 0 && <span className="inline-flex items-center gap-1 text-amber-600"><AlertTriangle className="w-3 h-3" /> {similarCount} similar — needs review</span>}
+        </div>
+      )}
+
       <div className="max-h-60 overflow-y-auto space-y-0.5">
-        <LogoRow logoUrl={enrichedData.logo_url} accepted={acceptedFields.logo_url} onToggle={() => toggleField("logo_url")} />
-        <FieldRow label="Description" value={enrichedData.description} accepted={acceptedFields.description} onToggle={() => toggleField("description")} />
-        <FieldRow label="Website" value={enrichedData.website} accepted={acceptedFields.website} onToggle={() => toggleField("website")} />
-        <FieldRow label="Email" value={enrichedData.email} accepted={acceptedFields.email} onToggle={() => toggleField("email")} />
-        <FieldRow label="LinkedIn" value={enrichedData.linkedin_url} accepted={acceptedFields.linkedin_url} onToggle={() => toggleField("linkedin_url")} />
-        <FieldRow label="Year Founded" value={enrichedData.year_founded} accepted={acceptedFields.year_founded} onToggle={() => toggleField("year_founded")} />
-        <FieldRow label="Firm Types" value={enrichedData.firm_types} accepted={acceptedFields.firm_types} onToggle={() => toggleField("firm_types")} />
+        <LogoRow logoUrl={enrichedData.logo_url} accepted={acceptedFields.logo_url} onToggle={() => toggleField("logo_url")} status={statusMap.logo_url} />
+        <FieldRow label="Description" value={enrichedData.description} accepted={acceptedFields.description} onToggle={() => toggleField("description")} status={statusMap.description} />
+        <FieldRow label="Website" value={enrichedData.website} accepted={acceptedFields.website} onToggle={() => toggleField("website")} status={statusMap.website} />
+        <FieldRow label="Email" value={enrichedData.email} accepted={acceptedFields.email} onToggle={() => toggleField("email")} status={statusMap.email} />
+        <FieldRow label="LinkedIn" value={enrichedData.linkedin_url} accepted={acceptedFields.linkedin_url} onToggle={() => toggleField("linkedin_url")} status={statusMap.linkedin_url} />
+        <FieldRow label="Year Founded" value={enrichedData.year_founded} accepted={acceptedFields.year_founded} onToggle={() => toggleField("year_founded")} status={statusMap.year_founded} />
+        <FieldRow label="Firm Types" value={enrichedData.firm_types} accepted={acceptedFields.firm_types} onToggle={() => toggleField("firm_types")} status={statusMap.firm_types} />
         {(enrichedData.addresses || []).map((addr, i) => (
-          <AddressRow key={`addr-${i}`} address={addr} index={i} accepted={acceptedFields[`address_${i}`]} onToggle={() => toggleField(`address_${i}`)} />
+          <AddressRow key={`addr-${i}`} address={addr} index={i} accepted={acceptedFields[`address_${i}`]} onToggle={() => toggleField(`address_${i}`)} status={statusMap[`address_${i}`]} />
         ))}
         {(enrichedData.phones || []).map((phone, i) => (
-          <PhoneRow key={`ph-${i}`} phone={phone} index={i} accepted={acceptedFields[`phone_${i}`]} onToggle={() => toggleField(`phone_${i}`)} />
+          <PhoneRow key={`ph-${i}`} phone={phone} index={i} accepted={acceptedFields[`phone_${i}`]} onToggle={() => toggleField(`phone_${i}`)} status={statusMap[`phone_${i}`]} />
         ))}
         {(enrichedData.people || []).map((person, i) => (
-          <PersonRow key={`ppl-${i}`} person={person} index={i} accepted={acceptedFields[`person_${i}`]} onToggle={() => toggleField(`person_${i}`)} />
+          <PersonRow key={`ppl-${i}`} person={person} index={i} accepted={acceptedFields[`person_${i}`]} onToggle={() => toggleField(`person_${i}`)} status={statusMap[`person_${i}`]} />
         ))}
       </div>
 
