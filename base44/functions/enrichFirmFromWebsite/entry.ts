@@ -179,7 +179,7 @@ async function extractBiographyFromPage(
 
 Person name: "${personName}"
 
-Below is the text content of their profile/biography page. Locate the section describing THIS person (often near their name, under a heading like "Biography", "About", "Profile", or "Overview"). Extract the COMPLETE biography text for this person — copy it verbatim, do not summarize or paraphrase. Include the full paragraphs. If the page lists multiple people, extract only the biography belonging to "${personName}". If no biography text is found for this person, return an empty string.
+Below is the text content of their profile/biography page. Locate the section describing THIS person (often near their name, under a heading like "Biography", "About", "Profile", or "Overview"). Extract the COMPLETE biography text for this person. You MUST copy the biography VERBATIM — do not summarize, do not paraphrase, do not abbreviate, and do not omit any sentences or paragraphs. Include EVERY paragraph of the biography in full. If the page lists multiple people, extract only the biography belonging to "${personName}". If no biography text is found for this person, return an empty string.
 
 --- PAGE CONTENT ---
 ${pageText.substring(0, 20000)}
@@ -236,23 +236,93 @@ function discoverBioUrl(
   return '';
 }
 
-// For every person with an individual profile page (bio_url), fetch that page
-// and fill in or replace the biography. The listing page often only shows a
-// short snippet (or nothing), so we always pull the authoritative full bio from
-// the linked profile page and prefer it when it is more complete than any
-// snippet the first pass returned. If the LLM didn't populate bio_url, attempt
-// to discover it from the fetched page content. Bounded concurrency + capped
-// total to keep the function within time limits.
+// Fallback: when the listing page doesn't link to individual bio pages (e.g.
+// Divi et_clickable cards, JS-rendered team grids), use web search to discover
+// each person's individual profile/biography page URL on the firm's own domain.
+// A single batched search for all missing-bio people keeps this within time
+// limits. Returns a map of lowercased full name -> bio page URL.
+async function discoverBioUrlsViaSearch(
+  base44: any,
+  people: any[],
+  website: string,
+): Promise<Map<string, string>> {
+  const result = new Map<string, string>();
+  if (!people || people.length === 0 || !website) return result;
+  let domain = '';
+  try { domain = new URL(website).host.toLowerCase(); } catch { /* ignore */ }
+  const names = people
+    .map((p) => [p.first_name, p.last_name].filter(Boolean).join(' ').trim())
+    .filter(Boolean);
+  if (names.length === 0) return result;
+  try {
+    const res = await base44.integrations.Core.InvokeLLM({
+      prompt: `Search the web for the individual biography/profile pages of the following people, who work at the firm whose website is ${domain}.
+
+For EACH person, find the full URL of their individual biography or profile page ON THE FIRM'S OWN WEBSITE (${domain}). Only return URLs that contain "${domain}" — do NOT return LinkedIn, RocketReach, or any third-party URLs. If you cannot find an individual bio page on ${domain} for a person, leave their URL empty.
+
+People:
+${names.map((n, i) => `${i + 1}. ${n}`).join('\n')}
+
+Return a JSON object with a "results" array, where each item has "name" (the person's name) and "bio_url" (the full URL on ${domain}, or empty string if not found).`,
+      add_context_from_internet: true,
+      response_json_schema: {
+        type: 'object',
+        properties: {
+          results: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                name: { type: 'string' },
+                bio_url: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+    });
+    const results = res?.results || [];
+    for (const r of results) {
+      const url = (r.bio_url || '').trim();
+      const name = (r.name || '').trim().toLowerCase();
+      if (url && /^https?:\/\/.+/.test(url) && name) {
+        // Only accept URLs on the firm's own domain.
+        let urlHost = '';
+        try { urlHost = new URL(url).host.toLowerCase(); } catch { /* ignore */ }
+        if (!domain || urlHost === domain || urlHost.endsWith('.' + domain)) {
+          result.set(name, url);
+        }
+      }
+    }
+  } catch {
+    // ignore — fall back to link-based discovery only
+  }
+  return result;
+}
+
+// For every person whose biography is missing (or only a short snippet on the
+// listing page), fetch their individual profile page and extract the FULL
+// biography verbatim. Bio page URLs are resolved in priority order: (1) the
+// LLM-provided bio_url from the listing page, (2) an internal [LINK: ...]
+// marker near the person's name, (3) a web-search fallback for sites that
+// don't expose individual bio page links in their HTML. Bounded concurrency +
+// capped total to keep the function within time limits.
 async function enrichMissingBiographies(
   base44: any,
   people: any[],
   pageContents: { url: string; text: string }[],
+  website: string,
 ): Promise<void> {
-  // Build the candidate list: anyone who could have a profile page. We
-  // discover bio_url for people missing one, so we don't pre-filter on bio_url.
-  const MAX = 15;
-  const CONCURRENCY = 4;
-  const queue = people.slice(0, MAX);
+  // Only process people who don't already have a biography — people whose bio
+  // was captured from the listing page (e.g. Tina) are skipped to save time.
+  const MAX = 12;
+  const CONCURRENCY = 6;
+  const queue = people.filter((p) => !(p.biography || '').trim()).slice(0, MAX);
+  if (queue.length === 0) return;
+
+  // One batched web search to discover individual bio page URLs for everyone
+  // in the queue (for sites that don't link to them in the listing HTML).
+  const searchResults = await discoverBioUrlsViaSearch(base44, queue, website);
 
   let cursor = 0;
   const worker = async () => {
@@ -260,21 +330,20 @@ async function enrichMissingBiographies(
       const i = cursor++;
       const person = queue[i];
       const fullName = [person.first_name, person.last_name].filter(Boolean).join(' ').trim();
-      // Resolve a bio URL: use the LLM-provided one, otherwise discover it.
+      // Resolve a bio URL: (1) LLM-provided, (2) link-marker discovery, (3) web search.
       let bioUrl = person.bio_url || '';
       if (!bioUrl) {
         bioUrl = discoverBioUrl(pageContents, person.first_name, person.last_name);
       }
+      if (!bioUrl) {
+        bioUrl = searchResults.get(fullName.toLowerCase()) || '';
+      }
       if (!bioUrl) continue;
       const bio = await extractBiographyFromPage(base44, fullName, bioUrl);
-      // Replace the (possibly truncated) snippet with the authoritative full
-      // biography from the profile page whenever it is non-empty and at least
-      // as complete as what the listing page returned.
+      // The individual profile page is the authoritative source — always use
+      // its full biography when non-empty (it is never a summary).
       if (bio) {
-        const existing = (person.biography || '').trim();
-        if (!existing || bio.length >= existing.length) {
-          person.biography = bio;
-        }
+        person.biography = bio;
       }
     }
   };
@@ -493,7 +562,7 @@ IMPORTANT:
     // Many firm "people" pages only show name + title on cards; the full bio lives
     // on a separate profile page linked from each card. For any person missing a
     // biography but with a bio_url, fetch that page and extract the biography.
-    await enrichMissingBiographies(base44, enrichedData.people || [], pageContents);
+    await enrichMissingBiographies(base44, enrichedData.people || [], pageContents, website);
 
     // Rehost images
     try {
