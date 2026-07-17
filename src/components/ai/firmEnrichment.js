@@ -444,9 +444,21 @@ export function computeContactUpdates(existingContact, person, firmId) {
     }
   }
 
-  // Biography: fill if empty; flag conflict if differs
+  // Biography: fill if empty (or just a name-stub); flag conflict only when a
+  // real existing bio differs. The Phase 1 extraction sometimes stores a
+  // person's name as their "biography" when the listing page had no bio —
+  // that stub is not a real biography and should be auto-replaced.
+  const isStubBio = (bio) => {
+    const b = (bio || "").trim();
+    if (!b) return true;
+    if (b.length < 60) {
+      const first = (existingContact.first_name || "").trim().toLowerCase();
+      if (first && b.toLowerCase().startsWith(first)) return true;
+    }
+    return false;
+  };
   if (person.biography) {
-    if (!existingContact.biography) {
+    if (isStubBio(existingContact.biography)) {
       updates.biography = person.biography;
       updatedFields.push("Biography");
     } else if (norm(existingContact.biography) !== norm(person.biography)) {

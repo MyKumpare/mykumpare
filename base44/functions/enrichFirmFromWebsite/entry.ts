@@ -313,11 +313,23 @@ async function enrichMissingBiographies(
   pageContents: { url: string; text: string }[],
   website: string,
 ): Promise<void> {
-  // Only process people who don't already have a biography — people whose bio
-  // was captured from the listing page (e.g. Tina) are skipped to save time.
+  // Only process people who don't already have a REAL biography. The Phase 1
+  // extraction sometimes puts a person's name (e.g. "Jerrod Stoller" or
+  // "Corey Moore, CFA") in the biography field when the listing page has no
+  // bio — these name-only stubs must be treated as "missing" so the real bio
+  // is fetched from their individual profile page. Real bios are paragraphs.
   const MAX = 12;
   const CONCURRENCY = 6;
-  const queue = people.filter((p) => !(p.biography || '').trim()).slice(0, MAX);
+  const isStubBio = (p: any): boolean => {
+    const bio = (p.biography || '').trim();
+    if (!bio) return true;
+    if (bio.length < 60) {
+      const first = (p.first_name || '').trim().toLowerCase();
+      if (first && bio.toLowerCase().startsWith(first)) return true;
+    }
+    return false;
+  };
+  const queue = people.filter(isStubBio).slice(0, MAX);
   if (queue.length === 0) return;
 
   // One batched web search to discover individual bio page URLs for everyone
