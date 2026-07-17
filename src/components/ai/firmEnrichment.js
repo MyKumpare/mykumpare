@@ -542,12 +542,35 @@ export async function createFirmFromEnrichment(enrichedData) {
 
   const createdFirm = await base44.entities.Firm.create(firmData);
 
-  // Create contacts from enrichment people data
+  // Create contacts from enrichment people data — but never create a duplicate of
+  // a contact that already exists. Match against the full contact list; for any
+  // match, link this firm to the existing contact instead of creating a new one.
   const people = (enrichedData.people || []).filter((p) => p.first_name || p.last_name);
+  let existingContacts = [];
+  try {
+    existingContacts = await base44.entities.Contact.list(null, 500);
+  } catch {}
+
   for (const person of people) {
     try {
       const fullName = `${person.first_name || ""} ${person.last_name || ""}`.trim();
       const designations = detectDesignations(fullName, person.biography);
+      const probeData = {
+        first_name: person.first_name || "",
+        last_name: person.last_name || "",
+        email: person.email || "",
+        phones: person.phone ? [parsePhoneString(person.phone)] : [],
+      };
+      const dups = findContactDuplicates(probeData, existingContacts);
+      if (dups.length > 0) {
+        const best = dups[0].contact;
+        const existingFirmIds = best.firm_ids || [];
+        if (!existingFirmIds.includes(createdFirm.id)) {
+          await base44.entities.Contact.update(best.id, { firm_ids: [...existingFirmIds, createdFirm.id] });
+        }
+        continue;
+      }
+
       const contactData = {
         first_name: person.first_name || "",
         last_name: person.last_name || "",
@@ -561,7 +584,8 @@ export async function createFirmFromEnrichment(enrichedData) {
       if (designations.length > 0) contactData.designations = designations;
       const parsedPhone = person.phone ? parsePhoneString(person.phone) : null;
       if (parsedPhone) contactData.phones = [parsedPhone];
-      await base44.entities.Contact.create(contactData);
+      const created = await base44.entities.Contact.create(contactData);
+      existingContacts.push(created);
     } catch {}
   }
 

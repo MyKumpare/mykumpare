@@ -4,13 +4,24 @@
  * email similarity, and phone number overlap.
  */
 
+// Salutations / suffixes that should be ignored when comparing names, so that
+// "Mrs. Sumali Sanyal" and "Sumali Sanyal" (or "Sumali Sanyal, CFA") are treated
+// as the same person rather than slipping through as a duplicate.
+const NAME_STOPWORDS = new Set([
+  "mr", "mrs", "ms", "miss", "dr", "prof", "professor", "hon", "sir", "madam",
+  "jr", "sr", "ii", "iii", "iv", "v", "esq", "cfa", "cpa", "mba", "phd", "md",
+]);
+
 function normalizeName(str) {
   if (!str) return "";
   return str
     .toLowerCase()
     .trim()
-    .replace(/[.'’-]/g, "")
-    .replace(/\s+/g, " ");
+    .replace(/[.'’-]/g, " ")
+    .split(/\s+/)
+    .filter((t) => t && !NAME_STOPWORDS.has(t))
+    .join(" ")
+    .trim();
 }
 
 function normalizeEmail(str) {
