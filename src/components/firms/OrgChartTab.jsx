@@ -3,12 +3,9 @@ import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { User, Plus, X, ChevronDown, ChevronRight, GripVertical, Edit2, Check, Printer, Download, ZoomIn, ZoomOut, Maximize2, CheckCircle2, Loader2, Users, Layers, UserMinus, Search, Expand, AlertTriangle } from "lucide-react";
+import { User, Plus, X, ChevronDown, ChevronRight, GripVertical, Edit2, Check, Printer, Download, ZoomIn, ZoomOut, Maximize2, CheckCircle2, Loader2, Users, Layers, UserMinus, Search, Expand } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import AddContactDialog from "@/components/contacts/AddContactDialog";
-import MergeDuplicateContactsDialog from "@/components/contacts/MergeDuplicateContactsDialog";
-import { findContactDuplicates } from "@/components/contacts/contactDuplicateCheck";
-import { toast } from "@/components/ui/use-toast";
 
 function getMaxDepth(nodes, rootIds) {
   const calc = (id, depth) => {
@@ -345,7 +342,6 @@ export default function OrgChartTab({ firmId, firmName = "" }) {
   const fullscreenChartRef = useRef(null);
   const fullscreenContainerRef = useRef(null);
   const [fullscreenZoom, setFullscreenZoom] = useState(1);
-  const [showMergeDialog, setShowMergeDialog] = useState(false);
   const [newContactOpen, setNewContactOpen] = useState(false);
 
   const handleViewContact = (contact) => {
@@ -356,9 +352,27 @@ export default function OrgChartTab({ firmId, firmName = "" }) {
 
   const { data: allContacts = [] } = useQuery({
     queryKey: ["contacts"],
-    queryFn: () => base44.entities.Contact.list("-created_date"),
+    queryFn: () => base44.entities.Contact.list("-created_date", 5000),
   });
-  const firmContacts = allContacts.filter(c => c.firm_ids?.includes(firmId));
+
+  // Mirror the Contact tab: only active contacts for this firm, and only the
+  // most-current (latest updated_date) record per duplicate name.
+  const firmContacts = useMemo(() => {
+    const active = allContacts.filter(c => c.firm_ids?.includes(firmId) && !c.deleted_at);
+    const latestPerKey = {};
+    for (const c of active) {
+      const key = `${(c.first_name || "").toLowerCase().trim()}|${(c.last_name || "").toLowerCase().trim()}`;
+      if (!key || key === "|") continue;
+      if (!latestPerKey[key] || new Date(c.updated_date || 0) > new Date(latestPerKey[key].updated_date || 0)) {
+        latestPerKey[key] = c;
+      }
+    }
+    return active.filter(c => {
+      const key = `${(c.first_name || "").toLowerCase().trim()}|${(c.last_name || "").toLowerCase().trim()}`;
+      if (!key || key === "|") return true;
+      return latestPerKey[key]?.id === c.id;
+    });
+  }, [allContacts, firmId]);
 
   const { data: orgCharts = [] } = useQuery({
     queryKey: ["orgchart", firmId],
@@ -674,25 +688,6 @@ export default function OrgChartTab({ firmId, firmName = "" }) {
   const levels = getMaxDepth(nodes, rootIds);
   const unassignedCount = availableContacts.length;
 
-  // Detect existing duplicate contacts among this firm's contacts
-  const duplicateCount = useMemo(() => {
-    let count = 0;
-    const seen = new Set();
-    for (let i = 0; i < firmContacts.length; i++) {
-      if (seen.has(firmContacts[i].id)) continue;
-      for (let j = i + 1; j < firmContacts.length; j++) {
-        if (seen.has(firmContacts[j].id)) continue;
-        if (findContactDuplicates(firmContacts[i], [firmContacts[j]]).length > 0) {
-          seen.add(firmContacts[i].id);
-          seen.add(firmContacts[j].id);
-          count++;
-          break;
-        }
-      }
-    }
-    return count;
-  }, [firmContacts]);
-
   return (
     <div className="flex flex-col gap-3">
       {/* Toolbar */}
@@ -780,16 +775,6 @@ export default function OrgChartTab({ firmId, firmName = "" }) {
           <div className="flex items-center justify-between mb-2">
             <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Contacts</div>
             <div className="flex items-center gap-1">
-              {duplicateCount > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setShowMergeDialog(true)}
-                  className="flex items-center gap-1 text-[10px] font-semibold text-amber-600 hover:text-amber-700 hover:bg-amber-50 px-1.5 py-0.5 rounded"
-                  title={`${duplicateCount} duplicate set(s) detected — review and merge`}
-                >
-                  <AlertTriangle className="w-3 h-3" /> {duplicateCount} dup
-                </button>
-              )}
               <button
                 type="button"
                 onClick={() => setNewContactOpen(true)}
@@ -800,11 +785,6 @@ export default function OrgChartTab({ firmId, firmName = "" }) {
               </button>
             </div>
           </div>
-          {duplicateCount > 0 && (
-            <Button variant="outline" size="sm" className="w-full h-7 mb-2 text-xs gap-1 border-amber-300 text-amber-700 hover:bg-amber-50" onClick={() => setShowMergeDialog(true)}>
-              <AlertTriangle className="w-3 h-3" /> Resolve Duplicates
-            </Button>
-          )}
           {firmContacts.length === 0 ? (
             <div className="text-xs text-gray-400 italic">No contacts for this firm</div>
           ) : availableContacts.length === 0 ? (
@@ -885,13 +865,6 @@ export default function OrgChartTab({ firmId, firmName = "" }) {
         onOpenChange={setNewContactOpen}
         currentFirmId={firmId}
         firms={[]}
-      />
-
-      <MergeDuplicateContactsDialog
-        open={showMergeDialog}
-        onOpenChange={setShowMergeDialog}
-        contacts={firmContacts}
-        onMerged={(n) => toast({ title: "Duplicates resolved", description: `${n} duplicate contact(s) merged.` })}
       />
 
       {/* Fullscreen modal */}
