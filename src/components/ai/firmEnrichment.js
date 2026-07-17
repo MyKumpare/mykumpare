@@ -1,6 +1,6 @@
 import { base44 } from "@/api/base44Client";
 import { detectDesignations } from "@/components/contacts/designationDetector";
-import { findContactDuplicates } from "@/components/contacts/contactDuplicateCheck";
+import { findContactDuplicates, findContactsByNormalizedName } from "@/components/contacts/contactDuplicateCheck";
 import { addressesAreExact, addressesAreSimilar } from "@/components/addressDuplicateCheck";
 import { compareScalar } from "./enrichmentValidation";
 
@@ -523,9 +523,12 @@ export function mergeContactEnrichment(people, existingContacts, firmId) {
     };
 
     const dups = findContactDuplicates(contactData, existingContacts);
+    // Fallback: normalized first+last name match catches cases where
+    // suffixes/designations are embedded in the name field.
+    const normDups = dups.length > 0 ? [] : findContactsByNormalizedName(contactData, existingContacts);
 
-    if (dups.length > 0) {
-      const bestMatch = dups[0].contact;
+    if (dups.length > 0 || normDups.length > 0) {
+      const bestMatch = (dups[0]?.contact) || normDups[0]?.contact;
       const { updates, updatedFields, conflicts } = computeContactUpdates(bestMatch, person, firmId);
       if (Object.keys(updates).length > 0 || conflicts.length > 0) {
         const contactName = `${bestMatch.first_name || ""} ${bestMatch.last_name || ""}`.trim();
@@ -630,8 +633,11 @@ export async function createFirmFromEnrichment(enrichedData) {
         phones: person.phone ? [parsePhoneString(person.phone)] : [],
       };
       const dups = findContactDuplicates(probeData, existingContacts);
-      if (dups.length > 0) {
-        const best = dups[0].contact;
+      // Fallback: normalized first+last name match catches cases where
+      // suffixes/designations are embedded in the name field.
+      const normDups = dups.length > 0 ? [] : findContactsByNormalizedName(probeData, existingContacts);
+      if (dups.length > 0 || normDups.length > 0) {
+        const best = (dups[0]?.contact) || normDups[0]?.contact;
         const existingFirmIds = best.firm_ids || [];
         if (!existingFirmIds.includes(createdFirm.id)) {
           await base44.entities.Contact.update(best.id, { firm_ids: [...existingFirmIds, createdFirm.id] });

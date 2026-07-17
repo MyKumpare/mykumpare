@@ -25,7 +25,7 @@ import ContactProductsTab from "./ContactProductsTab";
 import ContactRolePicker from "./ContactRolePicker";
 import ContactDepartmentPicker from "./ContactDepartmentPicker";
 import ContactTypePicker from "./ContactTypePicker";
-import { findContactDuplicates } from "./contactDuplicateCheck";
+import { findContactDuplicates, findContactsByNormalizedName } from "./contactDuplicateCheck";
 import SimilarAddressDialog from "../SimilarAddressDialog";
 import { findAddressIssues } from "../addressDuplicateCheck";
 
@@ -272,8 +272,18 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
       updateMutation.mutate({ id: editingContact.id, data });
     } else {
       const duplicates = findContactDuplicates(data, allContacts);
-      if (duplicates.length > 0) {
-        setDuplicateWarning({ data, duplicates });
+      // Fallback: also check normalized first+last name to catch cases where
+      // suffixes/designations are embedded in the name field.
+      const normDups = findContactsByNormalizedName(data, allContacts);
+      const allDups = duplicates.length > 0 ? duplicates : normDups.map(d => ({
+        contact: d.contact,
+        name: d.name,
+        email: d.email,
+        reasons: ["Same first and last name as an existing contact"],
+        score: 0.75,
+      }));
+      if (allDups.length > 0) {
+        setDuplicateWarning({ data, duplicates: allDups });
         return;
       }
       createMutation.mutate(data);

@@ -4,7 +4,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { AlertTriangle, UserPlus, UserCog, Info, FileText } from "lucide-react";
+import { AlertTriangle, UserPlus, UserCog, Info, FileText, User } from "lucide-react";
 
 export default function EnrichmentApprovalDialog({
   open,
@@ -16,6 +16,9 @@ export default function EnrichmentApprovalDialog({
 }) {
   // Per-contact opt-in for biography updates. Keyed by contact id.
   const [approvedBios, setApprovedBios] = useState({});
+  // Per-new-contact create checkbox. Default all checked; user can uncheck
+  // contacts flagged as potential duplicates to skip creating them.
+  const [createChecked, setCreateChecked] = useState({});
 
   // Reset selection when the set of contacts with biography changes changes.
   const bioContactIds = contactUpdates.filter((cu) => cu.biographyChange).map((cu) => cu.id);
@@ -28,13 +31,34 @@ export default function EnrichmentApprovalDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bioContactIds.join(",")]);
 
+  // Default all new contacts to checked (create them). Contacts with
+  // potential duplicates are also defaulted to checked so the user sees
+  // the warning and can actively decide to skip.
+  React.useEffect(() => {
+    setCreateChecked((prev) => {
+      const next = {};
+      for (let i = 0; i < newContacts.length; i++) {
+        next[i] = prev[i] !== undefined ? prev[i] : true;
+      }
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newContacts.length]);
+
   const toggleBio = (id) => setApprovedBios((prev) => ({ ...prev, [id]: !prev[id] }));
+  const toggleCreate = (i) => setCreateChecked((prev) => ({ ...prev, [i]: !prev[i] }));
 
   const hasContactChanges = contactUpdates.length > 0 || newContacts.length > 0;
   const approvedBioSet = new Set(Object.keys(approvedBios).filter((id) => approvedBios[id]));
+  const skippedNewContacts = newContacts
+    .map((_, i) => i)
+    .filter((i) => !createChecked[i]);
+
+  const hasDuplicates = newContacts.some((nc) => nc.potentialDuplicates?.length > 0);
+  const canConfirm = hasContactChanges && skippedNewContacts.length < newContacts.length;
 
   const handleConfirm = () => {
-    onConfirm(approvedBioSet);
+    onConfirm({ approvedBios: approvedBioSet, skippedNewContacts });
     onOpenChange(false);
   };
 
@@ -54,6 +78,20 @@ export default function EnrichmentApprovalDialog({
                 Firm fields populated (review in form before saving):
               </p>
               <p className="text-sm text-indigo-900">{firmFieldsApplied.join(", ")}</p>
+            </div>
+          )}
+          {hasDuplicates && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 space-y-1">
+              <div className="flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                <p className="text-xs font-semibold text-amber-800">
+                  Potential duplicate contacts detected
+                </p>
+              </div>
+              <p className="text-xs text-amber-700">
+                Some contacts from the website appear to match existing contacts at this firm.
+                Uncheck any that are duplicates to skip creating them. The existing contact will not be modified.
+              </p>
             </div>
           )}
           {contactUpdates.length > 0 && (
@@ -123,11 +161,26 @@ export default function EnrichmentApprovalDialog({
               </p>
               {newContacts.map((nc, i) => {
                 const name = [nc.first_name, nc.last_name].filter(Boolean).join(" ");
+                const dups = nc.potentialDuplicates || [];
+                const hasDup = dups.length > 0;
+                const isChecked = !!createChecked[i];
                 return (
-                  <div key={i} className="rounded-lg border border-green-200 bg-green-50 p-2.5">
-                    <div className="flex items-center gap-2.5">
-                      {nc.photo_url && (
+                  <div
+                    key={i}
+                    className={`rounded-lg border p-2.5 ${hasDup ? "border-amber-300 bg-amber-50" : "border-green-200 bg-green-50"}`}
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <Checkbox
+                        checked={isChecked}
+                        onCheckedChange={() => toggleCreate(i)}
+                        className="mt-0.5 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
+                      />
+                      {nc.photo_url ? (
                         <img src={nc.photo_url} alt={name} className="w-10 h-10 rounded-full object-cover border border-gray-200 flex-shrink-0" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                          <User className="w-5 h-5 text-indigo-400" />
+                        </div>
                       )}
                       <div className="min-w-0 flex-1">
                         <p className="font-medium text-sm text-gray-800">
@@ -135,6 +188,33 @@ export default function EnrichmentApprovalDialog({
                           {nc.title ? ` — ${nc.title}` : ""}
                         </p>
                         {nc.email && <p className="text-xs text-gray-500 mt-0.5">{nc.email}</p>}
+                        {hasDup && (
+                          <div className="mt-1.5 rounded-md border border-amber-200 bg-white p-1.5 space-y-1">
+                            <p className="text-xs font-semibold text-amber-800 flex items-center gap-1">
+                              <AlertTriangle className="w-3 h-3" /> May duplicate existing contact:
+                            </p>
+                            {dups.map((d, di) => (
+                              <div key={di} className="flex items-center gap-1.5 pl-4">
+                                {d.contact.photo_url ? (
+                                  <img src={d.contact.photo_url} alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
+                                ) : (
+                                  <div className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                                    <User className="w-3 h-3 text-gray-400" />
+                                  </div>
+                                )}
+                                <div className="min-w-0">
+                                  <p className="text-xs font-medium text-gray-700 truncate">{d.name}</p>
+                                  <p className="text-[10px] text-gray-500 truncate">
+                                    {d.title || "—"}{d.email ? ` · ${d.email}` : ""}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                            <p className="text-[10px] text-amber-700 pl-4">
+                              Uncheck this contact to skip creating a duplicate.
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -155,7 +235,7 @@ export default function EnrichmentApprovalDialog({
           <Button
             className="bg-indigo-600 hover:bg-indigo-700 text-white"
             onClick={handleConfirm}
-            disabled={!hasContactChanges}
+            disabled={!canConfirm}
           >
             Approve & Apply
           </Button>

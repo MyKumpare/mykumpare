@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Pencil, Building2, Plus, Upload, X, Globe, AlertTriangle } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
-import { findContactDuplicates } from "@/components/contacts/contactDuplicateCheck";
+import { findContactDuplicates, findContactsByNormalizedName } from "@/components/contacts/contactDuplicateCheck";
 import { detectDesignations } from "@/components/contacts/designationDetector";
 import FirmEnrichmentPanel from "./FirmEnrichmentPanel";
 import AddressForm from "./AddressForm";
@@ -361,7 +361,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
           // Only match against contacts already linked to THIS firm — a
           // same-named person at a different firm must not receive this
           // firm's biography (or any field update) from the enrichment.
-          const firmContacts = allContacts.filter((c) => (c.firm_ids || []).includes(editingFirm.id));
+          const firmContacts = allContacts.filter((c) => (c.firm_ids || []).includes(editingFirm.id) && !c.deleted_at);
           const dups = findContactDuplicates(contactData, firmContacts);
           if (dups.length > 0) {
             const bestMatch = dups[0].contact;
@@ -375,7 +375,12 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               contactUpdates.push({ id: bestMatch.id, updates, updatedFields, contactName: fullName, biographyChange });
             }
           } else {
-            newContacts.push(contactData);
+            // Fallback: catch same-named contacts that findContactDuplicates
+            // might miss (e.g. when suffixes/designations are embedded in the
+            // last_name field). Flag as potential duplicates so the approval
+            // dialog can warn the user before creating a duplicate record.
+            const normDups = findContactsByNormalizedName(contactData, firmContacts);
+            newContacts.push({ ...contactData, potentialDuplicates: normDups });
           }
         }
 
@@ -388,16 +393,21 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         const newPending = [];
         const skipped = [];
         for (const person of selected.people) {
+          const parsedPhone = person.phone ? parsePhoneString(person.phone) : null;
           const contactData = {
             first_name: person.first_name || "",
             last_name: person.last_name || "",
             email: person.email || "",
-            phone: person.phone || "",
+            phones: parsedPhone ? [parsedPhone] : [],
           };
           const dups = findContactDuplicates(contactData, allContacts);
+          const normDups = findContactsByNormalizedName(contactData, allContacts);
           const pendingDups = findContactDuplicates(contactData, pendingContacts);
           if (dups.length > 0) {
             skipped.push({ person, duplicates: dups });
+          } else if (normDups.length > 0) {
+            // Normalized name match — treat as potential duplicate and skip.
+            skipped.push({ person, duplicates: normDups.map(d => ({ contact: d.contact, name: d.name, email: d.email, reasons: ["Same first and last name (after normalization)"], score: 0.75 })) });
           } else if (pendingDups.length > 0) {
             // Already in pending list — skip to avoid duplicates
           } else {
@@ -441,11 +451,15 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     }
   };
 
-  const handleConfirmEnrichmentContacts = async (approvedBios) => {
+  const handleConfirmEnrichmentContacts = async (confirmData) => {
     if (!enrichmentApproval) return;
     const { contactUpdates, newContacts, firmFieldsApplied } = enrichmentApproval;
     const applied = [...firmFieldsApplied];
-    const bioSet = approvedBios instanceof Set ? approvedBios : new Set(approvedBios || []);
+    // The approval dialog now passes an object with both the approved bio
+    // set and the list of skipped new-contact indices.
+    const bioSet = confirmData?.approvedBios instanceof Set
+      ? confirmData.approvedBios
+      : new Set(confirmData?.approvedBios || (confirmData instanceof Set ? confirmData : []));
 
     let updated = 0;
     const updatedNames = [];
@@ -485,7 +499,12 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     }
     let created = 0;
     const createErrors = [];
-    for (const contactData of newContacts) {
+    // Only create new contacts the user confirmed — contacts flagged as
+    // potential duplicates can be unchecked in the approval dialog.
+    const skippedNewContactIndices = confirmData?.skippedNewContacts || [];
+    for (let i = 0; i < newContacts.length; i++) {
+      if (skippedNewContactIndices.includes(i)) continue;
+      const { potentialDuplicates, ...contactData } = newContacts[i];
       try { await base44.entities.Contact.create(contactData); created++; }
       catch (createErr) { createErrors.push(`${createErr.message || createErr}`); }
     }
@@ -493,6 +512,9 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
     }
     if (created > 0) applied.push(`${created} New Contact(s)`);
+    if (skippedNewContactIndices.length > 0) {
+      applied.push(`${skippedNewContactIndices.length} Duplicate(s) Skipped`);
+    }
     if (updated > 0) {
       applied.push(`Updated ${updated} Contact(s) (${updatedNames.join(", ")})`);
     }

@@ -183,3 +183,33 @@ export function findContactDuplicates(newContact, existingContacts) {
 
   return duplicates.sort((a, b) => b.score - a.score);
 }
+
+/**
+ * Find contacts with the same normalized first + last name.
+ * Stricter than findContactDuplicates — catches cases where suffixes or
+ * designations (e.g. "Jr.", "CMFC") are embedded in the last_name field
+ * but the core name is identical after normalization. Used as a fallback
+ * during enrichment to prevent creating duplicate contact records.
+ * @param {Object} newContact - { first_name, last_name }
+ * @param {Array} existingContacts - array of Contact entities
+ * @returns {Array} matching contacts with their display name
+ */
+export function findContactsByNormalizedName(newContact, existingContacts) {
+  if (!existingContacts || existingContacts.length === 0) return [];
+  const newFirst = normalizeName(newContact.first_name);
+  const newLast = normalizeName(newContact.last_name);
+  if (!newFirst || !newLast) return [];
+  return existingContacts
+    .filter((c) => {
+      if (c.deleted_at) return false;
+      const exFirst = normalizeName(c.first_name);
+      const exLast = normalizeName(c.last_name);
+      return exFirst === newFirst && exLast === newLast;
+    })
+    .map((c) => ({
+      contact: c,
+      name: fullName(c.first_name, c.middle_name, c.last_name),
+      email: c.email || "",
+      title: c.title || "",
+    }));
+}
