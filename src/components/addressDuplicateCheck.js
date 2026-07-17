@@ -74,12 +74,21 @@ function streetOf(a) {
   return normalizeStreet([a.address_line1, a.address_line2].filter(Boolean).join(" "));
 }
 
+// Normalize a postal/zip code for comparison: strip the +4 extension on US
+// zips (e.g. "19103-1234" → "19103") so the same address isn't treated as
+// a duplicate just because one source included the extended zip.
+function normalizePostal(v) {
+  const n = norm(v);
+  if (!n) return "";
+  return n.split("-")[0].trim();
+}
+
 function addressKey(a) {
   return [
     streetOf(a),
     norm(a.city),
     normalizeStateValue(a.state),
-    norm(a.postal_code),
+    normalizePostal(a.postal_code),
     normalizeCountryValue(a.country),
   ].join("|");
 }
@@ -91,14 +100,22 @@ function hasContent(a) {
 // Exact duplicate: all identifying fields match after normalization, OR the
 // strongest unique identifiers (street + postal code) match even when a
 // lesser field like city is labeled differently (e.g. "Raleigh" vs "Durham"
-// for the same 27713 address).
+// for the same 27713 address). A street "contains" relationship (one address
+// stores the suite, the other doesn't) at the same postal code + city is
+// also exact — it's the same building.
 export function addressesAreExact(a1, a2) {
   if (!a1 || !a2) return false;
   if (!hasContent(a1) || !hasContent(a2)) return false;
   if (addressKey(a1) === addressKey(a2)) return true;
   const s1 = streetOf(a1), s2 = streetOf(a2);
-  const z1 = norm(a1.postal_code), z2 = norm(a2.postal_code);
-  return !!(s1 && s1 === s2 && z1 && z1 === z2);
+  const z1 = normalizePostal(a1.postal_code), z2 = normalizePostal(a2.postal_code);
+  const c1 = norm(a1.city), c2 = norm(a2.city);
+  // Same postal + same street (exact match)
+  if (s1 && s2 && s1 === s2 && z1 && z1 === z2) return true;
+  // Same postal + same city + one street contains the other (same building,
+  // one just has more detail like a suite number)
+  if (z1 && z1 === z2 && c1 && c1 === c2 && s1 && s2 && (s1.includes(s2) || s2.includes(s1))) return true;
+  return false;
 }
 
 // Similar but not exact: enough overlap to be plausibly the same place
@@ -112,7 +129,7 @@ export function addressesAreSimilar(a1, a2) {
   const l1 = streetOf(a1);
   const l2 = streetOf(a2);
   const c1 = norm(a1.city), c2 = norm(a2.city);
-  const z1 = norm(a1.postal_code), z2 = norm(a2.postal_code);
+  const z1 = normalizePostal(a1.postal_code), z2 = normalizePostal(a2.postal_code);
 
   // Same postal code + same city → similar
   if (z1 && z2 && z1 === z2 && c1 && c2 && c1 === c2) return true;
