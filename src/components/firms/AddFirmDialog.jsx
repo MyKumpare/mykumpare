@@ -446,22 +446,44 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     let updated = 0;
     const updatedNames = [];
     const bioUpdatedNames = [];
+    const contactErrors = [];
     for (const cu of contactUpdates) {
+      const finalUpdates = { ...cu.updates };
+      const approvingBio = cu.biographyChange && bioSet.has(cu.id);
+      if (approvingBio) finalUpdates.biography = cu.biographyChange.incoming;
+      if (Object.keys(finalUpdates).length === 0) continue;
+      // Try the full update first; if it fails (e.g. an overly-long biography or
+      // an invalid field), fall back to applying each field individually so a
+      // single problematic field doesn't silently block the biography (or other
+      // fields) from being saved. Surface per-field errors so the user can see
+      // why a field didn't update.
       try {
-        const finalUpdates = { ...cu.updates };
-        const approvingBio = cu.biographyChange && bioSet.has(cu.id);
-        if (approvingBio) finalUpdates.biography = cu.biographyChange.incoming;
-        if (Object.keys(finalUpdates).length > 0) {
-          await base44.entities.Contact.update(cu.id, finalUpdates);
+        await base44.entities.Contact.update(cu.id, finalUpdates);
+        updated++;
+        updatedNames.push(cu.contactName);
+        if (approvingBio) bioUpdatedNames.push(cu.contactName);
+      } catch (bulkErr) {
+        let anyFieldSaved = false;
+        for (const [field, value] of Object.entries(finalUpdates)) {
+          try {
+            await base44.entities.Contact.update(cu.id, { [field]: value });
+            anyFieldSaved = true;
+            if (field === "biography" && approvingBio) bioUpdatedNames.push(cu.contactName);
+          } catch (fieldErr) {
+            contactErrors.push(`${cu.contactName} → ${field}: ${fieldErr.message || fieldErr}`);
+          }
+        }
+        if (anyFieldSaved) {
           updated++;
           updatedNames.push(cu.contactName);
-          if (approvingBio) bioUpdatedNames.push(cu.contactName);
         }
-      } catch {}
+      }
     }
     let created = 0;
+    const createErrors = [];
     for (const contactData of newContacts) {
-      try { await base44.entities.Contact.create(contactData); created++; } catch {}
+      try { await base44.entities.Contact.create(contactData); created++; }
+      catch (createErr) { createErrors.push(`${createErr.message || createErr}`); }
     }
     if (created > 0 || updated > 0) {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
@@ -477,6 +499,14 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     setEnrichmentApproval(null);
     if (applied.length > 0) {
       toast({ title: "✅ New information added", description: applied.join(", ") + " populated from web." });
+    }
+    if (contactErrors.length > 0 || createErrors.length > 0) {
+      const allErrors = [...contactErrors, ...createErrors];
+      toast({
+        title: "⚠️ Some fields could not be updated",
+        description: allErrors.slice(0, 3).join("\n") + (allErrors.length > 3 ? `\n...and ${allErrors.length - 3} more` : ""),
+        variant: "destructive",
+      });
     }
   };
 
