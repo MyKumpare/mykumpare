@@ -168,7 +168,15 @@ async function extractBiographyFromPage(
   if (!pageText || pageText.length < 50) return '';
   try {
     const res = await base44.integrations.Core.InvokeLLM({
-      prompt: `The following is the content of a biography/profile page for "${personName}". Extract the complete biography text for this person. Copy the full text verbatim — do not summarize. If no biography is found, return an empty string.\n\n---\n${pageText.substring(0, 12000)}\n---`,
+      prompt: `You are extracting the biography of a specific person from their individual profile page.
+
+Person name: "${personName}"
+
+Below is the text content of their profile/biography page. Locate the section describing THIS person (often near their name, under a heading like "Biography", "About", "Profile", or "Overview"). Extract the COMPLETE biography text for this person — copy it verbatim, do not summarize or paraphrase. Include the full paragraphs. If the page lists multiple people, extract only the biography belonging to "${personName}". If no biography text is found for this person, return an empty string.
+
+--- PAGE CONTENT ---
+${pageText.substring(0, 20000)}
+--- END PAGE CONTENT ---`,
       response_json_schema: {
         type: 'object',
         properties: {
@@ -176,22 +184,66 @@ async function extractBiographyFromPage(
         },
       },
     });
-    return res?.biography || '';
+    return (res?.biography || '').trim();
   } catch {
     return '';
   }
 }
 
-// For every person missing a biography but with a bio_url, fetch their
-// individual profile page and fill in the biography. Bounded concurrency +
-// capped total to keep the function within time limits.
-async function enrichMissingBiographies(base44: any, people: any[]): Promise<void> {
-  const needing = people.filter((p) => !p.biography && p.bio_url);
-  if (needing.length === 0) return;
+// Discover a person's individual profile-page URL by scanning the fetched
+// page text for an internal [LINK: ...] marker whose surrounding text contains
+// the person's name. The LLM sometimes fails to populate bio_url, so this is a
+// reliable fallback that inspects the link markers preserved by htmlToText.
+function discoverBioUrl(
+  pageContents: { url: string; text: string }[],
+  firstName: string,
+  lastName: string,
+): string {
+  if (!firstName && !lastName) return '';
+  const first = (firstName || '').toLowerCase().trim();
+  const last = (lastName || '').toLowerCase().trim();
+  for (const page of pageContents) {
+    if (!page.text) continue;
+    // Find all [LINK: url] markers with a generous window of preceding text.
+    const regex = /\[LINK:\s*([^\]]+)\]/g;
+    let m: RegExpExecArray | null;
+    while ((m = regex.exec(page.text)) !== null) {
+      const url = m[1].trim();
+      const before = page.text.substring(Math.max(0, m.index - 120), m.index).toLowerCase();
+      // Must be an internal link (same site) — skip social/external links.
+      let linkHost = '';
+      let pageHost = '';
+      try { linkHost = new URL(url).host.toLowerCase(); } catch { /* ignore */ }
+      try { pageHost = new URL(page.url).host.toLowerCase(); } catch { /* ignore */ }
+      if (!linkHost || !pageHost || linkHost !== pageHost) continue;
+      const nameMatch =
+        (first && before.includes(first)) || (last && before.includes(last));
+      const lastAndFirst = last && first && before.includes(last) && before.includes(first);
+      if (lastAndFirst || (nameMatch && last && before.includes(last))) {
+        return url;
+      }
+    }
+  }
+  return '';
+}
 
+// For every person with an individual profile page (bio_url), fetch that page
+// and fill in or replace the biography. The listing page often only shows a
+// short snippet (or nothing), so we always pull the authoritative full bio from
+// the linked profile page and prefer it when it is more complete than any
+// snippet the first pass returned. If the LLM didn't populate bio_url, attempt
+// to discover it from the fetched page content. Bounded concurrency + capped
+// total to keep the function within time limits.
+async function enrichMissingBiographies(
+  base44: any,
+  people: any[],
+  pageContents: { url: string; text: string }[],
+): Promise<void> {
+  // Build the candidate list: anyone who could have a profile page. We
+  // discover bio_url for people missing one, so we don't pre-filter on bio_url.
   const MAX = 15;
   const CONCURRENCY = 4;
-  const queue = needing.slice(0, MAX);
+  const queue = people.slice(0, MAX);
 
   let cursor = 0;
   const worker = async () => {
@@ -199,8 +251,22 @@ async function enrichMissingBiographies(base44: any, people: any[]): Promise<voi
       const i = cursor++;
       const person = queue[i];
       const fullName = [person.first_name, person.last_name].filter(Boolean).join(' ').trim();
-      const bio = await extractBiographyFromPage(base44, fullName, person.bio_url);
-      if (bio) person.biography = bio;
+      // Resolve a bio URL: use the LLM-provided one, otherwise discover it.
+      let bioUrl = person.bio_url || '';
+      if (!bioUrl) {
+        bioUrl = discoverBioUrl(pageContents, person.first_name, person.last_name);
+      }
+      if (!bioUrl) continue;
+      const bio = await extractBiographyFromPage(base44, fullName, bioUrl);
+      // Replace the (possibly truncated) snippet with the authoritative full
+      // biography from the profile page whenever it is non-empty and at least
+      // as complete as what the listing page returned.
+      if (bio) {
+        const existing = (person.biography || '').trim();
+        if (!existing || bio.length >= existing.length) {
+          person.biography = bio;
+        }
+      }
     }
   };
 
@@ -418,7 +484,7 @@ IMPORTANT:
     // Many firm "people" pages only show name + title on cards; the full bio lives
     // on a separate profile page linked from each card. For any person missing a
     // biography but with a bio_url, fetch that page and extract the biography.
-    await enrichMissingBiographies(base44, enrichedData.people || []);
+    await enrichMissingBiographies(base44, enrichedData.people || [], pageContents);
 
     // Rehost images
     try {

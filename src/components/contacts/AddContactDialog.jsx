@@ -26,6 +26,8 @@ import ContactRolePicker from "./ContactRolePicker";
 import ContactDepartmentPicker from "./ContactDepartmentPicker";
 import ContactTypePicker from "./ContactTypePicker";
 import { findContactDuplicates } from "./contactDuplicateCheck";
+import SimilarAddressDialog from "../SimilarAddressDialog";
+import { findAddressIssues } from "../addressDuplicateCheck";
 
 const SALUTATIONS = ["Mr.", "Ms.", "Mrs.", "Dr.", "Prof.", "Hon."];
 const SUFFIXES = ["Jr.", "Sr.", "II", "III", "IV", "Esq.", "CFA", "CPA", "MBA", "PhD", "MD"];
@@ -80,6 +82,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [addresses, setAddresses] = useState([newAddress()]);
   const [duplicateWarning, setDuplicateWarning] = useState(null);
   const [linkedinLookupLoading, setLinkedinLookupLoading] = useState(false);
+  const [similarAddressPairs, setSimilarAddressPairs] = useState(null);
 
   const queryClient = useQueryClient();
 
@@ -220,6 +223,21 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
 
   const handleSubmit = () => {
     if (!isValid) return;
+    // Block exact duplicate addresses; prompt for similar ones.
+    const { exactPairs, similarPairs } = findAddressIssues(addresses);
+    if (exactPairs.length > 0) {
+      const [i, j] = exactPairs[0];
+      toast({ title: "Duplicate address", description: `Address #${i + 1} and #${j + 1} are identical. Please remove or edit the duplicate before saving.`, variant: "destructive" });
+      return;
+    }
+    if (similarPairs.length > 0) {
+      setSimilarAddressPairs({ pairs: similarPairs.map(([i, j]) => ({ i, j, ai: addresses[i], aj: addresses[j] })) });
+      return;
+    }
+    performSubmit(addresses);
+  };
+
+  const performSubmit = (addrs) => {
     setShowUndeterminedWarning(false);
     const data = {
       photo_url: photoUrl,
@@ -248,7 +266,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
       professional_experience: professionalExperience,
       firm_ids: firmIds,
       phones,
-      addresses,
+      addresses: addrs,
     };
     if (editingContact) {
       updateMutation.mutate({ id: editingContact.id, data });
@@ -260,6 +278,17 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
       }
       createMutation.mutate(data);
     }
+  };
+
+  const handleResolveSimilarAddresses = (removeIndices) => {
+    let cleaned = addresses.filter((_, i) => !removeIndices.includes(i));
+    // Reassign primary if the primary address was removed
+    if (cleaned.length > 0 && !cleaned.some((a) => a.is_primary)) {
+      cleaned = cleaned.map((a, i) => i === 0 ? { ...a, is_primary: true } : a);
+    }
+    setAddresses(cleaned);
+    setSimilarAddressPairs(null);
+    performSubmit(cleaned);
   };
 
   const handleForceCreate = () => {
@@ -356,6 +385,14 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
 
   return (
     <>
+    {/* Similar address confirmation */}
+    <SimilarAddressDialog
+      open={!!similarAddressPairs}
+      onOpenChange={(v) => { if (!v) setSimilarAddressPairs(null); }}
+      pairs={similarAddressPairs?.pairs || []}
+      onResolve={handleResolveSimilarAddresses}
+    />
+
     {/* Firm remove warning */}
     {firmRemoveWarning && (
       <Dialog open={!!firmRemoveWarning} onOpenChange={() => setFirmRemoveWarning(null)}>

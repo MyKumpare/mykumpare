@@ -27,6 +27,8 @@ import FirmProductsTab from "./FirmProductsTab";
 import FirmPortfoliosTab from "./FirmPortfoliosTab";
 import FirmActivityLogTab from "./FirmActivityLogTab";
 import EnrichmentApprovalDialog from "./EnrichmentApprovalDialog";
+import SimilarAddressDialog from "../SimilarAddressDialog";
+import { findAddressIssues } from "../addressDuplicateCheck";
 
 function getCountryCodeFromCountryName(countryName) {
   if (!countryName) return "";
@@ -112,6 +114,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const [pendingContacts, setPendingContacts] = useState([]);
   const [contactDuplicateWarning, setContactDuplicateWarning] = useState(null);
   const [enrichmentApproval, setEnrichmentApproval] = useState(null);
+  const [similarAddressPairs, setSimilarAddressPairs] = useState(null);
   const nameInputRef = useRef(null);
 
   const { data: allContacts = [] } = useQuery({
@@ -261,8 +264,34 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
   const handleSubmit = () => {
     if (!isValid) return;
-    onSubmit({ firm_type: firmTypes[0] || "", firm_types: firmTypes, name: firmName.trim(), logo_url: logoUrl, website, email, linkedin_url: linkedinUrl, year_founded: yearFounded ? parseInt(yearFounded) : null, description, addresses, phones, pending_contacts: pendingContacts.length > 0 ? pendingContacts : undefined });
+    // Block exact duplicate addresses; prompt for similar ones.
+    const { exactPairs, similarPairs } = findAddressIssues(addresses);
+    if (exactPairs.length > 0) {
+      const [i, j] = exactPairs[0];
+      toast({ title: "Duplicate address", description: `Address #${i + 1} and #${j + 1} are identical. Please remove or edit the duplicate before saving.`, variant: "destructive" });
+      return;
+    }
+    if (similarPairs.length > 0) {
+      setSimilarAddressPairs({ pairs: similarPairs.map(([i, j]) => ({ i, j, ai: addresses[i], aj: addresses[j] })) });
+      return;
+    }
+    performSubmit(addresses);
+  };
+
+  const performSubmit = (addrs) => {
+    onSubmit({ firm_type: firmTypes[0] || "", firm_types: firmTypes, name: firmName.trim(), logo_url: logoUrl, website, email, linkedin_url: linkedinUrl, year_founded: yearFounded ? parseInt(yearFounded) : null, description, addresses: addrs, phones, pending_contacts: pendingContacts.length > 0 ? pendingContacts : undefined });
     setFirmTypes([]); setFirmName(""); setLogoUrl(""); setWebsite(""); setEmail(""); setLinkedinUrl(""); setYearFounded(""); setDescription(""); setAddresses([]); setPhones([]); setPendingContacts([]);
+  };
+
+  const handleResolveSimilarAddresses = (removeIndices) => {
+    let cleaned = addresses.filter((_, i) => !removeIndices.includes(i));
+    // Reassign headquarters if the HQ address was removed
+    if (cleaned.length > 0 && !cleaned.some((a) => a.is_headquarters)) {
+      cleaned = cleaned.map((a, i) => i === 0 ? { ...a, is_headquarters: true } : a);
+    }
+    setAddresses(cleaned);
+    setSimilarAddressPairs(null);
+    performSubmit(cleaned);
   };
 
   const handleApplyEnrichment = async (selected) => {
@@ -1100,6 +1129,13 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
           </DialogContent>
         </Dialog>
       )}
+
+      <SimilarAddressDialog
+        open={!!similarAddressPairs}
+        onOpenChange={(v) => { if (!v) setSimilarAddressPairs(null); }}
+        pairs={similarAddressPairs?.pairs || []}
+        onResolve={handleResolveSimilarAddresses}
+      />
 
       <EnrichmentApprovalDialog
         open={!!enrichmentApproval}
