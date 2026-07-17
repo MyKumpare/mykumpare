@@ -361,7 +361,12 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
           const dups = findContactDuplicates(contactData, allContacts);
           if (dups.length > 0) {
             const bestMatch = dups[0].contact;
-            const { updates, updatedFields, biographyChange } = computeContactUpdates(bestMatch, person, editingFirm.id);
+            const { updates, updatedFields, conflicts } = computeContactUpdates(bestMatch, person, editingFirm.id);
+            // computeContactUpdates returns field conflicts as an array; extract
+            // the biography conflict so the approval dialog + apply handler can
+            // surface it for explicit user opt-in (existing bios are never
+            // silently overwritten).
+            const biographyChange = conflicts.find((c) => c.field === "biography") || null;
             if (Object.keys(updates).length > 0 || biographyChange) {
               contactUpdates.push({ id: bestMatch.id, updates, updatedFields, contactName: fullName, biographyChange });
             }
