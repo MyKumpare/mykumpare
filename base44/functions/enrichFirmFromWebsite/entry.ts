@@ -109,13 +109,21 @@ function htmlToText(html: string, baseUrl: string): string {
 
   // Step 3: Convert <a href="...">text</a> into "text [LINK: url]" so the LLM
   // can see and extract LinkedIn profile URLs and other link targets that
-  // would otherwise be lost when tags are stripped.
+  // would otherwise be lost when tags are stripped. Internal links (same host)
+  // are preserved too, so the LLM can identify individual bio/profile pages
+  // linked from team directory cards.
+  let baseHost = '';
+  try { baseHost = new URL(baseUrl).host.toLowerCase(); } catch { /* ignore */ }
   result = result.replace(/<a\s[^>]*?href\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi, (_m, href, text) => {
     const cleanText = text.replace(/<[^>]+>/g, '').trim();
     const url = resolveUrl(baseUrl, href.trim());
     if (!url) return cleanText;
-    // LinkedIn and other social links: show the URL alongside the text
-    if (/linkedin|twitter|x\.com|facebook|instagram|youtube/i.test(url)) {
+    let linkHost = '';
+    try { linkHost = new URL(url).host.toLowerCase(); } catch { /* ignore */ }
+    const isSocial = /linkedin|twitter|x\.com|facebook|instagram|youtube/i.test(url);
+    const isInternal = !!baseHost && !!linkHost && linkHost === baseHost;
+    // Preserve social links and internal links (likely bio/profile pages).
+    if (isSocial || isInternal) {
       return `${cleanText} [LINK: ${url}]`;
     }
     return cleanText;
@@ -147,6 +155,58 @@ function resolveUrl(base: string, path: string): string {
   } catch {
     return '';
   }
+}
+
+// Fetch an individual biography/profile page and extract the person's full
+// biography text via a focused LLM pass. Returns '' if nothing is found.
+async function extractBiographyFromPage(
+  base44: any,
+  personName: string,
+  bioUrl: string,
+): Promise<string> {
+  const pageText = await fetchPage(bioUrl);
+  if (!pageText || pageText.length < 50) return '';
+  try {
+    const res = await base44.integrations.Core.InvokeLLM({
+      prompt: `The following is the content of a biography/profile page for "${personName}". Extract the complete biography text for this person. Copy the full text verbatim — do not summarize. If no biography is found, return an empty string.\n\n---\n${pageText.substring(0, 12000)}\n---`,
+      response_json_schema: {
+        type: 'object',
+        properties: {
+          biography: { type: 'string' },
+        },
+      },
+    });
+    return res?.biography || '';
+  } catch {
+    return '';
+  }
+}
+
+// For every person missing a biography but with a bio_url, fetch their
+// individual profile page and fill in the biography. Bounded concurrency +
+// capped total to keep the function within time limits.
+async function enrichMissingBiographies(base44: any, people: any[]): Promise<void> {
+  const needing = people.filter((p) => !p.biography && p.bio_url);
+  if (needing.length === 0) return;
+
+  const MAX = 15;
+  const CONCURRENCY = 4;
+  const queue = needing.slice(0, MAX);
+
+  let cursor = 0;
+  const worker = async () => {
+    while (cursor < queue.length) {
+      const i = cursor++;
+      const person = queue[i];
+      const fullName = [person.first_name, person.last_name].filter(Boolean).join(' ').trim();
+      const bio = await extractBiographyFromPage(base44, fullName, person.bio_url);
+      if (bio) person.biography = bio;
+    }
+  };
+
+  await Promise.all(
+    Array.from({ length: Math.min(CONCURRENCY, queue.length) }, () => worker()),
+  );
 }
 
 Deno.serve(async (req) => {
@@ -252,7 +312,7 @@ Extract the following information from this website content:
 - Firm logo URL (full URL starting with http)
 - Office addresses (street address, city, state, postal code, country)
 - Phone numbers (for US numbers: country_code, area_code, number_mid, number_last)
-- Key personnel: for each person found, include first_name, last_name, title, email, linkedin_url, phone, biography (full text), and photo_url (full URL starting with http)
+- Key personnel: for each person found, include first_name, last_name, title, email, linkedin_url, phone, biography (full text), photo_url (full URL starting with http), and bio_url (the full URL of this person's individual biography/profile page, if linked from a team card).
 
 IMPORTANT:
 - Images on the page appear as [IMAGE: alt="..." src="https://..."] markers.
@@ -262,11 +322,12 @@ IMPORTANT:
 - Links appear as [LINK: https://...] markers next to their link text.
   - For the firm's linkedin_url, find a LinkedIn link (e.g. linkedin.com/company/...) — usually in the footer or header. Use the exact URL from the [LINK: ...] marker.
   - For each person's linkedin_url, find the [LINK: linkedin.com/in/...] marker that appears closest to that person's name. Set that person's linkedin_url to the exact URL from that marker.
+  - For each person's bio_url, find the internal [LINK: ...] marker whose link text wraps that person's name or card (e.g. a link to /people/<name-slug>/). Set bio_url to the exact URL from that marker. Leave empty if their name is not itself a link and no individual profile page link exists.
   - Only use the exact URL from the [LINK: ...] marker — do not modify or construct URLs yourself.
 - Only include information you actually find in the content above
 - Do not fabricate or guess
 - Leave fields empty/null if not found
-- For biography, copy the complete text — do not summarize`;
+- For biography, copy the complete text — do not summarize. If the biography is NOT present on this listing page (only name/title are shown), leave biography empty but still set bio_url to that person's individual profile page link`;
 
     const enrichedData = await base44.integrations.Core.InvokeLLM({
       prompt: extractionPrompt,
@@ -328,6 +389,7 @@ IMPORTANT:
                 biography: { type: 'string' },
                 phone: { type: 'string' },
                 photo_url: { type: 'string' },
+                bio_url: { type: 'string' },
               },
             },
           },
@@ -349,7 +411,14 @@ IMPORTANT:
       person.email = cleanStr(person.email) || '';
       person.linkedin_url = cleanStr(person.linkedin_url) || '';
       person.biography = cleanStr(person.biography) || '';
+      person.bio_url = cleanStr(person.bio_url) || '';
     }
+
+    // Phase 2: gather individual biographies that weren't on the listing page.
+    // Many firm "people" pages only show name + title on cards; the full bio lives
+    // on a separate profile page linked from each card. For any person missing a
+    // biography but with a bio_url, fetch that page and extract the biography.
+    await enrichMissingBiographies(base44, enrichedData.people || []);
 
     // Rehost images
     try {
@@ -376,6 +445,12 @@ IMPORTANT:
       }
     } catch {
       // keep original URLs if rehosting fails
+    }
+
+    // bio_url is an internal helper for biography gathering — strip it before
+    // returning so it doesn't leak into the stored contact record.
+    for (const person of enrichedData.people || []) {
+      delete person.bio_url;
     }
 
     return Response.json(enrichedData);
