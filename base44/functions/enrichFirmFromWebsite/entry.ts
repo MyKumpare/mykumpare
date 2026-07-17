@@ -574,7 +574,7 @@ Deno.serve(async (req) => {
       const text = await fetchPage(fullUrl);
       if (text && text.length > 100) {
         const isPeoplePage = /\/(people|our-people|team|our-team|leadership|staff)\b/i.test(path);
-        const limit = isPeoplePage ? 18000 : 6000;
+        const limit = isPeoplePage ? 40000 : 6000;
         return { url: fullUrl, text: text.substring(0, limit) };
       }
       return null;
@@ -619,7 +619,7 @@ Deno.serve(async (req) => {
       const teamPages = (await Promise.all(
         toFetch.map(async (teamUrl) => {
           const text = await fetchPage(teamUrl);
-          if (text && text.length > 100) return { url: teamUrl, text: text.substring(0, 18000) };
+          if (text && text.length > 100) return { url: teamUrl, text: text.substring(0, 40000) };
           return null;
         }),
       )).filter(Boolean) as { url: string; text: string }[];
@@ -648,7 +648,7 @@ Deno.serve(async (req) => {
 
 Website content (combined from multiple pages):
 ---
-${combinedContent.substring(0, 40000)}
+${combinedContent.substring(0, 60000)}
 ---
 
 Extract the following information from this website content:
@@ -663,6 +663,14 @@ Extract the following information from this website content:
 - Office addresses (street address, city, state, postal code, country)
 - Phone numbers (for US numbers: country_code, area_code, number_mid, number_last)
 - Key personnel: for each person found, include first_name, last_name, title, email, linkedin_url, phone, biography (full text), photo_url (full URL starting with http), and bio_url (the full URL of this person's individual biography/profile page, if linked from a team card).
+
+CRITICAL — EXTRACT EVERY PERSON:
+- You MUST extract EVERY single person listed on the people/team page. Do NOT stop after the first few.
+- The people page is organized in sections (Executive, Investment Team, Portfolio Operations, Corporate, Sales & Client Service, etc.). Go through EVERY section and extract EVERY person in EVERY section.
+- If a person appears in multiple sections, extract them once with their most detailed title.
+- Each person card typically has a photo (shown as [IMAGE: ...]), a name (usually in a heading like "#### Name"), and a title/role below it.
+- Do NOT skip anyone. If you see 40+ people on the page, return all 40+ in the people array.
+- The people array should contain EVERY person whose name appears on the team/people page.
 
 IMPORTANT:
 - Images on the page appear as [IMAGE: alt="..." src="https://..."] markers.
