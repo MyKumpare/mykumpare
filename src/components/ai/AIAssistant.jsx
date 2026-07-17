@@ -266,12 +266,15 @@ export default function AIAssistant() {
             }
           } catch {}
         }
-        // Update existing contacts: apply auto-fills + any user-approved conflicts
+        // Update existing contacts: apply auto-fills + any user-approved conflicts.
+        // Apply each field individually so a failure on one field (e.g. an
+        // overly-long biography) doesn't silently block the others — and
+        // surface any errors so the user can see why a field didn't update.
         const approvedContactConflicts = opts.approvedContactConflicts || {};
         let contactsUpdated = 0;
+        const contactErrors = [];
         for (const cu of (pendingCreation.contactUpdates || [])) {
           const finalContactUpdates = { ...(cu.updates || {}) };
-          // Apply per-contact approved conflict fields
           const approvedFields = approvedContactConflicts[cu.id] || [];
           for (const c of (cu.conflicts || [])) {
             if (approvedFields.includes(c.field)) {
@@ -279,10 +282,24 @@ export default function AIAssistant() {
             }
           }
           if (Object.keys(finalContactUpdates).length === 0) continue;
+          // Try the full update first; if it fails, fall back to per-field updates
+          // so a single problematic field doesn't prevent the biography (or
+          // other fields) from being saved.
           try {
             await base44.entities.Contact.update(cu.id, finalContactUpdates);
             contactsUpdated++;
-          } catch {}
+          } catch (bulkErr) {
+            let anyFieldSaved = false;
+            for (const [field, value] of Object.entries(finalContactUpdates)) {
+              try {
+                await base44.entities.Contact.update(cu.id, { [field]: value });
+                anyFieldSaved = true;
+              } catch (fieldErr) {
+                contactErrors.push(`${cu.contactName} → ${field}: ${fieldErr.message || fieldErr}`);
+              }
+            }
+            if (anyFieldSaved) contactsUpdated++;
+          }
         }
         // Create new contacts that didn't match any existing ones
         let contactsCreated = 0;
@@ -306,9 +323,13 @@ export default function AIAssistant() {
         if (pendingCreation.updatedFields?.length > 0) parts.push(`${pendingCreation.updatedFields.length} firm field(s)`);
         if (contactsUpdated > 0) parts.push(`${contactsUpdated} contact(s) updated`);
         if (contactsCreated > 0) parts.push(`${contactsCreated} new contact(s) created`);
+        let resultContent = `✅ **Updates applied:** ${parts.join(", ") || "no changes needed"}`;
+        if (contactErrors.length > 0) {
+          resultContent += `\n\n⚠️ **Some fields could not be updated:**\n${contactErrors.map((e) => `- ${e}`).join("\n")}`;
+        }
         setMessages((prev) => [...prev, {
           role: "assistant",
-          content: `✅ **Updates applied:** ${parts.join(", ") || "no changes needed"}`,
+          content: resultContent,
         }]);
       }
     } catch (error) {
