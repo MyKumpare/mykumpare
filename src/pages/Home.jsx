@@ -119,7 +119,7 @@ export default function Home() {
 
   const { data: contacts = [] } = useQuery({
     queryKey: ["contacts"],
-    queryFn: () => base44.entities.Contact.list("-created_date"),
+    queryFn: () => base44.entities.Contact.list("-created_date", 5000),
   });
 
   const { data: portfolios = [] } = useQuery({

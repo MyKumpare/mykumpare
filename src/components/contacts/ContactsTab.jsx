@@ -20,7 +20,7 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
 
   const { data: contacts = [] } = useQuery({
     queryKey: ["contacts"],
-    queryFn: () => base44.entities.Contact.list("-created_date"),
+    queryFn: () => base44.entities.Contact.list("-created_date", 5000),
   });
 
   const firmContacts = contacts.filter((c) => c.firm_ids?.includes(firmId) && !c.deleted_at);
