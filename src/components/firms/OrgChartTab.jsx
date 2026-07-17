@@ -1,11 +1,14 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { User, Plus, X, ChevronDown, ChevronRight, GripVertical, Edit2, Check, Printer, Download, ZoomIn, ZoomOut, Maximize2, CheckCircle2, Loader2, Users, Layers, UserMinus, Search, Expand } from "lucide-react";
+import { User, Plus, X, ChevronDown, ChevronRight, GripVertical, Edit2, Check, Printer, Download, ZoomIn, ZoomOut, Maximize2, CheckCircle2, Loader2, Users, Layers, UserMinus, Search, Expand, AlertTriangle } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import AddContactDialog from "@/components/contacts/AddContactDialog";
+import MergeDuplicateContactsDialog from "@/components/contacts/MergeDuplicateContactsDialog";
+import { findContactDuplicates } from "@/components/contacts/contactDuplicateCheck";
+import { toast } from "@/components/ui/use-toast";
 
 function getMaxDepth(nodes, rootIds) {
   const calc = (id, depth) => {
@@ -342,6 +345,7 @@ export default function OrgChartTab({ firmId, firmName = "" }) {
   const fullscreenChartRef = useRef(null);
   const fullscreenContainerRef = useRef(null);
   const [fullscreenZoom, setFullscreenZoom] = useState(1);
+  const [showMergeDialog, setShowMergeDialog] = useState(false);
 
   const handleViewContact = (contact) => {
     if (!contact) return;
@@ -669,6 +673,25 @@ export default function OrgChartTab({ firmId, firmName = "" }) {
   const levels = getMaxDepth(nodes, rootIds);
   const unassignedCount = availableContacts.length;
 
+  // Detect existing duplicate contacts among this firm's contacts
+  const duplicateCount = useMemo(() => {
+    let count = 0;
+    const seen = new Set();
+    for (let i = 0; i < firmContacts.length; i++) {
+      if (seen.has(firmContacts[i].id)) continue;
+      for (let j = i + 1; j < firmContacts.length; j++) {
+        if (seen.has(firmContacts[j].id)) continue;
+        if (findContactDuplicates(firmContacts[i], [firmContacts[j]]).length > 0) {
+          seen.add(firmContacts[i].id);
+          seen.add(firmContacts[j].id);
+          count++;
+          break;
+        }
+      }
+    }
+    return count;
+  }, [firmContacts]);
+
   return (
     <div className="flex flex-col gap-3">
       {/* Toolbar */}
@@ -753,7 +776,24 @@ export default function OrgChartTab({ firmId, firmName = "" }) {
       <div className="flex gap-4" style={{ minHeight: 380 }}>
         {/* Sidebar */}
         <div className="w-44 flex-shrink-0">
-          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Contacts</div>
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Contacts</div>
+            {duplicateCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowMergeDialog(true)}
+                className="flex items-center gap-1 text-[10px] font-semibold text-amber-600 hover:text-amber-700 hover:bg-amber-50 px-1.5 py-0.5 rounded"
+                title={`${duplicateCount} duplicate set(s) detected — review and merge`}
+              >
+                <AlertTriangle className="w-3 h-3" /> {duplicateCount} dup
+              </button>
+            )}
+          </div>
+          {duplicateCount > 0 && (
+            <Button variant="outline" size="sm" className="w-full h-7 mb-2 text-xs gap-1 border-amber-300 text-amber-700 hover:bg-amber-50" onClick={() => setShowMergeDialog(true)}>
+              <AlertTriangle className="w-3 h-3" /> Resolve Duplicates
+            </Button>
+          )}
           {firmContacts.length === 0 ? (
             <div className="text-xs text-gray-400 italic">No contacts for this firm</div>
           ) : availableContacts.length === 0 ? (
@@ -828,6 +868,13 @@ export default function OrgChartTab({ firmId, firmName = "" }) {
           firms={[]}
         />
       )}
+
+      <MergeDuplicateContactsDialog
+        open={showMergeDialog}
+        onOpenChange={setShowMergeDialog}
+        contacts={firmContacts}
+        onMerged={(n) => toast({ title: "Duplicates resolved", description: `${n} duplicate contact(s) merged.` })}
+      />
 
       {/* Fullscreen modal */}
       <Dialog open={fullscreenOpen} onOpenChange={setFullscreenOpen}>
