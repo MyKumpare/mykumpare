@@ -171,7 +171,14 @@ export default function AIAssistant() {
 
       const summaryParts = [];
       if (updatedFields.length > 0) summaryParts.push(`${updatedFields.length} firm field(s): ${updatedFields.join(", ")}`);
-      if (contactUpdates.length > 0) summaryParts.push(`${contactUpdates.length} contact(s) updated: ${contactUpdates.map((c) => `${c.contactName} (${c.updatedFields.join(", ")})`).join("; ")}`);
+      if (contactUpdates.length > 0) {
+        const parts = contactUpdates.map((c) => {
+          const fields = [...c.updatedFields];
+          if (c.biographyChange) fields.push("biography changed (review in firm enrichment)");
+          return `${c.contactName} (${fields.join(", ") || "—"})`;
+        });
+        summaryParts.push(`${contactUpdates.length} contact(s) updated: ${parts.join("; ")}`);
+      }
       if (newPeople.length > 0) summaryParts.push(`${newPeople.length} new contact(s) to create`);
 
       return {
@@ -205,6 +212,9 @@ export default function AIAssistant() {
         // Update existing contacts with new info
         let contactsUpdated = 0;
         for (const cu of (pendingCreation.contactUpdates || [])) {
+          // Skip biography-only changes (updates is empty); those require
+          // explicit per-contact approval which this automated flow doesn't offer.
+          if (!cu.updates || Object.keys(cu.updates).length === 0) continue;
           try {
             await base44.entities.Contact.update(cu.id, cu.updates);
             contactsUpdated++;

@@ -395,16 +395,25 @@ export function computeContactUpdates(existingContact, person, firmId) {
     updates.linkedin_url = person.linkedin_url;
     updatedFields.push("LinkedIn");
   }
-  if (!existingContact.biography && person.biography) {
-    updates.biography = person.biography;
-    updatedFields.push("Biography");
+  // Biography: fill if empty; otherwise detect a change for user approval.
+  let biographyChange = null;
+  if (person.biography) {
+    const norm = (s) => (s || "").toLowerCase().replace(/\s+/g, " ").trim();
+    if (!existingContact.biography) {
+      updates.biography = person.biography;
+      updatedFields.push("Biography");
+    } else if (norm(existingContact.biography) !== norm(person.biography)) {
+      // Biography changed on the website — flag for explicit user approval.
+      biographyChange = { existing: existingContact.biography, incoming: person.biography };
+    }
   }
 
-  // Designations: merge any new ones not already present
+  // Designations: merge any new ones not already present (case-insensitive dedup)
   const existingDesignations = existingContact.designations || [];
   const fullName = `${person.first_name || ""} ${person.last_name || ""}`.trim();
   const personDesignations = detectDesignations(fullName, person.biography);
-  const newDesignations = personDesignations.filter((d) => !existingDesignations.includes(d));
+  const existingLower = new Set(existingDesignations.map((d) => d.toLowerCase()));
+  const newDesignations = personDesignations.filter((d) => !existingLower.has(d.toLowerCase()));
   if (newDesignations.length > 0) {
     updates.designations = [...existingDesignations, ...newDesignations];
     updatedFields.push("Designations");
@@ -433,7 +442,7 @@ export function computeContactUpdates(existingContact, person, firmId) {
     }
   }
 
-  return { updates, updatedFields };
+  return { updates, updatedFields, biographyChange };
 }
 
 /**
@@ -459,10 +468,10 @@ export function mergeContactEnrichment(people, existingContacts, firmId) {
 
     if (dups.length > 0) {
       const bestMatch = dups[0].contact;
-      const { updates, updatedFields } = computeContactUpdates(bestMatch, person, firmId);
-      if (Object.keys(updates).length > 0) {
+      const { updates, updatedFields, biographyChange } = computeContactUpdates(bestMatch, person, firmId);
+      if (Object.keys(updates).length > 0 || biographyChange) {
         const contactName = `${bestMatch.first_name || ""} ${bestMatch.last_name || ""}`.trim();
-        contactUpdates.push({ id: bestMatch.id, updates, updatedFields, contactName });
+        contactUpdates.push({ id: bestMatch.id, updates, updatedFields, contactName, biographyChange });
         allUpdatedFields.push(`${contactName}: ${updatedFields.join(", ")}`);
       }
     } else {

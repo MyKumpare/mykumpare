@@ -327,9 +327,9 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
           const dups = findContactDuplicates(contactData, allContacts);
           if (dups.length > 0) {
             const bestMatch = dups[0].contact;
-            const { updates, updatedFields } = computeContactUpdates(bestMatch, person, editingFirm.id);
-            if (Object.keys(updates).length > 0) {
-              contactUpdates.push({ id: bestMatch.id, updates, updatedFields, contactName: fullName });
+            const { updates, updatedFields, biographyChange } = computeContactUpdates(bestMatch, person, editingFirm.id);
+            if (Object.keys(updates).length > 0 || biographyChange) {
+              contactUpdates.push({ id: bestMatch.id, updates, updatedFields, contactName: fullName, biographyChange });
             }
           } else {
             newContacts.push(contactData);
@@ -398,14 +398,27 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     }
   };
 
-  const handleConfirmEnrichmentContacts = async () => {
+  const handleConfirmEnrichmentContacts = async (approvedBios) => {
     if (!enrichmentApproval) return;
     const { contactUpdates, newContacts, firmFieldsApplied } = enrichmentApproval;
     const applied = [...firmFieldsApplied];
+    const bioSet = approvedBios instanceof Set ? approvedBios : new Set(approvedBios || []);
 
     let updated = 0;
+    const updatedNames = [];
+    const bioUpdatedNames = [];
     for (const cu of contactUpdates) {
-      try { await base44.entities.Contact.update(cu.id, cu.updates); updated++; } catch {}
+      try {
+        const finalUpdates = { ...cu.updates };
+        const approvingBio = cu.biographyChange && bioSet.has(cu.id);
+        if (approvingBio) finalUpdates.biography = cu.biographyChange.incoming;
+        if (Object.keys(finalUpdates).length > 0) {
+          await base44.entities.Contact.update(cu.id, finalUpdates);
+          updated++;
+          updatedNames.push(cu.contactName);
+          if (approvingBio) bioUpdatedNames.push(cu.contactName);
+        }
+      } catch {}
     }
     let created = 0;
     for (const contactData of newContacts) {
@@ -416,7 +429,10 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     }
     if (created > 0) applied.push(`${created} New Contact(s)`);
     if (updated > 0) {
-      applied.push(`Updated ${updated} Contact(s) (${contactUpdates.map((c) => c.contactName).join(", ")})`);
+      applied.push(`Updated ${updated} Contact(s) (${updatedNames.join(", ")})`);
+    }
+    if (bioUpdatedNames.length > 0) {
+      applied.push(`${bioUpdatedNames.length} Biography Update(s) (${bioUpdatedNames.join(", ")})`);
     }
 
     setEnrichmentApproval(null);

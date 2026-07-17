@@ -12,34 +12,55 @@ export default function DesignationsPicker({ value = [], onChange, viewMode }) {
   const [search, setSearch] = useState("");
   const [showPicker, setShowPicker] = useState(false);
 
-  // Merge defaults with any custom ones already saved
-  const allOptions = [...new Set([...DEFAULT_DESIGNATIONS, ...value])].sort();
+  // Deduplicate the incoming value case-insensitively, keeping the first
+  // occurrence's casing (cleans up any legacy duplicates stored in the DB).
+  const dedupedValue = (() => {
+    const seen = new Set();
+    const out = [];
+    for (const d of value) {
+      const key = String(d).toLowerCase();
+      if (!seen.has(key)) { seen.add(key); out.push(d); }
+    }
+    return out;
+  })();
+
+  // Merge defaults with any custom ones already saved (case-insensitive)
+  const allOptions = (() => {
+    const seen = new Set(DEFAULT_DESIGNATIONS.map((d) => d.toLowerCase()));
+    const merged = [...DEFAULT_DESIGNATIONS];
+    for (const d of dedupedValue) {
+      const key = d.toLowerCase();
+      if (!seen.has(key)) { seen.add(key); merged.push(d); }
+    }
+    return merged.sort();
+  })();
+  const selectedLower = new Set(dedupedValue.map((d) => d.toLowerCase()));
   const filtered = allOptions.filter(d =>
-    d.toLowerCase().includes(search.toLowerCase()) && !value.includes(d)
+    d.toLowerCase().includes(search.toLowerCase()) && !selectedLower.has(d.toLowerCase())
   );
 
   const addDesignation = (d) => {
-    if (!value.includes(d)) onChange([...value, d]);
+    if (!selectedLower.has(d.toLowerCase())) onChange([...dedupedValue, d]);
     setSearch("");
     setShowPicker(false);
   };
 
   const addCustom = () => {
     const trimmed = search.trim();
-    if (!trimmed || value.includes(trimmed)) return;
-    onChange([...value, trimmed]);
+    if (!trimmed || selectedLower.has(trimmed.toLowerCase())) return;
+    onChange([...dedupedValue, trimmed]);
     setSearch("");
     setShowPicker(false);
   };
 
-  const remove = (d) => onChange(value.filter(x => x !== d));
+  const remove = (d) => onChange(dedupedValue.filter(x => x !== d));
 
   if (viewMode) {
     return (
       <div className="flex flex-wrap gap-1.5 px-1">
-        {value.length === 0
+        {dedupedValue.length === 0
           ? <span className="text-sm text-gray-400 italic">—</span>
-          : value.map(d => (
+          : dedupedValue.map(d => (
             <span key={d} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
               {d}
             </span>
@@ -51,9 +72,9 @@ export default function DesignationsPicker({ value = [], onChange, viewMode }) {
 
   return (
     <div className="space-y-2">
-      {value.length > 0 && (
+      {dedupedValue.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
-          {value.map(d => (
+          {dedupedValue.map(d => (
             <span key={d} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
               {d}
               <button type="button" onClick={() => remove(d)} className="hover:text-red-500 transition-colors">
