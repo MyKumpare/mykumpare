@@ -145,18 +145,36 @@ function ConflictReview({ conflicts, approved, onToggle }) {
 export default function AIAssistantMessage({ message, onSelectOption, onConfirmCreation, onCancelCreation, isLoading }) {
   const isUser = message.role === "user";
   const isUpdateFirm = message.pending_creation?.type === "update_firm";
-  const conflicts = isUpdateFirm ? (message.pending_creation.conflicts || []) : [];
+  const firmConflicts = isUpdateFirm ? (message.pending_creation.conflicts || []) : [];
+  const contactUpdates = isUpdateFirm ? (message.pending_creation.contactUpdates || []) : [];
   const [approvedConflicts, setApprovedConflicts] = useState([]);
+  // Per-contact conflict approvals: { [contactId]: Set of approved field names }
+  const [approvedContactConflicts, setApprovedContactConflicts] = useState({});
 
-  // Reset approvals whenever the pending creation changes.
-  useEffect(() => { setApprovedConflicts([]); }, [message.pending_creation]);
+  useEffect(() => {
+    setApprovedConflicts([]);
+    setApprovedContactConflicts({});
+  }, [message.pending_creation]);
 
   const toggleConflict = (field) => {
     setApprovedConflicts((prev) => prev.includes(field) ? prev.filter((f) => f !== field) : [...prev, field]);
   };
 
+  const toggleContactConflict = (contactId, field) => {
+    setApprovedContactConflicts((prev) => {
+      const current = prev[contactId] || [];
+      const next = current.includes(field) ? current.filter((f) => f !== field) : [...current, field];
+      return { ...prev, [contactId]: next };
+    });
+  };
+
   const handleApply = () => {
-    onConfirmCreation?.(message.pending_creation, { approvedConflicts });
+    // Convert Set-based map to plain arrays for the handler
+    const plainContactConflicts = {};
+    for (const [id, fields] of Object.entries(approvedContactConflicts)) {
+      plainContactConflicts[id] = Array.isArray(fields) ? fields : [...fields];
+    }
+    onConfirmCreation?.(message.pending_creation, { approvedConflicts, approvedContactConflicts: plainContactConflicts });
   };
   return (
     <div className={`flex items-start gap-3 ${isUser ? "flex-row-reverse" : ""}`}>
@@ -200,9 +218,41 @@ export default function AIAssistantMessage({ message, onSelectOption, onConfirmC
         )}
         {!isUser && message.pending_creation && (
           <div className="mt-2">
-            {isUpdateFirm && conflicts.length > 0 && (
-              <ConflictReview conflicts={conflicts} approved={approvedConflicts} onToggle={toggleConflict} />
+            {isUpdateFirm && firmConflicts.length > 0 && (
+              <ConflictReview conflicts={firmConflicts} approved={approvedConflicts} onToggle={toggleConflict} />
             )}
+            {isUpdateFirm && contactUpdates.filter((cu) => cu.conflicts?.length > 0).map((cu) => (
+              <div key={cu.id} className="mt-2 rounded-lg border border-blue-200 bg-blue-50/60 p-2 space-y-1.5">
+                <p className="text-[11px] font-semibold text-blue-700 uppercase tracking-wide">
+                  {cu.contactName} — contact field updates
+                </p>
+                <p className="text-[11px] text-gray-500">
+                  These contact fields already have data that differs from the web. Select ones to update.
+                </p>
+                {cu.conflicts.map((c, i) => {
+                  const approved = (approvedContactConflicts[cu.id] || []).includes(c.field);
+                  const fmtVal = (v) => {
+                    if (v == null) return "—";
+                    const s = String(v);
+                    return s.length > 200 ? s.substring(0, 200) + "…" : s;
+                  };
+                  return (
+                    <div key={i} className="rounded-md border border-blue-100 bg-white p-2">
+                      <div className="flex items-start gap-2">
+                        <Checkbox checked={approved} onCheckedChange={() => toggleContactConflict(cu.id, c.field)} className="mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-gray-700">{c.label}</p>
+                          <div className="mt-0.5 text-[11px] text-gray-500 space-y-0.5">
+                            <p><span className="font-medium text-gray-600">Current:</span> {fmtVal(c.existing)}</p>
+                            <p><span className="font-medium text-indigo-600">From web:</span> {fmtVal(c.incoming)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
             <div className="flex gap-2 mt-2">
               <button
                 onClick={handleApply}

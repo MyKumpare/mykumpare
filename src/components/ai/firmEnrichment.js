@@ -407,43 +407,54 @@ export function mergeEnrichmentData(existingFirm, enrichedData) {
 
 /**
  * Compute field-level updates for an existing contact based on enriched person data.
- * Only fills in fields that are empty/missing on the existing contact — never overwrites existing data.
+ * Empty fields are auto-filled. Fields that already have different data are surfaced
+ * as conflicts for explicit user approval.
  */
 export function computeContactUpdates(existingContact, person, firmId) {
   const updates = {};
   const updatedFields = [];
+  const conflicts = [];
+  const norm = (s) => (s || "").toLowerCase().replace(/\s+/g, " ").trim();
 
-  // Photo: update if empty, OR if enrichment has a different photo (user approves via dialog)
-  if (person.photo_url && person.photo_url !== existingContact.photo_url) {
-    updates.photo_url = person.photo_url;
-    updatedFields.push(existingContact.photo_url ? "Photo (replace)" : "Photo");
+  // Photo: auto-update if empty; flag as conflict if different
+  if (person.photo_url) {
+    if (!existingContact.photo_url) {
+      updates.photo_url = person.photo_url;
+      updatedFields.push("Photo");
+    } else if (person.photo_url !== existingContact.photo_url) {
+      conflicts.push({ field: "photo_url", label: "Photo", existing: existingContact.photo_url, incoming: person.photo_url });
+    }
   }
-  if (!existingContact.title && person.title) {
-    updates.title = person.title;
-    updatedFields.push("Title");
+
+  // Scalar text fields: fill if empty, flag conflict if differs
+  const SCALAR = [
+    { field: "title", label: "Title" },
+    { field: "email", label: "Email" },
+    { field: "linkedin_url", label: "LinkedIn" },
+  ];
+  for (const { field, label } of SCALAR) {
+    const incoming = person[field];
+    if (!incoming) continue;
+    const existing = existingContact[field];
+    if (!existing) {
+      updates[field] = incoming;
+      updatedFields.push(label);
+    } else if (norm(existing) !== norm(incoming)) {
+      conflicts.push({ field, label, existing, incoming });
+    }
   }
-  if (!existingContact.email && person.email) {
-    updates.email = person.email;
-    updatedFields.push("Email");
-  }
-  if (!existingContact.linkedin_url && person.linkedin_url) {
-    updates.linkedin_url = person.linkedin_url;
-    updatedFields.push("LinkedIn");
-  }
-  // Biography: fill if empty; otherwise detect a change for user approval.
-  let biographyChange = null;
+
+  // Biography: fill if empty; flag conflict if differs
   if (person.biography) {
-    const norm = (s) => (s || "").toLowerCase().replace(/\s+/g, " ").trim();
     if (!existingContact.biography) {
       updates.biography = person.biography;
       updatedFields.push("Biography");
     } else if (norm(existingContact.biography) !== norm(person.biography)) {
-      // Biography changed on the website — flag for explicit user approval.
-      biographyChange = { existing: existingContact.biography, incoming: person.biography };
+      conflicts.push({ field: "biography", label: "Biography", existing: existingContact.biography, incoming: person.biography });
     }
   }
 
-  // Designations: merge any new ones not already present (case-insensitive dedup)
+  // Designations: merge new ones (additive, no conflict needed)
   const existingDesignations = existingContact.designations || [];
   const fullName = `${person.first_name || ""} ${person.last_name || ""}`.trim();
   const personDesignations = detectDesignations(fullName, person.biography);
@@ -454,7 +465,7 @@ export function computeContactUpdates(existingContact, person, firmId) {
     updatedFields.push("Designations");
   }
 
-  // Phones: add new ones not already present
+  // Phones: add new ones not already present (additive)
   const existingPhones = existingContact.phones || [];
   const existingPhoneKeys = new Set(
     existingPhones.map((p) => `${p.country_code || ""}${p.area_code || ""}${p.number_mid || ""}${p.number_last || ""}`)
@@ -468,7 +479,7 @@ export function computeContactUpdates(existingContact, person, firmId) {
     }
   }
 
-  // Firm association: ensure the contact is linked to this firm
+  // Firm association: ensure the contact is linked to this firm (additive)
   if (firmId) {
     const existingFirmIds = existingContact.firm_ids || [];
     if (!existingFirmIds.includes(firmId)) {
@@ -477,7 +488,7 @@ export function computeContactUpdates(existingContact, person, firmId) {
     }
   }
 
-  return { updates, updatedFields, biographyChange };
+  return { updates, updatedFields, conflicts };
 }
 
 /**
@@ -503,11 +514,12 @@ export function mergeContactEnrichment(people, existingContacts, firmId) {
 
     if (dups.length > 0) {
       const bestMatch = dups[0].contact;
-      const { updates, updatedFields, biographyChange } = computeContactUpdates(bestMatch, person, firmId);
-      if (Object.keys(updates).length > 0 || biographyChange) {
+      const { updates, updatedFields, conflicts } = computeContactUpdates(bestMatch, person, firmId);
+      if (Object.keys(updates).length > 0 || conflicts.length > 0) {
         const contactName = `${bestMatch.first_name || ""} ${bestMatch.last_name || ""}`.trim();
-        contactUpdates.push({ id: bestMatch.id, updates, updatedFields, contactName, biographyChange });
-        allUpdatedFields.push(`${contactName}: ${updatedFields.join(", ")}`);
+        contactUpdates.push({ id: bestMatch.id, updates, updatedFields, conflicts, contactName });
+        const conflictLabels = conflicts.map((c) => `${c.label} (review)`);
+        allUpdatedFields.push(`${contactName}: ${[...updatedFields, ...conflictLabels].join(", ")}`);
       }
     } else {
       newPeople.push(person);

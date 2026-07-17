@@ -161,7 +161,8 @@ export default function AIAssistant() {
       const table = enrichmentToTable(enrichedData, allUpdatedFields);
 
       const hasConflicts = conflicts && conflicts.length > 0;
-      if (Object.keys(updates).length === 0 && contactUpdates.length === 0 && newPeople.length === 0 && !hasConflicts) {
+      const hasContactConflicts = contactUpdates.some((cu) => cu.conflicts?.length > 0);
+      if (Object.keys(updates).length === 0 && contactUpdates.length === 0 && newPeople.length === 0 && !hasConflicts && !hasContactConflicts) {
         return {
           role: "assistant",
           content: `I found **${firm.name}** in your database and searched their public website. All fields are already populated — no updates were needed.`,
@@ -175,8 +176,8 @@ export default function AIAssistant() {
       if (updatedFields.length > 0) summaryParts.push(`${updatedFields.length} firm field(s): ${updatedFields.join(", ")}`);
       if (contactUpdates.length > 0) {
         const parts = contactUpdates.map((c) => {
-          const fields = [...c.updatedFields];
-          if (c.biographyChange) fields.push("biography changed (review in firm enrichment)");
+          const fields = [...(c.updatedFields || [])];
+          if (c.conflicts?.length > 0) fields.push(...c.conflicts.map((cf) => `${cf.label} (review)`));
           return `${c.contactName} (${fields.join(", ") || "—"})`;
         });
         summaryParts.push(`${contactUpdates.length} contact(s) updated: ${parts.join("; ")}`);
@@ -195,7 +196,11 @@ export default function AIAssistant() {
           return s.length > 120 ? s.substring(0, 120) + "…" : s;
         };
         const lines = conflicts.map((c) => `  • ${c.label}${c.additive ? " (add)" : " (replace)"}:\n     Current: ${fmtVal(c.existing)}\n     From web: ${fmtVal(c.incoming)}`);
-        summaryParts.push(`ℹ️ ${conflicts.length} field(s) already have data that differ from the web. Review and select which to update below before applying:\n${lines.join("\n")}`);
+        summaryParts.push(`ℹ️ ${conflicts.length} firm field(s) already have data that differ from the web. Review and select which to update below before applying:\n${lines.join("\n")}`);
+      }
+      if (hasContactConflicts) {
+        const contactsWithConflicts = contactUpdates.filter((cu) => cu.conflicts?.length > 0);
+        summaryParts.push(`ℹ️ ${contactsWithConflicts.length} contact(s) have fields with differing data — review and select which to update in the panels below.`);
       }
 
       return {
@@ -261,14 +266,21 @@ export default function AIAssistant() {
             }
           } catch {}
         }
-        // Update existing contacts with new info
+        // Update existing contacts: apply auto-fills + any user-approved conflicts
+        const approvedContactConflicts = opts.approvedContactConflicts || {};
         let contactsUpdated = 0;
         for (const cu of (pendingCreation.contactUpdates || [])) {
-          // Skip biography-only changes (updates is empty); those require
-          // explicit per-contact approval which this automated flow doesn't offer.
-          if (!cu.updates || Object.keys(cu.updates).length === 0) continue;
+          const finalContactUpdates = { ...(cu.updates || {}) };
+          // Apply per-contact approved conflict fields
+          const approvedFields = approvedContactConflicts[cu.id] || [];
+          for (const c of (cu.conflicts || [])) {
+            if (approvedFields.includes(c.field)) {
+              finalContactUpdates[c.field] = c.incoming;
+            }
+          }
+          if (Object.keys(finalContactUpdates).length === 0) continue;
           try {
-            await base44.entities.Contact.update(cu.id, cu.updates);
+            await base44.entities.Contact.update(cu.id, finalContactUpdates);
             contactsUpdated++;
           } catch {}
         }
