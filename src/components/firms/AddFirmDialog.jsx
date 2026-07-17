@@ -358,7 +358,11 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
           const parsedPhone = person.phone ? parsePhoneString(person.phone) : null;
           if (parsedPhone) contactData.phones = [parsedPhone];
 
-          const dups = findContactDuplicates(contactData, allContacts);
+          // Only match against contacts already linked to THIS firm — a
+          // same-named person at a different firm must not receive this
+          // firm's biography (or any field update) from the enrichment.
+          const firmContacts = allContacts.filter((c) => (c.firm_ids || []).includes(editingFirm.id));
+          const dups = findContactDuplicates(contactData, firmContacts);
           if (dups.length > 0) {
             const bestMatch = dups[0].contact;
             const { updates, updatedFields, conflicts } = computeContactUpdates(bestMatch, person, editingFirm.id);
@@ -589,7 +593,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                 linkedin_url: linkedinUrl, year_founded: yearFounded ? parseInt(yearFounded) : null,
                 firm_types: firmTypes, addresses, phones,
               }}
-              existingContacts={allContacts}
+              existingContacts={editingFirm ? allContacts.filter((c) => (c.firm_ids || []).includes(editingFirm.id)) : allContacts}
             />
           )}
 

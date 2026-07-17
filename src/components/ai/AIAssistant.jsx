@@ -150,7 +150,10 @@ export default function AIAssistant() {
       let contactUpdatedFields = [];
       if (enrichedData.people?.length > 0) {
         const allContacts = await base44.entities.Contact.list(null, 500);
-        const firmContacts = allContacts.filter((c) => !c.deleted_at);
+        // Only match against contacts already linked to THIS firm — a
+        // same-named person at a different firm must not receive this
+        // firm's biography (or any field update) from the enrichment.
+        const firmContacts = allContacts.filter((c) => !c.deleted_at && (c.firm_ids || []).includes(firm.id));
         const contactResult = mergeContactEnrichment(enrichedData.people, firmContacts, firm.id);
         contactUpdates = contactResult.contactUpdates;
         newPeople = contactResult.newPeople;
