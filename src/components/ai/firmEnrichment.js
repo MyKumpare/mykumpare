@@ -1,7 +1,7 @@
 import { base44 } from "@/api/base44Client";
 import { detectDesignations } from "@/components/contacts/designationDetector";
 import { findContactDuplicates } from "@/components/contacts/contactDuplicateCheck";
-import { addressesAreExact } from "@/components/addressDuplicateCheck";
+import { addressesAreExact, addressesAreSimilar } from "@/components/addressDuplicateCheck";
 
 const COUNTRY_NAME_TO_CODE = {
   "united states": "US", "usa": "US", "u.s.": "US", "u.s.a.": "US", "america": "US",
@@ -340,18 +340,29 @@ export function mergeEnrichmentData(existingFirm, enrichedData) {
     updatedFields.push("Firm Types");
   }
 
-  // Addresses: add only new (non-duplicate) addresses, keeping existing ones.
-  // Use the robust normalized comparison so case/abbreviation/country-code
-  // differences don't let an exact duplicate slip through.
+  // Addresses: block exact duplicates, flag similar ones for explicit user
+  // confirmation, and only auto-apply genuinely new addresses. This mirrors
+  // the manual-entry and enrichment-panel behavior so the AI tool can't slip
+  // a duplicate (or a near-duplicate) past the user.
   const existingAddresses = existingFirm.addresses || [];
   const candidateAddresses = (enrichedData.addresses || []).filter((a) => a.address_line1 || a.city);
-  const uniqueNewAddrs = candidateAddresses.filter((a) =>
-    !existingAddresses.some((ex) => addressesAreExact(a, ex))
-  );
+  const similarAddresses = [];
+  const uniqueNewAddrs = candidateAddresses.filter((a) => {
+    if (existingAddresses.some((ex) => addressesAreExact(a, ex))) return false; // blocked
+    const similarMatch = existingAddresses.find((ex) => addressesAreSimilar(a, ex));
+    if (similarMatch) {
+      similarAddresses.push({ incoming: a, existing: similarMatch });
+      return false; // held back for explicit confirmation
+    }
+    return true;
+  });
   if (uniqueNewAddrs.length > 0) {
     if (existingAddresses.length === 0 && uniqueNewAddrs[0]) uniqueNewAddrs[0].is_headquarters = true;
     updates.addresses = [...existingAddresses, ...uniqueNewAddrs.map((a) => ({ ...a, id: crypto.randomUUID() }))];
     updatedFields.push(`${uniqueNewAddrs.length} Address(es)`);
+  }
+  if (similarAddresses.length > 0) {
+    updatedFields.push(`${similarAddresses.length} Similar Address(es) — needs confirmation`);
   }
 
   // Phones: add only new (non-duplicate) phones, keeping existing ones
@@ -368,7 +379,7 @@ export function mergeEnrichmentData(existingFirm, enrichedData) {
     updatedFields.push(`${uniqueNewPhones.length} Phone(s)`);
   }
 
-  return { updates, updatedFields };
+  return { updates, updatedFields, similarAddresses };
 }
 
 /**

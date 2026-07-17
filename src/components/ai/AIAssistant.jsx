@@ -141,7 +141,7 @@ export default function AIAssistant() {
         };
       }
 
-      const { updates, updatedFields } = mergeEnrichmentData(firm, enrichedData);
+      const { updates, updatedFields, similarAddresses } = mergeEnrichmentData(firm, enrichedData);
 
       // Also check for contact updates — match enriched people against existing contacts
       let contactUpdates = [];
@@ -180,12 +180,17 @@ export default function AIAssistant() {
         summaryParts.push(`${contactUpdates.length} contact(s) updated: ${parts.join("; ")}`);
       }
       if (newPeople.length > 0) summaryParts.push(`${newPeople.length} new contact(s) to create`);
+      if (similarAddresses?.length > 0) {
+        const fmt = (a) => [a.address_line1, a.address_line2, a.city, a.state, a.postal_code, a.country].filter(Boolean).join(", ");
+        const lines = similarAddresses.map((s) => `  • New: ${fmt(s.incoming)}\n     Existing: ${fmt(s.existing)}`);
+        summaryParts.push(`⚠️ ${similarAddresses.length} similar address(es) that may duplicate existing ones (held back — use "Add similar address(es)" to include):\n${lines.join("\n")}`);
+      }
 
       return {
         role: "assistant",
         content: `I found **${firm.name}** in your database and searched their public website. I can update:\n\n${summaryParts.map((s) => `- ${s}`).join("\n")}${validation.issues.length ? `\n\n⚠️ **Validation notes:**\n${validation.issues.map((i) => `- ${i}`).join("\n")}` : ""}\n\nPlease confirm to apply these updates.`,
         tables: [table],
-        pending_creation: { type: "update_firm", firmId: firm.id, updates, updatedFields, contactUpdates, newPeople },
+        pending_creation: { type: "update_firm", firmId: firm.id, updates, updatedFields, contactUpdates, newPeople, similarAddresses: similarAddresses || [] },
       };
     } catch (error) {
       return {
@@ -195,7 +200,7 @@ export default function AIAssistant() {
     }
   };
 
-  const handleConfirmCreation = async (pendingCreation) => {
+  const handleConfirmCreation = async (pendingCreation, opts = {}) => {
     setMessages((prev) => [...prev, { role: "user", content: pendingCreation.type === "update_firm" ? "Yes, apply updates" : "Yes, create it" }]);
     setIsLoading(true);
     try {
@@ -208,6 +213,27 @@ export default function AIAssistant() {
       } else if (pendingCreation.type === "update_firm") {
         if (Object.keys(pendingCreation.updates || {}).length > 0) {
           await base44.entities.Firm.update(pendingCreation.firmId, pendingCreation.updates);
+        }
+        // Similar addresses are held back from the auto-apply batch and only
+        // added when the user explicitly opts in ("Add similar address(es)").
+        // Double-check against the firm's current addresses so a duplicate
+        // can't sneak in if the record changed since the preview was built.
+        if (opts.includeSimilarAddresses && pendingCreation.similarAddresses?.length > 0) {
+          try {
+            const current = await base44.entities.Firm.get(pendingCreation.firmId);
+            const currentAddrs = current.addresses || [];
+            const { addressesAreExact } = await import("@/components/addressDuplicateCheck");
+            const toAdd = pendingCreation.similarAddresses
+              .map((s) => s.incoming)
+              .filter((a) => a.address_line1 || a.city)
+              .filter((a) => !currentAddrs.some((ex) => addressesAreExact(a, ex)))
+              .map((a) => ({ ...a, id: crypto.randomUUID() }));
+            if (toAdd.length > 0) {
+              await base44.entities.Firm.update(pendingCreation.firmId, {
+                addresses: [...currentAddrs, ...toAdd],
+              });
+            }
+          } catch {}
         }
         // Update existing contacts with new info
         let contactsUpdated = 0;
