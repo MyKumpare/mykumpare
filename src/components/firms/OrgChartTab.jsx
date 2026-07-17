@@ -346,6 +346,7 @@ export default function OrgChartTab({ firmId, firmName = "" }) {
   const fullscreenContainerRef = useRef(null);
   const [fullscreenZoom, setFullscreenZoom] = useState(1);
   const [showMergeDialog, setShowMergeDialog] = useState(false);
+  const [newContactOpen, setNewContactOpen] = useState(false);
 
   const handleViewContact = (contact) => {
     if (!contact) return;
@@ -778,16 +779,26 @@ export default function OrgChartTab({ firmId, firmName = "" }) {
         <div className="w-44 flex-shrink-0">
           <div className="flex items-center justify-between mb-2">
             <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Contacts</div>
-            {duplicateCount > 0 && (
+            <div className="flex items-center gap-1">
+              {duplicateCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowMergeDialog(true)}
+                  className="flex items-center gap-1 text-[10px] font-semibold text-amber-600 hover:text-amber-700 hover:bg-amber-50 px-1.5 py-0.5 rounded"
+                  title={`${duplicateCount} duplicate set(s) detected — review and merge`}
+                >
+                  <AlertTriangle className="w-3 h-3" /> {duplicateCount} dup
+                </button>
+              )}
               <button
                 type="button"
-                onClick={() => setShowMergeDialog(true)}
-                className="flex items-center gap-1 text-[10px] font-semibold text-amber-600 hover:text-amber-700 hover:bg-amber-50 px-1.5 py-0.5 rounded"
-                title={`${duplicateCount} duplicate set(s) detected — review and merge`}
+                onClick={() => setNewContactOpen(true)}
+                className="flex items-center gap-1 text-[10px] font-semibold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 px-1.5 py-0.5 rounded"
+                title="Add a new contact for this firm"
               >
-                <AlertTriangle className="w-3 h-3" /> {duplicateCount} dup
+                <Plus className="w-3 h-3" /> Add
               </button>
-            )}
+            </div>
           </div>
           {duplicateCount > 0 && (
             <Button variant="outline" size="sm" className="w-full h-7 mb-2 text-xs gap-1 border-amber-300 text-amber-700 hover:bg-amber-50" onClick={() => setShowMergeDialog(true)}>
@@ -868,6 +879,13 @@ export default function OrgChartTab({ firmId, firmName = "" }) {
           firms={[]}
         />
       )}
+
+      <AddContactDialog
+        open={newContactOpen}
+        onOpenChange={setNewContactOpen}
+        currentFirmId={firmId}
+        firms={[]}
+      />
 
       <MergeDuplicateContactsDialog
         open={showMergeDialog}
