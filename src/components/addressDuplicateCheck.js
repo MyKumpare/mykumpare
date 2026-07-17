@@ -112,8 +112,11 @@ export function addressesAreExact(a1, a2) {
   const c1 = norm(a1.city), c2 = norm(a2.city);
   // Same postal + same street (exact match)
   if (s1 && s2 && s1 === s2 && z1 && z1 === z2) return true;
-  // Same postal + same city + one street contains the other (same building,
-  // one just has more detail like a suite number)
+  // Same city + one street contains the other (same building, one just has
+  // more detail like a suite/floor number; web enrichment often omits the
+  // suite so the incoming street is a prefix of the stored one)
+  if (c1 && c1 === c2 && s1 && s2 && (s1.includes(s2) || s2.includes(s1))) return true;
+  // Same postal + same city + one street contains the other (same building)
   if (z1 && z1 === z2 && c1 && c1 === c2 && s1 && s2 && (s1.includes(s2) || s2.includes(s1))) return true;
   return false;
 }

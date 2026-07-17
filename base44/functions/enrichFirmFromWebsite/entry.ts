@@ -107,11 +107,23 @@ function htmlToText(html: string, baseUrl: string): string {
     return `\n[IMAGE: alt="${alt}" src="${src}"]\n`;
   });
 
-  // Step 2: For nav/footer/header sections, keep only the [IMAGE: ...] markers
-  // (logos are commonly in the header; strip the nav link noise)
+  // Step 2: For nav/footer/header sections, extract internal links (team/
+  // people page URLs often live only in the nav menu) and keep [IMAGE: ...]
+  // markers (logos are commonly in the header). Other nav text is noise.
   result = result.replace(/<(nav|footer|header)[^>]*>([\s\S]*?)<\/\1>/gi, (_m, _tag, inner) => {
     const images = inner.match(/\[IMAGE:[^\]]*\]/g) || [];
-    return images.length > 0 ? '\n' + images.join('\n') : '';
+    // Extract href URLs from <a> tags BEFORE image markers were applied —
+    // the inner HTML may still have raw <a href="..."> tags since this runs
+    // before the link conversion in Step 3.
+    const links = inner.match(/<a\s[^>]*?href\s*=\s*["']([^"']+)["']/gi) || [];
+    const linkMarkers = links
+      .map((l) => {
+        const hrefMatch = l.match(/href\s*=\s*["']([^"']+)["']/i);
+        return hrefMatch ? `[LINK: ${resolveUrl(baseUrl, hrefMatch[1].trim())}]` : '';
+      })
+      .filter(Boolean);
+    const parts = [...images, ...linkMarkers];
+    return parts.length > 0 ? '\n' + parts.join('\n') : '';
   });
 
   // Step 3: Convert <a href="...">text</a> into "text [LINK: url]" so the LLM
@@ -255,43 +267,53 @@ async function discoverBioUrlsViaSearch(
     .filter(Boolean);
   if (names.length === 0) return result;
   try {
-    const res = await base44.integrations.Core.InvokeLLM({
-      prompt: `Search the web for the individual biography/profile pages of the following people, who work at the firm whose website is ${domain}.
+    // Search in small batches (5 people per call) for reliability — a single
+    // search with 30+ names is too much for the LLM to resolve accurately.
+    const BATCH = 5;
+    for (let i = 0; i < names.length; i += BATCH) {
+      const batch = names.slice(i, i + BATCH);
+      try {
+        const res = await base44.integrations.Core.InvokeLLM({
+          prompt: `Search the web for the individual biography/profile pages of the following people, who work at the firm whose website is ${domain}.
 
 For EACH person, find the full URL of their individual biography or profile page ON THE FIRM'S OWN WEBSITE (${domain}). Only return URLs that contain "${domain}" — do NOT return LinkedIn, RocketReach, or any third-party URLs. If you cannot find an individual bio page on ${domain} for a person, leave their URL empty.
 
 People:
-${names.map((n, i) => `${i + 1}. ${n}`).join('\n')}
+${batch.map((n, i) => `${i + 1}. ${n}`).join('\n')}
 
 Return a JSON object with a "results" array, where each item has "name" (the person's name) and "bio_url" (the full URL on ${domain}, or empty string if not found).`,
-      add_context_from_internet: true,
-      response_json_schema: {
-        type: 'object',
-        properties: {
-          results: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                name: { type: 'string' },
-                bio_url: { type: 'string' },
+          add_context_from_internet: true,
+          response_json_schema: {
+            type: 'object',
+            properties: {
+              results: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string' },
+                    bio_url: { type: 'string' },
+                  },
+                },
               },
             },
           },
-        },
-      },
-    });
-    const results = res?.results || [];
-    for (const r of results) {
-      const url = (r.bio_url || '').trim();
-      const name = (r.name || '').trim().toLowerCase();
-      if (url && /^https?:\/\/.+/.test(url) && name) {
-        // Only accept URLs on the firm's own domain.
-        let urlHost = '';
-        try { urlHost = new URL(url).host.toLowerCase(); } catch { /* ignore */ }
-        if (!domain || urlHost === domain || urlHost.endsWith('.' + domain)) {
-          result.set(name, url);
+        });
+        const results = res?.results || [];
+        for (const r of results) {
+          const url = (r.bio_url || '').trim();
+          const name = (r.name || '').trim().toLowerCase();
+          if (url && /^https?:\/\/.+/.test(url) && name) {
+            // Only accept URLs on the firm's own domain.
+            let urlHost = '';
+            try { urlHost = new URL(url).host.toLowerCase(); } catch { /* ignore */ }
+            if (!domain || urlHost === domain || urlHost.endsWith('.' + domain)) {
+              result.set(name, url);
+            }
+          }
         }
+      } catch {
+        // continue to next batch on error
       }
     }
   } catch {
@@ -318,7 +340,7 @@ async function enrichMissingBiographies(
   // "Corey Moore, CFA") in the biography field when the listing page has no
   // bio — these name-only stubs must be treated as "missing" so the real bio
   // is fetched from their individual profile page. Real bios are paragraphs.
-  const MAX = 12;
+  const MAX = 30;
   const CONCURRENCY = 6;
   const isStubBio = (p: any): boolean => {
     const bio = (p.biography || '').trim();
@@ -430,10 +452,55 @@ Deno.serve(async (req) => {
       }
       return null;
     });
+    let subPages = (await Promise.all(subPagePromises)).filter(Boolean) as { url: string; text: string }[];
+
+    // Discover team/people pages from internal links on ALL fetched pages.
+    // Many sites use non-standard paths (e.g. /about-xponance/people/) that
+    // aren't in COMMON_PATHS. Internal links are preserved as [LINK: url]
+    // markers, so we scan every fetched page for team/people keywords.
+    {
+      let baseHost = '';
+      try { baseHost = new URL(website).host.toLowerCase(); } catch { /* ignore */ }
+      const discovered = new Set<string>();
+      const allText = [homepageText, ...subPages.map((p) => p.text)].filter(Boolean);
+      for (const text of allText) {
+        const linkRegex = /\[LINK:\s*(https?:\/\/[^\]]+)\]/gi;
+        let lmatch: RegExpExecArray | null;
+        while ((lmatch = linkRegex.exec(text)) !== null) {
+          const url = lmatch[1];
+          let linkHost = '';
+          try { linkHost = new URL(url).host.toLowerCase(); } catch { /* ignore */ }
+          if (!linkHost || linkHost !== baseHost) continue;
+          if (/\/(people|our-people|team|our-team|leadership|staff|personnel|professionals)\b/i.test(url)) {
+            if (url !== website) discovered.add(url);
+          }
+        }
+      }
+      // Also try keyword-based path discovery: extract path segments that
+      // look like team pages from any internal links (catches /about-xponance/people/
+      // even when the full URL doesn't match the keyword regex).
+      for (const text of allText) {
+        const pathRegex = /\[LINK:\s*https?:\/\/[^^\]]*?\/[^[\]]*?(people|our-people|team|our-team|leadership)\b[^\]]*\]/gi;
+        let pmatch: RegExpExecArray | null;
+        while ((pmatch = pathRegex.exec(text)) !== null) {
+          const url = pmatch[0].replace(/\[LINK:\s*/, '').replace(/\]$/, '').trim();
+          if (url !== website) discovered.add(url);
+        }
+      }
+      const existingUrls = new Set([website, ...subPages.map((p) => p.url)]);
+      const toFetch = [...discovered].filter((u) => !existingUrls.has(u)).slice(0, 5);
+      const teamPages = (await Promise.all(
+        toFetch.map(async (teamUrl) => {
+          const text = await fetchPage(teamUrl);
+          if (text && text.length > 100) return { url: teamUrl, text: text.substring(0, 18000) };
+          return null;
+        }),
+      )).filter(Boolean) as { url: string; text: string }[];
+      subPages = subPages.concat(teamPages);
+    }
 
     // Sort so people/team pages come first (most important for contact extraction),
     // keeping homepage at the front.
-    const subPages = (await Promise.all(subPagePromises)).filter(Boolean);
     subPages.sort((a, b) => {
       const aPeople = /\/(people|our-people|team|our-team|leadership|staff)\b/i.test(a.url) ? 0 : 1;
       const bPeople = /\/(people|our-people|team|our-team|leadership|staff)\b/i.test(b.url) ? 0 : 1;
