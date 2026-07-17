@@ -23,19 +23,40 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
     queryFn: () => base44.entities.Contact.list("-created_date", 5000),
   });
 
-  const firmContacts = contacts.filter((c) => c.firm_ids?.includes(firmId) && !c.deleted_at);
+  const allFirmContacts = useMemo(
+    () => contacts.filter((c) => c.firm_ids?.includes(firmId) && !c.deleted_at),
+    [contacts, firmId]
+  );
 
   // Detect duplicate contacts by same first + last name (case-insensitive)
   const duplicateGroups = useMemo(() => {
     const groups = {};
-    for (const c of firmContacts) {
+    for (const c of allFirmContacts) {
       const key = `${(c.first_name || "").toLowerCase().trim()}|${(c.last_name || "").toLowerCase().trim()}`;
       if (!key || key === "|") continue;
       if (!groups[key]) groups[key] = [];
       groups[key].push(c);
     }
     return Object.values(groups).filter((g) => g.length > 1);
-  }, [firmContacts]);
+  }, [allFirmContacts]);
+
+  // Only show the most-current (latest updated_date) record per duplicate group;
+  // contacts with no first+last name are always shown.
+  const firmContacts = useMemo(() => {
+    const latestPerKey = {};
+    for (const c of allFirmContacts) {
+      const key = `${(c.first_name || "").toLowerCase().trim()}|${(c.last_name || "").toLowerCase().trim()}`;
+      if (!key || key === "|") continue;
+      if (!latestPerKey[key] || new Date(c.updated_date || 0) > new Date(latestPerKey[key].updated_date || 0)) {
+        latestPerKey[key] = c;
+      }
+    }
+    return allFirmContacts.filter((c) => {
+      const key = `${(c.first_name || "").toLowerCase().trim()}|${(c.last_name || "").toLowerCase().trim()}`;
+      if (!key || key === "|") return true;
+      return latestPerKey[key]?.id === c.id;
+    });
+  }, [allFirmContacts]);
 
   const handleView = (contact) => {
     setEditingContact(contact);
