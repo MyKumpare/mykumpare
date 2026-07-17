@@ -49,32 +49,45 @@ const CONSENT_COOKIES = [
 ].join('; ');
 
 async function fetchPage(url: string, maxRedirects = 3): Promise<string> {
-  try {
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Cookie': CONSENT_COOKIES,
-        'DNT': '0',
-      },
-      redirect: 'follow',
-    });
-    if (!response.ok) {
-      // Always consume the body to avoid stalled-response deadlocks under load.
-      try { await response.body?.cancel(); } catch { /* ignore */ }
+  const doFetch = async (): Promise<string> => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Cookie': CONSENT_COOKIES,
+          'DNT': '0',
+        },
+        redirect: 'follow',
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        try { await response.body?.cancel(); } catch { /* ignore */ }
+        return '';
+      }
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.includes('text') && !contentType.includes('html')) {
+        try { await response.body?.cancel(); } catch { /* ignore */ }
+        return '';
+      }
+      const html = await response.text();
+      return htmlToText(html, url);
+    } catch {
       return '';
+    } finally {
+      clearTimeout(timeout);
     }
-    const contentType = response.headers.get('content-type') || '';
-    if (!contentType.includes('text') && !contentType.includes('html')) {
-      try { await response.body?.cancel(); } catch { /* ignore */ }
-      return '';
-    }
-    const html = await response.text();
-    return htmlToText(html, url);
-  } catch {
-    return '';
+  };
+  // Single retry on failure — handles intermittent timeouts and rate-limiting.
+  let result = await doFetch();
+  if (!result || result.length < 100) {
+    await new Promise((r) => setTimeout(r, 500));
+    result = await doFetch();
   }
+  return result;
 }
 
 function extractImgUrl(imgTag: string, baseUrl: string): string {
@@ -182,8 +195,11 @@ async function extractBiographyFromPage(
   base44: any,
   personName: string,
   bioUrl: string,
+  pageText?: string,
 ): Promise<string> {
-  const pageText = await fetchPage(bioUrl);
+  if (!pageText) {
+    pageText = await fetchPage(bioUrl);
+  }
   if (!pageText || pageText.length < 50) return '';
   try {
     const res = await base44.integrations.Core.InvokeLLM({
@@ -322,6 +338,76 @@ Return a JSON object with a "results" array, where each item has "name" (the per
   return result;
 }
 
+// Construct candidate individual-bio-page URLs from the team/people page
+// base URL + the person's name slug (e.g. /about-xponance/people/cesar-gonzales/).
+// Many sites (Divi, WordPress) use this predictable pattern. Probe each
+// candidate with a lightweight HEAD-like fetch; if the page exists and has
+// substantial content, return it. This avoids slow web search entirely for
+// sites that use standard slug patterns.
+const NAME_SUFFIXES = new Set(['jr', 'sr', 'ii', 'iii', 'iv', 'v', 'esq', 'cfa', 'cpa', 'mba', 'phd', 'md', 'cmfc', 'apfi', 'cipm', 'aicp', 'chfc', 'clu', 'cfp', 'frm']);
+
+function slugifyName(name: string): string {
+  return (name || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[.'’]/g, '')
+    .split(/\s+/)
+    .filter((t) => t && !NAME_SUFFIXES.has(t))
+    .join(' ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+async function discoverBioUrlByPattern(
+  pageContents: { url: string; text: string }[],
+  firstName: string,
+  lastName: string,
+  middleName?: string,
+): Promise<{ url: string; text: string }> {
+  if (!firstName || !lastName) return { url: '', text: '' };
+  // Find the team/people page base URL from fetched pages.
+  const baseCandidates: string[] = [];
+  for (const page of pageContents) {
+    if (/\/(people|our-people|team|our-team|leadership|staff)\b/i.test(page.url)) {
+      let base = page.url;
+      if (!base.endsWith('/')) base = base + '/';
+      const kwMatch = base.match(/(.*?\/(?:people|our-people|team|our-team|leadership|staff|personnel|professionals)\/)/i);
+      if (kwMatch) {
+        baseCandidates.push(kwMatch[1]);
+      } else {
+        baseCandidates.push(base);
+      }
+    }
+  }
+  if (baseCandidates.length === 0) return { url: '', text: '' };
+
+  const first = slugifyName(firstName);
+  const last = slugifyName(lastName);
+  const middle = slugifyName(middleName || '');
+  // Candidate slug patterns (most common first). Keep it to 2 to minimize fetches.
+  const slugPatterns = [
+    `${first}-${last}`,
+    `${first}-${middle}-${last}`,
+  ].filter((s) => s.replace(/-+/g, '-').length > 2 && !s.includes('--'));
+
+  const tried = new Set<string>();
+  for (const base of baseCandidates) {
+    for (const slug of slugPatterns) {
+      const url = base + slug + '/';
+      if (tried.has(url)) continue;
+      tried.add(url);
+      const text = await fetchPage(url);
+      if (text && text.length > 200) {
+        const lower = text.toLowerCase();
+        if (lower.includes(last) && (lower.includes(first) || lower.includes(firstName.toLowerCase().substring(0, 3)))) {
+          return { url, text };
+        }
+      }
+    }
+  }
+  return { url: '', text: '' };
+}
+
 // For every person whose biography is missing (or only a short snippet on the
 // listing page), fetch their individual profile page and extract the FULL
 // biography verbatim. Bio page URLs are resolved in priority order: (1) the
@@ -341,7 +427,7 @@ async function enrichMissingBiographies(
   // bio — these name-only stubs must be treated as "missing" so the real bio
   // is fetched from their individual profile page. Real bios are paragraphs.
   const MAX = 30;
-  const CONCURRENCY = 6;
+  const CONCURRENCY = 10;
   const isStubBio = (p: any): boolean => {
     const bio = (p.biography || '').trim();
     if (!bio) return true;
@@ -354,28 +440,69 @@ async function enrichMissingBiographies(
   const queue = people.filter(isStubBio).slice(0, MAX);
   if (queue.length === 0) return;
 
-  // One batched web search to discover individual bio page URLs for everyone
-  // in the queue (for sites that don't link to them in the listing HTML).
-  const searchResults = await discoverBioUrlsViaSearch(base44, queue, website);
-
+  // Phase A: pattern probe + link discovery for all missing-bio people.
+  // This resolves bio URLs and fetches page text in one step; the text is
+  // reused for LLM extraction so we avoid a second fetch per person.
   let cursor = 0;
-  const worker = async () => {
+  const resolved: Map<number, { url: string; text: string }> = new Map();
+  const unresolvedIdx: number[] = [];
+
+  const phaseAWorker = async () => {
     while (cursor < queue.length) {
       const i = cursor++;
       const person = queue[i];
-      const fullName = [person.first_name, person.last_name].filter(Boolean).join(' ').trim();
-      // Resolve a bio URL: (1) LLM-provided, (2) link-marker discovery, (3) web search.
-      let bioUrl = person.bio_url || '';
-      if (!bioUrl) {
-        bioUrl = discoverBioUrl(pageContents, person.first_name, person.last_name);
+      // (1) LLM-provided bio_url from the listing page.
+      if (person.bio_url) {
+        resolved.set(i, { url: person.bio_url, text: '' });
+        continue;
       }
-      if (!bioUrl) {
+      // (2) Internal [LINK: ...] marker near the person's name.
+      const linkUrl = discoverBioUrl(pageContents, person.first_name, person.last_name);
+      if (linkUrl) {
+        resolved.set(i, { url: linkUrl, text: '' });
+        continue;
+      }
+      // (3) URL pattern probe (slug-based) — returns fetched text too.
+      const probed = await discoverBioUrlByPattern(pageContents, person.first_name, person.last_name, person.middle_name);
+      if (probed.url) {
+        resolved.set(i, probed);
+        continue;
+      }
+      unresolvedIdx.push(i);
+    }
+  };
+
+  await Promise.all(
+    Array.from({ length: Math.min(CONCURRENCY, queue.length), }, () => phaseAWorker()),
+  );
+
+  // Phase B: batched web search ONLY for people the pattern probe couldn't
+  // resolve (keeps the expensive LLM web-search calls to a minimum).
+  let searchResults = new Map<string, string>();
+  if (unresolvedIdx.length > 0) {
+    const unresolvedPeople = unresolvedIdx.map((i) => queue[i]);
+    searchResults = await discoverBioUrlsViaSearch(base44, unresolvedPeople, website);
+  }
+
+  // Phase C: extract biographies. People resolved in Phase A reuse their
+  // already-fetched text; people resolved in Phase B fetch their bio page now.
+  let cCursor = 0;
+  const phaseCWorker = async () => {
+    while (cCursor < queue.length) {
+      const i = cCursor++;
+      const person = queue[i];
+      const fullName = [person.first_name, person.last_name].filter(Boolean).join(' ').trim();
+      const cached = resolved.get(i);
+      let bioUrl = '';
+      let pageText: string | undefined;
+      if (cached) {
+        bioUrl = cached.url;
+        pageText = cached.text || undefined;
+      } else {
         bioUrl = searchResults.get(fullName.toLowerCase()) || '';
       }
       if (!bioUrl) continue;
-      const bio = await extractBiographyFromPage(base44, fullName, bioUrl);
-      // The individual profile page is the authoritative source — always use
-      // its full biography when non-empty (it is never a summary).
+      const bio = await extractBiographyFromPage(base44, fullName, bioUrl, pageText);
       if (bio) {
         person.biography = bio;
       }
@@ -383,7 +510,7 @@ async function enrichMissingBiographies(
   };
 
   await Promise.all(
-    Array.from({ length: Math.min(CONCURRENCY, queue.length) }, () => worker()),
+    Array.from({ length: Math.min(CONCURRENCY, queue.length), }, () => phaseCWorker()),
   );
 }
 
