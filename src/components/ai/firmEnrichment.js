@@ -2,6 +2,7 @@ import { base44 } from "@/api/base44Client";
 import { detectDesignations } from "@/components/contacts/designationDetector";
 import { findContactDuplicates } from "@/components/contacts/contactDuplicateCheck";
 import { addressesAreExact, addressesAreSimilar } from "@/components/addressDuplicateCheck";
+import { compareScalar } from "./enrichmentValidation";
 
 const COUNTRY_NAME_TO_CODE = {
   "united states": "US", "usa": "US", "u.s.": "US", "u.s.a.": "US", "america": "US",
@@ -308,36 +309,58 @@ export async function enrichFirmFromWeb(firmName, websiteUrl) {
 export function mergeEnrichmentData(existingFirm, enrichedData) {
   const updates = {};
   const updatedFields = [];
+  const conflicts = [];
 
-  if (!existingFirm.logo_url && enrichedData.logo_url) {
-    updates.logo_url = enrichedData.logo_url;
-    updatedFields.push("Logo");
-  }
-  if (!existingFirm.description && enrichedData.description) {
-    updates.description = enrichedData.description;
-    updatedFields.push("Description");
-  }
-  if (!existingFirm.website && enrichedData.website) {
-    updates.website = enrichedData.website;
-    updatedFields.push("Website");
-  }
-  if (!existingFirm.email && enrichedData.email) {
-    updates.email = enrichedData.email;
-    updatedFields.push("Email");
-  }
-  if (!existingFirm.linkedin_url && enrichedData.linkedin_url) {
-    updates.linkedin_url = enrichedData.linkedin_url;
-    updatedFields.push("LinkedIn");
-  }
-  if (!existingFirm.year_founded && enrichedData.year_founded) {
-    updates.year_founded = enrichedData.year_founded;
-    updatedFields.push("Year Founded");
-  }
+  const isEmpty = (v) => v == null || v === "" || (Array.isArray(v) && v.length === 0);
+  const normText = (s) => (s == null ? "" : String(s).toLowerCase().replace(/\s+/g, " ").trim());
 
-  const existingTypes = existingFirm.firm_types || [];
-  if (existingTypes.length === 0 && enrichedData.firm_types?.length > 0) {
-    updates.firm_types = enrichedData.firm_types;
-    updatedFields.push("Firm Types");
+  // Scalar firm fields: empty → auto-fill (append-only); already populated and
+  // the web returned a different value → surface as a conflict the user must
+  // opt into (never silently overwrite existing data).
+  const SCALAR_FIELDS = [
+    { field: "logo_url", label: "Logo" },
+    { field: "description", label: "Description" },
+    { field: "website", label: "Website" },
+    { field: "email", label: "Email" },
+    { field: "linkedin_url", label: "LinkedIn" },
+    { field: "year_founded", label: "Year Founded" },
+    { field: "firm_types", label: "Firm Types" },
+  ];
+
+  for (const { field, label } of SCALAR_FIELDS) {
+    const incoming = enrichedData[field];
+    if (isEmpty(incoming)) continue;
+    const existingVal = existingFirm[field];
+
+    if (isEmpty(existingVal)) {
+      updates[field] = incoming;
+      updatedFields.push(label);
+      continue;
+    }
+
+    // Field already populated — only alert if the incoming value actually differs.
+    let same;
+    if (field === "logo_url") {
+      // Logo URLs are re-hosted each scrape, so a different URL doesn't prove a
+      // different image. We can't verify equality, so surface every time as a
+      // "replace" the user can accept or ignore.
+      same = false;
+    } else if (field === "description") {
+      same = normText(existingVal) === normText(incoming);
+    } else {
+      same = compareScalar(field, existingVal, incoming).status === "exact";
+    }
+
+    if (!same) {
+      // firm_types is additive (union), every other field is a straight overwrite.
+      conflicts.push({
+        field,
+        label,
+        existing: existingVal,
+        incoming,
+        additive: field === "firm_types",
+      });
+    }
   }
 
   // Addresses: block exact duplicates, flag similar ones for explicit user
@@ -379,7 +402,7 @@ export function mergeEnrichmentData(existingFirm, enrichedData) {
     updatedFields.push(`${uniqueNewPhones.length} Phone(s)`);
   }
 
-  return { updates, updatedFields, similarAddresses };
+  return { updates, updatedFields, similarAddresses, conflicts };
 }
 
 /**

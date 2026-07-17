@@ -14,6 +14,7 @@ import {
   createFirmFromEnrichment,
   validateFirmData,
 } from "./firmEnrichment";
+import { addressesAreExact } from "@/components/addressDuplicateCheck";
 
 const RESPONSE_SCHEMA = {
   type: "object",
@@ -141,7 +142,7 @@ export default function AIAssistant() {
         };
       }
 
-      const { updates, updatedFields, similarAddresses } = mergeEnrichmentData(firm, enrichedData);
+      const { updates, updatedFields, similarAddresses, conflicts } = mergeEnrichmentData(firm, enrichedData);
 
       // Also check for contact updates — match enriched people against existing contacts
       let contactUpdates = [];
@@ -159,7 +160,8 @@ export default function AIAssistant() {
       const allUpdatedFields = [...updatedFields, ...contactUpdatedFields];
       const table = enrichmentToTable(enrichedData, allUpdatedFields);
 
-      if (Object.keys(updates).length === 0 && contactUpdates.length === 0 && newPeople.length === 0) {
+      const hasConflicts = conflicts && conflicts.length > 0;
+      if (Object.keys(updates).length === 0 && contactUpdates.length === 0 && newPeople.length === 0 && !hasConflicts) {
         return {
           role: "assistant",
           content: `I found **${firm.name}** in your database and searched their public website. All fields are already populated — no updates were needed.`,
@@ -185,12 +187,22 @@ export default function AIAssistant() {
         const lines = similarAddresses.map((s) => `  • New: ${fmt(s.incoming)}\n     Existing: ${fmt(s.existing)}`);
         summaryParts.push(`⚠️ ${similarAddresses.length} similar address(es) that may duplicate existing ones (held back — use "Add similar address(es)" to include):\n${lines.join("\n")}`);
       }
+      if (hasConflicts) {
+        const fmtVal = (v) => {
+          if (Array.isArray(v)) return v.join(", ");
+          if (typeof v === "number") return String(v);
+          const s = String(v || "");
+          return s.length > 120 ? s.substring(0, 120) + "…" : s;
+        };
+        const lines = conflicts.map((c) => `  • ${c.label}${c.additive ? " (add)" : " (replace)"}:\n     Current: ${fmtVal(c.existing)}\n     From web: ${fmtVal(c.incoming)}`);
+        summaryParts.push(`ℹ️ ${conflicts.length} field(s) already have data that differ from the web. Review and select which to update below before applying:\n${lines.join("\n")}`);
+      }
 
       return {
         role: "assistant",
         content: `I found **${firm.name}** in your database and searched their public website. I can update:\n\n${summaryParts.map((s) => `- ${s}`).join("\n")}${validation.issues.length ? `\n\n⚠️ **Validation notes:**\n${validation.issues.map((i) => `- ${i}`).join("\n")}` : ""}\n\nPlease confirm to apply these updates.`,
         tables: [table],
-        pending_creation: { type: "update_firm", firmId: firm.id, updates, updatedFields, contactUpdates, newPeople, similarAddresses: similarAddresses || [] },
+        pending_creation: { type: "update_firm", firmId: firm.id, updates, updatedFields, contactUpdates, newPeople, similarAddresses: similarAddresses || [], conflicts: conflicts || [] },
       };
     } catch (error) {
       return {
@@ -211,8 +223,23 @@ export default function AIAssistant() {
           content: `✅ **Firm "${createdFirm.name}" created successfully.** You can review and edit the details in the Firms section.`,
         }]);
       } else if (pendingCreation.type === "update_firm") {
-        if (Object.keys(pendingCreation.updates || {}).length > 0) {
-          await base44.entities.Firm.update(pendingCreation.firmId, pendingCreation.updates);
+        // Build the final firm update: auto-fill (empty) fields + any field the
+        // user explicitly opted into from the conflicts list. firm_types is
+        // additive (union); every other approved conflict overwrites.
+        const finalUpdates = { ...(pendingCreation.updates || {}) };
+        const approvedFields = opts.approvedConflicts || [];
+        for (const c of (pendingCreation.conflicts || [])) {
+          if (!approvedFields.includes(c.field)) continue;
+          if (c.additive) {
+            const existing = new Set((finalUpdates.firm_types || []).map((t) => String(t).toLowerCase()));
+            finalUpdates.firm_types = [...(pendingCreation.updates.firm_types || []), ...(c.incoming || []).filter((t) => !existing.has(String(t).toLowerCase()))];
+            if (finalUpdates.firm_types.length === 0) delete finalUpdates.firm_types;
+          } else {
+            finalUpdates[c.field] = c.incoming;
+          }
+        }
+        if (Object.keys(finalUpdates).length > 0) {
+          await base44.entities.Firm.update(pendingCreation.firmId, finalUpdates);
         }
         // Similar addresses are held back from the auto-apply batch and only
         // added when the user explicitly opts in ("Add similar address(es)").
@@ -222,7 +249,6 @@ export default function AIAssistant() {
           try {
             const current = await base44.entities.Firm.get(pendingCreation.firmId);
             const currentAddrs = current.addresses || [];
-            const { addressesAreExact } = await import("@/components/addressDuplicateCheck");
             const toAdd = pendingCreation.similarAddresses
               .map((s) => s.incoming)
               .filter((a) => a.address_line1 || a.city)
