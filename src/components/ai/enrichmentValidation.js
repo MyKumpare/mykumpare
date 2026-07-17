@@ -10,6 +10,7 @@
  */
 
 import { findContactDuplicates } from "@/components/contacts/contactDuplicateCheck";
+import { addressesAreExact, addressesAreSimilar } from "@/components/addressDuplicateCheck";
 
 // ─── Shared normalizers ───
 
@@ -50,6 +51,18 @@ function normalizeUrl(url, { hostOnly = false } = {}) {
   return v;
 }
 
+// Extract the identifying slug from a LinkedIn URL — the path segment right
+// after /company/ (firms) or /in/ (people). e.g.
+//   linkedin.com/company/xponance-inc/posts/?feedView=all → "xponance-inc"
+//   linkedin.com/in/jane-doe/details/                    → "jane-doe"
+function linkedinSlug(url) {
+  if (!url) return "";
+  let v = String(url).toLowerCase().trim().replace(/^https?:\/\//, "").replace(/^www\./, "");
+  v = v.split(/[?#]/)[0].replace(/\/+$/, "");
+  const m = v.match(/\/(?:company|in|pub|profile)\/([^/?#]+)/);
+  return m ? m[1] : "";
+}
+
 function normalizeText(text) {
   if (text == null) return "";
   return String(text).toLowerCase().trim().replace(/\s+/g, " ");
@@ -80,12 +93,17 @@ export function compareScalar(field, existingValue, incomingValue) {
       const sim = stringSimilarity(a, b);
       return { status: sim >= 0.85 ? "similar" : "new", similarity: sim, existing };
     }
-    // LinkedIn identity is host + company slug (path); strip query/fragment.
+    // LinkedIn identity is the company/person slug — the path segment after
+    // /company/ or /in/. This is robust to trailing paths (e.g. /posts/,
+    // /about/) and query strings that get appended to the stored URL.
     if (field === "linkedin_url") {
       const a = normalizeUrl(existing);
       const b = normalizeUrl(incoming);
       if (!a) return { status: "new", similarity: 0, existing };
       if (a === b) return { status: "exact", similarity: 1, existing };
+      const slugA = linkedinSlug(existing);
+      const slugB = linkedinSlug(incoming);
+      if (slugA && slugB && slugA === slugB) return { status: "exact", similarity: 1, existing };
       const sim = stringSimilarity(a, b);
       return { status: sim >= 0.85 ? "similar" : "new", similarity: sim, existing };
     }
@@ -105,6 +123,19 @@ export function compareScalar(field, existingValue, incomingValue) {
     const b = String(incoming).trim();
     if (!a) return { status: "new", similarity: 0, existing };
     return a === b ? { status: "exact", similarity: 1, existing } : { status: "new", similarity: 0, existing };
+  }
+
+  // Description: we never overwrite an existing firm description during
+  // enrichment (append-only). If the firm already has any description, the
+  // incoming one is treated as "already exists" so it is blocked — even
+  // when the wording differs (a fresh scrape often rephrases it).
+  if (field === "description") {
+    const a = normalizeText(existing);
+    const b = normalizeText(incoming);
+    if (!b) return { status: "new", similarity: 0, existing };
+    if (!a) return { status: "new", similarity: 0, existing };
+    if (a === b) return { status: "exact", similarity: 1, existing };
+    return { status: "exact", similarity: 0.9, existing };
   }
 
   if (field === "firm_types") {
@@ -127,41 +158,15 @@ export function compareScalar(field, existingValue, incomingValue) {
 
 // ─── Address comparison ───
 
-function addressKey(addr) {
-  if (!addr) return "";
-  return [
-    normalizeText(addr.address_line1),
-    normalizeText(addr.city),
-    normalizeText(addr.state),
-    normalizeText(addr.postal_code),
-    normalizeText(addr.country),
-  ].join("|");
-}
-
-function addressCoreKey(addr) {
-  // street number + street name (drop suite/unit), city, state
-  const line1 = normalizeText(addr.address_line1 || "").replace(/\b(suite|ste|unit|apt|apartment|#)\s*\w+/g, "").trim();
-  return [line1, normalizeText(addr.city), normalizeText(addr.state)].join("|");
-}
-
 export function compareAddress(existingAddresses, incomingAddr) {
   if (!incomingAddr || (!incomingAddr.address_line1 && !incomingAddr.city)) {
     return { status: "new", similarity: 0 };
   }
-  const inKey = addressKey(incomingAddr);
   for (const ex of existingAddresses || []) {
-    if (addressKey(ex) === inKey) return { status: "exact", similarity: 1 };
+    if (addressesAreExact(ex, incomingAddr)) return { status: "exact", similarity: 1 };
   }
-  const inCore = addressCoreKey(incomingAddr);
   for (const ex of existingAddresses || []) {
-    if (addressCoreKey(ex) === inCore && inCore !== "||") return { status: "similar", similarity: 0.85 };
-  }
-  // Same postal code + city is also a strong similarity signal
-  for (const ex of existingAddresses || []) {
-    if (normalizeText(ex.postal_code) && normalizeText(ex.postal_code) === normalizeText(incomingAddr.postal_code)
-      && normalizeText(ex.city) === normalizeText(incomingAddr.city)) {
-      return { status: "similar", similarity: 0.8 };
-    }
+    if (addressesAreSimilar(ex, incomingAddr)) return { status: "similar", similarity: 0.85 };
   }
   return { status: "new", similarity: 0 };
 }

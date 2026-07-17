@@ -205,8 +205,12 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
     if (selPhones.length) selected.phones = selPhones;
     if (acceptedFields.logo_url && enrichedData.logo_url) selected.logo_url = enrichedData.logo_url;
     const selPeople = (enrichedData.people || [])
-      .filter((_, i) => acceptedFields[`person_${i}`])
-      .filter((p) => p.first_name || p.last_name);
+      // Include existing (exact-match) people too: the apply handler runs an
+      // append-only merge that only fills MISSING fields (e.g. a biography
+      // that wasn't on the listing page last time), never overwriting
+      // existing data. This lets re-enrichment populate bios for contacts
+      // that were created earlier without one.
+      .filter((p, i) => (acceptedFields[`person_${i}`] || statusMap[`person_${i}`] === "exact") && (p.first_name || p.last_name));
     if (selPeople.length) selected.people = selPeople;
     return selected;
   };

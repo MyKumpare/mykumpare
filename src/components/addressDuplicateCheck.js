@@ -67,9 +67,16 @@ function normalizeStateValue(v) {
   return STATE_NAME_TO_CODE[key] || key;
 }
 
+// Combined street identity: line1 + line2 joined, so an address stored as
+// line1="2605 Meridian Parkway" / line2="Suite 105" matches one stored with
+// the whole thing in line1.
+function streetOf(a) {
+  return normalizeStreet([a.address_line1, a.address_line2].filter(Boolean).join(" "));
+}
+
 function addressKey(a) {
   return [
-    normalizeStreet(a.address_line1),
+    streetOf(a),
     norm(a.city),
     normalizeStateValue(a.state),
     norm(a.postal_code),
@@ -78,14 +85,20 @@ function addressKey(a) {
 }
 
 function hasContent(a) {
-  return !!(normalizeStreet(a.address_line1) || norm(a.city) || norm(a.postal_code));
+  return !!(streetOf(a) || norm(a.city) || norm(a.postal_code));
 }
 
-// Exact duplicate: all identifying fields match after normalization.
+// Exact duplicate: all identifying fields match after normalization, OR the
+// strongest unique identifiers (street + postal code) match even when a
+// lesser field like city is labeled differently (e.g. "Raleigh" vs "Durham"
+// for the same 27713 address).
 export function addressesAreExact(a1, a2) {
   if (!a1 || !a2) return false;
   if (!hasContent(a1) || !hasContent(a2)) return false;
-  return addressKey(a1) === addressKey(a2);
+  if (addressKey(a1) === addressKey(a2)) return true;
+  const s1 = streetOf(a1), s2 = streetOf(a2);
+  const z1 = norm(a1.postal_code), z2 = norm(a2.postal_code);
+  return !!(s1 && s1 === s2 && z1 && z1 === z2);
 }
 
 // Similar but not exact: enough overlap to be plausibly the same place
@@ -96,8 +109,8 @@ export function addressesAreSimilar(a1, a2) {
   if (addressesAreExact(a1, a2)) return false;
   if (!hasContent(a1) || !hasContent(a2)) return false;
 
-  const l1 = normalizeStreet(a1.address_line1);
-  const l2 = normalizeStreet(a2.address_line1);
+  const l1 = streetOf(a1);
+  const l2 = streetOf(a2);
   const c1 = norm(a1.city), c2 = norm(a2.city);
   const z1 = norm(a1.postal_code), z2 = norm(a2.postal_code);
 
@@ -107,6 +120,9 @@ export function addressesAreSimilar(a1, a2) {
   if (l1 && l2 && l1 === l2 && c1 && c2 && c1 === c2) return true;
   // Same street + same postal code → similar
   if (l1 && l2 && l1 === l2 && z1 && z2 && z1 === z2) return true;
+  // Same postal code + same state → similar (same zip in same state)
+  const st1 = normalizeStateValue(a1.state), st2 = normalizeStateValue(a2.state);
+  if (z1 && z2 && z1 === z2 && st1 && st2 && st1 === st2) return true;
   // Fuzzy street match (one contains the other) + same city
   if (l1 && l2 && c1 && c2 && c1 === c2) {
     if (l1.includes(l2) || l2.includes(l1)) return true;
