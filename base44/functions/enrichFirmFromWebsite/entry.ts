@@ -60,9 +60,16 @@ async function fetchPage(url: string, maxRedirects = 3): Promise<string> {
       },
       redirect: 'follow',
     });
-    if (!response.ok) return '';
+    if (!response.ok) {
+      // Always consume the body to avoid stalled-response deadlocks under load.
+      try { await response.body?.cancel(); } catch { /* ignore */ }
+      return '';
+    }
     const contentType = response.headers.get('content-type') || '';
-    if (!contentType.includes('text') && !contentType.includes('html')) return '';
+    if (!contentType.includes('text') && !contentType.includes('html')) {
+      try { await response.body?.cancel(); } catch { /* ignore */ }
+      return '';
+    }
     const html = await response.text();
     return htmlToText(html, url);
   } catch {
@@ -204,22 +211,24 @@ function discoverBioUrl(
   const last = (lastName || '').toLowerCase().trim();
   for (const page of pageContents) {
     if (!page.text) continue;
-    // Find all [LINK: url] markers with a generous window of preceding text.
+    // Find all [LINK: url] markers with a generous window of surrounding text.
     const regex = /\[LINK:\s*([^\]]+)\]/g;
     let m: RegExpExecArray | null;
     while ((m = regex.exec(page.text)) !== null) {
       const url = m[1].trim();
-      const before = page.text.substring(Math.max(0, m.index - 120), m.index).toLowerCase();
       // Must be an internal link (same site) — skip social/external links.
       let linkHost = '';
       let pageHost = '';
       try { linkHost = new URL(url).host.toLowerCase(); } catch { /* ignore */ }
       try { pageHost = new URL(page.url).host.toLowerCase(); } catch { /* ignore */ }
       if (!linkHost || !pageHost || linkHost !== pageHost) continue;
-      const nameMatch =
-        (first && before.includes(first)) || (last && before.includes(last));
-      const lastAndFirst = last && first && before.includes(last) && before.includes(first);
-      if (lastAndFirst || (nameMatch && last && before.includes(last))) {
+      // Inspect text both before and after the marker (card layouts vary).
+      const before = page.text.substring(Math.max(0, m.index - 120), m.index).toLowerCase();
+      const after = page.text.substring(m.index, Math.min(page.text.length, m.index + 160)).toLowerCase();
+      const ctx = before + ' ' + after;
+      // Require the last name (more distinctive) and, if available, the first
+      // name too, to avoid grabbing unrelated internal links.
+      if (last && ctx.includes(last) && (!first || ctx.includes(first))) {
         return url;
       }
     }
