@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Briefcase, ChevronDown, ChevronUp } from "lucide-react";
+import ExtractFromBioButton from "./ExtractFromBioButton";
 
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: 80 }, (_, i) => CURRENT_YEAR - i);
@@ -106,10 +107,11 @@ function newExperience() {
   return { id: crypto.randomUUID(), company_name: "", title: "", start_year: "", end_year: "" };
 }
 
-export default function ContactProfessionalExperienceTab({ experience = [], onChange, firms = [], viewMode }) {
+export default function ContactProfessionalExperienceTab({ experience = [], onChange, firms = [], viewMode, biography, onExtractFromBio, extracting }) {
   const addEntry = () => onChange([...experience, newExperience()]);
   const removeEntry = (id) => onChange(experience.filter(e => e.id !== id));
   const updateEntry = (id, field, val) => onChange(experience.map(e => e.id === id ? { ...e, [field]: val } : e));
+  const canExtractFromBio = !viewMode && !!onExtractFromBio;
 
   // Build company options from existing firms + existing experience companies
   const firmNames = firms.map(f => f.name);
@@ -129,11 +131,20 @@ export default function ContactProfessionalExperienceTab({ experience = [], onCh
           <Briefcase className="w-4 h-4 text-indigo-500" /> Professional Experience
         </Label>
         {!viewMode && (
-          <Button type="button" variant="outline" size="sm"
-            className="h-7 text-xs gap-1 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
-            onClick={addEntry}>
-            <Plus className="w-3 h-3" /> Add Experience
-          </Button>
+          <div className="flex items-center gap-2">
+            {canExtractFromBio && (
+              <ExtractFromBioButton
+                onClick={() => onExtractFromBio("experience")}
+                loading={!!extracting}
+                disabled={!biography || !biography.trim()}
+              />
+            )}
+            <Button type="button" variant="outline" size="sm"
+              className="h-7 text-xs gap-1 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+              onClick={addEntry}>
+              <Plus className="w-3 h-3" /> Add Experience
+            </Button>
+          </div>
         )}
       </div>
 

@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, GraduationCap, ChevronDown, ChevronUp } from "lucide-react";
+import ExtractFromBioButton from "./ExtractFromBioButton";
 
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: 80 }, (_, i) => CURRENT_YEAR - i);
@@ -178,10 +179,11 @@ function newEducation() {
 const MAJOR_OPTIONS = ["Accounting", "Business Administration", "Economics", "Finance", "Information Technology", "Management", "Marketing", "Mathematics", "Statistics"];
 const MINOR_OPTIONS = ["Accounting", "Business Administration", "Economics", "Finance", "Information Technology", "Management", "Marketing", "Mathematics", "Statistics"];
 
-export default function ContactEducationTab({ education = [], onChange, designations = [], onDesignationsChange, viewMode }) {
+export default function ContactEducationTab({ education = [], onChange, designations = [], onDesignationsChange, viewMode, biography, onExtractFromBio, extracting }) {
   const addEntry = () => onChange([...education, newEducation()]);
   const removeEntry = (id) => onChange(education.filter(e => e.id !== id));
   const updateEntry = (id, field, val) => onChange(education.map(e => e.id === id ? { ...e, [field]: val } : e));
+  const canExtractFromBio = !viewMode && !!onExtractFromBio;
 
   return (
     <div className="space-y-4">
@@ -205,9 +207,18 @@ export default function ContactEducationTab({ education = [], onChange, designat
             <GraduationCap className="w-4 h-4 text-indigo-500" /> Education History
           </Label>
           {!viewMode && (
-            <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1 text-indigo-600 border-indigo-200 hover:bg-indigo-50" onClick={addEntry}>
-              <Plus className="w-3 h-3" /> Add Education
-            </Button>
+            <div className="flex items-center gap-2">
+              {canExtractFromBio && (
+                <ExtractFromBioButton
+                  onClick={() => onExtractFromBio("education")}
+                  loading={!!extracting}
+                  disabled={!biography || !biography.trim()}
+                />
+              )}
+              <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1 text-indigo-600 border-indigo-200 hover:bg-indigo-50" onClick={addEntry}>
+                <Plus className="w-3 h-3" /> Add Education
+              </Button>
+            </div>
           )}
         </div>
 

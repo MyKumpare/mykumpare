@@ -28,6 +28,8 @@ import ContactTypePicker from "./ContactTypePicker";
 import { findContactDuplicates, findContactsByNormalizedName } from "./contactDuplicateCheck";
 import SimilarAddressDialog from "../SimilarAddressDialog";
 import { findAddressIssues } from "../addressDuplicateCheck";
+import SubRecordDuplicateDialog from "./SubRecordDuplicateDialog";
+import { findEducationDuplicates, findExperienceDuplicates, findPhoneDuplicates } from "./subRecordDuplicateCheck";
 
 const SALUTATIONS = ["Mr.", "Ms.", "Mrs.", "Dr.", "Prof.", "Hon."];
 const SUFFIXES = ["Jr.", "Sr.", "II", "III", "IV", "Esq.", "CFA", "CPA", "MBA", "PhD", "MD"];
@@ -83,6 +85,8 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [duplicateWarning, setDuplicateWarning] = useState(null);
   const [linkedinLookupLoading, setLinkedinLookupLoading] = useState(false);
   const [similarAddressPairs, setSimilarAddressPairs] = useState(null);
+  const [subRecordReview, setSubRecordReview] = useState(null);
+  const [extracting, setExtracting] = useState(null); // "education" | "experience" | null
 
   const queryClient = useQueryClient();
 
@@ -221,24 +225,54 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
     if (!hasUndetermined) setShowUndeterminedWarning(false);
   }, [hasUndetermined]);
 
-  const handleSubmit = () => {
+  // Unified pre-submit validator: checks sub-record duplicates (education,
+  // experience, phones) first, then address duplicates. Each resolution path
+  // re-enters this function so all checks always run before the final save.
+  const validateAndSubmit = (addrs, overrides = {}, opts = {}) => {
     if (!isValid) return;
-    // Block exact duplicate addresses; prompt for similar ones.
-    const { exactPairs, similarPairs } = findAddressIssues(addresses);
+    const ed = overrides.education ?? education;
+    const ex = overrides.professional_experience ?? professionalExperience;
+    const ph = overrides.phones ?? phones;
+
+    // 1. Sub-record duplicates → open the review dialog (skipped when resuming
+    //    right after the user already resolved them, so "accept" decisions
+    //    don't re-trigger the same review in a loop).
+    if (!opts.skipSubRecords) {
+      const eduPairs = findEducationDuplicates(ed);
+      const expPairs = findExperienceDuplicates(ex);
+      const phonePairs = findPhoneDuplicates(ph);
+      if (eduPairs.length || expPairs.length || phonePairs.length) {
+        setSubRecordReview({
+          pairs: [...eduPairs, ...expPairs, ...phonePairs],
+          arrays: { education: ed, professional_experience: ex, phones: ph },
+          submitAfter: { addresses: addrs },
+        });
+        return;
+      }
+    }
+
+    // 2. Address duplicates (existing flow)
+    const { exactPairs, similarPairs } = findAddressIssues(addrs);
     if (exactPairs.length > 0) {
       const [i, j] = exactPairs[0];
       toast({ title: "Duplicate address", description: `Address #${i + 1} and #${j + 1} are identical. Please remove or edit the duplicate before saving.`, variant: "destructive" });
       return;
     }
     if (similarPairs.length > 0) {
-      setSimilarAddressPairs({ pairs: similarPairs.map(([i, j]) => ({ i, j, ai: addresses[i], aj: addresses[j] })) });
+      setSimilarAddressPairs({ pairs: similarPairs.map(([i, j]) => ({ i, j, ai: addrs[i], aj: addrs[j] })) });
       return;
     }
-    performSubmit(addresses);
+
+    performSubmit(addrs, overrides);
   };
 
-  const performSubmit = (addrs) => {
+  const handleSubmit = () => validateAndSubmit(addresses);
+
+  const performSubmit = (addrs, overrides = {}) => {
     setShowUndeterminedWarning(false);
+    const ed = overrides.education ?? education;
+    const ex = overrides.professional_experience ?? professionalExperience;
+    const ph = overrides.phones ?? phones;
     const data = {
       photo_url: photoUrl,
       salutation,
@@ -262,10 +296,10 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
       disability_status: disabilityStatus,
       biography: biography.trim(),
       notes: notes.trim(),
-      education,
-      professional_experience: professionalExperience,
+      education: ed,
+      professional_experience: ex,
       firm_ids: firmIds,
-      phones,
+      phones: ph,
       addresses: addrs,
     };
     if (editingContact) {
@@ -298,7 +332,109 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
     }
     setAddresses(cleaned);
     setSimilarAddressPairs(null);
-    performSubmit(cleaned);
+    validateAndSubmit(cleaned);
+  };
+
+  // Apply the user's accept/merge/delete decisions from the sub-record review.
+  // If the review was triggered from Save, re-enter the validator to finish.
+  const handleApplySubRecordReview = (resolvedArrays) => {
+    setEducation(resolvedArrays.education);
+    setProfessionalExperience(resolvedArrays.professional_experience);
+    setPhones(resolvedArrays.phones);
+    const submitAfter = subRecordReview?.submitAfter;
+    setSubRecordReview(null);
+    if (submitAfter) {
+      validateAndSubmit(submitAfter.addresses, resolvedArrays, { skipSubRecords: true });
+    }
+  };
+
+  // Extract structured education or professional-experience records from the
+  // contact's biography via LLM, then merge with existing records. Any
+  // duplicates against existing records are surfaced in the review dialog.
+  const handleExtractFromBio = async (type) => {
+    if (!biography || !biography.trim()) {
+      toast({ title: "No biography", description: "Add a biography for this contact first, then extract.", variant: "destructive" });
+      return;
+    }
+    setExtracting(type);
+    try {
+      const isEdu = type === "education";
+      const res = await base44.integrations.Core.InvokeLLM({
+        prompt: `You are extracting structured ${isEdu ? "education history" : "professional experience"} from a person's biography. Only include facts that are explicitly stated. Do not fabricate.
+
+Biography:
+"""
+${biography.trim().substring(0, 8000)}
+"""
+
+Return a JSON object. For education, each item: institution, degree, area_of_specialization, graduation_year (string), majors (array of strings). Only include schools/universities the person attended as a student. For professional experience, each item: company_name, title, start_year (string), end_year (string, empty if unknown/current). Only include prior employers, not their current firm.`,
+        response_json_schema: isEdu
+          ? {
+              type: "object",
+              properties: {
+                education: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      institution: { type: "string" },
+                      degree: { type: "string" },
+                      area_of_specialization: { type: "string" },
+                      graduation_year: { type: "string" },
+                      majors: { type: "array", items: { type: "string" } },
+                    },
+                  },
+                },
+              },
+            }
+          : {
+              type: "object",
+              properties: {
+                professional_experience: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      company_name: { type: "string" },
+                      title: { type: "string" },
+                      start_year: { type: "string" },
+                      end_year: { type: "string" },
+                    },
+                  },
+                },
+              },
+            },
+      });
+      const raw = isEdu ? res?.education : res?.professional_experience;
+      const items = (Array.isArray(raw) ? raw : []).map((x) => ({
+        ...x,
+        id: crypto.randomUUID(),
+        ...(isEdu ? { majors: Array.isArray(x.majors) ? x.majors : [], minors: [] } : {}),
+      }));
+      if (items.length === 0) {
+        toast({ title: "Nothing extracted", description: "No structured records could be found in the biography." });
+        return;
+      }
+      const existing = isEdu ? education : professionalExperience;
+      const combined = [...existing, ...items];
+      const pairs = isEdu ? findEducationDuplicates(combined) : findExperienceDuplicates(combined);
+      if (pairs.length > 0) {
+        setSubRecordReview({
+          pairs,
+          arrays: isEdu
+            ? { education: combined, professional_experience: professionalExperience, phones }
+            : { education: education, professional_experience: combined, phones },
+          submitAfter: null,
+        });
+      } else {
+        if (isEdu) setEducation(combined); else setProfessionalExperience(combined);
+        toast({ title: `✅ ${items.length} record${items.length === 1 ? "" : "s"} extracted`, description: "Added from biography." });
+      }
+    } catch (err) {
+      toast({ title: "Extraction failed", description: err?.message || "Could not extract from biography.", variant: "destructive" });
+    } finally {
+      setExtracting(null);
+    }
   };
 
   const handleForceCreate = () => {
@@ -401,6 +537,13 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
       onOpenChange={(v) => { if (!v) setSimilarAddressPairs(null); }}
       pairs={similarAddressPairs?.pairs || []}
       onResolve={handleResolveSimilarAddresses}
+    />
+
+    {/* Sub-record (education / experience / phones) duplicate review */}
+    <SubRecordDuplicateDialog
+      review={subRecordReview}
+      onApply={handleApplySubRecordReview}
+      onCancel={() => setSubRecordReview(null)}
     />
 
     {/* Firm remove warning */}
@@ -830,6 +973,9 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                 designations={designations}
                 onDesignationsChange={setDesignations}
                 viewMode={viewMode}
+                biography={biography}
+                onExtractFromBio={handleExtractFromBio}
+                extracting={extracting === "education"}
               />
             </TabsContent>
 
@@ -840,6 +986,9 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
                 onChange={setProfessionalExperience}
                 firms={firms}
                 viewMode={viewMode}
+                biography={biography}
+                onExtractFromBio={handleExtractFromBio}
+                extracting={extracting === "experience"}
               />
             </TabsContent>
 
