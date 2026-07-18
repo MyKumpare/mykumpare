@@ -356,6 +356,8 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
       toast({ title: "No biography", description: "Add a biography for this contact first, then extract.", variant: "destructive" });
       return;
     }
+    // Leave view mode so the user can review and save the extracted records.
+    if (viewMode) setViewMode(false);
     setExtracting(type);
     try {
       const isEdu = type === "education";
