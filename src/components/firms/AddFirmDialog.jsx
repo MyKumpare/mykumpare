@@ -357,6 +357,8 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
           if (designations.length > 0) contactData.designations = designations;
           const parsedPhone = person.phone ? parsePhoneString(person.phone) : null;
           if (parsedPhone) contactData.phones = [parsedPhone];
+          if (person.education?.length) contactData.education = person.education.map((e) => ({ ...e, id: crypto.randomUUID() }));
+          if (person.professional_experience?.length) contactData.professional_experience = person.professional_experience.map((e) => ({ ...e, id: crypto.randomUUID() }));
 
           // Only match against contacts already linked to THIS firm — a
           // same-named person at a different firm must not receive this
@@ -423,6 +425,8 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               photo_url: person.photo_url || "",
               phone: person.phone || "",
               designations: designations.length > 0 ? designations : undefined,
+              education: (person.education || []).map((e) => ({ ...e, id: crypto.randomUUID() })),
+              professional_experience: (person.professional_experience || []).map((e) => ({ ...e, id: crypto.randomUUID() })),
             });
           }
         }

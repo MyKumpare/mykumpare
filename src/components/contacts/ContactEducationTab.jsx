@@ -166,6 +166,7 @@ function MultiCreatableSelect({ label, options, value = [], onChange, placeholde
 function newEducation() {
   return {
     id: crypto.randomUUID(),
+    institution: "",
     graduation_year: "",
     degree: "",
     area_of_specialization: "",
@@ -227,6 +228,21 @@ export default function ContactEducationTab({ education = [], onChange, designat
               )}
 
               <div className="text-xs font-semibold text-indigo-600 mb-1">Education #{idx + 1}</div>
+
+              {/* Institution */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-gray-700">Institution</Label>
+                {viewMode ? (
+                  <div className="text-sm text-gray-900 px-1">{entry.institution || <span className="text-gray-400 italic">—</span>}</div>
+                ) : (
+                  <Input
+                    value={entry.institution || ""}
+                    onChange={(e) => updateEntry(entry.id, "institution", e.target.value)}
+                    placeholder="e.g. University of Pennsylvania"
+                    className="h-9 text-sm"
+                  />
+                )}
+              </div>
 
               {/* Graduation Year */}
               <div className="grid grid-cols-2 gap-3">

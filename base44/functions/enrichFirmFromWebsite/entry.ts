@@ -209,6 +209,25 @@ Person name: "${personName}"
 
 Below is the text content of their profile/biography page. Locate the section describing THIS person (often near their name, under a heading like "Biography", "About", "Profile", or "Overview"). Extract the COMPLETE biography text for this person. You MUST copy the biography VERBATIM — do not summarize, do not paraphrase, do not abbreviate, and do not omit any sentences or paragraphs. Include EVERY paragraph of the biography in full. If the page lists multiple people, extract only the biography belonging to "${personName}". If no biography text is found for this person, return an empty string.
 
+Then, from that biography, extract the person's education and prior professional experience.
+
+EDUCATION: every school, college, or university mentioned, with:
+- institution: the school/university name (e.g. "University of Pennsylvania")
+- degree: the degree earned, if stated (e.g. "BS", "BA", "MBA", "PhD")
+- area_of_specialization: the field/major area, if stated (e.g. "Economics", "Finance")
+- majors: array of major subjects, if stated
+- graduation_year: the graduation year as a string, if stated (e.g. "1998")
+Only include institutions the person actually attended as a student. Do NOT include firms where they worked.
+
+PROFESSIONAL EXPERIENCE: every prior employer/company mentioned OTHER than their current firm, with:
+- company_name: the company/firm name (e.g. "Wayne Management")
+- title: the role/title held there (e.g. "Director of Research")
+- start_year: start year as a string, if stated
+- end_year: end year as a string, if stated (empty if still there or unknown)
+Include each distinct prior company as a separate entry. Do NOT include their current firm (the one whose site this is).
+
+Return an object with "biography" (the verbatim text), "education" (array), and "professional_experience" (array). If a section has no data, return an empty array.
+
 --- PAGE CONTENT ---
 ${pageText.substring(0, 20000)}
 --- END PAGE CONTENT ---`,
@@ -216,12 +235,41 @@ ${pageText.substring(0, 20000)}
         type: 'object',
         properties: {
           biography: { type: 'string' },
+          education: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                institution: { type: 'string' },
+                degree: { type: 'string' },
+                area_of_specialization: { type: 'string' },
+                majors: { type: 'array', items: { type: 'string' } },
+                graduation_year: { type: 'string' },
+              },
+            },
+          },
+          professional_experience: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                company_name: { type: 'string' },
+                title: { type: 'string' },
+                start_year: { type: 'string' },
+                end_year: { type: 'string' },
+              },
+            },
+          },
         },
       },
     });
-    return (res?.biography || '').trim();
+    return {
+      biography: (res?.biography || '').trim(),
+      education: Array.isArray(res?.education) ? res.education : [],
+      professional_experience: Array.isArray(res?.professional_experience) ? res.professional_experience : [],
+    };
   } catch {
-    return '';
+    return { biography: '', education: [], professional_experience: [] };
   }
 }
 
@@ -502,15 +550,124 @@ async function enrichMissingBiographies(
         bioUrl = searchResults.get(fullName.toLowerCase()) || '';
       }
       if (!bioUrl) continue;
-      const bio = await extractBiographyFromPage(base44, fullName, bioUrl, pageText);
-      if (bio) {
-        person.biography = bio;
+      const result = await extractBiographyFromPage(base44, fullName, bioUrl, pageText);
+      if (result.biography) {
+        person.biography = result.biography;
       }
+      if (result.education?.length) person.education = result.education;
+      if (result.professional_experience?.length) person.professional_experience = result.professional_experience;
     }
   };
 
   await Promise.all(
     Array.from({ length: Math.min(CONCURRENCY, queue.length), }, () => phaseCWorker()),
+  );
+}
+
+// Extract education + professional experience from a biography paragraph using
+// a focused LLM pass. Used for people whose biography was already present on
+// the team listing page (so they didn't go through extractBiographyFromPage).
+async function extractEducationExperienceFromBio(
+  base44: any,
+  personName: string,
+  biography: string,
+): Promise<{ education: any[]; professional_experience: any[] }> {
+  if (!biography || biography.trim().length < 60) return { education: [], professional_experience: [] };
+  try {
+    const res = await base44.integrations.Core.InvokeLLM({
+      prompt: `You are extracting structured education and professional-experience data from the biography of a person named "${personName}".
+
+Biography:
+"""
+${biography.substring(0, 8000)}
+"""
+
+Extract:
+
+EDUCATION: every school, college, or university the person attended as a student, with:
+- institution: the school/university name (e.g. "University of Pennsylvania")
+- degree: the degree earned, if stated (e.g. "BS", "BA", "MBA", "PhD")
+- area_of_specialization: the field/major area, if stated (e.g. "Economics", "Finance")
+- majors: array of major subjects, if stated
+- graduation_year: graduation year as a string, if stated
+
+PROFESSIONAL EXPERIENCE: every prior employer/company mentioned (other than the firm whose biography this is), with:
+- company_name: the company/firm name (e.g. "Wayne Management")
+- title: the role/title held there (e.g. "Director of Research")
+- start_year: start year as a string, if stated
+- end_year: end year as a string, if stated (empty if unknown)
+
+Only include what is actually stated in the biography. Do not fabricate. Return an object with "education" and "professional_experience" arrays (empty arrays if none found).`,
+      response_json_schema: {
+        type: 'object',
+        properties: {
+          education: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                institution: { type: 'string' },
+                degree: { type: 'string' },
+                area_of_specialization: { type: 'string' },
+                majors: { type: 'array', items: { type: 'string' } },
+                graduation_year: { type: 'string' },
+              },
+            },
+          },
+          professional_experience: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                company_name: { type: 'string' },
+                title: { type: 'string' },
+                start_year: { type: 'string' },
+                end_year: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+    });
+    return {
+      education: Array.isArray(res?.education) ? res.education : [],
+      professional_experience: Array.isArray(res?.professional_experience) ? res.professional_experience : [],
+    };
+  } catch {
+    return { education: [], professional_experience: [] };
+  }
+}
+
+// For people whose biography was already present on the listing page (so they
+// were not in the stub-bio queue), extract education + professional experience
+// from their existing biography. Bounded concurrency + cap to stay in limits.
+async function enrichEducationExperienceFromBios(base44: any, people: any[]): Promise<void> {
+  const MAX = 30;
+  const CONCURRENCY = 10;
+  const isStubBio = (p: any): boolean => {
+    const bio = (p.biography || '').trim();
+    if (!bio) return true;
+    if (bio.length < 60) {
+      const first = (p.first_name || '').trim().toLowerCase();
+      if (first && bio.toLowerCase().startsWith(first)) return true;
+    }
+    return false;
+  };
+  const queue = people.filter((p) => !isStubBio(p) && p.education === undefined && p.professional_experience === undefined).slice(0, MAX);
+  if (queue.length === 0) return;
+  let cursor = 0;
+  const worker = async () => {
+    while (cursor < queue.length) {
+      const i = cursor++;
+      const person = queue[i];
+      const fullName = [person.first_name, person.last_name].filter(Boolean).join(' ').trim();
+      const { education, professional_experience } = await extractEducationExperienceFromBio(base44, fullName, person.biography || '');
+      person.education = education;
+      person.professional_experience = professional_experience;
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(CONCURRENCY, queue.length) }, () => worker()),
   );
 }
 
@@ -777,6 +934,10 @@ IMPORTANT:
     // on a separate profile page linked from each card. For any person missing a
     // biography but with a bio_url, fetch that page and extract the biography.
     await enrichMissingBiographies(base44, enrichedData.people || [], pageContents, website);
+
+    // Extract education + professional experience from biographies (both the
+    // ones just fetched and any real bios already on the listing page).
+    await enrichEducationExperienceFromBios(base44, enrichedData.people || []);
 
     // Rehost images
     try {

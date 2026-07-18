@@ -491,6 +491,46 @@ export function computeContactUpdates(existingContact, person, firmId) {
     }
   }
 
+  // Education: add new entries not already present (additive). Dedupe by
+  // normalized institution + degree + graduation year so the same school/degree
+  // isn't added twice, but different schools or degrees are appended.
+  const existingEducation = existingContact.education || [];
+  const eduKey = (e) =>
+    `${norm(e.institution)}|${norm(e.degree)}|${norm(e.area_of_specialization)}|${norm(e.graduation_year)}`;
+  const existingEduKeys = new Set(existingEducation.map(eduKey));
+  const newEducation = (person.education || [])
+    .filter((e) => e && (e.institution || e.degree || e.area_of_specialization))
+    .filter((e) => {
+      const k = eduKey(e);
+      if (existingEduKeys.has(k)) return false;
+      existingEduKeys.add(k);
+      return true;
+    })
+    .map((e) => ({ ...e, id: crypto.randomUUID() }));
+  if (newEducation.length > 0) {
+    updates.education = [...existingEducation, ...newEducation];
+    updatedFields.push("Education");
+  }
+
+  // Professional experience: add new entries not already present (additive).
+  // Dedupe by normalized company + title + start year.
+  const existingExperience = existingContact.professional_experience || [];
+  const expKey = (e) => `${norm(e.company_name)}|${norm(e.title)}|${norm(e.start_year)}`;
+  const existingExpKeys = new Set(existingExperience.map(expKey));
+  const newExperience = (person.professional_experience || [])
+    .filter((e) => e && (e.company_name || e.title))
+    .filter((e) => {
+      const k = expKey(e);
+      if (existingExpKeys.has(k)) return false;
+      existingExpKeys.add(k);
+      return true;
+    })
+    .map((e) => ({ ...e, id: crypto.randomUUID() }));
+  if (newExperience.length > 0) {
+    updates.professional_experience = [...existingExperience, ...newExperience];
+    updatedFields.push("Experience");
+  }
+
   // Firm association: ensure the contact is linked to this firm (additive)
   if (firmId) {
     const existingFirmIds = existingContact.firm_ids || [];
@@ -658,6 +698,16 @@ export async function createFirmFromEnrichment(enrichedData) {
       if (designations.length > 0) contactData.designations = designations;
       const parsedPhone = person.phone ? parsePhoneString(person.phone) : null;
       if (parsedPhone) contactData.phones = [parsedPhone];
+      if (person.education?.length) {
+        contactData.education = person.education
+          .filter((e) => e && (e.institution || e.degree || e.area_of_specialization))
+          .map((e) => ({ ...e, id: crypto.randomUUID() }));
+      }
+      if (person.professional_experience?.length) {
+        contactData.professional_experience = person.professional_experience
+          .filter((e) => e && (e.company_name || e.title))
+          .map((e) => ({ ...e, id: crypto.randomUUID() }));
+      }
       const created = await base44.entities.Contact.create(contactData);
       existingContacts.push(created);
     } catch {}
