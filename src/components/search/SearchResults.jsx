@@ -8,6 +8,47 @@ function getContactFullName(c) {
     (c.designations?.length ? `, ${c.designations.join(", ")}` : "");
 }
 
+const NAME_STOPWORDS = new Set(["mr", "mrs", "ms", "miss", "dr", "prof", "hon", "jr", "sr", "ii", "iii", "iv", "esq", "cfa", "cpa", "mba", "phd", "md"]);
+function normalizeNamePart(s) {
+  if (!s) return "";
+  return s.toLowerCase().trim().replace(/[.'’-]/g, " ").split(/\s+/).filter((t) => t && !NAME_STOPWORDS.has(t)).join(" ").trim();
+}
+function nameKey(c) {
+  return `${normalizeNamePart(c.first_name)}|${normalizeNamePart(c.last_name)}`;
+}
+// Collapse duplicate contacts: when two contacts share the same normalized
+// first + last name AND at least one firm, only show the most recently
+// updated record. Honors the user's preference to surface only the most
+// current contact per duplicate name for any related firm.
+function dedupeContacts(list) {
+  const groups = new Map();
+  for (const c of list) {
+    if (c.deleted_at) continue;
+    const k = nameKey(c);
+    if (!k || k === "|") { groups.set(`__${c.id}`, [c]); continue; }
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(c);
+  }
+  const result = [];
+  for (const [, group] of groups) {
+    const kept = [];
+    for (const c of group) {
+      const cFirms = new Set(c.firm_ids || []);
+      const dupIdx = kept.findIndex((k2) => (k2.firm_ids || []).some((fid) => cFirms.has(fid)));
+      if (dupIdx === -1) {
+        kept.push(c);
+      } else {
+        const existing = kept[dupIdx];
+        const existingDate = new Date(existing.updated_date || existing.created_date || 0).getTime();
+        const newDate = new Date(c.updated_date || c.created_date || 0).getTime();
+        if (newDate > existingDate) kept[dupIdx] = c;
+      }
+    }
+    result.push(...kept);
+  }
+  return result;
+}
+
 function ContactAvatar({ contact, size = "sm" }) {
   const sz = size === "sm" ? "w-7 h-7" : "w-8 h-8";
   return (
@@ -60,8 +101,8 @@ export default function SearchResults({ query, firms, products, contacts, portfo
   const q = query.toLowerCase().trim();
   if (!q) return null;
 
-  // --- Match contacts ---
-  const matchedContacts = contacts.filter((c) => {
+  // --- Match contacts (excluding soft-deleted), then collapse duplicates ---
+  const matchedContacts = dedupeContacts(contacts.filter((c) => {
     const fullName = getContactFullName(c).toLowerCase();
     return (
       fullName.includes(q) ||
@@ -69,7 +110,7 @@ export default function SearchResults({ query, firms, products, contacts, portfo
       (c.title || "").toLowerCase().includes(q) ||
       (c.designations || []).some(d => d.toLowerCase().includes(q))
     );
-  });
+  }));
 
   // --- Match firms (by name) ---
   const matchedFirms = firms.filter((f) => f.name.toLowerCase().includes(q));
