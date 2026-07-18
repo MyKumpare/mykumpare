@@ -418,7 +418,10 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
         return;
       }
       const existing = isEdu ? education : professionalExperience;
-      const combined = [...existing, ...items];
+      const sortFn = isEdu
+        ? (a, b) => (parseInt(b.graduation_year) || 0) - (parseInt(a.graduation_year) || 0)
+        : (a, b) => (parseInt(b.start_year) || 0) - (parseInt(a.start_year) || 0);
+      const combined = [...existing, ...items].sort(sortFn);
       const pairs = isEdu ? findEducationDuplicates(combined) : findExperienceDuplicates(combined);
       if (pairs.length > 0) {
         setSubRecordReview({

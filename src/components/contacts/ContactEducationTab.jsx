@@ -182,9 +182,10 @@ const MINOR_OPTIONS = ["Accounting", "Business Administration", "Economics", "Fi
 
 export default function ContactEducationTab({ education = [], onChange, designations = [], onDesignationsChange, viewMode, biography, onExtractFromBio, extracting }) {
   const [pendingDeleteId, setPendingDeleteId] = useState(null);
-  const addEntry = () => onChange([...education, newEducation()]);
+  const sortDesc = (arr) => [...arr].sort((a, b) => (parseInt(b.graduation_year) || 0) - (parseInt(a.graduation_year) || 0));
+  const addEntry = () => onChange(sortDesc([...education, newEducation()]));
   const removeEntry = (id) => onChange(education.filter(e => e.id !== id));
-  const updateEntry = (id, field, val) => onChange(education.map(e => e.id === id ? { ...e, [field]: val } : e));
+  const updateEntry = (id, field, val) => onChange(sortDesc(education.map(e => e.id === id ? { ...e, [field]: val } : e)));
   const canExtractFromBio = !!onExtractFromBio;
   const confirmDelete = () => {
     if (pendingDeleteId) removeEntry(pendingDeleteId);
@@ -235,7 +236,7 @@ export default function ContactEducationTab({ education = [], onChange, designat
         )}
 
         <div className="space-y-3">
-          {[...education].sort((a, b) => (parseInt(b.graduation_year) || 0) - (parseInt(a.graduation_year) || 0)).map((entry, idx) => (
+          {education.map((entry, idx) => (
             <div key={entry.id} className="border rounded-xl p-3 bg-gray-50/60 space-y-3 relative">
               <button type="button" onClick={() => setPendingDeleteId(entry.id)}
                 className="absolute top-2.5 right-2.5 text-gray-300 hover:text-red-500 transition-colors">

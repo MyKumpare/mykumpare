@@ -110,9 +110,10 @@ function newExperience() {
 
 export default function ContactProfessionalExperienceTab({ experience = [], onChange, firms = [], viewMode, biography, onExtractFromBio, extracting }) {
   const [pendingDeleteId, setPendingDeleteId] = useState(null);
-  const addEntry = () => onChange([...experience, newExperience()]);
+  const sortDesc = (arr) => [...arr].sort((a, b) => (parseInt(b.start_year) || 0) - (parseInt(a.start_year) || 0));
+  const addEntry = () => onChange(sortDesc([...experience, newExperience()]));
   const removeEntry = (id) => onChange(experience.filter(e => e.id !== id));
-  const updateEntry = (id, field, val) => onChange(experience.map(e => e.id === id ? { ...e, [field]: val } : e));
+  const updateEntry = (id, field, val) => onChange(sortDesc(experience.map(e => e.id === id ? { ...e, [field]: val } : e)));
   const canExtractFromBio = !!onExtractFromBio;
   const confirmDelete = () => {
     if (pendingDeleteId) removeEntry(pendingDeleteId);
@@ -124,11 +125,7 @@ export default function ContactProfessionalExperienceTab({ experience = [], onCh
   const experienceCompanies = experience.map(e => e.company_name).filter(Boolean);
   const companyOptions = [...new Set([...firmNames, ...experienceCompanies])].sort();
 
-  const sorted = [...experience].sort((a, b) => {
-    const aYear = parseInt(a.start_year) || 0;
-    const bYear = parseInt(b.start_year) || 0;
-    return bYear - aYear;
-  });
+
 
   return (
     <div className="space-y-4">
@@ -161,7 +158,7 @@ export default function ContactProfessionalExperienceTab({ experience = [], onCh
       )}
 
       <div className="space-y-3">
-        {sorted.map((entry) => (
+        {experience.map((entry) => (
           <div key={entry.id} className="border rounded-xl p-3 bg-gray-50/60 space-y-3 relative">
             <button type="button" onClick={() => setPendingDeleteId(entry.id)}
               className="absolute top-2.5 right-2.5 text-gray-300 hover:text-red-500 transition-colors">
