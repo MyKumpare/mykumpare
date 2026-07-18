@@ -237,12 +237,10 @@ export default function ContactEducationTab({ education = [], onChange, designat
         <div className="space-y-3">
           {[...education].sort((a, b) => (parseInt(b.graduation_year) || 0) - (parseInt(a.graduation_year) || 0)).map((entry, idx) => (
             <div key={entry.id} className="border rounded-xl p-3 bg-gray-50/60 space-y-3 relative">
-              {!viewMode && (
-                <button type="button" onClick={() => setPendingDeleteId(entry.id)}
-                  className="absolute top-2.5 right-2.5 text-gray-300 hover:text-red-500 transition-colors">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              )}
+              <button type="button" onClick={() => setPendingDeleteId(entry.id)}
+                className="absolute top-2.5 right-2.5 text-gray-300 hover:text-red-500 transition-colors">
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
 
               <div className="text-xs font-semibold text-indigo-600 mb-1">Education #{idx + 1}</div>
 

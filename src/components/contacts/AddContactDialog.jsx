@@ -369,7 +369,7 @@ Biography:
 ${biography.trim().substring(0, 8000)}
 """
 
-Return a JSON object. For education, each item: institution, degree, area_of_specialization, graduation_year (string), majors (array of strings). Only include schools/universities the person attended as a student. For professional experience, each item: company_name, title, start_year (string), end_year (string, empty if unknown/current). Only include prior employers, not their current firm.`,
+Return a JSON object. For education, each item: institution, degree, area_of_specialization, graduation_year (string), majors (array of strings). Only include schools/universities the person attended as a student. For professional experience, each item: company_name, title, start_year (string), end_year (string, empty if it is the person's current employer). Include ALL employers mentioned in the biography, including the person's current employer (leave end_year empty for current roles). Order entries from most recent to oldest.`,
         response_json_schema: isEdu
           ? {
               type: "object",

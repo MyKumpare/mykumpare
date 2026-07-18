@@ -163,12 +163,10 @@ export default function ContactProfessionalExperienceTab({ experience = [], onCh
       <div className="space-y-3">
         {sorted.map((entry) => (
           <div key={entry.id} className="border rounded-xl p-3 bg-gray-50/60 space-y-3 relative">
-            {!viewMode && (
-              <button type="button" onClick={() => setPendingDeleteId(entry.id)}
-                className="absolute top-2.5 right-2.5 text-gray-300 hover:text-red-500 transition-colors">
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            )}
+            <button type="button" onClick={() => setPendingDeleteId(entry.id)}
+              className="absolute top-2.5 right-2.5 text-gray-300 hover:text-red-500 transition-colors">
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
 
             {/* Company + Title */}
             <div className="grid grid-cols-2 gap-3 pr-6">
