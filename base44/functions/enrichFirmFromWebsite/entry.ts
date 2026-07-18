@@ -219,12 +219,12 @@ EDUCATION: every school, college, or university mentioned, with:
 - graduation_year: the graduation year as a string, if stated (e.g. "1998")
 Only include institutions the person actually attended as a student. Do NOT include firms where they worked.
 
-PROFESSIONAL EXPERIENCE: every prior employer/company mentioned OTHER than their current firm, with:
-- company_name: the company/firm name (e.g. "Wayne Management")
+PROFESSIONAL EXPERIENCE: every employer/company mentioned in the biography, INCLUDING their current firm (the one whose site this is), with:
+- company_name: the company/firm name (e.g. the current firm name, and prior employers like "Wayne Management")
 - title: the role/title held there (e.g. "Director of Research")
 - start_year: start year as a string, if stated
-- end_year: end year as a string, if stated (empty if still there or unknown)
-Include each distinct prior company as a separate entry. Do NOT include their current firm (the one whose site this is).
+- end_year: end year as a string, if stated (LEAVE EMPTY if this is the person's current employer / they are still there)
+Include each distinct company as a separate entry. Order entries from most recent to oldest.
 
 Return an object with "biography" (the verbatim text), "education" (array), and "professional_experience" (array). If a section has no data, return an empty array.
 
