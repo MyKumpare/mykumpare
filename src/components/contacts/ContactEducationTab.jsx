@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, GraduationCap, ChevronDown, ChevronUp } from "lucide-react";
 import ExtractFromBioButton from "./ExtractFromBioButton";
+import DeleteSubRecordDialog from "./DeleteSubRecordDialog";
 
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: 80 }, (_, i) => CURRENT_YEAR - i);
@@ -180,10 +181,15 @@ const MAJOR_OPTIONS = ["Accounting", "Business Administration", "Economics", "Fi
 const MINOR_OPTIONS = ["Accounting", "Business Administration", "Economics", "Finance", "Information Technology", "Management", "Marketing", "Mathematics", "Statistics"];
 
 export default function ContactEducationTab({ education = [], onChange, designations = [], onDesignationsChange, viewMode, biography, onExtractFromBio, extracting }) {
+  const [pendingDeleteId, setPendingDeleteId] = useState(null);
   const addEntry = () => onChange([...education, newEducation()]);
   const removeEntry = (id) => onChange(education.filter(e => e.id !== id));
   const updateEntry = (id, field, val) => onChange(education.map(e => e.id === id ? { ...e, [field]: val } : e));
   const canExtractFromBio = !!onExtractFromBio;
+  const confirmDelete = () => {
+    if (pendingDeleteId) removeEntry(pendingDeleteId);
+    setPendingDeleteId(null);
+  };
 
   return (
     <div className="space-y-4">
@@ -232,7 +238,7 @@ export default function ContactEducationTab({ education = [], onChange, designat
           {[...education].sort((a, b) => (parseInt(b.graduation_year) || 0) - (parseInt(a.graduation_year) || 0)).map((entry, idx) => (
             <div key={entry.id} className="border rounded-xl p-3 bg-gray-50/60 space-y-3 relative">
               {!viewMode && (
-                <button type="button" onClick={() => removeEntry(entry.id)}
+                <button type="button" onClick={() => setPendingDeleteId(entry.id)}
                   className="absolute top-2.5 right-2.5 text-gray-300 hover:text-red-500 transition-colors">
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -318,6 +324,13 @@ export default function ContactEducationTab({ education = [], onChange, designat
           ))}
         </div>
       </div>
+
+      <DeleteSubRecordDialog
+        open={!!pendingDeleteId}
+        onOpenChange={(o) => !o && setPendingDeleteId(null)}
+        onConfirm={confirmDelete}
+        recordLabel="education record"
+      />
     </div>
   );
 }
