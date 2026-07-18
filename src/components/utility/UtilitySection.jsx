@@ -4,6 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import AddBenchmarkDialog from "./AddBenchmarkDialog";
+import DuplicateContactsReview from "@/components/contacts/DuplicateContactsReview";
 
 function BenchmarkItem({ b, onClick }) {
   return (
@@ -175,6 +176,13 @@ export default function UtilitySection({ deletedCount }) {
             )}
           </div>
 
+          {/* Contact duplicates review */}
+          <div className="space-y-2 pt-2">
+            <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+              Contact Cleanup
+            </span>
+            <DuplicateContactsReview />
+          </div>
 
         </div>
       )}

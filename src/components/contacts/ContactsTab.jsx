@@ -2,12 +2,14 @@ import React, { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, User, AlertTriangle, Trash2 } from "lucide-react";
+import { Plus, User, AlertTriangle, Trash2, Check, ArrowRightLeft, Loader2 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/use-toast";
 import AddContactDialog from "./AddContactDialog";
+import MergeDuplicateContactsDialog from "./MergeDuplicateContactsDialog";
+import { useDuplicateReviews } from "./useDuplicateReviews";
 
 export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership, onProductClick, onFirmClick }) {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -15,8 +17,11 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
   const [viewMode, setViewMode] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [mergeCluster, setMergeCluster] = useState(null);
+  const [accepting, setAccepting] = useState(false);
 
   const queryClient = useQueryClient();
+  const { isGroupAccepted, acceptGroup } = useDuplicateReviews();
 
   const { data: contacts = [] } = useQuery({
     queryKey: ["contacts"],
@@ -28,7 +33,8 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
     [contacts, firmId]
   );
 
-  // Detect duplicate contacts by same first + last name (case-insensitive)
+  // Detect duplicate contacts by same first + last name (case-insensitive).
+  // Groups the user has already accepted (dismissed) are hidden.
   const duplicateGroups = useMemo(() => {
     const groups = {};
     for (const c of allFirmContacts) {
@@ -37,8 +43,10 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
       if (!groups[key]) groups[key] = [];
       groups[key].push(c);
     }
-    return Object.values(groups).filter((g) => g.length > 1);
-  }, [allFirmContacts]);
+    return Object.values(groups)
+      .filter((g) => g.length > 1)
+      .filter((g) => !isGroupAccepted(g));
+  }, [allFirmContacts, isGroupAccepted]);
 
   // Only show the most-current (latest updated_date) record per duplicate group;
   // contacts with no first+last name are always shown.
@@ -68,6 +76,18 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
     setEditingContact(null);
     setViewMode(false);
     setDialogOpen(true);
+  };
+
+  const handleAcceptGroup = async (group) => {
+    setAccepting(true);
+    try {
+      await acceptGroup(group);
+      toast({ title: "Duplicate accepted", description: "These contacts will be kept as-is. The warning is dismissed." });
+    } catch (error) {
+      toast({ title: "Could not dismiss", description: error.message || "Try again.", variant: "destructive" });
+    } finally {
+      setAccepting(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -113,38 +133,50 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
             </p>
           </div>
           <p className="text-xs text-amber-700">
-            The following contacts share the same first and last name. Review and delete any you don't need.
+            The following contacts share the same first and last name. Accept to keep both, merge to combine, or delete the duplicate.
           </p>
           <div className="space-y-2 mt-1">
             {duplicateGroups.map((group, gi) => (
-              <div key={gi} className="space-y-1">
-                {group.map((contact) => (
-                  <div key={contact.id} className="flex items-center justify-between gap-2 bg-white rounded-md border border-amber-200 px-2.5 py-1.5">
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                        {contact.photo_url ? (
-                          <img src={contact.photo_url} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <User className="w-3 h-3 text-indigo-600" />
-                        )}
+              <div key={gi} className="space-y-1 rounded-lg border border-amber-200 bg-amber-50/40 p-2">
+                <div className="space-y-1">
+                  {group.map((contact) => (
+                    <div key={contact.id} className="flex items-center justify-between gap-2 bg-white rounded-md border border-amber-200 px-2.5 py-1.5">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                          {contact.photo_url ? (
+                            <img src={contact.photo_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <User className="w-3 h-3 text-indigo-600" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium text-gray-800 truncate">{formatName(contact)}</p>
+                          <p className="text-[10px] text-gray-500 truncate">
+                            {contact.title || "—"}{contact.email ? ` · ${contact.email}` : ""}
+                          </p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-medium text-gray-800 truncate">{formatName(contact)}</p>
-                        <p className="text-[10px] text-gray-500 truncate">
-                          {contact.title || "—"}{contact.email ? ` · ${contact.email}` : ""}
-                        </p>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs text-indigo-600 hover:bg-indigo-50" onClick={() => handleView(contact)}>
+                          View
+                        </Button>
+                        <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs text-red-600 hover:bg-red-50" onClick={() => setDeleteTarget(contact)}>
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs text-indigo-600 hover:bg-indigo-50" onClick={() => handleView(contact)}>
-                        View
-                      </Button>
-                      <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs text-red-600 hover:bg-red-50" onClick={() => setDeleteTarget(contact)}>
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Button type="button" variant="outline" size="sm" className="h-6 gap-1 text-xs" onClick={() => handleAcceptGroup(group)} disabled={accepting}>
+                    {accepting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                    Accept (keep both)
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" className="h-6 gap-1 text-xs" onClick={() => setMergeCluster(group)} disabled={group.length < 2}>
+                    <ArrowRightLeft className="w-3 h-3" />
+                    Merge
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -255,6 +287,19 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
         onProductClick={onProductClick ? (product) => { setDialogOpen(false); onProductClick(product); } : undefined}
         onFirmClick={onFirmClick ? (firm) => { setDialogOpen(false); onFirmClick(firm); } : undefined}
       />
+
+      {mergeCluster && (
+        <MergeDuplicateContactsDialog
+          open={true}
+          onOpenChange={(v) => { if (!v) setMergeCluster(null); }}
+          contacts={mergeCluster}
+          onMerged={() => {
+            queryClient.invalidateQueries({ queryKey: ["contacts"] });
+            queryClient.invalidateQueries({ queryKey: ["duplicateReviews"] });
+            setMergeCluster(null);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -1,0 +1,18 @@
+{
+  "name": "DuplicateReview",
+  "type": "object",
+  "properties": {
+    "contact_a_id": {
+      "type": "string",
+      "description": "First contact ID in an accepted (dismissed) duplicate pair"
+    },
+    "contact_b_id": {
+      "type": "string",
+      "description": "Second contact ID in an accepted (dismissed) duplicate pair"
+    }
+  },
+  "required": [
+    "contact_a_id",
+    "contact_b_id"
+  ]
+}
