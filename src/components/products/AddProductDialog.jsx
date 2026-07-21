@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -19,11 +19,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Pencil, X, AlertTriangle } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import ProductClassificationsTab from "./ProductClassificationsTab";
 import ProductInvestmentTeamTab from "./ProductInvestmentTeamTab";
 import ProductInvestmentDescriptionTab from "./ProductInvestmentDescriptionTab";
 import ProductReturnsTab from "./ProductReturnsTab";
 import ProductAnalyticsTab from "./ProductAnalyticsTab";
+import ConstituentProductMultiSelect from "./ConstituentProductMultiSelect";
+import AddIMProductValidatedDialog from "./AddIMProductValidatedDialog";
 
 // Map product type -> firm type(s) that can be associated
 const PRODUCT_TYPE_TO_FIRM_TYPE = {
@@ -80,6 +83,9 @@ export default function AddProductDialog({
   const [description, setDescription] = useState("");
   const [classifications, setClassifications] = useState(EMPTY_CLASSIFICATIONS);
   const [investmentDescriptions, setInvestmentDescriptions] = useState({});
+  const [constituentProductIds, setConstituentProductIds] = useState([]);
+  const [addImProductOpen, setAddImProductOpen] = useState(false);
+  const queryClient = useQueryClient();
   const nameInputRef = useRef(null);
   // Snapshot of original values captured when the dialog opens — prevents stale prop re-renders from resetting the form
   const originalSnapshotRef = useRef(null);
@@ -120,6 +126,7 @@ export default function AddProductDialog({
           holdings_max: editingProduct.inv_desc_holdings_max ?? "",
           product_biases: editingProduct.inv_desc_product_biases || {},
         },
+        constituent_product_ids: editingProduct.constituent_product_ids || [],
       };
       originalSnapshotRef.current = snapshot;
       setProductType(snapshot.product_type);
@@ -128,6 +135,7 @@ export default function AddProductDialog({
       setDescription(snapshot.description);
       setClassifications(snapshot.classifications);
       setInvestmentDescriptions(snapshot.descriptions);
+      setConstituentProductIds(snapshot.constituent_product_ids);
       setIsEditing(false);
     } else {
       originalSnapshotRef.current = null;
@@ -137,6 +145,7 @@ export default function AddProductDialog({
       setDescription("");
       setClassifications(EMPTY_CLASSIFICATIONS);
       setInvestmentDescriptions({});
+      setConstituentProductIds([]);
       setIsEditing(true);
     }
   }, [open]);
@@ -189,6 +198,19 @@ export default function AddProductDialog({
         .sort((a, b) => a.name.localeCompare(b.name))
     : [];
 
+  // IM products available as constituents for a Multi-Manager Product
+  const imProductOptions = useMemo(() => {
+    const getFirmTypes = (f) =>
+      f.firm_types?.length ? f.firm_types : f.firm_type ? [f.firm_type] : [];
+    const imFirmIds = new Set(
+      firms.filter((f) => getFirmTypes(f).includes("Investment Manager")).map((f) => f.id)
+    );
+    return existingProducts
+      .filter((p) => p.product_type === "Investment Manager Product" && imFirmIds.has(p.firm_id) && !p.deleted_at)
+      .map((p) => ({ value: p.id, label: p.name, firm_name: p.firm_name || "" }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [firms, existingProducts]);
+
   const originalDescriptions = originalSnapshotRef.current?.descriptions ?? {};
 
   const hasChanges = originalSnapshotRef.current
@@ -196,6 +218,7 @@ export default function AddProductDialog({
       productType !== originalSnapshotRef.current.product_type ||
       firmId !== originalSnapshotRef.current.firm_id ||
       description !== originalSnapshotRef.current.description ||
+      JSON.stringify(constituentProductIds) !== JSON.stringify(originalSnapshotRef.current.constituent_product_ids || []) ||
       JSON.stringify(classifications) !== JSON.stringify(originalSnapshotRef.current.classifications) ||
       JSON.stringify(investmentDescriptions.product_biases ?? {}) !== JSON.stringify(originalDescriptions.product_biases ?? {}) ||
       JSON.stringify(investmentDescriptions.benchmarks ?? []) !== JSON.stringify(originalDescriptions.benchmarks ?? []) ||
@@ -248,12 +271,14 @@ export default function AddProductDialog({
       inv_desc_holdings_min: investmentDescriptions.holdings_min !== "" ? Number(investmentDescriptions.holdings_min) : null,
       inv_desc_holdings_max: investmentDescriptions.holdings_max !== "" ? Number(investmentDescriptions.holdings_max) : null,
       inv_desc_product_biases: investmentDescriptions.product_biases || {},
+      constituent_product_ids: productType === "Multi-Manager Product" ? constituentProductIds : [],
     });
     setProductType("");
     setFirmId("");
     setProductName("");
     setDescription("");
     setClassifications(EMPTY_CLASSIFICATIONS);
+    setConstituentProductIds([]);
   };
 
   const handleClose = () => {
@@ -270,6 +295,7 @@ export default function AddProductDialog({
     setDescription(snap.description);
     setClassifications(snap.classifications);
     setInvestmentDescriptions(snap.descriptions);
+    setConstituentProductIds(snap.constituent_product_ids);
     setIsEditing(false);
   };
 
@@ -482,6 +508,51 @@ export default function AddProductDialog({
                   />
                 )}
               </div>
+
+              {/* Constituent IM Products (Multi-Manager Product only) */}
+              {productType === "Multi-Manager Product" && (
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium text-gray-700">Constituent IM Products</Label>
+                  {!activelyEditing ? (
+                    <div className="space-y-1">
+                      {constituentProductIds.length === 0 ? (
+                        <div className="px-3 py-2 rounded-md border bg-gray-50 text-sm text-gray-400">
+                          —
+                        </div>
+                      ) : (
+                        constituentProductIds.map((id) => {
+                          const p = existingProducts.find((x) => x.id === id);
+                          return (
+                            <div
+                              key={id}
+                              className="px-3 py-2 rounded-md border bg-gray-50 text-sm text-gray-800"
+                            >
+                              <span className="font-medium">{p?.name || "Unknown product"}</span>
+                              {p?.firm_name && (
+                                <span className="text-gray-400"> · {p.firm_name}</span>
+                              )}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <ConstituentProductMultiSelect
+                        options={imProductOptions}
+                        value={constituentProductIds}
+                        onChange={setConstituentProductIds}
+                        onAddNew={() => setAddImProductOpen(true)}
+                      />
+                      {imProductOptions.length === 0 && (
+                        <p className="text-xs text-amber-600">
+                          No Investment Manager products found. Add one using "Add new IM product".
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
             </TabsContent>
 
             {/* ── Classifications Tab ── */}
@@ -577,6 +648,20 @@ export default function AddProductDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    {/* Inline validated Add IM Product dialog (for Multi-Manager Product constituents) */}
+    <AddIMProductValidatedDialog
+      open={addImProductOpen}
+      onOpenChange={setAddImProductOpen}
+      firms={firms}
+      existingProducts={existingProducts}
+      onCreated={(product) => {
+        queryClient.invalidateQueries({ queryKey: ["products"] });
+        setConstituentProductIds((prev) =>
+          prev.includes(product.id) ? prev : [...prev, product.id]
+        );
+      }}
+    />
     </>
     );
     }

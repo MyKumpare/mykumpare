@@ -80,6 +80,13 @@
         }
       }
     },
+    "constituent_product_ids": {
+      "type": "array",
+      "description": "Underlying Investment Manager product IDs for a Multi-Manager Product",
+      "items": {
+        "type": "string"
+      }
+    },
     "inv_desc_edge": {
       "type": "string",
       "description": "Investment Edge narrative"

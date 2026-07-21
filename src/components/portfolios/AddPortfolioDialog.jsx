@@ -13,6 +13,7 @@ import { format, parseISO } from "date-fns";
 import { CalendarIcon, Plus, X, ChevronDown, Check, Pencil, LayoutList, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AddFirmDialog from "@/components/firms/AddFirmDialog";
+import AddIMProductValidatedDialog from "@/components/products/AddIMProductValidatedDialog";
 
 // ── Searchable dropdown ────────────────────────────────────────────────────────
 function SearchableSelect({ options, value, onChange, placeholder, onAddNew, addNewLabel }) {
@@ -809,91 +810,21 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
         existingFirms={firms}
       />
 
-      {/* Add IM Product mini-dialog */}
-      {addProductOpen && (
-        <AddIMProductInlineDialog
-          open={addProductOpen}
-          onOpenChange={setAddProductOpen}
-          firms={firms}
-          onCreated={(product) => {
-            queryClient.invalidateQueries({ queryKey: ["products"] });
-            setSubManagers((prev) => [
-              ...prev,
-              { product_id: product.id, product_name: product.name, firm_name: product.firm_name || "" },
-            ]);
-          }}
-        />
-      )}
+      {/* Add IM Product (validated) */}
+      <AddIMProductValidatedDialog
+        open={addProductOpen}
+        onOpenChange={setAddProductOpen}
+        firms={firms}
+        existingProducts={products}
+        onCreated={(product) => {
+          queryClient.invalidateQueries({ queryKey: ["products"] });
+          setSubManagers((prev) =>
+            prev.some((s) => s.product_id === product.id)
+              ? prev
+              : [...prev, { product_id: product.id, product_name: product.name, firm_name: product.firm_name || "" }]
+          );
+        }}
+      />
     </>
-  );
-}
-
-// ── Lightweight inline Add IM Product dialog ───────────────────────────────────
-function AddIMProductInlineDialog({ open, onOpenChange, firms, onCreated }) {
-  const [name, setName] = useState("");
-  const [firmId, setFirmId] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  const imFirms = useMemo(() => {
-    const getFirmTypes = (f) =>
-      f.firm_types?.length ? f.firm_types : f.firm_type ? [f.firm_type] : [];
-    return firms
-      .filter((f) => getFirmTypes(f).includes("Investment Manager"))
-      .map((f) => ({ value: f.id, label: f.name }))
-      .sort((a, b) => a.label.localeCompare(b.label));
-  }, [firms]);
-
-  useEffect(() => {
-    if (open) { setName(""); setFirmId(""); }
-  }, [open]);
-
-  const handleSave = async () => {
-    if (!name.trim() || !firmId) return;
-    setSaving(true);
-    const firmName = firms.find((f) => f.id === firmId)?.name || "";
-    const product = await base44.entities.Product.create({
-      name: name.trim(),
-      firm_id: firmId,
-      firm_name: firmName,
-      product_type: "Investment Manager Product",
-    });
-    setSaving(false);
-    onCreated(product);
-    onOpenChange(false);
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle>Add IM Product</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-3 py-2">
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-gray-700">Product Name <span className="text-red-400">*</span></Label>
-            <Input placeholder="Enter product name..." value={name} onChange={(e) => setName(e.target.value)} className="h-9 text-sm" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-gray-700">Investment Manager Firm <span className="text-red-400">*</span></Label>
-            <SearchableSelect
-              options={imFirms}
-              value={firmId}
-              onChange={setFirmId}
-              placeholder="Select IM firm..."
-            />
-          </div>
-        </div>
-        <DialogFooter className="gap-2 pt-2 border-t">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button
-            disabled={!name.trim() || !firmId || saving}
-            onClick={handleSave}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white"
-          >
-            Add Product
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
