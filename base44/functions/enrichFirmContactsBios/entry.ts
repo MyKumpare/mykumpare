@@ -15,6 +15,26 @@ const CONSENT_COOKIES = [
   'cookieconsent_status=allow',
 ].join('; ');
 
+// Complete browser-like headers — some sites (WAFs / anti-bot plugins) 403
+// bare scraper requests; the Sec-Fetch-* / sec-ch-ua headers pass them.
+function browserHeaders(cookieHeader: string): Record<string, string> {
+  return {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Accept-Encoding': 'gzip, deflate',
+    'Sec-Fetch-Dest': 'document',
+    'Sec-Fetch-Mode': 'navigate',
+    'Sec-Fetch-Site': 'none',
+    'Sec-Fetch-User': '?1',
+    'Upgrade-Insecure-Requests': '1',
+    'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-platform': '"macOS"',
+    'Cookie': cookieHeader,
+  };
+}
+
 const COMMON_PEOPLE_PATHS = [
   '/about-xponance/people', '/about/people', '/about/firm', '/about/our-team',
   '/team', '/our-team', '/people', '/our-people', '/leadership', '/team-members',
@@ -28,12 +48,7 @@ async function fetchPage(url: string): Promise<string> {
   const timeout = setTimeout(() => controller.abort(), 15000);
   try {
     const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Cookie': CONSENT_COOKIES,
-      },
+      headers: browserHeaders(CONSENT_COOKIES),
       redirect: 'follow',
       signal: controller.signal,
     });

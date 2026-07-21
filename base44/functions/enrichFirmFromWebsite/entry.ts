@@ -73,6 +73,28 @@ const CONSENT_COOKIES = [
 // homepage's raw HTML. Appended to the baseline CONSENT_COOKIES on every fetch.
 let dynamicConsentCookies = '';
 
+// A complete set of browser-like request headers. Some sites (WAFs / anti-bot
+// plugins) 403 requests that look like a bare scraper — sending the Sec-Fetch-*
+// and sec-ch-ua headers a real browser emits is enough to pass them.
+function browserHeaders(cookieHeader: string): Record<string, string> {
+  return {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Accept-Encoding': 'gzip, deflate',
+    'Sec-Fetch-Dest': 'document',
+    'Sec-Fetch-Mode': 'navigate',
+    'Sec-Fetch-Site': 'none',
+    'Sec-Fetch-User': '?1',
+    'Upgrade-Insecure-Requests': '1',
+    'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-platform': '"macOS"',
+    'DNT': '0',
+    'Cookie': cookieHeader,
+  };
+}
+
 /**
  * Detects which cookie-consent platform a site uses from its raw HTML and
  * returns the platform-specific "accept all" cookies. Many platforms gate
@@ -134,13 +156,7 @@ async function fetchRawHtml(url: string): Promise<string> {
   const timeout = setTimeout(() => controller.abort(), 15000);
   try {
     const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Cookie': CONSENT_COOKIES,
-        'DNT': '0',
-      },
+      headers: browserHeaders(CONSENT_COOKIES),
       redirect: 'follow',
       signal: controller.signal,
     });
@@ -170,13 +186,7 @@ async function fetchPage(url: string, maxRedirects = 3): Promise<string> {
     const timeout = setTimeout(() => controller.abort(), 15000);
     try {
       const response = await fetch(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml',
-          'Accept-Language': 'en-US,en;q=0.9',
-          'Cookie': cookieHeader,
-          'DNT': '0',
-        },
+        headers: browserHeaders(cookieHeader),
         redirect: 'follow',
         signal: controller.signal,
       });
@@ -916,6 +926,13 @@ Deno.serve(async (req) => {
     }
 
     const combinedContent = pageContents.map((p) => `[Page: ${p.url}]\n${p.text}`).join('\n\n---\n\n');
+
+    // Detect a captcha / anti-bot challenge redirect (e.g. SiteGuard sgcaptcha),
+    // which serves a tiny meta-refresh stub instead of real content. This is an
+    // IP-reputation block that no cookie/header change can bypass.
+    if (homepageRaw && /\/\.well-known\/(sgcaptcha|sgcaptcha)|sgcaptcha|captcha/i.test(homepageRaw) && homepageRaw.length < 1000) {
+      return Response.json({ error: `${website} is protected by an anti-bot captcha that blocks automated access, so its content can't be auto-filled. Please enter the firm's details manually.` }, { status: 502 });
+    }
 
     if (!combinedContent || combinedContent.length < 50) {
       return Response.json({ error: `Could not fetch content from ${website}. The site may be blocking automated access.` }, { status: 502 });
