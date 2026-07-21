@@ -21,10 +21,12 @@ import {
   Download,
   Plus,
   Save,
+  Pencil,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import DocumentCategoryPicker from "./DocumentCategoryPicker";
 import SimilarDocumentDialog from "./SimilarDocumentDialog";
+import EditFirmDocumentDialog from "./EditFirmDocumentDialog";
 import { toast } from "@/components/ui/use-toast";
 
 const fmtDate = (iso) => {
@@ -58,6 +60,7 @@ export default function FirmDocumentsTab({ firmId, firmName }) {
   const [uploading, setUploading] = useState(false);
   const [duplicateCheck, setDuplicateCheck] = useState(null); // { draft, matches }
   const [deleteId, setDeleteId] = useState(null);
+  const [editingDoc, setEditingDoc] = useState(null);
 
   // list controls
   const [search, setSearch] = useState("");
@@ -306,6 +309,14 @@ export default function FirmDocumentsTab({ firmId, firmName }) {
         >
           <Download className="w-3.5 h-3.5" />
         </a>
+        <button
+          type="button"
+          onClick={() => setEditingDoc(doc)}
+          className="p-1.5 text-gray-400 hover:text-indigo-600"
+          title="Edit"
+        >
+          <Pencil className="w-3.5 h-3.5" />
+        </button>
         <button
           type="button"
           onClick={() => handleDelete(doc)}
@@ -595,6 +606,13 @@ export default function FirmDocumentsTab({ firmId, firmName }) {
             });
           }
         }}
+      />
+
+      <EditFirmDocumentDialog
+        open={!!editingDoc}
+        onOpenChange={(o) => !o && setEditingDoc(null)}
+        document={editingDoc}
+        firmId={firmId}
       />
     </div>
   );
