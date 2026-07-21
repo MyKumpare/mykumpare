@@ -438,6 +438,19 @@ function AssigneeStatusEditor({ assignments = [], onChange, allContacts, allFirm
     onChange([...assignments, newAssignment]);
   };
 
+  const handleContactChange = (assignmentId, contactId) => {
+    const contact = (allContacts || []).find(x => x.id === contactId);
+    if (!contact) return;
+    onChange(assignments.map(a => {
+      if (a.id !== assignmentId) return a;
+      return {
+        ...a,
+        contact_id: contact.id,
+        contact_name: [contact.first_name, contact.last_name].filter(Boolean).join(" "),
+      };
+    }));
+  };
+
   const handleRemoveAssignment = (assignmentId) => {
     onChange(assignments.filter(a => a.id !== assignmentId));
   };
@@ -530,6 +543,8 @@ function AssigneeStatusEditor({ assignments = [], onChange, allContacts, allFirm
                 const StatusIcon = s.icon;
                 const contact = allContacts.find(x => x.id === a.contact_id);
 
+                const firmContacts = (allContacts || []).filter(c => !c.deleted_at && (c.firm_ids || []).includes(a.firm_id));
+                const availableFirmContacts = firmContacts.filter(c => !assignments.find(other => other.id !== a.id && other.contact_id === c.id));
                 return (
                   <div key={a.id} className="rounded-lg bg-white border border-gray-100 p-2.5 space-y-2">
                     <div className="flex items-center gap-2">
@@ -549,6 +564,22 @@ function AssigneeStatusEditor({ assignments = [], onChange, allContacts, allFirm
                         </SelectContent>
                       </Select>
                     </div>
+                    {!a.contact_id && (
+                      <Select onValueChange={(cid) => handleContactChange(a.id, cid)}>
+                        <SelectTrigger className="h-7 text-xs border-dashed border-indigo-200 text-gray-500">
+                          <SelectValue placeholder="+ Select contact from this firm..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableFirmContacts.length === 0 ? (
+                            <SelectItem value="__none__" disabled>No contacts on file for this firm</SelectItem>
+                          ) : availableFirmContacts.map(c => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {[c.first_name, c.last_name].filter(Boolean).join(" ")}{c.title ? ` · ${c.title}` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                     <div>
                       <textarea
                         value={a.notes || ""}
