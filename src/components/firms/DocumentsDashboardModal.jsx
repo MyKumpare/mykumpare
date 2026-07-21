@@ -173,6 +173,12 @@ export default function DocumentsDashboardModal({ open, onClose }) {
                   <th className="px-4 py-2 font-semibold text-xs uppercase tracking-wide">
                     Category
                   </th>
+                  <th className="px-4 py-2 font-semibold text-xs uppercase tracking-wide">
+                    Sub-Categories
+                  </th>
+                  <th className="px-4 py-2 font-semibold text-xs uppercase tracking-wide whitespace-nowrap">
+                    Document Date
+                  </th>
                   <th className="px-4 py-2 font-semibold text-xs uppercase tracking-wide whitespace-nowrap">
                     Date Stamp
                   </th>
@@ -197,18 +203,6 @@ export default function DocumentsDashboardModal({ open, onClose }) {
                           >
                             {doc.file_name}
                           </a>
-                          {doc.sub_categories?.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-0.5">
-                              {doc.sub_categories.map((s) => (
-                                <span
-                                  key={s}
-                                  className="inline-flex items-center px-1.5 py-0 rounded-full text-[10px] font-medium bg-amber-100 text-amber-700"
-                                >
-                                  {s}
-                                </span>
-                              ))}
-                            </div>
-                          )}
                         </div>
                       </div>
                     </td>
@@ -236,13 +230,31 @@ export default function DocumentsDashboardModal({ open, onClose }) {
                         <span className="text-gray-300">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap text-gray-600 text-xs">
-                      <div>{fmtDate(doc.entry_date)}</div>
-                      {doc.document_as_of_date && (
-                        <div className="text-[10px] text-gray-400">
-                          as of {fmtDate(doc.document_as_of_date)}
+                    <td className="px-4 py-2.5">
+                      {doc.sub_categories?.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {doc.sub_categories.map((s) => (
+                            <span
+                              key={s}
+                              className="inline-flex items-center px-1.5 py-0 rounded-full text-[10px] font-medium bg-amber-100 text-amber-700"
+                            >
+                              {s}
+                            </span>
+                          ))}
                         </div>
+                      ) : (
+                        <span className="text-gray-300">—</span>
                       )}
+                    </td>
+                    <td className="px-4 py-2.5 whitespace-nowrap text-gray-600 text-xs">
+                      {doc.document_as_of_date ? (
+                        fmtDate(doc.document_as_of_date)
+                      ) : (
+                        <span className="text-gray-300">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 whitespace-nowrap text-gray-600 text-xs">
+                      {fmtDate(doc.entry_date)}
                     </td>
                   </tr>
                 ))}
