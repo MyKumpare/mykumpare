@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Send, Bot, Loader2, X } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
 import AIAssistantMessage from "./AIAssistantMessage";
@@ -61,6 +62,7 @@ export default function AIAssistant() {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const [isOpen, setIsOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -226,6 +228,8 @@ export default function AIAssistant() {
     try {
       if (pendingCreation.type === "create_firm") {
         const createdFirm = await createFirmFromEnrichment(pendingCreation.data);
+        queryClient.invalidateQueries({ queryKey: ["firms"] });
+        queryClient.invalidateQueries({ queryKey: ["contacts"] });
         setMessages((prev) => [...prev, {
           role: "assistant",
           content: `✅ **Firm "${createdFirm.name}" created successfully.** You can review and edit the details in the Firms section.`,
@@ -330,6 +334,8 @@ export default function AIAssistant() {
         if (contactErrors.length > 0) {
           resultContent += `\n\n⚠️ **Some fields could not be updated:**\n${contactErrors.map((e) => `- ${e}`).join("\n")}`;
         }
+        queryClient.invalidateQueries({ queryKey: ["firms"] });
+        queryClient.invalidateQueries({ queryKey: ["contacts"] });
         setMessages((prev) => [...prev, {
           role: "assistant",
           content: resultContent,
