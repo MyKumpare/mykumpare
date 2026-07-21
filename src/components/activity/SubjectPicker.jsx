@@ -67,9 +67,8 @@ export default function SubjectPicker({ value = [], onChange, placeholder = "Sel
   }, [open]);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return subjects;
-    const q = search.toLowerCase();
-    return subjects.filter(s => s.name.toLowerCase().includes(q));
+    const base = !search.trim() ? subjects : subjects.filter(s => s.name.toLowerCase().includes(search.toLowerCase()));
+    return [...base].sort((a, b) => a.name.localeCompare(b.name));
   }, [subjects, search]);
 
   const createMutation = useMutation({
