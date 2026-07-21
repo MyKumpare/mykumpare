@@ -15,6 +15,7 @@ import {
 import TaskAssigneeEditor from "@/components/activity/TaskAssigneeEditor";
 import TaskDetailModal from "@/components/activity/TaskDetailModal";
 import ActivityDetailModal from "@/components/activity/ActivityDetailModal";
+import { getCurrentUserContact } from "@/components/activity/useAutoOriginator";
 import { format } from "date-fns";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
@@ -460,7 +461,7 @@ function AttachmentsManager({ attachments = [], onChange }) {
 // (TaskEntryForm replaced by inline TaskEntryInner inside FirmTaskForm)
 
 // ── Activity form (full, mirrors ContactActivitiesTab's ActivityForm) ─────────
-function FirmActivityForm({ firmId, firmName, contact, allFirms, allContacts, onSaved, onCancel, onFirmClick, onContactClick }) {
+function FirmActivityForm({ firmId, firmName, contact, allFirms, allContacts, onSaved, onCancel, onChangeContact, onFirmClick, onContactClick }) {
   const queryClient = useQueryClient();
   const contactId = contact.id;
   const contactName = [contact.first_name, contact.last_name].filter(Boolean).join(" ");
@@ -499,9 +500,15 @@ function FirmActivityForm({ firmId, firmName, contact, allFirms, allContacts, on
   return (
     <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3 space-y-3">
       <div className="flex items-center justify-between">
-        <div>
+        <div className="flex items-center gap-1.5">
           <span className="text-xs font-semibold text-indigo-700">Log Activity</span>
           <span className="text-xs text-indigo-400 ml-1.5">for {contactName}</span>
+          {onChangeContact && (
+            <button type="button" onClick={onChangeContact}
+              className="text-[10px] text-indigo-500 hover:text-indigo-700 underline underline-offset-2 ml-1">
+              Change
+            </button>
+          )}
         </div>
         <button type="button" onClick={onCancel}><X className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" /></button>
       </div>
@@ -644,7 +651,7 @@ function TaskEntryInner({ idx, task, onChange, onRemove, showRemove, allFirms, a
 }
 
 // ── Task form (uses TaskAssigneeEditor for multi-firm assignment) ─────────────
-function FirmTaskForm({ firmId, firmName, contact, allFirms, allContacts, allActivities, onSaved, onCancel }) {
+function FirmTaskForm({ firmId, firmName, contact, allFirms, allContacts, allActivities, onSaved, onCancel, onChangeContact }) {
   const queryClient = useQueryClient();
   const contactId = contact.id;
   const contactName = [contact.first_name, contact.last_name].filter(Boolean).join(" ");
@@ -701,9 +708,15 @@ function FirmTaskForm({ firmId, firmName, contact, allFirms, allContacts, allAct
   return (
     <div className="rounded-xl border border-indigo-100 bg-indigo-50/30 p-3 space-y-3">
       <div className="flex items-center justify-between">
-        <div>
+        <div className="flex items-center gap-1.5">
           <span className="text-xs font-semibold text-indigo-700">Add Follow-up Task(s)</span>
           <span className="text-xs text-indigo-400 ml-1.5">for {contactName}</span>
+          {onChangeContact && (
+            <button type="button" onClick={onChangeContact}
+              className="text-[10px] text-indigo-500 hover:text-indigo-700 underline underline-offset-2 ml-1">
+              Change
+            </button>
+          )}
         </div>
         <button type="button" onClick={onCancel}><X className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" /></button>
       </div>
@@ -874,6 +887,27 @@ export default function FirmActivityLogTab({ firmId, firmName, onFirmClick, onCo
   const handleFormSaved = () => { setUiState("idle"); setSelectedContact(null); };
   const handleCancel = () => { setUiState("idle"); setSelectedContact(null); };
 
+  // Auto-select the signed-in user's contact (if they belong to this firm) and
+  // skip the manual picker; falls back to the picker if no match is found.
+  const startLogActivity = async () => {
+    setActiveSection("activities");
+    const me = await getCurrentUserContact(firmContacts);
+    if (me) { setSelectedContact(me); setUiState("activity-form"); }
+    else setUiState("picking-for-activity");
+  };
+  const startAddTask = async () => {
+    setActiveSection("tasks");
+    const me = await getCurrentUserContact(firmContacts);
+    if (me) { setSelectedContact(me); setUiState("task-form"); }
+    else setUiState("picking-for-task");
+  };
+
+  const handleChangeContact = () => {
+    setSelectedContact(null);
+    if (uiState === "activity-form") setUiState("picking-for-activity");
+    else if (uiState === "task-form") setUiState("picking-for-task");
+  };
+
   const isLoading = loadingActivities || loadingTasks || loadingContacts;
   const showingPicker = uiState === "picking-for-activity" || uiState === "picking-for-task";
 
@@ -903,12 +937,12 @@ export default function FirmActivityLogTab({ firmId, firmName, onFirmClick, onCo
           <>
             <Button type="button" variant="ghost" size="sm"
               className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs flex-shrink-0"
-              onClick={() => { setActiveSection("activities"); setUiState("picking-for-activity"); }}>
+              onClick={startLogActivity}>
               <Plus className="w-3.5 h-3.5" /> Log Activity
             </Button>
             <Button type="button" variant="ghost" size="sm"
               className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs flex-shrink-0"
-              onClick={() => { setActiveSection("tasks"); setUiState("picking-for-task"); }}>
+              onClick={startAddTask}>
               <Plus className="w-3.5 h-3.5" /> Add Task
             </Button>
           </>
@@ -926,12 +960,14 @@ export default function FirmActivityLogTab({ firmId, firmName, onFirmClick, onCo
       {uiState === "activity-form" && selectedContact && (
         <FirmActivityForm firmId={firmId} firmName={firmName} contact={selectedContact}
           allFirms={allFirms} allContacts={allContacts} onSaved={handleFormSaved} onCancel={handleCancel}
+          onChangeContact={handleChangeContact}
           onFirmClick={onFirmClick} onContactClick={onContactClick} />
       )}
       {uiState === "task-form" && selectedContact && (
         <FirmTaskForm firmId={firmId} firmName={firmName} contact={selectedContact}
           allFirms={allFirms} allContacts={allContacts} allActivities={firmActivities}
-          onSaved={handleFormSaved} onCancel={handleCancel} />
+          onSaved={handleFormSaved} onCancel={handleCancel}
+          onChangeContact={handleChangeContact} />
       )}
 
       {isLoading ? (
