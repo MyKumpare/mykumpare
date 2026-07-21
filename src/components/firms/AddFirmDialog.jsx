@@ -824,36 +824,30 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
           {/* Contacts, Addresses, Phones & Ownership Tabs */}
            <Tabs defaultValue={defaultTab || "contacts"} className="w-full">
-             {/* Row 1: Contacts, Addresses, Phones */}
+             {/* Single 3-column tab grid — wraps to max 3 per row */}
              <TabsList className="grid w-full mt-0 grid-cols-3">
                <TabsTrigger value="contacts">Contacts</TabsTrigger>
                <TabsTrigger value="addresses">Addresses</TabsTrigger>
                <TabsTrigger value="phones">Phones</TabsTrigger>
+               {!hideProductTabs && (
+                 <>
+                   {showPortfolioTab && <TabsTrigger value="portfolios">Portfolios</TabsTrigger>}
+                   {showAdvisorPortfolioTab && <TabsTrigger value="advisor-portfolios">Portfolios</TabsTrigger>}
+                   <TabsTrigger value="products">Products</TabsTrigger>
+                   <TabsTrigger value="due-diligence">Due Diligence</TabsTrigger>
+                   <TabsTrigger value="documents">Documents</TabsTrigger>
+                   <TabsTrigger value="activity-log">Activity Log</TabsTrigger>
+                   <TabsTrigger value="ownership">Ownership</TabsTrigger>
+                   <TabsTrigger value="orgchart">Org Chart</TabsTrigger>
+                 </>
+               )}
+               {hideProductTabs && (
+                 <>
+                   <TabsTrigger value="orgchart">Org Chart</TabsTrigger>
+                   <TabsTrigger value="activity-log">Activity Log</TabsTrigger>
+                 </>
+               )}
              </TabsList>
-             {/* Row 2: max 3 tabs per row */}
-             {!hideProductTabs && (
-              <TabsList className="grid w-full mt-1 grid-cols-3">
-                {showPortfolioTab && <TabsTrigger value="portfolios">Portfolios</TabsTrigger>}
-                {showAdvisorPortfolioTab && <TabsTrigger value="advisor-portfolios">Portfolios</TabsTrigger>}
-                <TabsTrigger value="products">Products</TabsTrigger>
-                <TabsTrigger value="due-diligence">Due Diligence</TabsTrigger>
-                <TabsTrigger value="documents">Documents</TabsTrigger>
-              </TabsList>
-             )}
-             {/* Row 3: Activity Log, Ownership, Org Chart */}
-             {!hideProductTabs && (
-              <TabsList className="grid w-full mt-1 grid-cols-3">
-                <TabsTrigger value="activity-log">Activity Log</TabsTrigger>
-                <TabsTrigger value="ownership">Ownership</TabsTrigger>
-                <TabsTrigger value="orgchart">Org Chart</TabsTrigger>
-              </TabsList>
-             )}
-             {hideProductTabs && (
-               <TabsList className="grid w-full grid-cols-2 mt-1">
-                 <TabsTrigger value="orgchart">Org Chart</TabsTrigger>
-                 <TabsTrigger value="activity-log">Activity Log</TabsTrigger>
-               </TabsList>
-              )}
 
             <TabsContent value="contacts" className="space-y-3">
               {editingFirm ? (
