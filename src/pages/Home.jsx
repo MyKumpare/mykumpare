@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, FileText } from "lucide-react";
+import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, FileText, Files } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,6 +26,7 @@ import ContactsSection from "../components/contacts/ContactsSection";
 import UtilitySection from "../components/utility/UtilitySection";
 import ReportsSection from "../components/reports/ReportsSection";
 import ReportsPickerModal from "../components/reports/ReportsPickerModal";
+import DocumentsDashboardModal from "../components/firms/DocumentsDashboardModal";
 import AddBenchmarkDialog from "../components/utility/AddBenchmarkDialog";
 import AnalyticsSection from "../components/analytics/AnalyticsSection";
 import EditAnalysisDialog from "../components/analytics/EditAnalysisDialog";
@@ -92,6 +93,7 @@ export default function Home() {
   const [taskPickerOpen, setTaskPickerOpen] = useState(false);
   const [viewingTask, setViewingTask] = useState(null);
   const [reportsPickerOpen, setReportsPickerOpen] = useState(false);
+  const [documentsPickerOpen, setDocumentsPickerOpen] = useState(false);
 
   const portfoliosRef = useRef(null);
   const firmsRef = useRef(null);
@@ -384,6 +386,7 @@ export default function Home() {
     { label: "Tasks", icon: LayoutList, ref: null, color: "text-orange-600", activeBg: "bg-orange-50", onClick: () => setTaskPickerOpen(true) },
     { label: "Analytics", icon: LineChart, ref: analyticsRef, color: "text-cyan-600", activeBg: "bg-cyan-50", onClick: () => setAnalyticsLaunchOpen(true) },
     { label: "Reports", icon: FileText, ref: reportsRef, color: "text-blue-600", activeBg: "bg-blue-50", onClick: () => setReportsPickerOpen(true) },
+    { label: "Documents", icon: Files, ref: null, color: "text-teal-600", activeBg: "bg-teal-50", onClick: () => setDocumentsPickerOpen(true) },
     { label: "Utilities", icon: Wrench, ref: utilityRef, color: "text-gray-600", activeBg: "bg-gray-100" },
   ];
 
@@ -814,6 +817,11 @@ export default function Home() {
       <ReportsPickerModal
         open={reportsPickerOpen}
         onClose={() => setReportsPickerOpen(false)}
+      />
+
+      <DocumentsDashboardModal
+        open={documentsPickerOpen}
+        onClose={() => setDocumentsPickerOpen(false)}
       />
 
       <ActivityDetailModal
