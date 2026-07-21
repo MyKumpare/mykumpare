@@ -40,6 +40,7 @@ export default function DocumentsDashboardModal({ open, onClose }) {
   const [filterFirm, setFilterFirm] = useState("all");
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterSubCategory, setFilterSubCategory] = useState("all");
+  const [filterDocDate, setFilterDocDate] = useState("");
 
   const { data: documents = [], isLoading } = useQuery({
     queryKey: ["all-firm-documents"],
@@ -80,6 +81,8 @@ export default function DocumentsDashboardModal({ open, onClose }) {
         !(d.sub_categories || []).includes(filterSubCategory)
       )
         return false;
+      if (filterDocDate && (d.document_as_of_date || "") !== filterDocDate)
+        return false;
       if (q) {
         const hay = `${d.file_name || ""} ${d.firm_name || ""} ${
           d.description || ""
@@ -90,7 +93,7 @@ export default function DocumentsDashboardModal({ open, onClose }) {
       }
       return true;
     });
-  }, [documents, search, filterFirm, filterCategory, filterSubCategory]);
+  }, [documents, search, filterFirm, filterCategory, filterSubCategory, filterDocDate]);
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -118,7 +121,7 @@ export default function DocumentsDashboardModal({ open, onClose }) {
               {filtered.length} of {documents.length}
             </span>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
             <div className="space-y-0.5">
               <label className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">
                 Firm
@@ -175,6 +178,17 @@ export default function DocumentsDashboardModal({ open, onClose }) {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-0.5">
+              <label className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">
+                Document Date
+              </label>
+              <Input
+                type="date"
+                value={filterDocDate}
+                onChange={(e) => setFilterDocDate(e.target.value)}
+                className="h-8 text-xs"
+              />
             </div>
           </div>
         </div>
