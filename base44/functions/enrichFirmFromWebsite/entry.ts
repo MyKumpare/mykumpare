@@ -27,17 +27,35 @@ const COMMON_PATHS = [
 // Common cookie consent cookies that signal "user accepted all cookies".
 // Many cookie consent platforms (OneTrust, Cookiebot, Quantcast, TrustArc, etc.)
 // check for these on the server side and return full content when present.
+// These are sent on EVERY request as a baseline; platform-specific cookies
+// discovered via detectConsentCookies() are appended per-site.
 const CONSENT_COOKIES = [
   // Cookiebot
   'CookieConsent={stamp%3D%27-consented%27%2Cnecessary%3Atrue%2Cpreferences%3Atrue%2Cstatistics%3Atrue%2Cmarketing%3Atrue%2Cmethod%3A%27explicit%27%2Cver%3A1}',
   // OneTrust / Optanon
-  'OptanonConsent=isIABGlobal=false&datestamp=Mon+Jan+01+2024+00%3A00%3A00+GMT-0000&version=6.30.0&consentId=consent&interactionCount=1&landingPath=NotLandingPage&groups=C0001%3A1%2CC0002%3A1%2CC0003%3A1%2CC0004%3A1%2CC0005%3A1',
-  'eupubconsent-v2=CP-xxx',
+  'OptanonConsent=isIABGlobal=false&datestamp=Mon+Jan+01+2024+00%3A00%3A00+GMT-0000&version=6.30.0&consentId=consent&interactionCount=1&landingPath=NotLandingPage&groups=C0001%3A1%2CC0002%3A1%2CC0003%3A1%2CC0004%3A1%2CC0005%3A1&AwaitingReconsent=false',
+  'OptanonAlertBoxClosed=2024-01-01T00:00:00.000Z',
+  // IAB TCF v2 (Sourcepoint, Didomi, Usercentrics, etc.) — a minimal valid-looking TC string
+  'euconsent-v2=CPdE5gAPdE5gAAAKBENCsAAAAAH_AAAAAAAYW4wAQAAAAgAAAA',
+  'eupubconsent-v2=CPdE5gAPdE5gAAAKBENCsAAAAAH_AAAAAAAYW4wAQAAAAgAAAA',
   // Quantcast Choice
   'qcSxc=1',
+  'addtl_consent=1~',
   // TrustArc
   'notice_preferences=2:',
   'cmapi_cookie_privacy=permit%201,2,3,4',
+  // Didomi
+  'didomi_token=eyJ1c2VyX2lkIjoiY29uc2VudCJ9',
+  'didomi_test_token=1',
+  // Usercentrics
+  'uc_settings=1',
+  'uc_state=consented',
+  // Iubenda
+  'cookieconsent=true',
+  'consent_cookie=true',
+  // Borlabs Cookie (WordPress)
+  '_borlabs-cookie-1=1',
+  '_borlabs-cookie-3=1',
   // Generic / custom banners
   'cookieconsent_status=allow',
   'cookies_accepted=true',
@@ -46,9 +64,107 @@ const CONSENT_COOKIES = [
   'hasConsented=true',
   'privacy_consent=1',
   'viewed_cookie_policy=true',
+  'cookie_consent=1',
+  'cookiesConsent=1',
+  'consent=yes',
 ].join('; ');
 
+// Per-invocation platform-specific consent cookies, detected from the
+// homepage's raw HTML. Appended to the baseline CONSENT_COOKIES on every fetch.
+let dynamicConsentCookies = '';
+
+/**
+ * Detects which cookie-consent platform a site uses from its raw HTML and
+ * returns the platform-specific "accept all" cookies. Many platforms gate
+ * content (or hide it behind a banner) server-side until these are present.
+ */
+function detectConsentCookies(rawHtml: string): string {
+  if (!rawHtml) return '';
+  const lower = rawHtml.toLowerCase();
+  const cookies: string[] = [];
+  // OneTrust / Cookiebot SDK
+  if (lower.includes('cookielaw.org') || lower.includes('onetrust') || lower.includes('optanon')) {
+    cookies.push('OptanonAlertBoxClosed=' + new Date('2024-01-01T00:00:00.000Z').toUTCString());
+    cookies.push('OptanonConsent=isIABGlobal=false&datestamp=Mon+Jan+01+2024+00%3A00%3A00+GMT-0000&version=6.30.0&consentId=consent&interactionCount=1&landingPath=NotLandingPage&groups=C0001%3A1%2CC0002%3A1%2CC0003%3A1%2CC0004%3A1%2CC0005%3A1&AwaitingReconsent=false');
+  }
+  // Cookiebot
+  if (lower.includes('cookiebot')) {
+    cookies.push('CookieConsent={stamp%3D%27-consented%27%2Cnecessary%3Atrue%2Cpreferences%3Atrue%2Cstatistics%3Atrue%2Cmarketing%3Atrue%2Cmethod%3A%27explicit%27%2Cver%3A1}');
+  }
+  // Quantcast Choice
+  if (lower.includes('quantcast') || lower.includes('qcsxc')) {
+    cookies.push('qcSxc=1');
+    cookies.push('addtl_consent=1~');
+  }
+  // TrustArc / TRUSTe
+  if (lower.includes('trustarc') || lower.includes('truste.com')) {
+    cookies.push('notice_preferences=2:');
+    cookies.push('cmapi_cookie_privacy=permit%201,2,3,4');
+  }
+  // Didomi
+  if (lower.includes('didomi')) {
+    cookies.push('euconsent-v2=CPdE5gAPdE5gAAAKBENCsAAAAAH_AAAAAAAYW4wAQAAAAgAAAA');
+  }
+  // Usercentrics
+  if (lower.includes('usercentrics')) {
+    cookies.push('uc_settings=1');
+    cookies.push('uc_state=consented');
+  }
+  // Sourcepoint / IAB TCF
+  if (lower.includes('sourcepoint') || lower.includes('consensu.org') || lower.includes('privacy-mgmt.com')) {
+    cookies.push('euconsent-v2=CPdE5gAPdE5gAAAKBENCsAAAAAH_AAAAAAAYW4wAQAAAAgAAAA');
+    cookies.push('eupubconsent-v2=CPdE5gAPdE5gAAAKBENCsAAAAAH_AAAAAAAYW4wAQAAAAgAAAA');
+  }
+  // Iubenda
+  if (lower.includes('iubenda')) {
+    cookies.push('cookieconsent=true');
+    cookies.push('consent_cookie=true');
+  }
+  // Borlabs Cookie (WordPress)
+  if (lower.includes('borlabs-cookie') || lower.includes('borlabs')) {
+    cookies.push('_borlabs-cookie-1=1');
+    cookies.push('_borlabs-cookie-3=1');
+  }
+  return cookies.join('; ');
+}
+
+/** Fetches raw HTML (no conversion) — used to detect the consent platform. */
+async function fetchRawHtml(url: string): Promise<string> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Cookie': CONSENT_COOKIES,
+        'DNT': '0',
+      },
+      redirect: 'follow',
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      try { await response.body?.cancel(); } catch { /* ignore */ }
+      return '';
+    }
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('text') && !contentType.includes('html')) {
+      try { await response.body?.cancel(); } catch { /* ignore */ }
+      return '';
+    }
+    return await response.text();
+  } catch {
+    return '';
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function fetchPage(url: string, maxRedirects = 3): Promise<string> {
+  const cookieHeader = dynamicConsentCookies
+    ? CONSENT_COOKIES + '; ' + dynamicConsentCookies
+    : CONSENT_COOKIES;
   const doFetch = async (): Promise<string> => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
@@ -58,7 +174,7 @@ async function fetchPage(url: string, maxRedirects = 3): Promise<string> {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           'Accept': 'text/html,application/xhtml+xml',
           'Accept-Language': 'en-US,en;q=0.9',
-          'Cookie': CONSENT_COOKIES,
+          'Cookie': cookieHeader,
           'DNT': '0',
         },
         redirect: 'follow',
@@ -717,7 +833,12 @@ Deno.serve(async (req) => {
 
     // Fetch homepage + common sub-pages
     const pageContents: { url: string; text: string }[] = [];
-    const homepageText = await fetchPage(website);
+    // Fetch the homepage raw HTML first so we can detect which cookie-consent
+    // platform the site uses and send the right "accept all" cookies on all
+    // subsequent requests (including a re-fetch of the homepage below).
+    const homepageRaw = await fetchRawHtml(website);
+    dynamicConsentCookies = detectConsentCookies(homepageRaw);
+    const homepageText = homepageRaw ? htmlToText(homepageRaw, website) : '';
     if (homepageText) {
       pageContents.push({ url: website, text: homepageText.substring(0, 8000) });
     }
