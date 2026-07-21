@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ActivityTypePicker from "./ActivityTypePicker";
 import SubjectPicker from "./SubjectPicker";
+import { useAutoOriginator } from "./useAutoOriginator";
 import {
   Phone, Mail, Users, FileText, MoreHorizontal, ChevronDown, ChevronUp,
   Building2, User, Clock, AlertCircle, CheckCircle2, XCircle, Calendar,
@@ -675,6 +676,7 @@ function TaskEntryForm({ idx, task, onChange, onRemove, showRemove, allFirms, al
 function ActivityLogForm({ onSaved, onCancel, allFirms, allContacts, onFirmClick, onContactClick }) {
   const queryClient = useQueryClient();
   const [originator, setOriginator] = useState({ firmId: "", firmName: "", firmType: null, contactId: "", contactName: "" });
+  useAutoOriginator(allFirms, allContacts, setOriginator, originator);
   const [activityType, setActivityType] = useState("Call");
   const [activityDate, setActivityDate] = useState(new Date().toISOString().split("T")[0]);
   const [subjects, setSubjects] = useState([]);
@@ -798,6 +800,7 @@ function ActivityLogForm({ onSaved, onCancel, allFirms, allContacts, onFirmClick
 function TasksForm({ onSaved, onCancel, allFirms, allContacts }) {
   const queryClient = useQueryClient();
   const [originator, setOriginator] = useState({ firmId: "", firmName: "", firmType: null, contactId: "", contactName: "" });
+  useAutoOriginator(allFirms, allContacts, setOriginator, originator);
   const emptyTask = () => ({
     task_description: "", due_date: new Date().toISOString().split("T")[0], status: "Not Started",
     assigned_to_contact_id: "", assigned_to_contact_name: "", assigned_to_firm_id: "", assigned_to_firm_name: "",
