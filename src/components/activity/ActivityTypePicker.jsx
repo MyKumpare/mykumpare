@@ -208,7 +208,7 @@ export default function ActivityTypePicker({ value = "", onChange, placeholder =
         }`}
       >
         <span className={`truncate ${value ? "text-gray-400" : ""}`}>
-          {value ? "Change log type..." : placeholder}
+          {value ? "Log Type" : placeholder}
         </span>
         <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
