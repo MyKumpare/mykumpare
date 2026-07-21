@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { useToast } from "@/components/ui/use-toast";
 import { Package, Star, StarOff, Plus, Check } from "lucide-react";
 
 const PRODUCT_TYPE_ORDER = ["Investment Manager Product", "Multi-Manager Product"];
@@ -21,20 +22,35 @@ function groupByType(products) {
 
 export default function ContactProductsTab({ contactId, firmIds = [], onProductClick }) {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   // Track pending key state for "available" products before saving
   const [pendingKeys, setPendingKeys] = useState({}); // productId -> boolean
+  const [savedFlash, setSavedFlash] = useState(false);
 
   const { data: allProducts = [], isLoading } = useQuery({
     queryKey: ["products"],
-    queryFn: () => base44.entities.Product.list("-created_date"),
+    queryFn: () => base44.entities.Product.list("-created_date", 500),
     enabled: !!contactId,
   });
 
   const updateTeamMutation = useMutation({
     mutationFn: ({ productId, newTeam }) =>
       base44.entities.Product.update(productId, { investment_team: newTeam }),
-    onSuccess: () => {
+    onSuccess: (_data, { productId }) => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["product", productId] });
+      setSavedFlash(true);
+      setTimeout(() => setSavedFlash(false), 2000);
+    },
+    onError: (err, { productId }) => {
+      toast({
+        title: "Failed to save",
+        description: err?.message || "Could not update the investment team. Please try again.",
+        variant: "destructive",
+      });
+      // Refresh so the UI reflects the true server state
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["product", productId] });
     },
   });
 
@@ -55,7 +71,7 @@ export default function ContactProductsTab({ contactId, firmIds = [], onProductC
 
   const handleAddToProduct = (product) => {
     const isKey = pendingKeys[product.id] || false;
-    const currentTeam = product.investment_team || [];
+    const currentTeam = Array.isArray(product.investment_team) ? product.investment_team : [];
     const newTeam = [...currentTeam, { contact_id: contactId, is_key: isKey }];
     updateTeamMutation.mutate({ productId: product.id, newTeam });
     setPendingKeys(prev => { const next = { ...prev }; delete next[product.id]; return next; });
@@ -81,6 +97,7 @@ export default function ContactProductsTab({ contactId, firmIds = [], onProductC
   const myGrouped = groupByType(myProducts);
   const availableGrouped = groupByType(availableProducts);
   const hasAnything = myProducts.length > 0 || availableProducts.length > 0;
+  const isSaving = updateTeamMutation.isPending;
 
   if (!hasAnything) {
     return (
@@ -93,6 +110,13 @@ export default function ContactProductsTab({ contactId, firmIds = [], onProductC
 
   return (
     <div className="space-y-5">
+      {/* Auto-save status */}
+      {(isSaving || savedFlash) && (
+        <div className={`text-xs px-2 py-1 rounded text-center transition-all ${isSaving ? "bg-indigo-50 text-indigo-500" : "bg-green-50 text-green-600"}`}>
+          {isSaving ? "Saving…" : "✓ Saved"}
+        </div>
+      )}
+
       {/* ── Products the contact is ON ── */}
       {myProducts.length > 0 && (
         <div className="space-y-3">
@@ -123,7 +147,7 @@ export default function ContactProductsTab({ contactId, firmIds = [], onProductC
                         title={isKey ? "Remove key flag" : "Flag as key"}
                         onClick={() => handleToggleKey(product)}
                         className="p-1 rounded hover:bg-amber-100 transition-colors flex-shrink-0"
-                        disabled={updateTeamMutation.isPending}
+                        disabled={isSaving}
                       >
                         {isKey
                           ? <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
@@ -136,7 +160,7 @@ export default function ContactProductsTab({ contactId, firmIds = [], onProductC
                         title="Remove from investment team"
                         onClick={() => handleRemoveFromProduct(product)}
                         className="p-1 rounded hover:bg-red-50 transition-colors flex-shrink-0"
-                        disabled={updateTeamMutation.isPending}
+                        disabled={isSaving}
                       >
                         <Check className="w-4 h-4 text-indigo-500" />
                       </button>
@@ -188,7 +212,7 @@ export default function ContactProductsTab({ contactId, firmIds = [], onProductC
                         type="button"
                         title="Add to investment team"
                         onClick={() => handleAddToProduct(product)}
-                        disabled={updateTeamMutation.isPending}
+                        disabled={isSaving}
                         className="p-1 rounded hover:bg-indigo-50 transition-colors flex-shrink-0"
                       >
                         <Plus className="w-4 h-4 text-gray-300 hover:text-indigo-500" />
