@@ -830,9 +830,9 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                <TabsTrigger value="addresses">Addresses</TabsTrigger>
                <TabsTrigger value="phones">Phones</TabsTrigger>
              </TabsList>
-             {/* Row 2: Portfolios, Products, Due Diligence, Documents */}
+             {/* Row 2: max 3 tabs per row */}
              {!hideProductTabs && (
-              <TabsList className="grid w-full mt-1 grid-cols-4">
+              <TabsList className="grid w-full mt-1 grid-cols-3">
                 {showPortfolioTab && <TabsTrigger value="portfolios">Portfolios</TabsTrigger>}
                 {showAdvisorPortfolioTab && <TabsTrigger value="advisor-portfolios">Portfolios</TabsTrigger>}
                 <TabsTrigger value="products">Products</TabsTrigger>
