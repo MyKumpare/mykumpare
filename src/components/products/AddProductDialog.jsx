@@ -499,6 +499,9 @@ export default function AddProductDialog({
                 descriptions={investmentDescriptions}
                 onChange={setInvestmentDescriptions}
                 isEditing={activelyEditing}
+                firmId={firmId}
+                productName={productName}
+                onRequestEdit={() => setIsEditing(true)}
               />
             </TabsContent>
 

@@ -5,6 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import ProductBiasesSection from "./ProductBiasesSection";
 import BenchmarkMultiSelect from "./BenchmarkMultiSelect";
+import InvDescriptionAutoFill from "./InvDescriptionAutoFill";
 
 const SECTIONS = [
   { key: "investment_edge", label: "Investment Edge" },
@@ -190,12 +191,30 @@ function InformationRatioBlock({ descriptions }) {
   );
 }
 
-export default function ProductInvestmentDescriptionTab({ descriptions, onChange, isEditing }) {
+export default function ProductInvestmentDescriptionTab({
+  descriptions,
+  onChange,
+  isEditing,
+  firmId,
+  productName,
+  onRequestEdit,
+}) {
   const set = (key, val) => onChange({ ...descriptions, [key]: val });
 
 
   return (
     <div className="space-y-6 py-2">
+      {firmId && (
+        <div className="flex justify-end">
+          <InvDescriptionAutoFill
+            firmId={firmId}
+            productName={productName}
+            descriptions={descriptions}
+            onApply={onChange}
+            onRequestEdit={onRequestEdit}
+          />
+        </div>
+      )}
       {SECTIONS.map(({ key, label, type, hasSub }) => (
         <div key={key}>
           <SectionBlock
