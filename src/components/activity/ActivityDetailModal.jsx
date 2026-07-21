@@ -581,22 +581,6 @@ export default function ActivityDetailModal({ open, activity, onClose, onOpenCon
     }
   }, [activity]);
 
-  // Resolve the originator (contact + firm) from the activity's contact_id
-  useEffect(() => {
-    if (!activity?.contact_id || !contacts.length) return;
-    const contact = contacts.find(c => c.id === activity.contact_id);
-    if (!contact) return;
-    const firmId = (contact.firm_ids || [])[0] || "";
-    const firm = firmId ? firms.find(f => f.id === firmId) : null;
-    setOriginator({
-      firmId,
-      firmName: firm?.name || "",
-      firmType: firm ? (firm.firm_types?.length ? firm.firm_types[0] : firm.firm_type || null) : null,
-      contactId: contact.id,
-      contactName: [contact.first_name, contact.last_name].filter(Boolean).join(" "),
-    });
-  }, [activity?.contact_id, contacts, firms]);
-
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
       // First, delete all associated follow-up tasks
@@ -639,6 +623,22 @@ export default function ActivityDetailModal({ open, activity, onClose, onOpenCon
     queryFn: () => base44.entities.Firm.list(),
     enabled: open && !!activity,
   });
+
+  // Resolve the originator (contact + firm) from the activity's contact_id
+  useEffect(() => {
+    if (!activity?.contact_id || !contacts.length) return;
+    const contact = contacts.find(c => c.id === activity.contact_id);
+    if (!contact) return;
+    const firmId = (contact.firm_ids || [])[0] || "";
+    const firm = firmId ? firms.find(f => f.id === firmId) : null;
+    setOriginator({
+      firmId,
+      firmName: firm?.name || "",
+      firmType: firm ? (firm.firm_types?.length ? firm.firm_types[0] : firm.firm_type || null) : null,
+      contactId: contact.id,
+      contactName: [contact.first_name, contact.last_name].filter(Boolean).join(" "),
+    });
+  }, [activity?.contact_id, contacts, firms]);
 
   const { data: linkedTasks = [] } = useQuery({
     queryKey: ["tasks_for_activity", activity?.id],
