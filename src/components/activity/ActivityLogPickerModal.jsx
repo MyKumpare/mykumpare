@@ -95,7 +95,9 @@ export default function ActivityLogPickerModal({ open, onClose, onAddActivity, o
       const primaryFirmId = firmIds[0];
       const firm = primaryFirmId ? firmMap[primaryFirmId] : null;
       const firmName = firm?.name || "Unknown Firm";
-      const firmTypes = firm?.firm_types?.length ? firm.firm_types : firm?.firm_type ? [firm.firm_type] : ["Other"];
+      const allFirmTypes = firm?.firm_types?.length ? firm.firm_types : firm?.firm_type ? [firm.firm_type] : ["Other"];
+      // If the activity was logged under a specific firm type, only show it under that type
+      const firmTypes = activity.firm_type ? [activity.firm_type] : allFirmTypes;
 
       firmTypes.forEach(type => {
         if (!result[type]) result[type] = {};

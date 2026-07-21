@@ -33,6 +33,10 @@
       "type": "string",
       "description": "Detailed notes about the activity"
     },
+    "firm_type": {
+      "type": "string",
+      "description": "Firm type context this activity was logged under (controls which firm-type bucket it appears under in the activity log)"
+    },
     "associated_firms_contacts": {
       "type": "array",
       "description": "Firms and contacts associated with this activity log",

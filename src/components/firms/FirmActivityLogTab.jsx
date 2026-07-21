@@ -470,6 +470,9 @@ function FirmActivityForm({ firmId, firmName, contact, allFirms, allContacts, on
   const [activityDate, setActivityDate] = useState(new Date().toISOString().split("T")[0]);
   const [subject, setSubject] = useState("");
   const [notes, setNotes] = useState("");
+  const firmObj = (allFirms || []).find(f => f.id === firmId);
+  const firmTypes = firmObj?.firm_types?.length ? firmObj.firm_types : firmObj?.firm_type ? [firmObj.firm_type] : [];
+  const [firmType, setFirmType] = useState(firmTypes.length === 1 ? firmTypes[0] : "");
   const [associatedFirmsContacts, setAssociatedFirmsContacts] = useState([{ _key: firmId, firm_id: firmId, firm_name: firmName, contacts: [] }]);
   const [addTask, setAddTask] = useState(false);
   const [taskDesc, setTaskDesc] = useState("");
@@ -512,6 +515,18 @@ function FirmActivityForm({ firmId, firmName, contact, allFirms, allContacts, on
         </div>
         <button type="button" onClick={onCancel}><X className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" /></button>
       </div>
+
+      {firmTypes.length > 1 && (
+        <div className="space-y-1">
+          <Label className="text-xs font-medium text-gray-700 flex items-center gap-1">
+            <Building2 className="w-3 h-3 text-indigo-500" /> Firm Type Context <span className="text-red-500">*</span>
+          </Label>
+          <Select value={firmType} onValueChange={setFirmType}>
+            <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Select which firm type..." /></SelectTrigger>
+            <SelectContent>{firmTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-2">
         <div className="space-y-1">
@@ -571,8 +586,8 @@ function FirmActivityForm({ firmId, firmName, contact, allFirms, allContacts, on
       <div className="flex gap-2 justify-end">
         <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={onCancel}>Cancel</Button>
         <Button type="button" size="sm" className="h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
-          disabled={!activityType || !activityDate || createMutation.isPending}
-          onClick={() => createMutation.mutate({ contact_id: contactId, activity_type: activityType, activity_date: activityDate, subject: subject.trim(), notes: notes.trim(), associated_firms_contacts: associatedFirmsContacts })}>
+          disabled={!activityType || !activityDate || (firmTypes.length > 1 && !firmType) || createMutation.isPending}
+          onClick={() => createMutation.mutate({ contact_id: contactId, activity_type: activityType, activity_date: activityDate, subject: subject.trim(), notes: notes.trim(), associated_firms_contacts: associatedFirmsContacts, firm_type: firmType || undefined })}>
           {createMutation.isPending ? "Saving..." : "Save Activity"}
         </Button>
       </div>

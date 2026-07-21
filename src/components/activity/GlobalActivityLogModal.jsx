@@ -454,7 +454,10 @@ function ActivityLogForm({ onSaved, onCancel, allFirms, allContacts, onFirmClick
     },
   });
 
-  const canSave = originator.contactId && activityType && activityDate;
+  const origFirm = originator.firmId ? allFirms.find(f => f.id === originator.firmId) : null;
+  const origFirmTypes = origFirm?.firm_types?.length ? origFirm.firm_types : origFirm?.firm_type ? [origFirm.firm_type] : [];
+  const needsFirmType = origFirmTypes.length > 1 && !originator.firmType;
+  const canSave = originator.contactId && activityType && activityDate && !needsFirmType;
 
   return (
     <div className="space-y-4">
@@ -465,6 +468,18 @@ function ActivityLogForm({ onSaved, onCancel, allFirms, allContacts, onFirmClick
           contactId={originator.contactId} contactName={originator.contactName}
           onChange={setOriginator} />
       </div>
+
+      {needsFirmType && (
+        <div className="space-y-1">
+          <Label className="text-xs font-medium text-gray-700 flex items-center gap-1">
+            <Building2 className="w-3 h-3 text-indigo-500" /> Firm Type Context <span className="text-red-500">*</span>
+          </Label>
+          <Select value={originator.firmType || ""} onValueChange={(v) => setOriginator({ ...originator, firmType: v })}>
+            <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Select which firm type..." /></SelectTrigger>
+            <SelectContent>{origFirmTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+      )}
 
       {/* Activity details */}
       <div className="grid grid-cols-2 gap-2">
@@ -532,6 +547,7 @@ function ActivityLogForm({ onSaved, onCancel, allFirms, allContacts, onFirmClick
           onClick={() => createMutation.mutate({
             contact_id: originator.contactId, activity_type: activityType, activity_date: activityDate,
             subjects: subjects, notes: notes.trim(), associated_firms_contacts: associatedFirmsContacts,
+            firm_type: originator.firmType || undefined,
           })}>
           {createMutation.isPending ? "Saving..." : "Save Activity"}
         </Button>

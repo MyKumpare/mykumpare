@@ -238,6 +238,11 @@ function ActivityForm({ contactId, contactName, onSaved, onCancel, allFirms, all
   const [activityDate, setActivityDate] = useState(new Date().toISOString().split("T")[0]);
   const [subject, setSubject] = useState("");
   const [notes, setNotes] = useState("");
+  const contact = (allContacts || []).find(c => c.id === contactId);
+  const primaryFirmId = contact?.firm_ids?.[0];
+  const firm = primaryFirmId ? (allFirms || []).find(f => f.id === primaryFirmId) : null;
+  const firmTypes = firm?.firm_types?.length ? firm.firm_types : firm?.firm_type ? [firm.firm_type] : [];
+  const [firmType, setFirmType] = useState(firmTypes.length === 1 ? firmTypes[0] : "");
   const [associatedFirmsContacts, setAssociatedFirmsContacts] = useState([]);
   const [addTask, setAddTask] = useState(false);
   const [taskDesc, setTaskDesc] = useState("");
@@ -274,6 +279,7 @@ function ActivityForm({ contactId, contactName, onSaved, onCancel, allFirms, all
       subject: subject.trim(),
       notes: notes.trim(),
       associated_firms_contacts: associatedFirmsContacts,
+      firm_type: firmType || undefined,
     });
   };
 
@@ -283,6 +289,18 @@ function ActivityForm({ contactId, contactName, onSaved, onCancel, allFirms, all
         <span className="text-xs font-semibold text-indigo-700">Log Activity</span>
         <button type="button" onClick={onCancel}><X className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" /></button>
       </div>
+
+      {firmTypes.length > 1 && (
+        <div className="space-y-1">
+          <Label className="text-xs font-medium text-gray-700 flex items-center gap-1">
+            <Building2 className="w-3 h-3 text-indigo-500" /> Firm Type Context <span className="text-red-500">*</span>
+          </Label>
+          <Select value={firmType} onValueChange={setFirmType}>
+            <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Select which firm type..." /></SelectTrigger>
+            <SelectContent>{firmTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-2">
         <div className="space-y-1">
@@ -357,7 +375,7 @@ function ActivityForm({ contactId, contactName, onSaved, onCancel, allFirms, all
           type="button"
           size="sm"
           className="h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
-          disabled={!activityType || !activityDate || createMutation.isPending}
+          disabled={!activityType || !activityDate || (firmTypes.length > 1 && !firmType) || createMutation.isPending}
           onClick={handleSave}
         >
           {createMutation.isPending ? "Saving..." : "Save Activity"}
