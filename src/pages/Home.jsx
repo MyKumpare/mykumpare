@@ -62,6 +62,7 @@ export default function Home() {
   const [viewingContact, setViewingContact] = useState(null);
   const [searchFocused, setSearchFocused] = useState(false);
   const [ownershipNavTarget, setOwnershipNavTarget] = useState(null); // { firmId, ownershipId }
+  const [documentsNavTarget, setDocumentsNavTarget] = useState(null); // firmId to open at Documents tab
 
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -167,6 +168,11 @@ export default function Home() {
   const { data: followUpTasks = [] } = useQuery({
     queryKey: ["follow_up_tasks_search"],
     queryFn: () => base44.entities.FollowUpTask.list("-due_date"),
+  });
+
+  const { data: documents = [] } = useQuery({
+    queryKey: ["firm_documents_search"],
+    queryFn: () => base44.entities.FirmDocument.list("-entry_date", 1000),
   });
 
   const deletedCount = deletedFirms.length + deletedProducts.length + deletedContacts.length + deletedPortfolios.length;
@@ -282,9 +288,20 @@ export default function Home() {
     setEditingFirm(firm);
     setPreselectedType(null);
     setOwnershipNavTarget(null);
+    setDocumentsNavTarget(null);
     setReturnToProduct(fromProduct);
     setReturnToContactFromFirm(fromContact);
     if (fromProduct) setProductDialogOpen(false);
+    setDialogOpen(true);
+  };
+
+  const handleDocumentClick = (doc) => {
+    const firm = firms.find((f) => f.id === doc.firm_id);
+    if (!firm) return;
+    setEditingFirm(firm);
+    setPreselectedType(null);
+    setOwnershipNavTarget(null);
+    setDocumentsNavTarget(firm.id);
     setDialogOpen(true);
   };
 
@@ -408,7 +425,7 @@ export default function Home() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/50" />
             <input
               type="text"
-              placeholder="Search firms, products, contacts, tasks..."
+              placeholder="Search firms, products, contacts, documents..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => setSearchFocused(true)}
@@ -426,6 +443,7 @@ export default function Home() {
                   analyses={analyses}
                   activities={activities}
                   followUpTasks={followUpTasks}
+                  documents={documents}
                   onFirmClick={(firm) => { setSearchQuery(""); handleEdit(firm); }}
                   onContactClick={(contact) => { setSearchQuery(""); setViewingContact(contact); }}
                   onProductClick={(product) => { setSearchQuery(""); handleEditProduct(product); }}
@@ -433,6 +451,7 @@ export default function Home() {
                   onAnalysisClick={(analysis) => { setSearchQuery(""); setEditingAnalysis(analysis); }}
                   onActivityClick={(activity) => { setSearchQuery(""); setViewingActivity(activity); }}
                   onTaskClick={(task) => { setSearchQuery(""); setViewingTask(task); }}
+                  onDocumentClick={(doc) => { setSearchQuery(""); handleDocumentClick(doc); }}
                 />
               </div>
             )}
@@ -636,6 +655,7 @@ export default function Home() {
             setEditingFirm(null);
             setPreselectedType(null);
             setOwnershipNavTarget(null);
+            setDocumentsNavTarget(null);
             if (returnToProduct) {
               setReturnToProduct(false);
               setProductDialogOpen(true);
@@ -651,7 +671,7 @@ export default function Home() {
         editingFirm={editingFirm}
         preselectedType={preselectedType}
         existingFirms={firms}
-        defaultTab={ownershipNavTarget ? "ownership" : undefined}
+        defaultTab={ownershipNavTarget ? "ownership" : documentsNavTarget ? "documents" : undefined}
         defaultOwnershipId={ownershipNavTarget?.ownershipId}
       />
 

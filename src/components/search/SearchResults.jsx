@@ -1,5 +1,5 @@
 import React from "react";
-import { Building2, User, Package, LayoutList, LineChart, ClipboardList, Clock, AlertCircle, CheckCircle2, XCircle, Calendar } from "lucide-react";
+import { Building2, User, Package, LayoutList, LineChart, ClipboardList, Clock, AlertCircle, CheckCircle2, XCircle, Calendar, Files } from "lucide-react";
 import { format } from "date-fns";
 
 function getContactFullName(c) {
@@ -97,7 +97,7 @@ function fmtDate(dateStr) {
   try { return format(new Date(dateStr + "T00:00:00"), "MMM d, yyyy"); } catch { return dateStr; }
 }
 
-export default function SearchResults({ query, firms, products, contacts, portfolios = [], analyses = [], activities = [], followUpTasks = [], onFirmClick, onContactClick, onProductClick, onPortfolioClick, onAnalysisClick, onActivityClick, onTaskClick }) {
+export default function SearchResults({ query, firms, products, contacts, portfolios = [], analyses = [], activities = [], followUpTasks = [], documents = [], onFirmClick, onContactClick, onProductClick, onPortfolioClick, onAnalysisClick, onActivityClick, onTaskClick, onDocumentClick }) {
   const q = query.toLowerCase().trim();
   if (!q) return null;
 
@@ -146,6 +146,15 @@ export default function SearchResults({ query, firms, products, contacts, portfo
     (t.status || "").toLowerCase().includes(q)
   );
 
+  // --- Match documents (by sub-category, category, name, firm, description) ---
+  const matchedDocuments = documents.filter((d) =>
+    (d.sub_categories || []).some((s) => s.toLowerCase().includes(q)) ||
+    (d.categories || []).some((c) => c.toLowerCase().includes(q)) ||
+    (d.file_name || "").toLowerCase().includes(q) ||
+    (d.firm_name || "").toLowerCase().includes(q) ||
+    (d.description || "").toLowerCase().includes(q)
+  );
+
   // For a firm result, gather its contacts
   const firmContacts = (firmId) => contacts.filter(c => (c.firm_ids || []).includes(firmId));
 
@@ -159,7 +168,7 @@ export default function SearchResults({ query, firms, products, contacts, portfo
     return firm ? firmContacts(firm.id) : [];
   };
 
-  const hasAny = matchedContacts.length > 0 || matchedFirms.length > 0 || matchedProducts.length > 0 || matchedPortfolios.length > 0 || matchedAnalyses.length > 0 || matchedActivities.length > 0 || matchedTasks.length > 0;
+  const hasAny = matchedContacts.length > 0 || matchedFirms.length > 0 || matchedProducts.length > 0 || matchedPortfolios.length > 0 || matchedAnalyses.length > 0 || matchedActivities.length > 0 || matchedTasks.length > 0 || matchedDocuments.length > 0;
   if (!hasAny) return (
     <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 p-4 text-sm text-gray-400 text-center">
       No results for "{query}"
@@ -439,6 +448,47 @@ export default function SearchResults({ query, firms, products, contacts, portfo
                   <div className="text-xs text-gray-500 mt-0.5">
                     {analysis.analysis_type === "single" ? "Single Product" : "Multi-Product"} · {analysis.visibility === "firm" ? "Firm-wide" : "Personal"}
                   </div>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Document Results */}
+      {matchedDocuments.length > 0 && (
+        <div>
+          <div className="px-4 pt-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+            <Files className="w-3.5 h-3.5" /> Documents
+          </div>
+          {matchedDocuments.map((doc) => (
+            <button
+              key={doc.id}
+              className="w-full text-left px-4 py-3 hover:bg-teal-50 transition-colors"
+              onClick={() => onDocumentClick && onDocumentClick(doc)}
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-7 h-7 rounded-lg border border-teal-200 bg-teal-50 flex items-center justify-center flex-shrink-0">
+                  <Files className="w-3.5 h-3.5 text-teal-600" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium text-gray-900 truncate">{doc.file_name}</div>
+                  {doc.firm_name && (
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <Building2 className="w-3 h-3 text-gray-400" />
+                      <span className="text-xs text-gray-500 truncate">{doc.firm_name}</span>
+                    </div>
+                  )}
+                  {(doc.sub_categories?.length > 0 || doc.categories?.length > 0) && (
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {doc.categories.map((c) => (
+                        <span key={`c-${c}`} className="text-[10px] bg-indigo-50 text-indigo-600 rounded-full px-1.5 py-0.5">{c}</span>
+                      ))}
+                      {doc.sub_categories.map((s) => (
+                        <span key={`s-${s}`} className="text-[10px] bg-amber-50 text-amber-600 rounded-full px-1.5 py-0.5">{s}</span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </button>
