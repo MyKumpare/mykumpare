@@ -12,8 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { FileText, Save } from "lucide-react";
+import { FileText, Save, Sparkles, Loader2 } from "lucide-react";
 import DocumentCategoryPicker from "./DocumentCategoryPicker";
+import DocumentProductTagSelect from "./DocumentProductTagSelect";
 import { toast } from "@/components/ui/use-toast";
 
 export default function EditFirmDocumentDialog({
@@ -30,6 +31,8 @@ export default function EditFirmDocumentDialog({
   const [sub_categories, setSubCategories] = useState([]);
   const [description, setDescription] = useState("");
   const [summary, setSummary] = useState("");
+  const [productIds, setProductIds] = useState([]);
+  const [summarizing, setSummarizing] = useState(false);
 
   useEffect(() => {
     if (!document) return;
@@ -40,7 +43,39 @@ export default function EditFirmDocumentDialog({
     setSubCategories(document.sub_categories || []);
     setDescription(document.description || "");
     setSummary(document.summary || "");
+    setProductIds(document.product_ids || []);
   }, [document]);
+
+  const handleSummarize = async () => {
+    if (!document?.file_url) {
+      toast({
+        title: "No document file available to summarize.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setSummarizing(true);
+    try {
+      const prompt =
+        "Summarize the attached document concisely. Capture its purpose, key points, and notable details in 4-6 sentences. Use only information present in the document; do not invent content.";
+      const res = await base44.integrations.Core.InvokeLLM({
+        prompt,
+        file_urls: [document.file_url],
+        add_context_from_internet: false,
+      });
+      const text = typeof res === "string" ? res : res?.summary || String(res || "");
+      setSummary(text.trim());
+      toast({ title: "Summary generated from document." });
+    } catch (e) {
+      toast({
+        title: "Summarization failed",
+        description: e.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSummarizing(false);
+    }
+  };
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.FirmDocument.update(id, data),
@@ -62,6 +97,7 @@ export default function EditFirmDocumentDialog({
           sub_categories,
           description: description || undefined,
           summary: summary || undefined,
+          product_ids: productIds,
         },
       });
       toast({ title: "Document updated", description: file_name });
@@ -151,12 +187,38 @@ export default function EditFirmDocumentDialog({
           </div>
 
           <div className="space-y-1">
-            <Label className="text-xs text-gray-600">Summary</Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs text-gray-600">Summary</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleSummarize}
+                disabled={summarizing}
+                className="gap-1.5 text-indigo-600 border-indigo-200 hover:bg-indigo-50 h-7"
+              >
+                {summarizing ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="w-3.5 h-3.5" />
+                )}
+                {summarizing ? "Summarizing..." : "Summarize Document"}
+              </Button>
+            </div>
             <Textarea
               placeholder="Add a summary of this document..."
               value={summary}
               onChange={(e) => setSummary(e.target.value)}
               className="min-h-20 text-xs"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label className="text-xs text-gray-600">Products</Label>
+            <DocumentProductTagSelect
+              firmId={firmId}
+              value={productIds}
+              onChange={setProductIds}
             />
           </div>
         </div>

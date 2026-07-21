@@ -53,6 +53,13 @@
     "summary": {
       "type": "string",
       "description": "User-provided summary of the document"
+    },
+    "product_ids": {
+      "type": "array",
+      "description": "IDs of products tagged to this document",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "required": [

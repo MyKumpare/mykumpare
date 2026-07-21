@@ -113,6 +113,18 @@ export default function AddIMProductValidatedDialog({
                       <p className="text-sm font-medium text-gray-800 truncate">{p.name}</p>
                       {p.firm_name && <p className="text-xs text-gray-500 truncate">{p.firm_name}</p>}
                     </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="gap-1 text-indigo-600 border-indigo-200 hover:bg-indigo-50 shrink-0 h-7"
+                      onClick={() => {
+                        onCreated?.(p);
+                        onOpenChange(false);
+                      }}
+                    >
+                      Use Existing
+                    </Button>
                   </div>
                 ))}
               </div>
