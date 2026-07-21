@@ -39,6 +39,7 @@ export default function DocumentsDashboardModal({ open, onClose }) {
   const [search, setSearch] = useState("");
   const [filterFirm, setFilterFirm] = useState("all");
   const [filterCategory, setFilterCategory] = useState("all");
+  const [filterSubCategory, setFilterSubCategory] = useState("all");
 
   const { data: documents = [], isLoading } = useQuery({
     queryKey: ["all-firm-documents"],
@@ -60,12 +61,24 @@ export default function DocumentsDashboardModal({ open, onClose }) {
       ).sort(),
     [documents]
   );
+  const subCategories = useMemo(
+    () =>
+      Array.from(
+        new Set(documents.flatMap((d) => d.sub_categories || []))
+      ).sort(),
+    [documents]
+  );
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
     return documents.filter((d) => {
       if (filterFirm !== "all" && d.firm_name !== filterFirm) return false;
       if (filterCategory !== "all" && !(d.categories || []).includes(filterCategory))
+        return false;
+      if (
+        filterSubCategory !== "all" &&
+        !(d.sub_categories || []).includes(filterSubCategory)
+      )
         return false;
       if (q) {
         const hay = `${d.file_name || ""} ${d.firm_name || ""} ${
@@ -77,7 +90,7 @@ export default function DocumentsDashboardModal({ open, onClose }) {
       }
       return true;
     });
-  }, [documents, search, filterFirm, filterCategory]);
+  }, [documents, search, filterFirm, filterCategory, filterSubCategory]);
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -105,7 +118,7 @@ export default function DocumentsDashboardModal({ open, onClose }) {
               {filtered.length} of {documents.length}
             </span>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <div className="space-y-0.5">
               <label className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">
                 Firm
@@ -137,6 +150,27 @@ export default function DocumentsDashboardModal({ open, onClose }) {
                   {categories.map((c) => (
                     <SelectItem key={c} value={c}>
                       {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-0.5">
+              <label className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">
+                Sub-Category
+              </label>
+              <Select
+                value={filterSubCategory}
+                onValueChange={setFilterSubCategory}
+              >
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="All sub-categories" />
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                  <SelectItem value="all">All sub-categories</SelectItem>
+                  {subCategories.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
                     </SelectItem>
                   ))}
                 </SelectContent>
