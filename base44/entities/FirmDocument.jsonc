@@ -49,6 +49,10 @@
     "description": {
       "type": "string",
       "description": "Description of the document"
+    },
+    "summary": {
+      "type": "string",
+      "description": "User-provided summary of the document"
     }
   },
   "required": [

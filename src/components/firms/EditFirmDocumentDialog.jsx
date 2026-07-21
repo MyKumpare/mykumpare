@@ -29,6 +29,7 @@ export default function EditFirmDocumentDialog({
   const [categories, setCategories] = useState([]);
   const [sub_categories, setSubCategories] = useState([]);
   const [description, setDescription] = useState("");
+  const [summary, setSummary] = useState("");
 
   useEffect(() => {
     if (!document) return;
@@ -38,6 +39,7 @@ export default function EditFirmDocumentDialog({
     setCategories(document.categories || []);
     setSubCategories(document.sub_categories || []);
     setDescription(document.description || "");
+    setSummary(document.summary || "");
   }, [document]);
 
   const updateMutation = useMutation({
@@ -59,6 +61,7 @@ export default function EditFirmDocumentDialog({
           categories,
           sub_categories,
           description: description || undefined,
+          summary: summary || undefined,
         },
       });
       toast({ title: "Document updated", description: file_name });
@@ -144,6 +147,16 @@ export default function EditFirmDocumentDialog({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="min-h-16 text-xs"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label className="text-xs text-gray-600">Summary</Label>
+            <Textarea
+              placeholder="Add a summary of this document..."
+              value={summary}
+              onChange={(e) => setSummary(e.target.value)}
+              className="min-h-20 text-xs"
             />
           </div>
         </div>

@@ -107,6 +107,7 @@ export default function FirmDocumentsTab({ firmId, firmName }) {
           categories: [],
           sub_categories: [],
           description: "",
+          summary: "",
         });
       } catch {
         toast({
@@ -155,6 +156,7 @@ export default function FirmDocumentsTab({ firmId, firmName }) {
         categories: draft.categories,
         sub_categories: draft.sub_categories,
         description: draft.description || undefined,
+        summary: draft.summary || undefined,
       });
       removeDraft(draft.id);
       toast({ title: "Document saved", description: draft.file_name });
@@ -298,6 +300,16 @@ export default function FirmDocumentsTab({ firmId, firmName }) {
             {doc.description}
           </p>
         )}
+        {doc.summary && (
+          <div className="mt-1.5 rounded-md bg-gray-50 border border-gray-200 px-2 py-1.5">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+              Summary
+            </span>
+            <p className="text-xs text-gray-600 mt-0.5 line-clamp-3">
+              {doc.summary}
+            </p>
+          </div>
+        )}
       </div>
       <div className="flex items-center gap-1 flex-shrink-0">
         <a
@@ -434,6 +446,18 @@ export default function FirmDocumentsTab({ firmId, firmName }) {
                       updateDraft(draft.id, { description: e.target.value })
                     }
                     className="min-h-16 text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs text-gray-600">Summary</Label>
+                  <Textarea
+                    placeholder="Add a summary of this document..."
+                    value={draft.summary}
+                    onChange={(e) =>
+                      updateDraft(draft.id, { summary: e.target.value })
+                    }
+                    className="min-h-20 text-xs"
                   />
                 </div>
 
