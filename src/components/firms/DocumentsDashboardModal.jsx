@@ -22,6 +22,12 @@ import {
   Files,
   Building,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
 import { format, parseISO } from "date-fns";
 
 const fmtDate = (iso) => {
@@ -209,6 +215,7 @@ export default function DocumentsDashboardModal({ open, onClose }) {
               No documents match the current filters.
             </div>
           ) : (
+            <TooltipProvider delayDuration={300}>
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-gray-100 text-gray-600 z-10">
                 <tr className="text-left">
@@ -242,15 +249,38 @@ export default function DocumentsDashboardModal({ open, onClose }) {
                       <div className="flex items-center gap-2">
                         <FileText className="w-4 h-4 text-teal-500 flex-shrink-0" />
                         <div className="min-w-0">
-                          <a
-                            href={doc.file_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm font-medium text-gray-800 hover:text-teal-600 truncate block max-w-xs"
-                            title={doc.file_name}
-                          >
-                            {doc.file_name}
-                          </a>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <a
+                                href={doc.file_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm font-medium text-gray-800 hover:text-teal-600 truncate block max-w-xs cursor-help"
+                                title={doc.file_name}
+                              >
+                                {doc.file_name}
+                              </a>
+                            </TooltipTrigger>
+                            <TooltipContent
+                              side="bottom"
+                              align="start"
+                              sideOffset={6}
+                              className="max-w-sm bg-white text-gray-700 border border-gray-200 shadow-lg px-3 py-2 text-xs leading-relaxed whitespace-normal"
+                            >
+                              {doc.summary ? (
+                                <div>
+                                  <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                                    Summary
+                                  </div>
+                                  <div>{doc.summary}</div>
+                                </div>
+                              ) : (
+                                <span className="italic text-gray-400">
+                                  No summary available for this document.
+                                </span>
+                              )}
+                            </TooltipContent>
+                          </Tooltip>
                         </div>
                       </div>
                     </td>
@@ -308,6 +338,7 @@ export default function DocumentsDashboardModal({ open, onClose }) {
                 ))}
               </tbody>
             </table>
+            </TooltipProvider>
           )}
         </div>
       </DialogContent>
