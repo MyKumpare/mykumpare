@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import TaskDetailModal from "@/components/activity/TaskDetailModal";
+import OriginatorPicker from "@/components/activity/OriginatorPicker";
 
 const TASK_STATUSES = ["Not Started", "In-process", "Completed", "Cancelled"];
 
@@ -557,6 +558,7 @@ export default function ActivityDetailModal({ open, activity, onClose, onOpenCon
   const [taskAttachments, setTaskAttachments] = useState([]);
   const [savingTask, setSavingTask] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
+  const [originator, setOriginator] = useState({ firmId: "", firmName: "", firmType: null, contactId: "", contactName: "" });
 
   useEffect(() => {
     if (activity) {
@@ -575,8 +577,25 @@ export default function ActivityDetailModal({ open, activity, onClose, onOpenCon
       setTaskDueDate(new Date().toISOString().split("T")[0]);
       setTaskStatus("Not Started");
       setTaskAssignedFirms([]);
+      setOriginator({ firmId: "", firmName: "", firmType: null, contactId: "", contactName: "" });
     }
   }, [activity]);
+
+  // Resolve the originator (contact + firm) from the activity's contact_id
+  useEffect(() => {
+    if (!activity?.contact_id || !contacts.length) return;
+    const contact = contacts.find(c => c.id === activity.contact_id);
+    if (!contact) return;
+    const firmId = (contact.firm_ids || [])[0] || "";
+    const firm = firmId ? firms.find(f => f.id === firmId) : null;
+    setOriginator({
+      firmId,
+      firmName: firm?.name || "",
+      firmType: firm ? (firm.firm_types?.length ? firm.firm_types[0] : firm.firm_type || null) : null,
+      contactId: contact.id,
+      contactName: [contact.first_name, contact.last_name].filter(Boolean).join(" "),
+    });
+  }, [activity?.contact_id, contacts, firms]);
 
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
@@ -709,10 +728,11 @@ export default function ActivityDetailModal({ open, activity, onClose, onOpenCon
   const primaryFirm = primaryFirmId ? firmMap[primaryFirmId] : null;
 
   const handleSave = async () => {
-    updateMutation.mutate(form, {
+    const payload = { ...form, contact_id: originator.contactId || activity.contact_id };
+    updateMutation.mutate(payload, {
       onSuccess: async () => {
         if (addTask && taskDesc && taskDesc !== "<p><br></p>") {
-          const originatorContact = contacts.find(c => c.id === activity.contact_id);
+          const originatorContact = contacts.find(c => c.id === (payload.contact_id || activity.contact_id));
           const originatorFirmId = (originatorContact?.firm_ids || [])[0];
           const originatorFirm = originatorFirmId ? firms.find(f => f.id === originatorFirmId) : null;
           const today = new Date().toISOString().split("T")[0];
@@ -745,7 +765,7 @@ export default function ActivityDetailModal({ open, activity, onClose, onOpenCon
             }
           }
           await base44.entities.FollowUpTask.create({
-            originator_contact_id: activity.contact_id,
+            originator_contact_id: payload.contact_id || activity.contact_id,
             originator_contact_name: originatorContact ? [originatorContact.first_name, originatorContact.last_name].filter(Boolean).join(" ") : "",
             originator_firm_id: originatorFirmId || undefined,
             originator_firm_name: originatorFirm?.name || undefined,
@@ -798,18 +818,19 @@ export default function ActivityDetailModal({ open, activity, onClose, onOpenCon
 
             {editing ? (
               <>
-                {/* Originator (read-only in edit) */}
-                <div className="rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-1">
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Originator (contact)</p>
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center text-xs font-bold text-amber-700 flex-shrink-0">
-                      {(contact?.first_name || "?")[0]}{(contact?.last_name || "")[0]}
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-gray-800">{contactName}</p>
-                      {primaryFirm && <p className="text-[10px] text-gray-400">{primaryFirm.name}</p>}
-                    </div>
-                  </div>
+                {/* Originator (editable) */}
+                <div className="rounded-xl border border-amber-100 bg-amber-50/40 p-3">
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Originator (contact)</p>
+                  <OriginatorPicker
+                    allFirms={firms}
+                    allContacts={contacts}
+                    firmId={originator.firmId}
+                    firmName={originator.firmName}
+                    firmType={originator.firmType}
+                    contactId={originator.contactId}
+                    contactName={originator.contactName}
+                    onChange={setOriginator}
+                  />
                 </div>
 
                 {/* Type */}
