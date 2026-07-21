@@ -177,6 +177,13 @@ export default function Home() {
 
   const deletedCount = deletedFirms.length + deletedProducts.length + deletedContacts.length + deletedPortfolios.length;
 
+  // Resolve the signed-in user's contact (by email) for photo + display name
+  const myContact = user?.email
+    ? contacts.find(c => !c.deleted_at && (c.email || "").toLowerCase() === user.email.toLowerCase())
+    : null;
+  const userPhoto = myContact?.photo_url;
+  const userDisplayName = user?.full_name || (myContact ? [myContact.first_name, myContact.last_name].filter(Boolean).join(" ") : "") || "";
+
 
 
   const createProductMutation = useMutation({
@@ -481,9 +488,21 @@ export default function Home() {
             </button>
           </div>
 
-          {/* User email on far right */}
+          {/* Signed-in user: photo + name above email */}
           {isAuthenticated && user?.email && (
-            <span className="hidden lg:block text-[10px] text-white/50 ml-1 flex-shrink-0">{user.email}</span>
+            <div className="hidden lg:flex items-center gap-2 ml-2 flex-shrink-0">
+              {userPhoto ? (
+                <img src={userPhoto} alt="" className="w-7 h-7 rounded-full object-cover border border-white/30" />
+              ) : (
+                <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-[10px] font-bold text-white border border-white/30">
+                  {(userDisplayName || user.email).slice(0, 2).toUpperCase()}
+                </div>
+              )}
+              <div className="flex flex-col leading-tight">
+                {userDisplayName && <span className="text-[11px] text-white/90 font-medium">{userDisplayName}</span>}
+                <span className="text-[10px] text-white/50">{user.email}</span>
+              </div>
+            </div>
           )}
         </div>
       </div>
