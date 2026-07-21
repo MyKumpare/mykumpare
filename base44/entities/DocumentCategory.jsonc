@@ -1,0 +1,13 @@
+{
+  "name": "DocumentCategory",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of a document category (managed master list, reusable across documents)"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

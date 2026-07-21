@@ -1,0 +1,60 @@
+{
+  "name": "FirmDocument",
+  "type": "object",
+  "properties": {
+    "firm_id": {
+      "type": "string",
+      "description": "ID of the associated firm"
+    },
+    "firm_name": {
+      "type": "string",
+      "description": "Name of the associated firm (denormalized)"
+    },
+    "file_url": {
+      "type": "string",
+      "description": "URL of the uploaded document file"
+    },
+    "file_name": {
+      "type": "string",
+      "description": "Display name of the document file"
+    },
+    "file_type": {
+      "type": "string",
+      "description": "MIME type or extension of the file"
+    },
+    "entry_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the document was uploaded/entered (auto date-stamped, stored YYYY-MM-DD)"
+    },
+    "document_as_of_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Optional 'as of' date the document pertains to"
+    },
+    "categories": {
+      "type": "array",
+      "description": "Document categories (multi-select)",
+      "items": {
+        "type": "string"
+      }
+    },
+    "sub_categories": {
+      "type": "array",
+      "description": "Document sub-categories (multi-select)",
+      "items": {
+        "type": "string"
+      }
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of the document"
+    }
+  },
+  "required": [
+    "firm_id",
+    "file_url",
+    "file_name",
+    "entry_date"
+  ]
+}
