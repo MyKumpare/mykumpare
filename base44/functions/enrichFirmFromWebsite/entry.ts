@@ -797,6 +797,133 @@ async function enrichEducationExperienceFromBios(base44: any, people: any[]): Pr
   );
 }
 
+// Fallback for captcha / anti-bot-blocked sites: gather the firm's public
+// information via the LLM's web-search capability (which fetches through
+// Google's index, whose crawler IPs are typically not challenged) instead of
+// scraping the blocked site directly. Returns the same structure as the normal
+// HTML-scraping extraction, or null on failure.
+async function enrichFirmViaWebSearch(
+  base44: any,
+  firmName: string,
+  website: string,
+): Promise<any> {
+  try {
+    const res = await base44.integrations.Core.InvokeLLM({
+      prompt: `Search the web for the investment firm "${firmName}" (official website: ${website}).
+Gather all publicly available information about this firm from its official website and other indexed sources (e.g. LinkedIn, directory listings).
+
+Extract and return:
+- Official firm name (exact name as it appears publicly)
+- A 2-3 sentence description of what the firm does and its investment approach
+- Year the firm was founded (integer; 0 if unknown)
+- Website URL
+- LinkedIn company page URL (full URL)
+- General contact email address
+- Firm type(s): one or more of "Investment Manager", "Allocator", "Investment Consultant", "Manager of Managers", "Securities Brokerage", "Trade Organizations"
+- Firm logo URL (full URL starting with http, if available)
+- Office addresses (street address, city, state, postal code, country); mark the headquarters
+- Phone numbers: for US numbers, split into country_code, area_code, number_mid, number_last
+- Key personnel: for EVERY person found on the firm's team / about / leadership / staff pages, include first_name, last_name, title, email (if available), linkedin_url (full URL if available), and the full biography text if available from their public profile.
+
+Be thorough — include EVERY team member you can find across all sections of their team page. Copy any biography text in full; do not summarize. Only include information you actually find from web sources; do not fabricate. Leave a field empty if not found.`,
+      add_context_from_internet: true,
+      response_json_schema: {
+        type: 'object',
+        properties: {
+          name: { type: 'string' },
+          description: { type: 'string' },
+          website: { type: 'string' },
+          email: { type: 'string' },
+          linkedin_url: { type: 'string' },
+          year_founded: { type: 'integer' },
+          firm_types: {
+            type: 'array',
+            items: {
+              type: 'string',
+              enum: ['Investment Manager', 'Allocator', 'Investment Consultant', 'Manager of Managers', 'Securities Brokerage', 'Trade Organizations'],
+            },
+          },
+          logo_url: { type: 'string' },
+          addresses: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                is_headquarters: { type: 'boolean' },
+                country: { type: 'string' },
+                state: { type: 'string' },
+                city: { type: 'string' },
+                postal_code: { type: 'string' },
+                address_line1: { type: 'string' },
+                address_line2: { type: 'string' },
+              },
+            },
+          },
+          phones: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                phone_type: { type: 'string' },
+                country_code: { type: 'string' },
+                area_code: { type: 'string' },
+                number_mid: { type: 'string' },
+                number_last: { type: 'string' },
+              },
+            },
+          },
+          people: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                first_name: { type: 'string' },
+                last_name: { type: 'string' },
+                title: { type: 'string' },
+                email: { type: 'string' },
+                linkedin_url: { type: 'string' },
+                biography: { type: 'string' },
+                photo_url: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+    });
+    return res;
+  } catch {
+    return null;
+  }
+}
+
+// Rehost the firm's logo + people photos so images are served from app storage.
+// Shared by both the direct-scrape and web-search fallback paths.
+async function rehostFirmImages(base44: any, data: any, website: string): Promise<void> {
+  try {
+    const imageUrls: string[] = [];
+    if (data.logo_url) imageUrls.push(data.logo_url);
+    for (const person of data.people || []) {
+      if (person.photo_url) imageUrls.push(person.photo_url);
+    }
+    if (imageUrls.length === 0) return;
+    const rehostResponse = await base44.functions.invoke('rehostImages', {
+      image_urls: imageUrls,
+      website: website,
+    });
+    const results = rehostResponse?.data?.results || [];
+    for (const r of results) {
+      if (r.rehosted) {
+        if (data.logo_url === r.original) data.logo_url = r.rehosted;
+        for (const person of data.people || []) {
+          if (person.photo_url === r.original) person.photo_url = r.rehosted;
+        }
+      }
+    }
+  } catch {
+    // keep original URLs if rehosting fails
+  }
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -927,10 +1054,39 @@ Deno.serve(async (req) => {
 
     const combinedContent = pageContents.map((p) => `[Page: ${p.url}]\n${p.text}`).join('\n\n---\n\n');
 
-    // Detect a captcha / anti-bot challenge redirect (e.g. SiteGuard sgcaptcha),
-    // which serves a tiny meta-refresh stub instead of real content. This is an
-    // IP-reputation block that no cookie/header change can bypass.
-    if (homepageRaw && /\/\.well-known\/(sgcaptcha|sgcaptcha)|sgcaptcha|captcha/i.test(homepageRaw) && homepageRaw.length < 1000) {
+    // Detect a captcha / anti-bot challenge redirect (e.g. SiteGuard sgcaptcha,
+    // Cloudflare "Robot Challenge"), which serves a tiny meta-refresh stub
+    // instead of real content. This is an IP-reputation block that no
+    // cookie/header change can bypass — so fall back to web-search-based
+    // enrichment (the LLM fetches via Google's index, whose crawler IPs are
+    // typically not challenged) rather than failing outright.
+    const isCaptchaBlocked = !!homepageRaw &&
+      /\/\.well-known\/sgcaptcha|sgcaptcha|robot challenge|checking the site connection/i.test(homepageRaw) &&
+      homepageRaw.length < 1000;
+    if (isCaptchaBlocked) {
+      const fallback = await enrichFirmViaWebSearch(base44, firm_name, website);
+      if (fallback && (fallback.name || (Array.isArray(fallback.people) && fallback.people.length > 0))) {
+        if (!fallback.name) fallback.name = firm_name;
+        const cleanStr = (v: any): any => (v === 'null' || v === 'undefined' ? '' : v);
+        fallback.logo_url = cleanStr(fallback.logo_url) || '';
+        fallback.email = cleanStr(fallback.email) || '';
+        fallback.linkedin_url = cleanStr(fallback.linkedin_url) || '';
+        fallback.website = cleanStr(fallback.website) || '';
+        fallback.description = cleanStr(fallback.description) || '';
+        for (const person of fallback.people || []) {
+          person.photo_url = cleanStr(person.photo_url) || '';
+          person.email = cleanStr(person.email) || '';
+          person.linkedin_url = cleanStr(person.linkedin_url) || '';
+          person.biography = cleanStr(person.biography) || '';
+          delete person.bio_url;
+        }
+        // Extract education + professional experience from any bios the web
+        // search returned. (Skip individual-bio-page fetching here — those
+        // pages are also captcha-blocked for direct scraping.)
+        await enrichEducationExperienceFromBios(base44, fallback.people || []);
+        await rehostFirmImages(base44, fallback, website);
+        return Response.json(fallback);
+      }
       return Response.json({ error: `${website} is protected by an anti-bot captcha that blocks automated access, so its content can't be auto-filled. Please enter the firm's details manually.` }, { status: 502 });
     }
 
@@ -1078,31 +1234,7 @@ IMPORTANT:
     await enrichEducationExperienceFromBios(base44, enrichedData.people || []);
 
     // Rehost images
-    try {
-      const imageUrls: string[] = [];
-      if (enrichedData.logo_url) imageUrls.push(enrichedData.logo_url);
-      for (const person of enrichedData.people || []) {
-        if (person.photo_url) imageUrls.push(person.photo_url);
-      }
-
-      if (imageUrls.length > 0) {
-        const rehostResponse = await base44.functions.invoke('rehostImages', {
-          image_urls: imageUrls,
-          website: website,
-        });
-        const results = rehostResponse?.data?.results || [];
-        for (const r of results) {
-          if (r.rehosted) {
-            if (enrichedData.logo_url === r.original) enrichedData.logo_url = r.rehosted;
-            for (const person of enrichedData.people || []) {
-              if (person.photo_url === r.original) person.photo_url = r.rehosted;
-            }
-          }
-        }
-      }
-    } catch {
-      // keep original URLs if rehosting fails
-    }
+    await rehostFirmImages(base44, enrichedData, website);
 
     // bio_url is an internal helper for biography gathering — strip it before
     // returning so it doesn't leak into the stored contact record.
