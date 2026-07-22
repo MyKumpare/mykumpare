@@ -268,8 +268,16 @@ export default function Home() {
     mutationFn: ({ id, data }) => base44.entities.Firm.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["firms"] });
+      // Close the dialog WITHOUT nulling editingFirm here. Nulling it in the
+      // same batch as setDialogOpen(false) creates a render window where
+      // open is still true but editingFirm is already null — the dialog's
+      // init effect then runs its add-mode (else) branch and wipes the form
+      // to empty defaults (no firm type, empty name, placeholders), which is
+      // exactly the "firm name disappears right after Save" symptom.
+      // editingFirm is cleared by the dialog's onOpenChange close handler
+      // (below) and overwritten on the next open, so leaving it set here is
+      // safe and keeps the form intact during the close transition.
       setDialogOpen(false);
-      setEditingFirm(null);
     },
     onError: (err) => {
       // Keep the dialog open with the user's data intact (form is no longer
