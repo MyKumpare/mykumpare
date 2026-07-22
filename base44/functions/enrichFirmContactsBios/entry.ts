@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
+import { assertSafePublicUrl } from '../../shared/urlSafety.ts';
 
 /**
  * Targeted enrichment: fetches the firm's people page, extracts all personnel,
@@ -44,6 +45,8 @@ const COMMON_PEOPLE_PATHS = [
 const NAME_SUFFIXES = new Set(['jr', 'sr', 'ii', 'iii', 'iv', 'v', 'esq', 'cfa', 'cpa', 'mba', 'phd', 'md', 'cmfc', 'apfi', 'cipm', 'chfc', 'clu', 'cfp', 'frm']);
 
 async function fetchPage(url: string): Promise<string> {
+  // SSRF guard: reject internal/private/link-local/loopback targets before fetching.
+  try { await assertSafePublicUrl(url); } catch { return ''; }
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
   try {

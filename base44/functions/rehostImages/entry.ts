@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { assertSafePublicUrl } from '../../shared/urlSafety.ts';
 
 Deno.serve(async (req) => {
   try {
@@ -48,6 +49,8 @@ Deno.serve(async (req) => {
       }
 
       try {
+        // SSRF guard: reject internal/private/link-local/loopback targets before fetching.
+        await assertSafePublicUrl(absoluteUrl);
         // Download the image — include Referer header to bypass hotlink protection
         const fetchResponse = await fetch(absoluteUrl, {
           headers: {

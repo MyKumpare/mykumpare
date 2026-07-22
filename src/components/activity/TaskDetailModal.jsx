@@ -13,6 +13,7 @@ import {
 import { format } from "date-fns";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 
 const TASK_STATUSES = ["Not Started", "In-process", "Completed", "Cancelled"];
 const FIRM_TYPES_ORDER = ["Allocator", "Investment Consultant", "Investment Manager", "Manager of Managers", "Securities Brokerage", "Trade Organizations"];
@@ -981,7 +982,7 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
                 <div>
                   <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Task Description</p>
                   <div className="rounded-xl border border-gray-100 bg-gray-50 p-3 text-sm text-gray-700 leading-relaxed quill-preview"
-                    dangerouslySetInnerHTML={{ __html: task.task_description }} />
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(task.task_description) }} />
                 </div>
               )}
 
@@ -1042,7 +1043,7 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
                 <div>
                   <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Notes</p>
                   <div className="rounded-xl border border-gray-100 bg-gray-50 p-3 text-sm text-gray-700 leading-relaxed quill-preview"
-                    dangerouslySetInnerHTML={{ __html: task.notes }} />
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(task.notes) }} />
                 </div>
               )}
 
