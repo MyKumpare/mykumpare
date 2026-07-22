@@ -97,63 +97,138 @@ function fmtDate(dateStr) {
   try { return format(new Date(dateStr + "T00:00:00"), "MMM d, yyyy"); } catch { return dateStr; }
 }
 
+// Split the query into individual keywords. Each keyword is matched
+// independently across an entity's searchable fields. An entity is included
+// if it matches at least one keyword; results are ranked by how many
+// keyword-field pairs match (most matches first).
+const KEYWORD_MIN_LEN = 2;
+function parseKeywords(query) {
+  const raw = (query || "").toLowerCase().trim().split(/\s+/).filter(Boolean);
+  // Drop tiny tokens unless the entire query is a single short token
+  if (raw.length > 1) return raw.filter((t) => t.length >= KEYWORD_MIN_LEN || raw.length === 1);
+  return raw;
+}
+// Count how many (keyword, field) pairs match across the provided field values.
+// A field matches a keyword when the keyword appears as a substring of that
+// field's value. Returns 0 if nothing matches.
+function scoreFields(keywords, fields) {
+  if (!keywords.length) return 0;
+  const haystacks = (Array.isArray(fields) ? fields : [fields])
+    .filter((v) => v != null && v !== "")
+    .map((v) => v.toLowerCase());
+  let score = 0;
+  for (const kw of keywords) {
+    for (const hay of haystacks) {
+      if (hay.includes(kw)) {
+        score += 1;
+        // A keyword only needs to match once per entity for ranking purposes
+        break;
+      }
+    }
+  }
+  return score;
+}
+
 export default function SearchResults({ query, firms, products, contacts, portfolios = [], analyses = [], activities = [], followUpTasks = [], documents = [], onFirmClick, onContactClick, onProductClick, onPortfolioClick, onAnalysisClick, onActivityClick, onTaskClick, onDocumentClick }) {
-  const q = query.toLowerCase().trim();
-  if (!q) return null;
+  const keywords = parseKeywords(query);
+  if (!keywords.length) return null;
+
+  const byScoreDesc = (a, b) => b._score - a._score;
 
   // --- Match contacts (excluding soft-deleted), then collapse duplicates ---
-  const matchedContacts = dedupeContacts(contacts.filter((c) => {
-    const fullName = getContactFullName(c).toLowerCase();
-    return (
-      fullName.includes(q) ||
-      (c.email || "").toLowerCase().includes(q) ||
-      (c.title || "").toLowerCase().includes(q) ||
-      (c.designations || []).some(d => d.toLowerCase().includes(q))
-    );
-  }));
+  const matchedContacts = dedupeContacts(
+    contacts
+      .map((c) => ({
+        ...c,
+        _score: scoreFields(keywords, [
+          getContactFullName(c),
+          c.email,
+          c.title,
+          (c.designations || []).join(" "),
+        ]),
+      }))
+      .filter((c) => c._score > 0)
+  ).sort(byScoreDesc);
 
-  // --- Match firms (by name) ---
-  const matchedFirms = firms.filter((f) => f.name.toLowerCase().includes(q));
+  // --- Match firms ---
+  const matchedFirms = firms
+    .map((f) => ({
+      ...f,
+      _score: scoreFields(keywords, [f.name, f.firm_type, (f.firm_types || []).join(" "), f.website, f.email, f.description]),
+    }))
+    .filter((f) => f._score > 0)
+    .sort(byScoreDesc);
 
   // --- Match products ---
-  const matchedProducts = products.filter((p) => p.name.toLowerCase().includes(q));
+  const matchedProducts = products
+    .map((p) => ({
+      ...p,
+      _score: scoreFields(keywords, [p.name, p.description, p.asset_class, p.geography, p.market_cap, p.style, p.investment_process, p.firm_name]),
+    }))
+    .filter((p) => p._score > 0)
+    .sort(byScoreDesc);
 
   // --- Match portfolios ---
-  const matchedPortfolios = portfolios.filter((p) =>
-    (p.portfolio_name || "").toLowerCase().includes(q) ||
-    (p.allocator_name || "").toLowerCase().includes(q) ||
-    (p.advisor_firm_name || "").toLowerCase().includes(q)
-  );
+  const matchedPortfolios = portfolios
+    .map((p) => ({
+      ...p,
+      _score: scoreFields(keywords, [p.portfolio_name, p.allocator_name, p.advisor_firm_name]),
+    }))
+    .filter((p) => p._score > 0)
+    .sort(byScoreDesc);
 
   // --- Match analyses ---
-  const matchedAnalyses = analyses.filter((a) =>
-    (a.name || "").toLowerCase().includes(q)
-  );
+  const matchedAnalyses = analyses
+    .map((a) => ({ ...a, _score: scoreFields(keywords, [a.name, a.description]) }))
+    .filter((a) => a._score > 0)
+    .sort(byScoreDesc);
 
   // --- Match activities ---
-  const matchedActivities = activities.filter((a) =>
-    (a.subject || "").toLowerCase().includes(q) ||
-    (a.activity_type || "").toLowerCase().includes(q) ||
-    stripHtml(a.notes).toLowerCase().includes(q)
-  );
+  const matchedActivities = activities
+    .map((a) => ({
+      ...a,
+      _score: scoreFields(keywords, [
+        (a.subject || ""),
+        (a.activity_type || ""),
+        stripHtml(a.notes),
+        (a.associated_firms_contacts || [])
+          .flatMap((fc) => [fc.firm_name, ...(fc.contacts || []).map((ct) => ct.contact_name)])
+          .join(" "),
+      ]),
+    }))
+    .filter((a) => a._score > 0)
+    .sort(byScoreDesc);
 
   // --- Match follow-up tasks ---
-  const matchedTasks = followUpTasks.filter((t) =>
-    stripHtml(t.task_description).toLowerCase().includes(q) ||
-    (t.originator_contact_name || "").toLowerCase().includes(q) ||
-    (t.assigned_to_contact_name || "").toLowerCase().includes(q) ||
-    (t.assigned_to_firm_name || "").toLowerCase().includes(q) ||
-    (t.status || "").toLowerCase().includes(q)
-  );
+  const matchedTasks = followUpTasks
+    .map((t) => ({
+      ...t,
+      _score: scoreFields(keywords, [
+        stripHtml(t.task_description),
+        t.originator_contact_name,
+        t.assigned_to_contact_name,
+        t.assigned_to_firm_name,
+        t.status,
+      ]),
+    }))
+    .filter((t) => t._score > 0)
+    .sort(byScoreDesc);
 
   // --- Match documents (by sub-category, category, name, firm, description) ---
-  const matchedDocuments = documents.filter((d) =>
-    (d.sub_categories || []).some((s) => s.toLowerCase().includes(q)) ||
-    (d.categories || []).some((c) => c.toLowerCase().includes(q)) ||
-    (d.file_name || "").toLowerCase().includes(q) ||
-    (d.firm_name || "").toLowerCase().includes(q) ||
-    (d.description || "").toLowerCase().includes(q)
-  );
+  const matchedDocuments = documents
+    .map((d) => ({
+      ...d,
+      _score: scoreFields(keywords, [
+        d.file_name,
+        d.firm_name,
+        d.description,
+        d.summary,
+        (d.categories || []).join(" "),
+        (d.sub_categories || []).join(" "),
+      ]),
+    }))
+    .filter((d) => d._score > 0)
+    .sort(byScoreDesc);
 
   // For a firm result, gather its contacts
   const firmContacts = (firmId) => contacts.filter(c => (c.firm_ids || []).includes(firmId));
