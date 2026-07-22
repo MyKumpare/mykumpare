@@ -55,7 +55,7 @@ export default function EnrichmentApprovalDialog({
     .filter((i) => !createChecked[i]);
 
   const hasDuplicates = newContacts.some((nc) => nc.potentialDuplicates?.length > 0);
-  const canConfirm = hasContactChanges && skippedNewContacts.length < newContacts.length;
+  const canConfirm = hasContactChanges && (newContacts.length === 0 || skippedNewContacts.length < newContacts.length);
 
   const handleConfirm = () => {
     onConfirm({ approvedBios: approvedBioSet, skippedNewContacts });
