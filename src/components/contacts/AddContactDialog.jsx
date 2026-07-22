@@ -577,9 +577,25 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                 )}
               </div>
               <div className="min-w-0">
-                <DialogTitle className="text-base leading-tight">
-                  {formatFullName()}
-                  {designations?.length > 0 && `, ${designations.join(", ")}`}
+                <DialogTitle className="text-base leading-tight flex items-center gap-2 flex-wrap">
+                  <span>
+                    {formatFullName()}
+                    {designations?.length > 0 && `, ${designations.join(", ")}`}
+                  </span>
+                  <span
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                      (contactStatus || "Active") === "Inactive"
+                        ? "bg-red-100 text-red-700"
+                        : "bg-green-100 text-green-700"
+                    }`}
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        (contactStatus || "Active") === "Inactive" ? "bg-red-500" : "bg-green-500"
+                      }`}
+                    />
+                    {contactStatus || "Active"}
+                  </span>
                 </DialogTitle>
                 {firmIds.length > 0 && (
                   <p className="text-sm text-indigo-600 font-medium mt-0.5 truncate">
