@@ -272,6 +272,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
       JSON.stringify([...firmTypes].sort()) !== JSON.stringify([...existingTypes].sort()) ||
       logoUrl !== (editingFirm.logo_url || "") ||
       website !== (editingFirm.website || "") ||
+      email !== (editingFirm.email || "") ||
       linkedinUrl !== (editingFirm.linkedin_url || "") ||
       yearFounded !== (editingFirm.year_founded ? String(editingFirm.year_founded) : "") ||
       description !== (editingFirm.description || "") ||
