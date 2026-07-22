@@ -21,6 +21,9 @@ import {
   Download,
   Files,
   Building,
+  ArrowUp,
+  ArrowDown,
+  ChevronsUpDown,
 } from "lucide-react";
 import {
   Tooltip,
@@ -47,6 +50,26 @@ export default function DocumentsDashboardModal({ open, onClose }) {
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterSubCategory, setFilterSubCategory] = useState("all");
   const [filterDocDate, setFilterDocDate] = useState("");
+  const [sortKey, setSortKey] = useState("entry_date");
+  const [sortDir, setSortDir] = useState("desc");
+
+  const SORT_ACCESSORS = {
+    file_name: (d) => (d.file_name || "").toLowerCase(),
+    firm_name: (d) => (d.firm_name || "").toLowerCase(),
+    categories: (d) => (d.categories || []).join(" ").toLowerCase(),
+    sub_categories: (d) => (d.sub_categories || []).join(" ").toLowerCase(),
+    document_as_of_date: (d) => d.document_as_of_date || "",
+    entry_date: (d) => d.entry_date || "",
+  };
+
+  const toggleSort = (key) => {
+    if (sortKey === key) {
+      setSortDir((dir) => (dir === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  };
 
   const { data: documents = [], isLoading } = useQuery({
     queryKey: ["all-firm-documents"],
@@ -100,6 +123,19 @@ export default function DocumentsDashboardModal({ open, onClose }) {
       return true;
     });
   }, [documents, search, filterFirm, filterCategory, filterSubCategory, filterDocDate]);
+
+  const sorted = useMemo(() => {
+    const accessor = SORT_ACCESSORS[sortKey] || SORT_ACCESSORS.entry_date;
+    const copy = [...filtered];
+    copy.sort((a, b) => {
+      const va = accessor(a);
+      const vb = accessor(b);
+      if (va < vb) return sortDir === "asc" ? -1 : 1;
+      if (va > vb) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+    return copy;
+  }, [filtered, sortKey, sortDir]);
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -219,28 +255,43 @@ export default function DocumentsDashboardModal({ open, onClose }) {
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-gray-100 text-gray-600 z-10">
                 <tr className="text-left">
-                  <th className="px-4 py-2 font-semibold text-xs uppercase tracking-wide">
-                    Document
-                  </th>
-                  <th className="px-4 py-2 font-semibold text-xs uppercase tracking-wide">
-                    Firm
-                  </th>
-                  <th className="px-4 py-2 font-semibold text-xs uppercase tracking-wide">
-                    Category
-                  </th>
-                  <th className="px-4 py-2 font-semibold text-xs uppercase tracking-wide">
-                    Sub-Categories
-                  </th>
-                  <th className="px-4 py-2 font-semibold text-xs uppercase tracking-wide whitespace-nowrap">
-                    Document Date
-                  </th>
-                  <th className="px-4 py-2 font-semibold text-xs uppercase tracking-wide whitespace-nowrap">
-                    Date Stamp
-                  </th>
+                  {[
+                    { key: "file_name", label: "Document" },
+                    { key: "firm_name", label: "Firm" },
+                    { key: "categories", label: "Category" },
+                    { key: "sub_categories", label: "Sub-Categories" },
+                    { key: "document_as_of_date", label: "Document Date", nowrap: true },
+                    { key: "entry_date", label: "Date Stamp", nowrap: true },
+                  ].map((col) => {
+                    const active = sortKey === col.key;
+                    return (
+                      <th
+                        key={col.key}
+                        className={`px-4 py-2 font-semibold text-xs uppercase tracking-wide ${col.nowrap ? "whitespace-nowrap" : ""}`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => toggleSort(col.key)}
+                          className="inline-flex items-center gap-1 hover:text-teal-700 transition-colors"
+                        >
+                          {col.label}
+                          {active ? (
+                            sortDir === "asc" ? (
+                              <ArrowUp className="w-3 h-3 text-teal-600" />
+                            ) : (
+                              <ArrowDown className="w-3 h-3 text-teal-600" />
+                            )
+                          ) : (
+                            <ChevronsUpDown className="w-3 h-3 text-gray-300" />
+                          )}
+                        </button>
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filtered.map((doc) => (
+                {sorted.map((doc) => (
                   <tr
                     key={doc.id}
                     className="hover:bg-teal-50/40 transition-colors"
