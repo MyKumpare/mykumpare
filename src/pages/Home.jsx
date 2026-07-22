@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -177,6 +177,26 @@ export default function Home() {
   });
 
   const deletedCount = deletedFirms.length + deletedProducts.length + deletedContacts.length + deletedPortfolios.length;
+
+  // Realtime sync: keep every signed-in client in sync so an update made by one
+  // account (e.g. "cgonzales") is immediately visible to others (e.g. the admin
+  // "cjgonzales72"). On any create/update/delete event for a tracked entity,
+  // invalidate its cached query so React Query refetches the latest data.
+  useEffect(() => {
+    const invalidate = (keys) => keys.forEach((k) => queryClient.invalidateQueries({ queryKey: k }));
+    const subs = [
+      base44.entities.Firm.subscribe(() => invalidate([["firms"], ["deletedFirms"]])),
+      base44.entities.Product.subscribe(() => invalidate([["products"], ["deletedProducts"]])),
+      base44.entities.Contact.subscribe(() => invalidate([["contacts"], ["deletedContacts"]])),
+      base44.entities.Portfolio.subscribe(() => invalidate([["portfolios"], ["deletedPortfolios"]])),
+      base44.entities.ContactActivity.subscribe(() => invalidate([["contact_activities_search"]])),
+      base44.entities.FollowUpTask.subscribe(() => invalidate([["follow_up_tasks_search"]])),
+      base44.entities.FirmDocument.subscribe(() => invalidate([["firm_documents_search"]])),
+      base44.entities.Analysis.subscribe(() => invalidate([["analyses"]])),
+      base44.entities.Benchmark.subscribe(() => invalidate([["benchmarks"]])),
+    ];
+    return () => subs.forEach((unsub) => unsub && unsub());
+  }, [queryClient]);
 
   // Resolve the signed-in user's contact (by email) for photo + display name
   const myContact = user?.email
