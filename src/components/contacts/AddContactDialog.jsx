@@ -756,6 +756,27 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                 )}
               </div>
 
+              {/* Contact Status */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Contact Status</Label>
+                {viewMode ? (
+                  <div className="text-sm px-1">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${(contactStatus || "Active") === "Inactive" ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${(contactStatus || "Active") === "Inactive" ? "bg-red-500" : "bg-green-500"}`} />
+                      {contactStatus || "Active"}
+                    </span>
+                  </div>
+                ) : (
+                  <Select value={contactStatus || "Active"} onValueChange={setContactStatus}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Select status..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Active">Active</SelectItem>
+                      <SelectItem value="Inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
               {/* Email */}
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-gray-700">Email</Label>
