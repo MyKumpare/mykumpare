@@ -12,7 +12,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Pencil, Building2, Plus, Upload, X, Globe, AlertTriangle } from "lucide-react";
+import { Pencil, Building2, Plus, Upload, X, Globe, AlertTriangle, Linkedin, Loader2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { findContactDuplicates, findContactsByNormalizedName } from "@/components/contacts/contactDuplicateCheck";
@@ -116,6 +116,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const [contactDuplicateWarning, setContactDuplicateWarning] = useState(null);
   const [enrichmentApproval, setEnrichmentApproval] = useState(null);
   const [similarAddressPairs, setSimilarAddressPairs] = useState(null);
+  const [linkedinLookupLoading, setLinkedinLookupLoading] = useState(false);
   const nameInputRef = useRef(null);
 
   const { data: allContacts = [] } = useQuery({
@@ -186,6 +187,30 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     const { file_url } = await base44.integrations.Core.UploadFile({ file });
     setLogoUrl(file_url);
     setUploadingLogo(false);
+  };
+
+  const handleLinkedInLookup = async () => {
+    if (!firmName.trim()) {
+      toast({ title: "Firm name required", description: "Enter the firm name first.", variant: "destructive" });
+      return;
+    }
+    setLinkedinLookupLoading(true);
+    try {
+      const res = await base44.functions.invoke("linkedinFirmLookup", {
+        firm_id: editingFirm?.id || "",
+        website: website || "",
+        name: firmName.trim(),
+      });
+      if (res.data?.linkedin_url) {
+        setLinkedinUrl(res.data.linkedin_url);
+        toast({ title: "✅ LinkedIn page found", description: res.data.linkedin_url });
+      } else {
+        toast({ title: "No page found", description: res.data?.message || "Could not find the firm's LinkedIn page." });
+      }
+    } catch (err) {
+      toast({ title: "LinkedIn lookup failed", description: err.response?.data?.error || err.message || "Could not find the firm's LinkedIn page.", variant: "destructive" });
+    }
+    setLinkedinLookupLoading(false);
   };
 
   const handleAddAddress = () => {
@@ -773,12 +798,26 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                     {linkedinUrl ? <a href={linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">View LinkedIn</a> : <span className="text-gray-400">—</span>}
                   </div>
                 ) : (
-                  <Input
-                    placeholder="https://linkedin.com/company/..."
-                    value={linkedinUrl}
-                    onChange={(e) => setLinkedinUrl(e.target.value)}
-                    className="h-9"
-                  />
+                  <div className="flex gap-1.5">
+                    <Input
+                      placeholder="https://linkedin.com/company/..."
+                      value={linkedinUrl}
+                      onChange={(e) => setLinkedinUrl(e.target.value)}
+                      className="h-9 flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-9 px-2 text-[#0A66C2] border-[#0A66C2]/30 hover:bg-[#0A66C2]/10 gap-1"
+                      onClick={handleLinkedInLookup}
+                      disabled={linkedinLookupLoading || !firmName.trim()}
+                      title="Find LinkedIn page"
+                    >
+                      {linkedinLookupLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Linkedin className="w-4 h-4" />}
+                      <span className="text-xs">Find</span>
+                    </Button>
+                  </div>
                 )}
               </div>
 
