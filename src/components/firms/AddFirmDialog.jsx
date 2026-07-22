@@ -388,7 +388,12 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     if (editingFirm && Object.keys(firmUpdates).length > 0) {
       try {
         await base44.entities.Firm.update(editingFirm.id, firmUpdates);
-        queryClient.invalidateQueries({ queryKey: ["firms"] });
+        // Note: the firms list is intentionally NOT invalidated here. The form's
+        // local state is the source of truth while the dialog is open; a mid-dialog
+        // refetch re-renders the dialog and can race with the local setState calls
+        // above, leaving the form matching the (now-saved) firm record — which
+        // makes hasChanges false and disables Save immediately after applying
+        // enrichment. The list is refreshed on dialog close (see handleClose).
       } catch (err) {
         toast({ title: "Failed to save enriched firm fields", description: err?.message || "Please try again.", variant: "destructive" });
       }
@@ -597,6 +602,10 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   };
 
   const handleClose = () => {
+    // Refresh the firms list when the dialog closes so any enrichment fields
+    // persisted during apply (handleApplyEnrichment) are reflected in the list
+    // and on a subsequent reopen — without re-rendering the dialog mid-edit.
+    queryClient.invalidateQueries({ queryKey: ["firms"] });
     onOpenChange(false);
     setIsEditing(false);
     setShowEnrichment(false);
