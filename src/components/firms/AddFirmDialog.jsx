@@ -306,7 +306,12 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
   const performSubmit = (addrs) => {
     onSubmit({ firm_type: firmTypes[0] || "", firm_types: firmTypes, name: firmName.trim(), logo_url: logoUrl, website, email, linkedin_url: linkedinUrl, year_founded: yearFounded ? parseInt(yearFounded) : null, description, addresses: addrs, phones, pending_contacts: pendingContacts.length > 0 ? pendingContacts : undefined });
-    setFirmTypes([]); setFirmName(""); setLogoUrl(""); setWebsite(""); setEmail(""); setLinkedinUrl(""); setYearFounded(""); setDescription(""); setAddresses([]); setPhones([]); setPendingContacts([]);
+    // NOTE: do NOT clear form state here. onSubmit triggers an async save; if it
+    // fails (e.g. backend validation), clearing now would wipe the user's
+    // in-progress data — including enrichment they just reviewed — leaving the
+    // dialog open with empty fields. The form is re-initialized from the
+    // editingFirm/open effect when the dialog reopens, so an eager clear is both
+    // unnecessary and unsafe.
   };
 
   const handleResolveSimilarAddresses = (removeIndices) => {

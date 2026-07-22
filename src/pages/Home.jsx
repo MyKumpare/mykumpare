@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import AIAssistant from "@/components/ai/AIAssistant";
 import { parsePhoneString } from "@/components/ai/firmEnrichment";
 import { detectDesignations } from "@/components/contacts/designationDetector";
+import { toast } from "@/components/ui/use-toast";
 
 import AddFirmDialog from "../components/firms/AddFirmDialog";
 import DeleteConfirmDialog from "../components/firms/DeleteConfirmDialog";
@@ -258,6 +259,9 @@ export default function Home() {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
       setDialogOpen(false);
     },
+    onError: (err) => {
+      toast({ title: "Failed to create firm", description: err?.message || "Please try again.", variant: "destructive" });
+    },
   });
 
   const updateMutation = useMutation({
@@ -266,6 +270,11 @@ export default function Home() {
       queryClient.invalidateQueries({ queryKey: ["firms"] });
       setDialogOpen(false);
       setEditingFirm(null);
+    },
+    onError: (err) => {
+      // Keep the dialog open with the user's data intact (form is no longer
+      // cleared on submit) so they can fix the issue and retry.
+      toast({ title: "Failed to save firm", description: err?.message || "Please try again.", variant: "destructive" });
     },
   });
 
