@@ -327,23 +327,23 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
   const handleApplyEnrichment = async (selected) => {
     const applied = [];
-    // Accumulate the enriched firm fields so they can be persisted alongside
-    // the local form state. Enrichment contacts are saved to the DB on apply;
-    // firm fields must be too — otherwise they live only in transient form
-    // state and are lost the moment the dialog closes or re-initializes
-    // (while the contacts remain, leaving the form looking "wiped").
-    const firmUpdates = {};
+    // Enriched firm fields are applied to local form state only and committed
+    // to the DB when the user clicks Save Changes (via the update mutation).
+    // We do NOT write them to the DB here on apply — that would run the Firm
+    // update against the current user's permissions (creator-or-admin), which
+    // is rejected for firms the user didn't create, surfacing a "Permission
+    // denied" toast mid-enrichment. Contacts are still saved on apply below.
 
-    if (selected.logo_url && !logoUrl) { setLogoUrl(selected.logo_url); firmUpdates.logo_url = selected.logo_url; applied.push("Logo"); }
-    if (selected.description && !description) { setDescription(selected.description); firmUpdates.description = selected.description; applied.push("Description"); }
-    if (selected.website && !website) { setWebsite(selected.website); firmUpdates.website = selected.website; applied.push("Website"); }
-    if (selected.email && !email) { setEmail(selected.email); firmUpdates.email = selected.email; applied.push("Email"); }
-    if (selected.linkedin_url && !linkedinUrl) { setLinkedinUrl(selected.linkedin_url); firmUpdates.linkedin_url = selected.linkedin_url; applied.push("LinkedIn"); }
-    if (selected.year_founded && !yearFounded) { setYearFounded(String(selected.year_founded)); firmUpdates.year_founded = selected.year_founded; applied.push("Year Founded"); }
+    if (selected.logo_url && !logoUrl) { setLogoUrl(selected.logo_url); applied.push("Logo"); }
+    if (selected.description && !description) { setDescription(selected.description); applied.push("Description"); }
+    if (selected.website && !website) { setWebsite(selected.website); applied.push("Website"); }
+    if (selected.email && !email) { setEmail(selected.email); applied.push("Email"); }
+    if (selected.linkedin_url && !linkedinUrl) { setLinkedinUrl(selected.linkedin_url); applied.push("LinkedIn"); }
+    if (selected.year_founded && !yearFounded) { setYearFounded(String(selected.year_founded)); applied.push("Year Founded"); }
     if (selected.firm_types?.length) {
       const merged = [...new Set([...firmTypes, ...selected.firm_types])];
       const added = merged.length - firmTypes.length;
-      if (added > 0) { setFirmTypes(merged); firmUpdates.firm_types = merged; firmUpdates.firm_type = merged[0] || ""; applied.push("Firm Types"); }
+      if (added > 0) { setFirmTypes(merged); applied.push("Firm Types"); }
     }
     if (selected.addresses?.length) {
       const newAddrs = selected.addresses.filter((a) => {
@@ -358,7 +358,6 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         if (mergedAddrs.length === 0) newAddrs[0].is_headquarters = true;
         mergedAddrs.push(...newAddrs);
         setAddresses(mergedAddrs);
-        firmUpdates.addresses = mergedAddrs;
         applied.push(`${newAddrs.length} Address(es)`);
       }
     }
@@ -376,26 +375,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         }
         mergedPhones.push(...newPhs);
         setPhones(mergedPhones);
-        firmUpdates.phones = mergedPhones;
         applied.push(`${newPhs.length} Phone(s)`);
-      }
-    }
-
-    // Persist the enriched firm fields immediately when editing an existing
-    // firm, so they survive a dialog close/reopen or any form re-init. The
-    // form re-initializes from the saved firm record; if the enriched fields
-    // are not saved, they vanish while the contacts (saved separately) stay.
-    if (editingFirm && Object.keys(firmUpdates).length > 0) {
-      try {
-        await base44.entities.Firm.update(editingFirm.id, firmUpdates);
-        // Note: the firms list is intentionally NOT invalidated here. The form's
-        // local state is the source of truth while the dialog is open; a mid-dialog
-        // refetch re-renders the dialog and can race with the local setState calls
-        // above, leaving the form matching the (now-saved) firm record — which
-        // makes hasChanges false and disables Save immediately after applying
-        // enrichment. The list is refreshed on dialog close (see handleClose).
-      } catch (err) {
-        toast({ title: "Failed to save enriched firm fields", description: err?.message || "Please try again.", variant: "destructive" });
       }
     }
     if (selected.people?.length) {
