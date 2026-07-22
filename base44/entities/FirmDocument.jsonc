@@ -10,6 +10,10 @@
       "type": "string",
       "description": "Name of the associated firm (denormalized)"
     },
+    "firm_type": {
+      "type": "string",
+      "description": "Firm type context this document was associated with (controls which firm-type bucket it appears under)"
+    },
     "file_url": {
       "type": "string",
       "description": "URL of the uploaded document file"

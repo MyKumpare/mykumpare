@@ -32,6 +32,9 @@ import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
 import { format, parseISO } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import AddDocumentDialog from "./AddDocumentDialog";
 
 const fmtDate = (iso) => {
   if (!iso) return "—";
@@ -50,6 +53,7 @@ export default function DocumentsDashboardModal({ open, onClose }) {
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterSubCategory, setFilterSubCategory] = useState("all");
   const [filterDocDate, setFilterDocDate] = useState("");
+  const [addOpen, setAddOpen] = useState(false);
   const [sortKey, setSortKey] = useState("entry_date");
   const [sortDir, setSortDir] = useState("desc");
 
@@ -141,9 +145,20 @@ export default function DocumentsDashboardModal({ open, onClose }) {
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-5xl max-h-[85vh] flex flex-col p-0 gap-0">
         <DialogHeader className="px-5 pt-5 pb-3 border-b border-gray-100">
-          <DialogTitle className="flex items-center gap-2 text-lg">
-            <Files className="w-5 h-5 text-teal-600" />
-            Documents Dashboard
+          <DialogTitle className="flex items-center gap-2 text-lg justify-between">
+            <span className="flex items-center gap-2">
+              <Files className="w-5 h-5 text-teal-600" />
+              Documents Dashboard
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              className="h-8 text-xs gap-1 bg-teal-600 hover:bg-teal-700 text-white"
+              onClick={() => setAddOpen(true)}
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Add Document
+            </Button>
           </DialogTitle>
         </DialogHeader>
 
@@ -392,6 +407,8 @@ export default function DocumentsDashboardModal({ open, onClose }) {
             </TooltipProvider>
           )}
         </div>
+
+        <AddDocumentDialog open={addOpen} onOpenChange={setAddOpen} />
       </DialogContent>
     </Dialog>
   );
