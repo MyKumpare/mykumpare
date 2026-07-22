@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, User, AlertTriangle, Trash2, Check, ArrowRightLeft, Loader2 } from "lucide-react";
+import { Plus, User, AlertTriangle, Trash2, Check, ArrowRightLeft, Loader2, Eye, EyeOff } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -19,6 +19,7 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
   const [deleting, setDeleting] = useState(false);
   const [mergeCluster, setMergeCluster] = useState(null);
   const [accepting, setAccepting] = useState(false);
+  const [togglingId, setTogglingId] = useState(null);
 
   const queryClient = useQueryClient();
   const { isGroupAccepted, acceptGroup } = useDuplicateReviews();
@@ -103,6 +104,24 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
       toast({ title: "Delete failed", description: error.message || "Could not delete this contact.", variant: "destructive" });
     } finally {
       setDeleting(false);
+    }
+  };
+
+  // Toggle a contact's visibility (Active = visible, Inactive = hidden)
+  const handleToggleStatus = async (contact) => {
+    const newStatus = (contact.contact_status || "Active") === "Active" ? "Inactive" : "Active";
+    setTogglingId(contact.id);
+    try {
+      await base44.entities.Contact.update(contact.id, { contact_status: newStatus });
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      toast({
+        title: newStatus === "Inactive" ? "Contact hidden" : "Contact unhidden",
+        description: `${contact.first_name} ${contact.last_name} is now ${newStatus}.`,
+      });
+    } catch (error) {
+      toast({ title: "Update failed", description: error.message || "Could not update status.", variant: "destructive" });
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -191,6 +210,9 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
         <div className="space-y-2">
           {firmContacts
             .sort((a, b) => {
+              const aActive = (a.contact_status || "Active") === "Active" ? 0 : 1;
+              const bActive = (b.contact_status || "Active") === "Active" ? 0 : 1;
+              if (aActive !== bActive) return aActive - bActive;
               const roleOrder = { Primary: 0, Secondary: 1 };
               const aOrder = roleOrder[a.contact_role] ?? 2;
               const bOrder = roleOrder[b.contact_role] ?? 2;
@@ -223,6 +245,10 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
                           {contact.contact_role}
                         </span>
                       )}
+                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs font-medium ${(contact.contact_status || "Active") === "Inactive" ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${(contact.contact_status || "Active") === "Inactive" ? "bg-red-500" : "bg-green-500"}`} />
+                        {contact.contact_status || "Active"}
+                      </span>
                       {isDuplicate && (
                         <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
                           <AlertTriangle className="w-3 h-3" /> Duplicate
@@ -236,6 +262,21 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
                       <a href={`mailto:${contact.email}`} className="text-xs text-indigo-600 hover:underline" onClick={(e) => e.stopPropagation()}>{contact.email}</a>
                     )}
                   </div>
+                  <button
+                    type="button"
+                    className="p-1.5 rounded-md text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors flex-shrink-0"
+                    title={(contact.contact_status || "Active") === "Active" ? "Hide contact (set Inactive)" : "Unhide contact (set Active)"}
+                    disabled={togglingId === contact.id}
+                    onClick={(e) => { e.stopPropagation(); handleToggleStatus(contact); }}
+                  >
+                    {togglingId === contact.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (contact.contact_status || "Active") === "Active" ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
                   <button
                     type="button"
                     className="p-1.5 rounded-md text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors flex-shrink-0"
