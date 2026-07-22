@@ -5,7 +5,7 @@ import { Loader2, Globe, Check, X, Sparkles, AlertTriangle, ShieldCheck } from "
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
-import { enrichFirmFromWeb } from "../ai/firmEnrichment";
+import { enrichFirmFromWeb, autoFillMissingLinkedInUrls } from "../ai/firmEnrichment";
 import { validateEnrichment } from "../ai/enrichmentValidation";
 
 // ─── Status badge ───
@@ -145,6 +145,7 @@ function SimilarConfirmDialog({ open, onOpenChange, items, onConfirm }) {
 
 export default function FirmEnrichmentPanel({ firmName, website, onApply, onClose, onLoadingChange, existingFirm, existingContacts = [] }) {
   const [loading, setLoading] = useState(false);
+  const [linkedinFilling, setLinkedinFilling] = useState(false);
   const [enrichedData, setEnrichedData] = useState(null);
   const [error, setError] = useState(null);
   const [acceptedFields, setAcceptedFields] = useState({});
@@ -158,6 +159,17 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
     setEnrichedData(null);
     try {
       const data = await enrichFirmFromWeb(firmName, website);
+
+      // Auto-find LinkedIn URLs the website scrape missed — for the firm and
+      // any contacts still without one — so the user doesn't have to look each
+      // up manually. Runs before the review panel so results flow through the
+      // normal accept/skip + duplicate-validation path.
+      setLinkedinFilling(true);
+      try {
+        await autoFillMissingLinkedInUrls(data, website || data.website || "");
+      } catch { /* non-fatal — keep enrichment data as-is */ }
+      setLinkedinFilling(false);
+
       setEnrichedData(data);
 
       // Run global duplicate validation against existing firm + contacts.
@@ -176,6 +188,7 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
       const msg = err.message || "Failed to fetch data from the web";
       setError(msg);
     } finally {
+      setLinkedinFilling(false);
       setLoading(false);
       onLoadingChange?.(false);
     }
@@ -282,8 +295,14 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
       <div className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-4 flex items-center gap-3">
         <Loader2 className="w-5 h-5 text-indigo-600 animate-spin" />
         <div>
-          <p className="text-sm font-medium text-indigo-700">Searching the web...</p>
-          <p className="text-xs text-gray-500">Looking up {firmName}'s public information</p>
+          <p className="text-sm font-medium text-indigo-700">
+            {linkedinFilling ? "Finding LinkedIn URLs..." : "Searching the web..."}
+          </p>
+          <p className="text-xs text-gray-500">
+            {linkedinFilling
+              ? `Looking up LinkedIn pages for ${firmName} and its contacts`
+              : `Looking up ${firmName}'s public information`}
+          </p>
         </div>
       </div>
     );

@@ -715,3 +715,67 @@ export async function createFirmFromEnrichment(enrichedData) {
 
   return createdFirm;
 }
+
+/**
+ * After web enrichment, automatically discover LinkedIn URLs the website
+ * scrape missed — for the firm and for every contact still missing one.
+ * Uses the dedicated lookup functions (website scrape + web-search fallback),
+ * so JS-rendered footers/bios that the enrichment pass couldn't read still get
+ * resolved. Mutates `enrichedData` in place and returns counts.
+ */
+export async function autoFillMissingLinkedInUrls(enrichedData, website) {
+  const site = website || enrichedData.website || "";
+  const result = { firmFound: false, firmSearched: false, contactsFound: 0, contactsSearched: 0 };
+
+  // Firm LinkedIn
+  if (!enrichedData.linkedin_url) {
+    result.firmSearched = true;
+    try {
+      const res = await base44.functions.invoke("linkedinFirmLookup", {
+        name: enrichedData.name || "",
+        website: site,
+      });
+      const url = res?.data?.linkedin_url || "";
+      if (url) {
+        enrichedData.linkedin_url = url;
+        result.firmFound = true;
+      }
+    } catch { /* leave empty */ }
+  }
+
+  // Contacts LinkedIn — bounded concurrency so a large team doesn't fan out
+  // into dozens of simultaneous web searches.
+  const people = (enrichedData.people || []).filter(
+    (p) => (p.first_name || p.last_name) && !p.linkedin_url
+  );
+  result.contactsSearched = people.length;
+  if (people.length > 0) {
+    const CONCURRENCY = 5;
+    let cursor = 0;
+    let found = 0;
+    const worker = async () => {
+      while (cursor < people.length) {
+        const i = cursor++;
+        const person = people[i];
+        try {
+          const res = await base44.functions.invoke("linkedinContactLookup", {
+            first_name: person.first_name || "",
+            last_name: person.last_name || "",
+            website: site,
+          });
+          const url = res?.data?.linkedin_url || "";
+          if (url) {
+            person.linkedin_url = url;
+            found++;
+          }
+        } catch { /* leave empty */ }
+      }
+    };
+    await Promise.all(
+      Array.from({ length: Math.min(CONCURRENCY, people.length) }, () => worker())
+    );
+    result.contactsFound = found;
+  }
+
+  return result;
+}
