@@ -254,10 +254,14 @@ export default function Home() {
       }
       return firm;
     },
-    onSuccess: () => {
+    onSuccess: (createdFirm) => {
       queryClient.invalidateQueries({ queryKey: ["firms"] });
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
-      setDialogOpen(false);
+      // Keep the dialog open and switch to view mode after creating a firm
+      // (instead of closing it). Setting editingFirm to the newly-created firm
+      // object makes AddFirmDialog's init effect re-run, re-initializing the
+      // form from the saved values and setting isEditing=false → view mode.
+      setEditingFirm(createdFirm);
     },
     onError: (err) => {
       toast({ title: "Failed to create firm", description: err?.message || "Please try again.", variant: "destructive" });
