@@ -183,6 +183,9 @@ export default function Home() {
     : null;
   const userPhoto = myContact?.photo_url;
   const userDisplayName = user?.full_name || (myContact ? [myContact.first_name, myContact.last_name].filter(Boolean).join(" ") : "") || "";
+  const userContactFullName = myContact
+    ? [myContact.salutation, myContact.first_name, myContact.middle_name, myContact.last_name, myContact.suffix].filter(Boolean).join(" ")
+    : "";
 
 
 
@@ -500,7 +503,7 @@ export default function Home() {
               )}
               <div className="flex flex-col leading-tight">
                 {userDisplayName && <span className="text-[11px] text-white/90 font-medium">{userDisplayName}</span>}
-                <span className="text-[10px] text-white/50">{user.email}</span>
+                <span className="text-[10px] text-white/50">{userContactFullName || user.email}</span>
               </div>
             </div>
           )}
