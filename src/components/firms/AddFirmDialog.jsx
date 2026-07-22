@@ -327,17 +327,23 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
   const handleApplyEnrichment = async (selected) => {
     const applied = [];
+    // Accumulate the enriched firm fields so they can be persisted alongside
+    // the local form state. Enrichment contacts are saved to the DB on apply;
+    // firm fields must be too — otherwise they live only in transient form
+    // state and are lost the moment the dialog closes or re-initializes
+    // (while the contacts remain, leaving the form looking "wiped").
+    const firmUpdates = {};
 
-    if (selected.logo_url && !logoUrl) { setLogoUrl(selected.logo_url); applied.push("Logo"); }
-    if (selected.description && !description) { setDescription(selected.description); applied.push("Description"); }
-    if (selected.website && !website) { setWebsite(selected.website); applied.push("Website"); }
-    if (selected.email && !email) { setEmail(selected.email); applied.push("Email"); }
-    if (selected.linkedin_url && !linkedinUrl) { setLinkedinUrl(selected.linkedin_url); applied.push("LinkedIn"); }
-    if (selected.year_founded && !yearFounded) { setYearFounded(String(selected.year_founded)); applied.push("Year Founded"); }
+    if (selected.logo_url && !logoUrl) { setLogoUrl(selected.logo_url); firmUpdates.logo_url = selected.logo_url; applied.push("Logo"); }
+    if (selected.description && !description) { setDescription(selected.description); firmUpdates.description = selected.description; applied.push("Description"); }
+    if (selected.website && !website) { setWebsite(selected.website); firmUpdates.website = selected.website; applied.push("Website"); }
+    if (selected.email && !email) { setEmail(selected.email); firmUpdates.email = selected.email; applied.push("Email"); }
+    if (selected.linkedin_url && !linkedinUrl) { setLinkedinUrl(selected.linkedin_url); firmUpdates.linkedin_url = selected.linkedin_url; applied.push("LinkedIn"); }
+    if (selected.year_founded && !yearFounded) { setYearFounded(String(selected.year_founded)); firmUpdates.year_founded = selected.year_founded; applied.push("Year Founded"); }
     if (selected.firm_types?.length) {
       const merged = [...new Set([...firmTypes, ...selected.firm_types])];
       const added = merged.length - firmTypes.length;
-      if (added > 0) { setFirmTypes(merged); applied.push("Firm Types"); }
+      if (added > 0) { setFirmTypes(merged); firmUpdates.firm_types = merged; firmUpdates.firm_type = merged[0] || ""; applied.push("Firm Types"); }
     }
     if (selected.addresses?.length) {
       const newAddrs = selected.addresses.filter((a) => {
@@ -348,8 +354,11 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         return !addresses.some((ex) => addressesAreExact(a, ex));
       });
       if (newAddrs.length > 0) {
-        if (addresses.length === 0) newAddrs[0].is_headquarters = true;
-        setAddresses([...addresses, ...newAddrs]);
+        const mergedAddrs = [...addresses];
+        if (mergedAddrs.length === 0) newAddrs[0].is_headquarters = true;
+        mergedAddrs.push(...newAddrs);
+        setAddresses(mergedAddrs);
+        firmUpdates.addresses = mergedAddrs;
         applied.push(`${newAddrs.length} Address(es)`);
       }
     }
@@ -357,15 +366,31 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
       const existingNums = new Set(phones.map((p) => `${p.area_code}${p.number_mid}${p.number_last}`));
       const newPhs = selected.phones.filter((p) => !existingNums.has(`${p.area_code}${p.number_mid}${p.number_last}`));
       if (newPhs.length > 0) {
-        if (phones.length === 0) newPhs[0].is_default = true;
+        const mergedPhones = [...phones];
+        if (mergedPhones.length === 0) newPhs[0].is_default = true;
         if (addresses.length > 0) {
           newPhs.forEach((p) => {
             if (!p.address_id) p.address_id = addresses[0].id;
             if (!p.country_code) p.country_code = getCountryCodeFromCountryName(addresses[0].country);
           });
         }
-        setPhones([...phones, ...newPhs]);
+        mergedPhones.push(...newPhs);
+        setPhones(mergedPhones);
+        firmUpdates.phones = mergedPhones;
         applied.push(`${newPhs.length} Phone(s)`);
+      }
+    }
+
+    // Persist the enriched firm fields immediately when editing an existing
+    // firm, so they survive a dialog close/reopen or any form re-init. The
+    // form re-initializes from the saved firm record; if the enriched fields
+    // are not saved, they vanish while the contacts (saved separately) stay.
+    if (editingFirm && Object.keys(firmUpdates).length > 0) {
+      try {
+        await base44.entities.Firm.update(editingFirm.id, firmUpdates);
+        queryClient.invalidateQueries({ queryKey: ["firms"] });
+      } catch (err) {
+        toast({ title: "Failed to save enriched firm fields", description: err?.message || "Please try again.", variant: "destructive" });
       }
     }
     if (selected.people?.length) {
