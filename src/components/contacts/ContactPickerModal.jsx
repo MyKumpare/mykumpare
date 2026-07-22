@@ -1,14 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { X, User, Plus, Search, ChevronRight, ChevronDown, Building } from "lucide-react";
 
-const CONTACT_TYPES = [
-  "Allocator",
-  "Investment Consultant",
-  "Investment Manager",
-  "Securities Broker",
-  "Trade Organization Representative",
-];
-
 const getFullName = (c) => {
   const name = [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ");
   return c.designations?.length ? `${name}, ${c.designations.join(", ")}` : name;
@@ -30,6 +22,15 @@ export default function ContactPickerModal({ open, onClose, contacts, firms, onC
     return map;
   }, [firms]);
 
+  const firmTypeMap = useMemo(() => {
+    const map = {};
+    (firms || []).forEach(f => {
+      const types = f.firm_types?.length ? f.firm_types : (f.firm_type ? [f.firm_type] : []);
+      map[f.id] = types;
+    });
+    return map;
+  }, [firms]);
+
   const activeContacts = useMemo(() => contacts.filter(c => !c.deleted_at), [contacts]);
 
   const filtered = useMemo(() =>
@@ -43,37 +44,30 @@ export default function ContactPickerModal({ open, onClose, contacts, firms, onC
       return name.includes(q) || email.includes(q) || title.includes(q) || type.includes(q) || firmNames.includes(q);
     }), [activeContacts, q, firmMap]);
 
-  // Group: contact_type → firm_name → contacts (sorted alpha)
+  // Group: firm_type → firm_name → contacts (all sorted ascending alphabetically)
   const grouped = useMemo(() => {
     const result = {};
-    const orderedTypes = CONTACT_TYPES.filter(t => filtered.some(c => c.contact_type === t));
-    const otherTypes = [...new Set(
-      filtered.filter(c => !CONTACT_TYPES.includes(c.contact_type)).map(c => c.contact_type || "Other")
-    )];
-    const allTypes = [...orderedTypes, ...otherTypes];
-
-    allTypes.forEach(type => {
-      const typeContacts = filtered.filter(c => (c.contact_type || "Other") === type);
-      const firmGroups = {};
-
-      typeContacts.forEach(c => {
-        const primaryFirmId = (c.firm_ids || [])[0];
-        const firmName = primaryFirmId ? (firmMap[primaryFirmId] || "Unknown Firm") : "No Firm";
-        if (!firmGroups[firmName]) firmGroups[firmName] = [];
-        firmGroups[firmName].push(c);
-      });
-
-      const sortedFirms = Object.keys(firmGroups).sort((a, b) => a.localeCompare(b));
-      if (sortedFirms.length > 0) {
-        result[type] = sortedFirms.map(firm => ({
-          firm,
-          contacts: firmGroups[firm].sort((a, b) => getFullName(a).localeCompare(getFullName(b))),
-        }));
-      }
+    filtered.forEach(c => {
+      const primaryFirmId = (c.firm_ids || [])[0];
+      const firmTypes = primaryFirmId ? (firmTypeMap[primaryFirmId] || []) : [];
+      const type = firmTypes[0] || "Other";
+      const firmName = primaryFirmId ? (firmMap[primaryFirmId] || "Unknown Firm") : "No Firm";
+      if (!result[type]) result[type] = {};
+      if (!result[type][firmName]) result[type][firmName] = [];
+      result[type][firmName].push(c);
     });
 
-    return result;
-  }, [filtered, firmMap]);
+    const sortedResult = {};
+    Object.keys(result).sort((a, b) => a.localeCompare(b)).forEach(type => {
+      sortedResult[type] = Object.keys(result[type])
+        .sort((a, b) => a.localeCompare(b))
+        .map(firm => ({
+          firm,
+          contacts: result[type][firm].sort((a, b) => getFullName(a).localeCompare(getFullName(b))),
+        }));
+    });
+    return sortedResult;
+  }, [filtered, firmMap, firmTypeMap]);
 
   if (!open) return null;
 
