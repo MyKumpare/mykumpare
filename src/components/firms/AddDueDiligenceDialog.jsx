@@ -323,7 +323,13 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
     const ids = new Set(localContacts.map((c) => c.id));
     const merged = [...localContacts];
     analystContacts.forEach((c) => { if (!ids.has(c.id)) merged.push(c); });
-    return merged;
+    return merged.sort((a, b) => {
+      const fa = (a.first_name || "").toLowerCase();
+      const fb = (b.first_name || "").toLowerCase();
+      if (fa < fb) return -1;
+      if (fa > fb) return 1;
+      return (a.last_name || "").toLowerCase().localeCompare((b.last_name || "").toLowerCase());
+    });
   }, [localContacts, analystContacts]);
 
   const productOptions = allProducts.map((p) => ({ value: p.id, label: p.name }));
