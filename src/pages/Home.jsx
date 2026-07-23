@@ -2,8 +2,8 @@ import React, { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, FileText, Files } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, FileText, Files, ShieldCheck } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import AIAssistant from "@/components/ai/AIAssistant";
@@ -53,6 +53,7 @@ const FIRM_TYPES = [
 
 export default function Home() {
   const { isAuthenticated, user, navigateToLogin, logout, updateUser } = useAuth();
+  const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingFirm, setEditingFirm] = useState(null);
   const [preselectedType, setPreselectedType] = useState(null);
@@ -464,6 +465,7 @@ export default function Home() {
     { label: "Reports", icon: FileText, ref: reportsRef, color: "text-blue-600", activeBg: "bg-blue-50", onClick: () => setReportsPickerOpen(true) },
     { label: "Documents", icon: Files, ref: null, color: "text-teal-600", activeBg: "bg-teal-50", onClick: () => setDocumentsPickerOpen(true) },
     { label: "Utilities", icon: Wrench, ref: utilityRef, color: "text-gray-600", activeBg: "bg-gray-100" },
+    ...(user?.role === "admin" ? [{ label: "Admin", icon: ShieldCheck, ref: null, color: "text-rose-600", activeBg: "bg-rose-50", onClick: () => navigate("/UserManagement") }] : []),
   ];
 
   return (

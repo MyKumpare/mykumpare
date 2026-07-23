@@ -19,6 +19,11 @@
         ]
       }
     },
+    "is_owner": {
+      "type": "boolean",
+      "description": "True if this user is the designated owner of the application (top-level administrator who can manage users and roles)",
+      "default": false
+    },
     "linked_firm_id": {
       "type": "string",
       "description": "ID of the firm this user is affiliated with (self-linked from profile)"
