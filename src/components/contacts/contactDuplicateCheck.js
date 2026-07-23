@@ -15,11 +15,20 @@ const NAME_STOPWORDS = new Set([
 function normalizeName(str) {
   if (!str) return "";
   return str
-    .toLowerCase()
     .trim()
-    .replace(/[.'’-]/g, " ")
+    .replace(/[.'’\-(),]/g, " ")
     .split(/\s+/)
-    .filter((t) => t && !NAME_STOPWORDS.has(t))
+    .filter((t) => {
+      if (!t) return false;
+      // Strip designation abbreviations written in ALL CAPS (e.g. CFA, APFI,
+      // CMFC). Catches designations not in the stopword list so names like
+      // "Choppin, CFA, APFI" normalize to "choppin" and match "Choppin".
+      if (t.length >= 2 && t === t.toUpperCase() && /[A-Z]/.test(t)) return false;
+      const lower = t.toLowerCase();
+      if (NAME_STOPWORDS.has(lower)) return false;
+      return true;
+    })
+    .map((t) => t.toLowerCase())
     .join(" ")
     .trim();
 }
