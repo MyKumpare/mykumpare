@@ -161,7 +161,7 @@
     },
     "parent_task_id": {
       "type": "string",
-      "description": "If this task is a sub-task, points to the parent task id"
+      "description": "If this is a sub-task, points to the parent task id"
     },
     "attachments": {
       "type": "array",
@@ -200,9 +200,18 @@
   ],
   "rls": {
     "create": {
-      "user_condition": {
-        "role": "user"
-      }
+      "$or": [
+        {
+          "user_condition": {
+            "role": "user"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
     },
     "read": null,
     "update": {
