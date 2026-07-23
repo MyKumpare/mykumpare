@@ -28,6 +28,7 @@ import ProductAnalyticsTab from "./ProductAnalyticsTab";
 import ProductDueDiligenceTab from "./ProductDueDiligenceTab";
 import ConstituentProductMultiSelect from "./ConstituentProductMultiSelect";
 import AddIMProductValidatedDialog from "./AddIMProductValidatedDialog";
+import { base44 } from "@/api/base44Client";
 
 // Map product type -> firm type(s) that can be associated
 const PRODUCT_TYPE_TO_FIRM_TYPE = {
@@ -365,10 +366,21 @@ export default function AddProductDialog({
             {(editingProduct?.firm_name || firms.find((f) => f.id === firmId)?.name) && (() => {
               const firmName = editingProduct?.firm_name || firms.find((f) => f.id === firmId)?.name;
               const firm = firms.find((f) => f.id === firmId || f.name === editingProduct?.firm_name);
-              return onFirmClick && firm ? (
+              const firmIdForClick = editingProduct?.firm_id || firm?.id;
+              const handleFirmClick = async () => {
+                if (!onFirmClick) return;
+                if (firm) { onFirmClick(firm); return; }
+                if (firmIdForClick) {
+                  try {
+                    const full = await base44.entities.Firm.get(firmIdForClick);
+                    if (full && !full.deleted_at) onFirmClick(full);
+                  } catch (e) { /* firm not retrievable — no-op */ }
+                }
+              };
+              return onFirmClick && firmIdForClick ? (
                 <button
                   type="button"
-                  onClick={() => onFirmClick(firm)}
+                  onClick={handleFirmClick}
                   className="text-xs text-indigo-500 hover:underline hover:text-indigo-700 truncate text-left"
                 >
                   {firmName}
