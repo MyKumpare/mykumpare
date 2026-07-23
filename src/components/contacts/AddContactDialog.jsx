@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import {   X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload, TrendingUp, Tag, GraduationCap, Briefcase, Activity, Package, AlertTriangle, Linkedin, Loader2, ClipboardCheck } from "lucide-react";
+import {   X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload, TrendingUp, Tag, GraduationCap, Briefcase, Activity, Package, AlertTriangle, Linkedin, Loader2, ClipboardCheck, Image as ImageIcon } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "@/components/ui/use-toast";
@@ -85,6 +85,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [addresses, setAddresses] = useState([newAddress()]);
   const [duplicateWarning, setDuplicateWarning] = useState(null);
   const [linkedinLookupLoading, setLinkedinLookupLoading] = useState(false);
+  const [linkedinPhotoLoading, setLinkedinPhotoLoading] = useState(false);
   const [similarAddressPairs, setSimilarAddressPairs] = useState(null);
   const [subRecordReview, setSubRecordReview] = useState(null);
   const [extracting, setExtracting] = useState(null); // "education" | "experience" | null
@@ -222,6 +223,35 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
       toast({ title: "LinkedIn lookup failed", description: err.response?.data?.error || err.message || "Please connect your LinkedIn account first.", variant: "destructive" });
     }
     setLinkedinLookupLoading(false);
+  };
+
+  // Pull the contact's profile photo directly from their LinkedIn profile page.
+  const handleLinkedInPhoto = async () => {
+    const url = linkedinUrl.trim();
+    if (!url) {
+      toast({ title: "No LinkedIn URL", description: "Enter a LinkedIn profile link first.", variant: "destructive" });
+      return;
+    }
+    setLinkedinPhotoLoading(true);
+    try {
+      const firm = firms.find((f) => firmIds.includes(f.id));
+      const res = await base44.functions.invoke("linkedinProfilePhoto", {
+        linkedin_url: url,
+        firm_id: firm?.id || "",
+        website: firm?.website || "",
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+      });
+      if (res.data?.photo_url) {
+        setPhotoUrl(res.data.photo_url);
+        toast({ title: "✅ Photo added", description: "Pulled the headshot from the LinkedIn profile." });
+      } else {
+        toast({ title: "No photo found", description: res.data?.message || "Could not extract a photo from that LinkedIn profile.", variant: "destructive" });
+      }
+    } catch (err) {
+      toast({ title: "Photo extraction failed", description: err.response?.data?.error || err.message || "Could not extract the photo.", variant: "destructive" });
+    }
+    setLinkedinPhotoLoading(false);
   };
 
   const isValid = firstName.trim() && lastName.trim();
@@ -823,6 +853,18 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                     >
                       {linkedinLookupLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Linkedin className="w-4 h-4" />}
                       <span className="text-xs">Find</span>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-9 px-2 text-[#0A66C2] border-[#0A66C2]/30 hover:bg-[#0A66C2]/10 gap-1"
+                      onClick={handleLinkedInPhoto}
+                      disabled={linkedinPhotoLoading || !linkedinUrl.trim()}
+                      title="Extract photo from LinkedIn profile"
+                    >
+                      {linkedinPhotoLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />}
+                      <span className="text-xs">Photo</span>
                     </Button>
                   </div>
                 )}
