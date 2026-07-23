@@ -26,6 +26,7 @@ import ProductsSection from "../components/products/ProductsSection";
 import ContactsSection from "../components/contacts/ContactsSection";
 import UtilitySection from "../components/utility/UtilitySection";
 import ReportsSection from "../components/reports/ReportsSection";
+import PickerSection from "../components/common/PickerSection";
 import ReportsPickerModal from "../components/reports/ReportsPickerModal";
 import DocumentsDashboardModal from "../components/firms/DocumentsDashboardModal";
 import AddBenchmarkDialog from "../components/utility/AddBenchmarkDialog";
@@ -609,6 +610,18 @@ export default function Home() {
           forceExpanded={allExpanded}
         />
 
+        {/* Due Diligence section */}
+        <PickerSection
+          label="Due Diligence"
+          icon={ShieldCheck}
+          iconColor="text-indigo-500"
+          entityName="DueDiligence"
+          onOpen={() => setFirmPickerOpen(true)}
+          openLabel="Open Due Diligence"
+          description="Open the firm picker to manage due diligence records."
+          forceExpanded={allExpanded}
+        />
+
         {/* Firms section */}
         <div ref={firmsRef} />
         {isLoading ? (
@@ -660,6 +673,30 @@ export default function Home() {
           forceExpanded={allExpanded}
         />
 
+        {/* Activity section */}
+        <PickerSection
+          label="Activity"
+          icon={ClipboardList}
+          iconColor="text-amber-500"
+          count={activities.filter(a => !a.deleted_at).length}
+          onOpen={() => setActivityPickerOpen(true)}
+          openLabel="Open Activity"
+          description="Open the activity log to view and log contact activities."
+          forceExpanded={allExpanded}
+        />
+
+        {/* Tasks section */}
+        <PickerSection
+          label="Tasks"
+          icon={LayoutList}
+          iconColor="text-orange-500"
+          count={followUpTasks.filter(t => !t.deleted_at).length}
+          onOpen={() => setTaskPickerOpen(true)}
+          openLabel="Open Tasks"
+          description="Open the task picker to view and manage follow-up tasks."
+          forceExpanded={allExpanded}
+        />
+
         {/* Analytics section */}
         <div ref={analyticsRef} />
         <AnalyticsSection
@@ -698,9 +735,34 @@ export default function Home() {
         <div ref={reportsRef} />
         <ReportsSection forceExpanded={allExpanded} />
 
+        {/* Documents section */}
+        <PickerSection
+          label="Documents"
+          icon={Files}
+          iconColor="text-teal-500"
+          count={documents.filter(d => !d.deleted_at).length}
+          onOpen={() => setDocumentsPickerOpen(true)}
+          openLabel="Open Documents"
+          description="Open the documents dashboard to browse and manage firm documents."
+          forceExpanded={allExpanded}
+        />
+
         {/* Utility section */}
         <div ref={utilityRef} />
         <UtilitySection deletedCount={deletedCount} />
+
+        {/* Admin section (admin only) */}
+        {user?.role === "admin" && (
+          <PickerSection
+            label="Admin"
+            icon={ShieldCheck}
+            iconColor="text-rose-500"
+            onOpen={() => navigate("/UserManagement")}
+            openLabel="Open Admin"
+            description="Open the admin console to manage users and workspace settings."
+            forceExpanded={allExpanded}
+          />
+        )}
 
         <div className="h-4" />
       </div>
