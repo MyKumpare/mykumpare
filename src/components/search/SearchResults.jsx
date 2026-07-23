@@ -1,5 +1,5 @@
 import React from "react";
-import { Building2, User, Package, LayoutList, LineChart, ClipboardList, Clock, AlertCircle, CheckCircle2, XCircle, Calendar, Files } from "lucide-react";
+import { Building2, User, Package, LayoutList, LineChart, ClipboardList, Clock, AlertCircle, CheckCircle2, XCircle, Calendar, Files, ClipboardCheck, FileText, BarChart2 } from "lucide-react";
 import { format } from "date-fns";
 
 function getContactFullName(c) {
@@ -146,7 +146,7 @@ function scoreFields(keywords, fields) {
   return score;
 }
 
-export default function SearchResults({ query, firms, products, contacts, portfolios = [], analyses = [], activities = [], followUpTasks = [], documents = [], onFirmClick, onContactClick, onProductClick, onPortfolioClick, onAnalysisClick, onActivityClick, onTaskClick, onDocumentClick }) {
+export default function SearchResults({ query, firms, products, contacts, portfolios = [], analyses = [], activities = [], followUpTasks = [], documents = [], dueDiligences = [], customReports = [], benchmarks = [], onFirmClick, onContactClick, onProductClick, onPortfolioClick, onAnalysisClick, onActivityClick, onTaskClick, onDocumentClick, onDueDiligenceClick, onReportClick, onBenchmarkClick }) {
   const keywords = parseKeywords(query);
   if (!keywords.length) return null;
 
@@ -247,6 +247,56 @@ export default function SearchResults({ query, firms, products, contacts, portfo
     .filter((d) => d._score > 0)
     .sort(byScoreDesc);
 
+  // --- Match due diligence records (by product, firm, analysts, status) ---
+  const matchedDueDiligences = dueDiligences
+    .filter((r) => !r.deleted_at)
+    .map((r) => ({
+      ...r,
+      _score: scoreFields(keywords, [
+        r.product_name,
+        r.firm_name,
+        r.primary_analyst_name,
+        r.secondary_analyst_name,
+        r.status,
+        r.process_status,
+      ]),
+    }))
+    .filter((r) => r._score > 0)
+    .sort(byScoreDesc);
+
+  // --- Match custom reports (by name, description, source, format) ---
+  const matchedReports = customReports
+    .map((r) => ({
+      ...r,
+      _score: scoreFields(keywords, [
+        r.name,
+        r.description,
+        r.data_source,
+        r.format_type,
+        r.chart_type,
+        r.group_by,
+        r.filters_description,
+      ]),
+    }))
+    .filter((r) => r._score > 0)
+    .sort(byScoreDesc);
+
+  // --- Match benchmarks (by name, description, asset class, region, style) ---
+  const matchedBenchmarks = benchmarks
+    .map((b) => ({
+      ...b,
+      _score: scoreFields(keywords, [
+        b.name,
+        b.description,
+        b.asset_class,
+        b.region,
+        b.market_capitalization,
+        b.style,
+      ]),
+    }))
+    .filter((b) => b._score > 0)
+    .sort(byScoreDesc);
+
   // For a firm result, gather its contacts
   const firmContacts = (firmId) => contacts.filter(c => (c.firm_ids || []).includes(firmId));
 
@@ -260,7 +310,7 @@ export default function SearchResults({ query, firms, products, contacts, portfo
     return firm ? firmContacts(firm.id) : [];
   };
 
-  const hasAny = matchedContacts.length > 0 || matchedFirms.length > 0 || matchedProducts.length > 0 || matchedPortfolios.length > 0 || matchedAnalyses.length > 0 || matchedActivities.length > 0 || matchedTasks.length > 0 || matchedDocuments.length > 0;
+  const hasAny = matchedContacts.length > 0 || matchedFirms.length > 0 || matchedProducts.length > 0 || matchedPortfolios.length > 0 || matchedAnalyses.length > 0 || matchedActivities.length > 0 || matchedTasks.length > 0 || matchedDocuments.length > 0 || matchedDueDiligences.length > 0 || matchedReports.length > 0 || matchedBenchmarks.length > 0;
   if (!hasAny) return (
     <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 p-4 text-sm text-gray-400 text-center">
       No results for "{query}"
@@ -540,6 +590,116 @@ export default function SearchResults({ query, firms, products, contacts, portfo
                   <div className="text-xs text-gray-500 mt-0.5">
                     {analysis.analysis_type === "single" ? "Single Product" : "Multi-Product"} · {analysis.visibility === "firm" ? "Firm-wide" : "Personal"}
                   </div>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Due Diligence Results */}
+      {matchedDueDiligences.length > 0 && (
+        <div>
+          <div className="px-4 pt-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+            <ClipboardCheck className="w-3.5 h-3.5" /> Due Diligence
+          </div>
+          {matchedDueDiligences.map((rec) => (
+            <button
+              key={rec.id}
+              className="w-full text-left px-4 py-3 hover:bg-indigo-50 transition-colors"
+              onClick={() => onDueDiligenceClick && onDueDiligenceClick(rec)}
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-7 h-7 rounded-lg border border-indigo-200 bg-indigo-50 flex items-center justify-center flex-shrink-0">
+                  <ClipboardCheck className="w-3.5 h-3.5 text-indigo-600" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-medium text-gray-900 truncate">{rec.product_name || "(No product)"}</span>
+                    {rec.status && (
+                      <span className="text-[10px] font-semibold bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">{rec.status}</span>
+                    )}
+                    {rec.process_status && (
+                      <span className="text-[10px] font-semibold bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{rec.process_status}</span>
+                    )}
+                  </div>
+                  {rec.firm_name && (
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <Building2 className="w-3 h-3 text-gray-400" />
+                      <span className="text-xs text-gray-500 truncate">{rec.firm_name}</span>
+                    </div>
+                  )}
+                  {(rec.primary_analyst_name || rec.secondary_analyst_name) && (
+                    <p className="text-xs text-gray-400 mt-0.5 truncate">
+                      {rec.primary_analyst_name ? `Primary: ${rec.primary_analyst_name}` : ""}
+                      {rec.secondary_analyst_name ? `${rec.primary_analyst_name ? " · " : ""}Secondary: ${rec.secondary_analyst_name}` : ""}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Report Results */}
+      {matchedReports.length > 0 && (
+        <div>
+          <div className="px-4 pt-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+            <FileText className="w-3.5 h-3.5" /> Reports
+          </div>
+          {matchedReports.map((report) => (
+            <button
+              key={report.id}
+              className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors"
+              onClick={() => onReportClick && onReportClick(report)}
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-7 h-7 rounded-lg border border-blue-200 bg-blue-50 flex items-center justify-center flex-shrink-0">
+                  <FileText className="w-3.5 h-3.5 text-blue-600" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium text-gray-900 truncate">{report.name}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">
+                    {report.data_source ? report.data_source : "Report"}{report.format_type ? ` · ${report.format_type}` : ""}{report.chart_type ? ` · ${report.chart_type}` : ""}
+                  </div>
+                  {report.description && (
+                    <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{report.description}</p>
+                  )}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Benchmark Results */}
+      {matchedBenchmarks.length > 0 && (
+        <div>
+          <div className="px-4 pt-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+            <BarChart2 className="w-3.5 h-3.5" /> Benchmarks
+          </div>
+          {matchedBenchmarks.map((benchmark) => (
+            <button
+              key={benchmark.id}
+              className="w-full text-left px-4 py-3 hover:bg-purple-50 transition-colors"
+              onClick={() => onBenchmarkClick && onBenchmarkClick(benchmark)}
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-7 h-7 rounded-lg border border-purple-200 bg-purple-50 flex items-center justify-center flex-shrink-0">
+                  <BarChart2 className="w-3.5 h-3.5 text-purple-600" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium text-gray-900 truncate">{benchmark.name}</div>
+                  <div className="text-xs text-gray-500 mt-0.5 flex flex-wrap gap-x-2">
+                    {benchmark.asset_class && <span>{benchmark.asset_class}</span>}
+                    {benchmark.region && <span>· {benchmark.region}</span>}
+                    {benchmark.market_capitalization && <span>· {benchmark.market_capitalization}</span>}
+                    {benchmark.style && <span>· {benchmark.style}</span>}
+                  </div>
+                  {benchmark.description && (
+                    <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{benchmark.description}</p>
+                  )}
                 </div>
               </div>
             </button>

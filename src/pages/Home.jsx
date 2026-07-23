@@ -189,6 +189,16 @@ export default function Home() {
     queryFn: () => base44.entities.FirmDocument.list("-entry_date", 1000),
   });
 
+  const { data: dueDiligences = [] } = useQuery({
+    queryKey: ["due-diligence-search"],
+    queryFn: () => base44.entities.DueDiligence.list("-created_date", 5000),
+  });
+
+  const { data: customReports = [] } = useQuery({
+    queryKey: ["custom_reports_search"],
+    queryFn: () => base44.entities.CustomReport.list("-created_date"),
+  });
+
   const deletedCount = deletedFirms.length + deletedProducts.length + deletedContacts.length + deletedPortfolios.length;
 
   // Realtime sync: keep every signed-in client in sync so an update made by one
@@ -207,6 +217,8 @@ export default function Home() {
       base44.entities.FirmDocument.subscribe(() => invalidate([["firm_documents_search"]])),
       base44.entities.Analysis.subscribe(() => invalidate([["analyses"]])),
       base44.entities.Benchmark.subscribe(() => invalidate([["benchmarks"]])),
+      base44.entities.DueDiligence.subscribe(() => invalidate([["due-diligence-search"], ["due-diligence-all"]])),
+      base44.entities.CustomReport.subscribe(() => invalidate([["custom_reports_search"], ["custom_reports"]])),
     ];
     return () => subs.forEach((unsub) => unsub && unsub());
   }, [queryClient]);
@@ -590,6 +602,9 @@ export default function Home() {
                       activities={activities}
                       followUpTasks={followUpTasks}
                       documents={documents}
+                      dueDiligences={dueDiligences}
+                      customReports={customReports}
+                      benchmarks={benchmarks}
                       onFirmClick={(firm) => { setSearchQuery(""); setSearchFocused(false); handleEdit(firm); }}
                       onContactClick={(contact) => { setSearchQuery(""); setSearchFocused(false); setViewingContact(contact); }}
                       onProductClick={(product) => { setSearchQuery(""); setSearchFocused(false); handleEditProduct(product); }}
@@ -598,10 +613,13 @@ export default function Home() {
                       onActivityClick={(activity) => { setSearchQuery(""); setSearchFocused(false); setViewingActivity(activity); }}
                       onTaskClick={(task) => { setSearchQuery(""); setSearchFocused(false); setViewingTask(task); }}
                       onDocumentClick={(doc) => { setSearchQuery(""); setSearchFocused(false); handleDocumentClick(doc); }}
+                      onDueDiligenceClick={() => { setSearchQuery(""); setSearchFocused(false); setDueDiligencePickerOpen(true); }}
+                      onReportClick={() => { setSearchQuery(""); setSearchFocused(false); setReportsPickerOpen(true); }}
+                      onBenchmarkClick={(benchmark) => { setSearchQuery(""); setSearchFocused(false); setEditingBenchmark(benchmark); setBenchmarkDialogOpen(true); }}
                     />
                   ) : (
                     <div className="bg-white border border-gray-200 rounded-xl shadow-xl p-6 text-sm text-gray-400 text-center">
-                      Start typing to search across firms, products, contacts, portfolios, activities, tasks and documents.
+                      Start typing to search across firms, products, contacts, portfolios, due diligence, activities, tasks, reports, benchmarks and documents.
                     </div>
                   )}
                 </div>
