@@ -632,11 +632,11 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                 <TabsTrigger value="info" className="flex-1 flex items-center gap-1.5">
                   <User className="w-3.5 h-3.5" /> Info
                 </TabsTrigger>
-                <TabsTrigger value="phones" className="flex-1 flex items-center gap-1.5">
-                  <Phone className="w-3.5 h-3.5" /> Phones
-                </TabsTrigger>
                 <TabsTrigger value="addresses" className="flex-1 flex items-center gap-1.5">
                   <MapPin className="w-3.5 h-3.5" /> Addresses
+                </TabsTrigger>
+                <TabsTrigger value="phones" className="flex-1 flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5" /> Phones
                 </TabsTrigger>
               </TabsList>
               <TabsList className="w-full">
