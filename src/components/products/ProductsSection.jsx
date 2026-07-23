@@ -65,6 +65,7 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
           ) : (
             <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
           )}
+          <Package className="w-4 h-4 text-violet-500" />
           <span className="text-sm font-semibold text-gray-700 group-hover:text-gray-900">
             Products
           </span>

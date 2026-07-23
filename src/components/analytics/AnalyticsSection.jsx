@@ -29,6 +29,7 @@ export default function AnalyticsSection({ openLaunch, onLaunchOpenChange, total
           ) : (
             <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
           )}
+          <LineChart className="w-4 h-4 text-cyan-500" />
           <span className="text-sm font-semibold text-gray-700 group-hover:text-gray-900">
             Analytics
           </span>

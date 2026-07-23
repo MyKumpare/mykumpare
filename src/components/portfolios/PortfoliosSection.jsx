@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, LayoutList, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, LayoutList, ChevronDown, ChevronRight, BarChart3 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
 export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddPortfolio, forceExpanded }) {
@@ -64,6 +64,7 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
           ) : (
             <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
           )}
+          <BarChart3 className="w-4 h-4 text-emerald-500" />
           <span className="text-sm font-semibold text-gray-700 group-hover:text-gray-900">
             Portfolios
           </span>

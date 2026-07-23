@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { ChevronDown, ChevronRight, Plus, Gauge } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Gauge, Wrench } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -98,6 +98,7 @@ export default function UtilitySection({ deletedCount }) {
           ) : (
             <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
           )}
+          <Wrench className="w-4 h-4 text-gray-500" />
           <span className="text-sm font-semibold text-gray-700 group-hover:text-gray-900">
             Utility
           </span>

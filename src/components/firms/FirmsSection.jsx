@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, ChevronDown, ChevronRight, Building } from "lucide-react";
 import FirmTypeSection from "./FirmTypeSection";
 
 const FIRM_TYPES = [
@@ -45,6 +45,7 @@ export default function FirmsSection({
           ) : (
             <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
           )}
+          <Building className="w-4 h-4 text-indigo-500" />
           <span className="text-sm font-semibold text-gray-700 group-hover:text-gray-900">
             Firms
           </span>

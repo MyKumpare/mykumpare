@@ -104,6 +104,7 @@ export default function ContactsSection({ contacts, firms, onContactClick, onAdd
           ) : (
             <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
           )}
+          <User className="w-4 h-4 text-pink-500" />
           <span className="text-sm font-semibold text-gray-700 group-hover:text-gray-900">
             Contacts
           </span>
