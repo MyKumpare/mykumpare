@@ -79,7 +79,14 @@ export default function FirmDueDiligenceTab({ firmId, firmName, contacts = [] })
       ) : (
         <div className="space-y-2">
           {sorted.map((rec) => (
-            <div key={rec.id} className="flex items-start gap-3 px-3 py-2.5 rounded-lg border border-gray-200 bg-white hover:border-indigo-200 transition-colors">
+            <div
+              key={rec.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => { setEditing(rec); setShowDialog(true); }}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setEditing(rec); setShowDialog(true); } }}
+              className="flex items-start gap-3 px-3 py-2.5 rounded-lg border border-gray-200 bg-white hover:border-indigo-200 hover:bg-indigo-50/30 cursor-pointer transition-colors"
+            >
               <ClipboardCheck className="w-4 h-4 text-indigo-400 flex-shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -98,7 +105,7 @@ export default function FirmDueDiligenceTab({ firmId, firmName, contacts = [] })
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-1 flex-shrink-0">
+              <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                 <button type="button" onClick={() => { setEditing(rec); setShowDialog(true); }} className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-indigo-600">
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
