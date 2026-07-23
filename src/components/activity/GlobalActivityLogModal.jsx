@@ -16,6 +16,7 @@ import {
   Paperclip, Link2, Plus, X, ClipboardList, Upload, UserPlus
 } from "lucide-react";
 import { format } from "date-fns";
+import { toast } from "@/components/ui/use-toast";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 
@@ -427,6 +428,8 @@ function ActivityLogForm({ onSaved, onCancel, allFirms, allContacts, onFirmClick
   const [notes, setNotes] = useState("");
   const [associatedFirmsContacts, setAssociatedFirmsContacts] = useState([]);
   const [tasks, setTasks] = useState([]);
+  const [savedActivity, setSavedActivity] = useState(null); // { id, type, date } once the activity has been persisted
+  const [savingTasks, setSavingTasks] = useState(false);
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.ContactActivity.create(data),
@@ -451,17 +454,67 @@ function ActivityLogForm({ onSaved, onCancel, allFirms, allContacts, onFirmClick
         queryClient.invalidateQueries({ queryKey: ["follow_up_tasks", originator.contactId] });
         queryClient.invalidateQueries({ queryKey: ["all_tasks_for_firm", originator.firmId] });
       }
-      onSaved();
+      // Keep the form open: lock the saved activity, clear the task drafts, and
+      // let the user add more follow-up tasks (linked to this activity) or log
+      // another activity without closing the modal.
+      setSavedActivity({ id: created.id, type: activityType, date: activityDate });
+      setTasks([]);
+      toast({ title: "Activity saved", description: "Add more follow-up tasks or log another activity." });
+      onSaved && onSaved();
     },
   });
+
+  // Save additional follow-up tasks linked to the already-saved activity
+  const handleSaveTasks = async () => {
+    if (!savedActivity) return;
+    const validTasks = tasks.filter(t => t.task_description && t.task_description !== "<p><br></p>");
+    if (!validTasks.length) return;
+    setSavingTasks(true);
+    const today = new Date().toISOString().split("T")[0];
+    for (const t of validTasks) {
+      await base44.entities.FollowUpTask.create({
+        originator_contact_id: originator.contactId,
+        originator_contact_name: originator.contactName,
+        originator_firm_id: originator.firmId || undefined,
+        originator_firm_name: originator.firmName || undefined,
+        activity_id: savedActivity.id,
+        activity_label: `${savedActivity.type} – ${fmt(savedActivity.date)}`,
+        due_date: t.due_date, task_description: t.task_description, status: "Not Started",
+        status_date: today,
+      });
+    }
+    queryClient.invalidateQueries({ queryKey: ["follow_up_tasks", originator.contactId] });
+    queryClient.invalidateQueries({ queryKey: ["all_tasks_for_firm", originator.firmId] });
+    setTasks([]);
+    setSavingTasks(false);
+    toast({ title: "Follow-up tasks saved" });
+  };
+
+  const handleLogAnother = () => {
+    setSavedActivity(null);
+    setActivityType("Call");
+    setActivityDate(new Date().toISOString().split("T")[0]);
+    setSubjects([]);
+    setNotes("");
+    setAssociatedFirmsContacts([]);
+    setTasks([]);
+  };
 
   const origFirm = originator.firmId ? allFirms.find(f => f.id === originator.firmId) : null;
   const origFirmTypes = origFirm?.firm_types?.length ? origFirm.firm_types : origFirm?.firm_type ? [origFirm.firm_type] : [];
   const needsFirmType = origFirmTypes.length > 1 && !originator.firmType;
-  const canSave = originator.contactId && activityType && activityDate && !needsFirmType;
+  const canSaveActivity = !savedActivity && originator.contactId && activityType && activityDate && !needsFirmType;
+  const hasTasksToSave = savedActivity && tasks.some(t => t.task_description && t.task_description !== "<p><br></p>");
 
   return (
     <div className="space-y-4">
+      {savedActivity && (
+        <div className="flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-3 py-2.5 text-xs text-green-700">
+          <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+          <span>Activity saved — add more follow-up tasks below, or log another activity.</span>
+        </div>
+      )}
+      <fieldset disabled={!!savedActivity} className="space-y-4">
       {/* Originator */}
       <div className="rounded-xl border border-amber-100 bg-amber-50/40 p-3">
         <OriginatorPicker allFirms={allFirms} allContacts={allContacts}
@@ -516,6 +569,7 @@ function ActivityLogForm({ onSaved, onCancel, allFirms, allContacts, onFirmClick
         <Label className="text-xs font-medium text-gray-700 flex items-center gap-1"><Building2 className="w-3 h-3 text-indigo-500" /> Associated Firms & Contacts</Label>
         <AssociatedFirmsEditor value={associatedFirmsContacts} onChange={setAssociatedFirmsContacts} allFirms={allFirms} onFirmClick={onFirmClick} onContactClick={onContactClick} />
       </div>
+      </fieldset>
 
       {tasks.length === 0 ? (
         <button type="button"
@@ -560,16 +614,27 @@ function ActivityLogForm({ onSaved, onCancel, allFirms, allContacts, onFirmClick
       )}
 
       <div className="flex gap-2 justify-end pt-1">
-        <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={onCancel}>Cancel</Button>
-        <Button type="button" size="sm" className="h-8 text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
-          disabled={!canSave || createMutation.isPending}
-          onClick={() => createMutation.mutate({
-            contact_id: originator.contactId, activity_type: activityType, activity_date: activityDate,
-            subjects: subjects, notes: notes.trim(), associated_firms_contacts: associatedFirmsContacts,
-            firm_type: originator.firmType || undefined,
-          })}>
-          {createMutation.isPending ? "Saving..." : "Save Activity"}
-        </Button>
+        <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={onCancel}>{savedActivity ? "Done" : "Cancel"}</Button>
+        {savedActivity ? (
+          <>
+            <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={handleLogAnother}>Log Another Activity</Button>
+            <Button type="button" size="sm" className="h-8 text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
+              disabled={!hasTasksToSave || savingTasks}
+              onClick={handleSaveTasks}>
+              {savingTasks ? "Saving..." : "Save Tasks"}
+            </Button>
+          </>
+        ) : (
+          <Button type="button" size="sm" className="h-8 text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
+            disabled={!canSaveActivity || createMutation.isPending}
+            onClick={() => createMutation.mutate({
+              contact_id: originator.contactId, activity_type: activityType, activity_date: activityDate,
+              subjects: subjects, notes: notes.trim(), associated_firms_contacts: associatedFirmsContacts,
+              firm_type: originator.firmType || undefined,
+            })}>
+            {createMutation.isPending ? "Saving..." : "Save Activity"}
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -646,12 +711,6 @@ function TasksForm({ onSaved, onCancel, allFirms, allContacts }) {
 
 // ── Main Modal ────────────────────────────────────────────────────────────────
 export default function GlobalActivityLogModal({ open, onClose, onFirmClick, onContactClick }) {
-  const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    if (open) { setSaved(false); }
-  }, [open]);
-
   const { data: allFirms = [] } = useQuery({
     queryKey: ["all_firms_for_activities"],
     queryFn: () => base44.entities.Firm.list(),
@@ -666,11 +725,6 @@ export default function GlobalActivityLogModal({ open, onClose, onFirmClick, onC
 
   if (!open) return null;
 
-  const handleSaved = () => {
-    setSaved(true);
-    setTimeout(() => onClose(), 800);
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 px-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
@@ -683,14 +737,7 @@ export default function GlobalActivityLogModal({ open, onClose, onFirmClick, onC
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-5">
-          {saved ? (
-            <div className="flex flex-col items-center justify-center py-10 gap-3">
-              <CheckCircle2 className="w-10 h-10 text-green-500" />
-              <p className="text-sm font-semibold text-gray-700">Saved successfully!</p>
-            </div>
-          ) : (
-            <ActivityLogForm onSaved={handleSaved} onCancel={onClose} allFirms={allFirms} allContacts={allContacts} onFirmClick={onFirmClick} onContactClick={onContactClick} />
-          )}
+          <ActivityLogForm onSaved={() => {}} onCancel={onClose} allFirms={allFirms} allContacts={allContacts} onFirmClick={onFirmClick} onContactClick={onContactClick} />
         </div>
       </div>
     </div>
