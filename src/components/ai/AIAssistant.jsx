@@ -15,6 +15,7 @@ import {
   createFirmFromEnrichment,
   validateFirmData,
 } from "./firmEnrichment";
+import { detectAddressIntent, searchFirmAddresses } from "./firmAddressSearch";
 import { addressesAreExact } from "@/components/addressDuplicateCheck";
 
 const RESPONSE_SCHEMA = {
@@ -388,6 +389,15 @@ export default function AIAssistant() {
       const enrichmentIntent = detectEnrichmentIntent(userMessage);
       if (enrichmentIntent.isEnrichment) {
         const result = await handleFirmEnrichment(enrichmentIntent.firmName);
+        setMessages((prev) => [...prev, result]);
+        return;
+      }
+
+      // Address lookup: return ALL partial firm-name matches with their addresses
+      // so the user can decide which one they want to see.
+      const addressIntent = detectAddressIntent(userMessage);
+      if (addressIntent.isAddressSearch) {
+        const result = await searchFirmAddresses(addressIntent.firmName);
         setMessages((prev) => [...prev, result]);
         return;
       }
