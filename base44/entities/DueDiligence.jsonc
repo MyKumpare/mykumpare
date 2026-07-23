@@ -1,0 +1,94 @@
+{
+  "name": "DueDiligence",
+  "type": "object",
+  "properties": {
+    "firm_id": {
+      "type": "string",
+      "description": "ID of the firm this due diligence record belongs to"
+    },
+    "firm_name": {
+      "type": "string",
+      "description": "Name of the associated firm (denormalized)"
+    },
+    "product_id": {
+      "type": "string",
+      "description": "ID of the product under due diligence"
+    },
+    "product_name": {
+      "type": "string",
+      "description": "Name of the product under due diligence (denormalized)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Pipeline",
+        "Buy List",
+        "Rejected"
+      ],
+      "default": "Pipeline",
+      "description": "Due diligence status"
+    },
+    "primary_analyst_contact_id": {
+      "type": "string",
+      "description": "ID of the primary analyst (a contact from the firm)"
+    },
+    "primary_analyst_name": {
+      "type": "string",
+      "description": "Full name of the primary analyst (denormalized)"
+    },
+    "secondary_analyst_contact_id": {
+      "type": "string",
+      "description": "ID of the secondary analyst (a contact from the firm)"
+    },
+    "secondary_analyst_name": {
+      "type": "string",
+      "description": "Full name of the secondary analyst (denormalized)"
+    }
+  },
+  "required": [
+    "firm_id",
+    "product_id",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "user"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": null,
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

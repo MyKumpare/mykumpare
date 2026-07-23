@@ -27,6 +27,7 @@ import FirmProductsTab from "./FirmProductsTab";
 import FirmPortfoliosTab from "./FirmPortfoliosTab";
 import FirmActivityLogTab from "./FirmActivityLogTab";
 import FirmDocumentsTab from "./FirmDocumentsTab";
+import FirmDueDiligenceTab from "./FirmDueDiligenceTab";
 import EnrichmentApprovalDialog from "./EnrichmentApprovalDialog";
 import SimilarAddressDialog from "../SimilarAddressDialog";
 import { findAddressIssues, addressesAreExact } from "../addressDuplicateCheck";
@@ -1099,9 +1100,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
               <TabsContent value="due-diligence" className="space-y-3">
               {editingFirm ? (
-                <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
-                  Due Diligence content coming soon
-                </div>
+                <FirmDueDiligenceTab firmId={editingFirm.id} firmName={editingFirm.name} contacts={allContacts} />
               ) : (
                 <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
                   Save the firm first to add due diligence information
