@@ -61,8 +61,8 @@ export default function ReportsSection({ forceExpanded = false }) {
         ) : (
           <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
         )}
+        <FileText className="w-4 h-4 text-blue-500" />
         <span className="text-sm font-semibold text-gray-700 group-hover:text-gray-900">Reports</span>
-        <FileText className="w-4 h-4 text-gray-400" />
         {savedReports.length > 0 && (
           <span className="text-[10px] font-medium text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full">
             {savedReports.length}
