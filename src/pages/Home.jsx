@@ -62,6 +62,7 @@ export default function Home() {
   const [editingFirm, setEditingFirm] = useState(null);
   const [preselectedType, setPreselectedType] = useState(null);
   const [deletingFirm, setDeletingFirm] = useState(null);
+  const [firmDeleteLoading, setFirmDeleteLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statsModal, setStatsModal] = useState(null); // "firms" | "products" | "portfolios" | null
   const [contactsModalOpen, setContactsModalOpen] = useState(false);
@@ -394,13 +395,41 @@ export default function Home() {
     setProductDialogOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
-    if (deletingFirm) {
-      // Soft delete: set deleted_at timestamp
-      updateMutation.mutate({ 
-        id: deletingFirm.id, 
-        data: { deleted_at: new Date().toISOString() } 
+  const handleDeleteConfirm = async () => {
+    if (!deletingFirm) return;
+    setFirmDeleteLoading(true);
+    try {
+      const res = await base44.functions.invoke('deleteFirmCascade', { firm_id: deletingFirm.id });
+      const data = res?.data ?? res ?? {};
+      // Realtime subscriptions auto-invalidate most lists, but refresh explicitly too.
+      queryClient.invalidateQueries({ queryKey: ["firms"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolios"] });
+      queryClient.invalidateQueries({ queryKey: ["deletedFirms"] });
+      queryClient.invalidateQueries({ queryKey: ["deletedProducts"] });
+      queryClient.invalidateQueries({ queryKey: ["deletedContacts"] });
+      queryClient.invalidateQueries({ queryKey: ["deletedPortfolios"] });
+      queryClient.invalidateQueries({ queryKey: ["contact_activities_search"] });
+      queryClient.invalidateQueries({ queryKey: ["follow_up_tasks_search"] });
+      queryClient.invalidateQueries({ queryKey: ["firm_documents_search"] });
+      queryClient.invalidateQueries({ queryKey: ["analyses"] });
+      setDeletingFirm(null);
+      setEditingFirm(null);
+      setDialogOpen(false);
+      const summary = data?.deleted
+        ? Object.entries(data.deleted).filter(([, v]) => v > 0).map(([k, v]) => `${v} ${k}`).join(", ")
+        : "";
+      toast({
+        title: "Firm deleted",
+        description: summary
+          ? `"${data.firm_name || deletingFirm.name}" and related records (${summary}) were deleted.`
+          : `"${data.firm_name || deletingFirm.name}" was deleted.`,
       });
+    } catch (err) {
+      toast({ title: "Failed to delete firm", description: err?.message || "Please try again.", variant: "destructive" });
+    } finally {
+      setFirmDeleteLoading(false);
     }
   };
 
@@ -876,6 +905,7 @@ export default function Home() {
         onOpenChange={(open) => !open && setDeletingFirm(null)}
         firm={deletingFirm}
         onConfirm={handleDeleteConfirm}
+        loading={firmDeleteLoading}
       />
 
       <DeleteProductConfirmDialog
