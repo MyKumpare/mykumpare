@@ -241,8 +241,7 @@ function NewFirmForm({ existingFirms, onCreated, onCancel }) {
         return existing.includes(input) || input.includes(existing);
       })
     : [];
-  const isDuplicate = matches.length > 0;
-  const isValid = name.trim() && !isDuplicate && !saving;
+  const isValid = name.trim() && !saving;
 
   const handleCreate = async () => {
     if (!isValid) return;
@@ -275,7 +274,7 @@ function NewFirmForm({ existingFirms, onCreated, onCancel }) {
           placeholder="Enter firm name..."
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className={cn("h-9 text-sm", isDuplicate && "border-amber-400 focus-visible:ring-amber-400")}
+          className={cn("h-9 text-sm", matches.length > 0 && "border-amber-400 focus-visible:ring-amber-400")}
           autoFocus
         />
         {matches.length > 0 && (
