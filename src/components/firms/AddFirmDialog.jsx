@@ -1220,7 +1220,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
             ) : isAddMode ? (
               <>
                 <Button variant="outline" onClick={handleClose}>Cancel</Button>
-                <Button onClick={handleSubmit} disabled={!isValid} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                <Button onClick={() => handleSubmit()} disabled={!isValid} className="bg-indigo-600 hover:bg-indigo-700 text-white">
                   Add Firm
                 </Button>
               </>
