@@ -10,6 +10,12 @@ const STATUS_STYLES = {
   "Rejected": "bg-red-50 text-red-700 border-red-200",
 };
 
+const PROCESS_STYLES = {
+  "Not Started": "bg-gray-100 text-gray-600 border-gray-200",
+  "In-process": "bg-amber-50 text-amber-700 border-amber-200",
+  "Completed": "bg-emerald-50 text-emerald-700 border-emerald-200",
+};
+
 // Shows every DueDiligence record where this contact is the primary or secondary
 // analyst. Each row edits the ORIGINAL record (updates propagate to the source).
 export default function ContactDueDiligenceTab({ contactId, contactName }) {
@@ -90,6 +96,9 @@ export default function ContactDueDiligenceTab({ contactId, contactName }) {
                   <span className="text-sm font-medium text-gray-800 truncate">{rec.product_name || "—"}</span>
                   <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${STATUS_STYLES[rec.status] || STATUS_STYLES["Pipeline"]}`}>
                     {rec.status}
+                  </span>
+                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${PROCESS_STYLES[rec.process_status] || PROCESS_STYLES["Not Started"]}`}>
+                    {rec.process_status || "Not Started"}
                   </span>
                   <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded border bg-indigo-50 text-indigo-700 border-indigo-200">
                     {rec._role} Analyst

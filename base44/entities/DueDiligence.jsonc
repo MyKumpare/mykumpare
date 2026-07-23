@@ -28,6 +28,16 @@
       "default": "Pipeline",
       "description": "Due diligence status"
     },
+    "process_status": {
+      "type": "string",
+      "enum": [
+        "Not Started",
+        "In-process",
+        "Completed"
+      ],
+      "default": "Not Started",
+      "description": "Due diligence process status"
+    },
     "primary_analyst_contact_id": {
       "type": "string",
       "description": "ID of the primary analyst (a contact from the firm)"

@@ -17,6 +17,7 @@ import { findContactDuplicates } from "@/components/contacts/contactDuplicateChe
 import { useFirmOwner } from "@/components/admin/useFirmOwner";
 
 const DD_STATUSES = ["Pipeline", "Buy List", "Rejected"];
+const PROCESS_STATUSES = ["Not Started", "In-process", "Completed"];
 const PRODUCT_TYPES = ["Investment Manager Product", "Multi-Manager Product"];
 
 const contactName = (c) => [c?.first_name, c?.last_name].filter(Boolean).join(" ").trim();
@@ -228,6 +229,7 @@ function NewProductForm({ firmId, firmName, existingProducts, onCreated, onCance
 export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firmName, products = [], contacts = [], editingRecord, onSubmit }) {
   const [productId, setProductId] = useState("");
   const [status, setStatus] = useState("Pipeline");
+  const [processStatus, setProcessStatus] = useState("Not Started");
   const [primaryId, setPrimaryId] = useState("");
   const [secondaryId, setSecondaryId] = useState("");
   const [productMode, setProductMode] = useState("select"); // "select" | "new"
@@ -282,11 +284,13 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
     if (editingRecord) {
       setProductId(editingRecord.product_id || "");
       setStatus(editingRecord.status || "Pipeline");
+      setProcessStatus(editingRecord.process_status || "Not Started");
       setPrimaryId(editingRecord.primary_analyst_contact_id || "");
       setSecondaryId(editingRecord.secondary_analyst_contact_id || "");
     } else {
       setProductId("");
       setStatus("Pipeline"); // auto-select Pipeline for new due diligence
+      setProcessStatus("Not Started");
       setPrimaryId("");
       setSecondaryId("");
     }
@@ -350,6 +354,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
       product_id: productId,
       product_name: selectedProduct?.name || "",
       status,
+      process_status: processStatus,
       primary_analyst_contact_id: primaryId,
       primary_analyst_name: contactName(primaryContact) || "",
       secondary_analyst_contact_id: secondaryId || undefined,
@@ -423,6 +428,17 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
               <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {DD_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Process status */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-gray-700">Due Diligence Process Status</Label>
+            <Select value={processStatus} onValueChange={setProcessStatus}>
+              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {PROCESS_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>

@@ -11,6 +11,12 @@ const STATUS_STYLES = {
   "Rejected": "bg-red-50 text-red-700 border-red-200",
 };
 
+const PROCESS_STYLES = {
+  "Not Started": "bg-gray-100 text-gray-600 border-gray-200",
+  "In-process": "bg-amber-50 text-amber-700 border-amber-200",
+  "Completed": "bg-emerald-50 text-emerald-700 border-emerald-200",
+};
+
 export default function FirmDueDiligenceTab({ firmId, firmName, contacts = [] }) {
   const queryClient = useQueryClient();
   const [showDialog, setShowDialog] = useState(false);
@@ -80,6 +86,9 @@ export default function FirmDueDiligenceTab({ firmId, firmName, contacts = [] })
                   <span className="text-sm font-medium text-gray-800 truncate">{rec.product_name || "—"}</span>
                   <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${STATUS_STYLES[rec.status] || STATUS_STYLES["Pipeline"]}`}>
                     {rec.status}
+                  </span>
+                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${PROCESS_STYLES[rec.process_status] || PROCESS_STYLES["Not Started"]}`}>
+                    {rec.process_status || "Not Started"}
                   </span>
                 </div>
                 <div className="text-xs text-gray-500 mt-0.5">
