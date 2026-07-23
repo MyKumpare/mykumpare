@@ -17,6 +17,11 @@ import { cn } from "@/lib/utils";
 // Shared inline "Add IM Product" dialog that uses the SAME validation as
 // AddProductDialog: requires firm + name, and blocks duplicate product names
 // within the same firm (case-insensitive substring match).
+// Capitalize the first letter of each word in a product name (preserves acronyms/numbers like "S&P 500").
+function titleCaseProductName(str) {
+  return str.replace(/\b([a-z])/g, (m) => m.toUpperCase());
+}
+
 export default function AddIMProductValidatedDialog({
   open,
   onOpenChange,
@@ -66,7 +71,7 @@ export default function AddIMProductValidatedDialog({
     try {
       const firmName = firms.find((f) => f.id === firmId)?.name || "";
       const product = await base44.entities.Product.create({
-        name: name.trim(),
+        name: titleCaseProductName(name.trim()),
         firm_id: firmId,
         firm_name: firmName,
         product_type: "Investment Manager Product",

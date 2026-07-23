@@ -38,6 +38,11 @@ const PRODUCT_TYPE_TO_FIRM_TYPE = {
 
 const PRODUCT_TYPES = ["Investment Manager Product", "Multi-Manager Product"];
 
+// Capitalize the first letter of each word in a product name (preserves acronyms/numbers like "S&P 500").
+function titleCaseProductName(str) {
+  return str.replace(/\b([a-z])/g, (m) => m.toUpperCase());
+}
+
 const EMPTY_CLASSIFICATIONS = {
   asset_class: "",
   geography: "",
@@ -252,7 +257,7 @@ export default function AddProductDialog({
       product_type: productType,
       firm_id: firmId,
       firm_name: selectedFirm?.name || "",
-      name: productName.trim(),
+      name: isAddMode ? titleCaseProductName(productName.trim()) : productName.trim(),
       description,
       ...classifications,
       inv_desc_edge: investmentDescriptions.investment_edge || "",

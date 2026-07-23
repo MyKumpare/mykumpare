@@ -23,6 +23,11 @@ const FIRM_TYPES = ["Manager of Managers", "Investment Manager", "Allocator", "I
 
 const contactName = (c) => [c?.first_name, c?.last_name].filter(Boolean).join(" ").trim();
 
+// Capitalize the first letter of each word in a product name (preserves acronyms/numbers like "S&P 500").
+function titleCaseProductName(str) {
+  return str.replace(/\b([a-z])/g, (m) => m.toUpperCase());
+}
+
 // Reusable searchable single-select with an optional footer action.
 function SearchableSelect({ options, value, onChange, placeholder, excludeValues = [], footer }) {
   const [open, setOpen] = useState(false);
@@ -172,7 +177,7 @@ function NewProductForm({ firmId, firmName, existingProducts, onCreated, onCance
     setError("");
     try {
       const created = await base44.entities.Product.create({
-        name: name.trim(),
+        name: titleCaseProductName(name.trim()),
         product_type: productType,
         firm_id: firmId,
         firm_name: firmName,
