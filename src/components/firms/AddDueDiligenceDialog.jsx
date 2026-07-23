@@ -164,7 +164,7 @@ function NewProductForm({ firmId, firmName, existingProducts, onCreated, onCance
       })
     : [];
   const isDuplicate = matches.length > 0;
-  const isValid = name.trim() && productType && !isDuplicate && !saving;
+  const isValid = name.trim() && productType && firmId && !isDuplicate && !saving;
 
   const handleCreate = async () => {
     if (!isValid) return;
@@ -226,6 +226,9 @@ function NewProductForm({ firmId, firmName, existingProducts, onCreated, onCance
           </SelectContent>
         </Select>
       </div>
+      {!firmId && (
+        <p className="text-xs text-red-600">Select a firm before adding a product.</p>
+      )}
       {error && (
         <p className="text-xs text-red-600">{error}</p>
       )}

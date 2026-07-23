@@ -461,6 +461,11 @@ export default function AddProductDialog({
                         No {PRODUCT_TYPE_TO_FIRM_TYPE[productType]} firms found. Add one first.
                       </p>
                     )}
+                    {productType && eligibleFirms.length > 0 && !firmId && (
+                      <p className="text-sm text-red-600 mt-1">
+                        A related firm is required to create this product.
+                      </p>
+                    )}
                   </>
                 )}
               </div>

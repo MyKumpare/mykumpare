@@ -145,6 +145,11 @@ export default function AddIMProductValidatedDialog({
                 No Investment Manager firms found. Add one first.
               </p>
             )}
+            {imFirms.length > 0 && !firmId && (
+              <p className="text-xs text-red-600 mt-1">
+                A related firm is required to create this product.
+              </p>
+            )}
           </div>
         </div>
         <DialogFooter className="gap-2 pt-2 border-t">
