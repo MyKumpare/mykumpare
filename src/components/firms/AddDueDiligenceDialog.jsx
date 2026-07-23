@@ -233,6 +233,7 @@ function NewFirmForm({ existingFirms, onCreated, onCancel }) {
   const [name, setName] = useState("");
   const [firmType, setFirmType] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   const matches = name.trim().length >= 2
     ? existingFirms.filter((f) => {
@@ -246,6 +247,7 @@ function NewFirmForm({ existingFirms, onCreated, onCancel }) {
   const handleCreate = async () => {
     if (!isValid) return;
     setSaving(true);
+    setError("");
     try {
       const payload = { name: name.trim() };
       if (firmType) {
@@ -257,6 +259,7 @@ function NewFirmForm({ existingFirms, onCreated, onCancel }) {
       onCreated?.(created);
     } catch (err) {
       console.error(err);
+      setError(err?.message || "Failed to create firm. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -302,6 +305,9 @@ function NewFirmForm({ existingFirms, onCreated, onCancel }) {
           </SelectContent>
         </Select>
       </div>
+      {error && (
+        <p className="text-xs text-red-600">{error}</p>
+      )}
       <div className="flex gap-2 justify-end pt-0.5">
         <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={onCancel}>Cancel</Button>
         <Button type="button" size="sm" className="h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white" disabled={!isValid} onClick={handleCreate}>
