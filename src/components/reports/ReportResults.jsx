@@ -8,6 +8,7 @@ import {
 } from "recharts";
 import { DATA_SOURCES } from "./reportConfig";
 import { buildTableRows, sortData, runComputations, generateCSV, downloadCSV } from "./reportEngine";
+import { useFirmOwner } from "@/components/admin/useFirmOwner";
 
 const CHART_COLORS = ["#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#ef4444", "#6366f1", "#14b8a6"];
 
@@ -165,6 +166,7 @@ function ComputationTable({ computation }) {
 }
 
 export default function ReportResults({ config, data, onBack }) {
+  const firmOwner = useFirmOwner();
   const fieldDefs = DATA_SOURCES[config.data_source]?.fields || [];
 
   const sortedData = useMemo(
@@ -228,6 +230,17 @@ export default function ReportResults({ config, data, onBack }) {
 
       {/* Report title */}
       <div className="pdf-block">
+        {(firmOwner?.logo_url || firmOwner?.name) && (
+          <div className="flex items-center gap-3 mb-3 pb-3 border-b border-gray-200">
+            {firmOwner.logo_url && (
+              <img src={firmOwner.logo_url} alt={firmOwner.name || "logo"} className="w-12 h-12 object-contain" />
+            )}
+            <div>
+              {firmOwner.name && <p className="text-sm font-bold text-gray-800">{firmOwner.name}</p>}
+              {firmOwner.primary_contact_name && <p className="text-[11px] text-gray-500">{firmOwner.primary_contact_name}</p>}
+            </div>
+          </div>
+        )}
         <h2 className="text-lg font-bold text-gray-800">{config.name}</h2>
         {config.description && <p className="text-sm text-gray-500">{config.description}</p>}
         <p className="text-xs text-gray-400 mt-1">

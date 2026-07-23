@@ -41,6 +41,7 @@ import ActivityDetailModal from "../components/activity/ActivityDetailModal";
 import FollowUpTaskPickerModal from "../components/activity/FollowUpTaskPickerModal";
 import TaskDetailModal from "../components/activity/TaskDetailModal";
 import UserProfileDialog from "../components/user/UserProfileDialog";
+import { useFirmOwner } from "@/components/admin/useFirmOwner";
 
 const FIRM_TYPES = [
   "Manager of Managers",
@@ -54,6 +55,7 @@ const FIRM_TYPES = [
 export default function Home() {
   const { isAuthenticated, user, navigateToLogin, logout, updateUser } = useAuth();
   const navigate = useNavigate();
+  const firmOwner = useFirmOwner();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingFirm, setEditingFirm] = useState(null);
   const [preselectedType, setPreselectedType] = useState(null);
@@ -475,10 +477,14 @@ export default function Home() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2.5 flex items-center gap-3">
           {/* Logo + title */}
           <div className="flex items-center gap-2 mr-3 flex-shrink-0">
-            <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center">
-              <Building className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-base font-bold tracking-tight hidden sm:block">MyKumpare</span>
+            {firmOwner?.logo_url ? (
+              <img src={firmOwner.logo_url} alt={firmOwner.name || "logo"} className="w-8 h-8 rounded-lg bg-white object-contain p-0.5 border border-white/30" />
+            ) : (
+              <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center">
+                <Building className="w-4 h-4 text-white" />
+              </div>
+            )}
+            <span className="text-base font-bold tracking-tight hidden sm:block">{firmOwner?.name || "MyKumpare"}</span>
           </div>
 
           {/* Search bar inline in header */}
