@@ -18,8 +18,8 @@ function BenchmarkItem({ b, onClick }) {
   );
 }
 
-function CollapsibleGroup({ label, labelClass = "text-xs font-semibold text-indigo-600 uppercase tracking-wide", indent = 0, children }) {
-  const [open, setOpen] = useState(true);
+function CollapsibleGroup({ label, labelClass = "text-xs font-semibold text-indigo-600 uppercase tracking-wide", indent = 0, defaultOpen = true, children }) {
+  const [open, setOpen] = useState(defaultOpen);
   return (
     <div style={{ paddingLeft: indent * 8 }}>
       <button
@@ -108,81 +108,30 @@ export default function UtilitySection({ deletedCount }) {
       {expanded && (
         <div className="space-y-2 pl-2 border-l-2 border-gray-100">
           {/* Benchmark */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                Benchmark
-              </span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-6 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs"
-                onClick={() => { setSelectedBenchmark(null); setBenchmarkDialogOpen(true); }}
-              >
-                <Plus className="w-3 h-3" />
-                Add Benchmark
-              </Button>
+          <CollapsibleGroup label="Benchmark" defaultOpen={false} labelClass="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+            <div className="space-y-2">
+              <div className="flex items-center justify-end">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs"
+                  onClick={() => { setSelectedBenchmark(null); setBenchmarkDialogOpen(true); }}
+                >
+                  <Plus className="w-3 h-3" />
+                  Add Benchmark
+                </Button>
+              </div>
+...
             </div>
-            {benchmarks.length === 0 ? (
-              <div className="text-xs text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-lg">
-                No benchmarks yet
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {/* Equity benchmarks grouped by Region → Market Cap → Style */}
-                {groupedBenchmarks.hasEquity && (
-                  <CollapsibleGroup label="Equity">
-                    <div className="space-y-1 ml-1">
-                      {Object.keys(groupedBenchmarks.equityGroups).sort().map(region => (
-                        <CollapsibleGroup key={region} label={region} labelClass="text-xs font-medium text-gray-600" indent={1}>
-                          <div className="space-y-1 ml-1">
-                            {Object.keys(groupedBenchmarks.equityGroups[region]).sort().map(mc => (
-                              <CollapsibleGroup key={mc} label={mc} labelClass="text-xs text-gray-500 italic" indent={2}>
-                                <div className="space-y-1 ml-1">
-                                  {Object.keys(groupedBenchmarks.equityGroups[region][mc]).sort().map(style => (
-                                    <CollapsibleGroup key={style} label={style} labelClass="text-xs text-gray-400 italic" indent={3}>
-                                      <div className="space-y-1 ml-2">
-                                        {groupedBenchmarks.equityGroups[region][mc][style].map(b => (
-                                          <BenchmarkItem key={b.id} b={b} onClick={() => { setSelectedBenchmark(b); setBenchmarkDialogOpen(true); }} />
-                                        ))}
-                                      </div>
-                                    </CollapsibleGroup>
-                                  ))}
-                                </div>
-                              </CollapsibleGroup>
-                            ))}
-                          </div>
-                        </CollapsibleGroup>
-                      ))}
-                    </div>
-                  </CollapsibleGroup>
-                )}
-                {/* Non-equity benchmarks grouped by Asset Class */}
-                {groupedBenchmarks.hasNonEquity && (
-                  <div className="space-y-1">
-                    {Object.keys(groupedBenchmarks.nonEquityGroups).sort().map(ac => (
-                      <CollapsibleGroup key={ac} label={ac}>
-                        <div className="space-y-1 ml-1">
-                          {groupedBenchmarks.nonEquityGroups[ac].map(b => (
-                            <BenchmarkItem key={b.id} b={b} onClick={() => { setSelectedBenchmark(b); setBenchmarkDialogOpen(true); }} />
-                          ))}
-                        </div>
-                      </CollapsibleGroup>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          </CollapsibleGroup>
 
           {/* Contact duplicates review */}
-          <div className="space-y-2 pt-2">
-            <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-              Contact Cleanup
-            </span>
-            <DuplicateContactsReview />
-          </div>
+          <CollapsibleGroup label="Contact Cleanup" defaultOpen={false} labelClass="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+            <div className="space-y-2 pt-2">
+              <DuplicateContactsReview />
+            </div>
+          </CollapsibleGroup>
 
         </div>
       )}
