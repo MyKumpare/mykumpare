@@ -40,6 +40,7 @@ import ActivityLogPickerModal from "../components/activity/ActivityLogPickerModa
 import ActivityDetailModal from "../components/activity/ActivityDetailModal";
 import FollowUpTaskPickerModal from "../components/activity/FollowUpTaskPickerModal";
 import TaskDetailModal from "../components/activity/TaskDetailModal";
+import UserProfileDialog from "../components/user/UserProfileDialog";
 
 const FIRM_TYPES = [
   "Manager of Managers",
@@ -51,7 +52,7 @@ const FIRM_TYPES = [
 ];
 
 export default function Home() {
-  const { isAuthenticated, user, navigateToLogin, logout } = useAuth();
+  const { isAuthenticated, user, navigateToLogin, logout, updateUser } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingFirm, setEditingFirm] = useState(null);
   const [preselectedType, setPreselectedType] = useState(null);
@@ -96,6 +97,7 @@ export default function Home() {
   const [viewingTask, setViewingTask] = useState(null);
   const [reportsPickerOpen, setReportsPickerOpen] = useState(false);
   const [documentsPickerOpen, setDocumentsPickerOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const portfoliosRef = useRef(null);
   const firmsRef = useRef(null);
@@ -198,11 +200,21 @@ export default function Home() {
     return () => subs.forEach((unsub) => unsub && unsub());
   }, [queryClient]);
 
-  // Resolve the signed-in user's contact (by email) for photo + display name
-  const myContact = user?.email
+  // Resolve the signed-in user's contact: prefer the explicitly linked record,
+  // fall back to an email match. Used for the header photo + display name.
+  const linkedContact = user?.linked_contact_id
+    ? contacts.find(c => c.id === user.linked_contact_id && !c.deleted_at)
+    : null;
+  const emailContact = user?.email
     ? contacts.find(c => !c.deleted_at && (c.email || "").toLowerCase() === user.email.toLowerCase())
     : null;
+  const myContact = linkedContact || emailContact;
   const userPhoto = myContact?.photo_url;
+
+  const handleSaveProfileLink = async ({ linked_firm_id, linked_contact_id }) => {
+    await updateUser({ linked_firm_id, linked_contact_id });
+    toast({ title: "Profile updated", description: "Your firm & contact link have been saved." });
+  };
   const userDisplayName = user?.full_name || (myContact ? [myContact.first_name, myContact.last_name].filter(Boolean).join(" ") : "") || "";
   const userContactFullName = myContact
     ? [myContact.salutation, myContact.first_name, myContact.middle_name, myContact.last_name, myContact.suffix].filter(Boolean).join(" ")
@@ -528,21 +540,38 @@ export default function Home() {
             </button>
           </div>
 
-          {/* Signed-in user: photo + name above email */}
+          {/* Signed-in user: click to open profile (logout + firm/contact link) */}
           {isAuthenticated && user?.email && (
-            <div className="hidden lg:flex items-center gap-2 ml-2 flex-shrink-0">
-              {userPhoto ? (
-                <img src={userPhoto} alt="" className="w-7 h-7 rounded-full object-cover border border-white/30" />
-              ) : (
-                <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-[10px] font-bold text-white border border-white/30">
-                  {(userDisplayName || user.email).slice(0, 2).toUpperCase()}
+            <>
+              <button
+                onClick={() => setProfileOpen(true)}
+                title="My profile"
+                className="hidden lg:flex items-center gap-2 ml-2 flex-shrink-0 rounded-lg px-2 py-1 hover:bg-white/15 transition-colors text-left"
+              >
+                {userPhoto ? (
+                  <img src={userPhoto} alt="" className="w-7 h-7 rounded-full object-cover border border-white/30" />
+                ) : (
+                  <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-[10px] font-bold text-white border border-white/30">
+                    {(userDisplayName || user.email).slice(0, 2).toUpperCase()}
+                  </div>
+                )}
+                <div className="flex flex-col leading-tight">
+                  {userDisplayName && <span className="text-[11px] text-white/90 font-medium">{userDisplayName}</span>}
+                  <span className="text-[10px] text-white/50">{userContactFullName || user.email}</span>
                 </div>
-              )}
-              <div className="flex flex-col leading-tight">
-                {userDisplayName && <span className="text-[11px] text-white/90 font-medium">{userDisplayName}</span>}
-                <span className="text-[10px] text-white/50">{userContactFullName || user.email}</span>
-              </div>
-            </div>
+              </button>
+              <button
+                onClick={() => setProfileOpen(true)}
+                title="My profile"
+                className="sm:hidden flex items-center justify-center w-8 h-8 rounded-full bg-white/20 border border-white/30 ml-1 shrink-0"
+              >
+                {userPhoto ? (
+                  <img src={userPhoto} alt="" className="w-7 h-7 rounded-full object-cover" />
+                ) : (
+                  <span className="text-[10px] font-bold text-white">{(userDisplayName || user.email).slice(0, 2).toUpperCase()}</span>
+                )}
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -950,6 +979,17 @@ export default function Home() {
         onOpenChange={(o) => { if (!o) setEditingBenchmark(null); setBenchmarkDialogOpen(o); }}
         benchmarks={benchmarks}
         editingBenchmark={editingBenchmark}
+      />
+
+      {/* User profile: logout + firm/contact linking */}
+      <UserProfileDialog
+        open={profileOpen}
+        onOpenChange={setProfileOpen}
+        user={user}
+        firms={firms}
+        contacts={contacts}
+        onSaveLinked={handleSaveProfileLink}
+        onLogout={() => { setProfileOpen(false); logout(); }}
       />
 
       {/* AI Assistant */}

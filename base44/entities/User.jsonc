@@ -7,6 +7,14 @@
         "admin",
         "user"
       ]
+    },
+    "linked_firm_id": {
+      "type": "string",
+      "description": "ID of the firm this user is affiliated with (self-linked from profile)"
+    },
+    "linked_contact_id": {
+      "type": "string",
+      "description": "ID of the contact record this user is linked to (self-linked from profile)"
     }
   },
   "required": [
