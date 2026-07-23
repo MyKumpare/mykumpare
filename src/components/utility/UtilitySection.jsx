@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search, ArrowLeft, Users, Sparkles } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -47,14 +47,21 @@ function CollapsibleGroup({ label, labelClass = "text-xs font-semibold text-indi
 
 export default function UtilitySection({ deletedCount, forceExpanded = false }) {
   const [expanded, setExpanded] = useState(false);
+  // 'menu' = selection screen, 'benchmark' = benchmark list + search, 'cleanup' = contact cleanup
+  const [view, setView] = useState("menu");
   const [benchmarkDialogOpen, setBenchmarkDialogOpen] = useState(false);
   const [selectedBenchmark, setSelectedBenchmark] = useState(null);
   const [benchmarkQuery, setBenchmarkQuery] = useState("");
+  const [cleanupStarted, setCleanupStarted] = useState(false);
 
-  // Expand when the parent requests it (e.g. clicking the Utilities header icon),
+  // Expand + reset to selection menu when the parent requests it (e.g. clicking the Utilities header icon),
   // while still letting the user collapse it manually afterwards.
   useEffect(() => {
-    if (forceExpanded) setExpanded(true);
+    if (forceExpanded) {
+      setExpanded(true);
+      setView("menu");
+      setCleanupStarted(false);
+    }
   }, [forceExpanded]);
 
   const { data: benchmarks = [] } = useQuery({
@@ -74,8 +81,6 @@ export default function UtilitySection({ deletedCount, forceExpanded = false }) 
     );
   }, [benchmarks, benchmarkQuery]);
 
-  // Group benchmarks: Equity → by region → by market_cap → by style (all ascending)
-  // Non-equity → by asset_class → by name
   const groupedBenchmarks = useMemo(() => {
     const equityBenchmarks = filteredBenchmarks
       .filter(b => b.asset_class === "Equity")
@@ -138,11 +143,47 @@ export default function UtilitySection({ deletedCount, forceExpanded = false }) 
         </button>
       </div>
 
-      {/* Utility options */}
       {expanded && (
-        <div className="space-y-2 pl-2 border-l-2 border-gray-100">
-          {/* Benchmark */}
-          <CollapsibleGroup label="Benchmark" defaultOpen={true} labelClass="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+        <div className="pl-2 border-l-2 border-gray-100">
+          {/* Sub-view navigation */}
+          {view !== "menu" && (
+            <button
+              onClick={() => { setView("menu"); setCleanupStarted(false); }}
+              className="flex items-center gap-1 mb-2 text-xs text-gray-500 hover:text-gray-700"
+            >
+              <ArrowLeft className="w-3 h-3" />
+              Back to selection
+            </button>
+          )}
+
+          {/* Selection menu */}
+          {view === "menu" && (
+            <div className="grid grid-cols-2 gap-2 py-1">
+              <button
+                onClick={() => setView("benchmark")}
+                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
+              >
+                <div className="w-9 h-9 rounded-full bg-indigo-50 flex items-center justify-center">
+                  <Gauge className="w-4.5 h-4.5 text-indigo-600" />
+                </div>
+                <span className="text-sm font-semibold text-gray-700">Benchmark</span>
+                <span className="text-[11px] text-gray-400">Search & manage benchmarks</span>
+              </button>
+              <button
+                onClick={() => setView("cleanup")}
+                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
+              >
+                <div className="w-9 h-9 rounded-full bg-rose-50 flex items-center justify-center">
+                  <Users className="w-4.5 h-4.5 text-rose-600" />
+                </div>
+                <span className="text-sm font-semibold text-gray-700">Contact Cleanup</span>
+                <span className="text-[11px] text-gray-400">Review & merge duplicates</span>
+              </button>
+            </div>
+          )}
+
+          {/* Benchmark view */}
+          {view === "benchmark" && (
             <div className="space-y-2">
               <div className="flex items-center justify-end">
                 <Button
@@ -157,14 +198,13 @@ export default function UtilitySection({ deletedCount, forceExpanded = false }) 
                 </Button>
               </div>
 
-              {/* Benchmark search */}
               <div className="relative">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
                 <input
                   type="text"
                   value={benchmarkQuery}
                   onChange={(e) => setBenchmarkQuery(e.target.value)}
-                  placeholder="Search benchmarks..."
+                  placeholder="Search by name, region, cap, style..."
                   className="w-full pl-8 pr-3 h-8 rounded-lg bg-white border border-gray-200 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400"
                 />
               </div>
@@ -217,15 +257,33 @@ export default function UtilitySection({ deletedCount, forceExpanded = false }) 
                 </div>
               )}
             </div>
-          </CollapsibleGroup>
+          )}
 
-          {/* Contact duplicates review */}
-          <CollapsibleGroup label="Contact Cleanup" defaultOpen={false} labelClass="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-            <div className="space-y-2 pt-2">
-              <DuplicateContactsReview />
+          {/* Contact cleanup view */}
+          {view === "cleanup" && (
+            <div className="space-y-3 py-1">
+              {!cleanupStarted ? (
+                <div className="flex flex-col items-center justify-center gap-3 p-6 rounded-xl border border-dashed border-gray-200 bg-white text-center">
+                  <div className="w-10 h-10 rounded-full bg-rose-50 flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-rose-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700">Contact Cleanup</p>
+                    <p className="text-xs text-gray-400 mt-1">Find and merge duplicate contact records.</p>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={() => setCleanupStarted(true)}
+                    className="bg-rose-600 hover:bg-rose-700 text-white"
+                  >
+                    Start Contact Cleanup
+                  </Button>
+                </div>
+              ) : (
+                <DuplicateContactsReview />
+              )}
             </div>
-          </CollapsibleGroup>
-
+          )}
         </div>
       )}
 
