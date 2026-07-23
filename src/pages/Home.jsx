@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, FileText, Files, ShieldCheck } from "lucide-react";
+import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, FileText, Files, ShieldCheck, X } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -491,7 +491,7 @@ export default function Home() {
             <span className="text-base font-bold tracking-tight hidden sm:block">{firmOwner?.name || "MyKumpare"}</span>
           </div>
 
-          {/* Search bar inline in header */}
+          {/* Search bar inline in header — opens an expanded overlay on focus */}
           <div className="flex-1 relative max-w-xl">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/50" />
             <input
@@ -500,33 +500,68 @@ export default function Home() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => setSearchFocused(true)}
-              onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
-              className="w-full pl-9 pr-3 h-8 rounded-lg bg-white/15 border border-white/20 text-white placeholder-white/50 text-sm focus:outline-none focus:bg-white/25 focus:border-white/40 transition-colors"
+              className="w-full pl-9 pr-3 h-8 rounded-lg bg-white/15 border border-white/20 text-white placeholder-white/50 text-sm focus:outline-none focus:bg-white/25 focus:border-white/40 transition-colors cursor-pointer"
             />
-            {searchFocused && searchQuery.trim() && (
-              <div className="absolute top-full left-0 right-0 mt-1 z-50">
-                <SearchResults
-                  query={searchQuery}
-                  firms={firms}
-                  products={products}
-                  contacts={contacts}
-                  portfolios={portfolios}
-                  analyses={analyses}
-                  activities={activities}
-                  followUpTasks={followUpTasks}
-                  documents={documents}
-                  onFirmClick={(firm) => { setSearchQuery(""); handleEdit(firm); }}
-                  onContactClick={(contact) => { setSearchQuery(""); setViewingContact(contact); }}
-                  onProductClick={(product) => { setSearchQuery(""); handleEditProduct(product); }}
-                  onPortfolioClick={(portfolio) => { setSearchQuery(""); setPreselectedAllocatorId(portfolio.firm_id); setPortfolioDialogOpen(true); }}
-                  onAnalysisClick={(analysis) => { setSearchQuery(""); setEditingAnalysis(analysis); }}
-                  onActivityClick={(activity) => { setSearchQuery(""); setViewingActivity(activity); }}
-                  onTaskClick={(task) => { setSearchQuery(""); setViewingTask(task); }}
-                  onDocumentClick={(doc) => { setSearchQuery(""); handleDocumentClick(doc); }}
-                />
-              </div>
-            )}
           </div>
+
+          {/* Expanded search overlay — auto-opens on focus so the user can
+              see what they type and browse results in a roomy panel. */}
+          {searchFocused && (
+            <div className="fixed inset-0 z-[60] flex items-start justify-center pt-[12vh] px-4">
+              <div
+                className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+                onClick={() => setSearchFocused(false)}
+              />
+              <div className="relative w-full max-w-2xl">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    autoFocus
+                    placeholder="Search firms, products, contacts, documents..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Escape") setSearchFocused(false); }}
+                    className="w-full pl-10 pr-10 h-12 rounded-xl bg-white border border-gray-200 text-gray-900 placeholder-gray-400 text-base shadow-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <button
+                    onClick={() => setSearchFocused(false)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+                    title="Close search"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="relative mt-2">
+                  {searchQuery.trim() ? (
+                    <SearchResults
+                      query={searchQuery}
+                      firms={firms}
+                      products={products}
+                      contacts={contacts}
+                      portfolios={portfolios}
+                      analyses={analyses}
+                      activities={activities}
+                      followUpTasks={followUpTasks}
+                      documents={documents}
+                      onFirmClick={(firm) => { setSearchQuery(""); setSearchFocused(false); handleEdit(firm); }}
+                      onContactClick={(contact) => { setSearchQuery(""); setSearchFocused(false); setViewingContact(contact); }}
+                      onProductClick={(product) => { setSearchQuery(""); setSearchFocused(false); handleEditProduct(product); }}
+                      onPortfolioClick={(portfolio) => { setSearchQuery(""); setSearchFocused(false); setPreselectedAllocatorId(portfolio.firm_id); setPortfolioDialogOpen(true); }}
+                      onAnalysisClick={(analysis) => { setSearchQuery(""); setSearchFocused(false); setEditingAnalysis(analysis); }}
+                      onActivityClick={(activity) => { setSearchQuery(""); setSearchFocused(false); setViewingActivity(activity); }}
+                      onTaskClick={(task) => { setSearchQuery(""); setSearchFocused(false); setViewingTask(task); }}
+                      onDocumentClick={(doc) => { setSearchQuery(""); setSearchFocused(false); handleDocumentClick(doc); }}
+                    />
+                  ) : (
+                    <div className="bg-white border border-gray-200 rounded-xl shadow-xl p-6 text-sm text-gray-400 text-center">
+                      Start typing to search across firms, products, contacts, portfolios, activities, tasks and documents.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Desktop nav — single row of icon buttons */}
           <div className="hidden sm:flex items-center gap-0.5 ml-2">
