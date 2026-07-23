@@ -1,6 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import {
-  BROWSER_HEADERS, extractLinkedinUrls, pickBestImage, rehostImage, fetchFirmPages,
+  BROWSER_HEADERS, extractLinkedinUrls, pickBestImage, pickBestImageOnPage, pickHeadshotByName,
+  rehostImage, fetchFirmPages, fetchPage, linkedinSlug,
 } from '../../shared/linkedinScrape.ts';
 
 // Normalize a LinkedIn personal-profile URL into a clean canonical form.
@@ -63,10 +64,13 @@ Deno.serve(async (req) => {
 
     const firstNameLower = (first_name || '').toLowerCase();
     const lastNameLower = (last_name || '').toLowerCase();
+    const targetSlug = linkedinSlug(profileUrl);
 
-    // ── Strategy 1: Scrape the contact's firm website for the headshot
-    // sitting near this exact LinkedIn profile link. Firm team/bio pages host
-    // headshots publicly, so this is the most reliable path. ──
+    // ── Strategy 1: Scrape the contact's firm website for the headshot near
+    // this LinkedIn profile link. Matches by profile slug (so trailing
+    // slashes, www/locale variants still match), extracts lazy-load + CSS
+    // background images, and falls back to the best headshot on the whole
+    // page or an individual bio page linked nearby. ──
     let websiteUrl = website;
     if (!websiteUrl && firm_id) {
       try {
@@ -80,16 +84,49 @@ Deno.serve(async (req) => {
       try { origin = new URL(websiteUrl).origin; } catch { origin = ''; }
       if (origin) {
         const pages = await fetchFirmPages(origin);
-        for (const html of pages) {
-          if (!html) continue;
-          const found = extractLinkedinUrls(html);
-          // Match the exact normalized URL the user entered.
-          const info = found.get(profileUrl) || found.get(profileUrl.replace('https://www.linkedin.com', 'https://linkedin.com'));
-          if (info?.rawChunk) {
-            const imgUrl = pickBestImage(info.rawChunk, info.linkOffsetInChunk, origin, firstNameLower, lastNameLower);
-            if (imgUrl) {
-              const photo_url = await rehostImage(imgUrl, origin + '/', base44);
-              if (photo_url) return Response.json({ photo_url, source: 'firm_website' });
+        for (const page of pages) {
+          if (!page?.html) continue;
+          const pageUrl = page.url;
+          const found = extractLinkedinUrls(page.html);
+          const info = targetSlug ? found.get(targetSlug) : null;
+          if (!info?.rawChunk) continue;
+
+          // 1a. Headshot near the LinkedIn link in the raw HTML chunk.
+          let imgUrl = pickBestImage(info.rawChunk, info.linkOffsetInChunk, pageUrl, firstNameLower, lastNameLower);
+          // 1b. Fall back to the best headshot-like image anywhere on the page.
+          if (!imgUrl) imgUrl = pickBestImageOnPage(page.html, pageUrl, firstNameLower, lastNameLower);
+          // 1c. Try an individual bio page linked near the LinkedIn link.
+          if (!imgUrl) {
+            const bioLinks = [...info.rawChunk.matchAll(/<a[^>]*\shref=["'](\/[^"']+)["']/gi)]
+              .map((m) => m[1])
+              .filter((href) => /bio|profile|team|member|staff|people|leadership/i.test(href))
+              .map((href) => { try { return new URL(href, pageUrl).href; } catch { return null; } })
+              .filter(Boolean);
+            for (const bioUrl of bioLinks.slice(0, 3)) {
+              const bio = await fetchPage(bioUrl);
+              if (!bio?.html) continue;
+              const bioImg = pickBestImageOnPage(bio.html, bio.url, firstNameLower, lastNameLower)
+                || pickBestImageOnPage(bio.html, bio.url, '', '');
+              if (bioImg) { imgUrl = bioImg; break; }
+            }
+          }
+          if (imgUrl) {
+            const photo_url = await rehostImage(imgUrl, pageUrl, base44);
+            if (photo_url) return Response.json({ photo_url, source: 'firm_website' });
+          }
+        }
+
+        // ── 1d. Name-based fallback: some firm "people" pages list headshots
+        // but do NOT link individual LinkedIn profiles in static HTML. Find the
+        // headshot nearest the contact's name instead. ──
+        if (targetSlug && (firstNameLower || lastNameLower)) {
+          for (const page of pages) {
+            if (!page?.html) continue;
+            if (!new RegExp(`${firstNameLower}|${lastNameLower}`, 'i').test(page.html)) continue;
+            const byName = pickHeadshotByName(page.html, page.url, firstNameLower, lastNameLower);
+            if (byName) {
+              const photo_url = await rehostImage(byName, page.url, base44);
+              if (photo_url) return Response.json({ photo_url, source: 'firm_website_name' });
             }
           }
         }
