@@ -79,6 +79,7 @@ function NewContactForm({ firmId, existingContacts, onCreated, onCancel }) {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   const draft = { first_name: firstName, last_name: lastName, email };
   const duplicates = (firstName.trim() || lastName.trim() || email.trim())
@@ -89,6 +90,7 @@ function NewContactForm({ firmId, existingContacts, onCreated, onCancel }) {
   const handleCreate = async () => {
     if (!isValid) return;
     setSaving(true);
+    setError("");
     try {
       const created = await base44.entities.Contact.create({
         first_name: firstName.trim(),
@@ -100,6 +102,7 @@ function NewContactForm({ firmId, existingContacts, onCreated, onCancel }) {
       onCreated?.(created);
     } catch (err) {
       console.error(err);
+      setError(err?.message || "Failed to create contact. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -116,6 +119,9 @@ function NewContactForm({ firmId, existingContacts, onCreated, onCancel }) {
         <Input placeholder="Last name" value={lastName} onChange={(e) => setLastName(e.target.value)} className="h-8 text-sm" />
       </div>
       <Input placeholder="Email (optional)" value={email} onChange={(e) => setEmail(e.target.value)} className="h-8 text-sm" />
+      {error && (
+        <p className="text-xs text-red-600">{error}</p>
+      )}
       {duplicates.length > 0 && (
         <div className="space-y-1">
           <p className="text-xs font-medium text-amber-600 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Potential duplicate:</p>
@@ -148,6 +154,7 @@ function NewProductForm({ firmId, firmName, existingProducts, onCreated, onCance
   const [name, setName] = useState("");
   const [productType, setProductType] = useState(PRODUCT_TYPES[0]);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   const matches = name.trim().length >= 2
     ? existingProducts.filter((p) => {
@@ -162,6 +169,7 @@ function NewProductForm({ firmId, firmName, existingProducts, onCreated, onCance
   const handleCreate = async () => {
     if (!isValid) return;
     setSaving(true);
+    setError("");
     try {
       const created = await base44.entities.Product.create({
         name: name.trim(),
@@ -174,6 +182,7 @@ function NewProductForm({ firmId, firmName, existingProducts, onCreated, onCance
       onCreated?.(created);
     } catch (err) {
       console.error(err);
+      setError(err?.message || "Failed to create product. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -217,6 +226,9 @@ function NewProductForm({ firmId, firmName, existingProducts, onCreated, onCance
           </SelectContent>
         </Select>
       </div>
+      {error && (
+        <p className="text-xs text-red-600">{error}</p>
+      )}
       <div className="flex gap-2 justify-end pt-0.5">
         <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={onCancel}>Cancel</Button>
         <Button type="button" size="sm" className="h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white" disabled={!isValid} onClick={handleCreate}>
