@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -285,6 +285,24 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const phonesValid = phones.length === 0 || phones.every(p => p.address_id && p.phone_type && p.country_code && p.area_code && p.number_mid && p.number_last);
 
   const isValid = firmTypes.length > 0 && firmName.trim() && phonesValid;
+
+  // Live similar-firm detection: surface existing firms whose name overlaps
+  // with what the user is typing, so they can see a potential duplicate before
+  // they ever click Save. Reuses the same substring-inclusion check the
+  // submit-time warning uses, so the two never disagree. Only in add mode.
+  const liveSimilarFirms = useMemo(() => {
+    if (!isAddMode || !activelyEditing) return [];
+    const input = firmName.trim().toLowerCase();
+    if (input.length < 3) return [];
+    return existingFirms
+      .filter((f) => {
+        if (f.deleted_at) return false;
+        if (editingFirm && f.id === editingFirm.id) return false;
+        const existing = (f.name || "").toLowerCase();
+        return existing.includes(input) || input.includes(existing);
+      })
+      .slice(0, 5);
+  }, [isAddMode, activelyEditing, firmName, existingFirms, editingFirm]);
 
   const NON_PRODUCT_TYPES = ["Allocator", "Trade Organizations"];
   const hideProductTabs = firmTypes.length > 0 && firmTypes.every(t => NON_PRODUCT_TYPES.includes(t));
@@ -790,6 +808,25 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                       onKeyDown={(e) => e.key === "Enter" && isValid && handleSubmit()}
                       spellCheck autoCorrect="on" autoCapitalize="words" lang="en"
                     />
+                    {liveSimilarFirms.length > 0 && (
+                      <div className="mt-1.5 rounded-md border border-amber-200 bg-amber-50 p-2 space-y-1">
+                        <p className="text-xs font-medium text-amber-700 flex items-center gap-1">
+                          <AlertTriangle className="w-3 h-3" />
+                          {liveSimilarFirms.length} similar firm{liveSimilarFirms.length > 1 ? "s" : ""} already in the system
+                        </p>
+                        <ul className="space-y-0.5">
+                          {liveSimilarFirms.map((f) => {
+                            const types = f.firm_types?.length ? f.firm_types : (f.firm_type ? [f.firm_type] : []);
+                            return (
+                              <li key={f.id} className="text-xs text-gray-700 flex items-start gap-1 flex-wrap">
+                                <span className="font-medium">{f.name}</span>
+                                {types.length > 0 && <span className="text-gray-500">— {types.join(", ")}</span>}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    )}
                   </>
                 )}
               </div>
