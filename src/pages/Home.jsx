@@ -35,6 +35,7 @@ import EditAnalysisDialog from "../components/analytics/EditAnalysisDialog";
 import GlobalActivityLogModal from "../components/activity/GlobalActivityLogModal";
 import PortfolioPickerModal from "../components/portfolios/PortfolioPickerModal";
 import FirmPickerModal from "../components/firms/FirmPickerModal";
+import DueDiligencePickerModal from "../components/firms/DueDiligencePickerModal";
 import ProductPickerModal from "../components/products/ProductPickerModal";
 import ContactPickerModal from "../components/contacts/ContactPickerModal";
 import ActivityLogPickerModal from "../components/activity/ActivityLogPickerModal";
@@ -92,6 +93,7 @@ export default function Home() {
   const [activityLogDefaultTab, setActivityLogDefaultTab] = useState("activity");
   const [portfolioPickerOpen, setPortfolioPickerOpen] = useState(false);
   const [firmPickerOpen, setFirmPickerOpen] = useState(false);
+  const [dueDiligencePickerOpen, setDueDiligencePickerOpen] = useState(false);
   const [productPickerOpen, setProductPickerOpen] = useState(false);
   const [contactPickerOpen, setContactPickerOpen] = useState(false);
   const [activityPickerOpen, setActivityPickerOpen] = useState(false);
@@ -459,7 +461,7 @@ export default function Home() {
 
   const mobileNavItems = [
     { label: "Portfolios", icon: BarChart3, ref: null, color: "text-emerald-600", activeBg: "bg-emerald-50", onClick: () => setPortfolioPickerOpen(true) },
-    { label: "Due Diligence", icon: ShieldCheck, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => setFirmPickerOpen(true) },
+    { label: "Due Diligence", icon: ShieldCheck, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => setDueDiligencePickerOpen(true) },
     { label: "Firms", icon: Building, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => setFirmPickerOpen(true) },
     { label: "Products", icon: Package, ref: null, color: "text-violet-600", activeBg: "bg-violet-50", onClick: () => setProductPickerOpen(true) },
     { label: "Contacts", icon: User, ref: null, color: "text-pink-600", activeBg: "bg-pink-50", onClick: () => setContactPickerOpen(true) },
@@ -616,9 +618,9 @@ export default function Home() {
           icon={ShieldCheck}
           iconColor="text-indigo-500"
           entityName="DueDiligence"
-          onOpen={() => setFirmPickerOpen(true)}
+          onOpen={() => setDueDiligencePickerOpen(true)}
           openLabel="Open Due Diligence"
-          description="Open the firm picker to manage due diligence records."
+          description="Open the due diligence picker to view and manage records."
           forceExpanded={allExpanded}
         />
 
@@ -969,6 +971,14 @@ export default function Home() {
         firms={firms}
         onFirmClick={(firm) => handleEdit(firm)}
         onAddFirm={() => { setEditingFirm(null); setPreselectedType(null); setDialogOpen(true); }}
+      />
+
+      <DueDiligencePickerModal
+        open={dueDiligencePickerOpen}
+        onClose={() => setDueDiligencePickerOpen(false)}
+        onFirmClick={(firmId) => { const full = firms.find(x => x.id === firmId); if (full) handleEdit(full); }}
+        onContactClick={(contact) => setViewingContact(contact)}
+        onProductClick={(product) => handleEditProduct(product)}
       />
 
       <ProductPickerModal
