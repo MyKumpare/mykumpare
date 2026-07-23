@@ -157,6 +157,7 @@ export default function ProductDueDiligenceTab({ productId, productName, firmId,
         contacts={[]}
         editingRecord={editing}
         onSubmit={handleSubmit}
+        preselectProductId={editing ? undefined : productId}
       />
     </div>
   );

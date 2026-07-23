@@ -330,7 +330,7 @@ function NewFirmForm({ existingFirms, onCreated, onCancel }) {
   );
 }
 
-export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firmName, products = [], contacts = [], editingRecord, onSubmit, firmSelectionMode = false }) {
+export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firmName, products = [], contacts = [], editingRecord, onSubmit, firmSelectionMode = false, preselectProductId = "" }) {
   const [productId, setProductId] = useState("");
   const [status, setStatus] = useState("Pipeline");
   const [processStatus, setProcessStatus] = useState("Not Started");
@@ -428,7 +428,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
       setSelectedFirmId(editingRecord.firm_id || "");
       setSelectedFirmName(editingRecord.firm_name || "");
     } else {
-      setProductId("");
+      setProductId(preselectProductId || "");
       setStatus("Pipeline"); // auto-select Pipeline for new due diligence
       setProcessStatus("Not Started");
       setPrimaryId("");
