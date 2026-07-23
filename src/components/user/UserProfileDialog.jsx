@@ -71,7 +71,8 @@ export default function UserProfileDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] flex flex-col overflow-hidden gap-0">
+        <div className="flex-1 overflow-y-auto pr-1 -mr-1 space-y-4">
         <DialogHeader>
           <DialogTitle>My Profile</DialogTitle>
           <DialogDescription>
@@ -205,7 +206,8 @@ export default function UserProfileDialog({
           </div>
         )}
 
-        <DialogFooter className="flex-row justify-between gap-2 sm:justify-between pt-2 border-t">
+        </div>
+        <DialogFooter className="flex-row justify-between gap-2 sm:justify-between pt-3 mt-2 border-t shrink-0">
           <Button
             variant="ghost"
             className="text-red-500 hover:text-red-600 hover:bg-red-50"
