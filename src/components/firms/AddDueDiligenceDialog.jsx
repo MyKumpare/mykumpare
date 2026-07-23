@@ -500,7 +500,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
       product_id: productId,
       product_name: selectedProduct?.name || "",
       status,
-      process_status: processStatus,
+      process_status: status === "Buy List" ? "Completed" : processStatus,
       primary_analyst_contact_id: primaryId,
       primary_analyst_name: contactName(primaryContact) || "",
       secondary_analyst_contact_id: secondaryId || undefined,
@@ -613,7 +613,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
           {/* Status */}
           <div className="space-y-1.5">
             <Label className="text-xs font-medium text-gray-700">Due Diligence Status</Label>
-            <Select value={status} onValueChange={setStatus}>
+            <Select value={status} onValueChange={(v) => { setStatus(v); if (v === "Buy List") setProcessStatus("Completed"); }}>
               <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {DD_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}

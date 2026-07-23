@@ -79,7 +79,11 @@ export default function DueDiligencePickerModal({ open, onClose, onFirmClick, on
   };
 
   const handleMoveCard = (rec, destColumn) => {
-    updateMutation.mutate({ id: rec.id, data: { [kanbanField]: destColumn } });
+    const updates = { [kanbanField]: destColumn };
+    if (kanbanField === "status" && destColumn === "Buy List") {
+      updates.process_status = "Completed";
+    }
+    updateMutation.mutate({ id: rec.id, data: updates });
   };
 
   const [linkedLoading, setLinkedLoading] = useState(null);
