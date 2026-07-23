@@ -20,9 +20,11 @@ export default function UserProfileDialog({
   onSaveLinked,
   onLogout,
 }) {
+  const ROLE_OPTIONS = ["admin", "user"];
   const [firmQuery, setFirmQuery] = useState("");
   const [selectedFirmId, setSelectedFirmId] = useState("");
   const [selectedContactId, setSelectedContactId] = useState("");
+  const [selectedRoles, setSelectedRoles] = useState([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -30,8 +32,25 @@ export default function UserProfileDialog({
       setSelectedFirmId(user?.linked_firm_id || "");
       setSelectedContactId(user?.linked_contact_id || "");
       setFirmQuery("");
+      // Seed the multi-select roles from the user's stored `roles` array,
+      // falling back to the built-in single `role` so the picker reflects
+      // what's currently in effect for tagging.
+      const base = Array.isArray(user?.roles) && user.roles.length > 0
+        ? user.roles
+        : user?.role ? [user.role] : [];
+      setSelectedRoles(base);
     }
   }, [open, user]);
+
+  const toggleRole = (r) => {
+    setSelectedRoles((prev) => (prev.includes(r) ? prev.filter((x) => x !== r) : [...prev, r].sort()));
+  };
+
+  const rolesEqual = (a, b) => {
+    const sa = [...(a || [])].sort().join(",");
+    const sb = [...(b || [])].sort().join(",");
+    return sa === sb;
+  };
 
   const activeFirms = useMemo(
     () => (firms || []).filter((f) => !f.deleted_at).sort((a, b) => (a.name || "").localeCompare(b.name || "")),
@@ -53,9 +72,14 @@ export default function UserProfileDialog({
       .sort((a, b) => `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`));
   }, [contacts, selectedFirm]);
 
+  const originalRoles = Array.isArray(user?.roles) && user.roles.length > 0
+    ? user.roles
+    : user?.role ? [user.role] : [];
+
   const hasChanges =
     (user?.linked_firm_id || "") !== (selectedFirmId || "") ||
-    (user?.linked_contact_id || "") !== (selectedContactId || "");
+    (user?.linked_contact_id || "") !== (selectedContactId || "") ||
+    !rolesEqual(selectedRoles, originalRoles);
 
   const handleSave = async () => {
     setSaving(true);
@@ -63,6 +87,7 @@ export default function UserProfileDialog({
       await onSaveLinked({
         linked_firm_id: selectedFirmId || null,
         linked_contact_id: selectedContactId || null,
+        roles: selectedRoles.length > 0 ? selectedRoles : null,
       });
     } finally {
       setSaving(false);
@@ -88,7 +113,41 @@ export default function UserProfileDialog({
           <div className="min-w-0">
             <div className="font-semibold truncate">{user?.full_name || "—"}</div>
             <div className="text-sm text-gray-500 truncate">{user?.email}</div>
-            <div className="text-xs text-gray-400 mt-0.5 capitalize">{user?.role || ""}</div>
+            <div className="text-xs text-gray-400 mt-0.5">
+              {(selectedRoles.length > 0 ? selectedRoles : user?.role ? [user.role] : [])
+                .map((r) => r.charAt(0).toUpperCase() + r.slice(1))
+                .join(" · ") || "—"}
+            </div>
+          </div>
+        </div>
+
+        {/* Custom roles (multi-select, display/tagging only) */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5 text-sm font-medium">
+            <UserIcon className="w-4 h-4 text-indigo-600" /> Roles
+          </div>
+          <p className="text-xs text-gray-500">
+            Tag yourself with one or more roles (for display only — does not change your access level).
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {ROLE_OPTIONS.map((r) => {
+              const active = selectedRoles.includes(r);
+              return (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => toggleRole(r)}
+                  className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+                    active
+                      ? "bg-indigo-600 border-indigo-600 text-white"
+                      : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  {active && <Check className="w-3.5 h-3.5 inline mr-1 -mt-0.5" />}
+                  {r.charAt(0).toUpperCase() + r.slice(1)}
+                </button>
+              );
+            })}
           </div>
         </div>
 

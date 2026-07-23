@@ -211,9 +211,9 @@ export default function Home() {
   const myContact = linkedContact || emailContact;
   const userPhoto = myContact?.photo_url;
 
-  const handleSaveProfileLink = async ({ linked_firm_id, linked_contact_id }) => {
-    await updateUser({ linked_firm_id, linked_contact_id });
-    toast({ title: "Profile updated", description: "Your firm & contact link have been saved." });
+  const handleSaveProfileLink = async ({ linked_firm_id, linked_contact_id, roles }) => {
+    await updateUser({ linked_firm_id, linked_contact_id, roles });
+    toast({ title: "Profile updated", description: "Your profile changes have been saved." });
   };
   const userDisplayName = user?.full_name || (myContact ? [myContact.first_name, myContact.last_name].filter(Boolean).join(" ") : "") || "";
   const userContactFullName = myContact

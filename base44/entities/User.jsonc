@@ -2,11 +2,22 @@
   "properties": {
     "role": {
       "type": "string",
-      "description": "The role of the user in the app",
+      "description": "The built-in role of the user in the app (single platform role used for security)",
       "enum": [
         "admin",
         "user"
       ]
+    },
+    "roles": {
+      "type": "array",
+      "description": "Custom multi-select roles for display/tagging only (does not affect built-in permissions). A user may hold both 'admin' and 'user' here.",
+      "items": {
+        "type": "string",
+        "enum": [
+          "admin",
+          "user"
+        ]
+      }
     },
     "linked_firm_id": {
       "type": "string",
