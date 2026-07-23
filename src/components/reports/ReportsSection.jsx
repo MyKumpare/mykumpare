@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { ChevronDown, ChevronRight, FileText, LayoutGrid, Plus, Pencil, Trash2, FileBarChart } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import CustomReportBuilder from "./CustomReportBuilder";
@@ -52,23 +53,34 @@ export default function ReportsSection({ forceExpanded = false }) {
 
   return (
     <div className="mb-6">
-      <button
-        onClick={() => setExpanded((v) => !v)}
-        className="flex items-center gap-2 mb-3 group"
-      >
-        {isOpen ? (
-          <ChevronDown className="w-4 h-4 text-gray-500" />
-        ) : (
-          <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
-        )}
-        <FileText className="w-4 h-4 text-blue-500" />
-        <span className="text-sm font-semibold text-gray-700 group-hover:text-gray-900">Reports</span>
-        {savedReports.length > 0 && (
-          <span className="text-[10px] font-medium text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full">
-            {savedReports.length}
-          </span>
-        )}
-      </button>
+      <div className="flex items-center justify-between mb-2 px-1">
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="flex items-center gap-2 group"
+        >
+          {isOpen ? (
+            <ChevronDown className="w-4 h-4 text-gray-500" />
+          ) : (
+            <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
+          )}
+          <FileText className="w-4 h-4 text-blue-500" />
+          <span className="text-sm font-semibold text-gray-700 group-hover:text-gray-900">Reports</span>
+          {savedReports.length > 0 && (
+            <span className="text-[10px] font-medium text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full">
+              {savedReports.length}
+            </span>
+          )}
+        </button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 gap-1 text-xs"
+          onClick={handleOpenBuilder}
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Add Report
+        </Button>
+      </div>
 
       {isOpen && (
         <div className="space-y-4">

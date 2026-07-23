@@ -20,6 +20,8 @@ import ContactsListModal from "../components/contacts/ContactsListModal";
 import AddContactDialog from "../components/contacts/AddContactDialog";
 import SearchResults from "../components/search/SearchResults";
 import AddPortfolioDialog from "../components/portfolios/AddPortfolioDialog";
+import AddDueDiligenceDialog from "../components/firms/AddDueDiligenceDialog";
+import AddDocumentDialog from "../components/firms/AddDocumentDialog";
 import PortfoliosSection from "../components/portfolios/PortfoliosSection";
 import FirmsSection from "../components/firms/FirmsSection";
 import ProductsSection from "../components/products/ProductsSection";
@@ -104,6 +106,8 @@ export default function Home() {
   const [viewingTask, setViewingTask] = useState(null);
   const [reportsPickerOpen, setReportsPickerOpen] = useState(false);
   const [documentsPickerOpen, setDocumentsPickerOpen] = useState(false);
+  const [ddAddOpen, setDdAddOpen] = useState(false);
+  const [addDocOpen, setAddDocOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
 
   const portfoliosRef = useRef(null);
@@ -382,6 +386,19 @@ export default function Home() {
     setPreselectedProductType(productType);
     setPreselectedFirmId(firm.id);
     setProductDialogOpen(true);
+  };
+
+  const handleDdAddSubmit = (data) => {
+    base44.entities.DueDiligence.create(data)
+      .then(() => {
+        queryClient.invalidateQueries({ queryKey: ["due-diligence-all"] });
+        if (data?.firm_id) queryClient.invalidateQueries({ queryKey: ["due-diligence", data.firm_id] });
+        setDdAddOpen(false);
+        toast({ title: "Due diligence record added" });
+      })
+      .catch((err) => {
+        toast({ title: "Failed to add due diligence record", description: err?.message || "Please try again.", variant: "destructive" });
+      });
   };
 
   const handleEditProduct = (product, fromContact = false) => {
@@ -683,6 +700,11 @@ export default function Home() {
           iconColor="text-indigo-500"
           entityName="DueDiligence"
           onOpen={() => setDueDiligencePickerOpen(true)}
+          onAdd={() => setDdAddOpen(true)}
+          addLabel="Add Due Diligence"
+          addColor="text-indigo-600"
+          addHoverColor="hover:text-indigo-700"
+          addHoverBg="hover:bg-indigo-50"
           openLabel="Open Due Diligence"
           description="Open the due diligence picker to view and manage records."
           forceExpanded={allExpanded}
@@ -746,6 +768,11 @@ export default function Home() {
           iconColor="text-amber-500"
           count={activities.filter(a => !a.deleted_at).length}
           onOpen={() => setActivityPickerOpen(true)}
+          onAdd={() => { setActivityLogDefaultTab("activity"); setActivityLogModalOpen(true); }}
+          addLabel="Add Activity"
+          addColor="text-amber-600"
+          addHoverColor="hover:text-amber-700"
+          addHoverBg="hover:bg-amber-50"
           openLabel="Open Activity"
           description="Open the activity log to view and log contact activities."
           forceExpanded={allExpanded}
@@ -758,6 +785,11 @@ export default function Home() {
           iconColor="text-orange-500"
           count={followUpTasks.filter(t => !t.deleted_at).length}
           onOpen={() => setTaskPickerOpen(true)}
+          onAdd={() => { setActivityLogDefaultTab("task"); setActivityLogModalOpen(true); }}
+          addLabel="Add Task"
+          addColor="text-orange-600"
+          addHoverColor="hover:text-orange-700"
+          addHoverBg="hover:bg-orange-50"
           openLabel="Open Tasks"
           description="Open the task picker to view and manage follow-up tasks."
           forceExpanded={allExpanded}
@@ -808,6 +840,11 @@ export default function Home() {
           iconColor="text-teal-500"
           count={documents.filter(d => !d.deleted_at).length}
           onOpen={() => setDocumentsPickerOpen(true)}
+          onAdd={() => setAddDocOpen(true)}
+          addLabel="Add Document"
+          addColor="text-teal-600"
+          addHoverColor="hover:text-teal-700"
+          addHoverBg="hover:bg-teal-50"
           openLabel="Open Documents"
           description="Open the documents dashboard to browse and manage firm documents."
           forceExpanded={allExpanded}
@@ -1079,6 +1116,17 @@ export default function Home() {
         open={documentsPickerOpen}
         onClose={() => setDocumentsPickerOpen(false)}
       />
+
+      {/* Standalone Add Due Diligence dialog (from the "+ Add Due Diligence" header button) */}
+      <AddDueDiligenceDialog
+        open={ddAddOpen}
+        onOpenChange={setDdAddOpen}
+        firmSelectionMode
+        onSubmit={handleDdAddSubmit}
+      />
+
+      {/* Standalone Add Document dialog (from the "+ Add Document" header button) */}
+      <AddDocumentDialog open={addDocOpen} onOpenChange={setAddDocOpen} />
 
       <ActivityDetailModal
         open={!!viewingActivity}

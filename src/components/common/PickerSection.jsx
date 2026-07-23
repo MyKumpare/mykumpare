@@ -1,5 +1,6 @@
 import React from "react";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 
@@ -8,6 +9,9 @@ import { useQuery } from "@tanstack/react-query";
  * header is clicked — no intermediate "Open" button. Mirrors the visual
  * style of the inline data sections (Portfolios/Firms/…) so the vertical
  * section list stays consistent with the main header navigation.
+ *
+ * Optionally renders a "+ Add …" action button on the right of the header
+ * when `onAdd` is supplied, matching the pattern used by Portfolios/Firms.
  */
 export default function PickerSection({
   label,
@@ -16,6 +20,11 @@ export default function PickerSection({
   count,
   entityName,
   onOpen,
+  onAdd,
+  addLabel,
+  addColor = "text-gray-600",
+  addHoverColor = "hover:text-gray-700",
+  addHoverBg = "hover:bg-gray-50",
   openLabel: _openLabel,
   description: _description,
   forceExpanded: _forceExpanded,
@@ -42,6 +51,17 @@ export default function PickerSection({
             <span className="text-xs text-gray-400 font-normal">({resolvedCount})</span>
           )}
         </button>
+        {onAdd && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className={`h-7 px-2 ${addColor} ${addHoverColor} ${addHoverBg} gap-1 text-xs`}
+            onClick={onAdd}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            {addLabel || `Add ${label}`}
+          </Button>
+        )}
       </div>
     </div>
   );
