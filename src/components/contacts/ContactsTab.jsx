@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/use-toast";
 import AddContactDialog from "./AddContactDialog";
+import ContactsTabFilters, { filterContacts } from "./ContactsTabFilters";
 import MergeDuplicateContactsDialog from "./MergeDuplicateContactsDialog";
 import { useDuplicateReviews } from "./useDuplicateReviews";
 
@@ -20,6 +21,19 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
   const [mergeCluster, setMergeCluster] = useState(null);
   const [accepting, setAccepting] = useState(false);
   const [togglingId, setTogglingId] = useState(null);
+  const [filterText, setFilterText] = useState("");
+  const [filterSelected, setFilterSelected] = useState({});
+
+  const handleToggleFilter = (fieldKey, value) => {
+    setFilterSelected((prev) => {
+      const next = { ...prev };
+      const s = new Set(next[fieldKey] || []);
+      if (s.has(value)) s.delete(value); else s.add(value);
+      if (s.size === 0) delete next[fieldKey]; else next[fieldKey] = s;
+      return next;
+    });
+  };
+  const handleClearFilters = () => { setFilterText(""); setFilterSelected({}); };
 
   const queryClient = useQueryClient();
   const { isGroupAccepted, acceptGroup } = useDuplicateReviews();
@@ -66,6 +80,11 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
       return latestPerKey[key]?.id === c.id;
     });
   }, [allFirmContacts]);
+
+  const filteredContacts = useMemo(
+    () => filterContacts(firmContacts, filterText, filterSelected),
+    [firmContacts, filterText, filterSelected]
+  );
 
   const handleView = (contact) => {
     setEditingContact(contact);
@@ -202,13 +221,26 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
         </div>
       )}
 
+      <ContactsTabFilters
+        contacts={firmContacts}
+        text={filterText}
+        onTextChange={setFilterText}
+        selected={filterSelected}
+        onToggle={handleToggleFilter}
+        onClear={handleClearFilters}
+      />
+
       {firmContacts.length === 0 ? (
         <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
           No contacts added
         </div>
+      ) : filteredContacts.length === 0 ? (
+        <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
+          No contacts match your filters
+        </div>
       ) : (
         <div className="space-y-2">
-          {firmContacts
+          {filteredContacts
             .sort((a, b) => {
               const aActive = (a.contact_status || "Active") === "Active" ? 0 : 1;
               const bActive = (b.contact_status || "Active") === "Active" ? 0 : 1;
