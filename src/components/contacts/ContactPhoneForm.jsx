@@ -1,4 +1,4 @@
-import React, { useRef, useMemo } from "react";
+import React from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -6,32 +6,35 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Phone, Trash2, Star } from "lucide-react";
-import { COUNTRY_CODES, getAreaCodesForCountry } from "../firms/phoneData";
+import { COUNTRY_CODES } from "../firms/phoneData";
 
 const PHONE_TYPES = ["Mobile", "Office", "Home", "Fax", "Other"];
 
 export default function ContactPhoneForm({ phone, onChange, onDelete, onSetDefault, isDefault, isEditing, isOnly }) {
-  const midRef = useRef(null);
-  const lastRef = useRef(null);
-
-  const areaCodes = useMemo(() => {
-    if (!phone.country_code) return [];
-    return getAreaCodesForCountry(phone.country_code);
-  }, [phone.country_code]);
-
   const handleCountryCodeChange = (val) => {
     onChange({ ...phone, country_code: val, area_code: "", number_mid: "", number_last: "" });
   };
 
-  const handleMidChange = (e) => {
-    const val = e.target.value.replace(/\D/g, "").slice(0, 3);
-    onChange({ ...phone, number_mid: val });
-    if (val.length === 3) lastRef.current?.focus();
+  // Auto-format the phone number into the system style: (415) 555-1234.
+  // Stored fields stay split (area_code / number_mid / number_last) to preserve
+  // the existing data model and downstream tel-link/display logic.
+  const combinedDigits = `${phone.area_code || ""}${phone.number_mid || ""}${phone.number_last || ""}`.slice(0, 10);
+
+  const formatPhone = (d) => {
+    if (d.length === 0) return "";
+    if (d.length <= 3) return `(${d}`;
+    if (d.length <= 6) return `(${d.slice(0, 3)}) ${d.slice(3)}`;
+    return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
   };
 
-  const handleLastChange = (e) => {
-    const val = e.target.value.replace(/\D/g, "").slice(0, 4);
-    onChange({ ...phone, number_last: val });
+  const handleNumberChange = (e) => {
+    const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
+    onChange({
+      ...phone,
+      area_code: digits.slice(0, 3),
+      number_mid: digits.slice(3, 6),
+      number_last: digits.slice(6, 10),
+    });
   };
 
   const displayNumber = () => {
@@ -120,38 +123,15 @@ export default function ContactPhoneForm({ phone, onChange, onDelete, onSetDefau
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-gray-600">Area Code</Label>
-            {areaCodes.length > 0 ? (
-              <Select value={phone.area_code || ""} onValueChange={(val) => onChange({ ...phone, area_code: val })} disabled={!phone.country_code}>
-                <SelectTrigger className="h-9 bg-white">
-                  <SelectValue placeholder="Select area code..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {areaCodes.map((a) => <SelectItem key={a.code} value={a.code}>{a.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            ) : (
-              <Input className="h-9 bg-white" placeholder="Area code"
-                value={phone.area_code || ""}
-                onChange={(e) => onChange({ ...phone, area_code: e.target.value.replace(/\D/g, "").slice(0, 5) })}
-                disabled={!phone.country_code}
-              />
-            )}
-          </div>
-
-          <div className="space-y-1.5">
             <Label className="text-xs font-medium text-gray-600">Phone Number</Label>
-            <div className="flex items-center gap-2">
-              <Input ref={midRef} className="h-9 bg-white text-center font-mono tracking-widest"
-                placeholder="000" maxLength={3} value={phone.number_mid || ""}
-                onChange={handleMidChange} disabled={!phone.area_code}
-              />
-              <span className="text-gray-400 font-bold">–</span>
-              <Input ref={lastRef} className="h-9 bg-white text-center font-mono tracking-widest"
-                placeholder="0000" maxLength={4} value={phone.number_last || ""}
-                onChange={handleLastChange} disabled={!phone.number_mid || phone.number_mid.length < 3}
-              />
-            </div>
+            <Input
+              className="h-9 bg-white font-mono tracking-wide"
+              placeholder="(415) 555-1234"
+              inputMode="tel"
+              value={formatPhone(combinedDigits)}
+              onChange={handleNumberChange}
+              disabled={!phone.country_code}
+            />
           </div>
         </div>
       ) : (
