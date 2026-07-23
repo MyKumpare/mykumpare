@@ -1,0 +1,47 @@
+{
+  "name": "FirmOwner",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the firm that owns this application"
+    },
+    "primary_contact_name": {
+      "type": "string",
+      "description": "Primary contact person for the owning firm"
+    },
+    "address": {
+      "type": "string",
+      "description": "Address of the owning firm"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Phone number of the owning firm"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email of the owning firm"
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": null,
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

@@ -12,6 +12,7 @@ import {
 import { Link } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 import InviteUserDialog from "@/components/admin/InviteUserDialog";
+import FirmOwnerCard from "@/components/admin/FirmOwnerCard";
 
 function fmtDate(d) {
   if (!d) return "—";
@@ -139,6 +140,9 @@ export default function UserManagement() {
             <p className="text-sm font-semibold text-gray-800 mt-1 truncate">{owner ? (owner.full_name || owner.email) : "Not set"}</p>
           </div>
         </div>
+
+        {/* Firm owner details */}
+        <FirmOwnerCard />
 
         {/* Owner callout */}
         {!owner && (
