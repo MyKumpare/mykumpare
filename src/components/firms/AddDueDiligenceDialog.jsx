@@ -226,7 +226,7 @@ function NewProductForm({ firmId, firmName, existingProducts, onCreated, onCance
   );
 }
 
-export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firmName, products = [], contacts = [], editingRecord, onSubmit }) {
+export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firmName, products = [], contacts = [], editingRecord, onSubmit, firmSelectionMode = false }) {
   const [productId, setProductId] = useState("");
   const [status, setStatus] = useState("Pipeline");
   const [processStatus, setProcessStatus] = useState("Not Started");
@@ -237,6 +237,8 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
   const [addingSecondary, setAddingSecondary] = useState(false);
   const [localProducts, setLocalProducts] = useState([]);
   const [localContacts, setLocalContacts] = useState([]);
+  const [selectedFirmId, setSelectedFirmId] = useState("");
+  const [selectedFirmName, setSelectedFirmName] = useState("");
 
   // Analysts are sourced from the OWNER firm (the firm that owns this app),
   // not the firm under due diligence. The owner firm is resolved from the
@@ -273,6 +275,36 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
     return contacts; // fallback to the analyzed firm's contacts when no owner is configured
   }, [ownerFirmId, ownerContactsRaw, contacts]);
 
+  // Effective firm: when editing, use the record's firm; when in firm-selection
+  // (create) mode, use the firm the user picked; otherwise the supplied firmId.
+  const effectiveFirmId = editingRecord
+    ? editingRecord.firm_id
+    : firmSelectionMode
+      ? selectedFirmId
+      : firmId;
+  const effectiveFirmName = editingRecord
+    ? editingRecord.firm_name
+    : firmSelectionMode
+      ? selectedFirmName
+      : firmName;
+
+  // Products for the effective firm (only in firm-selection mode where we don't
+  // get a pre-filtered list from the parent).
+  const { data: firmProducts = [] } = useQuery({
+    queryKey: ["products", effectiveFirmId],
+    queryFn: () => base44.entities.Product.filter({ firm_id: effectiveFirmId }),
+    enabled: !!effectiveFirmId && firmSelectionMode,
+  });
+
+  // Firm options for the picker (firm-selection mode only).
+  const firmOptions = useMemo(
+    () => allFirms
+      .filter((f) => !f.deleted_at)
+      .map((f) => ({ value: f.id, label: f.name }))
+      .sort((a, b) => a.label.toLowerCase().localeCompare(b.label.toLowerCase())),
+    [allFirms]
+  );
+
   // Reset & initialize whenever the dialog opens.
   useEffect(() => {
     if (!open) return;
@@ -287,12 +319,16 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
       setProcessStatus(editingRecord.process_status || "Not Started");
       setPrimaryId(editingRecord.primary_analyst_contact_id || "");
       setSecondaryId(editingRecord.secondary_analyst_contact_id || "");
+      setSelectedFirmId(editingRecord.firm_id || "");
+      setSelectedFirmName(editingRecord.firm_name || "");
     } else {
       setProductId("");
       setStatus("Pipeline"); // auto-select Pipeline for new due diligence
       setProcessStatus("Not Started");
       setPrimaryId("");
       setSecondaryId("");
+      setSelectedFirmId("");
+      setSelectedFirmName("");
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -319,9 +355,13 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
   const allProducts = useMemo(() => {
     const ids = new Set(localProducts.map((p) => p.id));
     const merged = [...localProducts];
-    products.forEach((p) => { if (!ids.has(p.id)) merged.push(p); });
+    if (firmSelectionMode) {
+      firmProducts.forEach((p) => { if (!ids.has(p.id)) { merged.push(p); ids.add(p.id); } });
+    } else {
+      products.forEach((p) => { if (!ids.has(p.id)) merged.push(p); });
+    }
     return merged;
-  }, [localProducts, products]);
+  }, [localProducts, products, firmProducts, firmSelectionMode]);
 
   const allContacts = useMemo(() => {
     const ids = new Set(localContacts.map((c) => c.id));
@@ -344,13 +384,13 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
   const secondaryContact = allContacts.find((c) => c.id === secondaryId);
 
   // Validation: a contact picked for one analyst cannot be the other.
-  const isValid = productId && primaryId && (primaryId !== secondaryId);
+  const isValid = !!effectiveFirmId && productId && primaryId && (primaryId !== secondaryId);
 
   const handleSave = () => {
     if (!isValid) return;
     onSubmit({
-      firm_id: firmId,
-      firm_name: firmName,
+      firm_id: effectiveFirmId,
+      firm_name: effectiveFirmName,
       product_id: productId,
       product_name: selectedProduct?.name || "",
       status,
@@ -399,6 +439,24 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
           <DialogTitle>{editingRecord ? "Edit Due Diligence" : "Add Due Diligence"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
+          {/* Firm picker (contact-context create mode only) */}
+          {firmSelectionMode && !editingRecord && (
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-gray-700">Firm <span className="text-red-400">*</span></Label>
+              <SearchableSelect
+                options={firmOptions}
+                value={selectedFirmId}
+                onChange={(v) => {
+                  setSelectedFirmId(v);
+                  setSelectedFirmName(firmOptions.find((f) => f.value === v)?.label || "");
+                  setProductId("");
+                  setProductMode("select");
+                }}
+                placeholder="Select firm..."
+              />
+            </div>
+          )}
+
           {/* Product */}
           <div className="space-y-1.5">
             <Label className="text-xs font-medium text-gray-700">Product <span className="text-red-400">*</span></Label>
@@ -412,8 +470,8 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
               />
             ) : (
               <NewProductForm
-                firmId={firmId}
-                firmName={firmName}
+                firmId={effectiveFirmId}
+                firmName={effectiveFirmName}
                 existingProducts={allProducts}
                 onCreated={(p) => { setLocalProducts((prev) => [...prev, p]); setProductId(p.id); setProductMode("select"); }}
                 onCancel={() => setProductMode("select")}

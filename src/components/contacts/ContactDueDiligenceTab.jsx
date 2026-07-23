@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { ClipboardCheck, Pencil } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ClipboardCheck, Pencil, Plus } from "lucide-react";
 import AddDueDiligenceDialog from "../firms/AddDueDiligenceDialog";
 
 const STATUS_STYLES = {
@@ -50,6 +51,15 @@ export default function ContactDueDiligenceTab({ contactId, contactName }) {
       setShowDialog(false);
     },
   });
+  const createMutation = useMutation({
+    mutationFn: (data) => base44.entities.DueDiligence.create(data),
+    onSuccess: (_res, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["dd-primary-analyst", contactId] });
+      queryClient.invalidateQueries({ queryKey: ["dd-secondary-analyst", contactId] });
+      if (variables?.firm_id) queryClient.invalidateQueries({ queryKey: ["due-diligence", variables.firm_id] });
+      setShowDialog(false);
+    },
+  });
 
   // Merge primary + secondary, dedupe by id, tag the contact's role on each record.
   const records = useMemo(() => {
@@ -63,6 +73,7 @@ export default function ContactDueDiligenceTab({ contactId, contactName }) {
 
   const handleSubmit = (data) => {
     if (editing) updateMutation.mutate({ id: editing.id, data });
+    else createMutation.mutate(data);
   };
 
   if (!contactId) {
@@ -77,6 +88,18 @@ export default function ContactDueDiligenceTab({ contactId, contactName }) {
 
   return (
     <div className="space-y-2 py-1">
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs"
+          onClick={() => { setEditing(null); setShowDialog(true); }}
+        >
+          <Plus className="w-3.5 h-3.5" /> Add Due Diligence
+        </Button>
+      </div>
+
       {isLoading ? (
         <div className="text-xs text-gray-400 italic py-4 text-center">Loading...</div>
       ) : records.length === 0 ? (
@@ -133,6 +156,7 @@ export default function ContactDueDiligenceTab({ contactId, contactName }) {
         products={editProducts}
         contacts={[]}
         editingRecord={editing}
+        firmSelectionMode
         onSubmit={handleSubmit}
       />
     </div>
