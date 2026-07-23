@@ -88,6 +88,7 @@ export default function Home() {
 
   const [analyticsLaunchOpen, setAnalyticsLaunchOpen] = useState(false);
   const [allExpanded, setAllExpanded] = useState(false);
+  const [utilityForceExpanded, setUtilityForceExpanded] = useState(false);
   const [editingAnalysis, setEditingAnalysis] = useState(null);
   const [analyticsReturnState, setAnalyticsReturnState] = useState(null); // { type: 'product'|'firm'|'benchmark', data: ... }
   const [benchmarkDialogOpen, setBenchmarkDialogOpen] = useState(false);
@@ -528,7 +529,7 @@ export default function Home() {
     { label: "Analytics", icon: LineChart, ref: analyticsRef, color: "text-cyan-600", activeBg: "bg-cyan-50", onClick: () => setAnalyticsLaunchOpen(true) },
     { label: "Reports", icon: FileText, ref: reportsRef, color: "text-blue-600", activeBg: "bg-blue-50", onClick: () => setReportsPickerOpen(true) },
     { label: "Documents", icon: Files, ref: null, color: "text-teal-600", activeBg: "bg-teal-50", onClick: () => setDocumentsPickerOpen(true) },
-    { label: "Utilities", icon: Wrench, ref: utilityRef, color: "text-gray-600", activeBg: "bg-gray-100" },
+    { label: "Utilities", icon: Wrench, ref: utilityRef, color: "text-gray-600", activeBg: "bg-gray-100", onClick: () => { setUtilityForceExpanded(true); scrollTo(utilityRef); } },
     ...(user?.role === "admin" ? [{ label: "Admin", icon: ShieldCheck, ref: null, color: "text-rose-600", activeBg: "bg-rose-50", onClick: () => navigate("/UserManagement") }] : []),
   ];
 
@@ -870,7 +871,7 @@ export default function Home() {
 
         {/* Utility section */}
         <div ref={utilityRef} />
-        <UtilitySection deletedCount={deletedCount} />
+        <UtilitySection deletedCount={deletedCount} forceExpanded={allExpanded || utilityForceExpanded} />
 
         {/* Admin section (admin only) */}
         {user?.role === "admin" && (
