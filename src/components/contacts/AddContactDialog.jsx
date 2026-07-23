@@ -207,7 +207,14 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
       });
       if (res.data?.linkedin_url) {
         setLinkedinUrl(res.data.linkedin_url);
-        toast({ title: "✅ LinkedIn profile found", description: res.data.linkedin_url });
+        // Auto-fill the contact photo from the firm team/bio page when no photo is set yet.
+        if (res.data.photo_url && !photoUrl) {
+          setPhotoUrl(res.data.photo_url);
+          toast({ title: "✅ LinkedIn profile found", description: res.data.linkedin_url });
+          toast({ title: "✅ Photo added", description: "Pulled the contact's headshot from their web profile." });
+        } else {
+          toast({ title: "✅ LinkedIn profile found", description: res.data.linkedin_url });
+        }
       } else {
         toast({ title: "No profile found", description: res.data?.message || "Could not find a LinkedIn profile for this contact." });
       }

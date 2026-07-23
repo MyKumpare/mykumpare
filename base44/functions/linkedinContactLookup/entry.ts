@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
+import { assertSafePublicUrl } from '../../shared/urlSafety.ts';
 
 const SUB_PAGES = ['/team', '/about', '/about-us', '/people', '/our-team', '/leadership', '/staff', '/investment-team', '/management', '/bio', '/bios'];
 
@@ -8,26 +9,112 @@ const BROWSER_HEADERS = {
   'Accept-Language': 'en-US,en;q=0.9',
 };
 
-// Extract LinkedIn personal profile URLs (+context) from a chunk of HTML/text
+// Skip images that are clearly logos / icons / social glyphs, not headshots.
+const BAD_IMG_RE = /logo|icon|sprite|favicon|social|facebook|twitter|x-icon|youtube|instagram|wechat|linkedin-icon|arrow|button|banner|hero|background|placeholder/i;
+const BAD_IMG_EXT = /\.(svg|gif)$/i;
+
+// Extract LinkedIn personal profile URLs (+context and raw HTML chunk) from a page
 function extractLinkedinUrls(text) {
-  const found = new Map(); // url -> context
+  const found = new Map(); // url -> { context, rawChunk, linkOffsetInChunk }
   const regex = /https?:\/\/(?:www\.)?linkedin\.com\/(?:in|pub)\/[A-Za-z0-9_\-%]+/gi;
   let match;
   while ((match = regex.exec(text)) !== null) {
     const url = match[0];
     if (!found.has(url)) {
-      const start = Math.max(0, match.index - 250);
-      const end = Math.min(text.length, match.index + url.length + 250);
-      const context = text.slice(start, end).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-      found.set(url, context);
+      const start = Math.max(0, match.index - 800);
+      const end = Math.min(text.length, match.index + url.length + 200);
+      const rawChunk = text.slice(start, end);
+      const context = rawChunk.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      found.set(url, { context, rawChunk, linkOffsetInChunk: match.index - start });
     }
   }
   return found;
 }
 
+// Pull image URLs (with their position in the chunk) out of a raw HTML slice,
+// resolving relative URLs against the page base.
+function extractImageUrlsWithPos(rawChunk, baseUrl) {
+  const imgs = [];
+  // <img ... src="...">  (capture src + the position of the src attribute)
+  const srcRe = /<img[^>]*\ssrc=["']([^"']+)["']/gi;
+  let m;
+  while ((m = srcRe.exec(rawChunk)) !== null) {
+    imgs.push({ url: m[1], pos: m.index });
+  }
+  // srcset="url 2x, url 3x" — take the first (base) candidate
+  const srcsetRe = /\ssrcset=["']([^"']+)["']/gi;
+  let s;
+  while ((s = srcsetRe.exec(rawChunk)) !== null) {
+    const first = s[1].split(',')[0].trim().split(/\s+/)[0];
+    if (first) imgs.push({ url: first, pos: s.index });
+  }
+  // Resolve relative URLs
+  return imgs
+    .map(({ url, pos }) => {
+      try {
+        const abs = new URL(url, baseUrl).href;
+        return { url: abs, pos };
+      } catch { return null; }
+    })
+    .filter(Boolean);
+}
+
+// Choose the best headshot candidate: prefer an image that appears *before*
+// the LinkedIn link (headshots usually sit above the name/link), closest to it.
+function pickBestImage(rawChunk, linkOffsetInChunk, baseUrl, firstNameLower, lastNameLower) {
+  const candidates = extractImageUrlsWithPos(rawChunk, baseUrl);
+  if (candidates.length === 0) return null;
+
+  const scored = candidates.map((c) => {
+    const u = c.url.toLowerCase();
+    let score = 0;
+    if (BAD_IMG_RE.test(u) || BAD_IMG_EXT.test(u)) score -= 100;
+    if (u.includes(lastNameLower)) score += 6;
+    if (u.includes(firstNameLower)) score += 3;
+    if (/headshot|portrait|photo|team|bio|staff|member|person|profile/i.test(u)) score += 3;
+    // Prefer images before the link (headshot above name); closeness is a bonus.
+    if (c.pos <= linkOffsetInChunk) score += 2;
+    return { ...c, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+  const best = scored[0];
+  if (!best || best.score < 0) return null;
+  return best.url;
+}
+
+// Download + rehost an image to Base44 storage, returning a permanent file_url.
+async function rehostImage(absoluteUrl, refererUrl, base44) {
+  try {
+    await assertSafePublicUrl(absoluteUrl);
+    let ref = refererUrl || '';
+    try { ref = new URL(absoluteUrl).origin + '/'; } catch { /* keep */ }
+    const res = await fetch(absoluteUrl, {
+      headers: {
+        'User-Agent': BROWSER_HEADERS['User-Agent'],
+        'Accept': 'image/*,*/*;q=0.8',
+        'Referer': ref,
+      },
+      redirect: 'follow',
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) return null;
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.startsWith('image/') && contentType !== 'application/octet-stream') return null;
+    let finalType = contentType === 'application/octet-stream'
+      ? (/\.(png)/i.test(absoluteUrl) ? 'image/png' : /\.(webp)/i.test(absoluteUrl) ? 'image/webp' : 'image/jpeg')
+      : contentType;
+    const buf = await res.arrayBuffer();
+    const ext = finalType.split('/')[1]?.split(';')[0] || 'jpg';
+    const file = new File([new Blob([buf], { type: finalType })], `linkedin_photo_${Date.now()}.${ext}`, { type: finalType });
+    const { file_url } = await base44.asServiceRole.integrations.Core.UploadFile({ file });
+    return file_url || null;
+  } catch { return null; }
+}
+
 // Score a candidate LinkedIn URL against the target name
-function scoreCandidate(url, context, firstNameLower, lastNameLower) {
-  const contextLower = (context || '').toLowerCase();
+function scoreCandidate(url, info, firstNameLower, lastNameLower) {
+  const contextLower = (info.context || '').toLowerCase();
   const slugLower = url.toLowerCase();
   const slugHasLastName = slugLower.includes(lastNameLower);
   const slugHasFirstName = slugLower.includes(firstNameLower);
@@ -38,7 +125,7 @@ function scoreCandidate(url, context, firstNameLower, lastNameLower) {
   if (slugHasFirstName) score += 2;
   if (hasLastName) score += 2;
   if (hasFirstName) score += 1;
-  return { url, score, context };
+  return { url, score, info };
 }
 
 Deno.serve(async (req) => {
@@ -74,12 +161,14 @@ Deno.serve(async (req) => {
 
     // ── Strategy 1: Scrape the firm website for LinkedIn links ──
     let websiteCandidates = new Map();
+    let scrapedOrigin = '';
     if (websiteUrl) {
       if (!websiteUrl.startsWith('http')) websiteUrl = 'https://' + websiteUrl;
       let baseUrl;
       try { baseUrl = new URL(websiteUrl); } catch { baseUrl = null; }
       if (baseUrl) {
         const origin = baseUrl.origin;
+        scrapedOrigin = origin;
         const candidateUrls = [origin, ...SUB_PAGES.map(p => origin + p)];
         const pages = await Promise.all(
           candidateUrls.map(async (u) => {
@@ -94,8 +183,8 @@ Deno.serve(async (req) => {
         for (const html of pages) {
           if (!html) continue;
           const found = extractLinkedinUrls(html);
-          for (const [url, ctx] of found.entries()) {
-            if (!websiteCandidates.has(url)) websiteCandidates.set(url, ctx);
+          for (const [url, info] of found.entries()) {
+            if (!websiteCandidates.has(url)) websiteCandidates.set(url, info);
           }
         }
       }
@@ -103,17 +192,20 @@ Deno.serve(async (req) => {
 
     // Score website candidates
     let websiteMatches = [];
-    for (const [url, ctx] of websiteCandidates.entries()) {
-      const c = scoreCandidate(url, ctx, firstNameLower, lastNameLower);
+    for (const [url, info] of websiteCandidates.entries()) {
+      const c = scoreCandidate(url, info, firstNameLower, lastNameLower);
       if (c.score > 0) websiteMatches.push(c);
     }
     websiteMatches.sort((a, b) => b.score - a.score);
 
     if (websiteMatches.length > 0 && websiteMatches[0].score >= 3) {
+      const best = websiteMatches[0];
+      const photo_url = await tryExtractPhoto(best, scrapedOrigin, base44, firstNameLower, lastNameLower);
       return Response.json({
-        linkedin_url: websiteMatches[0].url,
-        confidence: websiteMatches[0].score >= 5 ? 'high' : 'medium',
+        linkedin_url: best.url,
+        confidence: best.score >= 5 ? 'high' : 'medium',
         source: 'firm_website',
+        ...(photo_url ? { photo_url } : {}),
       });
     }
 
@@ -140,8 +232,8 @@ Deno.serve(async (req) => {
         });
         const searchCandidates = extractLinkedinUrls(decodedHtml);
         ddgDiag += ` found=${searchCandidates.size}`;
-        for (const [url, ctx] of searchCandidates.entries()) {
-          const c = scoreCandidate(url, ctx, firstNameLower, lastNameLower);
+        for (const [url, info] of searchCandidates.entries()) {
+          const c = scoreCandidate(url, info, firstNameLower, lastNameLower);
           if (c.score > 0) searchMatches.push(c);
         }
         searchMatches.sort((a, b) => b.score - a.score);
@@ -149,21 +241,28 @@ Deno.serve(async (req) => {
     } catch (e) { ddgDiag = 'err=' + (e.message || String(e)); }
 
     if (searchMatches.length > 0 && searchMatches[0].score >= 3) {
+      const best = searchMatches[0];
+      // DDG result snippets rarely contain the headshot image, but try anyway.
+      const photo_url = await tryExtractPhoto(best, scrapedOrigin, base44, firstNameLower, lastNameLower);
       return Response.json({
-        linkedin_url: searchMatches[0].url,
-        confidence: searchMatches[0].score >= 5 ? 'high' : 'medium',
+        linkedin_url: best.url,
+        confidence: best.score >= 5 ? 'high' : 'medium',
         source: 'web_search',
+        ...(photo_url ? { photo_url } : {}),
       });
     }
 
     // Combine best efforts for a low-confidence result
     const allMatches = [...websiteMatches, ...searchMatches].sort((a, b) => b.score - a.score);
     if (allMatches.length > 0) {
+      const best = allMatches[0];
+      const photo_url = await tryExtractPhoto(best, scrapedOrigin, base44, firstNameLower, lastNameLower);
       return Response.json({
-        linkedin_url: allMatches[0].url,
+        linkedin_url: best.url,
         confidence: 'low',
         source: websiteMatches.length > 0 ? 'firm_website' : 'web_search',
         message: 'A possible match was found but with low confidence. Please verify before saving.',
+        ...(photo_url ? { photo_url } : {}),
       });
     }
 
@@ -175,3 +274,16 @@ Deno.serve(async (req) => {
     return Response.json({ error: error.message || 'Failed to lookup LinkedIn profile' }, { status: 500 });
   }
 });
+
+// Extract + rehost the best nearby headshot for a matched candidate.
+async function tryExtractPhoto(match, baseUrl, base44, firstNameLower, lastNameLower) {
+  try {
+    if (!match?.info?.rawChunk) return null;
+    let base = baseUrl;
+    if (!base) { try { base = new URL(match.url).origin; } catch { base = ''; } }
+    if (!base) return null;
+    const imgUrl = pickBestImage(match.info.rawChunk, match.info.linkOffsetInChunk, base, firstNameLower, lastNameLower);
+    if (!imgUrl) return null;
+    return await rehostImage(imgUrl, base, base44);
+  } catch { return null; }
+}
