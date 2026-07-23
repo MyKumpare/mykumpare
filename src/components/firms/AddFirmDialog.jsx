@@ -118,6 +118,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const [enrichmentApproval, setEnrichmentApproval] = useState(null);
   const [similarAddressPairs, setSimilarAddressPairs] = useState(null);
   const [linkedinLookupLoading, setLinkedinLookupLoading] = useState(false);
+  const [similarFirmWarning, setSimilarFirmWarning] = useState(null);
   const nameInputRef = useRef(null);
 
   const { data: allContacts = [] } = useQuery({
@@ -290,8 +291,24 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const showPortfolioTab = firmTypes.includes("Allocator");
   const showAdvisorPortfolioTab = firmTypes.includes("Manager of Managers") || firmTypes.includes("Investment Manager");
 
-  const handleSubmit = () => {
+  const handleSubmit = (forceFirmName = false) => {
     if (!isValid) return;
+    // In add mode, warn on similar existing firm names before saving so the
+    // user can confirm they're not creating a duplicate. Matches the same
+    // substring-inclusion check used by the quick-add firm form.
+    if (!forceFirmName && isAddMode && firmName.trim().length >= 2) {
+      const input = firmName.trim().toLowerCase();
+      const matches = existingFirms.filter((f) => {
+        if (f.deleted_at) return false;
+        if (editingFirm && f.id === editingFirm.id) return false;
+        const existing = (f.name || "").toLowerCase();
+        return existing.includes(input) || input.includes(existing);
+      });
+      if (matches.length > 0) {
+        setSimilarFirmWarning(matches);
+        return;
+      }
+    }
     // Block exact duplicate addresses; prompt for similar ones.
     const { exactPairs, similarPairs } = findAddressIssues(addresses);
     if (exactPairs.length > 0) {
@@ -1280,6 +1297,41 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         pairs={similarAddressPairs?.pairs || []}
         onResolve={handleResolveSimilarAddresses}
       />
+
+      {similarFirmWarning && (
+        <Dialog open={true} onOpenChange={() => setSimilarFirmWarning(null)}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-500" />
+                Similar Firm Name Exists
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              <p className="text-sm text-gray-600">
+                A firm with a similar name already exists. Would you like to add this firm anyway?
+              </p>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {similarFirmWarning.map((f) => {
+                  const types = f.firm_types?.length ? f.firm_types : (f.firm_type ? [f.firm_type] : []);
+                  return (
+                    <div key={f.id} className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                      <p className="font-semibold text-sm text-gray-800">{f.name}</p>
+                      {types.length > 0 && <p className="text-xs text-gray-500">{types.join(", ")}</p>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setSimilarFirmWarning(null)}>Cancel</Button>
+              <Button className="bg-amber-600 hover:bg-amber-700 text-white" onClick={() => { setSimilarFirmWarning(null); handleSubmit(true); }}>
+                Add Anyway
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       <EnrichmentApprovalDialog
         open={!!enrichmentApproval}
