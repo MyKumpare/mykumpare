@@ -61,11 +61,17 @@ export function useAutoOriginator(allFirms, allContacts, setOriginator, originat
         if (!firmId) firmId = (contact.firm_ids || [])[0] || "";
 
         const firm = firmId ? allFirms.find((f) => f.id === firmId) : null;
+        const firmTypes = firm
+          ? (firm.firm_types?.length ? firm.firm_types : firm.firm_type ? [firm.firm_type] : [])
+          : [];
+        // Default the firm-type context so the activity is immediately savable.
+        // For multi-type firms the selector stays visible so the user can change it.
+        const defaultFirmType = firmTypes[0] || null;
         if (!active) return;
         setOriginator({
           firmId,
           firmName: firm?.name || "",
-          firmType: null,
+          firmType: defaultFirmType,
           contactId: contact.id,
           contactName: [contact.first_name, contact.last_name]
             .filter(Boolean)

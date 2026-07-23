@@ -426,27 +426,28 @@ function ActivityLogForm({ onSaved, onCancel, allFirms, allContacts, onFirmClick
   const [subjects, setSubjects] = useState([]);
   const [notes, setNotes] = useState("");
   const [associatedFirmsContacts, setAssociatedFirmsContacts] = useState([]);
-  const [addTask, setAddTask] = useState(false);
-  const [taskDesc, setTaskDesc] = useState("");
-  const [taskDueDate, setTaskDueDate] = useState(new Date().toISOString().split("T")[0]);
+  const [tasks, setTasks] = useState([]);
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.ContactActivity.create(data),
     onSuccess: async (created) => {
       queryClient.invalidateQueries({ queryKey: ["contact_activities", originator.contactId] });
       queryClient.invalidateQueries({ queryKey: ["all_activities_for_firm", originator.firmId] });
-      if (addTask && taskDesc && taskDesc !== "<p><br></p>") {
+      const validTasks = tasks.filter(t => t.task_description && t.task_description !== "<p><br></p>");
+      if (validTasks.length) {
         const today = new Date().toISOString().split("T")[0];
-        await base44.entities.FollowUpTask.create({
-          originator_contact_id: originator.contactId,
-          originator_contact_name: originator.contactName,
-          originator_firm_id: originator.firmId || undefined,
-          originator_firm_name: originator.firmName || undefined,
-          activity_id: created.id,
-          activity_label: `${activityType} – ${fmt(activityDate)}`,
-          due_date: taskDueDate, task_description: taskDesc, status: "Not Started",
-          status_date: today,
-        });
+        for (const t of validTasks) {
+          await base44.entities.FollowUpTask.create({
+            originator_contact_id: originator.contactId,
+            originator_contact_name: originator.contactName,
+            originator_firm_id: originator.firmId || undefined,
+            originator_firm_name: originator.firmName || undefined,
+            activity_id: created.id,
+            activity_label: `${activityType} – ${fmt(activityDate)}`,
+            due_date: t.due_date, task_description: t.task_description, status: "Not Started",
+            status_date: today,
+          });
+        }
         queryClient.invalidateQueries({ queryKey: ["follow_up_tasks", originator.contactId] });
         queryClient.invalidateQueries({ queryKey: ["all_tasks_for_firm", originator.firmId] });
       }
@@ -469,7 +470,7 @@ function ActivityLogForm({ onSaved, onCancel, allFirms, allContacts, onFirmClick
           onChange={setOriginator} />
       </div>
 
-      {needsFirmType && (
+      {origFirmTypes.length > 1 && (
         <div className="space-y-1">
           <Label className="text-xs font-medium text-gray-700 flex items-center gap-1">
             <Building2 className="w-3 h-3 text-indigo-500" /> Firm Type Context <span className="text-red-500">*</span>
@@ -516,27 +517,45 @@ function ActivityLogForm({ onSaved, onCancel, allFirms, allContacts, onFirmClick
         <AssociatedFirmsEditor value={associatedFirmsContacts} onChange={setAssociatedFirmsContacts} allFirms={allFirms} onFirmClick={onFirmClick} onContactClick={onContactClick} />
       </div>
 
-      {!addTask ? (
-        <button type="button" onClick={() => setAddTask(true)}
+      {tasks.length === 0 ? (
+        <button type="button"
+          onClick={() => setTasks([{ task_description: "", due_date: new Date().toISOString().split("T")[0] }])}
           className="w-full flex items-center gap-1.5 px-2.5 py-2 rounded-lg border border-dashed border-indigo-300 text-xs text-indigo-600 hover:bg-indigo-50 transition-colors">
           <ClipboardList className="w-3.5 h-3.5" /> Add a follow-up task for this activity
         </button>
       ) : (
-        <div className="rounded-lg border border-indigo-200 bg-white p-3 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-indigo-700 flex items-center gap-1"><ClipboardList className="w-3 h-3" /> Follow-up Task</span>
-            <button type="button" onClick={() => setAddTask(false)}><X className="w-3 h-3 text-gray-400 hover:text-red-500" /></button>
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs font-medium text-gray-700">Task Description *</Label>
-            <div className="quill-sm border border-gray-200 rounded-lg overflow-hidden bg-white">
-              <ReactQuill theme="snow" value={taskDesc} onChange={setTaskDesc} modules={QUILL_MODULES} placeholder="Describe the task..." style={{ minHeight: 70 }} />
+        <div className="space-y-2">
+          {tasks.map((task, idx) => (
+            <div key={idx} className="rounded-lg border border-indigo-200 bg-white p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-indigo-700 flex items-center gap-1">
+                  <ClipboardList className="w-3 h-3" /> Follow-up Task {tasks.length > 1 ? idx + 1 : ""}
+                </span>
+                <button type="button" onClick={() => setTasks(prev => prev.filter((_, i) => i !== idx))}>
+                  <X className="w-3 h-3 text-gray-400 hover:text-red-500" />
+                </button>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-medium text-gray-700">Task Description *</Label>
+                <div className="quill-sm border border-gray-200 rounded-lg overflow-hidden bg-white">
+                  <ReactQuill theme="snow" value={task.task_description}
+                    onChange={(val) => setTasks(prev => prev.map((t, i) => i === idx ? { ...t, task_description: val } : t))}
+                    modules={QUILL_MODULES} placeholder="Describe the task..." style={{ minHeight: 70 }} />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-medium text-gray-700">Due Date</Label>
+                <Input type="date" value={task.due_date}
+                  onChange={e => setTasks(prev => prev.map((t, i) => i === idx ? { ...t, due_date: e.target.value } : t))}
+                  className="h-8 text-sm" />
+              </div>
             </div>
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs font-medium text-gray-700">Due Date</Label>
-            <Input type="date" value={taskDueDate} onChange={e => setTaskDueDate(e.target.value)} className="h-8 text-sm" />
-          </div>
+          ))}
+          <button type="button"
+            onClick={() => setTasks(prev => [...prev, { task_description: "", due_date: new Date().toISOString().split("T")[0] }])}
+            className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-dashed border-indigo-300 text-xs text-indigo-600 hover:bg-indigo-50 transition-colors">
+            <Plus className="w-3.5 h-3.5" /> Add Another Task
+          </button>
         </div>
       )}
 
