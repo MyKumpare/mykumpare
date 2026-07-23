@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -14,6 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ChevronDown, Check, Plus, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { findContactDuplicates } from "@/components/contacts/contactDuplicateCheck";
+import { useFirmOwner } from "@/components/admin/useFirmOwner";
 
 const DD_STATUSES = ["Pipeline", "Buy List", "Rejected"];
 const PRODUCT_TYPES = ["Investment Manager Product", "Multi-Manager Product"];
@@ -235,11 +236,46 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
   const [localProducts, setLocalProducts] = useState([]);
   const [localContacts, setLocalContacts] = useState([]);
 
+  // Analysts are sourced from the OWNER firm (the firm that owns this app),
+  // not the firm under due diligence. The owner firm is resolved from the
+  // FirmOwner config by matching its name to a Firm record.
+  const firmOwner = useFirmOwner();
+  const { data: currentUser } = useQuery({
+    queryKey: ["me"],
+    queryFn: () => base44.auth.me(),
+  });
+  const { data: allFirms = [] } = useQuery({
+    queryKey: ["firms"],
+    queryFn: () => base44.entities.Firm.list("-created_date"),
+  });
+  const { data: ownerContactsRaw = [] } = useQuery({
+    queryKey: ["contacts"],
+    queryFn: () => base44.entities.Contact.list("-created_date", 5000),
+  });
+  // Resolve the owner firm: prefer the signed-in user's linked firm, fall back
+  // to the FirmOwner config (matched by name), then to the analyzed firm.
+  const ownerFirmId = useMemo(() => {
+    if (currentUser?.linked_firm_id) return currentUser.linked_firm_id;
+    if (firmOwner?.name) {
+      const f = allFirms.find(
+        (x) => !x.deleted_at && (x.name || "").toLowerCase() === (firmOwner.name || "").toLowerCase()
+      );
+      return f?.id || null;
+    }
+    return null;
+  }, [currentUser, firmOwner, allFirms]);
+  const analystContacts = useMemo(() => {
+    if (ownerFirmId) {
+      return ownerContactsRaw.filter((c) => !c.deleted_at && (c.firm_ids || []).includes(ownerFirmId));
+    }
+    return contacts; // fallback to the analyzed firm's contacts when no owner is configured
+  }, [ownerFirmId, ownerContactsRaw, contacts]);
+
   // Reset & initialize whenever the dialog opens.
   useEffect(() => {
     if (!open) return;
     setLocalProducts(products);
-    setLocalContacts(contacts);
+    setLocalContacts([]);
     setProductMode("select");
     setAddingPrimary(false);
     setAddingSecondary(false);
@@ -253,23 +289,28 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
       setStatus("Pipeline"); // auto-select Pipeline for new due diligence
       setPrimaryId("");
       setSecondaryId("");
-      // Auto-assign primary analyst from the signed-in user.
-      (async () => {
-        try {
-          const user = await base44.auth.me();
-          let match = null;
-          if (user?.linked_contact_id) {
-            match = contacts.find((c) => c.id === user.linked_contact_id && !c.deleted_at) || null;
-          }
-          if (!match && user?.email) {
-            const email = user.email.toLowerCase();
-            match = contacts.find((c) => !c.deleted_at && (c.email || "").toLowerCase() === email) || null;
-          }
-          if (match) setPrimaryId(match.id);
-        } catch { /* not logged in — leave manual */ }
-      })();
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-assign primary analyst from the signed-in user, matched among the
+  // OWNER firm's contacts. Runs once contacts resolve; never overrides a selection.
+  useEffect(() => {
+    if (!open || editingRecord || primaryId) return;
+    (async () => {
+      try {
+        const user = await base44.auth.me();
+        let match = null;
+        if (user?.linked_contact_id) {
+          match = analystContacts.find((c) => c.id === user.linked_contact_id) || null;
+        }
+        if (!match && user?.email) {
+          const email = user.email.toLowerCase();
+          match = analystContacts.find((c) => (c.email || "").toLowerCase() === email) || null;
+        }
+        if (match) setPrimaryId(match.id);
+      } catch { /* not logged in — leave manual */ }
+    })();
+  }, [open, editingRecord, analystContacts, primaryId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const allProducts = useMemo(() => {
     const ids = new Set(localProducts.map((p) => p.id));
@@ -281,9 +322,9 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
   const allContacts = useMemo(() => {
     const ids = new Set(localContacts.map((c) => c.id));
     const merged = [...localContacts];
-    contacts.forEach((c) => { if (!ids.has(c.id)) merged.push(c); });
+    analystContacts.forEach((c) => { if (!ids.has(c.id)) merged.push(c); });
     return merged;
-  }, [localContacts, contacts]);
+  }, [localContacts, analystContacts]);
 
   const productOptions = allProducts.map((p) => ({ value: p.id, label: p.name }));
   const contactOptions = allContacts.map((c) => ({ value: c.id, label: contactName(c) || c.email || c.id }));
@@ -385,7 +426,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
             <Label className="text-xs font-medium text-gray-700">Primary Analyst <span className="text-red-400">*</span></Label>
             {addingPrimary ? (
               <NewContactForm
-                firmId={firmId}
+                firmId={ownerFirmId || firmId}
                 existingContacts={allContacts}
                 onCreated={(c) => { setLocalContacts((prev) => [...prev, c]); setPrimaryId(c.id); setAddingPrimary(false); }}
                 onCancel={() => setAddingPrimary(false)}
@@ -407,7 +448,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
             <Label className="text-xs font-medium text-gray-700">Secondary Analyst</Label>
             {addingSecondary ? (
               <NewContactForm
-                firmId={firmId}
+                firmId={ownerFirmId || firmId}
                 existingContacts={allContacts}
                 onCreated={(c) => { setLocalContacts((prev) => [...prev, c]); setSecondaryId(c.id); setAddingSecondary(false); }}
                 onCancel={() => setAddingSecondary(false)}
