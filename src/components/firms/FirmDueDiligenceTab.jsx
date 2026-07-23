@@ -17,7 +17,7 @@ const PROCESS_STYLES = {
   "Completed": "bg-emerald-50 text-emerald-700 border-emerald-200",
 };
 
-export default function FirmDueDiligenceTab({ firmId, firmName, contacts = [] }) {
+export default function FirmDueDiligenceTab({ firmId, firmName, contacts = [], onContactClick, onProductClick }) {
   const queryClient = useQueryClient();
   const [showDialog, setShowDialog] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -56,6 +56,20 @@ export default function FirmDueDiligenceTab({ firmId, firmName, contacts = [] })
 
   const sorted = [...records].sort((a, b) => (a.status || "").localeCompare(b.status || ""));
 
+  const findContact = (id) => contacts.find((c) => c.id === id && !c.deleted_at);
+  const findProduct = (id) => products.find((p) => p.id === id && !p.deleted_at);
+
+  const openContact = (id) => {
+    if (!id || !onContactClick) return;
+    const contact = findContact(id);
+    if (contact) onContactClick(contact);
+  };
+  const openProduct = (id) => {
+    if (!id || !onProductClick) return;
+    const product = findProduct(id);
+    if (product) onProductClick(product);
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex justify-end">
@@ -90,7 +104,17 @@ export default function FirmDueDiligenceTab({ firmId, firmName, contacts = [] })
               <ClipboardCheck className="w-4 h-4 text-indigo-400 flex-shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-medium text-gray-800 truncate">{rec.product_name || "—"}</span>
+                  {rec.product_id && findProduct(rec.product_id) ? (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); openProduct(rec.product_id); }}
+                      className="text-sm font-medium text-indigo-600 hover:text-indigo-700 hover:underline truncate text-left"
+                    >
+                      {rec.product_name || "—"}
+                    </button>
+                  ) : (
+                    <span className="text-sm font-medium text-gray-800 truncate">{rec.product_name || "—"}</span>
+                  )}
                   <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${STATUS_STYLES[rec.status] || STATUS_STYLES["Pipeline"]}`}>
                     {rec.status}
                   </span>
@@ -99,9 +123,29 @@ export default function FirmDueDiligenceTab({ firmId, firmName, contacts = [] })
                   </span>
                 </div>
                 <div className="text-xs text-gray-500 mt-0.5">
-                  <span>Primary: <span className="text-gray-700 font-medium">{rec.primary_analyst_name || "—"}</span></span>
+                  <span>Primary: {
+                    rec.primary_analyst_contact_id && findContact(rec.primary_analyst_contact_id) ? (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); openContact(rec.primary_analyst_contact_id); }}
+                        className="text-indigo-600 hover:text-indigo-700 hover:underline font-medium"
+                      >
+                        {rec.primary_analyst_name || "—"}
+                      </button>
+                    ) : <span className="text-gray-700 font-medium">{rec.primary_analyst_name || "—"}</span>
+                  }</span>
                   {rec.secondary_analyst_name && (
-                    <span className="ml-3">Secondary: <span className="text-gray-700 font-medium">{rec.secondary_analyst_name}</span></span>
+                    <span className="ml-3">Secondary: {
+                      rec.secondary_analyst_contact_id && findContact(rec.secondary_analyst_contact_id) ? (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); openContact(rec.secondary_analyst_contact_id); }}
+                          className="text-indigo-600 hover:text-indigo-700 hover:underline font-medium"
+                        >
+                          {rec.secondary_analyst_name}
+                        </button>
+                      ) : <span className="text-gray-700 font-medium">{rec.secondary_analyst_name}</span>
+                    }</span>
                   )}
                 </div>
               </div>

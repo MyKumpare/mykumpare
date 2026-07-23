@@ -19,7 +19,7 @@ const PROCESS_STYLES = {
 
 // Shows every DueDiligence record where this contact is the primary or secondary
 // analyst. Each row edits the ORIGINAL record (updates propagate to the source).
-export default function ContactDueDiligenceTab({ contactId, contactName }) {
+export default function ContactDueDiligenceTab({ contactId, contactName, onContactClick, onProductClick }) {
   const queryClient = useQueryClient();
   const [showDialog, setShowDialog] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -76,6 +76,32 @@ export default function ContactDueDiligenceTab({ contactId, contactName }) {
     else createMutation.mutate(data);
   };
 
+  const [linkedLoading, setLinkedLoading] = useState(null);
+  const openLinkedContact = async (id) => {
+    if (!id || !onContactClick || linkedLoading) return;
+    setLinkedLoading("contact-" + id);
+    try {
+      const contact = await base44.entities.Contact.get(id);
+      if (contact && !contact.deleted_at) onContactClick(contact);
+    } catch (e) {
+      console.error("Failed to load contact", e);
+    } finally {
+      setLinkedLoading(null);
+    }
+  };
+  const openLinkedProduct = async (id) => {
+    if (!id || !onProductClick || linkedLoading) return;
+    setLinkedLoading("product-" + id);
+    try {
+      const product = await base44.entities.Product.get(id);
+      if (product && !product.deleted_at) onProductClick(product);
+    } catch (e) {
+      console.error("Failed to load product", e);
+    } finally {
+      setLinkedLoading(null);
+    }
+  };
+
   if (!contactId) {
     return (
       <div className="text-sm text-gray-400 italic py-4 text-center">
@@ -120,7 +146,18 @@ export default function ContactDueDiligenceTab({ contactId, contactName }) {
               <ClipboardCheck className="w-4 h-4 text-indigo-400 flex-shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-medium text-gray-800 truncate">{rec.product_name || "—"}</span>
+                  {rec.product_id && onProductClick ? (
+                    <button
+                      type="button"
+                      disabled={linkedLoading === "product-" + rec.product_id}
+                      onClick={(e) => { e.stopPropagation(); openLinkedProduct(rec.product_id); }}
+                      className="text-sm font-medium text-indigo-600 hover:text-indigo-700 hover:underline truncate text-left disabled:opacity-60"
+                    >
+                      {linkedLoading === "product-" + rec.product_id ? "Loading…" : (rec.product_name || "—")}
+                    </button>
+                  ) : (
+                    <span className="text-sm font-medium text-gray-800 truncate">{rec.product_name || "—"}</span>
+                  )}
                   <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${STATUS_STYLES[rec.status] || STATUS_STYLES["Pipeline"]}`}>
                     {rec.status}
                   </span>
@@ -131,7 +168,35 @@ export default function ContactDueDiligenceTab({ contactId, contactName }) {
                     {rec._role} Analyst
                   </span>
                 </div>
-                <div className="text-xs text-gray-500 mt-0.5">{rec.firm_name || "—"}</div>
+                <div className="text-xs text-gray-500 mt-0.5 flex items-center gap-x-2 gap-y-0.5 flex-wrap">
+                  {rec.firm_name || "—"}
+                  <span>Primary: {
+                    rec.primary_analyst_contact_id && onContactClick ? (
+                      <button
+                        type="button"
+                        disabled={linkedLoading === "contact-" + rec.primary_analyst_contact_id}
+                        onClick={(e) => { e.stopPropagation(); openLinkedContact(rec.primary_analyst_contact_id); }}
+                        className="text-indigo-600 hover:text-indigo-700 hover:underline font-medium disabled:opacity-60"
+                      >
+                        {linkedLoading === "contact-" + rec.primary_analyst_contact_id ? "Loading…" : (rec.primary_analyst_name || "—")}
+                      </button>
+                    ) : <span className="text-gray-700 font-medium">{rec.primary_analyst_name || "—"}</span>
+                  }</span>
+                  {rec.secondary_analyst_name && (
+                    <span>Secondary: {
+                      rec.secondary_analyst_contact_id && onContactClick ? (
+                        <button
+                          type="button"
+                          disabled={linkedLoading === "contact-" + rec.secondary_analyst_contact_id}
+                          onClick={(e) => { e.stopPropagation(); openLinkedContact(rec.secondary_analyst_contact_id); }}
+                          className="text-indigo-600 hover:text-indigo-700 hover:underline font-medium disabled:opacity-60"
+                        >
+                          {linkedLoading === "contact-" + rec.secondary_analyst_contact_id ? "Loading…" : rec.secondary_analyst_name}
+                        </button>
+                      ) : <span className="text-gray-700 font-medium">{rec.secondary_analyst_name}</span>
+                    }</span>
+                  )}
+                </div>
               </div>
               <div onClick={(e) => e.stopPropagation()}>
                 <button

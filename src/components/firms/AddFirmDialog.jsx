@@ -1100,7 +1100,17 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
               <TabsContent value="due-diligence" className="space-y-3">
               {editingFirm ? (
-                <FirmDueDiligenceTab firmId={editingFirm.id} firmName={editingFirm.name} contacts={allContacts} />
+                <FirmDueDiligenceTab
+                  firmId={editingFirm.id}
+                  firmName={editingFirm.name}
+                  contacts={allContacts}
+                  onContactClick={(c) => {
+                    if (!c) return;
+                    onOpenChange(false);
+                    onContactClick(c);
+                  }}
+                  onProductClick={onProductClick}
+                />
               ) : (
                 <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
                   Save the firm first to add due diligence information
