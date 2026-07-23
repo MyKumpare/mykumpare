@@ -14,7 +14,12 @@ function normalizeNamePart(s) {
   return s.toLowerCase().trim().replace(/[.'’-]/g, " ").split(/\s+/).filter((t) => t && !NAME_STOPWORDS.has(t)).join(" ").trim();
 }
 function nameKey(c) {
-  return `${normalizeNamePart(c.first_name)}|${normalizeNamePart(c.last_name)}`;
+  // Use only the first token of the first name so records that store a middle
+  // name inside first_name ("Tina Byles") still match records that don't
+  // ("Tina"). Last name is kept in full to preserve compound surnames.
+  const first = (normalizeNamePart(c.first_name) || "").split(" ")[0] || "";
+  const last = normalizeNamePart(c.last_name) || "";
+  return `${first}|${last}`;
 }
 // Collapse duplicate contacts: when two contacts share the same normalized
 // first + last name AND at least one firm, only show the most recently
@@ -29,19 +34,31 @@ function dedupeContacts(list) {
     if (!groups.has(k)) groups.set(k, []);
     groups.get(k).push(c);
   }
+  const fullNameLen = (c) => getContactFullName(c).length;
   const result = [];
   for (const [, group] of groups) {
     const kept = [];
     for (const c of group) {
       const cFirms = new Set(c.firm_ids || []);
-      const dupIdx = kept.findIndex((k2) => (k2.firm_ids || []).some((fid) => cFirms.has(fid)));
+      // Collapse when two records share a firm, or when either record has no
+      // firm association (historical duplicates often lose their firm link).
+      const dupIdx = kept.findIndex((k2) => {
+        const k2Firms = new Set(k2.firm_ids || []);
+        if (cFirms.size === 0 || k2Firms.size === 0) return true;
+        return [...cFirms].some((fid) => k2Firms.has(fid));
+      });
       if (dupIdx === -1) {
         kept.push(c);
       } else {
         const existing = kept[dupIdx];
-        const existingDate = new Date(existing.updated_date || existing.created_date || 0).getTime();
-        const newDate = new Date(c.updated_date || c.created_date || 0).getTime();
-        if (newDate > existingDate) kept[dupIdx] = c;
+        // Prefer the record with the more complete (longer) full name so the
+        // contact's full name is shown; tiebreak by most recently updated.
+        if (fullNameLen(c) > fullNameLen(existing) ||
+            (fullNameLen(c) === fullNameLen(existing) &&
+             new Date(c.updated_date || c.created_date || 0).getTime() >
+             new Date(existing.updated_date || existing.created_date || 0).getTime())) {
+          kept[dupIdx] = c;
+        }
       }
     }
     result.push(...kept);
@@ -281,7 +298,7 @@ export default function SearchResults({ query, firms, products, contacts, portfo
                                 ? <img src={c.photo_url} alt="" className="w-full h-full object-cover" />
                                 : <User className="w-2.5 h-2.5 text-indigo-400 m-auto" />}
                             </div>
-                            {c.first_name} {c.last_name}
+                            {getContactFullName(c)}
                           </span>
                         ))}
                       </div>
@@ -369,7 +386,7 @@ export default function SearchResults({ query, firms, products, contacts, portfo
                                 ? <img src={c.photo_url} alt="" className="w-full h-full object-cover" />
                                 : <User className="w-2.5 h-2.5 text-indigo-400 m-auto" />}
                             </div>
-                            {c.first_name} {c.last_name}
+                            {getContactFullName(c)}
                           </span>
                         ))}
                       </div>
