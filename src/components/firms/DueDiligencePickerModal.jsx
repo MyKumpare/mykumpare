@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { X, ShieldCheck, Plus, Search, Pencil, ClipboardCheck } from "lucide-react";
+import { X, ShieldCheck, Plus, Search, Pencil, ClipboardCheck, LayoutGrid, List } from "lucide-react";
 import AddDueDiligenceDialog from "../firms/AddDueDiligenceDialog";
+import DueDiligenceKanbanBoard from "./DueDiligenceKanbanBoard";
 
 const STATUS_STYLES = {
   "Pipeline": "bg-blue-50 text-blue-700 border-blue-200",
@@ -23,6 +24,8 @@ export default function DueDiligencePickerModal({ open, onClose, onFirmClick, on
   const [search, setSearch] = useState("");
   const [showDialog, setShowDialog] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [viewMode, setViewMode] = useState("list"); // 'list' | 'kanban'
+  const [kanbanField, setKanbanField] = useState("status"); // 'status' | 'process_status'
 
   const { data: records = [], isLoading } = useQuery({
     queryKey: ["due-diligence-all"],
@@ -75,6 +78,10 @@ export default function DueDiligencePickerModal({ open, onClose, onFirmClick, on
     else createMutation.mutate(data);
   };
 
+  const handleMoveCard = (rec, destColumn) => {
+    updateMutation.mutate({ id: rec.id, data: { [kanbanField]: destColumn } });
+  };
+
   const [linkedLoading, setLinkedLoading] = useState(null);
   const openLinkedContact = async (id) => {
     if (!id || !onContactClick || linkedLoading) return;
@@ -105,19 +112,62 @@ export default function DueDiligencePickerModal({ open, onClose, onFirmClick, on
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 px-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[78vh] overflow-hidden flex flex-col">
+      <div className={`relative bg-white rounded-2xl shadow-2xl w-full ${viewMode === "kanban" ? "max-w-5xl" : "max-w-lg"} max-h-[78vh] overflow-hidden flex flex-col`}>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
           <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-indigo-600" />
             Due Diligence
             <span className="text-xs text-gray-400 font-normal">({filtered.length})</span>
           </h2>
-          <button type="button" onClick={onClose}>
-            <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
-          </button>
+          <div className="flex items-center gap-2">
+            {/* View mode toggle */}
+            <div className="flex items-center rounded-lg border border-gray-200 bg-gray-50 p-0.5">
+              <button
+                type="button"
+                onClick={() => setViewMode("list")}
+                title="List view"
+                className={`p-1 rounded-md ${viewMode === "list" ? "bg-white shadow-sm text-indigo-600" : "text-gray-400 hover:text-gray-600"}`}
+              >
+                <List className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("kanban")}
+                title="Kanban view"
+                className={`p-1 rounded-md ${viewMode === "kanban" ? "bg-white shadow-sm text-indigo-600" : "text-gray-400 hover:text-gray-600"}`}
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <button type="button" onClick={onClose}>
+              <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+            </button>
+          </div>
         </div>
+
+        {/* Column-field toggle (kanban only) */}
+        {viewMode === "kanban" && (
+          <div className="flex items-center gap-2 px-5 py-2 border-b border-gray-100 bg-gray-50/50">
+            <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Columns:</span>
+            <button
+              type="button"
+              onClick={() => setKanbanField("status")}
+              className={`text-xs px-2 py-1 rounded-md ${kanbanField === "status" ? "bg-indigo-600 text-white" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
+            >
+              DD Status
+            </button>
+            <button
+              type="button"
+              onClick={() => setKanbanField("process_status")}
+              className={`text-xs px-2 py-1 rounded-md ${kanbanField === "process_status" ? "bg-indigo-600 text-white" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
+            >
+              Process Status
+            </button>
+            <span className="text-[11px] text-gray-400 ml-auto">Drag cards between columns to update</span>
+          </div>
+        )}
 
         {/* Search */}
         <div className="px-4 py-3 border-b border-gray-100">
@@ -139,7 +189,30 @@ export default function DueDiligencePickerModal({ open, onClose, onFirmClick, on
           </div>
         </div>
 
-        {/* List */}
+        {/* List / Kanban */}
+        {viewMode === "kanban" ? (
+          <div className="flex-1 min-h-0 p-3">
+            {isLoading ? (
+              <p className="text-sm text-gray-400 italic text-center py-8">Loading...</p>
+            ) : filtered.length === 0 ? (
+              <p className="text-sm text-gray-400 italic text-center py-8">
+                {search ? "No due diligence records match your search." : "No due diligence records yet."}
+              </p>
+            ) : (
+              <div className="h-full">
+                <DueDiligenceKanbanBoard
+                  records={filtered}
+                  columnField={kanbanField}
+                  onMoveCard={handleMoveCard}
+                  onCardClick={(rec) => { setEditing(rec); setShowDialog(true); }}
+                  onProductClick={openLinkedProduct}
+                  onFirmClick={openLinkedFirm}
+                  onContactClick={openLinkedContact}
+                />
+              </div>
+            )}
+          </div>
+        ) : (
         <div className="flex-1 overflow-y-auto py-2 px-3">
           {isLoading ? (
             <p className="text-sm text-gray-400 italic text-center py-8">Loading...</p>
@@ -235,6 +308,7 @@ export default function DueDiligencePickerModal({ open, onClose, onFirmClick, on
             </div>
           )}
         </div>
+        )}
 
         {/* Footer */}
         <div className="px-4 py-3 border-t border-gray-100">
