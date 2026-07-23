@@ -43,7 +43,7 @@ function newAddress() {
   return { id: crypto.randomUUID(), is_primary: false, country: "", state: "", city: "", postal_code: "", address_line1: "", address_line2: "" };
 }
 
-export default function AddContactDialog({ open, onOpenChange, editingContact, currentFirmId, firms: firmsProp = [], viewMode: initialViewMode = false, onNavigateToOwnership, onContactCreated, onProductClick, onFirmClick }) {
+export default function AddContactDialog({ open, onOpenChange, editingContact, currentFirmId, firms: firmsProp = [], viewMode: initialViewMode = false, onNavigateToOwnership, onContactCreated, onProductClick, onFirmClick, onContactClick }) {
   const [viewMode, setViewMode] = useState(initialViewMode);
   const { data: liveFirms = [] } = useQuery({
     queryKey: ["firms"],
@@ -1311,6 +1311,8 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
               <ContactDueDiligenceTab
                 contactId={editingContact?.id}
                 contactName={[firstName, lastName].filter(Boolean).join(" ")}
+                onContactClick={onContactClick ? (contact) => { onOpenChange(false); onContactClick(contact); } : undefined}
+                onProductClick={onProductClick ? (product) => { onOpenChange(false); onProductClick(product); } : undefined}
               />
             </TabsContent>
           </Tabs>

@@ -806,6 +806,7 @@ export default function Home() {
         onNavigateToOwnership={handleNavigateToOwnership}
         onProductClick={(product) => handleEditProduct(product, true)}
         onFirmClick={(firm) => firm && handleEdit(firm, false, true)}
+        onContactClick={(contact) => setViewingContact(contact)}
       />
 
       <AddContactDialog
@@ -833,6 +834,7 @@ export default function Home() {
         onNavigateToOwnership={handleNavigateToOwnership}
         onProductClick={(product) => handleEditProduct(product, true)}
         onFirmClick={(firm) => firm && handleEdit(firm, false, true)}
+        onContactClick={(contact) => setViewingContact(contact)}
       />
 
       <AddPortfolioDialog
