@@ -15,9 +15,11 @@ export async function getCurrentUserContact(contacts) {
   }
 }
 
-// Auto-populates the originator (contact + firm) from the signed-in user's email.
-// Looks up a Contact whose email matches the logged-in user's email and resolves
-// the associated firm. No-op if a contact is already selected or no match exists.
+// Auto-populates the originator (contact + firm) from the signed-in user.
+// Prefers the explicitly-linked contact/firm (set from the profile dialog),
+// then falls back to matching the user's email to a Contact record. The
+// resulting originator stays fully editable by the user. No-op if a contact
+// is already selected or no match exists.
 export function useAutoOriginator(allFirms, allContacts, setOriginator, originator) {
   useEffect(() => {
     if (originator.contactId) return;
@@ -26,13 +28,38 @@ export function useAutoOriginator(allFirms, allContacts, setOriginator, originat
     (async () => {
       try {
         const user = await base44.auth.me();
-        const email = (user?.email || "").toLowerCase();
-        if (!email) return;
-        const contact = allContacts.find(
-          (c) => !c.deleted_at && (c.email || "").toLowerCase() === email
-        );
+        if (!active) return;
+
+        // 1) Prefer the explicitly-linked contact record (from profile dialog).
+        let contact = null;
+        let preferredFirmId = "";
+        if (user?.linked_contact_id) {
+          contact = allContacts.find(
+            (c) => c.id === user.linked_contact_id && !c.deleted_at
+          ) || null;
+          if (contact) preferredFirmId = user.linked_firm_id || "";
+        }
+
+        // 2) Fall back to an email match if no linked contact resolved.
+        if (!contact) {
+          const email = (user?.email || "").toLowerCase();
+          if (email) {
+            contact = allContacts.find(
+              (c) => !c.deleted_at && (c.email || "").toLowerCase() === email
+            ) || null;
+          }
+        }
+
         if (!contact) return;
-        const firmId = (contact.firm_ids || [])[0] || "";
+
+        // Resolve the associated firm: prefer the linked firm (if the contact
+        // belongs to it), otherwise the contact's first firm.
+        let firmId = "";
+        if (preferredFirmId && (contact.firm_ids || []).includes(preferredFirmId)) {
+          firmId = preferredFirmId;
+        }
+        if (!firmId) firmId = (contact.firm_ids || [])[0] || "";
+
         const firm = firmId ? allFirms.find((f) => f.id === firmId) : null;
         if (!active) return;
         setOriginator({
