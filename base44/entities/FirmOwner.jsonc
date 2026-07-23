@@ -21,6 +21,10 @@
     "email": {
       "type": "string",
       "description": "Email of the owning firm"
+    },
+    "logo_url": {
+      "type": "string",
+      "description": "URL of the owning firm's logo"
     }
   },
   "required": [
