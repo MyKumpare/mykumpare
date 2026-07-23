@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload, TrendingUp, Tag, GraduationCap, Briefcase, Activity, Package, AlertTriangle, Linkedin, Loader2 } from "lucide-react";
+import {   X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload, TrendingUp, Tag, GraduationCap, Briefcase, Activity, Package, AlertTriangle, Linkedin, Loader2, ClipboardCheck } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "@/components/ui/use-toast";
@@ -21,6 +21,7 @@ import ContactAddressForm from "./ContactAddressForm";
 import ContactEducationTab from "./ContactEducationTab";
 import ContactProfessionalExperienceTab from "./ContactProfessionalExperienceTab";
 import ContactActivitiesTab from "./ContactActivitiesTab";
+import ContactDueDiligenceTab from "./ContactDueDiligenceTab";
 import ContactProductsTab from "./ContactProductsTab";
 import ContactRolePicker from "./ContactRolePicker";
 import ContactDepartmentPicker from "./ContactDepartmentPicker";
@@ -665,6 +666,9 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                   <TabsTrigger value="activities" className="flex items-center gap-1.5">
                     <Activity className="w-3.5 h-3.5" /> Activities
                   </TabsTrigger>
+                  <TabsTrigger value="due-diligence" className="flex items-center gap-1.5">
+                    <ClipboardCheck className="w-3.5 h-3.5" /> Due Diligence
+                  </TabsTrigger>
                 </TabsList>
               </div>
             </div>
@@ -1300,6 +1304,13 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                 contactName={[firstName, lastName].filter(Boolean).join(" ")}
                 contactFirmId={firmIds?.[0]}
                 contactFirmName={firmIds?.[0] ? firms?.find?.(f => f.id === firmIds[0])?.name : undefined}
+              />
+            </TabsContent>
+            {/* ── DUE DILIGENCE TAB ── */}
+            <TabsContent value="due-diligence" className="mt-0">
+              <ContactDueDiligenceTab
+                contactId={editingContact?.id}
+                contactName={[firstName, lastName].filter(Boolean).join(" ")}
               />
             </TabsContent>
           </Tabs>
