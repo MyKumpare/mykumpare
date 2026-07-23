@@ -25,6 +25,7 @@ import ProductInvestmentTeamTab from "./ProductInvestmentTeamTab";
 import ProductInvestmentDescriptionTab from "./ProductInvestmentDescriptionTab";
 import ProductReturnsTab from "./ProductReturnsTab";
 import ProductAnalyticsTab from "./ProductAnalyticsTab";
+import ProductDueDiligenceTab from "./ProductDueDiligenceTab";
 import ConstituentProductMultiSelect from "./ConstituentProductMultiSelect";
 import AddIMProductValidatedDialog from "./AddIMProductValidatedDialog";
 
@@ -381,8 +382,9 @@ export default function AddProductDialog({
 
         <div className="flex-1 overflow-y-auto pr-1">
           <Tabs defaultValue="details" className="w-full">
-            <TabsList className="grid grid-cols-3 w-full mb-4">
+            <TabsList className="grid grid-cols-4 w-full mb-4">
               <TabsTrigger value="details">Details</TabsTrigger>
+              <TabsTrigger value="dd" disabled={isAddMode}>Due Diligence</TabsTrigger>
               <TabsTrigger value="classifications">Classifications</TabsTrigger>
               <TabsTrigger value="description">Inv. Description</TabsTrigger>
             </TabsList>
@@ -552,6 +554,22 @@ export default function AddProductDialog({
                     </>
                   )}
                 </div>
+              )}
+            </TabsContent>
+
+            {/* ── Due Diligence Tab ── */}
+            <TabsContent value="dd">
+              {editingProduct && (
+                <ProductDueDiligenceTab
+                  productId={editingProduct.id}
+                  productName={editingProduct.name}
+                  firmId={editingProduct.firm_id}
+                  firmName={editingProduct.firm_name}
+                  onFirmClick={onFirmClick ? (firmId) => {
+                    const firm = firms.find((f) => f.id === firmId);
+                    if (firm) onFirmClick(firm);
+                  } : undefined}
+                />
               )}
             </TabsContent>
 
