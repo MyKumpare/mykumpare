@@ -246,10 +246,13 @@ function htmlToText(html: string, baseUrl: string): string {
     return `\n[IMAGE: alt="${alt}" src="${src}"]\n`;
   });
 
-  // Step 2: For nav/footer/header sections, extract internal links (team/
-  // people page URLs often live only in the nav menu) and keep [IMAGE: ...]
-  // markers (logos are commonly in the header). Other nav text is noise.
-  result = result.replace(/<(nav|footer|header)[^>]*>([\s\S]*?)<\/\1>/gi, (_m, _tag, inner) => {
+  // Step 2: For nav/header sections, extract internal links (team/people page
+  // URLs often live only in the nav menu) and keep [IMAGE: ...] markers (logos
+  // are commonly in the header). Other nav/header text is navigation noise.
+  // IMPORTANT: <footer> is NOT stripped here — footers almost always hold the
+  // firm's contact block (address, phone, email), so that text must reach the
+  // LLM. Stripping it was why addresses/phones were silently dropped.
+  result = result.replace(/<(nav|header)[^>]*>([\s\S]*?)<\/\1>/gi, (_m, _tag, inner) => {
     const images = inner.match(/\[IMAGE:[^\]]*\]/g) || [];
     // Extract href URLs from <a> tags BEFORE image markers were applied —
     // the inner HTML may still have raw <a href="..."> tags since this runs
@@ -977,7 +980,9 @@ Deno.serve(async (req) => {
     dynamicConsentCookies = detectConsentCookies(homepageRaw);
     const homepageText = homepageRaw ? htmlToText(homepageRaw, website) : '';
     if (homepageText) {
-      pageContents.push({ url: website, text: homepageText.substring(0, 8000) });
+      // Give the homepage a generous budget so the footer (which holds the
+      // address/phone/contact block) isn't truncated away before the LLM sees it.
+      pageContents.push({ url: website, text: homepageText.substring(0, 20000) });
     }
 
     // Fetch sub-pages in parallel
@@ -989,7 +994,7 @@ Deno.serve(async (req) => {
       const text = await fetchPage(fullUrl);
       if (text && text.length > 100) {
         const isPeoplePage = /\/(people|our-people|team|our-team|leadership|staff)\b/i.test(path);
-        const limit = isPeoplePage ? 40000 : 6000;
+        const limit = isPeoplePage ? 40000 : 12000;
         return { url: fullUrl, text: text.substring(0, limit) };
       }
       return null;
