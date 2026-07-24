@@ -10,6 +10,11 @@ import {
 const CHART_COLORS = ["#6366f1", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#ef4444", "#3b82f6", "#14b8a6"];
 
 function DataTable({ table }) {
+  const headers = table.headers || [];
+  // Column indices whose header is "Address" — render those cells as Google Maps links.
+  const addressColIdx = new Set(
+    headers.map((h, i) => (typeof h === "string" && h.toLowerCase() === "address" ? i : -1)).filter((i) => i >= 0)
+  );
   return (
     <div className="mt-2">
       {table.title && <p className="text-xs font-semibold text-gray-600 mb-1">{table.title}</p>}
@@ -17,7 +22,7 @@ function DataTable({ table }) {
         <table className="w-full text-xs">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
-              {(table.headers || []).map((h, i) => (
+              {headers.map((h, i) => (
                 <th key={i} className="px-2 py-1.5 text-left font-semibold text-gray-600 whitespace-nowrap">{h}</th>
               ))}
             </tr>
@@ -25,9 +30,26 @@ function DataTable({ table }) {
           <tbody>
             {(table.rows || []).map((row, ri) => (
               <tr key={ri} className="border-b border-gray-50">
-                {(Array.isArray(row) ? row : []).map((cell, ci) => (
-                  <td key={ci} className="px-2 py-1.5 text-gray-700 whitespace-nowrap">{String(cell ?? "")}</td>
-                ))}
+                {(Array.isArray(row) ? row : []).map((cell, ci) => {
+                  const text = String(cell ?? "");
+                  if (addressColIdx.has(ci) && text && text !== "No address on file") {
+                    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(text)}`;
+                    return (
+                      <td key={ci} className="px-2 py-1.5 whitespace-nowrap">
+                        <a
+                          href={mapsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-indigo-600 hover:text-indigo-700 hover:underline inline-flex items-center gap-1"
+                          title="Open in Google Maps"
+                        >
+                          {text}
+                        </a>
+                      </td>
+                    );
+                  }
+                  return <td key={ci} className="px-2 py-1.5 text-gray-700 whitespace-nowrap">{text}</td>;
+                })}
               </tr>
             ))}
           </tbody>
