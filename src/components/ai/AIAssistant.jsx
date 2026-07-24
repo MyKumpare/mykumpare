@@ -397,7 +397,7 @@ export default function AIAssistant() {
       // so the user can decide which one they want to see.
       const addressIntent = detectAddressIntent(userMessage);
       if (addressIntent.isAddressSearch) {
-        const result = await searchFirmAddresses(addressIntent.firmName);
+        const result = await searchFirmAddresses(addressIntent);
         setMessages((prev) => [...prev, result]);
         return;
       }

@@ -1,9 +1,37 @@
 import { base44 } from "@/api/base44Client";
 
+const FIRM_TYPES = [
+  "Manager of Managers",
+  "Investment Manager",
+  "Allocator",
+  "Investment Consultant",
+  "Securities Brokerage",
+  "Trade Organizations",
+];
+
+// Map common phrasings (incl. plurals) to the canonical firm type.
+function detectFirmType(text) {
+  const t = text.toLowerCase();
+  // Order matters: check more-specific / multi-word types first.
+  if (/\bmanager(s)?\s+of\s+manager(s)?\b/.test(t) || /\bmom(s)?\b/.test(t)) return "Manager of Managers";
+  if (/\binvestment\s+manager(s)?\b/.test(t) || /\bim(s)?\b/.test(t)) return "Investment Manager";
+  if (/\binvestment\s+consultant(s)?\b/.test(t)) return "Investment Consultant";
+  if (/\bsecurities\s+brokerage(s)?\b/.test(t) || /\bbrokerage(s)?\b/.test(t) || /\bbroker(s)?\b/.test(t)) return "Securities Brokerage";
+  if (/\btrade\s+organization(s)?\b/.test(t) || /\btrade\s+org(s)?\b/.test(t)) return "Trade Organizations";
+  if (/\ballocator(s)?\b/.test(t)) return "Allocator";
+  return null;
+}
+
+function hasExcelIntent(text) {
+  return /\b(excel|spreadsheet|\.csv|\.xlsx)\b/i.test(text) || /\bexport\s+to\s+(excel|csv)\b/i.test(text) || /\bin\s+(excel|csv)\b/i.test(text) || /\bas\s+(excel|csv)\b/i.test(text);
+}
+
 // ─── Intent detection ───
 // Detects when the user is asking the AI agent to look up the address(es)
-// of a specific firm (any firm type — investment manager, allocator, etc.),
-// even when the name provided is only a partial / incomplete match.
+// of firms. Two shapes are supported:
+//   1. A specific firm name (incl. partial / incomplete matches).
+//   2. "all <firm type>" (or "all firms") → every firm of that type.
+// An optional "in excel" / "export to excel" triggers a CSV download.
 export function detectAddressIntent(query) {
   const q = query.toLowerCase();
 
@@ -11,6 +39,15 @@ export function detectAddressIntent(query) {
     /address|addresses|location|located|where is|where's|office|offices|headquarter|headquarters|based\b/i.test(q);
 
   if (!hasAddressKeyword) return { isAddressSearch: false };
+
+  const isAll = /\ball\b/i.test(q);
+  const firmTypeFilter = detectFirmType(query);
+  const exportExcel = hasExcelIntent(query);
+
+  // "all <firm type>" or "all firms" with address(es): type-based report
+  if (isAll && (firmTypeFilter || /\bfirm(s)?\b/i.test(q))) {
+    return { isAddressSearch: true, firmName: null, firmTypeFilter, isAll: true, exportExcel };
+  }
 
   const patterns = [
     /(?:show|get|find|give me|tell me|list)\s+(?:me\s+)?(?:the\s+)?address(?:es)?\s+(?:of|for)\s+(.+?)(?:\s*$|[,.\?!])/i,
@@ -34,9 +71,10 @@ export function detectAddressIntent(query) {
     const stopWords = new Set([
       "show", "get", "find", "give", "tell", "list", "me", "the", "what", "is", "are",
       "where", "address", "addresses", "location", "located", "office", "offices",
-      "headquarters", "of", "for", "firm", "company", "and", "their", "an", "a",
-      "investment", "manager", "allocator", "consultant", "brokerage",
-      "trade", "organization", "securities", "managers", "of", "managers",
+      "headquarters", "of", "for", "firm", "firms", "company", "companies", "and", "their", "an", "a",
+      "investment", "manager", "managers", "allocator", "allocators", "consultant", "consultants",
+      "brokerage", "brokerages", "organization", "organizations", "securities", "all",
+      "report", "create", "generate", "build", "with", "in", "excel", "csv", "export", "to", "as",
     ]);
     const words = query.split(/\s+/);
     const properNouns = words
@@ -46,19 +84,16 @@ export function detectAddressIntent(query) {
   }
 
   if (firmName) {
-    // Strip trailing firm-type descriptors and punctuation the regex may capture
     firmName = firmName
-      .replace(/\s+(firm|company|managers?|allocator|consultant|brokerage|organization|securities)\s*$/i, "")
+      .replace(/\s+(firm|company|firms|companies|managers?|allocator|allocators|consultant|consultants|brokerage|brokerages|organization|organizations|securities)\s*$/i, "")
       .replace(/['"]/g, "")
       .trim();
   }
 
-  return { isAddressSearch: !!firmName, firmName };
+  return { isAddressSearch: !!firmName, firmName, firmTypeFilter: null, isAll: false, exportExcel };
 }
 
-// ─── Partial matching ───
-// Return ALL firms whose name partially matches the query (in either direction),
-// ranked by match quality, so the user can decide which one they want.
+// ─── Partial name matching ───
 async function findFirmsByPartialName(firmName) {
   const allFirms = await base44.entities.Firm.list(null, 500);
   const activeFirms = allFirms.filter((f) => !f.deleted_at);
@@ -72,7 +107,6 @@ async function findFirmsByPartialName(firmName) {
     return fn.includes(q) || q.includes(fn);
   });
 
-  // Rank: exact match first, then firm-name-starts-with query, then query-starts-with firm-name, then substring.
   const score = (f) => {
     const fn = clean(f.name);
     if (fn === q) return 0;
@@ -80,9 +114,21 @@ async function findFirmsByPartialName(firmName) {
     if (q.startsWith(fn)) return 2;
     return 3;
   };
-
   matches.sort((a, b) => score(a) - score(b) || a.name.localeCompare(b.name));
   return matches;
+}
+
+// ─── Type-based "all" matching ───
+async function findAllFirmsByType(firmTypeFilter) {
+  const allFirms = await base44.entities.Firm.list(null, 500);
+  const activeFirms = allFirms.filter((f) => !f.deleted_at);
+  if (!firmTypeFilter) return activeFirms.sort((a, b) => a.name.localeCompare(b.name));
+  return activeFirms
+    .filter((f) => {
+      const types = f.firm_types?.length ? f.firm_types : f.firm_type ? [f.firm_type] : [];
+      return types.includes(firmTypeFilter);
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function formatAddress(a) {
@@ -91,40 +137,78 @@ function formatAddress(a) {
     .join(", ");
 }
 
+// ─── CSV download (Excel-compatible) ───
+function downloadCsv(filename, headers, rows) {
+  const esc = (v) => {
+    const s = String(v ?? "");
+    return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const csv = [headers.map(esc).join(","), ...rows.map((r) => r.map(esc).join(","))].join("\n");
+  // Prepend BOM so Excel reads UTF-8 correctly.
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+function buildRows(matches) {
+  const rows = [];
+  for (const f of matches) {
+    const type = f.firm_types?.join(", ") || f.firm_type || "";
+    const addresses = f.addresses?.length ? f.addresses : [];
+    if (addresses.length === 0) {
+      rows.push([f.name, type, "No address on file", ""]);
+    } else {
+      for (const a of addresses) {
+        rows.push([f.name, type, formatAddress(a), a.is_headquarters ? "Headquarters" : ""]);
+      }
+    }
+  }
+  return rows;
+}
+
 // ─── Search & format ───
-export async function searchFirmAddresses(firmName) {
+export async function searchFirmAddresses(intent) {
+  const { firmName, firmTypeFilter, isAll, exportExcel } = intent;
   try {
-    const matches = await findFirmsByPartialName(firmName);
+    let matches;
+    let scopeLabel;
+    if (isAll || firmTypeFilter) {
+      matches = await findAllFirmsByType(firmTypeFilter);
+      scopeLabel = firmTypeFilter
+        ? `all ${firmTypeFilter.toLowerCase()}s`
+        : "all firms";
+    } else {
+      matches = await findFirmsByPartialName(firmName);
+      scopeLabel = `"${firmName}"`;
+    }
 
     if (matches.length === 0) {
       return {
         role: "assistant",
-        content: `I couldn't find any firms whose name matches **"${firmName}"** (including partial matches). Try a shorter or alternate spelling, or ask me to populate the firm from the web.`,
+        content: `I couldn't find any firms matching ${scopeLabel}. Try a shorter or alternate spelling, or ask me to populate the firm from the web.`,
       };
     }
 
-    // Build a table: one row per firm address (a firm with multiple addresses gets multiple rows).
     const headers = ["Firm", "Type", "Address", "Notes"];
-    const rows = [];
-    for (const f of matches) {
-      const type = f.firm_types?.join(", ") || f.firm_type || "";
-      const addresses = f.addresses?.length
-        ? f.addresses
-        : [];
-      if (addresses.length === 0) {
-        rows.push([f.name, type, "No address on file", ""]);
-      } else {
-        for (const a of addresses) {
-          const note = a.is_headquarters ? "Headquarters" : "";
-          rows.push([f.name, type, formatAddress(a), note]);
-        }
-      }
+    const rows = buildRows(matches);
+    const firmsWithAddresses = matches.filter((f) => f.addresses?.length).length;
+
+    if (exportExcel) {
+      const fname = (firmTypeFilter ? firmTypeFilter.replace(/\s+/g, "_").toLowerCase() : "firms") + "_addresses.csv";
+      downloadCsv(fname, headers, rows);
     }
 
-    const intro =
-      matches.length === 1
+    const intro = isAll || firmTypeFilter
+      ? `Here are the addresses for ${scopeLabel} — **${matches.length}** firm(s), **${firmsWithAddresses}** with an address on file.${exportExcel ? " A CSV (Excel-compatible) download has started." : ""}`
+      : (matches.length === 1
         ? `Here is the address on file for **${matches[0].name}**:`
-        : `I found **${matches.length}** firms matching **"${firmName}"** (including partial matches). Please review the addresses below and let me know which firm you'd like to see.`;
+        : `I found **${matches.length}** firms matching ${scopeLabel} (including partial matches). Please review the addresses below and let me know which firm you'd like to see.${exportExcel ? " A CSV (Excel-compatible) download has started." : ""}`);
 
     return {
       role: "assistant",
