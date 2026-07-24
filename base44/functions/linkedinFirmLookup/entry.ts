@@ -156,6 +156,42 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ── Strategy 2b: LLM web search for the LinkedIn company page ──
+    // Many firm sites render their social links via JavaScript (absent from
+    // static HTML), and DuckDuckGo is frequently blocked by the host
+    // environment. The LLM's web-search capability (Gemini, via Google's
+    // index) is a reliable last-resort fallback.
+    if (searchMatches.length === 0 || searchMatches[0].score < 2) {
+      try {
+        const sitePart = websiteUrl ? ` (official website: ${websiteUrl})` : '';
+        const llmRes = await base44.integrations.Core.InvokeLLM({
+          prompt: `Search the web for the LinkedIn company page URL of the investment firm "${name}"${sitePart}. Return ONLY their public LinkedIn company page URL in the form https://www.linkedin.com/company/... . If you cannot find it, return an empty string. Do not guess or fabricate a URL.`,
+          add_context_from_internet: true,
+          response_json_schema: {
+            type: 'object',
+            properties: {
+              linkedin_url: { type: 'string' },
+            },
+          },
+        });
+        const llmUrl = (llmRes?.linkedin_url || '').trim();
+        if (llmUrl && /https?:\/\/(?:www\.)?linkedin\.com\/company\//i.test(llmUrl)) {
+          let url = llmUrl.replace(/[?#].*$/, '');
+          const parts = url.split('/company/');
+          const firstSeg = (parts[1] || '').split('/')[0];
+          url = `https://www.linkedin.com/company/${firstSeg}`;
+          const slugLower = url.toLowerCase();
+          const slugMatches = !!nameSlug && slugLower.includes(nameSlug);
+          return Response.json({
+            linkedin_url: url,
+            confidence: slugMatches ? 'high' : 'medium',
+            source: 'web_search',
+            ...(!slugMatches ? { message: 'Found via web search — please verify before saving.' } : {}),
+          });
+        }
+      } catch { /* keep going — fall through to empty result */ }
+    }
+
     const reason = !websiteUrl
       ? "The firm has no website on file, so its LinkedIn page could not be found automatically."
       : "No LinkedIn company page was found on the firm's website. You can enter the URL manually.";

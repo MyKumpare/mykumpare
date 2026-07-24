@@ -135,7 +135,7 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
-    const { first_name, last_name, firm_id, website, current_title } = body || {};
+    const { first_name, last_name, firm_id, website, current_title, firm_name: bodyFirmName } = body || {};
     if (!first_name || !last_name) {
       return Response.json({ error: 'first_name and last_name are required' }, { status: 400 });
     }
@@ -150,12 +150,12 @@ Deno.serve(async (req) => {
 
     // Resolve the firm website + name
     let websiteUrl = website;
-    let firmName = '';
-    if (!websiteUrl && firm_id) {
+    let firmName = bodyFirmName || '';
+    if (firm_id) {
       try {
         const firm = await base44.asServiceRole.entities.Firm.get(firm_id);
-        websiteUrl = firm?.website;
-        firmName = firm?.name || '';
+        websiteUrl = websiteUrl || firm?.website || '';
+        if (!firmName) firmName = firm?.name || '';
       } catch { /* ignore */ }
     }
 
@@ -251,6 +251,40 @@ Deno.serve(async (req) => {
         ...(photo_url ? { photo_url } : {}),
       });
     }
+
+    // ── Strategy 3: LLM web search for the LinkedIn profile ──
+    // Many firm sites render team LinkedIn links via JavaScript (absent from
+    // the static HTML), and DuckDuckGo is frequently blocked by the host
+    // environment. The LLM's web-search capability (Gemini, via Google's
+    // index) is a reliable fallback for resolving an individual's profile —
+    // the same approach the enrichment pass uses for bio-page discovery.
+    try {
+      const firmPart = firmName ? ` who works at ${firmName}` : '';
+      const titlePart = current_title ? `, ${current_title}` : '';
+      const llmRes = await base44.integrations.Core.InvokeLLM({
+        prompt: `Search the web for the public LinkedIn personal profile URL of ${first_name} ${last_name}${firmPart}${titlePart}. Return ONLY their LinkedIn profile URL in the form https://www.linkedin.com/in/... (or https://www.linkedin.com/pub/...). If you cannot find it, return an empty string. Do not guess or fabricate a URL.`,
+        add_context_from_internet: true,
+        response_json_schema: {
+          type: 'object',
+          properties: {
+            linkedin_url: { type: 'string' },
+          },
+        },
+      });
+      const llmUrl = (llmRes?.linkedin_url || '').trim();
+      if (llmUrl && /https?:\/\/(?:www\.)?linkedin\.com\/(?:in|pub)\//i.test(llmUrl)) {
+        const slugLower = llmUrl.toLowerCase();
+        // Require the last name in the slug to avoid a plausible-but-wrong profile.
+        if (lastNameLower && slugLower.includes(lastNameLower)) {
+          return Response.json({
+            linkedin_url: llmUrl,
+            confidence: 'medium',
+            source: 'web_search',
+            message: 'Found via web search — please verify before saving.',
+          });
+        }
+      }
+    } catch { /* keep going — fall through to combined result */ }
 
     // Combine best efforts for a low-confidence result
     const allMatches = [...websiteMatches, ...searchMatches].sort((a, b) => b.score - a.score);

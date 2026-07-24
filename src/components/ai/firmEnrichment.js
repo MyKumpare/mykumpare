@@ -762,6 +762,7 @@ export async function autoFillMissingLinkedInUrls(enrichedData, website) {
             first_name: person.first_name || "",
             last_name: person.last_name || "",
             website: site,
+            firm_name: enrichedData.name || "",
           });
           const url = res?.data?.linkedin_url || "";
           if (url) {
