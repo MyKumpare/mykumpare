@@ -15,6 +15,8 @@ import { ChevronDown, Check, Plus, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { findContactDuplicates } from "@/components/contacts/contactDuplicateCheck";
 import { useFirmOwner } from "@/components/admin/useFirmOwner";
+import DueDiligenceStagePicker from "./DueDiligenceStagePicker";
+import { useDueDiligenceStages, DD_STAGE_NOT_STARTED } from "./useDueDiligenceStages";
 
 const DD_STATUSES = ["Pipeline", "Buy List", "Rejected"];
 const PROCESS_STATUSES = ["Not Started", "In-process", "Completed"];
@@ -342,6 +344,8 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
   const [productId, setProductId] = useState("");
   const [status, setStatus] = useState("Pipeline");
   const [processStatus, setProcessStatus] = useState("Not Started");
+  const [ddStage, setDdStage] = useState(DD_STAGE_NOT_STARTED);
+  const { stages } = useDueDiligenceStages();
   const [primaryId, setPrimaryId] = useState("");
   const [secondaryId, setSecondaryId] = useState("");
   const [productMode, setProductMode] = useState("select"); // "select" | "new"
@@ -431,6 +435,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
       setProductId(editingRecord.product_id || "");
       setStatus(editingRecord.status || "Pipeline");
       setProcessStatus(editingRecord.process_status || "Not Started");
+      setDdStage(editingRecord.due_diligence_stage || DD_STAGE_NOT_STARTED);
       setPrimaryId(editingRecord.primary_analyst_contact_id || "");
       setSecondaryId(editingRecord.secondary_analyst_contact_id || "");
       setSelectedFirmId(editingRecord.firm_id || "");
@@ -439,6 +444,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
       setProductId(preselectProductId || "");
       setStatus("Pipeline"); // auto-select Pipeline for new due diligence
       setProcessStatus("Not Started");
+      setDdStage(DD_STAGE_NOT_STARTED);
       setPrimaryId("");
       setSecondaryId("");
       setSelectedFirmId("");
@@ -500,6 +506,20 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
   // Validation: a contact picked for one analyst cannot be the other.
   const isValid = !!effectiveFirmId && productId && primaryId && (primaryId !== secondaryId);
 
+  // When the process is started, auto-select Stage 1 (Pre-liminary Assessment)
+  // if no real stage has been chosen yet; when reset to Not Started, clear the stage.
+  const handleProcessStatusChange = (v) => {
+    setProcessStatus(v);
+    if (v === "Not Started") {
+      setDdStage(DD_STAGE_NOT_STARTED);
+    } else if (v === "In-process") {
+      if (!ddStage || ddStage === DD_STAGE_NOT_STARTED) {
+        const first = stages[0];
+        if (first) setDdStage(first.name);
+      }
+    }
+  };
+
   const handleSave = () => {
     if (!isValid) return;
     onSubmit({
@@ -509,6 +529,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
       product_name: selectedProduct?.name || "",
       status,
       process_status: status === "Buy List" ? "Completed" : processStatus,
+      due_diligence_stage: ddStage || DD_STAGE_NOT_STARTED,
       primary_analyst_contact_id: primaryId,
       primary_analyst_name: contactName(primaryContact) || "",
       secondary_analyst_contact_id: secondaryId || undefined,
@@ -632,12 +653,22 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
           {/* Process status */}
           <div className="space-y-1.5">
             <Label className="text-xs font-medium text-gray-700">Due Diligence Process Status</Label>
-            <Select value={processStatus} onValueChange={setProcessStatus}>
+            <Select value={processStatus} onValueChange={handleProcessStatusChange}>
               <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {PROCESS_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Due Diligence Stage */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-gray-700">Due Diligence Stage</Label>
+            <DueDiligenceStagePicker
+              value={ddStage}
+              onChange={setDdStage}
+              disabled={status === "Buy List"}
+            />
           </div>
 
           {/* Primary analyst */}

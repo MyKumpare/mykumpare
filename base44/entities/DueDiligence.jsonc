@@ -38,6 +38,11 @@
       "default": "Not Started",
       "description": "Due diligence process status"
     },
+    "due_diligence_stage": {
+      "type": "string",
+      "default": "Not Started",
+      "description": "Current due diligence stage (a DueDiligenceStage name), or 'Not Started'. Displayed as 'Stage N - name' based on the stage's position in the master list."
+    },
     "primary_analyst_contact_id": {
       "type": "string",
       "description": "ID of the primary analyst (a contact from the firm)"
