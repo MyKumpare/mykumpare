@@ -252,35 +252,54 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── Strategy 3: LLM web search for the LinkedIn profile ──
-    // Many firm sites render team LinkedIn links via JavaScript (absent from
-    // the static HTML), and DuckDuckGo is frequently blocked by the host
-    // environment. The LLM's web-search capability (Gemini, via Google's
-    // index) is a reliable fallback for resolving an individual's profile —
-    // the same approach the enrichment pass uses for bio-page discovery.
+    // ── Strategy 3: LLM web search against LinkedIn ──
+    // Direct LinkedIn scraping is blocked (anti-bot 999) and the LinkedIn API
+    // has no people-search scope, so we search the web (Google's index, via
+    // Gemini) for the contact's LinkedIn profile. We issue several targeted
+    // LinkedIn queries and fall back to the higher-quality model if the first
+    // pass finds nothing — this maximizes the hit rate for indexed profiles.
+    const firmPartQ = firmName ? ` ${firmName}` : '';
+    const titlePartQ = current_title ? ` ${current_title}` : '';
+    const llmQueries = [
+      `site:linkedin.com/in "${first_name} ${last_name}"${firmPartQ}`,
+      `"${first_name} ${last_name}"${firmPartQ}${titlePartQ} linkedin`,
+      `"${first_name} ${last_name}" linkedin`,
+    ];
+    const llmPrompt = `Run these Google searches one at a time and look at the results:\n${llmQueries.map((q, i) => `${i + 1}. ${q}`).join('\n')}\n\nFind any result URL that matches https://www.linkedin.com/in/... (a personal profile, not a company /company/ page). Return ONLY that full LinkedIn profile URL. If none of the searches surface a LinkedIn personal profile, return exactly: not found\nDo not guess or fabricate a URL.`;
+
+    const extractLlmUrl = (rawText) => {
+      const text = typeof rawText === 'string' ? rawText : (rawText?.linkedin_url || JSON.stringify(rawText || ''));
+      const m = text.match(/https?:\/\/(?:[a-z]{2}-[a-z]{2}\.)?(?:www\.)?linkedin\.com\/(?:in|pub)\/[A-Za-z0-9_\-%]+/i);
+      return m ? m[0] : null;
+    };
+
+    const finalizeLlm = (llmUrl) => {
+      const slugHasLastName = !lastNameLower || llmUrl.toLowerCase().includes(lastNameLower);
+      return Response.json({
+        linkedin_url: llmUrl,
+        confidence: slugHasLastName ? 'medium' : 'low',
+        source: 'web_search',
+        message: 'Found via web search — please verify before saving.',
+      });
+    };
+
     try {
-      const firmPart = firmName ? ` who works at ${firmName}` : '';
-      const titlePart = current_title ? `, ${current_title}` : '';
-      // NOTE: response_json_schema is intentionally omitted. With
-      // add_context_from_internet the LLM returns a raw string (the schema is
-      // ignored and can come back empty), so we extract the URL from the text.
       const llmRes = await base44.integrations.Core.InvokeLLM({
-        prompt: `Search the web for the public LinkedIn personal profile URL of ${first_name} ${last_name}${firmPart}${titlePart}. In your answer, include the full LinkedIn profile URL (https://www.linkedin.com/in/... or https://www.linkedin.com/pub/...). If you genuinely cannot find it, say "not found". Do not guess or fabricate a URL.`,
+        prompt: llmPrompt,
         model: 'gemini_3_flash',
         add_context_from_internet: true,
       });
-      const rawText = typeof llmRes === 'string' ? llmRes : (llmRes?.linkedin_url || JSON.stringify(llmRes || ''));
-      const m = rawText.match(/https?:\/\/(?:[a-z]{2}-[a-z]{2}\.)?(?:www\.)?linkedin\.com\/(?:in|pub)\/[A-Za-z0-9_\-%]+/i);
-      if (m) {
-        const llmUrl = m[0];
-        const slugHasLastName = !lastNameLower || llmUrl.toLowerCase().includes(lastNameLower);
-        return Response.json({
-          linkedin_url: llmUrl,
-          confidence: slugHasLastName ? 'medium' : 'low',
-          source: 'web_search',
-          message: 'Found via web search — please verify before saving.',
-        });
-      }
+      const llmUrl = extractLlmUrl(llmRes);
+      if (llmUrl) return finalizeLlm(llmUrl);
+
+      // Fallback to the higher-quality search model when flash finds nothing.
+      const proRes = await base44.integrations.Core.InvokeLLM({
+        prompt: llmPrompt,
+        model: 'gemini_3_1_pro',
+        add_context_from_internet: true,
+      });
+      const proUrl = extractLlmUrl(proRes);
+      if (proUrl) return finalizeLlm(proUrl);
     } catch (e) {
       console.log('[linkedinContactLookup] LLM web-search error:', e?.message || String(e));
     }
