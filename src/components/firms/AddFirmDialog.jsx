@@ -581,15 +581,53 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     }
     let created = 0;
     const createErrors = [];
+    const createdContacts = [];
     // Only create new contacts the user confirmed — contacts flagged as
     // potential duplicates can be unchecked in the approval dialog.
     const skippedNewContactIndices = confirmData?.skippedNewContacts || [];
     for (let i = 0; i < newContacts.length; i++) {
       if (skippedNewContactIndices.includes(i)) continue;
       const { potentialDuplicates, ...contactData } = newContacts[i];
-      try { await base44.entities.Contact.create(contactData); created++; }
+      try {
+        const createdContact = await base44.entities.Contact.create(contactData);
+        createdContacts.push(createdContact);
+        created++;
+      }
       catch (createErr) { createErrors.push(`${createErr.message || createErr}`); }
     }
+
+    // Auto-populate LinkedIn for newly created contacts the web scrape didn't
+    // resolve a profile for — this mirrors the "Find" button in the contact
+    // editor so the user doesn't have to trigger it manually for each contact
+    // created by the auto-fill flow.
+    const needsLinkedIn = createdContacts.filter((c) => !c.linkedin_url && c.first_name && c.last_name);
+    if (needsLinkedIn.length > 0) {
+      const firmId = editingFirm?.id || "";
+      const firmWebsite = editingFirm?.website || "";
+      const firmName = editingFirm?.name || "";
+      let linkedinFound = 0;
+      await Promise.all(needsLinkedIn.map(async (c) => {
+        try {
+          const res = await base44.functions.invoke("linkedinContactLookup", {
+            first_name: c.first_name,
+            last_name: c.last_name,
+            firm_id: firmId,
+            website: firmWebsite,
+            current_title: c.title || "",
+            firm_name: firmName,
+          });
+          const url = res?.data?.linkedin_url;
+          if (url) {
+            await base44.entities.Contact.update(c.id, { linkedin_url: url });
+            linkedinFound++;
+          }
+        } catch { /* non-fatal — leave LinkedIn blank */ }
+      }));
+      if (linkedinFound > 0) {
+        applied.push(`${linkedinFound} LinkedIn Profile(s) auto-populated`);
+      }
+    }
+
     if (created > 0 || updated > 0) {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
     }
