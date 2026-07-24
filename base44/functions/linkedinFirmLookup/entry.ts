@@ -164,19 +164,18 @@ Deno.serve(async (req) => {
     if (searchMatches.length === 0 || searchMatches[0].score < 2) {
       try {
         const sitePart = websiteUrl ? ` (official website: ${websiteUrl})` : '';
+        // NOTE: response_json_schema is intentionally omitted. With
+        // add_context_from_internet the LLM returns a raw string (the schema is
+        // ignored and can come back empty), so we extract the URL from the text.
         const llmRes = await base44.integrations.Core.InvokeLLM({
-          prompt: `Search the web for the LinkedIn company page URL of the investment firm "${name}"${sitePart}. Return ONLY their public LinkedIn company page URL in the form https://www.linkedin.com/company/... . If you cannot find it, return an empty string. Do not guess or fabricate a URL.`,
+          prompt: `Search the web for the LinkedIn company page URL of the investment firm "${name}"${sitePart}. In your answer, include the full LinkedIn company page URL (https://www.linkedin.com/company/...). If you genuinely cannot find it, say "not found". Do not guess or fabricate a URL.`,
           model: 'gemini_3_flash',
           add_context_from_internet: true,
-          response_json_schema: {
-            type: 'object',
-            properties: {
-              linkedin_url: { type: 'string' },
-            },
-          },
         });
-        const llmUrl = (llmRes?.linkedin_url || '').trim();
-        if (llmUrl && /https?:\/\/(?:www\.)?linkedin\.com\/company\//i.test(llmUrl)) {
+        const rawText = typeof llmRes === 'string' ? llmRes : (llmRes?.linkedin_url || JSON.stringify(llmRes || ''));
+        const m = rawText.match(/https?:\/\/(?:[a-z]{2}-[a-z]{2}\.)?(?:www\.)?linkedin\.com\/company\/[A-Za-z0-9_\-%./]+/i);
+        if (m) {
+          const llmUrl = m[0];
           let url = llmUrl.replace(/[?#].*$/, '');
           const parts = url.split('/company/');
           const firstSeg = (parts[1] || '').split('/')[0];
