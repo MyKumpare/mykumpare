@@ -43,10 +43,11 @@ export function detectAddressIntent(query) {
   const isAll = /\ball\b/i.test(q);
   const firmTypeFilter = detectFirmType(query);
   const exportExcel = hasExcelIntent(query);
+  const withAddressOnly = /\bwith\s+(?:an?\s+)?address(es)?\b/i.test(q);
 
   // "all <firm type>" or "all firms" with address(es): type-based report
   if (isAll && (firmTypeFilter || /\bfirm(s)?\b/i.test(q))) {
-    return { isAddressSearch: true, firmName: null, firmTypeFilter, isAll: true, exportExcel };
+    return { isAddressSearch: true, firmName: null, firmTypeFilter, isAll: true, exportExcel, withAddressOnly };
   }
 
   const patterns = [
@@ -90,8 +91,8 @@ export function detectAddressIntent(query) {
       .trim();
   }
 
-  return { isAddressSearch: !!firmName, firmName, firmTypeFilter: null, isAll: false, exportExcel };
-}
+  return { isAddressSearch: !!firmName, firmName, firmTypeFilter: null, isAll: false, exportExcel, withAddressOnly };
+  }
 
 // ─── Partial name matching ───
 async function findFirmsByPartialName(firmName) {
@@ -174,7 +175,7 @@ function buildRows(matches) {
 
 // ─── Search & format ───
 export async function searchFirmAddresses(intent) {
-  const { firmName, firmTypeFilter, isAll, exportExcel } = intent;
+  const { firmName, firmTypeFilter, isAll, exportExcel, withAddressOnly } = intent;
   try {
     let matches;
     let scopeLabel;
@@ -186,6 +187,11 @@ export async function searchFirmAddresses(intent) {
     } else {
       matches = await findFirmsByPartialName(firmName);
       scopeLabel = `"${firmName}"`;
+    }
+
+    // When the user asked for firms "with address(es)", drop firms that have none.
+    if (withAddressOnly) {
+      matches = matches.filter((f) => f.addresses && f.addresses.length > 0);
     }
 
     if (matches.length === 0) {
@@ -205,7 +211,7 @@ export async function searchFirmAddresses(intent) {
     }
 
     const intro = isAll || firmTypeFilter
-      ? `Here are the addresses for ${scopeLabel} — **${matches.length}** firm(s), **${firmsWithAddresses}** with an address on file.${exportExcel ? " A CSV (Excel-compatible) download has started." : ""}`
+      ? `Here are the addresses for ${scopeLabel} — **${matches.length}** firm(s)${withAddressOnly ? " with an address on file" : `, ${firmsWithAddresses} with an address on file`}.${exportExcel ? " A CSV (Excel-compatible) download has started." : ""}`
       : (matches.length === 1
         ? `Here is the address on file for **${matches[0].name}**:`
         : `I found **${matches.length}** firms matching ${scopeLabel} (including partial matches). Please review the addresses below and let me know which firm you'd like to see.${exportExcel ? " A CSV (Excel-compatible) download has started." : ""}`);
