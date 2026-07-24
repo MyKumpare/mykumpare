@@ -261,30 +261,29 @@ Deno.serve(async (req) => {
     try {
       const firmPart = firmName ? ` who works at ${firmName}` : '';
       const titlePart = current_title ? `, ${current_title}` : '';
+      // NOTE: response_json_schema is intentionally omitted. With
+      // add_context_from_internet the LLM returns a raw string (the schema is
+      // ignored and can come back empty), so we extract the URL from the text.
       const llmRes = await base44.integrations.Core.InvokeLLM({
-        prompt: `Search the web for the public LinkedIn personal profile URL of ${first_name} ${last_name}${firmPart}${titlePart}. Return ONLY their LinkedIn profile URL in the form https://www.linkedin.com/in/... (or https://www.linkedin.com/pub/...). If you cannot find it, return an empty string. Do not guess or fabricate a URL.`,
+        prompt: `Search the web for the public LinkedIn personal profile URL of ${first_name} ${last_name}${firmPart}${titlePart}. In your answer, include the full LinkedIn profile URL (https://www.linkedin.com/in/... or https://www.linkedin.com/pub/...). If you genuinely cannot find it, say "not found". Do not guess or fabricate a URL.`,
+        model: 'gemini_3_flash',
         add_context_from_internet: true,
-        response_json_schema: {
-          type: 'object',
-          properties: {
-            linkedin_url: { type: 'string' },
-          },
-        },
       });
-      const llmUrl = (llmRes?.linkedin_url || '').trim();
-      if (llmUrl && /https?:\/\/(?:www\.)?linkedin\.com\/(?:in|pub)\//i.test(llmUrl)) {
-        const slugLower = llmUrl.toLowerCase();
-        // Require the last name in the slug to avoid a plausible-but-wrong profile.
-        if (lastNameLower && slugLower.includes(lastNameLower)) {
-          return Response.json({
-            linkedin_url: llmUrl,
-            confidence: 'medium',
-            source: 'web_search',
-            message: 'Found via web search — please verify before saving.',
-          });
-        }
+      const rawText = typeof llmRes === 'string' ? llmRes : (llmRes?.linkedin_url || JSON.stringify(llmRes || ''));
+      const m = rawText.match(/https?:\/\/(?:[a-z]{2}-[a-z]{2}\.)?(?:www\.)?linkedin\.com\/(?:in|pub)\/[A-Za-z0-9_\-%]+/i);
+      if (m) {
+        const llmUrl = m[0];
+        const slugHasLastName = !lastNameLower || llmUrl.toLowerCase().includes(lastNameLower);
+        return Response.json({
+          linkedin_url: llmUrl,
+          confidence: slugHasLastName ? 'medium' : 'low',
+          source: 'web_search',
+          message: 'Found via web search — please verify before saving.',
+        });
       }
-    } catch { /* keep going — fall through to combined result */ }
+    } catch (e) {
+      console.log('[linkedinContactLookup] LLM web-search error:', e?.message || String(e));
+    }
 
     // Combine best efforts for a low-confidence result
     const allMatches = [...websiteMatches, ...searchMatches].sort((a, b) => b.score - a.score);

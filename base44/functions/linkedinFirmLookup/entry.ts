@@ -166,6 +166,7 @@ Deno.serve(async (req) => {
         const sitePart = websiteUrl ? ` (official website: ${websiteUrl})` : '';
         const llmRes = await base44.integrations.Core.InvokeLLM({
           prompt: `Search the web for the LinkedIn company page URL of the investment firm "${name}"${sitePart}. Return ONLY their public LinkedIn company page URL in the form https://www.linkedin.com/company/... . If you cannot find it, return an empty string. Do not guess or fabricate a URL.`,
+          model: 'gemini_3_flash',
           add_context_from_internet: true,
           response_json_schema: {
             type: 'object',

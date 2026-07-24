@@ -829,6 +829,7 @@ Extract and return:
 - Key personnel: for EVERY person found on the firm's team / about / leadership / staff pages, include first_name, last_name, title, email (if available), linkedin_url (full URL if available), and the full biography text if available from their public profile.
 
 Be thorough — include EVERY team member you can find across all sections of their team page. Copy any biography text in full; do not summarize. Only include information you actually find from web sources; do not fabricate. Leave a field empty if not found.`,
+      model: 'gemini_3_flash',
       add_context_from_internet: true,
       response_json_schema: {
         type: 'object',
