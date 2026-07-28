@@ -31,6 +31,8 @@ import FirmDueDiligenceTab from "./FirmDueDiligenceTab";
 import EnrichmentApprovalDialog from "./EnrichmentApprovalDialog";
 import SimilarAddressDialog from "../SimilarAddressDialog";
 import { findAddressIssues, addressesAreExact } from "../addressDuplicateCheck";
+import SimilarFirmFieldDialog from "./SimilarFirmFieldDialog";
+import { findFirmFieldConflicts } from "./firmFieldDuplicateCheck";
 
 function getCountryCodeFromCountryName(countryName) {
   if (!countryName) return "";
@@ -119,6 +121,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const [similarAddressPairs, setSimilarAddressPairs] = useState(null);
   const [linkedinLookupLoading, setLinkedinLookupLoading] = useState(false);
   const [similarFirmWarning, setSimilarFirmWarning] = useState(null);
+  const [firmFieldConflicts, setFirmFieldConflicts] = useState(null);
   const nameInputRef = useRef(null);
 
   const { data: allContacts = [] } = useQuery({
@@ -309,7 +312,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const showPortfolioTab = firmTypes.includes("Allocator");
   const showAdvisorPortfolioTab = firmTypes.includes("Manager of Managers") || firmTypes.includes("Investment Manager");
 
-  const handleSubmit = (forceFirmName = false) => {
+  const handleSubmit = (forceFirmName = false, forceFieldConflicts = false) => {
     if (!isValid) return;
     // In add mode, warn on similar existing firm names before saving so the
     // user can confirm they're not creating a duplicate. Matches the same
@@ -337,6 +340,20 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     if (similarPairs.length > 0) {
       setSimilarAddressPairs({ pairs: similarPairs.map(([i, j]) => ({ i, j, ai: addresses[i], aj: addresses[j] })) });
       return;
+    }
+    // Warn when the website, email, or LinkedIn URL matches (exactly or
+    // closely) another firm already in the system — in both add and edit
+    // modes (the current firm is excluded so it never conflicts with itself).
+    if (!forceFieldConflicts) {
+      const conflicts = findFirmFieldConflicts(
+        { website, email, linkedin_url: linkedinUrl },
+        existingFirms,
+        editingFirm?.id
+      );
+      if (conflicts.length > 0) {
+        setFirmFieldConflicts(conflicts);
+        return;
+      }
     }
     performSubmit(addresses);
   };
@@ -666,6 +683,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     setShowEnrichment(false);
     setEnrichmentLoading(false);
     setEnrichmentApproval(null);
+    setFirmFieldConflicts(null);
   };
 
   const handleCancelEdit = () => {
@@ -1415,6 +1433,13 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         contactUpdates={enrichmentApproval?.contactUpdates || []}
         newContacts={enrichmentApproval?.newContacts || []}
         firmFieldsApplied={enrichmentApproval?.firmFieldsApplied || []}
+      />
+
+      <SimilarFirmFieldDialog
+        open={!!firmFieldConflicts}
+        conflicts={firmFieldConflicts || []}
+        onAccept={() => { setFirmFieldConflicts(null); handleSubmit(true, true); }}
+        onReject={() => setFirmFieldConflicts(null)}
       />
     </Dialog>
   );
