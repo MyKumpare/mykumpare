@@ -4,7 +4,6 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { ClipboardCheck, Pencil, Plus } from "lucide-react";
 import AddDueDiligenceDialog from "../firms/AddDueDiligenceDialog";
-import { useDueDiligenceStages, formatStageLabel, DD_STAGE_NOT_STARTED } from "../firms/useDueDiligenceStages";
 
 const STATUS_STYLES = {
   "Pipeline": "bg-blue-50 text-blue-700 border-blue-200",
@@ -18,15 +17,12 @@ const PROCESS_STYLES = {
   "Completed": "bg-emerald-50 text-emerald-700 border-emerald-200",
 };
 
-const STAGE_STYLES = "bg-violet-50 text-violet-700 border-violet-200";
-
 // Shows every DueDiligence record where this contact is the primary or secondary
 // analyst. Each row edits the ORIGINAL record (updates propagate to the source).
 export default function ContactDueDiligenceTab({ contactId, contactName, onContactClick, onProductClick }) {
   const queryClient = useQueryClient();
   const [showDialog, setShowDialog] = useState(false);
   const [editing, setEditing] = useState(null);
-  const { stages } = useDueDiligenceStages();
 
   const { data: primary = [], isLoading: lp } = useQuery({
     queryKey: ["dd-primary-analyst", contactId],
@@ -168,15 +164,6 @@ export default function ContactDueDiligenceTab({ contactId, contactName, onConta
                   <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${PROCESS_STYLES[rec.process_status] || PROCESS_STYLES["Not Started"]}`}>
                     {rec.process_status || "Not Started"}
                   </span>
-                  {(() => {
-                    const label = formatStageLabel(rec.due_diligence_stage, stages);
-                    if (label === DD_STAGE_NOT_STARTED) return null;
-                    return (
-                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${STAGE_STYLES}`}>
-                        {label}
-                      </span>
-                    );
-                  })()}
                   <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded border bg-indigo-50 text-indigo-700 border-indigo-200">
                     {rec._role} Analyst
                   </span>
