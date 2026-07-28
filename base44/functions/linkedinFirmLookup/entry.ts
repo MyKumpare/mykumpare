@@ -35,6 +35,23 @@ function slugify(name) {
   return (name || '').toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 40);
 }
 
+// Convert a LinkedIn company slug (e.g. "xponance-investment-partners")
+// into a human-readable company name ("Xponance Investment Partners").
+function slugToCompanyName(slug) {
+  return (slug || '')
+    .replace(/[-_]+/g, ' ')
+    .replace(/[^a-z0-9 ]/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+// Derive the slug + display company name from a LinkedIn company URL.
+function companyFromUrl(url) {
+  const slug = (url.split('/company/')[1] || '').split('/')[0] || '';
+  return { slug, companyName: slugToCompanyName(slug) };
+}
+
 function scoreCandidate(url, context, nameSlug, nameTokens) {
   const slugLower = (url.split('/company/')[1] || '').toLowerCase();
   let score = 1;
@@ -111,8 +128,11 @@ Deno.serve(async (req) => {
 
     if (matches.length > 0) {
       const best = matches[0];
+      const { slug, companyName } = companyFromUrl(best.url);
       return Response.json({
         linkedin_url: best.url,
+        linkedin_slug: slug,
+        linkedin_company_name: companyName,
         confidence: best.score >= 4 ? 'high' : best.score >= 2 ? 'medium' : 'low',
         source: 'firm_website',
       });
@@ -149,8 +169,11 @@ Deno.serve(async (req) => {
     } catch (e) { ddgDiag = 'err=' + (e.message || String(e)); }
 
     if (searchMatches.length > 0 && searchMatches[0].score >= 2) {
+      const { slug, companyName } = companyFromUrl(searchMatches[0].url);
       return Response.json({
         linkedin_url: searchMatches[0].url,
+        linkedin_slug: slug,
+        linkedin_company_name: companyName,
         confidence: searchMatches[0].score >= 4 ? 'high' : 'medium',
         source: 'web_search',
       });
@@ -182,8 +205,11 @@ Deno.serve(async (req) => {
           url = `https://www.linkedin.com/company/${firstSeg}`;
           const slugLower = url.toLowerCase();
           const slugMatches = !!nameSlug && slugLower.includes(nameSlug);
+          const llmCompany = companyFromUrl(url);
           return Response.json({
             linkedin_url: url,
+            linkedin_slug: llmCompany.slug,
+            linkedin_company_name: llmCompany.companyName,
             confidence: slugMatches ? 'high' : 'medium',
             source: 'web_search',
             ...(!slugMatches ? { message: 'Found via web search — please verify before saving.' } : {}),

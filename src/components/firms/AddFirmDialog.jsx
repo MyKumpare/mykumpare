@@ -34,6 +34,8 @@ import { findAddressIssues, addressesAreExact } from "../addressDuplicateCheck";
 import SimilarFirmFieldDialog from "./SimilarFirmFieldDialog";
 import { findFirmFieldConflicts } from "./firmFieldDuplicateCheck";
 import LiveFieldConflictWarning from "./LiveFieldConflictWarning";
+import { isFirmNameSimilarToLinkedin } from "./firmNameSimilarity";
+import LinkedinFirmMismatchDialog from "./LinkedinFirmMismatchDialog";
 
 function getCountryCodeFromCountryName(countryName) {
   if (!countryName) return "";
@@ -121,6 +123,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const [enrichmentApproval, setEnrichmentApproval] = useState(null);
   const [similarAddressPairs, setSimilarAddressPairs] = useState(null);
   const [linkedinLookupLoading, setLinkedinLookupLoading] = useState(false);
+  const [linkedinMismatch, setLinkedinMismatch] = useState(null);
   const [similarFirmWarning, setSimilarFirmWarning] = useState(null);
   const [firmFieldConflicts, setFirmFieldConflicts] = useState(null);
   const nameInputRef = useRef(null);
@@ -208,8 +211,19 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         name: firmName.trim(),
       });
       if (res.data?.linkedin_url) {
-        setLinkedinUrl(res.data.linkedin_url);
-        toast({ title: "✅ LinkedIn page found", description: res.data.linkedin_url });
+        const liName = res.data.linkedin_company_name || "";
+        const liSlug = res.data.linkedin_slug || "";
+        const { similar } = isFirmNameSimilarToLinkedin(firmName.trim(), liName, liSlug);
+        if (similar) {
+          setLinkedinUrl(res.data.linkedin_url);
+          toast({ title: "✅ LinkedIn page found", description: res.data.linkedin_url });
+        } else {
+          setLinkedinMismatch({
+            firmName: firmName.trim(),
+            linkedinCompanyName: liName || liSlug,
+            linkedinUrl: res.data.linkedin_url,
+          });
+        }
       } else {
         toast({ title: "No page found", description: res.data?.message || "Could not find the firm's LinkedIn page." });
       }
@@ -1472,6 +1486,20 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         conflicts={firmFieldConflicts || []}
         onAccept={() => { setFirmFieldConflicts(null); handleSubmit(true, true); }}
         onReject={() => setFirmFieldConflicts(null)}
+      />
+
+      <LinkedinFirmMismatchDialog
+        open={!!linkedinMismatch}
+        data={linkedinMismatch}
+        onAccept={(url) => {
+          if (url) setLinkedinUrl(url);
+          toast({ title: "LinkedIn URL applied", description: "Match accepted by user." });
+          setLinkedinMismatch(null);
+        }}
+        onReject={() => {
+          toast({ title: "LinkedIn URL not applied", description: "Match rejected by user." });
+          setLinkedinMismatch(null);
+        }}
       />
     </Dialog>
   );
