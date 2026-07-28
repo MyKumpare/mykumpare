@@ -33,6 +33,7 @@ import SimilarAddressDialog from "../SimilarAddressDialog";
 import { findAddressIssues, addressesAreExact } from "../addressDuplicateCheck";
 import SimilarFirmFieldDialog from "./SimilarFirmFieldDialog";
 import { findFirmFieldConflicts } from "./firmFieldDuplicateCheck";
+import LiveFieldConflictWarning from "./LiveFieldConflictWarning";
 
 function getCountryCodeFromCountryName(countryName) {
   if (!countryName) return "";
@@ -306,6 +307,28 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
       })
       .slice(0, 5);
   }, [isAddMode, activelyEditing, firmName, existingFirms, editingFirm]);
+
+  // Live website/email/LinkedIn duplicate detection: surface existing firms
+  // whose website, email, or LinkedIn matches (exactly or closely) what the
+  // user is typing — mirroring the live similar-firm-name warning above, so a
+  // conflict is visible before they ever click Save. Runs in both add and
+  // edit modes (the current firm is excluded so it never conflicts with itself).
+  const liveFieldConflicts = useMemo(() => {
+    if (!activelyEditing) return [];
+    return findFirmFieldConflicts(
+      { website, email, linkedin_url: linkedinUrl },
+      existingFirms,
+      editingFirm?.id
+    );
+  }, [activelyEditing, website, email, linkedinUrl, existingFirms, editingFirm]);
+
+  const liveConflictsByField = useMemo(() => {
+    const byField = { website: [], email: [], linkedin_url: [] };
+    for (const c of liveFieldConflicts) {
+      if (byField[c.field]) byField[c.field].push(c);
+    }
+    return byField;
+  }, [liveFieldConflicts]);
 
   const NON_PRODUCT_TYPES = ["Allocator", "Trade Organizations"];
   const hideProductTabs = firmTypes.length > 0 && firmTypes.every(t => NON_PRODUCT_TYPES.includes(t));
@@ -895,12 +918,15 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                     {website ? <a href={website} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">{website}</a> : <span className="text-gray-400">—</span>}
                   </div>
                 ) : (
-                  <Input
-                    placeholder="https://example.com"
-                    value={website}
-                    onChange={(e) => setWebsite(e.target.value)}
-                    className="h-9"
-                  />
+                  <>
+                    <Input
+                      placeholder="https://example.com"
+                      value={website}
+                      onChange={(e) => setWebsite(e.target.value)}
+                      className="h-9"
+                    />
+                    <LiveFieldConflictWarning conflicts={liveConflictsByField.website} />
+                  </>
                 )}
               </div>
 
@@ -912,12 +938,15 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                     {email ? <a href={`mailto:${email}`} className="text-indigo-600 hover:underline">{email}</a> : <span className="text-gray-400">—</span>}
                   </div>
                 ) : (
-                  <Input
-                    placeholder="info@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="h-9"
-                  />
+                  <>
+                    <Input
+                      placeholder="info@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="h-9"
+                    />
+                    <LiveFieldConflictWarning conflicts={liveConflictsByField.email} />
+                  </>
                 )}
               </div>
 
@@ -929,25 +958,28 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                     {linkedinUrl ? <a href={linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">View LinkedIn</a> : <span className="text-gray-400">—</span>}
                   </div>
                 ) : (
-                  <div className="flex gap-1.5">
-                    <Input
-                      placeholder="https://linkedin.com/company/..."
-                      value={linkedinUrl}
-                      onChange={(e) => setLinkedinUrl(e.target.value)}
-                      className="h-9 flex-1"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-9 px-2 text-[#0A66C2] border-[#0A66C2]/30 hover:bg-[#0A66C2]/10 gap-1"
-                      onClick={handleLinkedInLookup}
-                      disabled={linkedinLookupLoading || !firmName.trim()}
-                      title="Find LinkedIn page"
-                    >
-                      {linkedinLookupLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Linkedin className="w-4 h-4" />}
-                      <span className="text-xs">Find</span>
-                    </Button>
+                  <div className="space-y-1.5">
+                    <div className="flex gap-1.5">
+                      <Input
+                        placeholder="https://linkedin.com/company/..."
+                        value={linkedinUrl}
+                        onChange={(e) => setLinkedinUrl(e.target.value)}
+                        className="h-9 flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-9 px-2 text-[#0A66C2] border-[#0A66C2]/30 hover:bg-[#0A66C2]/10 gap-1"
+                        onClick={handleLinkedInLookup}
+                        disabled={linkedinLookupLoading || !firmName.trim()}
+                        title="Find LinkedIn page"
+                      >
+                        {linkedinLookupLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Linkedin className="w-4 h-4" />}
+                        <span className="text-xs">Find</span>
+                      </Button>
+                    </div>
+                    <LiveFieldConflictWarning conflicts={liveConflictsByField.linkedin_url} />
                   </div>
                 )}
               </div>

@@ -93,16 +93,19 @@ export function findFirmFieldConflicts(current, existingFirms, excludeId) {
     if (f.deleted_at) continue;
     if (excludeId && f.id === excludeId) continue;
 
-    // Website — exact (normalized full URL) then similar (same hostname)
+    // Website — exact (normalized full URL) then similar (same hostname).
+    // NOTE: do NOT `continue` here — that would skip the email/LinkedIn checks
+    // for this same firm. Only the similar-hostname sub-check is mutually
+    // exclusive with the exact match.
     if (cw) {
       const ew = normalizeWebsite(f.website);
       if (ew && ew === cw) {
         conflicts.push({ field: "website", currentValue: current.website, existingFirm: f, existingValue: f.website, matchType: "exact" });
-        continue; // don't also flag as similar for the same firm/field
-      }
-      const eh = websiteHostname(f.website);
-      if (ch && eh && ch === eh) {
-        conflicts.push({ field: "website", currentValue: current.website, existingFirm: f, existingValue: f.website, matchType: "similar" });
+      } else {
+        const eh = websiteHostname(f.website);
+        if (ch && eh && ch === eh) {
+          conflicts.push({ field: "website", currentValue: current.website, existingFirm: f, existingValue: f.website, matchType: "similar" });
+        }
       }
     }
 
