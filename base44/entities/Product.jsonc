@@ -258,17 +258,17 @@
               "$or": [
                 {
                   "user_condition": {
-                    "firm_role": "admin"
+                    "data.firm_role": "admin"
                   }
                 },
                 {
                   "user_condition": {
-                    "firm_role": "co-admin"
+                    "data.firm_role": "co-admin"
                   }
                 },
                 {
                   "user_condition": {
-                    "can_edit": true
+                    "data.can_edit": true
                   }
                 }
               ]
@@ -293,17 +293,17 @@
               "$or": [
                 {
                   "user_condition": {
-                    "firm_role": "admin"
+                    "data.firm_role": "admin"
                   }
                 },
                 {
                   "user_condition": {
-                    "firm_role": "co-admin"
+                    "data.firm_role": "co-admin"
                   }
                 },
                 {
                   "user_condition": {
-                    "can_delete": true
+                    "data.can_delete": true
                   }
                 }
               ]
