@@ -10,6 +10,10 @@ const COMMON_PATHS = [
   '/about',
   '/about/firm',
   '/about/our-team',
+  '/about/team',
+  '/about/people',
+  '/about/leadership',
+  '/about/staff',
   '/team',
   '/our-team',
   '/people',
@@ -19,6 +23,12 @@ const COMMON_PATHS = [
   '/staff',
   '/contact',
   '/about-us',
+  '/about-us/our-team',
+  '/about-us/team',
+  '/about-us/people',
+  '/about-us/our-people',
+  '/about-us/leadership',
+  '/about-us/staff',
   '/company',
   '/philosophy',
   '/approach',
@@ -886,32 +896,73 @@ async function enrichEducationExperienceFromBios(base44: any, people: any[]): Pr
 // Google's index, whose crawler IPs are typically not challenged) instead of
 // scraping the blocked site directly. Returns the same structure as the normal
 // HTML-scraping extraction, or null on failure.
+//
+// IMPORTANT: InvokeLLM with response_json_schema + add_context_from_internet
+// simultaneously returns inconsistent/empty results. So we use a two-step
+// approach: (1) web search to gather raw text about the firm, (2) structured
+// extraction from the raw text WITHOUT web search.
 async function enrichFirmViaWebSearch(
   base44: any,
   firmName: string,
   website: string,
 ): Promise<any> {
   try {
-    const res = await base44.integrations.Core.InvokeLLM({
+    // Step 1: Use web search to gather raw information about the firm
+    const rawContent = await base44.integrations.Core.InvokeLLM({
       prompt: `Search the web for the investment firm "${firmName}" (official website: ${website}).
-Gather all publicly available information about this firm from its official website and other indexed sources (e.g. LinkedIn, directory listings).
+Find their team/leadership page and list ALL team members visible on that page. Also find their firm's description, LinkedIn URL, year founded, address, and phone.
 
-Extract and return:
-- Official firm name (exact name as it appears publicly)
-- A 2-3 sentence description of what the firm does and its investment approach
-- Year the firm was founded (integer; 0 if unknown)
-- Website URL
-- LinkedIn company page URL (full URL)
-- General contact email address
-- Firm type(s): one or more of "Investment Manager", "Allocator", "Investment Consultant", "Manager of Managers", "Securities Brokerage", "Trade Organizations"
-- Firm logo URL (full URL starting with http, if available)
-- Office addresses (street address, city, state, postal code, country); mark the headquarters
-- Phone numbers: for US numbers, split into country_code, area_code, number_mid, number_last
-- Key personnel: for EVERY person found on the firm's team / about / leadership / staff pages, include first_name, last_name, title, email (if available), linkedin_url (full URL if available), and the full biography text if available from their public profile.
+For EACH team member, include:
+- Their full name
+- Their title/role (e.g. CEO, COO, Director of Partnerships)
+- Their LinkedIn profile URL if visible on the page
+- The FULL URL of their profile photo — this typically looks like ${website}/wp-content/uploads/... Search the page source for image URLs on the ${website} domain.
+- Their biography if available
 
-Be thorough — include EVERY team member you can find across all sections of their team page. Copy any biography text in full; do not summarize. Only include information you actually find from web sources; do not fabricate. Leave a field empty if not found.`,
-      model: 'gemini_3_flash',
+Also include:
+- The firm's logo URL
+- A 2-3 sentence description of the firm
+- Year founded
+- LinkedIn company page URL
+- Contact email and phone
+- Office address
+
+Return ALL information you find. Be very thorough about photos — every team member card on a Divi/WordPress site has a photo, and the URL is in the page HTML.`,
+      model: 'gemini_3_1_pro',
       add_context_from_internet: true,
+    });
+
+    const rawText = typeof rawContent === 'string' ? rawContent : JSON.stringify(rawContent || '');
+    console.log('enrichFirmViaWebSearch: raw content length =', rawText?.length || 0);
+    if (!rawText || rawText.length < 50) {
+      console.log('enrichFirmViaWebSearch: empty raw content from web search');
+      return null;
+    }
+    console.log('enrichFirmViaWebSearch: raw content preview =', rawText.substring(0, 300));
+
+    // Step 2: Structured extraction from the raw text (no web search)
+    const res = await base44.integrations.Core.InvokeLLM({
+      prompt: `Extract structured information about the investment firm "${firmName}" from the web research below.
+
+Web research:
+---
+${rawText.substring(0, 50000)}
+---
+
+Extract and return as JSON:
+- name: official firm name
+- description: 2-3 sentence description
+- website: website URL
+- email: general contact email
+- linkedin_url: LinkedIn company page URL
+- year_founded: integer year founded (0 if unknown)
+- firm_types: array of firm types ("Investment Manager", "Allocator", "Investment Consultant", "Manager of Managers", "Securities Brokerage", "Trade Organizations")
+- logo_url: firm logo URL (full URL starting with http)
+- addresses: array of {is_headquarters, country, state, city, postal_code, address_line1, address_line2}
+- phones: array of {phone_type, country_code, area_code, number_mid, number_last}
+- people: array of {first_name, last_name, title, email, linkedin_url, photo_url, biography} for EVERY person mentioned
+
+CRITICAL: Include the photo_url for each person if mentioned in the research. Photo URLs contain /wp-content/uploads/ or similar paths.`,
       response_json_schema: {
         type: 'object',
         properties: {
@@ -976,7 +1027,8 @@ Be thorough — include EVERY team member you can find across all sections of th
       },
     });
     return res;
-  } catch {
+  } catch (err) {
+    console.log('enrichFirmViaWebSearch error:', err?.message || err);
     return null;
   }
 }
@@ -1075,7 +1127,7 @@ Deno.serve(async (req) => {
       if (!fullUrl || fullUrl === website) return null;
       const text = await fetchPage(fullUrl);
       if (text && text.length > 100) {
-        const isPeoplePage = /\/(people|our-people|team|our-team|leadership|staff)\b/i.test(path);
+        const isPeoplePage = /\/(people|our-people|team|our-team|leadership|staff|about-us)\b/i.test(path);
         const limit = isPeoplePage ? 80000 : 12000;
         return { url: fullUrl, text: text.substring(0, limit) };
       }
@@ -1144,12 +1196,16 @@ Deno.serve(async (req) => {
     // Detect a captcha / anti-bot challenge redirect (e.g. SiteGuard sgcaptcha,
     // Cloudflare "Robot Challenge"), which serves a tiny meta-refresh stub
     // instead of real content. This is an IP-reputation block that no
-    // cookie/header change can bypass — so fall back to web-search-based
-    // enrichment (the LLM fetches via Google's index, whose crawler IPs are
-    // typically not challenged) rather than failing outright.
-    const isCaptchaBlocked = !!homepageRaw &&
+    // cookie/header change can bypass.
+    // IMPORTANT: only fall back to web search if the sub-pages ALSO returned
+    // captcha stubs or no content. Some sites block the homepage fetch but
+    // still allow direct sub-page access — in that case we have enough
+    // content from the sub-pages to proceed with normal extraction.
+    const isHomepageCaptcha = !!homepageRaw &&
       /\/\.well-known\/sgcaptcha|sgcaptcha|robot challenge|checking the site connection/i.test(homepageRaw) &&
       homepageRaw.length < 1000;
+    const subPageContentLength = subPages.reduce((sum, p) => sum + (p?.text?.length || 0), 0);
+    const isCaptchaBlocked = isHomepageCaptcha && subPageContentLength < 500;
     if (isCaptchaBlocked) {
       const fallback = await enrichFirmViaWebSearch(base44, firm_name, website);
       if (fallback && (fallback.name || (Array.isArray(fallback.people) && fallback.people.length > 0))) {
