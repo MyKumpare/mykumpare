@@ -8,6 +8,7 @@ import Analytics from './pages/Analytics';
 import UserManagement from './pages/UserManagement';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import OnboardingGuard from '@/components/onboarding/OnboardingGuard';
 
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -43,6 +44,8 @@ const AuthenticatedApp = () => {
 
   // Render the main app
   return (
+    <>
+    <OnboardingGuard />
     <Routes>
       <Route path="/" element={
         <LayoutWrapper currentPageName={mainPageKey}>
@@ -65,6 +68,7 @@ const AuthenticatedApp = () => {
       <Route path="/UserManagement" element={<LayoutWrapper currentPageName="UserManagement"><UserManagement /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
+    </>
   );
 };
 

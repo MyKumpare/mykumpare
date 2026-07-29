@@ -2,7 +2,7 @@
   "properties": {
     "role": {
       "type": "string",
-      "description": "The built-in role of the user in the app (single platform role used for security)",
+      "description": "The built-in platform role of the user in the app (single platform role used for app-level security)",
       "enum": [
         "admin",
         "user"
@@ -26,11 +26,36 @@
     },
     "linked_firm_id": {
       "type": "string",
-      "description": "ID of the firm this user is affiliated with (self-linked from profile)"
+      "description": "ID of the firm (tenant) this user is affiliated with. Acts as the tenant boundary for multi-tenant data isolation."
     },
     "linked_contact_id": {
       "type": "string",
       "description": "ID of the contact record this user is linked to (self-linked from profile)"
+    },
+    "firm_role": {
+      "type": "string",
+      "description": "This user's role within their affiliated firm (tenant). Drives firm-level permissions: admin/co-admin have full edit+delete; a regular 'user' is gated by can_edit/can_delete.",
+      "enum": [
+        "admin",
+        "co-admin",
+        "user"
+      ],
+      "default": "user"
+    },
+    "can_edit": {
+      "type": "boolean",
+      "description": "Grants edit (update) permission on firm records for users whose firm_role is 'user'. Admins and co-admins always have edit access regardless of this flag.",
+      "default": false
+    },
+    "can_delete": {
+      "type": "boolean",
+      "description": "Grants delete permission on firm records for users whose firm_role is 'user'. Admins and co-admins always have delete access regardless of this flag.",
+      "default": false
+    },
+    "onboarded": {
+      "type": "boolean",
+      "description": "True once the user has completed the firm onboarding/join step (linked to a firm and contact record).",
+      "default": false
     }
   },
   "required": [

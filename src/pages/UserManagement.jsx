@@ -214,6 +214,40 @@ export default function UserManagement() {
                       )}
                     </div>
 
+                    {/* Firm role & permissions (tenant-level access) */}
+                    <div className="flex items-center gap-1.5">
+                      <Select
+                        value={u.firm_role || "user"}
+                        onValueChange={(v) => updateMutation.mutate({ id: u.id, data: { firm_role: v } })}
+                        disabled={isSelf || updateMutation.isPending}
+                      >
+                        <SelectTrigger className="h-7 w-28 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="admin">Firm Admin</SelectItem>
+                          <SelectItem value="co-admin">Co-Admin</SelectItem>
+                          <SelectItem value="user">Member</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <button
+                        type="button"
+                        title="Can edit firm records"
+                        onClick={() => updateMutation.mutate({ id: u.id, data: { can_edit: !u.can_edit } })}
+                        className={`h-7 px-2 rounded-md text-[11px] border ${u.can_edit ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-white border-gray-200 text-gray-400"}`}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        title="Can delete firm records"
+                        onClick={() => updateMutation.mutate({ id: u.id, data: { can_delete: !u.can_delete } })}
+                        className={`h-7 px-2 rounded-md text-[11px] border ${u.can_delete ? "bg-rose-50 border-rose-200 text-rose-700" : "bg-white border-gray-200 text-gray-400"}`}
+                      >
+                        Delete
+                      </button>
+                    </div>
+
                     <div className="hidden md:block text-[11px] text-gray-400 w-28 text-right">{fmtDate(u.created_date)}</div>
                   </div>
                 );
