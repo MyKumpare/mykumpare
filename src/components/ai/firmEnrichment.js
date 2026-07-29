@@ -332,6 +332,9 @@ export function mergeEnrichmentData(existingFirm, enrichedData) {
     if (isEmpty(incoming)) continue;
     const existingVal = existingFirm[field];
 
+    // A logo already saved on the firm is never overridden by auto-fill.
+    if (field === "logo_url" && !isEmpty(existingVal)) continue;
+
     if (isEmpty(existingVal)) {
       updates[field] = incoming;
       updatedFields.push(label);
@@ -340,12 +343,7 @@ export function mergeEnrichmentData(existingFirm, enrichedData) {
 
     // Field already populated — only alert if the incoming value actually differs.
     let same;
-    if (field === "logo_url") {
-      // Logo URLs are re-hosted each scrape, so a different URL doesn't prove a
-      // different image. We can't verify equality, so surface every time as a
-      // "replace" the user can accept or ignore.
-      same = false;
-    } else if (field === "description") {
+    if (field === "description") {
       same = normText(existingVal) === normText(incoming);
     } else {
       same = compareScalar(field, existingVal, incoming).status === "exact";
