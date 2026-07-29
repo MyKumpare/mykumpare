@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
+import { assertSafePublicUrl } from '../../shared/urlSafety.ts';
 
 const SUB_PAGES = ['/about', '/about-us', '/contact', '/contact-us', '/team', '/our-team', '/leadership', '/connect', '/company'];
 
@@ -89,6 +90,16 @@ Deno.serve(async (req) => {
 
     let websiteUrl = website;
     if (websiteUrl && !websiteUrl.startsWith('http')) websiteUrl = 'https://' + websiteUrl;
+    // Validate the user-supplied website before any outbound fetch to prevent
+    // SSRF (internal IPs, cloud metadata endpoints, etc.). Skip the scrape
+    // strategy entirely if the URL is unsafe or cannot be validated.
+    if (websiteUrl) {
+      try {
+        await assertSafePublicUrl(websiteUrl);
+      } catch {
+        websiteUrl = null;
+      }
+    }
 
     // ── Strategy: scrape the firm's own website for LinkedIn company links ──
     // The firm's site (footer / social / about pages) is the most reliable source
