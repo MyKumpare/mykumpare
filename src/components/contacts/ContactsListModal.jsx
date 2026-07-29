@@ -22,7 +22,11 @@ export default function ContactsListModal({ open, onOpenChange, contacts = [], f
     );
   });
 
-  const sorted = [...filtered].sort((a, b) => a.last_name.localeCompare(b.last_name));
+  const sorted = [...filtered].sort((a, b) => {
+    const fn = (a.first_name || "").localeCompare(b.first_name || "", undefined, { sensitivity: "base" });
+    if (fn !== 0) return fn;
+    return (a.last_name || "").localeCompare(b.last_name || "", undefined, { sensitivity: "base" });
+  });
 
   return (
     <>
