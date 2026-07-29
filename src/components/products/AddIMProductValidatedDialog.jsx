@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/lib/AuthContext";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +34,7 @@ export default function AddIMProductValidatedDialog({
   const [name, setName] = useState("");
   const [firmId, setFirmId] = useState("");
   const [saving, setSaving] = useState(false);
+  const { user } = useAuth();
 
   const getFirmTypes = (f) =>
     f.firm_types?.length ? f.firm_types : f.firm_type ? [f.firm_type] : [];
@@ -75,6 +77,7 @@ export default function AddIMProductValidatedDialog({
         firm_id: firmId,
         firm_name: firmName,
         product_type: "Investment Manager Product",
+        tenant_id: user?.linked_firm_id,
       });
       onCreated?.(product);
       onOpenChange(false);

@@ -247,7 +247,7 @@ export default function Home() {
 
 
   const createProductMutation = useMutation({
-    mutationFn: (data) => base44.entities.Product.create(data),
+    mutationFn: (data) => base44.entities.Product.create({ ...data, tenant_id: user?.linked_firm_id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       setProductDialogOpen(false);
