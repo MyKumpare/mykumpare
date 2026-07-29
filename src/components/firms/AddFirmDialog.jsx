@@ -427,7 +427,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     // is rejected for firms the user didn't create, surfacing a "Permission
     // denied" toast mid-enrichment. Contacts are still saved on apply below.
 
-    if (selected.logo_url && !logoUrl) { setLogoUrl(selected.logo_url); applied.push("Logo"); }
+    if (selected.logo_url && selected.logo_url !== logoUrl) { setLogoUrl(selected.logo_url); applied.push("Logo"); }
     if (selected.description && !description) { setDescription(selected.description); applied.push("Description"); }
     if (selected.website && !website) { setWebsite(selected.website); applied.push("Website"); }
     if (selected.email && !email) { setEmail(selected.email); applied.push("Email"); }

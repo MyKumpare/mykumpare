@@ -108,13 +108,13 @@ export function compareScalar(field, existingValue, incomingValue) {
       return { status: sim >= 0.85 ? "similar" : "new", similarity: sim, existing };
     }
     // Logo URLs are re-hosted on each enrichment, so the stored and incoming
-    // URLs are always different even for the same image. We cannot verify
-    // image equality from URLs, so if the firm already has a logo, treat the
-    // incoming one as "already exists" (do not flag as new / do not overwrite).
+    // URLs are always different even for the same image. If the firm already
+    // has a logo, treat the incoming one as "similar" so the user can review
+    // and choose to override it (e.g. when the existing logo is incorrect).
     if (field === "logo_url") {
       const a = normalizeUrl(existing);
       if (!a) return { status: "new", similarity: 0, existing };
-      return { status: "exact", similarity: 1, existing };
+      return { status: "similar", similarity: 0.8, existing };
     }
   }
 
