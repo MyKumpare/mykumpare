@@ -3,6 +3,8 @@ import { ChevronDown, ChevronRight, FileText, LayoutGrid, Plus, Pencil, Trash2, 
 import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import ViewModeToggle from "@/components/common/ViewModeToggle";
+import { useViewMode } from "@/hooks/useViewMode";
 import CustomReportBuilder from "./CustomReportBuilder";
 import StandardReportsList from "./StandardReportsList";
 
@@ -12,6 +14,7 @@ export default function ReportsSection({ forceExpanded = false }) {
   const [standardOpen, setStandardOpen] = useState(false);
   const [editingReport, setEditingReport] = useState(null);
   const [prefillConfig, setPrefillConfig] = useState(null);
+  const [viewMode, setViewMode] = useViewMode("reports");
 
   const queryClient = useQueryClient();
   const isOpen = forceExpanded || expanded;
@@ -71,15 +74,18 @@ export default function ReportsSection({ forceExpanded = false }) {
             </span>
           )}
         </button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 gap-1 text-xs"
-          onClick={handleOpenBuilder}
-        >
-          <Plus className="w-3.5 h-3.5" />
-          Add Report
-        </Button>
+        <div className="flex items-center gap-2">
+          <ViewModeToggle value={viewMode} onChange={setViewMode} />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 gap-1 text-xs"
+            onClick={handleOpenBuilder}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add Report
+          </Button>
+        </div>
       </div>
 
       {isOpen && (
@@ -113,38 +119,90 @@ export default function ReportsSection({ forceExpanded = false }) {
           {savedReports.length > 0 && (
             <div>
               <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Saved Custom Reports</p>
-              <div className="space-y-1.5">
-                {savedReports.map((report) => (
-                  <div
-                    key={report.id}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-100 bg-white hover:bg-gray-50 transition-colors group"
-                  >
-                    <FileBarChart className="w-4 h-4 text-blue-400 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
+              {viewMode === "kanban" ? (
+                <div className="flex gap-3 overflow-x-auto pb-2">
+                  {["table", "chart", "mixed"].map((fmt) => {
+                    const items = savedReports.filter((r) => (r.format_type || "table") === fmt);
+                    if (items.length === 0) return null;
+                    return (
+                      <div key={fmt} className="flex-shrink-0 w-64">
+                        <div className="flex items-center gap-2 mb-2 px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-100">
+                          <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">{fmt}</span>
+                          <span className="text-xs text-gray-400 ml-auto">{items.length}</span>
+                        </div>
+                        <div className="space-y-2">
+                          {items.map((report) => (
+                            <div
+                              key={report.id}
+                              className="px-3 py-2 rounded-lg border border-gray-100 bg-white hover:bg-gray-50 transition-colors group"
+                            >
+                              <FileBarChart className="w-4 h-4 text-blue-400 mb-1" />
+                              <p className="text-sm font-medium text-gray-800 truncate">{report.name}</p>
+                              <p className="text-[11px] text-gray-400 truncate">{report.data_source}</p>
+                              <div className="flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onClick={() => handleEditReport(report)} className="p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-600" title="Edit"><Pencil className="w-3 h-3" /></button>
+                                <button onClick={() => handleDelete(report)} className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-500" title="Delete"><Trash2 className="w-3 h-3" /></button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : viewMode === "card" ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {savedReports.map((report) => (
+                    <div
+                      key={report.id}
+                      className="flex flex-col gap-2 p-3 rounded-xl border border-gray-100 bg-white hover:border-blue-200 hover:bg-gray-50 transition-colors group"
+                    >
+                      <div className="flex items-center justify-between">
+                        <FileBarChart className="w-5 h-5 text-blue-400" />
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => handleEditReport(report)} className="p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-600" title="Edit"><Pencil className="w-3.5 h-3.5" /></button>
+                          <button onClick={() => handleDelete(report)} className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-500" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button>
+                        </div>
+                      </div>
                       <p className="text-sm font-medium text-gray-800 truncate">{report.name}</p>
-                      <p className="text-[11px] text-gray-400 truncate">
-                        {report.data_source} · {report.format_type}
-                      </p>
+                      <p className="text-[11px] text-gray-400 truncate">{report.data_source} · {report.format_type}</p>
                     </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => handleEditReport(report)}
-                        className="p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-600"
-                        title="Edit"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(report)}
-                        className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-500"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  {savedReports.map((report) => (
+                    <div
+                      key={report.id}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-100 bg-white hover:bg-gray-50 transition-colors group"
+                    >
+                      <FileBarChart className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-800 truncate">{report.name}</p>
+                        <p className="text-[11px] text-gray-400 truncate">
+                          {report.data_source} · {report.format_type}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => handleEditReport(report)}
+                          className="p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-600"
+                          title="Edit"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(report)}
+                          className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-500"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

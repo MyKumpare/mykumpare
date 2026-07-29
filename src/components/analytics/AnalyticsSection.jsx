@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { LineChart, ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import ViewModeToggle from "@/components/common/ViewModeToggle";
+import { useViewMode } from "@/hooks/useViewMode";
 import AnalysisLaunchModal from "./AnalysisLaunchModal";
 import NewAnalysisDialog from "./NewAnalysisDialog";
 import ExistingAnalysesDialog from "./ExistingAnalysesDialog";
@@ -11,6 +13,7 @@ export default function AnalyticsSection({ openLaunch, onLaunchOpenChange, total
   const setLaunchOpen = onLaunchOpenChange ?? (() => {});
   const [newOpen, setNewOpen] = useState(false);
   const [existingOpen, setExistingOpen] = useState(false);
+  const [viewMode, setViewMode] = useViewMode("analytics");
 
   useEffect(() => {
     if (forceExpanded !== undefined) setExpanded(forceExpanded);
@@ -35,15 +38,18 @@ export default function AnalyticsSection({ openLaunch, onLaunchOpenChange, total
           </span>
           <span className="text-xs text-gray-400 font-normal">({totalAnalyses})</span>
         </button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 px-2 text-cyan-600 hover:text-cyan-700 hover:bg-cyan-50 gap-1 text-xs"
-          onClick={() => setNewOpen(true)}
-        >
-          <Plus className="w-3.5 h-3.5" />
-          Add Analysis
-        </Button>
+        <div className="flex items-center gap-2">
+          <ViewModeToggle value={viewMode} onChange={setViewMode} />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-cyan-600 hover:text-cyan-700 hover:bg-cyan-50 gap-1 text-xs"
+            onClick={() => setNewOpen(true)}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add Analysis
+          </Button>
+        </div>
       </div>
 
       {/* Expanded content */}

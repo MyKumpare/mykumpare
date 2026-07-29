@@ -3,6 +3,8 @@ import { ChevronRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
+import ViewModeToggle from "@/components/common/ViewModeToggle";
+import { useViewMode } from "@/hooks/useViewMode";
 
 /**
  * Collapsible-style section that opens a picker modal directly when the
@@ -40,6 +42,9 @@ export default function PickerSection({
   const resolvedCount =
     count !== undefined ? count : entityName ? fetched.filter((x) => !x.deleted_at).length : undefined;
 
+  const sectionKey = label.toLowerCase().replace(/\s+/g, "_");
+  const [viewMode, setViewMode] = useViewMode(sectionKey);
+
   return (
     <div className="mb-6">
       <div className="flex items-center justify-between mb-2 px-1">
@@ -51,17 +56,20 @@ export default function PickerSection({
             <span className="text-xs text-gray-400 font-normal">({resolvedCount})</span>
           )}
         </button>
-        {onAdd && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`h-7 px-2 ${addColor} ${addHoverColor} ${addHoverBg} gap-1 text-xs`}
-            onClick={onAdd}
-          >
-            <Plus className="w-3.5 h-3.5" />
-            {addLabel || `Add ${label}`}
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          <ViewModeToggle value={viewMode} onChange={setViewMode} />
+          {onAdd && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`h-7 px-2 ${addColor} ${addHoverColor} ${addHoverBg} gap-1 text-xs`}
+              onClick={onAdd}
+            >
+              <Plus className="w-3.5 h-3.5" />
+              {addLabel || `Add ${label}`}
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );
