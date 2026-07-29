@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, LayoutList, ChevronDown, ChevronRight, BarChart3 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
+import SectionSearch from "@/components/common/SectionSearch";
 import { useViewMode } from "@/hooks/useViewMode";
 
 export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddPortfolio, forceExpanded }) {
@@ -10,16 +11,28 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
   const [expandedGroups, setExpandedGroups] = useState({});
   const [expandedAdvisorTypes, setExpandedAdvisorTypes] = useState({});
   const [viewMode, setViewMode] = useViewMode("portfolios");
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     if (forceExpanded !== undefined) setExpanded(forceExpanded);
   }, [forceExpanded]);
 
+  const searchLower = search.toLowerCase().trim();
+  const filteredPortfolios = useMemo(() => {
+    if (!searchLower) return portfolios;
+    return portfolios.filter((p) => {
+      const name = (p.portfolio_name || "").toLowerCase();
+      const advisor = (p.advisor_firm_name || "").toLowerCase();
+      const allocator = (p.allocator_name || "").toLowerCase();
+      return name.includes(searchLower) || advisor.includes(searchLower) || allocator.includes(searchLower);
+    });
+  }, [portfolios, searchLower]);
+
   // Group portfolios by advisor type → allocator → portfolio name
   const grouped = useMemo(() => {
     const groups = {};
     
-    portfolios.forEach((p) => {
+    filteredPortfolios.forEach((p) => {
       const advisorType = p.advisor_type || "No Advisor";
       const allocator = p.allocator_name || "Unknown";
       
@@ -112,15 +125,16 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
       {/* Portfolio groups */}
       {expanded && (
         <div className="space-y-3">
-          {viewMode === "card" && portfolios.length > 0 && (
+          <SectionSearch value={search} onChange={setSearch} placeholder="Search portfolios..." />
+          {viewMode === "card" && filteredPortfolios.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 py-1">
-              {portfolios.map((portfolio) => (
+              {filteredPortfolios.map((portfolio) => (
                 <PortfolioMiniCard key={portfolio.id} portfolio={portfolio} />
               ))}
             </div>
           )}
 
-          {viewMode === "kanban" && portfolios.length > 0 && (
+          {viewMode === "kanban" && filteredPortfolios.length > 0 && (
             <div className="flex gap-3 overflow-x-auto pb-2">
               {Object.entries(grouped).map(([advisorType, allocatorGroups]) => {
                 const allPortfolios = Object.values(allocatorGroups).flat();
@@ -141,13 +155,13 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
             </div>
           )}
 
-          {viewMode === "list" && portfolios.length === 0 && (
+          {viewMode === "list" && filteredPortfolios.length === 0 && (
             <div className="text-sm text-gray-400 italic py-3 text-center border border-dashed border-gray-200 rounded-xl">
               No portfolios yet — click "Add Portfolio" to create one
             </div>
           )}
 
-          {viewMode === "list" && portfolios.length > 0 && Object.entries(grouped).map(([advisorType, allocatorGroups]) => {
+          {viewMode === "list" && filteredPortfolios.length > 0 && Object.entries(grouped).map(([advisorType, allocatorGroups]) => {
             const isAdvisorTypeOpen = expandedAdvisorTypes[advisorType] !== false;
             return (
             <div key={advisorType} className="space-y-2">

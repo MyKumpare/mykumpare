@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { ChevronDown, ChevronRight, FileText, LayoutGrid, Plus, Pencil, Trash2, FileBarChart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
+import SectionSearch from "@/components/common/SectionSearch";
 import { useViewMode } from "@/hooks/useViewMode";
 import CustomReportBuilder from "./CustomReportBuilder";
 import StandardReportsList from "./StandardReportsList";
@@ -15,6 +16,7 @@ export default function ReportsSection({ forceExpanded = false }) {
   const [editingReport, setEditingReport] = useState(null);
   const [prefillConfig, setPrefillConfig] = useState(null);
   const [viewMode, setViewMode] = useViewMode("reports");
+  const [search, setSearch] = useState("");
 
   const queryClient = useQueryClient();
   const isOpen = forceExpanded || expanded;
@@ -23,6 +25,16 @@ export default function ReportsSection({ forceExpanded = false }) {
     queryKey: ["custom_reports"],
     queryFn: () => base44.entities.CustomReport.list("-created_date"),
   });
+
+  const searchLower = search.toLowerCase().trim();
+  const filteredReports = useMemo(() => {
+    if (!searchLower) return savedReports;
+    return savedReports.filter((r) => {
+      const name = (r.name || "").toLowerCase();
+      const source = (r.data_source || "").toLowerCase();
+      return name.includes(searchLower) || source.includes(searchLower);
+    });
+  }, [savedReports, searchLower]);
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.CustomReport.delete(id),
@@ -68,9 +80,9 @@ export default function ReportsSection({ forceExpanded = false }) {
           )}
           <FileText className="w-4 h-4 text-blue-500" />
           <span className="text-sm font-semibold text-gray-700 group-hover:text-gray-900">Reports</span>
-          {savedReports.length > 0 && (
+          {filteredReports.length > 0 && (
             <span className="text-[10px] font-medium text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full">
-              {savedReports.length}
+              {filteredReports.length}
             </span>
           )}
         </button>
@@ -90,6 +102,7 @@ export default function ReportsSection({ forceExpanded = false }) {
 
       {isOpen && (
         <div className="space-y-4">
+          <SectionSearch value={search} onChange={setSearch} placeholder="Search reports..." />
           {/* Two action cards */}
           <div className="grid grid-cols-2 gap-3">
             <button
@@ -116,13 +129,13 @@ export default function ReportsSection({ forceExpanded = false }) {
           </div>
 
           {/* Saved custom reports */}
-          {savedReports.length > 0 && (
+          {filteredReports.length > 0 && (
             <div>
               <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Saved Custom Reports</p>
               {viewMode === "kanban" ? (
                 <div className="flex gap-3 overflow-x-auto pb-2">
                   {["table", "chart", "mixed"].map((fmt) => {
-                    const items = savedReports.filter((r) => (r.format_type || "table") === fmt);
+                    const items = filteredReports.filter((r) => (r.format_type || "table") === fmt);
                     if (items.length === 0) return null;
                     return (
                       <div key={fmt} className="flex-shrink-0 w-64">
@@ -152,7 +165,7 @@ export default function ReportsSection({ forceExpanded = false }) {
                 </div>
               ) : viewMode === "card" ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-                  {savedReports.map((report) => (
+                  {filteredReports.map((report) => (
                     <div
                       key={report.id}
                       className="flex flex-col gap-2 p-3 rounded-xl border border-gray-100 bg-white hover:border-blue-200 hover:bg-gray-50 transition-colors group"
@@ -171,7 +184,7 @@ export default function ReportsSection({ forceExpanded = false }) {
                 </div>
               ) : (
                 <div className="space-y-1.5">
-                  {savedReports.map((report) => (
+                  {filteredReports.map((report) => (
                     <div
                       key={report.id}
                       className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-100 bg-white hover:bg-gray-50 transition-colors group"

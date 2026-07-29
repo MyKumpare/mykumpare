@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, ChevronDown, ChevronRight, Package } from "lucide-react";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
+import SectionSearch from "@/components/common/SectionSearch";
 import { useViewMode } from "@/hooks/useViewMode";
 
 const PRODUCT_GROUP_TYPES = ["Manager of Managers", "Investment Manager"];
@@ -16,6 +17,7 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
   const [expandedGroups, setExpandedGroups] = useState({});
   const [expandedFirms, setExpandedFirms] = useState({});
   const [viewMode, setViewMode] = useViewMode("products");
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     if (forceExpanded !== undefined) setExpanded(forceExpanded);
@@ -29,6 +31,17 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
 
   // Build a firmId -> firm map for quick lookup
   const firmMap = Object.fromEntries(firms.map((f) => [f.id, f]));
+
+  const searchLower = search.toLowerCase().trim();
+  const filteredProducts = React.useMemo(() => {
+    if (!searchLower) return products;
+    return filteredProducts.filter((p) => {
+      const name = (p.name || "").toLowerCase();
+      const assetClass = (p.asset_class || "").toLowerCase();
+      const firm = (firmMap[p.firm_id]?.name || "").toLowerCase();
+      return name.includes(searchLower) || assetClass.includes(searchLower) || firm.includes(searchLower);
+    });
+  }, [products, searchLower, firmMap]);
 
   // Group products by firm type, then sort firms asc, products asc
   const grouped = PRODUCT_GROUP_TYPES.reduce((acc, groupType) => {
@@ -113,6 +126,7 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
 
       {expanded && (
         <div className="pl-2 border-l-2 border-gray-100 space-y-4">
+          <SectionSearch value={search} onChange={setSearch} placeholder="Search products..." />
           {viewMode === "list" && PRODUCT_GROUP_TYPES.map((groupType) => {
             const firmGroups = grouped[groupType];
             if (!firmGroups) return null;
@@ -200,7 +214,7 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
 
           {viewMode === "card" && (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 py-1">
-              {products
+              {filteredProducts
                 .slice()
                 .sort((a, b) => a.name.localeCompare(b.name))
                 .map((product) => (

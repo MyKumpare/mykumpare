@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, ChevronDown, ChevronRight, User } from "lucide-react";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
+import SectionSearch from "@/components/common/SectionSearch";
 import { useViewMode } from "@/hooks/useViewMode";
 
 const FIRM_TYPES = [
@@ -50,6 +51,16 @@ export default function ContactsSection({ contacts, firms, onContactClick, onAdd
   const [expandedGroups, setExpandedGroups] = useState({});
   const [expandedFirms, setExpandedFirms] = useState({});
   const [viewMode, setViewMode] = useViewMode("contacts");
+  const [search, setSearch] = useState("");
+
+  const searchLower = search.toLowerCase().trim();
+  const filteredContacts = React.useMemo(() => {
+    if (!searchLower) return contacts;
+    return filteredContacts.filter((c) => {
+      const name = [c.first_name, c.last_name, c.title].filter(Boolean).join(" ").toLowerCase();
+      return name.includes(searchLower);
+    });
+  }, [contacts, searchLower]);
 
   useEffect(() => {
     if (forceExpanded !== undefined) setExpanded(forceExpanded);
@@ -151,6 +162,7 @@ export default function ContactsSection({ contacts, firms, onContactClick, onAdd
 
       {expanded && (
         <div className="pl-2 border-l-2 border-gray-100 space-y-4">
+          <SectionSearch value={search} onChange={setSearch} placeholder="Search contacts..." />
           {viewMode === "list" && FIRM_TYPES.map((groupType) => {
             const firmGroups = grouped[groupType];
             if (!firmGroups) return null;
@@ -279,7 +291,7 @@ export default function ContactsSection({ contacts, firms, onContactClick, onAdd
 
           {viewMode === "card" && (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 py-1">
-              {contacts
+              {filteredContacts
                 .slice()
                 .sort((a, b) => (a.last_name || "").localeCompare(b.last_name || ""))
                 .map((contact) => (
