@@ -22,8 +22,14 @@ export default function ContactsListModal({ open, onOpenChange, contacts = [], f
     );
   });
 
+  const SALUTATIONS = ["mr.", "mrs.", "ms.", "dr.", "prof.", "hon.", "mr", "mrs", "ms", "dr", "prof", "hon"];
+  const stripSalutation = (name) => {
+    const n = (name || "").trim();
+    const first = n.split(/\s+/)[0]?.toLowerCase().replace(".", "") || "";
+    return SALUTATIONS.includes(first) ? n.split(/\s+/).slice(1).join(" ") : n;
+  };
   const byFirstName = (a, b) => {
-    const fn = (a.first_name || "").localeCompare(b.first_name || "", undefined, { sensitivity: "base" });
+    const fn = stripSalutation(a.first_name).localeCompare(stripSalutation(b.first_name), undefined, { sensitivity: "base" });
     if (fn !== 0) return fn;
     return (a.last_name || "").localeCompare(b.last_name || "", undefined, { sensitivity: "base" });
   };

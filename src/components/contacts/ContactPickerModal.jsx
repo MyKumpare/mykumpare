@@ -6,6 +6,18 @@ const getFullName = (c) => {
   return c.designations?.length ? `${name}, ${c.designations.join(", ")}` : name;
 };
 
+const SALUTATIONS = ["mr.", "mrs.", "ms.", "dr.", "prof.", "hon.", "mr", "mrs", "ms", "dr", "prof", "hon"];
+const stripSalutation = (name) => {
+  const n = (name || "").trim();
+  const first = n.split(/\s+/)[0]?.toLowerCase().replace(".", "") || "";
+  return SALUTATIONS.includes(first) ? n.split(/\s+/).slice(1).join(" ") : n;
+};
+const byFirstName = (a, b) => {
+  const fn = stripSalutation(a.first_name).localeCompare(stripSalutation(b.first_name), undefined, { sensitivity: "base" });
+  if (fn !== 0) return fn;
+  return (a.last_name || "").localeCompare(b.last_name || "", undefined, { sensitivity: "base" });
+};
+
 export default function ContactPickerModal({ open, onClose, contacts, firms, onContactClick, onAddContact }) {
   const [search, setSearch] = useState("");
   const [collapsedTypes, setCollapsedTypes] = useState({});
@@ -63,7 +75,7 @@ export default function ContactPickerModal({ open, onClose, contacts, firms, onC
         .sort((a, b) => a.localeCompare(b))
         .map(firm => ({
           firm,
-          contacts: result[type][firm].sort((a, b) => getFullName(a).localeCompare(getFullName(b))),
+          contacts: result[type][firm].sort(byFirstName),
         }));
     });
     return sortedResult;
