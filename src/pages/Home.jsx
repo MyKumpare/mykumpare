@@ -285,7 +285,7 @@ export default function Home() {
   const createMutation = useMutation({
     mutationFn: async (data) => {
       const { pending_contacts, ...firmData } = data;
-      const firm = await base44.entities.Firm.create(firmData);
+      const firm = await base44.entities.Firm.create({ ...firmData, tenant_id: user?.linked_firm_id });
       if (pending_contacts?.length) {
         for (const person of pending_contacts) {
           const fullName = `${person.first_name || ""} ${person.last_name || ""}`.trim();
@@ -293,6 +293,7 @@ export default function Home() {
             ? person.designations
             : detectDesignations(fullName, person.biography);
           const contactData = {
+            tenant_id: user?.linked_firm_id,
             first_name: person.first_name || "",
             last_name: person.last_name || "",
             title: person.title || "",

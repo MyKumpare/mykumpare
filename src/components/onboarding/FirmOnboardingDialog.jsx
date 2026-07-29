@@ -91,24 +91,16 @@ export default function FirmOnboardingDialog() {
     }
     setSaving(true);
     try {
-      const firm = await base44.entities.Firm.create({
+      const res = await base44.functions.invoke("onboardNewFirm", {
         name: firmName.trim(),
         firm_type: firmType,
-        firm_types: [firmType],
-        website: website.trim() || undefined,
+        website: website.trim(),
       });
-      const { first_name, last_name } = splitName(user?.full_name);
-      const contact = await base44.entities.Contact.create({
-        tenant_id: firm.id,
-        first_name: first_name || firmName.trim(),
-        last_name,
-        email: user?.email || "",
-        firm_ids: [firm.id],
-        contact_status: "Active",
-      });
+      const result = res?.data || {};
+      if (result.error) throw new Error(result.error);
       await updateUser({
-        linked_firm_id: firm.id,
-        linked_contact_id: contact.id,
+        linked_firm_id: result.firm_id,
+        linked_contact_id: result.contact_id,
         firm_role: "admin",
         onboarded: true,
       });

@@ -230,7 +230,7 @@ export default function AIAssistant() {
     setIsLoading(true);
     try {
       if (pendingCreation.type === "create_firm") {
-        const createdFirm = await createFirmFromEnrichment(pendingCreation.data);
+        const createdFirm = await createFirmFromEnrichment(pendingCreation.data, user?.linked_firm_id);
         queryClient.invalidateQueries({ queryKey: ["firms"] });
         queryClient.invalidateQueries({ queryKey: ["contacts"] });
         setMessages((prev) => [...prev, {

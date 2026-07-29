@@ -632,9 +632,10 @@ export function enrichmentToTable(enrichedData, updatedFields) {
   return { title: "Firm Data from Web", headers, rows };
 }
 
-export async function createFirmFromEnrichment(enrichedData) {
+export async function createFirmFromEnrichment(enrichedData, tenantId) {
   const firmData = {
     name: enrichedData.name,
+    tenant_id: tenantId,
     description: enrichedData.description || "",
     website: enrichedData.website || "",
     email: enrichedData.email || "",
@@ -686,6 +687,7 @@ export async function createFirmFromEnrichment(enrichedData) {
       }
 
       const contactData = {
+        tenant_id: tenantId,
         first_name: person.first_name || "",
         last_name: person.last_name || "",
         title: person.title || "",

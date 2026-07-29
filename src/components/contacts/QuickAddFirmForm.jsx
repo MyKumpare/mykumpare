@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { useAuth } from "@/lib/AuthContext";
 
 const FIRM_TYPES = [
   "Manager of Managers",
@@ -18,6 +19,7 @@ const FIRM_TYPES = [
 export default function QuickAddFirmForm({ onFirmCreated, onCancel }) {
   const [name, setName] = useState("");
   const [firmType, setFirmType] = useState("");
+  const { user } = useAuth();
   const queryClient = useQueryClient();
 
   const createMutation = useMutation({
@@ -30,7 +32,7 @@ export default function QuickAddFirmForm({ onFirmCreated, onCancel }) {
 
   const handleSubmit = () => {
     if (!name.trim() || !firmType) return;
-    createMutation.mutate({ name: name.trim(), firm_type: firmType });
+    createMutation.mutate({ name: name.trim(), firm_type: firmType, firm_types: [firmType], tenant_id: user?.linked_firm_id });
   };
 
   return (

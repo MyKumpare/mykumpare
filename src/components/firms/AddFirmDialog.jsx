@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Pencil, Building2, Plus, Upload, X, Globe, AlertTriangle, Linkedin, Loader2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/lib/AuthContext";
 import { findContactDuplicates, findContactsByNormalizedName } from "@/components/contacts/contactDuplicateCheck";
 import { detectDesignations } from "@/components/contacts/designationDetector";
 import FirmEnrichmentPanel from "./FirmEnrichmentPanel";
@@ -133,6 +134,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     queryFn: () => base44.entities.Contact.list("-created_date", 500),
   });
   const logoInputRef = useRef(null);
+  const { user } = useAuth();
   const queryClient = useQueryClient();
 
   const isAddMode = !editingFirm;
@@ -643,7 +645,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
       if (skippedNewContactIndices.includes(i)) continue;
       const { potentialDuplicates, ...contactData } = newContacts[i];
       try {
-        const createdContact = await base44.entities.Contact.create(contactData);
+        const createdContact = await base44.entities.Contact.create({ ...contactData, tenant_id: user?.linked_firm_id });
         createdContacts.push(createdContact);
         created++;
       }
@@ -1414,7 +1416,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                   } else {
                     let created = 0;
                     for (const dup of warning.duplicates) {
-                      try { await base44.entities.Contact.create(dup.contactData); created++; } catch {}
+                      try { await base44.entities.Contact.create({ ...dup.contactData, tenant_id: user?.linked_firm_id }); created++; } catch {}
                     }
                     if (created > 0) {
                       queryClient.invalidateQueries({ queryKey: ["contacts"] });
