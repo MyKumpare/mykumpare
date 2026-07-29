@@ -3,6 +3,7 @@ import { Send, Bot, Loader2, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/lib/AuthContext";
 import AIAssistantMessage from "./AIAssistantMessage";
 import { buildSystemPrompt, buildToolContext } from "./aiContextBuilder";
 import {
@@ -63,6 +64,7 @@ export default function AIAssistant() {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const [isOpen, setIsOpen] = useState(false);
+  const { user } = useAuth();
   const queryClient = useQueryClient();
 
   const scrollToBottom = () => {
@@ -314,6 +316,7 @@ export default function AIAssistant() {
         for (const person of (pendingCreation.newPeople || [])) {
           try {
             const contactData = {
+              tenant_id: user?.linked_firm_id,
               first_name: person.first_name || "",
               last_name: person.last_name || "",
               title: person.title || "",

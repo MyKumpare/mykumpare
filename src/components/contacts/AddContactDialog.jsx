@@ -14,6 +14,7 @@ import {
 import {   X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload, TrendingUp, Tag, GraduationCap, Briefcase, Activity, Package, AlertTriangle, Linkedin, Loader2, ClipboardCheck, Image as ImageIcon } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/lib/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 import QuickAddFirmForm from "./QuickAddFirmForm";
 import ContactPhoneForm from "./ContactPhoneForm";
@@ -90,6 +91,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [subRecordReview, setSubRecordReview] = useState(null);
   const [extracting, setExtracting] = useState(null); // "education" | "experience" | null
 
+  const { user } = useAuth();
   const queryClient = useQueryClient();
 
   const { data: allContacts = [] } = useQuery({
@@ -339,6 +341,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
       firm_ids: firmIds,
       phones: ph,
       addresses: addrs,
+      tenant_id: user?.linked_firm_id,
     };
     if (editingContact) {
       updateMutation.mutate({ id: editingContact.id, data });

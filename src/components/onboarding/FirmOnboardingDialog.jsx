@@ -99,6 +99,7 @@ export default function FirmOnboardingDialog() {
       });
       const { first_name, last_name } = splitName(user?.full_name);
       const contact = await base44.entities.Contact.create({
+        tenant_id: firm.id,
         first_name: first_name || firmName.trim(),
         last_name,
         email: user?.email || "",
