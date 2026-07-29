@@ -1,7 +1,9 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search, ArrowLeft, Users, Sparkles, ScrollText } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search, ArrowLeft, Users, Sparkles, ScrollText, ShieldCheck } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import AddBenchmarkDialog from "./AddBenchmarkDialog";
 import DuplicateContactsReview from "@/components/contacts/DuplicateContactsReview";
@@ -47,6 +49,9 @@ function CollapsibleGroup({ label, labelClass = "text-xs font-semibold text-indi
 }
 
 export default function UtilitySection({ deletedCount, forceExpanded = false }) {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [expanded, setExpanded] = useState(false);
   // 'menu' = selection screen, 'benchmark' = benchmark list + search, 'cleanup' = contact cleanup
   const [view, setView] = useState("menu");
@@ -190,6 +195,18 @@ export default function UtilitySection({ deletedCount, forceExpanded = false }) 
                 <span className="text-sm font-semibold text-gray-700">Enrichment Logs</span>
                 <span className="text-[11px] text-gray-400">Review enrichment results</span>
               </button>
+              {isAdmin && (
+                <button
+                  onClick={() => navigate("/UserManagement")}
+                  className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
+                >
+                  <div className="w-9 h-9 rounded-full bg-rose-50 flex items-center justify-center">
+                    <ShieldCheck className="w-4.5 h-4.5 text-rose-600" />
+                  </div>
+                  <span className="text-sm font-semibold text-gray-700">Admin</span>
+                  <span className="text-[11px] text-gray-400">Manage users & settings</span>
+                </button>
+              )}
             </div>
           )}
 
