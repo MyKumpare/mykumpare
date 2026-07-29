@@ -152,6 +152,20 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
   const [statusMap, setStatusMap] = useState({});
   const [similarConfirm, setSimilarConfirm] = useState(null);
 
+  // Re-run duplicate validation + accepted-fields initialization whenever the
+  // enriched data changes (including when background LinkedIn lookups update it).
+  const initValidation = (data) => {
+    const { items } = validateEnrichment(data, existingFirm || {}, existingContacts);
+    const smap = {};
+    const initial = {};
+    for (const it of items) {
+      smap[it.key] = it.status;
+      initial[it.key] = it.status !== "exact";
+    }
+    setStatusMap(smap);
+    setAcceptedFields(initial);
+  };
+
   const handleFetch = async () => {
     setLoading(true);
     onLoadingChange?.(true);
@@ -160,35 +174,37 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
     try {
       const data = await enrichFirmFromWeb(firmName, website);
 
-      // Auto-find LinkedIn URLs the website scrape missed — for the firm and
-      // any contacts still without one — so the user doesn't have to look each
-      // up manually. Runs before the review panel so results flow through the
-      // normal accept/skip + duplicate-validation path.
-      setLinkedinFilling(true);
-      try {
-        await autoFillMissingLinkedInUrls(data, website || data.website || "");
-      } catch { /* non-fatal — keep enrichment data as-is */ }
-      setLinkedinFilling(false);
-
+      // Show the review panel immediately — the website scrape already found
+      // most LinkedIn URLs from the HTML. The slower web-search fallback for
+      // any remaining contacts runs in the background and updates the panel
+      // incrementally so the user isn't blocked waiting for it.
       setEnrichedData(data);
+      initValidation(data);
 
-      // Run global duplicate validation against existing firm + contacts.
-      const { items } = validateEnrichment(data, existingFirm || {}, existingContacts);
-      const smap = {};
-      const initial = {};
-      for (const it of items) {
-        smap[it.key] = it.status;
-        // Exact duplicates are blocked (forced off). New + similar default on so
-        // the user can review; similar items prompt for explicit confirmation on apply.
-        initial[it.key] = it.status !== "exact";
-      }
-      setStatusMap(smap);
-      setAcceptedFields(initial);
+      // Background LinkedIn auto-fill: find URLs the website scrape missed for
+      // the firm and any contacts still without one. Runs non-blocking so the
+      // user can review the already-fetched data while lookups are in flight.
+      setLinkedinFilling(true);
+      (async () => {
+        try {
+          await autoFillMissingLinkedInUrls(data, website || data.website || "");
+          // Re-run validation to pick up any newly-found LinkedIn URLs.
+          setEnrichedData((prev) => {
+            if (!prev) return prev;
+            // Shallow-merge so React sees a new reference.
+            const updated = { ...prev };
+            if (data.linkedin_url) updated.linkedin_url = data.linkedin_url;
+            if (data.people) updated.people = data.people.map((p) => ({ ...p }));
+            initValidation(updated);
+            return updated;
+          });
+        } catch { /* non-fatal — keep enrichment data as-is */ }
+        setLinkedinFilling(false);
+      })();
     } catch (err) {
       const msg = err.message || "Failed to fetch data from the web";
       setError(msg);
     } finally {
-      setLinkedinFilling(false);
       setLoading(false);
       onLoadingChange?.(false);
     }
@@ -365,6 +381,14 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
           items={similarConfirm.items}
           onConfirm={handleConfirmSimilar}
         />
+      )}
+      {linkedinFilling && (
+        <div className="flex items-center gap-2 rounded-md bg-indigo-50 border border-indigo-100 px-3 py-1.5">
+          <Loader2 className="w-3.5 h-3.5 text-indigo-600 animate-spin flex-shrink-0" />
+          <p className="text-xs text-indigo-700 font-medium">
+            Finding LinkedIn URLs in the background…
+          </p>
+        </div>
       )}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
