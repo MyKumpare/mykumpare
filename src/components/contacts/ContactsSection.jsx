@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, ChevronDown, ChevronRight, User } from "lucide-react";
+import ViewModeToggle from "@/components/common/ViewModeToggle";
+import { useViewMode } from "@/hooks/useViewMode";
 
 const FIRM_TYPES = [
   "Manager of Managers",
@@ -47,6 +49,7 @@ export default function ContactsSection({ contacts, firms, onContactClick, onAdd
   const [expanded, setExpanded] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState({});
   const [expandedFirms, setExpandedFirms] = useState({});
+  const [viewMode, setViewMode] = useViewMode("contacts");
 
   useEffect(() => {
     if (forceExpanded !== undefined) setExpanded(forceExpanded);
@@ -91,6 +94,28 @@ export default function ContactsSection({ contacts, firms, onContactClick, onAdd
 
   const totalContacts = contacts.length;
 
+  const contactColor = (gt) => GROUP_COLORS[gt] || "bg-gray-100 text-gray-700";
+
+  function ContactMiniCard({ contact }) {
+    return (
+      <button
+        onClick={() => onContactClick(contact)}
+        className="text-left p-3 rounded-xl border border-gray-100 bg-white hover:bg-pink-50 hover:border-pink-200 transition-colors w-full"
+      >
+        <div className="flex items-center gap-2.5 mb-1">
+          <ContactAvatar contact={contact} />
+          <span className="text-sm font-medium text-gray-800 truncate">{formatContactName(contact)}</span>
+          {contact.contact_status === "Active" ? (
+            <span className="ml-auto w-2 h-2 rounded-full bg-green-500 flex-shrink-0" title="Active" />
+          ) : contact.contact_status === "Inactive" ? (
+            <span className="ml-auto w-2 h-2 rounded-full bg-red-500 flex-shrink-0" title="Inactive" />
+          ) : null}
+        </div>
+        {contact.title && <p className="text-xs text-gray-400 truncate pl-8">{contact.title}</p>}
+      </button>
+    );
+  }
+
   return (
     <div className="mb-6">
       {/* Section header */}
@@ -110,20 +135,23 @@ export default function ContactsSection({ contacts, firms, onContactClick, onAdd
           </span>
           <span className="text-xs text-gray-400 font-normal">({totalContacts})</span>
         </button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 px-2 text-pink-600 hover:text-pink-700 hover:bg-pink-50 gap-1 text-xs"
-          onClick={onAddContact}
-        >
-          <Plus className="w-3.5 h-3.5" />
-          Add Contact
-        </Button>
+        <div className="flex items-center gap-2">
+          <ViewModeToggle value={viewMode} onChange={setViewMode} />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-pink-600 hover:text-pink-700 hover:bg-pink-50 gap-1 text-xs"
+            onClick={onAddContact}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add Contact
+          </Button>
+        </div>
       </div>
 
       {expanded && (
         <div className="pl-2 border-l-2 border-gray-100 space-y-4">
-          {FIRM_TYPES.map((groupType) => {
+          {viewMode === "list" && FIRM_TYPES.map((groupType) => {
             const firmGroups = grouped[groupType];
             if (!firmGroups) return null;
             const isGroupExpanded = expandedGroups[groupType] !== false; // default open
@@ -208,8 +236,7 @@ export default function ContactsSection({ contacts, firms, onContactClick, onAdd
             );
           })}
 
-          {/* Unassigned contacts */}
-          {unassignedContacts.length > 0 && (
+          {viewMode === "list" && unassignedContacts.length > 0 && (
             <div>
               <button
                 onClick={() => toggleGroup("__unassigned__")}
@@ -245,6 +272,52 @@ export default function ContactsSection({ contacts, firms, onContactClick, onAdd
                       )}
                     </button>
                   ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {viewMode === "card" && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 py-1">
+              {contacts
+                .slice()
+                .sort((a, b) => (a.last_name || "").localeCompare(b.last_name || ""))
+                .map((contact) => (
+                  <ContactMiniCard key={contact.id} contact={contact} />
+                ))}
+            </div>
+          )}
+
+          {viewMode === "kanban" && (
+            <div className="flex gap-3 overflow-x-auto pb-2">
+              {FIRM_TYPES.filter((t) => grouped[t]).map((gt) => {
+                const firmGroups = grouped[gt];
+                const allContacts = firmGroups.flatMap((g) => g.contacts);
+                return (
+                  <div key={gt} className="flex-shrink-0 w-72">
+                    <div className={`flex items-center gap-2 mb-2 px-3 py-1.5 rounded-lg ${contactColor(gt)}`}>
+                      <span className="text-xs font-semibold uppercase tracking-wide truncate">{gt}</span>
+                      <span className="text-xs ml-auto">{allContacts.length}</span>
+                    </div>
+                    <div className="space-y-2">
+                      {allContacts.map((contact) => (
+                        <ContactMiniCard key={contact.id} contact={contact} />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+              {unassignedContacts.length > 0 && (
+                <div className="flex-shrink-0 w-72">
+                  <div className="flex items-center gap-2 mb-2 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-500">
+                    <span className="text-xs font-semibold uppercase tracking-wide">No Firm</span>
+                    <span className="text-xs ml-auto">{unassignedContacts.length}</span>
+                  </div>
+                  <div className="space-y-2">
+                    {unassignedContacts.map((contact) => (
+                      <ContactMiniCard key={contact.id} contact={contact} />
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

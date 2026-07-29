@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, ChevronDown, ChevronRight, Package } from "lucide-react";
+import ViewModeToggle from "@/components/common/ViewModeToggle";
+import { useViewMode } from "@/hooks/useViewMode";
 
 const PRODUCT_GROUP_TYPES = ["Manager of Managers", "Investment Manager"];
 
@@ -13,6 +15,7 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
   const [expanded, setExpanded] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState({});
   const [expandedFirms, setExpandedFirms] = useState({});
+  const [viewMode, setViewMode] = useViewMode("products");
 
   useEffect(() => {
     if (forceExpanded !== undefined) setExpanded(forceExpanded);
@@ -52,6 +55,29 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
 
   const totalProducts = products.length;
 
+  const productColor = (gt) => GROUP_COLORS[gt] || "bg-gray-100 text-gray-700";
+
+  function ProductMiniCard({ product }) {
+    const firm = firmMap[product.firm_id];
+    return (
+      <button
+        onClick={() => onProductClick(product)}
+        className="text-left p-3 rounded-xl border border-gray-100 bg-white hover:bg-violet-50 hover:border-violet-200 transition-colors w-full"
+      >
+        <div className="flex items-center gap-2 mb-1">
+          <div className="w-7 h-7 rounded-lg bg-violet-50 flex items-center justify-center flex-shrink-0">
+            <Package className="w-3.5 h-3.5 text-violet-500" />
+          </div>
+          <span className="text-sm font-medium text-gray-800 truncate">{product.name}</span>
+        </div>
+        {firm && <p className="text-xs text-gray-400 truncate pl-9">{firm.name}</p>}
+        {product.asset_class && (
+          <p className="text-xs text-gray-400 pl-9">{product.asset_class}</p>
+        )}
+      </button>
+    );
+  }
+
   return (
     <div className="mb-6">
       {/* Section header */}
@@ -71,20 +97,23 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
           </span>
           <span className="text-xs text-gray-400 font-normal">({totalProducts})</span>
         </button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 px-2 text-violet-600 hover:text-violet-700 hover:bg-violet-50 gap-1 text-xs"
-          onClick={onAddProduct}
-        >
-          <Plus className="w-3.5 h-3.5" />
-          Add Product
-        </Button>
+        <div className="flex items-center gap-2">
+          <ViewModeToggle value={viewMode} onChange={setViewMode} />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-violet-600 hover:text-violet-700 hover:bg-violet-50 gap-1 text-xs"
+            onClick={onAddProduct}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add Product
+          </Button>
+        </div>
       </div>
 
       {expanded && (
         <div className="pl-2 border-l-2 border-gray-100 space-y-4">
-          {PRODUCT_GROUP_TYPES.map((groupType) => {
+          {viewMode === "list" && PRODUCT_GROUP_TYPES.map((groupType) => {
             const firmGroups = grouped[groupType];
             if (!firmGroups) return null;
             const isGroupExpanded = expandedGroups[groupType] !== false; // default open
@@ -168,6 +197,39 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
               </div>
             );
           })}
+
+          {viewMode === "card" && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 py-1">
+              {products
+                .slice()
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((product) => (
+                  <ProductMiniCard key={product.id} product={product} />
+                ))}
+            </div>
+          )}
+
+          {viewMode === "kanban" && (
+            <div className="flex gap-3 overflow-x-auto pb-2">
+              {PRODUCT_GROUP_TYPES.filter((gt) => grouped[gt]).map((gt) => {
+                const firmGroups = grouped[gt];
+                const allProducts = firmGroups.flatMap((g) => g.products);
+                return (
+                  <div key={gt} className="flex-shrink-0 w-72">
+                    <div className={`flex items-center gap-2 mb-2 px-3 py-1.5 rounded-lg ${productColor(gt)}`}>
+                      <span className="text-xs font-semibold uppercase tracking-wide truncate">{gt}</span>
+                      <span className="text-xs ml-auto">{allProducts.length}</span>
+                    </div>
+                    <div className="space-y-2">
+                      {allProducts.map((product) => (
+                        <ProductMiniCard key={product.id} product={product} />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {Object.keys(grouped).length === 0 && (
             <div className="text-sm text-gray-400 italic py-3 text-center border border-dashed border-gray-200 rounded-xl">
