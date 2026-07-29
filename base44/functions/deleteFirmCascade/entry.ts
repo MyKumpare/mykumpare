@@ -10,10 +10,6 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    // Cascading deletion uses the service role (bypasses per-user ownership),
-    // so restrict it to admins to prevent any authenticated user from deleting
-    // arbitrary firms and their related records.
-    if (user.role !== 'admin') return Response.json({ error: 'Forbidden — admin role required' }, { status: 403 });
 
     const body = await req.json().catch(() => ({}));
     const firmId = body?.firm_id;
@@ -27,6 +23,20 @@ Deno.serve(async (req) => {
     const firm = await svc.entities.Firm.get(firmId);
     if (!firm) return Response.json({ error: 'Firm not found' }, { status: 404 });
     if (firm.deleted_at) return Response.json({ error: 'Firm is already deleted' }, { status: 400 });
+
+    // Authorization: cascading deletion uses the service role (bypasses per-user
+    // ownership), so gate it carefully. Platform admins may delete any firm.
+    // Otherwise the user must belong to the same tenant as the firm AND hold a
+    // firm-level role that permits deletion (firm admin / co-admin, or can_delete).
+    const isPlatformAdmin = user.role === 'admin';
+    const userFirmId = user.linked_firm_id ?? user.data?.linked_firm_id;
+    const sameTenant = !!userFirmId && firm.tenant_id === userFirmId;
+    const firmRole = user.firm_role ?? user.data?.firm_role;
+    const canDelete = (user.can_delete ?? user.data?.can_delete) === true;
+    const allowedByFirm = sameTenant && (firmRole === 'admin' || firmRole === 'co-admin' || canDelete);
+    if (!isPlatformAdmin && !allowedByFirm) {
+      return Response.json({ error: 'Forbidden — insufficient permissions to delete this firm' }, { status: 403 });
+    }
 
     // --- Products of this firm (soft delete) ---
     const products = await svc.entities.Product.filter({ firm_id: firmId });
