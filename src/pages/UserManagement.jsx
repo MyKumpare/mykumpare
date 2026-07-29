@@ -38,6 +38,12 @@ export default function UserManagement() {
     queryFn: () => base44.entities.Firm.list(),
     enabled: isAdmin,
   });
+  const { data: pendingInvites = [] } = useQuery({
+    queryKey: ["pending_invitations"],
+    queryFn: () => base44.entities.PendingInvitation.list("-created_date", 200),
+    enabled: isAdmin,
+  });
+  const pending = (pendingInvites || []).filter((i) => !i.accepted);
 
   const owner = users.find((u) => u.is_owner);
   const adminCount = users.filter((u) => u.role === "admin").length;
@@ -71,6 +77,33 @@ export default function UserManagement() {
       toast({ title: "Failed to set owner", description: e?.message, variant: "destructive" });
     } finally {
       setBusyOwnerId(null);
+    }
+  };
+
+  const handleCancelInvite = async (inv) => {
+    if (!window.confirm(`Cancel the invitation to ${inv.email}?`)) return;
+    try {
+      await base44.entities.PendingInvitation.delete(inv.id);
+      if (inv.contact_id) { try { await base44.entities.Contact.delete(inv.contact_id); } catch {} }
+      queryClient.invalidateQueries({ queryKey: ["pending_invitations"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      toast({ title: "Invitation cancelled" });
+    } catch (e) {
+      toast({ title: "Could not cancel", description: e?.message, variant: "destructive" });
+    }
+  };
+
+  const handleResendInvite = async (inv) => {
+    try {
+      await base44.users.inviteUser(inv.email, "user");
+      toast({ title: "Invitation re-sent", description: `A new join link was sent to ${inv.email}.` });
+    } catch (e) {
+      const msg = (e?.message || "").toLowerCase();
+      if (msg.includes("already") || msg.includes("exist") || msg.includes("registered") || msg.includes("invited")) {
+        toast({ title: "Invitation re-sent", description: `A new join link was sent to ${inv.email}.` });
+      } else {
+        toast({ title: "Could not re-send", description: e?.message, variant: "destructive" });
+      }
     }
   };
 
@@ -258,6 +291,34 @@ export default function UserManagement() {
             </div>
           )}
         </div>
+
+        {/* Pending invitations */}
+        {pending.length > 0 && (
+          <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-sm font-bold text-gray-800 flex items-center gap-1.5"><Mail className="w-3.5 h-3.5 text-indigo-500" /> Pending Invitations</h2>
+              <span className="text-[11px] text-gray-400">{pending.length} pending</span>
+            </div>
+            <div className="divide-y divide-gray-100">
+              {pending.map((inv) => (
+                <div key={inv.id} className="flex flex-col sm:flex-row sm:items-center gap-2 px-4 py-2.5">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">{inv.email}</p>
+                    <p className="text-[11px] text-gray-500 truncate">
+                      {inv.firm_name || "—"} · {inv.firm_role === "admin" ? "Firm Admin" : inv.firm_role === "co-admin" ? "Co-Admin" : "Member"}
+                      {inv.first_name || inv.last_name ? ` · ${[inv.first_name, inv.last_name].filter(Boolean).join(" ")}` : ""}
+                      {inv.invited_by_name ? ` · invited by ${inv.invited_by_name}` : ""}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => handleResendInvite(inv)}>Resend</Button>
+                    <Button variant="outline" size="sm" className="h-7 text-xs text-rose-600 border-rose-200 hover:bg-rose-50" onClick={() => handleCancelInvite(inv)}>Cancel</Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <p className="text-[11px] text-gray-400 leading-relaxed">
           Roles control access: <span className="font-medium text-gray-600">Administrators</span> can manage all data and invite/manage users;

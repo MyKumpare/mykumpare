@@ -1,0 +1,195 @@
+{
+  "name": "PendingInvitation",
+  "type": "object",
+  "properties": {
+    "email": {
+      "type": "string",
+      "description": "Email address the invitation was sent to"
+    },
+    "firm_id": {
+      "type": "string",
+      "description": "ID of the firm (tenant) the invitee should be linked to on first login"
+    },
+    "firm_name": {
+      "type": "string",
+      "description": "Denormalized firm name (display)"
+    },
+    "firm_role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "co-admin",
+        "user"
+      ],
+      "default": "user",
+      "description": "Firm-level role to assign the invitee when they join"
+    },
+    "can_edit": {
+      "type": "boolean",
+      "default": false,
+      "description": "Edit permission to grant the invitee (applies when firm_role is 'user')"
+    },
+    "can_delete": {
+      "type": "boolean",
+      "default": false,
+      "description": "Delete permission to grant the invitee (applies when firm_role is 'user')"
+    },
+    "first_name": {
+      "type": "string",
+      "description": "Invitee first name (used to pre-create their contact record)"
+    },
+    "last_name": {
+      "type": "string",
+      "description": "Invitee last name (used to pre-create their contact record)"
+    },
+    "contact_id": {
+      "type": "string",
+      "description": "ID of the pre-created contact record for this invitee (linked to the user on first login)"
+    },
+    "invited_by_name": {
+      "type": "string",
+      "description": "Name of the admin who sent the invitation"
+    },
+    "accepted": {
+      "type": "boolean",
+      "default": false,
+      "description": "True once the invitee has logged in and been auto-linked to the firm"
+    }
+  },
+  "required": [
+    "email",
+    "firm_id",
+    "firm_role"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.firm_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "firm_role": "co-admin"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.firm_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "firm_role": "co-admin"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.firm_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "firm_role": "co-admin"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.firm_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "firm_role": "co-admin"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
