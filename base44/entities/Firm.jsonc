@@ -2,6 +2,10 @@
   "name": "Firm",
   "type": "object",
   "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "ID of the firm (tenant) that owns this firm record. For a tenant's own organization firm, this equals the record's own id. Drives tenant isolation via RLS."
+    },
     "name": {
       "type": "string",
       "description": "Name of the firm"
@@ -138,28 +142,58 @@
       "$or": [
         {
           "user_condition": {
-            "role": "user"
+            "role": "admin"
           }
         },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "read": {
+      "$or": [
         {
           "user_condition": {
             "role": "admin"
           }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
         }
       ]
     },
-    "read": null,
     "update": {
       "$or": [
         {
           "user_condition": {
-            "role": "user"
+            "role": "admin"
           }
         },
         {
-          "user_condition": {
-            "role": "admin"
-          }
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "can_edit": true
+                  }
+                }
+              ]
+            }
+          ]
         }
       ]
     },
@@ -167,13 +201,34 @@
       "$or": [
         {
           "user_condition": {
-            "role": "user"
+            "role": "admin"
           }
         },
         {
-          "user_condition": {
-            "role": "admin"
-          }
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "can_delete": true
+                  }
+                }
+              ]
+            }
+          ]
         }
       ]
     }
