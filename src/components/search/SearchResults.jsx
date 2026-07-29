@@ -167,8 +167,9 @@ export default function SearchResults({ query, firms, products, contacts, portfo
       .filter((c) => c._score > 0)
   ).sort(byScoreDesc);
 
-  // --- Match firms ---
+  // --- Match firms (excluding soft-deleted) ---
   const matchedFirms = firms
+    .filter((f) => !f.deleted_at)
     .map((f) => ({
       ...f,
       _score: scoreFields(keywords, [f.name, f.firm_type, (f.firm_types || []).join(" "), f.website, f.email, f.description]),
@@ -176,8 +177,9 @@ export default function SearchResults({ query, firms, products, contacts, portfo
     .filter((f) => f._score > 0)
     .sort(byScoreDesc);
 
-  // --- Match products ---
+  // --- Match products (excluding soft-deleted) ---
   const matchedProducts = products
+    .filter((p) => !p.deleted_at)
     .map((p) => ({
       ...p,
       _score: scoreFields(keywords, [p.name, p.description, p.asset_class, p.geography, p.market_cap, p.style, p.investment_process, p.firm_name]),
@@ -185,8 +187,9 @@ export default function SearchResults({ query, firms, products, contacts, portfo
     .filter((p) => p._score > 0)
     .sort(byScoreDesc);
 
-  // --- Match portfolios ---
+  // --- Match portfolios (excluding soft-deleted) ---
   const matchedPortfolios = portfolios
+    .filter((p) => !p.deleted_at)
     .map((p) => ({
       ...p,
       _score: scoreFields(keywords, [p.portfolio_name, p.allocator_name, p.advisor_firm_name]),
