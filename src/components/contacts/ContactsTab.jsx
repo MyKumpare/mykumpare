@@ -249,7 +249,7 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
               const aOrder = roleOrder[a.contact_role] ?? 2;
               const bOrder = roleOrder[b.contact_role] ?? 2;
               if (aOrder !== bOrder) return aOrder - bOrder;
-              return (a.last_name || "").localeCompare(b.last_name || "");
+              return (a.first_name || "").localeCompare(b.first_name || "") || (a.last_name || "").localeCompare(b.last_name || "");
             })
             .map((contact) => {
               const isDuplicate = duplicateGroups.some((g) => g.some((c) => c.id === contact.id));
