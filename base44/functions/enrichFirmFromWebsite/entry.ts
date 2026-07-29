@@ -1201,6 +1201,7 @@ CRITICAL — EXTRACT EVERY PERSON:
 - The people page is organized in sections (Executive, Investment Team, Portfolio Operations, Corporate, Sales & Client Service, etc.). Go through EVERY section and extract EVERY person in EVERY section.
 - Some pages use tabbed or filtered layouts (e.g. "All Teams", "Our Leaders", "Domestic Equities Experts", "Emerging Markets Equities Experts", "Global Equities Experts", "Marketing and Client Service", "Administration and Trading"). ALL of these tabs/sections are included in the content below — you must process EVERY one of them, not just the first.
 - If a person appears in multiple sections, extract them once with their most detailed title.
+- CRITICAL: Section/tab labels like "Our Leaders", "Domestic Equities Experts", "Emerging Markets Equities Experts", "Global Equities Experts", "Marketing and Client Service", "Administration and Trading", "Company Board of Directors", "Mutual Fund Board of Trustees", "All Teams" are TAB HEADERS, NOT people. Do NOT include them as people entries. Only extract entries that have a real person's first and last name.
 - Each person card typically has a photo (shown as [IMAGE: ...]), a name (usually in a heading like "#### Name"), and a title/role below it.
 - IMPORTANT: Some sites embed team data as JSON inside <script> tags. This data has been extracted and appears as [PERSON: name="..." title="..." photo_url="..." bio_url="..."] markers in the "Embedded Team Data" section. You MUST extract EVERY [PERSON: ...] marker as a person entry. Each marker provides the person's name, title, photo_url, and bio_url (their individual profile page). Use these fields directly — do NOT skip any [PERSON: ...] marker.
 - Do NOT skip anyone. If you see 40+ people on the page, return all 40+ in the people array.
@@ -1307,6 +1308,24 @@ IMPORTANT:
       person.linkedin_url = cleanStr(person.linkedin_url) || '';
       person.biography = cleanStr(person.biography) || '';
       person.bio_url = cleanStr(person.bio_url) || '';
+    }
+
+    // Filter out section headers that the LLM sometimes returns as "people"
+    // (e.g. "Our Leaders", "Domestic Equities Experts", "Company Board of Directors").
+    // These are not real people — they are tab/filter labels on the team page.
+    if (Array.isArray(enrichedData.people)) {
+      const SECTION_HEADER_RE = /^(all teams|our leaders|domestic equities experts|emerging markets equities experts|global equities experts|marketing and client service|administration and trading|company board of directors|mutual fund board of trustees|our team|our experts|leadership|our people|staff|personnel|professionals)$/i;
+      const isSectionHeader = (p: any): boolean => {
+        const first = (p.first_name || '').trim();
+        const last = (p.last_name || '').trim();
+        const full = `${first} ${last}`.trim();
+        // A section header has a first_name like "Our" and last_name like "Leaders"
+        // or the combined name matches a known section header.
+        return SECTION_HEADER_RE.test(full) ||
+          (first.length <= 4 && SECTION_HEADER_RE.test(last)) ||
+          (last.length <= 4 && SECTION_HEADER_RE.test(first));
+      };
+      enrichedData.people = enrichedData.people.filter((p: any) => !isSectionHeader(p));
     }
 
     // Phase 2: gather individual biographies that weren't on the listing page.
