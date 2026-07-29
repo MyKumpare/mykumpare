@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/lib/AuthContext";
 import {
   Dialog,
   DialogContent,
@@ -60,6 +61,7 @@ const normalizeName = (s) =>
 export default function AddDocumentDialog({ open, onOpenChange }) {
   const queryClient = useQueryClient();
   const fileInputRef = useRef(null);
+  const { user } = useAuth();
 
   const [firmId, setFirmId] = useState("");
   const [firmType, setFirmType] = useState("");
@@ -191,6 +193,7 @@ export default function AddDocumentDialog({ open, onOpenChange }) {
     firm_id: firmId,
     firm_name: selectedFirm?.name || "",
     firm_type: firmType || undefined,
+    tenant_id: user?.linked_firm_id,
     file_url: file.file_url,
     file_name: file.file_name,
     file_type: file.file_type,

@@ -403,7 +403,7 @@ export default function Home() {
   };
 
   const handleDdAddSubmit = (data) => {
-    base44.entities.DueDiligence.create(data)
+    base44.entities.DueDiligence.create({ ...data, tenant_id: user?.linked_firm_id })
       .then(() => {
         queryClient.invalidateQueries({ queryKey: ["due-diligence-all"] });
         if (data?.firm_id) queryClient.invalidateQueries({ queryKey: ["due-diligence", data.firm_id] });

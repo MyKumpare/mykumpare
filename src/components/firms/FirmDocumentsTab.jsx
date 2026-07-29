@@ -27,6 +27,7 @@ import { format, parseISO } from "date-fns";
 import DocumentCategoryPicker from "./DocumentCategoryPicker";
 import SimilarDocumentDialog from "./SimilarDocumentDialog";
 import EditFirmDocumentDialog from "./EditFirmDocumentDialog";
+import { useAuth } from "@/lib/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 
 const fmtDate = (iso) => {
@@ -56,6 +57,7 @@ const normalizeName = (s) =>
 export default function FirmDocumentsTab({ firmId, firmName }) {
   const queryClient = useQueryClient();
   const fileInputRef = useRef(null);
+  const { user } = useAuth();
   const [pending, setPending] = useState([]); // uploaded-but-unsaved drafts
   const [uploading, setUploading] = useState(false);
   const [duplicateCheck, setDuplicateCheck] = useState(null); // { draft, matches }
@@ -148,6 +150,7 @@ export default function FirmDocumentsTab({ firmId, firmName }) {
       await createMutation.mutateAsync({
         firm_id: firmId,
         firm_name: firmName,
+        tenant_id: user?.linked_firm_id,
         file_url: draft.file_url,
         file_name: draft.file_name,
         file_type: draft.file_type,
