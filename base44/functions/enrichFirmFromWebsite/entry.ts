@@ -995,7 +995,7 @@ Deno.serve(async (req) => {
       const text = await fetchPage(fullUrl);
       if (text && text.length > 100) {
         const isPeoplePage = /\/(people|our-people|team|our-team|leadership|staff)\b/i.test(path);
-        const limit = isPeoplePage ? 40000 : 12000;
+        const limit = isPeoplePage ? 80000 : 12000;
         return { url: fullUrl, text: text.substring(0, limit) };
       }
       return null;
@@ -1040,7 +1040,7 @@ Deno.serve(async (req) => {
       const teamPages = (await Promise.all(
         toFetch.map(async (teamUrl) => {
           const text = await fetchPage(teamUrl);
-          if (text && text.length > 100) return { url: teamUrl, text: text.substring(0, 40000) };
+          if (text && text.length > 100) return { url: teamUrl, text: text.substring(0, 80000) };
           return null;
         }),
       )).filter(Boolean) as { url: string; text: string }[];
@@ -1105,7 +1105,7 @@ Deno.serve(async (req) => {
 
 Website content (combined from multiple pages):
 ---
-${combinedContent.substring(0, 60000)}
+${combinedContent.substring(0, 120000)}
 ---
 
 Extract the following information from this website content:
@@ -1124,6 +1124,7 @@ Extract the following information from this website content:
 CRITICAL — EXTRACT EVERY PERSON:
 - You MUST extract EVERY single person listed on the people/team page. Do NOT stop after the first few.
 - The people page is organized in sections (Executive, Investment Team, Portfolio Operations, Corporate, Sales & Client Service, etc.). Go through EVERY section and extract EVERY person in EVERY section.
+- Some pages use tabbed or filtered layouts (e.g. "All Teams", "Our Leaders", "Domestic Equities Experts", "Emerging Markets Equities Experts", "Global Equities Experts", "Marketing and Client Service", "Administration and Trading"). ALL of these tabs/sections are included in the content below — you must process EVERY one of them, not just the first.
 - If a person appears in multiple sections, extract them once with their most detailed title.
 - Each person card typically has a photo (shown as [IMAGE: ...]), a name (usually in a heading like "#### Name"), and a title/role below it.
 - Do NOT skip anyone. If you see 40+ people on the page, return all 40+ in the people array.
