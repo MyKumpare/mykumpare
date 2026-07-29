@@ -920,8 +920,7 @@ For EACH team member, include:
 - Their biography if available
 
 Also include:
-- The firm's logo URL
-- A 2-3 sentence description of the firm
+- The firm's logo URL (do NOT use social media icon URLs like LinkedIn/Twitter/Facebook badges — the firm logo is a unique brand image, usually a stylized wordmark or icon)
 - Year founded
 - LinkedIn company page URL
 - Contact email and phone
@@ -957,8 +956,7 @@ Extract and return as JSON:
 - linkedin_url: LinkedIn company page URL
 - year_founded: integer year founded (0 if unknown)
 - firm_types: array of firm types ("Investment Manager", "Allocator", "Investment Consultant", "Manager of Managers", "Securities Brokerage", "Trade Organizations")
-- logo_url: firm logo URL (full URL starting with http)
-- addresses: array of {is_headquarters, country, state, city, postal_code, address_line1, address_line2}
+- logo_url: firm logo URL (full URL starting with http). Do NOT use social media icon URLs (LinkedIn, Twitter, Facebook, Instagram, YouTube icons) — the firm logo is a unique brand image.
 - phones: array of {phone_type, country_code, area_code, number_mid, number_last}
 - people: array of {first_name, last_name, title, email, linkedin_url, photo_url, biography} for EVERY person mentioned
 
@@ -1033,10 +1031,75 @@ CRITICAL: Include the photo_url for each person if mentioned in the research. Ph
   }
 }
 
+// Extract a firm logo that is applied via CSS as a background image on an
+// element with id/class containing "logo". Many sites (especially older ones)
+// use <a id="logo" style="background: url(...)"> or a CSS rule #logo { background: url(...) }
+// instead of an <img> tag — so the logo is invisible to the img-only extraction.
+// We fetch linked CSS files, find logo-related rules, and return the resolved URL.
+async function extractLogoFromCss(html: string, baseUrl: string): Promise<string> {
+  try {
+    // 1. Collect linked stylesheet URLs from the HTML
+    const cssHrefRegex = /<link[^>]+rel\s*=\s*["']stylesheet["'][^>]+href\s*=\s*["']([^"']+)["']/gi;
+    const cssUrls: string[] = [];
+    let m: RegExpExecArray | null;
+    while ((m = cssHrefRegex.exec(html)) !== null) {
+      const resolved = resolveUrl(baseUrl, m[1].trim());
+      if (resolved) cssUrls.push(resolved);
+    }
+    // Also check inline style attributes on logo elements
+    const inlineLogoRegex = /<(?:a|div|span|header)[^>]*(?:id|class)\s*=\s*["'][^"']*(?:logo|brand)[^"']*["'][^>]*style\s*=\s*["']([^"']*)["']/gi;
+    while ((m = inlineLogoRegex.exec(html)) !== null) {
+      const bgMatch = m[1].match(/background[^;]*url\(\s*["']?([^"')]+)["']?\s*\)/i);
+      if (bgMatch) {
+        const resolved = resolveUrl(baseUrl, bgMatch[1].trim());
+        if (resolved && !isSocialOrIconUrl(resolved)) return resolved;
+      }
+    }
+
+    // 2. Fetch each CSS file and look for logo-related selectors
+    const logoSelectorRegex = /(?:#logo|\.logo|#header-logo|\.site-logo|#brand|\.brand-logo|#site-logo|\.header-logo)[^{]*\{[^}]*\}/gi;
+    for (const cssUrl of cssUrls.slice(0, 3)) {
+      try {
+        const resp = await fetch(cssUrl, { headers: browserHeaders(CONSENT_COOKIES + ';' + dynamicConsentCookies) });
+        if (!resp.ok) continue;
+        const css = await resp.text();
+        let ruleMatch: RegExpExecArray | null;
+        logoSelectorRegex.lastIndex = 0;
+        while ((ruleMatch = logoSelectorRegex.exec(css)) !== null) {
+          const bgMatch = ruleMatch[0].match(/background[^;]*url\(\s*["']?([^"')]+)["']?\s*\)/i);
+          if (bgMatch) {
+            const resolved = resolveUrl(cssUrl, bgMatch[1].trim());
+            if (resolved && !isSocialOrIconUrl(resolved)) return resolved;
+          }
+        }
+      } catch {
+        // skip CSS file that fails to load
+      }
+    }
+  } catch {
+    // non-fatal
+  }
+  return '';
+}
+
+// Reject social-media / generic icon URLs that the LLM sometimes picks as the
+// firm logo. These appear in headers/footers alongside the real logo and the
+// LLM confuses them — especially the LinkedIn "in" badge.
+function isSocialOrIconUrl(url: string): boolean {
+  if (!url) return false;
+  const lower = url.toLowerCase();
+  return /linkedin|twitter|x-icon|facebook|instagram|youtube|tiktok|favicon|sprite|social-icon|social_icon|icon-linkedin|icon-twitter|icon-facebook|icon-instagram|icon-youtube/i.test(lower);
+}
+
 // Rehost the firm's logo + people photos so images are served from app storage.
 // Shared by both the direct-scrape and web-search fallback paths.
 async function rehostFirmImages(base44: any, data: any, website: string): Promise<void> {
   try {
+    // Drop the logo if it's a social media / generic icon URL.
+    if (data.logo_url && isSocialOrIconUrl(data.logo_url)) {
+      console.log('rehostFirmImages: rejecting social/icon logo_url =', data.logo_url);
+      data.logo_url = '';
+    }
     const imageUrls: string[] = [];
     if (data.logo_url) imageUrls.push(data.logo_url);
     for (const person of data.people || []) {
@@ -1113,10 +1176,20 @@ Deno.serve(async (req) => {
     const homepageRaw = await fetchRawHtml(website);
     dynamicConsentCookies = detectConsentCookies(homepageRaw);
     const homepageText = homepageRaw ? htmlToText(homepageRaw, website) : '';
+    // Extract the firm logo from CSS background images (for sites that use
+    // <a id="logo" style="background: url(...)"> instead of <img> tags).
+    const cssLogoUrl = homepageRaw ? await extractLogoFromCss(homepageRaw, website) : '';
+    if (cssLogoUrl) {
+      console.log('extractLogoFromCss: found logo via CSS =', cssLogoUrl);
+    }
+    // Prepend the CSS-discovered logo as an [IMAGE: ...] marker so the LLM
+    // sees it as the first image on the page (matching the "logo is typically
+    // one of the first images" prompt instruction).
+    const logoMarker = cssLogoUrl ? `\n[IMAGE: alt="firm logo" src="${cssLogoUrl}"]\n` : '';
     if (homepageText) {
       // Give the homepage a generous budget so the footer (which holds the
       // address/phone/contact block) isn't truncated away before the LLM sees it.
-      pageContents.push({ url: website, text: homepageText.substring(0, 20000) });
+      pageContents.push({ url: website, text: logoMarker + homepageText.substring(0, 20000) });
     }
 
     // Fetch sub-pages in parallel
@@ -1212,6 +1285,10 @@ Deno.serve(async (req) => {
         if (!fallback.name) fallback.name = firm_name;
         const cleanStr = (v: any): any => (v === 'null' || v === 'undefined' ? '' : v);
         fallback.logo_url = cleanStr(fallback.logo_url) || '';
+        if (isSocialOrIconUrl(fallback.logo_url)) {
+          console.log('fallback: rejecting social/icon logo_url =', fallback.logo_url);
+          fallback.logo_url = '';
+        }
         fallback.email = cleanStr(fallback.email) || '';
         fallback.linkedin_url = cleanStr(fallback.linkedin_url) || '';
         fallback.website = cleanStr(fallback.website) || '';
@@ -1271,7 +1348,7 @@ CRITICAL — EXTRACT EVERY PERSON:
 
 IMPORTANT:
 - Images on the page appear as [IMAGE: alt="..." src="https://..."] markers.
-  - The firm logo is typically one of the first images (often in the header/nav section) — look at the alt text and position to identify it. Set logo_url to that image's src URL.
+  - The firm logo is typically one of the first images (often in the header/nav section) — look at the alt text and position to identify it. Set logo_url to that image's src URL. CRITICAL: Do NOT use social media icons (LinkedIn "in" badge, Twitter/X, Facebook, Instagram, YouTube, TikTok icons) as the firm logo. The firm logo is a unique brand image — usually a stylized wordmark or icon with the firm name in the alt text or near it. If the only image in the header is a social media icon, leave logo_url empty.
   - For each person, find the [IMAGE: ...] marker that appears closest to that person's name and bio. Set that person's photo_url to the image's src URL.
   - Only use the exact src URL from the [IMAGE: ...] marker — do not modify or construct URLs yourself; the URLs are already absolute.
 - Some sites embed team data as JSON in <script> tags. This extracted data appears as [PERSON: name="..." title="..." photo_url="..." bio_url="..."] markers in an "Embedded Team Data" section.
@@ -1360,6 +1437,16 @@ IMPORTANT:
     // Clean up string "null" values that the LLM sometimes returns for missing fields
     const cleanStr = (v: any): any => (v === 'null' || v === 'undefined' ? '' : v);
     enrichedData.logo_url = cleanStr(enrichedData.logo_url) || '';
+    if (isSocialOrIconUrl(enrichedData.logo_url)) {
+      console.log('enrichedData: rejecting social/icon logo_url =', enrichedData.logo_url);
+      enrichedData.logo_url = '';
+    }
+    // If the LLM didn't find a logo (or its was rejected as a social icon),
+    // use the CSS-discovered logo as a fallback.
+    if (!enrichedData.logo_url && cssLogoUrl) {
+      console.log('enrichedData: using CSS-discovered logo as fallback =', cssLogoUrl);
+      enrichedData.logo_url = cssLogoUrl;
+    }
     enrichedData.email = cleanStr(enrichedData.email) || '';
     enrichedData.linkedin_url = cleanStr(enrichedData.linkedin_url) || '';
     enrichedData.website = cleanStr(enrichedData.website) || '';
