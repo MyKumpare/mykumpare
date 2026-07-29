@@ -565,6 +565,17 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
     return name.length === 1 ? `${name}.` : name;
   };
 
+  // Auto title-case: first letter upper, rest lower. Leaves mixed-case names
+  // (e.g. "McDonald") untouched so users can override the auto-formatting.
+  const autoCaseName = (val) => {
+    if (!val) return "";
+    const trimmed = val.trim();
+    const lower = trimmed.toLowerCase();
+    const upper = trimmed.toUpperCase();
+    if (trimmed !== lower && trimmed !== upper) return trimmed;
+    return lower.charAt(0).toUpperCase() + lower.slice(1);
+  };
+
   const formatFullName = () => {
     const parts = [salutation, firstName, formatMiddleName(middleName), lastName].filter(Boolean);
     const name = parts.join(" ");
@@ -759,13 +770,13 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                 <div className="space-y-1.5">
                   <Label className="text-xs font-medium text-gray-700">First Name *</Label>
                   {viewMode ? ro(firstName) : (
-                    <Input placeholder="First name" value={firstName} onChange={(e) => setFirstName(e.target.value)} className="h-9" />
+                    <Input placeholder="First name" value={firstName} onChange={(e) => setFirstName(e.target.value)} onBlur={() => setFirstName(autoCaseName(firstName))} className="h-9" />
                   )}
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-medium text-gray-700">Middle Name</Label>
                   {viewMode ? ro(middleName) : (
-                    <Input placeholder="Middle" value={middleName} onChange={(e) => setMiddleName(e.target.value)} className="h-9" />
+                    <Input placeholder="Middle" value={middleName} onChange={(e) => setMiddleName(e.target.value)} onBlur={() => setMiddleName(autoCaseName(middleName))} className="h-9" />
                   )}
                 </div>
               </div>
@@ -775,7 +786,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                 <div className="col-span-2 space-y-1.5">
                   <Label className="text-xs font-medium text-gray-700">Last Name *</Label>
                   {viewMode ? ro(lastName) : (
-                    <Input placeholder="Last name" value={lastName} onChange={(e) => setLastName(e.target.value)} className="h-9" />
+                    <Input placeholder="Last name" value={lastName} onChange={(e) => setLastName(e.target.value)} onBlur={() => setLastName(autoCaseName(lastName))} className="h-9" />
                   )}
                 </div>
                 <div className="space-y-1.5">
