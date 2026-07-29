@@ -236,6 +236,12 @@ function extractImgUrl(imgTag: string, baseUrl: string): string {
 }
 
 function htmlToText(html: string, baseUrl: string): string {
+  // Step 0: Extract person data from embedded JSON in <script> tags BEFORE
+  // scripts are stripped. Many WordPress sites render team grids via JS with
+  // person data embedded as a JSON data object in a <script> tag. Without this,
+  // the entire team member dataset is lost when scripts are stripped below.
+  const embeddedPersonData = extractPersonDataFromScripts(html);
+
   // Step 1: Convert all <img> tags into text markers with resolved absolute URLs
   // so the LLM can see and extract photo/logo URLs (images are normally stripped)
   let result = html.replace(/<img[^>]*>/gi, (match) => {
@@ -307,6 +313,11 @@ function htmlToText(html: string, baseUrl: string): string {
     .replace(/[ \t]+/g, ' ')
     .trim();
 
+  // Append person data extracted from embedded JSON in <script> tags
+  if (embeddedPersonData) {
+    result += embeddedPersonData;
+  }
+
   return result;
 }
 
@@ -316,6 +327,70 @@ function resolveUrl(base: string, path: string): string {
   } catch {
     return '';
   }
+}
+
+// Extract person data from embedded JSON in <script> tags. Many WordPress
+// sites render team grids via JavaScript, with the person data embedded as a
+// JSON data object inside a <script> tag (often a page-builder data object).
+// Without this, the htmlToText() function strips all <script> tags and the
+// person data is completely lost — only a few people (found on other pages)
+// are extracted instead of the full team.
+function extractPersonDataFromScripts(html: string): string {
+  const markers: string[] = [];
+  const seen = new Set<string>();
+
+  // Find all <script> tag contents
+  const scriptRegex = /<script[^>]*>([\s\S]*?)<\/script>/gi;
+  let scriptMatch: RegExpExecArray | null;
+  while ((scriptMatch = scriptRegex.exec(html)) !== null) {
+    const content = scriptMatch[1];
+    if (!content.includes('/person/') || !content.includes('"permalink"')) continue;
+
+    // Find all person permalink URLs and extract surrounding data fields.
+    // Each person object typically has: permalink, title, roles[], image{imgSrc}
+    const permalinkRegex = /"permalink"\s*:\s*"(https?:\/\/[^"]*\/person\/[^"]+)"/gi;
+    let pMatch: RegExpExecArray | null;
+    while ((pMatch = permalinkRegex.exec(content)) !== null) {
+      const permalink = pMatch[1];
+      if (seen.has(permalink)) continue;
+      seen.add(permalink);
+
+      // Look for title, roles, and imgSrc within a window around the permalink.
+      const windowStart = Math.max(0, pMatch.index - 500);
+      const windowEnd = Math.min(content.length, pMatch.index + 1500);
+      const window = content.substring(windowStart, windowEnd);
+
+      // Extract title (person name)
+      const titleMatch = window.match(/"title"\s*:\s*"([^"]+)"/);
+      const name = titleMatch ? titleMatch[1] : '';
+      if (!name) continue;
+
+      // Extract roles
+      const rolesMatch = window.match(/"roles"\s*:\s*\[([\s\S]*?)\]/);
+      let roles = '';
+      if (rolesMatch) {
+        roles = rolesMatch[1]
+          .split(',')
+          .map((r) => r.replace(/"/g, '').trim())
+          .filter(Boolean)
+          .join('; ');
+      }
+
+      // Extract image URL
+      const imgMatch = window.match(/"imgSrc"\s*:\s*"([^"]+)"/);
+      const photoUrl = imgMatch ? imgMatch[1] : '';
+
+      let marker = `[PERSON: name="${name}"`;
+      if (roles) marker += ` title="${roles}"`;
+      if (photoUrl) marker += ` photo_url="${photoUrl}"`;
+      marker += ` bio_url="${permalink}"]`;
+      markers.push(marker);
+    }
+  }
+
+  return markers.length > 0
+    ? '\n--- Embedded Team Data ---\n' + markers.join('\n') + '\n--- End Team Data ---\n'
+    : '';
 }
 
 // Fetch an individual biography/profile page and extract the person's full
@@ -1127,6 +1202,7 @@ CRITICAL — EXTRACT EVERY PERSON:
 - Some pages use tabbed or filtered layouts (e.g. "All Teams", "Our Leaders", "Domestic Equities Experts", "Emerging Markets Equities Experts", "Global Equities Experts", "Marketing and Client Service", "Administration and Trading"). ALL of these tabs/sections are included in the content below — you must process EVERY one of them, not just the first.
 - If a person appears in multiple sections, extract them once with their most detailed title.
 - Each person card typically has a photo (shown as [IMAGE: ...]), a name (usually in a heading like "#### Name"), and a title/role below it.
+- IMPORTANT: Some sites embed team data as JSON inside <script> tags. This data has been extracted and appears as [PERSON: name="..." title="..." photo_url="..." bio_url="..."] markers in the "Embedded Team Data" section. You MUST extract EVERY [PERSON: ...] marker as a person entry. Each marker provides the person's name, title, photo_url, and bio_url (their individual profile page). Use these fields directly — do NOT skip any [PERSON: ...] marker.
 - Do NOT skip anyone. If you see 40+ people on the page, return all 40+ in the people array.
 - The people array should contain EVERY person whose name appears on the team/people page.
 
@@ -1135,10 +1211,13 @@ IMPORTANT:
   - The firm logo is typically one of the first images (often in the header/nav section) — look at the alt text and position to identify it. Set logo_url to that image's src URL.
   - For each person, find the [IMAGE: ...] marker that appears closest to that person's name and bio. Set that person's photo_url to the image's src URL.
   - Only use the exact src URL from the [IMAGE: ...] marker — do not modify or construct URLs yourself; the URLs are already absolute.
+- Some sites embed team data as JSON in <script> tags. This extracted data appears as [PERSON: name="..." title="..." photo_url="..." bio_url="..."] markers in an "Embedded Team Data" section.
+  - For each [PERSON: ...] marker, create a person entry with the provided name, title, photo_url, and bio_url. These URLs are already absolute — use them directly.
+  - If a person appears in BOTH a [PERSON: ...] marker AND as a card with an [IMAGE: ...], prefer the [PERSON: ...] marker's photo_url and bio_url (they are more reliably associated).
 - Links appear as [LINK: https://...] markers next to their link text.
   - For the firm's linkedin_url, find a LinkedIn link (e.g. linkedin.com/company/...) — usually in the footer or header. Use the exact URL from the [LINK: ...] marker.
   - For each person's linkedin_url, find the [LINK: linkedin.com/in/...] marker that appears closest to that person's name. Set that person's linkedin_url to the exact URL from that marker.
-  - For each person's bio_url, find the internal [LINK: ...] marker whose link text wraps that person's name or card (e.g. a link to /people/<name-slug>/). Set bio_url to the exact URL from that marker. Leave empty if their name is not itself a link and no individual profile page link exists.
+  - For each person's bio_url, if a [PERSON: ...] marker provides it, use that. Otherwise find the internal [LINK: ...] marker whose link text wraps that person's name or card (e.g. a link to /people/<name-slug>/). Set bio_url to the exact URL from that marker.
   - Only use the exact URL from the [LINK: ...] marker — do not modify or construct URLs yourself.
 - Only include information you actually find in the content above
 - Do not fabricate or guess
