@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, FileText, Files, ShieldCheck, X, ScrollText } from "lucide-react";
+import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, FileText, Files, ShieldCheck, X } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -530,7 +530,6 @@ export default function Home() {
     { label: "Analytics", icon: LineChart, ref: analyticsRef, color: "text-cyan-600", activeBg: "bg-cyan-50", onClick: () => setAnalyticsLaunchOpen(true) },
     { label: "Reports", icon: FileText, ref: reportsRef, color: "text-blue-600", activeBg: "bg-blue-50", onClick: () => setReportsPickerOpen(true) },
     { label: "Documents", icon: Files, ref: null, color: "text-teal-600", activeBg: "bg-teal-50", onClick: () => setDocumentsPickerOpen(true) },
-    { label: "Enrichment Logs", icon: ScrollText, ref: null, color: "text-slate-600", activeBg: "bg-slate-100", onClick: () => navigate("/EnrichmentLogs") },
     { label: "Utilities", icon: Wrench, ref: utilityRef, color: "text-gray-600", activeBg: "bg-gray-100", onClick: () => { setUtilityForceExpanded(true); scrollTo(utilityRef); } },
     ...(user?.role === "admin" ? [{ label: "Admin", icon: ShieldCheck, ref: null, color: "text-rose-600", activeBg: "bg-rose-50", onClick: () => navigate("/UserManagement") }] : []),
   ];

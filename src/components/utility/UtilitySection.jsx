@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search, ArrowLeft, Users, Sparkles } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search, ArrowLeft, Users, Sparkles, ScrollText } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import AddBenchmarkDialog from "./AddBenchmarkDialog";
 import DuplicateContactsReview from "@/components/contacts/DuplicateContactsReview";
+import EnrichmentLogsView from "./EnrichmentLogsView";
 
 function BenchmarkItem({ b, onClick }) {
   return (
@@ -179,6 +180,16 @@ export default function UtilitySection({ deletedCount, forceExpanded = false }) 
                 <span className="text-sm font-semibold text-gray-700">Contact Cleanup</span>
                 <span className="text-[11px] text-gray-400">Review & merge duplicates</span>
               </button>
+              <button
+                onClick={() => setView("enrichment-logs")}
+                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
+              >
+                <div className="w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center">
+                  <ScrollText className="w-4.5 h-4.5 text-slate-600" />
+                </div>
+                <span className="text-sm font-semibold text-gray-700">Enrichment Logs</span>
+                <span className="text-[11px] text-gray-400">Review enrichment results</span>
+              </button>
             </div>
           )}
 
@@ -283,6 +294,11 @@ export default function UtilitySection({ deletedCount, forceExpanded = false }) 
                 <DuplicateContactsReview />
               )}
             </div>
+          )}
+
+          {/* Enrichment logs view */}
+          {view === "enrichment-logs" && (
+            <EnrichmentLogsView />
           )}
         </div>
       )}
