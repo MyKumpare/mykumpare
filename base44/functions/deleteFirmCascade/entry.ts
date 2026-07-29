@@ -22,7 +22,18 @@ Deno.serve(async (req) => {
     // Verify the firm exists and is not already deleted.
     const firm = await svc.entities.Firm.get(firmId);
     if (!firm) return Response.json({ error: 'Firm not found' }, { status: 404 });
-    if (firm.deleted_at) return Response.json({ error: 'Firm is already deleted' }, { status: 400 });
+    // Idempotent: if the firm is already soft-deleted (e.g. a double-click while
+    // the list is still refreshing), report success so the client refreshes
+    // instead of surfacing a confusing error.
+    if (firm.deleted_at) {
+      return Response.json({
+        success: true,
+        firm_id: firmId,
+        firm_name: firm.name,
+        already_deleted: true,
+        deleted: {},
+      });
+    }
 
     // Authorization: cascading deletion uses the service role (bypasses per-user
     // ownership), so gate it carefully. Platform admins may delete any firm.
