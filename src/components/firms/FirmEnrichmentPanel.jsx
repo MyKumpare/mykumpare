@@ -344,7 +344,12 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
     onApply(buildSelected());
   };
 
-  const hasAccepted = Object.entries(acceptedFields).some(([k, v]) => v && statusMap[k] !== "exact");
+  // hasAccepted is true when there are non-except items accepted, OR when
+  // there are exact-match people — buildSelected() includes exact-match people
+  // for an append-only merge that fills in MISSING fields (e.g. photos, bios),
+  // so the user must be able to apply even when all people are "exact".
+  const hasAccepted = Object.entries(acceptedFields).some(([k, v]) => v && statusMap[k] !== "exact") ||
+    Object.entries(statusMap).some(([k, v]) => v === "exact" && k.startsWith("person_"));
 
   if (!enrichedData && !loading && !error) {
     return (
@@ -507,7 +512,7 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
             <X className="w-3 h-3" /> Clear
           </Button>
           <Button size="sm" onClick={handleApply} disabled={!hasAccepted} className="h-8 text-xs bg-indigo-600 hover:bg-indigo-700 text-white gap-1">
-            <Check className="w-3.5 h-3.5" /> Apply Selected
+            <Check className="w-3.5 h-3.5" /> {hasAccepted && !Object.entries(acceptedFields).some(([k, v]) => v && statusMap[k] !== "exact") ? "Update Existing" : "Apply Selected"}
           </Button>
         </div>
       </div>
