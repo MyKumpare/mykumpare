@@ -313,9 +313,12 @@ function htmlToText(html: string, baseUrl: string): string {
     .replace(/[ \t]+/g, ' ')
     .trim();
 
-  // Append person data extracted from embedded JSON in <script> tags
+  // Prepend person data extracted from embedded JSON in <script> tags so they
+  // are not truncated by the page text limit (80,000 chars for people pages).
+  // If appended at the end, markers for people later in the list are cut off
+  // when the text is truncated, resulting in missing contacts and photos.
   if (embeddedPersonData) {
-    result += embeddedPersonData;
+    result = embeddedPersonData + result;
   }
 
   return result;
@@ -355,9 +358,12 @@ function extractPersonDataFromScripts(html: string): string {
       if (seen.has(permalink)) continue;
       seen.add(permalink);
 
-      // Look for title, roles, and imgSrc within a window around the permalink.
-      const windowStart = Math.max(0, pMatch.index - 500);
-      const windowEnd = Math.min(content.length, pMatch.index + 1500);
+      // Look for title, roles, and imgSrc within a window AFTER the permalink.
+      // IMPORTANT: start at pMatch.index (NOT pMatch.index - 500) so the regex
+      // doesn't match the PREVIOUS person's title/roles/imgSrc that appears
+      // before the current permalink in the JSON.
+      const windowStart = pMatch.index;
+      const windowEnd = Math.min(content.length, pMatch.index + 2000);
       const window = content.substring(windowStart, windowEnd);
 
       // Extract title (person name)
@@ -1180,7 +1186,7 @@ Deno.serve(async (req) => {
 
 Website content (combined from multiple pages):
 ---
-${combinedContent.substring(0, 120000)}
+${combinedContent.substring(0, 150000)}
 ---
 
 Extract the following information from this website content:
