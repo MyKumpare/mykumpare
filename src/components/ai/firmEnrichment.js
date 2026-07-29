@@ -725,12 +725,24 @@ export async function createFirmFromEnrichment(enrichedData, tenantId) {
  * so JS-rendered footers/bios that the enrichment pass couldn't read still get
  * resolved. Mutates `enrichedData` in place and returns counts.
  */
-export async function autoFillMissingLinkedInUrls(enrichedData, website) {
+export async function autoFillMissingLinkedInUrls(enrichedData, website, onProgress) {
   const site = website || enrichedData.website || "";
   const result = { firmFound: false, firmSearched: false, contactsFound: 0, contactsSearched: 0 };
 
+  const people = (enrichedData.people || []).filter(
+    (p) => (p.first_name || p.last_name) && !p.linkedin_url
+  );
+  const firmNeedsLookup = !enrichedData.linkedin_url;
+  const total = (firmNeedsLookup ? 1 : 0) + people.length;
+  let completed = 0;
+
+  const report = () => {
+    if (onProgress) onProgress({ current: completed, total });
+  };
+  report();
+
   // Firm LinkedIn
-  if (!enrichedData.linkedin_url) {
+  if (firmNeedsLookup) {
     result.firmSearched = true;
     try {
       const res = await base44.functions.invoke("linkedinFirmLookup", {
@@ -743,13 +755,12 @@ export async function autoFillMissingLinkedInUrls(enrichedData, website) {
         result.firmFound = true;
       }
     } catch { /* leave empty */ }
+    completed++;
+    report();
   }
 
   // Contacts LinkedIn — bounded concurrency so a large team doesn't fan out
   // into dozens of simultaneous web searches.
-  const people = (enrichedData.people || []).filter(
-    (p) => (p.first_name || p.last_name) && !p.linkedin_url
-  );
   result.contactsSearched = people.length;
   if (people.length > 0) {
     const CONCURRENCY = 5;
@@ -772,6 +783,8 @@ export async function autoFillMissingLinkedInUrls(enrichedData, website) {
             found++;
           }
         } catch { /* leave empty */ }
+        completed++;
+        report();
       }
     };
     await Promise.all(

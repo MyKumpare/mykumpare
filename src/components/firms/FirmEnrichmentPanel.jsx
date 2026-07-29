@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, Globe, Check, X, Sparkles, AlertTriangle, ShieldCheck } from "lucide-react";
@@ -7,6 +7,62 @@ import {
 } from "@/components/ui/dialog";
 import { enrichFirmFromWeb, autoFillMissingLinkedInUrls } from "../ai/firmEnrichment";
 import { validateEnrichment } from "../ai/enrichmentValidation";
+
+// ─── Progress bar ───
+function ProgressBar({ value, className }) {
+  const pct = Math.max(0, Math.min(100, value));
+  return (
+    <div className={`w-full h-1.5 bg-gray-200 rounded-full overflow-hidden ${className || ""}`}>
+      <div
+        className="h-full bg-indigo-500 rounded-full transition-all duration-500 ease-out"
+        style={{ width: `${pct}%` }}
+      />
+    </div>
+  );
+}
+
+// ─── Loading stage cycler ───
+// The initial web scrape is a single backend function call, so we can't get
+// real progress from it. Instead we cycle through human-readable status
+// messages based on elapsed time so the user knows what's happening.
+const LOADING_STAGES = [
+  { label: "Fetching website", detail: "Connecting to the public website" },
+  { label: "Reading page content", detail: "Scraping text, links, and images" },
+  { label: "Extracting firm details", detail: "Parsing logo, description, addresses" },
+  { label: "Finding personnel", detail: "Discovering team members and bios" },
+  { label: "Deep-reading profiles", detail: "Extracting education and experience" },
+  { label: "Finalizing", detail: "Organizing data for review" },
+];
+
+function useLoadingProgress(active) {
+  const [stageIdx, setStageIdx] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
+  const startRef = useRef(0);
+
+  useEffect(() => {
+    if (!active) {
+      setStageIdx(0);
+      setElapsed(0);
+      return;
+    }
+    startRef.current = Date.now();
+    setStageIdx(0);
+    setElapsed(0);
+    const interval = setInterval(() => {
+      const secs = Math.floor((Date.now() - startRef.current) / 1000);
+      setElapsed(secs);
+      // Advance stage roughly every 5 seconds, capped at last stage.
+      const idx = Math.min(LOADING_STAGES.length - 1, Math.floor(secs / 5));
+      setStageIdx(idx);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [active]);
+
+  if (!active) return null;
+  const stage = LOADING_STAGES[stageIdx];
+  const pct = ((stageIdx + 1) / LOADING_STAGES.length) * 100;
+  return { ...stage, elapsed, pct };
+}
 
 // ─── Status badge ───
 function StatusBadge({ status }) {
@@ -146,11 +202,13 @@ function SimilarConfirmDialog({ open, onOpenChange, items, onConfirm }) {
 export default function FirmEnrichmentPanel({ firmName, website, onApply, onClose, onLoadingChange, existingFirm, existingContacts = [] }) {
   const [loading, setLoading] = useState(false);
   const [linkedinFilling, setLinkedinFilling] = useState(false);
+  const [linkedinProgress, setLinkedinProgress] = useState(null);
   const [enrichedData, setEnrichedData] = useState(null);
   const [error, setError] = useState(null);
   const [acceptedFields, setAcceptedFields] = useState({});
   const [statusMap, setStatusMap] = useState({});
   const [similarConfirm, setSimilarConfirm] = useState(null);
+  const loadingProgress = useLoadingProgress(loading);
 
   // Re-run duplicate validation + accepted-fields initialization whenever the
   // enriched data changes (including when background LinkedIn lookups update it).
@@ -185,9 +243,12 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
       // the firm and any contacts still without one. Runs non-blocking so the
       // user can review the already-fetched data while lookups are in flight.
       setLinkedinFilling(true);
+      setLinkedinProgress(null);
       (async () => {
         try {
-          await autoFillMissingLinkedInUrls(data, website || data.website || "");
+          await autoFillMissingLinkedInUrls(data, website || data.website || "", (p) => {
+            setLinkedinProgress(p);
+          });
           // Re-run validation to pick up any newly-found LinkedIn URLs.
           setEnrichedData((prev) => {
             if (!prev) return prev;
@@ -200,6 +261,7 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
           });
         } catch { /* non-fatal — keep enrichment data as-is */ }
         setLinkedinFilling(false);
+        setLinkedinProgress(null);
       })();
     } catch (err) {
       const msg = err.message || "Failed to fetch data from the web";
@@ -306,20 +368,22 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
     );
   }
 
-  if (loading) {
+  if (loading && loadingProgress) {
     return (
-      <div className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-4 flex items-center gap-3">
-        <Loader2 className="w-5 h-5 text-indigo-600 animate-spin" />
-        <div>
-          <p className="text-sm font-medium text-indigo-700">
-            {linkedinFilling ? "Finding LinkedIn URLs..." : "Searching the web..."}
-          </p>
-          <p className="text-xs text-gray-500">
-            {linkedinFilling
-              ? `Looking up LinkedIn pages for ${firmName} and its contacts`
-              : `Looking up ${firmName}'s public information`}
-          </p>
+      <div className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-4 space-y-3">
+        <div className="flex items-center gap-3">
+          <Loader2 className="w-5 h-5 text-indigo-600 animate-spin flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-indigo-700">{loadingProgress.label}…</p>
+              {loadingProgress.elapsed > 0 && (
+                <span className="text-[11px] text-gray-400 tabular-nums">{loadingProgress.elapsed}s</span>
+              )}
+            </div>
+            <p className="text-xs text-gray-500">{loadingProgress.detail} for {firmName}</p>
+          </div>
         </div>
+        <ProgressBar value={loadingProgress.pct} />
       </div>
     );
   }
@@ -383,11 +447,21 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
         />
       )}
       {linkedinFilling && (
-        <div className="flex items-center gap-2 rounded-md bg-indigo-50 border border-indigo-100 px-3 py-1.5">
-          <Loader2 className="w-3.5 h-3.5 text-indigo-600 animate-spin flex-shrink-0" />
-          <p className="text-xs text-indigo-700 font-medium">
-            Finding LinkedIn URLs in the background…
-          </p>
+        <div className="rounded-md bg-indigo-50 border border-indigo-100 px-3 py-2 space-y-1.5">
+          <div className="flex items-center gap-2">
+            <Loader2 className="w-3.5 h-3.5 text-indigo-600 animate-spin flex-shrink-0" />
+            <p className="text-xs text-indigo-700 font-medium flex-1">
+              Finding LinkedIn URLs in the background…
+            </p>
+            {linkedinProgress && linkedinProgress.total > 0 && (
+              <span className="text-[11px] text-indigo-600 tabular-nums font-medium">
+                {linkedinProgress.current}/{linkedinProgress.total}
+              </span>
+            )}
+          </div>
+          {linkedinProgress && linkedinProgress.total > 0 && (
+            <ProgressBar value={(linkedinProgress.current / linkedinProgress.total) * 100} />
+          )}
         </div>
       )}
       <div className="flex items-center justify-between">
