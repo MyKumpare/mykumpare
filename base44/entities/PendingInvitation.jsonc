@@ -78,12 +78,12 @@
               "$or": [
                 {
                   "user_condition": {
-                    "firm_role": "admin"
+                    "data.firm_role": "admin"
                   }
                 },
                 {
                   "user_condition": {
-                    "firm_role": "co-admin"
+                    "data.firm_role": "co-admin"
                   }
                 }
               ]
@@ -111,12 +111,12 @@
               "$or": [
                 {
                   "user_condition": {
-                    "firm_role": "admin"
+                    "data.firm_role": "admin"
                   }
                 },
                 {
                   "user_condition": {
-                    "firm_role": "co-admin"
+                    "data.firm_role": "co-admin"
                   }
                 }
               ]
@@ -144,12 +144,12 @@
               "$or": [
                 {
                   "user_condition": {
-                    "firm_role": "admin"
+                    "data.firm_role": "admin"
                   }
                 },
                 {
                   "user_condition": {
-                    "firm_role": "co-admin"
+                    "data.firm_role": "co-admin"
                   }
                 }
               ]
@@ -177,12 +177,12 @@
               "$or": [
                 {
                   "user_condition": {
-                    "firm_role": "admin"
+                    "data.firm_role": "admin"
                   }
                 },
                 {
                   "user_condition": {
-                    "firm_role": "co-admin"
+                    "data.firm_role": "co-admin"
                   }
                 }
               ]
