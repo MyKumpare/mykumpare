@@ -96,7 +96,7 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
           <span className="text-xs text-gray-400 font-normal">({portfolios.length})</span>
         </button>
         <div className="flex items-center gap-2">
-          <ViewModeToggle value={viewMode} onChange={setViewMode} />
+          <ViewModeToggle value={viewMode} onChange={(m) => { setViewMode(m); setExpanded(true); }} />
           <Button
             variant="ghost"
             size="sm"

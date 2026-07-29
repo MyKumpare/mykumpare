@@ -75,7 +75,7 @@ export default function ReportsSection({ forceExpanded = false }) {
           )}
         </button>
         <div className="flex items-center gap-2">
-          <ViewModeToggle value={viewMode} onChange={setViewMode} />
+          <ViewModeToggle value={viewMode} onChange={(m) => { setViewMode(m); setExpanded(true); }} />
           <Button
             variant="ghost"
             size="sm"

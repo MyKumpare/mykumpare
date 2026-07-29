@@ -61,7 +61,7 @@ export default function FirmsSection({
           <span className="text-xs text-gray-400 font-normal">({totalFirms})</span>
         </button>
         <div className="flex items-center gap-2">
-          <ViewModeToggle value={viewMode} onChange={setViewMode} />
+          <ViewModeToggle value={viewMode} onChange={(m) => { setViewMode(m); setExpanded(true); }} />
           <Button
             variant="ghost"
             size="sm"
