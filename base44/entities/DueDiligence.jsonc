@@ -2,6 +2,10 @@
   "name": "DueDiligence",
   "type": "object",
   "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "ID of the firm (tenant) that owns this due diligence record. Set on creation to the creator's linked_firm_id; drives tenant isolation via RLS."
+    },
     "firm_id": {
       "type": "string",
       "description": "ID of the firm this due diligence record belongs to"
@@ -65,17 +69,26 @@
       "$or": [
         {
           "user_condition": {
-            "role": "user"
+            "role": "admin"
           }
         },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "read": {
+      "$or": [
         {
           "user_condition": {
             "role": "admin"
           }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
         }
       ]
     },
-    "read": null,
     "update": {
       "$or": [
         {
