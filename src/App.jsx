@@ -6,6 +6,7 @@ import { HashRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import Analytics from './pages/Analytics';
 import UserManagement from './pages/UserManagement';
+import EnrichmentLogs from './pages/EnrichmentLogs';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import OnboardingGuard from '@/components/onboarding/OnboardingGuard';
@@ -66,6 +67,7 @@ const AuthenticatedApp = () => {
 
       <Route path="/Analytics" element={<LayoutWrapper currentPageName="Analytics"><Analytics /></LayoutWrapper>} />
       <Route path="/UserManagement" element={<LayoutWrapper currentPageName="UserManagement"><UserManagement /></LayoutWrapper>} />
+      <Route path="/EnrichmentLogs" element={<LayoutWrapper currentPageName="EnrichmentLogs"><EnrichmentLogs /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
     </>

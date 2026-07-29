@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { enrichFirmFromWeb, autoFillMissingLinkedInUrls } from "../ai/firmEnrichment";
 import { validateEnrichment } from "../ai/enrichmentValidation";
+import { logEnrichmentAttempt } from "../ai/enrichmentLogger";
 
 // ─── Progress bar ───
 function ProgressBar({ value, className }) {
@@ -232,6 +233,15 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
     try {
       const data = await enrichFirmFromWeb(firmName, website);
 
+      // Persist a log entry so the user can review enrichment results later.
+      const { items: validationItems } = validateEnrichment(data, existingFirm || {}, existingContacts);
+      logEnrichmentAttempt({
+        firmName,
+        websiteUrl: website || data.website || "",
+        status: "success",
+        validationItems,
+      });
+
       // Show the review panel immediately — the website scrape already found
       // most LinkedIn URLs from the HTML. The slower web-search fallback for
       // any remaining contacts runs in the background and updates the panel
@@ -266,6 +276,12 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
     } catch (err) {
       const msg = err.message || "Failed to fetch data from the web";
       setError(msg);
+      logEnrichmentAttempt({
+        firmName,
+        websiteUrl: website || "",
+        status: "error",
+        errorMessage: msg,
+      });
     } finally {
       setLoading(false);
       onLoadingChange?.(false);

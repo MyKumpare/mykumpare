@@ -1,0 +1,130 @@
+{
+  "name": "EnrichmentLog",
+  "type": "object",
+  "properties": {
+    "firm_name": {
+      "type": "string",
+      "description": "Name of the firm that the enrichment attempted"
+    },
+    "website_url": {
+      "type": "string",
+      "description": "Website URL the enrichment scraped"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "success",
+        "error",
+        "no_data"
+      ],
+      "default": "success",
+      "description": "Outcome of the enrichment attempt"
+    },
+    "error_message": {
+      "type": "string",
+      "description": "Error message if the enrichment failed"
+    },
+    "total_people_found": {
+      "type": "integer",
+      "description": "Number of people extracted from the website"
+    },
+    "people_new": {
+      "type": "integer",
+      "description": "Number of new contacts (not previously in the database)"
+    },
+    "people_skipped": {
+      "type": "integer",
+      "description": "Number of contacts skipped because they already existed (exact duplicate)"
+    },
+    "people_similar": {
+      "type": "integer",
+      "description": "Number of contacts flagged as similar to an existing contact"
+    },
+    "skipped_contacts": {
+      "type": "array",
+      "description": "Details of each skipped or similar contact",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the person from the website"
+          },
+          "title": {
+            "type": "string",
+            "description": "Job title of the person"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why this contact was skipped or flagged (e.g. 'Exact match: John Park')"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "skipped",
+              "similar"
+            ],
+            "description": "Whether the contact was skipped (exact duplicate) or flagged for review (similar)"
+          }
+        }
+      }
+    },
+    "fields_new": {
+      "type": "integer",
+      "description": "Number of firm fields that were new"
+    },
+    "fields_skipped": {
+      "type": "integer",
+      "description": "Number of firm fields that already existed (exact duplicates)"
+    },
+    "fields_similar": {
+      "type": "integer",
+      "description": "Number of firm fields flagged as similar to existing data"
+    }
+  },
+  "required": [
+    "firm_name",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "user"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": null,
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
