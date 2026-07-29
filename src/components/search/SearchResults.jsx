@@ -208,7 +208,7 @@ export default function SearchResults({ query, firms, products, contacts, portfo
     .map((a) => ({
       ...a,
       _score: scoreFields(keywords, [
-        (a.subject || ""),
+        (a.subjects || []).join(" "),
         (a.activity_type || ""),
         stripHtml(a.notes),
         (a.associated_firms_contacts || [])
