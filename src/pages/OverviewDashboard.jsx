@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Link } from "react-router-dom";
@@ -8,7 +8,7 @@ import {
 } from "recharts";
 import {
   Building, ListChecks, ArrowLeft, TrendingUp, Clock,
-  CheckCircle2, XCircle, Loader2,
+  CheckCircle2, XCircle, Loader2, UserCircle, Globe,
 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 
@@ -36,6 +36,8 @@ const TASK_STATUSES = Object.keys(TASK_STATUS_META);
 
 export default function OverviewDashboard() {
   const { user } = useAuth();
+  const [dataScope, setDataScope] = useState("my"); // "my" | "all"
+  const linkedFirmId = user?.data?.linked_firm_id;
 
   const { data: firms = [], isLoading: firmsLoading } = useQuery({
     queryKey: ["firms"],
@@ -47,8 +49,24 @@ export default function OverviewDashboard() {
     queryFn: () => base44.entities.FollowUpTask.list("-due_date"),
   });
 
+  const scopedFirms = useMemo(() => {
+    if (dataScope === "all" || !linkedFirmId) return firms.filter((f) => !f.deleted_at);
+    return firms.filter((f) => !f.deleted_at && f.tenant_id === linkedFirmId);
+  }, [firms, dataScope, linkedFirmId]);
+
+  const scopedTasks = useMemo(() => {
+    if (dataScope === "all" || !linkedFirmId) return tasks.filter((t) => !t.deleted_at);
+    return tasks.filter(
+      (t) => !t.deleted_at && (
+        t.originator_firm_id === linkedFirmId ||
+        t.assigned_to_firm_id === linkedFirmId ||
+        t.created_by_id === user?.id
+      )
+    );
+  }, [tasks, dataScope, linkedFirmId, user?.id]);
+
   const firmTypeData = useMemo(() => {
-    const active = firms.filter((f) => !f.deleted_at);
+    const active = scopedFirms;
     const counts = {};
     FIRM_TYPES.forEach((t) => (counts[t] = 0));
     for (const f of active) {
@@ -67,21 +85,21 @@ export default function OverviewDashboard() {
   }, [firms]);
 
   const taskStatusData = useMemo(() => {
-    const active = tasks.filter((t) => !t.deleted_at);
+    const active = scopedTasks;
     return TASK_STATUSES.map((status) => ({
       name: status,
       count: active.filter((t) => t.status === status).length,
     }));
   }, [tasks]);
 
-  const totalFirms = firms.filter((f) => !f.deleted_at).length;
-  const totalTasks = tasks.filter((t) => !t.deleted_at).length;
+  const totalFirms = scopedFirms.length;
+  const totalTasks = scopedTasks.length;
   const overdueTasks = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
-    return tasks.filter(
-      (t) => !t.deleted_at && t.status !== "Completed" && t.status !== "Cancelled" && t.due_date < today
+    return scopedTasks.filter(
+      (t) => t.status !== "Completed" && t.status !== "Cancelled" && t.due_date < today
     ).length;
-  }, [tasks]);
+  }, [scopedTasks]);
 
   const userName = user?.full_name || user?.email || "";
 
@@ -103,6 +121,33 @@ export default function OverviewDashboard() {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        {/* Data scope toggle */}
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <p className="text-sm text-gray-500">
+            {dataScope === "my" ? "Showing data associated with your firm" : "Showing all firm data"}
+          </p>
+          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5 shadow-sm">
+            <button
+              onClick={() => setDataScope("my")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                dataScope === "my" ? "bg-indigo-600 text-white" : "text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              <UserCircle className="w-3.5 h-3.5" />
+              My Data
+            </button>
+            <button
+              onClick={() => setDataScope("all")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                dataScope === "all" ? "bg-indigo-600 text-white" : "text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              <Globe className="w-3.5 h-3.5" />
+              All Data
+            </button>
+          </div>
+        </div>
+
         {/* Summary cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <SummaryCard label="Total Firms" value={totalFirms} icon={Building} color="bg-indigo-500" loading={firmsLoading} />
