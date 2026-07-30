@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { X, Plus, AlertTriangle, Trash2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
+import { useToast } from "@/components/ui/use-toast";
 import DeleteOptionDialog from "./DeleteOptionDialog";
 
 export const CONTACT_ROLE_OPTIONS = [
@@ -78,6 +79,7 @@ const similarity = (a, b) => {
 };
 
 export default function ContactRolePicker({ value = [], onChange, viewMode = false }) {
+  const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [pendingCustom, setPendingCustom] = useState(null); // { val, matches }
@@ -171,7 +173,7 @@ export default function ContactRolePicker({ value = [], onChange, viewMode = fal
     if (!isPreset && !alreadySaved) {
       base44.entities.ContactRoleOption.create({ name: val })
         .then((row) => setSavedOptions((prev) => (prev.some((o) => o.name.toLowerCase() === val.toLowerCase()) ? prev : [...prev, { id: row.id, name: val }])))
-        .catch(() => {});
+        .catch((err) => { toast({ title: "Failed to save role", description: err.message || "Could not save this role to the master list.", variant: "destructive" }); });
     }
   };
 

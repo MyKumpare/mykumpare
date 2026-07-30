@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/use-toast";
 
 // Simple similarity check - returns true if strings are very similar
 function areSimilar(str1, str2) {
@@ -51,6 +52,7 @@ function levenshteinDistance(s1, s2) {
 
 // Log type picker with search-as-you-type and add-new functionality
 export default function ActivityTypePicker({ value = "", onChange, placeholder = "Select type..." }) {
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [addingNew, setAddingNew] = useState(false);
@@ -132,6 +134,7 @@ export default function ActivityTypePicker({ value = "", onChange, placeholder =
       refetch();
     } catch (error) {
       console.error("Failed to save log type:", error);
+      toast({ title: "Failed to save log type", description: error.message || "Could not save this log type.", variant: "destructive" });
     }
     onChange(trimmedType);
     setAddingNew(false);

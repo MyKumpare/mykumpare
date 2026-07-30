@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { X, Plus, Trash2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
+import { useToast } from "@/components/ui/use-toast";
 import DeleteOptionDialog from "./DeleteOptionDialog";
 
 export const DEFAULT_CONTACT_DEPARTMENT_OPTIONS = [
@@ -16,6 +17,7 @@ export const DEFAULT_CONTACT_DEPARTMENT_OPTIONS = [
 ];
 
 export default function ContactDepartmentPicker({ value = [], onChange, viewMode = false }) {
+  const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [savedOptions, setSavedOptions] = useState([]); // [{id, name}]
@@ -76,7 +78,7 @@ export default function ContactDepartmentPicker({ value = [], onChange, viewMode
     if (!isPreset && !alreadySaved) {
       base44.entities.ContactDepartmentOption.create({ name: val })
         .then((row) => setSavedOptions((prev) => [...prev, { id: row.id, name: row.name }]))
-        .catch(() => {});
+        .catch((err) => { toast({ title: "Failed to save department", description: err.message || "Could not save this department to the master list.", variant: "destructive" }); });
     }
   };
 

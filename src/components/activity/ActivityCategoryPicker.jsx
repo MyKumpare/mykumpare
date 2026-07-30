@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/use-toast";
 
 // Simple similarity check
 function areSimilar(str1, str2) {
@@ -33,6 +34,7 @@ function levenshteinDistance(s1, s2) {
 }
 
 export default function ActivityCategoryPicker({ value = [], onChange, placeholder = "Select categories..." }) {
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [addingNew, setAddingNew] = useState(false);
@@ -98,6 +100,7 @@ export default function ActivityCategoryPicker({ value = [], onChange, placehold
       refetch();
     } catch (error) {
       console.error("Failed to save category:", error);
+      toast({ title: "Failed to save category", description: error.message || "Could not save this category.", variant: "destructive" });
     }
     onChange([...value, trimmedCategory]);
     setAddingNew(false);
