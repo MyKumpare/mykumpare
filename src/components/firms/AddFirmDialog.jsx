@@ -302,7 +302,14 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
       JSON.stringify(phones) !== JSON.stringify(editingFirm.phones || [])
     : false;
 
-  const phonesValid = phones.length === 0 || phones.every(p => p.address_id && p.phone_type && p.country_code && p.area_code && p.number_mid && p.number_last);
+  const phonesValid = phones.length === 0 || phones.every(p => {
+    // Only validate phones that have some number content — empty/partial
+    // phone slots shouldn't block saving. Core number parts are required
+    // only when the phone has any content at all.
+    const hasNumberContent = p.area_code || p.number_mid || p.number_last;
+    if (!hasNumberContent) return true;
+    return p.area_code && p.number_mid && p.number_last;
+  });
 
   const isValid = firmTypes.length > 0 && firmName.trim() && phonesValid;
 
@@ -1353,6 +1360,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                 <Button
                   onClick={handleSubmit}
                   disabled={!isValid || !hasChanges}
+                  title={!isValid ? "Firm name and type are required" : !hasChanges ? "Make a change to enable saving" : undefined}
                   className={`text-white transition-all ${hasChanges && isValid ? "bg-indigo-600 hover:bg-indigo-700 shadow-md" : "bg-indigo-300"}`}
                 >
                   Save Changes
