@@ -8,6 +8,8 @@ import {
 import { enrichFirmFromWeb, autoFillMissingLinkedInUrls } from "../ai/firmEnrichment";
 import { validateEnrichment } from "../ai/enrichmentValidation";
 import { logEnrichmentAttempt } from "../ai/enrichmentLogger";
+import TeamHierarchyView from "./TeamHierarchyView";
+import { Network as NetworkIcon, List as ListIcon } from "lucide-react";
 
 // ─── Progress bar ───
 function ProgressBar({ value, className }) {
@@ -209,6 +211,7 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
   const [acceptedFields, setAcceptedFields] = useState({});
   const [statusMap, setStatusMap] = useState({});
   const [similarConfirm, setSimilarConfirm] = useState(null);
+  const [teamView, setTeamView] = useState(false);
   const loadingProgress = useLoadingProgress(loading);
 
   // Re-run duplicate validation + accepted-fields initialization whenever the
@@ -502,7 +505,7 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
         </div>
       )}
 
-      <div className="max-h-60 overflow-y-auto space-y-0.5">
+      <div className="max-h-80 overflow-y-auto space-y-0.5">
         <LogoRow logoUrl={enrichedData.logo_url} accepted={acceptedFields.logo_url} onToggle={() => toggleField("logo_url")} status={statusMap.logo_url} />
         <FieldRow label="Description" value={enrichedData.description} accepted={acceptedFields.description} onToggle={() => toggleField("description")} status={statusMap.description} />
         <FieldRow label="Website" value={enrichedData.website} accepted={acceptedFields.website} onToggle={() => toggleField("website")} status={statusMap.website} />
@@ -516,9 +519,38 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
         {(enrichedData.phones || []).map((phone, i) => (
           <PhoneRow key={`ph-${i}`} phone={phone} index={i} accepted={acceptedFields[`phone_${i}`]} onToggle={() => toggleField(`phone_${i}`)} status={statusMap[`phone_${i}`]} />
         ))}
-        {(enrichedData.people || []).map((person, i) => (
-          <PersonRow key={`ppl-${i}`} person={person} index={i} accepted={acceptedFields[`person_${i}`]} onToggle={() => toggleField(`person_${i}`)} status={statusMap[`person_${i}`]} />
-        ))}
+        {/* People section: toggle between flat list and team hierarchy view */}
+        {(enrichedData.people?.length > 0) && (
+          <div className="pt-2 mt-1 border-t border-gray-100">
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">
+                Personnel ({enrichedData.people.length})
+              </p>
+              <button
+                type="button"
+                onClick={() => setTeamView(v => !v)}
+                className={`flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md transition-colors ${
+                  teamView ? "bg-indigo-100 text-indigo-700" : "text-gray-500 hover:bg-gray-100"
+                }`}
+              >
+                {teamView ? (
+                  <><ListIcon className="w-3 h-3" /> List view</>
+                ) : (
+                  <><NetworkIcon className="w-3 h-3" /> Team structure</>
+                )}
+              </button>
+            </div>
+            {teamView ? (
+              <TeamHierarchyView people={enrichedData.people} firmName={firmName} />
+            ) : (
+              <div className="space-y-0.5">
+                {(enrichedData.people || []).map((person, i) => (
+                  <PersonRow key={`ppl-${i}`} person={person} index={i} accepted={acceptedFields[`person_${i}`]} onToggle={() => toggleField(`person_${i}`)} status={statusMap[`person_${i}`]} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex items-center justify-between pt-1.5 border-t">
