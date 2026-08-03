@@ -45,6 +45,7 @@ export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditP
           <button
             className="font-medium text-gray-900 truncate hover:text-indigo-600 transition-colors text-left"
             onClick={() => onEdit(firm)}
+            title={firm.name}
           >
             {firm.name}
           </button>
