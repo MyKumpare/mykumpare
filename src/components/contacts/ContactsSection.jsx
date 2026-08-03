@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, ChevronDown, ChevronRight, User } from "lucide-react";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
-import SectionSearch from "@/components/common/SectionSearch";
+import ContactsSectionFilters, { filterSectionContacts } from "@/components/contacts/ContactsSectionFilters";
 import { useViewMode } from "@/hooks/useViewMode";
 
 const FIRM_TYPES = [
@@ -46,21 +46,24 @@ function ContactAvatar({ contact }) {
   );
 }
 
-export default function ContactsSection({ contacts, firms, onContactClick, onAddContact, onFirmClick, forceExpanded }) {
+export default function ContactsSection({ contacts, firms, products, onContactClick, onAddContact, onFirmClick, forceExpanded }) {
   const [expanded, setExpanded] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState({});
   const [expandedFirms, setExpandedFirms] = useState({});
   const [viewMode, setViewMode] = useViewMode("contacts");
-  const [search, setSearch] = useState("");
+  const [filterText, setFilterText] = useState("");
+  const [filterSelected, setFilterSelected] = useState({});
 
-  const searchLower = search.toLowerCase().trim();
-  const filteredContacts = React.useMemo(() => {
-    if (!searchLower) return contacts;
-    return filteredContacts.filter((c) => {
-      const name = [c.first_name, c.last_name, c.title].filter(Boolean).join(" ").toLowerCase();
-      return name.includes(searchLower);
+  const handleToggleFilter = (fieldKey, value) => {
+    setFilterSelected((prev) => {
+      const next = { ...prev };
+      const s = new Set(next[fieldKey] || []);
+      if (s.has(value)) s.delete(value); else s.add(value);
+      if (s.size === 0) delete next[fieldKey]; else next[fieldKey] = s;
+      return next;
     });
-  }, [contacts, searchLower]);
+  };
+  const handleClearFilters = () => { setFilterText(""); setFilterSelected({}); };
 
   useEffect(() => {
     if (forceExpanded !== undefined) setExpanded(forceExpanded);
@@ -75,6 +78,26 @@ export default function ContactsSection({ contacts, firms, onContactClick, onAdd
   // Build firmId -> firm map
   const firmMap = Object.fromEntries(firms.map((f) => [f.id, f]));
 
+  // Build contactId -> product names reverse map (from product investment_team)
+  const contactProductMap = useMemo(() => {
+    const map = {};
+    for (const p of products || []) {
+      for (const member of (p.investment_team || [])) {
+        const cid = member.contact_id;
+        if (!cid) continue;
+        if (!map[cid]) map[cid] = [];
+        if (!map[cid].includes(p.name)) map[cid].push(p.name);
+      }
+    }
+    return map;
+  }, [products]);
+
+  const hasFilters = filterText.trim() || Object.keys(filterSelected).length > 0;
+  const filteredContacts = useMemo(() => {
+    if (!hasFilters) return contacts;
+    return filterSectionContacts(contacts, filterText, filterSelected, firmMap, contactProductMap);
+  }, [contacts, filterText, filterSelected, firmMap, contactProductMap, hasFilters]);
+
   // Group contacts: by firm type → by firm → sorted by last name
   const grouped = FIRM_TYPES.reduce((acc, groupType) => {
     // Firms of this type, sorted by name
@@ -88,7 +111,7 @@ export default function ContactsSection({ contacts, firms, onContactClick, onAdd
     const firmGroups = groupFirms
       .map((firm) => ({
         firm,
-        contacts: contacts
+        contacts: filteredContacts
           .filter((c) => (c.firm_ids || []).includes(firm.id))
           .sort((a, b) => (a.last_name || "").localeCompare(b.last_name || "")),
       }))
@@ -99,11 +122,12 @@ export default function ContactsSection({ contacts, firms, onContactClick, onAdd
   }, {});
 
   // Contacts not associated with any firm
-  const unassignedContacts = contacts
+  const unassignedContacts = filteredContacts
     .filter((c) => !c.firm_ids?.length)
     .sort((a, b) => (a.last_name || "").localeCompare(b.last_name || ""));
 
-  const totalContacts = contacts.length;
+  const totalContacts = filteredContacts.length;
+  const totalAllContacts = contacts.length;
 
   const contactColor = (gt) => GROUP_COLORS[gt] || "bg-gray-100 text-gray-700";
 
@@ -144,7 +168,7 @@ export default function ContactsSection({ contacts, firms, onContactClick, onAdd
           <span className="text-sm font-semibold text-gray-700 group-hover:text-gray-900">
             Contacts
           </span>
-          <span className="text-xs text-gray-400 font-normal">({totalContacts})</span>
+          <span className="text-xs text-gray-400 font-normal">({totalAllContacts})</span>
         </button>
         <div className="flex items-center gap-2">
           <ViewModeToggle value={viewMode} onChange={(m) => { setViewMode(m); setExpanded(true); }} />
@@ -162,7 +186,16 @@ export default function ContactsSection({ contacts, firms, onContactClick, onAdd
 
       {expanded && (
         <div className="pl-2 border-l-2 border-gray-100 space-y-4">
-          <SectionSearch value={search} onChange={setSearch} placeholder="Search contacts..." />
+          <ContactsSectionFilters
+            contacts={contacts}
+            firms={firms}
+            products={products}
+            text={filterText}
+            onTextChange={setFilterText}
+            selected={filterSelected}
+            onToggle={handleToggleFilter}
+            onClear={handleClearFilters}
+          />
           {viewMode === "list" && FIRM_TYPES.map((groupType) => {
             const firmGroups = grouped[groupType];
             if (!firmGroups) return null;
@@ -337,7 +370,7 @@ export default function ContactsSection({ contacts, firms, onContactClick, onAdd
 
           {totalContacts === 0 && (
             <div className="text-sm text-gray-400 italic py-3 text-center border border-dashed border-gray-200 rounded-xl">
-              No contacts yet. Click "Add Contact" to create one.
+              {hasFilters ? "No contacts match your filters." : 'No contacts yet. Click "Add Contact" to create one.'}
             </div>
           )}
         </div>
