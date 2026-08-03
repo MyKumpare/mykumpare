@@ -261,7 +261,7 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
           No contacts match your filters
         </div>
       ) : teamView ? (
-        <TeamHierarchyView people={filteredContacts} firmName={firmName} />
+        <TeamHierarchyView people={filteredContacts} firmName={firmName} firmId={firmId} />
       ) : (
         <div className="space-y-2">
           {filteredContacts
