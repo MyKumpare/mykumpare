@@ -2,7 +2,8 @@ import React, { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, User, AlertTriangle, Trash2, Check, ArrowRightLeft, Loader2, Eye, EyeOff } from "lucide-react";
+import { Plus, User, AlertTriangle, Trash2, Check, ArrowRightLeft, Loader2, Eye, EyeOff, Network as NetworkIcon, List as ListIcon } from "lucide-react";
+import TeamHierarchyView from "../firms/TeamHierarchyView";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -23,6 +24,7 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
   const [togglingId, setTogglingId] = useState(null);
   const [filterText, setFilterText] = useState("");
   const [filterSelected, setFilterSelected] = useState({});
+  const [teamView, setTeamView] = useState(false);
 
   const handleToggleFilter = (fieldKey, value) => {
     setFilterSelected((prev) => {
@@ -46,6 +48,11 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
   const allFirmContacts = useMemo(
     () => contacts.filter((c) => c.firm_ids?.includes(firmId) && !c.deleted_at),
     [contacts, firmId]
+  );
+
+  const firmName = useMemo(
+    () => (firms.find((f) => f.id === firmId)?.name) || "",
+    [firms, firmId]
   );
 
   // Detect duplicate contacts by same first + last name (case-insensitive).
@@ -149,12 +156,27 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between">
+        {firmContacts.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setTeamView(v => !v)}
+            className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md transition-colors ${
+              teamView ? "bg-indigo-100 text-indigo-700" : "text-gray-500 hover:bg-gray-100"
+            }`}
+          >
+            {teamView ? (
+              <><ListIcon className="w-3.5 h-3.5" /> List view</>
+            ) : (
+              <><NetworkIcon className="w-3.5 h-3.5" /> Team structure</>
+            )}
+          </button>
+        )}
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs"
+          className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs ml-auto"
           onClick={handleAdd}
         >
           <Plus className="w-3.5 h-3.5" />
@@ -238,6 +260,8 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
         <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
           No contacts match your filters
         </div>
+      ) : teamView ? (
+        <TeamHierarchyView people={filteredContacts} firmName={firmName} />
       ) : (
         <div className="space-y-2">
           {filteredContacts
