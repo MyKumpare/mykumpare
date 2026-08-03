@@ -74,11 +74,18 @@ function getFullName(person) {
 }
 
 // ─── Person card ───
-function PersonCard({ person, colorClass }) {
+function PersonCard({ person, colorClass, onClick }) {
   const name = getFullName(person);
+  const clickable = !!onClick;
   return (
     <div className="flex flex-col items-center" style={{ minWidth: 130 }}>
-      <div className={`flex flex-col items-center p-2.5 rounded-xl border-2 bg-white shadow-sm ${colorClass}`} style={{ width: 130, minHeight: 110 }}>
+      <div
+        className={`flex flex-col items-center p-2.5 rounded-xl border-2 bg-white shadow-sm ${colorClass} ${clickable ? "cursor-pointer hover:shadow-md hover:ring-2 hover:ring-indigo-300 hover:border-indigo-400 transition-all" : ""}`}
+        style={{ width: 130, minHeight: 110 }}
+        onClick={clickable ? () => onClick(person) : undefined}
+        role={clickable ? "button" : undefined}
+        tabIndex={clickable ? 0 : undefined}
+      >
         <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 overflow-hidden border-2 border-white mb-1.5">
           {person.photo_url ? (
             <img src={person.photo_url} alt="" className="w-full h-full object-cover" onError={(e) => { e.target.style.display = "none"; }} />
@@ -100,7 +107,7 @@ function PersonCard({ person, colorClass }) {
 }
 
 // ─── Level row (display) ───
-function LevelRow({ cat, people, idx, total }) {
+function LevelRow({ cat, people, idx, total, onContactClick }) {
   const [collapsed, setCollapsed] = useState(false);
   const Icon = ICONS[cat.iconKey] || Users;
   const color = COLORS[cat.colorKey] || COLORS.gray;
@@ -119,7 +126,7 @@ function LevelRow({ cat, people, idx, total }) {
       {!collapsed && (
         <div className="flex flex-wrap gap-4 justify-center mb-2">
           {people.map((person, i) => (
-            <PersonCard key={i} person={person} colorClass={color.card} />
+            <PersonCard key={i} person={person} colorClass={color.card} onClick={onContactClick} />
           ))}
         </div>
       )}
@@ -213,7 +220,7 @@ function CategoryEditor({ cat, idx, total, onChange, onDelete, onMoveUp, onMoveD
 }
 
 // ─── Main component ───
-export default function TeamHierarchyView({ people, firmName, firmId, editable }) {
+export default function TeamHierarchyView({ people, firmName, firmId, editable, onContactClick }) {
   const canEdit = editable !== undefined ? editable : !!firmId;
   const [categories, setCategories] = useState(() => loadCategories(firmId));
   const [manageMode, setManageMode] = useState(false);
@@ -451,6 +458,7 @@ export default function TeamHierarchyView({ people, firmName, firmId, editable }
                   people={level.people}
                   idx={idx}
                   total={grouped.length}
+                  onContactClick={onContactClick}
                 />
               ))
             )}
