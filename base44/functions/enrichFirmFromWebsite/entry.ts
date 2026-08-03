@@ -928,31 +928,38 @@ async function fetchViaWayback(url: string): Promise<string> {
     // availability API (which is rate-limited and causes 429 errors).
     const waybackUrl = `https://web.archive.org/web/2024/${url}`;
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
+    const timeout = setTimeout(() => controller.abort(), 15000);
     const resp = await fetch(waybackUrl, {
       headers: browserHeaders(''),
       redirect: 'follow',
       signal: controller.signal,
     });
     clearTimeout(timeout);
-    if (!resp.ok) return '';
+    if (!resp.ok) {
+      console.log(`fetchViaWayback: ${url} returned status ${resp.status}`);
+      return '';
+    }
     const contentType = resp.headers.get('content-type') || '';
-    if (!contentType.includes('text') && !contentType.includes('html')) return '';
+    if (!contentType.includes('text') && !contentType.includes('html')) {
+      console.log(`fetchViaWayback: ${url} returned content-type ${contentType}`);
+      return '';
+    }
     const html = await resp.text();
-    if (!html || html.length < 100) return '';
+    if (!html || html.length < 100) {
+      console.log(`fetchViaWayback: ${url} returned ${html?.length || 0} chars`);
+      return '';
+    }
     // Rewrite Wayback-wrapped URLs (href/src) to their original form so that
-    // htmlToText can use the ORIGINAL url as the base. This way:
-    // - Internal links resolve to the original domain (correct for discovery)
-    // - Image URLs (e.g. /getmedia/...) resolve to the original domain
-    //   (fetchable by rehostImages, since the root domain is usually not
-    //   captcha-blocked even when /about-us/ sub-pages are)
-    // Wayback wraps links as: /web/{timestamp}/{original_url}
+    // htmlToText can use the ORIGINAL url as the base.
     const processedHtml = html.replace(
       /((?:href|src)\s*=\s*["'])(?:https?:\/\/web\.archive\.org)?\/web\/\d+(?:[a-z_]+)?\//gi,
       '$1',
     );
-    return htmlToText(processedHtml, url);
-  } catch {
+    const result = htmlToText(processedHtml, url);
+    console.log(`fetchViaWayback: ${url} -> ${result.length} chars of text`);
+    return result;
+  } catch (err) {
+    console.log(`fetchViaWayback: ${url} error: ${err?.message || err}`);
     return '';
   }
 }
@@ -1035,6 +1042,53 @@ async function fetchPagesViaWayback(
     // non-fatal — return whatever we have
   }
   return pages;
+}
+
+// Use LLM web search to discover sub-page URLs on the firm's domain.
+// This handles JS-rendered sites (React/Vue SPAs, WordPress with JS page
+// builders) where the initial HTML from both direct fetch and the Wayback
+// Machine is just a skeleton with no navigation links. The LLM can find
+// staff/team page URLs through Google's index, which crawls the rendered DOM.
+async function discoverSubPageUrlsViaSearch(
+  base44: any,
+  firmName: string,
+  website: string,
+): Promise<string[]> {
+  let domain = '';
+  try { domain = new URL(website).host.toLowerCase(); } catch { /* ignore */ }
+  if (!domain) return [];
+  try {
+    const res = await base44.integrations.Core.InvokeLLM({
+      prompt: `Search the web for the organization "${firmName}" (website: ${domain}).
+
+Find ALL pages on their website that list staff, team members, leadership, board members, trustees, or key personnel. Common page names include: Staff, Team, Leadership, Board of Trustees, Board of Directors, Our People, Administration, Investment Staff, etc.
+
+For each page you find, return the full URL on ${domain}. Only return URLs that start with https://${domain} or http://${domain}. Do NOT return LinkedIn, Facebook, or other third-party URLs.
+
+Return a JSON object with a "urls" array of full URLs.`,
+      add_context_from_internet: true,
+      response_json_schema: {
+        type: 'object',
+        properties: {
+          urls: {
+            type: 'array',
+            items: { type: 'string' },
+          },
+        },
+      },
+    });
+    const urls = res?.urls || [];
+    return urls
+      .map((u: string) => u.trim())
+      .filter((u: string) => /^https?:\/\/.+/.test(u))
+      .filter((u: string) => {
+        let host = '';
+        try { host = new URL(u).host.toLowerCase(); } catch { /* ignore */ }
+        return host === domain || host.endsWith('.' + domain);
+      });
+  } catch {
+    return [];
+  }
 }
 
 // Fallback for captcha / anti-bot-blocked sites: gather the firm's public
@@ -1461,9 +1515,40 @@ Deno.serve(async (req) => {
     const peoplePageCount = subPages.filter((p) =>
       /\/(people|our-people|team|our-team|leadership|staff|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b/i.test(p.url)
     ).length;
+
+    // LLM-powered sub-page discovery: use the LLM web search to find
+    // staff/team/board page URLs on the firm's domain. This handles
+    // JS-rendered sites and sites with non-standard paths (e.g.
+    // /about-bcers/staff/) that aren't in COMMON_PATHS and can't be
+    // discovered from the Wayback homepage skeleton HTML.
+    if (website) {
+      const discoveredUrls = await discoverSubPageUrlsViaSearch(base44, firm_name, website);
+      if (discoveredUrls.length > 0) {
+        const existingUrls = new Set(pageContents.map((p) => p.url));
+        const toFetch = discoveredUrls.filter((u) => !existingUrls.has(u)).slice(0, 8);
+        const discoveredPages = await Promise.all(
+          toFetch.map(async (url) => {
+            let text = await fetchPage(url);
+            if (!text || text.length < 100) {
+              text = await fetchViaWayback(url);
+            }
+            if (text && text.length > 100) {
+              const isPeoplePage = /\/(people|our-people|team|our-team|leadership|staff|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b/i.test(url);
+              const limit = isPeoplePage ? 80000 : 12000;
+              return { url, text: text.substring(0, limit) };
+            }
+            return null;
+          }),
+        );
+        for (const p of discoveredPages) {
+          if (p) pageContents.push(p);
+        }
+        combinedContent = pageContents.map((p) => `[Page: ${p.url}]\n${p.text}`).join('\n\n---\n\n');
+      }
+    }
+
     let waybackUsed = false;
     if ((isHomepageCaptcha || combinedContent.length < 5000 || peoplePageCount < 2) && website) {
-      console.log(`enrichFirmFromWebsite: direct fetch insufficient (captcha=${isHomepageCaptcha}, content=${combinedContent.length} chars, peoplePages=${peoplePageCount}), trying Wayback Machine fallback...`);
       const waybackPages = await fetchPagesViaWayback(website);
       if (waybackPages.length > 0) {
         const existingUrls = new Set(pageContents.map((p) => p.url));
@@ -1475,7 +1560,6 @@ Deno.serve(async (req) => {
         }
         combinedContent = pageContents.map((p) => `[Page: ${p.url}]\n${p.text}`).join('\n\n---\n\n');
         waybackUsed = true;
-        console.log(`enrichFirmFromWebsite: Wayback merged ${waybackPages.length} pages, total ${pageContents.length} pages, ${combinedContent.length} chars`);
       }
     }
 
@@ -1496,12 +1580,12 @@ Deno.serve(async (req) => {
       combinedContent = pageContents.map((p) => `[Page: ${p.url}]\n${p.text}`).join('\n\n---\n\n');
     }
 
-    // Only fall back to web search if the homepage was captcha-blocked, the
-    // sub-pages didn't have enough content, AND the Wayback Machine didn't
-    // help. Some sites block the homepage fetch but still allow direct
-    // sub-page access — in that case we have enough content to proceed.
-    const isCaptchaBlocked = isHomepageCaptcha && subPageContentLength < 500 && !waybackUsed && combinedContent.length < 5000;
-    if (isCaptchaBlocked) {
+    // Fall back to web search if the combined content is very small after ALL
+    // fetch attempts (direct, Wayback, and LLM-discovered). This catches both
+    // captcha-blocked sites AND JS-rendered sites where the Wayback Machine
+    // only captures skeleton HTML.
+    const isInsufficientContent = combinedContent.length < 500;
+    if (isInsufficientContent) {
       const fallback = await enrichFirmViaWebSearch(base44, firm_name, website);
       if (fallback && (fallback.name || (Array.isArray(fallback.people) && fallback.people.length > 0))) {
         if (!fallback.name) fallback.name = firm_name;
@@ -1714,6 +1798,53 @@ IMPORTANT:
       enrichedData.people = enrichedData.people.filter((p: any) => !isSectionHeader(p));
     }
 
+    // Secondary web search fallback: if the LLM extraction found very few
+    // people (< 3), the combined content likely didn't include the staff/team
+    // page. Try the web search fallback which uses the LLM with web search
+    // to find ALL personnel.
+    if (!Array.isArray(enrichedData.people) || enrichedData.people.length < 3) {
+      console.log(`enrichFirmFromWebsite: LLM extraction found only ${enrichedData.people?.length || 0} people, trying web search fallback...`);
+      const fallback = await enrichFirmViaWebSearch(base44, firm_name, website);
+      if (fallback && Array.isArray(fallback.people) && fallback.people.length > (enrichedData.people?.length || 0)) {
+        console.log(`enrichFirmFromWebsite: web search fallback found ${fallback.people.length} people, merging...`);
+        // Merge: keep the main extraction's firm data but use the web search's
+        // people array if it found more.
+        const cleanStr2 = (v: any): any => (v === 'null' || v === 'undefined' ? '' : v);
+        fallback.logo_url = cleanStr2(fallback.logo_url) || '';
+        if (isSocialOrIconUrl(fallback.logo_url)) fallback.logo_url = '';
+        fallback.email = cleanStr2(fallback.email) || enrichedData.email || '';
+        fallback.linkedin_url = cleanStr2(fallback.linkedin_url) || enrichedData.linkedin_url || '';
+        fallback.website = cleanStr2(fallback.website) || enrichedData.website || '';
+        fallback.description = cleanStr2(fallback.description) || enrichedData.description || '';
+        if (!fallback.name) fallback.name = enrichedData.name;
+        for (const person of fallback.people || []) {
+          person.photo_url = cleanStr2(person.photo_url) || '';
+          person.email = cleanStr2(person.email) || '';
+          person.linkedin_url = cleanStr2(person.linkedin_url) || '';
+          person.biography = cleanStr2(person.biography) || '';
+          delete person.bio_url;
+        }
+        // Use the web search fallback's people, but keep the main extraction's
+        // firm-level data (addresses, phones, logo, etc.) if the fallback
+        // didn't provide them.
+        if (!fallback.addresses?.length && enrichedData.addresses?.length) {
+          fallback.addresses = enrichedData.addresses;
+        }
+        if (!fallback.phones?.length && enrichedData.phones?.length) {
+          fallback.phones = enrichedData.phones;
+        }
+        if (!fallback.logo_url) fallback.logo_url = enrichedData.logo_url;
+        if (!fallback.year_founded) fallback.year_founded = enrichedData.year_founded;
+        if (!fallback.firm_types?.length) fallback.firm_types = enrichedData.firm_types;
+        await enrichEducationExperienceFromBios(base44, fallback.people || []);
+        await rehostFirmImages(base44, fallback, website);
+        for (const person of fallback.people || []) {
+          delete person.bio_url;
+        }
+        return Response.json(fallback);
+      }
+    }
+
     // Phase 2: gather individual biographies that weren't on the listing page.
     // Many firm "people" pages only show name + title on cards; the full bio lives
     // on a separate profile page linked from each card. For any person missing a
@@ -1748,6 +1879,7 @@ IMPORTANT:
       delete person.bio_url;
     }
 
+    console.log(`enrichFirmFromWebsite: returning ${enrichedData.people?.length || 0} people, ${pageContents.length} pages fetched, ${combinedContent.length} chars total content`);
     return Response.json(enrichedData);
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
