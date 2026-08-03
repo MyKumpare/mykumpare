@@ -33,6 +33,7 @@ export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditP
           <button
             className="flex-shrink-0 w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center overflow-hidden hover:ring-2 hover:ring-indigo-300 transition-all"
             onClick={() => onEdit(firm)}
+            title={firm.name}
           >
             {firm.logo_url ? (
               <img src={firm.logo_url} alt={firm.name} className="w-full h-full object-contain p-1" />
