@@ -977,7 +977,18 @@ async function fetchViaWayback(url: string): Promise<string> {
     if (!contentType.includes('text') && !contentType.includes('html')) return '';
     const html = await snapResp.text();
     if (!html || html.length < 100) return '';
-    return htmlToText(html, url);
+    // Rewrite Wayback-wrapped URLs (href/src) to their original form so that
+    // htmlToText can use the ORIGINAL url as the base. This way:
+    // - Internal links resolve to the original domain (correct for discovery)
+    // - Image URLs (e.g. /getmedia/...) resolve to the original domain
+    //   (fetchable by rehostImages, since the root domain is usually not
+    //   captcha-blocked even when /about-us/ sub-pages are)
+    // Wayback wraps links as: /web/{timestamp}/{original_url}
+    let processedHtml = html.replace(
+      /((?:href|src)\s*=\s*["'])(?:https?:\/\/web\.archive\.org)?\/web\/\d+(?:[a-z_]+)?\//gi,
+      '$1',
+    );
+    return htmlToText(processedHtml, url);
   } catch {
     return '';
   }
@@ -1022,11 +1033,24 @@ async function fetchPagesViaWayback(
 
     // Pass 1: common paths + links discovered from the homepage
     const pass1Urls = new Set<string>();
-    COMMON_PATHS.map((p) => resolveUrl(website, p)).filter((u): u is string => !!u && u !== website).forEach((u) => pass1Urls.add(u));
+    COMMON_PATHS.map((p) => resolveUrl(website, p)).filter((u): u is string => !!u && u !== website).forEach((u) => {
+      pass1Urls.add(u);
+      // Also try with trailing slash — the Wayback Machine often has snapshots
+      // for /about-us/ but not /about-us (without trailing slash)
+      if (!u.endsWith('/')) pass1Urls.add(u + '/');
+    });
     discoverLinks(homepageText, pass1Urls);
 
+    // Sort so team/people pages are tried first (they're most likely to have
+    // the full staff listing), then slice — this ensures we don't miss key
+    // paths like /about-us/ that are further down the COMMON_PATHS list.
+    const sortedPass1Urls = [...pass1Urls].sort((a, b) => {
+      const PEOPLE_RE = /\/(people|our-people|team|our-team|leadership|staff|board|trustees|governance|administration|administrators|executive|executives|consultants|directors|about-us)\b/i;
+      return (PEOPLE_RE.test(a) ? 0 : 1) - (PEOPLE_RE.test(b) ? 0 : 1);
+    });
+
     const pass1Results = await Promise.all(
-      [...pass1Urls].slice(0, 12).map(async (originalUrl) => {
+      sortedPass1Urls.slice(0, 20).map(async (originalUrl) => {
         const text = await fetchViaWayback(originalUrl);
         if (!text || text.length < 100) return null;
         const isPeoplePage = /\/(people|our-people|team|our-team|leadership|board|trustees|governance|administration|administrators|executive|executives|consultants|directors|about-us|about)\b/i.test(originalUrl);
@@ -1399,7 +1423,8 @@ Deno.serve(async (req) => {
         const linkRegex = /\[LINK:\s*(https?:\/\/[^\]]+)\]/gi;
         let lmatch: RegExpExecArray | null;
         while ((lmatch = linkRegex.exec(text)) !== null) {
-          const url = lmatch[1];
+          // Unwrap Wayback Machine URLs to get the original URL for host matching
+          const url = unwrapWaybackUrl(lmatch[1]);
           let linkHost = '';
           try { linkHost = new URL(url).host.toLowerCase(); } catch { /* ignore */ }
           if (!linkHost || linkHost !== baseHost) continue;
@@ -1415,7 +1440,7 @@ Deno.serve(async (req) => {
         const pathRegex = /\[LINK:\s*https?:\/\/[^^\]]*?\/[^[\]]*?(people|our-people|team|our-team|leadership|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b[^\]]*\]/gi;
         let pmatch: RegExpExecArray | null;
         while ((pmatch = pathRegex.exec(text)) !== null) {
-          const url = pmatch[0].replace(/\[LINK:\s*/, '').replace(/\]$/, '').trim();
+          const url = unwrapWaybackUrl(pmatch[0].replace(/\[LINK:\s*/, '').replace(/\]$/, '').trim());
           if (url !== website) discovered.add(url);
         }
       }
@@ -1707,6 +1732,14 @@ IMPORTANT:
       person.linkedin_url = cleanStr(person.linkedin_url) || '';
       person.biography = cleanStr(person.biography) || '';
       person.bio_url = cleanStr(person.bio_url) || '';
+      // Wayback Machine photo URLs sometimes use HTTP — upgrade to HTTPS so
+      // rehostImages can fetch them reliably.
+      if (person.photo_url && person.photo_url.startsWith('http://web.archive.org')) {
+        person.photo_url = person.photo_url.replace('http://web.archive.org', 'https://web.archive.org');
+      }
+    }
+    if (enrichedData.logo_url && enrichedData.logo_url.startsWith('http://web.archive.org')) {
+      enrichedData.logo_url = enrichedData.logo_url.replace('http://web.archive.org', 'https://web.archive.org');
     }
 
     // Filter out section headers that the LLM sometimes returns as "people"
