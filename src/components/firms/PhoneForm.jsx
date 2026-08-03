@@ -8,8 +8,9 @@ import {
 import { Phone, Trash2, Star, MapPin } from "lucide-react";
 import { COUNTRY_CODES, getAreaCodesForCountry } from "./phoneData";
 import { getAreaCodesForCity } from "./geoData";
+import PhoneTypePicker from "./PhoneTypePicker";
 
-const PHONE_TYPES = ["Office Main Number", "Toll Free Number", "Fax Number"];
+const PHONE_TYPES = ["Office Main Number", "Toll Free Number", "Fax Number", "Main", "Secondary", "Fax", "Toll Free", "Office", "Direct", "Mobile", "Reception"];
 
 function getAddressLabel(addr) {
   const parts = [addr.city, addr.state, addr.country].filter(Boolean);
@@ -160,16 +161,7 @@ export default function PhoneForm({ phone, onChange, onDelete, onSetDefault, isD
           {/* Phone Type */}
           <div className="space-y-1.5">
             <Label className="text-xs font-medium text-gray-600">Phone Type</Label>
-            <Select value={phone.phone_type || ""} onValueChange={(val) => onChange({ ...phone, phone_type: val })}>
-              <SelectTrigger className="h-9 bg-white">
-                <SelectValue placeholder="Select type..." />
-              </SelectTrigger>
-              <SelectContent>
-                {PHONE_TYPES.map((t) => (
-                  <SelectItem key={t} value={t}>{t}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <PhoneTypePicker value={phone.phone_type || ""} onChange={(val) => onChange({ ...phone, phone_type: val })} />
           </div>
 
           {/* Country Code */}
