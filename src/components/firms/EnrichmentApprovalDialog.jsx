@@ -4,7 +4,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { AlertTriangle, UserPlus, UserCog, Info, FileText, User } from "lucide-react";
+import { AlertTriangle, UserPlus, UserCog, Info, FileText, User, Loader2 } from "lucide-react";
 
 export default function EnrichmentApprovalDialog({
   open,
@@ -56,9 +56,15 @@ export default function EnrichmentApprovalDialog({
 
   const hasDuplicates = newContacts.some((nc) => nc.potentialDuplicates?.length > 0);
   const canConfirm = hasContactChanges && (newContacts.length === 0 || skippedNewContacts.length < newContacts.length);
+  const [applying, setApplying] = useState(false);
 
-  const handleConfirm = () => {
-    onConfirm({ approvedBios: approvedBioSet, skippedNewContacts });
+  const handleConfirm = async () => {
+    setApplying(true);
+    try {
+      await onConfirm({ approvedBios: approvedBioSet, skippedNewContacts });
+    } finally {
+      setApplying(false);
+    }
     onOpenChange(false);
   };
 
@@ -71,7 +77,13 @@ export default function EnrichmentApprovalDialog({
             Approve Enrichment Updates
           </DialogTitle>
         </DialogHeader>
-        <div className="space-y-3 py-2 max-h-[55vh] overflow-y-auto">
+        {applying && (
+          <div className="flex items-center gap-2 text-sm text-indigo-600 py-2">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Creating contacts and updating data…
+          </div>
+        )}
+        <div className={`space-y-3 py-2 max-h-[55vh] overflow-y-auto ${applying ? "opacity-50 pointer-events-none" : ""}`}>
           {firmFieldsApplied.length > 0 && (
             <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-3">
               <p className="text-xs font-semibold text-indigo-700 mb-1">
@@ -229,15 +241,15 @@ export default function EnrichmentApprovalDialog({
           )}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={applying}>
             Cancel
           </Button>
           <Button
             className="bg-indigo-600 hover:bg-indigo-700 text-white"
             onClick={handleConfirm}
-            disabled={!canConfirm}
+            disabled={!canConfirm || applying}
           >
-            Approve & Apply
+            {applying ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating contacts…</> : "Approve & Apply"}
           </Button>
         </DialogFooter>
       </DialogContent>
