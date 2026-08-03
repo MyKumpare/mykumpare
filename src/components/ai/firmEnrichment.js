@@ -269,10 +269,21 @@ export async function enrichFirmFromWeb(firmName, websiteUrl) {
   // Use the backend function that fetches the website directly and extracts data.
   // This is more reliable than relying on LLM web search alone, which often returns
   // empty results for smaller firms.
-  const response = await base44.functions.invoke('enrichFirmFromWebsite', {
-    firm_name: firmName,
-    website_url: websiteUrl || '',
-  });
+  let response;
+  try {
+    response = await base44.functions.invoke('enrichFirmFromWebsite', {
+      firm_name: firmName,
+      website_url: websiteUrl || '',
+    });
+  } catch (err) {
+    // The backend returns 502 with a helpful error message in the response body
+    // (e.g. "protected by an anti-bot captcha", "could not fetch content from…").
+    // The SDK throws on non-2xx, so extract that message instead of surfacing a
+    // generic "Request failed with status code 502" to the user.
+    const backendError = err?.response?.data?.error || err?.data?.error;
+    if (backendError) throw new Error(backendError);
+    throw err;
+  }
 
   let data;
   if (response.data && typeof response.data === 'object') {
