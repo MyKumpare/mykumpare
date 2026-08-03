@@ -925,6 +925,106 @@ async function enrichEducationExperienceFromBios(base44: any, people: any[]): Pr
   );
 }
 
+// ─── Wayback Machine (Internet Archive) fallback ───
+//
+// When a firm's website is protected by an anti-bot captcha (Cloudflare,
+// SiteGuard, etc.) or returns insufficient content, we try the Wayback
+// Machine's cached snapshots. The Wayback Machine serves from its own archive,
+// so it bypasses the target site's captcha/anti-bot protections entirely —
+// and unlike the LLM web-search fallback, it provides the full HTML content
+// (with photos, individual bios, and complete team listings).
+
+// Unwrap a Wayback Machine URL to its original form.
+// Wayback URLs look like: https://web.archive.org/web/{timestamp}/{original_url}
+function unwrapWaybackUrl(url: string): string {
+  if (!url) return url;
+  const match = url.match(/^https?:\/\/web\.archive\.org\/web\/\d+(?:[a-z_]+)?\/(.+)$/i);
+  if (match) return match[1];
+  return url;
+}
+
+// Fetch a single page from the Wayback Machine. Returns the page text (via
+// htmlToText) or '' if no snapshot is available. Uses the original URL as the
+// base for resolveUrl so image/link URLs are resolved against the original
+// domain.
+async function fetchViaWayback(url: string): Promise<string> {
+  try {
+    // Step 1: Use the availability API to find the closest snapshot
+    const availabilityUrl = `https://archive.org/wayback/available?url=${encodeURIComponent(url)}`;
+    const availController = new AbortController();
+    const availTimeout = setTimeout(() => availController.abort(), 10000);
+    const availResp = await fetch(availabilityUrl, {
+      headers: { 'Accept': 'application/json' },
+      signal: availController.signal,
+    });
+    clearTimeout(availTimeout);
+    if (!availResp.ok) return '';
+    const availData = await availResp.json();
+    const snapshotUrl: string | undefined = availData?.archived_snapshots?.closest?.url;
+    if (!snapshotUrl) return '';
+
+    // Step 2: Fetch the snapshot HTML
+    const snapController = new AbortController();
+    const snapTimeout = setTimeout(() => snapController.abort(), 15000);
+    const snapResp = await fetch(snapshotUrl, {
+      headers: browserHeaders(''),
+      redirect: 'follow',
+      signal: snapController.signal,
+    });
+    clearTimeout(snapTimeout);
+    if (!snapResp.ok) return '';
+    const contentType = snapResp.headers.get('content-type') || '';
+    if (!contentType.includes('text') && !contentType.includes('html')) return '';
+    const html = await snapResp.text();
+    if (!html || html.length < 100) return '';
+    return htmlToText(html, url);
+  } catch {
+    return '';
+  }
+}
+
+// Fetch the homepage + key team/people sub-pages from the Wayback Machine.
+// Returns an array of {url, text} in the same format as pageContents.
+async function fetchPagesViaWayback(
+  website: string,
+): Promise<{ url: string; text: string }[]> {
+  const pages: { url: string; text: string }[] = [];
+  try {
+    // Fetch the homepage first
+    const homepageText = await fetchViaWayback(website);
+    if (!homepageText || homepageText.length < 100) return pages;
+    pages.push({ url: website, text: homepageText.substring(0, 20000) });
+
+    // Fetch the most important team/people sub-pages in parallel
+    const keyPaths = [
+      '/about', '/about/our-team', '/about/team', '/about/people',
+      '/about/leadership', '/about/board', '/about/board-of-directors',
+      '/about/board-of-trustees', '/about/governance',
+      '/team', '/our-team', '/people', '/our-people', '/leadership',
+      '/board', '/board-of-directors', '/board-of-trustees', '/trustees',
+      '/about-us', '/about-us/our-team', '/about-us/team',
+      '/company', '/contact',
+    ];
+    const subResults = await Promise.all(
+      keyPaths.map(async (path) => {
+        const fullUrl = resolveUrl(website, path);
+        if (!fullUrl || fullUrl === website) return null;
+        const text = await fetchViaWayback(fullUrl);
+        if (!text || text.length < 100) return null;
+        const isPeoplePage = /\/(people|our-people|team|our-team|leadership|board|trustees|governance|about-us)\b/i.test(path);
+        const limit = isPeoplePage ? 80000 : 12000;
+        return { url: fullUrl, text: text.substring(0, limit) };
+      }),
+    );
+    for (const p of subResults) {
+      if (p) pages.push(p);
+    }
+  } catch {
+    // non-fatal — return whatever we have
+  }
+  return pages;
+}
+
 // Fallback for captcha / anti-bot-blocked sites: gather the firm's public
 // information via the LLM's web-search capability (which fetches through
 // Google's index, whose crawler IPs are typically not challenged) instead of
@@ -1298,21 +1398,41 @@ Deno.serve(async (req) => {
       pageContents.push(page);
     }
 
-    const combinedContent = pageContents.map((p) => `[Page: ${p.url}]\n${p.text}`).join('\n\n---\n\n');
+    let combinedContent = pageContents.map((p) => `[Page: ${p.url}]\n${p.text}`).join('\n\n---\n\n');
 
     // Detect a captcha / anti-bot challenge redirect (e.g. SiteGuard sgcaptcha,
     // Cloudflare "Robot Challenge"), which serves a tiny meta-refresh stub
     // instead of real content. This is an IP-reputation block that no
     // cookie/header change can bypass.
-    // IMPORTANT: only fall back to web search if the sub-pages ALSO returned
-    // captcha stubs or no content. Some sites block the homepage fetch but
-    // still allow direct sub-page access — in that case we have enough
-    // content from the sub-pages to proceed with normal extraction.
     const isHomepageCaptcha = !!homepageRaw &&
       /\/\.well-known\/sgcaptcha|sgcaptcha|robot challenge|checking the site connection/i.test(homepageRaw) &&
       homepageRaw.length < 1000;
     const subPageContentLength = subPages.reduce((sum, p) => sum + (p?.text?.length || 0), 0);
-    const isCaptchaBlocked = isHomepageCaptcha && subPageContentLength < 500;
+
+    // Wayback Machine fallback: if the direct fetch was captcha-blocked or
+    // returned insufficient content, try fetching cached snapshots from the
+    // Internet Archive. The Wayback Machine serves from its own archive, so
+    // it bypasses the target site's captcha/anti-bot protections entirely —
+    // and provides the full HTML (photos, bios, complete team listings) that
+    // the LLM web-search fallback can't.
+    let waybackUsed = false;
+    if ((isHomepageCaptcha || combinedContent.length < 50) && website) {
+      console.log('enrichFirmFromWebsite: direct fetch insufficient, trying Wayback Machine fallback...');
+      const waybackPages = await fetchPagesViaWayback(website);
+      if (waybackPages.length > 0) {
+        pageContents.length = 0;
+        pageContents.push(...waybackPages);
+        combinedContent = pageContents.map((p) => `[Page: ${p.url}]\n${p.text}`).join('\n\n---\n\n');
+        waybackUsed = combinedContent.length >= 50;
+        console.log(`enrichFirmFromWebsite: Wayback provided ${waybackPages.length} pages, ${combinedContent.length} chars, succeeded=${waybackUsed}`);
+      }
+    }
+
+    // Only fall back to web search if the homepage was captcha-blocked, the
+    // sub-pages didn't have enough content, AND the Wayback Machine didn't
+    // help. Some sites block the homepage fetch but still allow direct
+    // sub-page access — in that case we have enough content to proceed.
+    const isCaptchaBlocked = isHomepageCaptcha && subPageContentLength < 500 && !waybackUsed;
     if (isCaptchaBlocked) {
       const fallback = await enrichFirmViaWebSearch(base44, firm_name, website);
       if (fallback && (fallback.name || (Array.isArray(fallback.people) && fallback.people.length > 0))) {
@@ -1467,6 +1587,21 @@ IMPORTANT:
     });
 
     if (!enrichedData.name) enrichedData.name = firm_name;
+
+    // Unwrap any Wayback Machine URLs back to their original form. The Wayback
+    // Machine wraps all URLs as https://web.archive.org/web/{timestamp}/{original}.
+    // We unwrap linkedin_url, website, and bio_url so they point to the original
+    // destinations. photo_url and logo_url are left as Wayback URLs —
+    // rehostImages fetches and re-uploads them, and the original site may be
+    // captcha-blocked, so the Wayback URL is the reliable source.
+    if (waybackUsed) {
+      if (enrichedData.linkedin_url) enrichedData.linkedin_url = unwrapWaybackUrl(enrichedData.linkedin_url);
+      if (enrichedData.website) enrichedData.website = unwrapWaybackUrl(enrichedData.website);
+      for (const person of enrichedData.people || []) {
+        if (person.linkedin_url) person.linkedin_url = unwrapWaybackUrl(person.linkedin_url);
+        if (person.bio_url) person.bio_url = unwrapWaybackUrl(person.bio_url);
+      }
+    }
 
     // Clean up string "null" values that the LLM sometimes returns for missing fields
     const cleanStr = (v: any): any => (v === 'null' || v === 'undefined' ? '' : v);
