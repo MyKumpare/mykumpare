@@ -8,64 +8,42 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 const COMMON_PATHS = [
   '/about',
-  '/about/firm',
-  '/about/our-team',
+  '/about-us',
   '/about/team',
+  '/about/our-team',
   '/about/people',
   '/about/leadership',
-  '/about/staff',
   '/about/board',
   '/about/board-of-directors',
   '/about/board-of-trustees',
   '/about/governance',
-  '/about/administration',
-  '/about/administrators',
   '/about/executive-leadership',
-  '/about/executive-team',
-  '/about/executive',
+  '/about/administration',
   '/about/consultants',
-  '/about/our-consultants',
   '/team',
   '/our-team',
   '/people',
   '/our-people',
   '/leadership',
-  '/leadership-team',
-  '/executive-leadership',
-  '/executive-team',
-  '/executive',
-  '/executives',
   '/board',
   '/board-of-directors',
   '/board-of-trustees',
-  '/boards',
   '/trustees',
   '/governance',
   '/administration',
-  '/administrators',
   '/consultants',
-  '/our-consultants',
-  '/team-members',
   '/staff',
-  '/contact',
-  '/about-us',
-  '/about-us/our-team',
   '/about-us/team',
   '/about-us/people',
-  '/about-us/our-people',
   '/about-us/leadership',
-  '/about-us/staff',
   '/about-us/board',
   '/about-us/board-of-directors',
   '/about-us/board-of-trustees',
   '/about-us/governance',
   '/about-us/administration',
   '/about-us/executive-leadership',
-  '/about-us/executive-team',
-  '/about-us/consultants',
   '/company',
-  '/philosophy',
-  '/approach',
+  '/contact',
 ];
 
 // Common cookie consent cookies that signal "user accepted all cookies".
@@ -197,7 +175,7 @@ function detectConsentCookies(rawHtml: string): string {
 /** Fetches raw HTML (no conversion) — used to detect the consent platform. */
 async function fetchRawHtml(url: string): Promise<string> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
+  const timeout = setTimeout(() => controller.abort(), 10000);
   try {
     const response = await fetch(url, {
       headers: browserHeaders(CONSENT_COOKIES),
@@ -227,7 +205,7 @@ async function fetchPage(url: string, maxRedirects = 3): Promise<string> {
     : CONSENT_COOKIES;
   const doFetch = async (): Promise<string> => {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
+    const timeout = setTimeout(() => controller.abort(), 10000);
     try {
       const response = await fetch(url, {
         headers: browserHeaders(cookieHeader),
@@ -251,13 +229,7 @@ async function fetchPage(url: string, maxRedirects = 3): Promise<string> {
       clearTimeout(timeout);
     }
   };
-  // Single retry on failure — handles intermittent timeouts and rate-limiting.
-  let result = await doFetch();
-  if (!result || result.length < 100) {
-    await new Promise((r) => setTimeout(r, 500));
-    result = await doFetch();
-  }
-  return result;
+  return doFetch();
 }
 
 function extractImgUrl(imgTag: string, baseUrl: string): string {
@@ -956,7 +928,7 @@ async function fetchViaWayback(url: string): Promise<string> {
     // availability API (which is rate-limited and causes 429 errors).
     const waybackUrl = `https://web.archive.org/web/2024/${url}`;
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
+    const timeout = setTimeout(() => controller.abort(), 10000);
     const resp = await fetch(waybackUrl, {
       headers: browserHeaders(''),
       redirect: 'follow',
@@ -1299,6 +1271,8 @@ async function rehostFirmImages(base44: any, data: any, website: string): Promis
 }
 
 Deno.serve(async (req) => {
+  const fnStartTime = Date.now();
+  const TIME_BUDGET_MS = 45000;
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
@@ -1350,6 +1324,18 @@ Deno.serve(async (req) => {
     const homepageRaw = await fetchRawHtml(website);
     dynamicConsentCookies = detectConsentCookies(homepageRaw);
     const homepageText = homepageRaw ? htmlToText(homepageRaw, website) : '';
+
+    // Detect captcha / anti-bot blocking EARLY so we can skip wasteful direct
+    // fetches for sub-pages. When the homepage is captcha-blocked, ALL sub-page
+    // direct fetches will also fail — each taking 15s (timeout) + 500ms (retry
+    // delay) + 15s (retry timeout) = ~30s per path. Skipping them and going
+    // straight to the Wayback Machine saves ~30 seconds for captcha-blocked
+    // sites, keeping the function within platform timeout limits.
+    const isHomepageCaptcha = !!homepageRaw &&
+      /\/\.well-known\/sgcaptcha|sgcaptcha|robot challenge|checking the site connection/i.test(homepageRaw) &&
+      homepageRaw.length < 1000;
+    const isHomepageBlocked = isHomepageCaptcha || (!homepageText || homepageText.length < 50);
+
     // Extract the firm logo from CSS background images (for sites that use
     // <a id="logo" style="background: url(...)"> instead of <img> tags).
     const cssLogoUrl = homepageRaw ? await extractLogoFromCss(homepageRaw, website) : '';
@@ -1366,18 +1352,22 @@ Deno.serve(async (req) => {
       pageContents.push({ url: website, text: logoMarker + homepageText.substring(0, 20000) });
     }
 
-    // Fetch sub-pages in parallel
+    // Fetch sub-pages in parallel. When the homepage is captcha-blocked, skip
+    // the direct fetch entirely and go straight to the Wayback Machine — this
+    // avoids wasting ~30 seconds on direct fetches that will all fail.
     // Team/people pages often contain many staff across tabbed sections — give them a larger
     // content budget so contacts from every tab are captured rather than truncated.
     const subPagePromises = COMMON_PATHS.map(async (path) => {
       const fullUrl = resolveUrl(website, path);
       if (!fullUrl || fullUrl === website) return null;
-      let text = await fetchPage(fullUrl);
-      // If the direct fetch failed (captcha/anti-bot 403), try the Wayback
-      // Machine for this specific sub-page — it bypasses the target site's
-      // protections and may have the team/people listing we need.
-      if ((!text || text.length < 100) && fullUrl.startsWith('http')) {
+      let text = '';
+      if (isHomepageBlocked && fullUrl.startsWith('http')) {
         text = await fetchViaWayback(fullUrl);
+      } else {
+        text = await fetchPage(fullUrl);
+        if ((!text || text.length < 100) && fullUrl.startsWith('http')) {
+          text = await fetchViaWayback(fullUrl);
+        }
       }
       if (text && text.length > 100) {
         const isPeoplePage = /\/(people|our-people|team|our-team|leadership|staff|about-us|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b/i.test(path);
@@ -1425,13 +1415,15 @@ Deno.serve(async (req) => {
       const toFetch = [...discovered].filter((u) => !existingUrls.has(u)).slice(0, 5);
       const teamPages = (await Promise.all(
         toFetch.map(async (teamUrl) => {
-          let text = await fetchPage(teamUrl);
-          // If the direct fetch failed (captcha/anti-bot), try the Wayback
-          // Machine for this specific team page — it bypasses the target
-          // site's protections and often has the full team listing.
-          if ((!text || text.length < 100) && teamUrl.startsWith('http')) {
-            console.log(`enrichFirmFromWebsite: direct fetch failed for ${teamUrl}, trying Wayback...`);
+          let text = '';
+          if (isHomepageBlocked && teamUrl.startsWith('http')) {
             text = await fetchViaWayback(teamUrl);
+          } else {
+            text = await fetchPage(teamUrl);
+            if ((!text || text.length < 100) && teamUrl.startsWith('http')) {
+              console.log(`enrichFirmFromWebsite: direct fetch failed for ${teamUrl}, trying Wayback...`);
+              text = await fetchViaWayback(teamUrl);
+            }
           }
           if (text && text.length > 100) return { url: teamUrl, text: text.substring(0, 80000) };
           return null;
@@ -1453,13 +1445,6 @@ Deno.serve(async (req) => {
 
     let combinedContent = pageContents.map((p) => `[Page: ${p.url}]\n${p.text}`).join('\n\n---\n\n');
 
-    // Detect a captcha / anti-bot challenge redirect (e.g. SiteGuard sgcaptcha,
-    // Cloudflare "Robot Challenge"), which serves a tiny meta-refresh stub
-    // instead of real content. This is an IP-reputation block that no
-    // cookie/header change can bypass.
-    const isHomepageCaptcha = !!homepageRaw &&
-      /\/\.well-known\/sgcaptcha|sgcaptcha|robot challenge|checking the site connection/i.test(homepageRaw) &&
-      homepageRaw.length < 1000;
     const subPageContentLength = subPages.reduce((sum, p) => sum + (p?.text?.length || 0), 0);
 
     // Wayback Machine fallback: if the direct fetch was captcha-blocked,
@@ -1733,11 +1718,26 @@ IMPORTANT:
     // Many firm "people" pages only show name + title on cards; the full bio lives
     // on a separate profile page linked from each card. For any person missing a
     // biography but with a bio_url, fetch that page and extract the biography.
-    await enrichMissingBiographies(base44, enrichedData.people || [], pageContents, website);
+    //
+    // TIME BUDGET: These enrichment phases make many LLM calls (one per person
+    // for biography extraction + one per person for education/experience). For
+    // a 20+ person team, that's 40+ LLM calls adding 30-60 seconds. To stay
+    // within platform timeout limits, skip these phases if the function has
+    // already been running for more than 45 seconds — the basic firm data and
+    // contact info (name, title, photo) is already extracted and valuable;
+    // biographies and education can be enriched on a subsequent run.
+    const elapsedMs = Date.now() - fnStartTime;
+    if (elapsedMs < TIME_BUDGET_MS) {
+      await enrichMissingBiographies(base44, enrichedData.people || [], pageContents, website);
+    } else {
+      console.log(`enrichFirmFromWebsite: skipping biography enrichment — time budget exceeded (${Math.round(elapsedMs / 1000)}s)`);
+    }
 
     // Extract education + professional experience from biographies (both the
     // ones just fetched and any real bios already on the listing page).
-    await enrichEducationExperienceFromBios(base44, enrichedData.people || []);
+    if (Date.now() - fnStartTime < TIME_BUDGET_MS) {
+      await enrichEducationExperienceFromBios(base44, enrichedData.people || []);
+    }
 
     // Rehost images
     await rehostFirmImages(base44, enrichedData, website);
