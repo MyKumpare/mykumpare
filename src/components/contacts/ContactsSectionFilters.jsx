@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Search, SlidersHorizontal, MapPin, Package, Tag, Users, Shield, Building2 } from "lucide-react";
+import { Search, SlidersHorizontal, MapPin, Package, Tag, Users, Shield, Building2, Briefcase } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -20,6 +20,13 @@ const FIELD_GROUPS = [
     icon: Package,
     fields: [
       { key: "product_name", label: "Product" },
+    ],
+  },
+  {
+    label: "Portfolios",
+    icon: Briefcase,
+    fields: [
+      { key: "portfolio_name", label: "Portfolio" },
     ],
   },
   {
@@ -71,6 +78,34 @@ function buildContactProductMap(products) {
   return map;
 }
 
+// Build a reverse map: contactId -> array of portfolio names
+// A contact is associated with a portfolio if any of their firm_ids matches
+// the portfolio's allocator firm (firm_id) or advisor firm (advisor_firm_id).
+function buildContactPortfolioMap(portfolios, contacts) {
+  const map = {};
+  if (!portfolios || !contacts) return map;
+  // Build firmId -> [portfolio names] lookup
+  const firmPortfolioMap = {};
+  for (const p of portfolios) {
+    if (p.deleted_at) continue;
+    const firmIds = [p.firm_id, p.advisor_firm_id].filter(Boolean);
+    for (const fid of firmIds) {
+      if (!firmPortfolioMap[fid]) firmPortfolioMap[fid] = [];
+      if (!firmPortfolioMap[fid].includes(p.portfolio_name)) firmPortfolioMap[fid].push(p.portfolio_name);
+    }
+  }
+  // Map each contact to portfolio names via their firm_ids
+  for (const c of contacts) {
+    const firmIds = c.firm_ids || [];
+    const names = new Set();
+    for (const fid of firmIds) {
+      for (const name of firmPortfolioMap[fid] || []) names.add(name);
+    }
+    if (names.size > 0) map[c.id] = Array.from(names);
+  }
+  return map;
+}
+
 function getAddrValues(c, fieldKey) {
   const addrs = c.addresses || [];
   const propMap = { addr_city: "city", addr_state: "state", addr_country: "country" };
@@ -80,12 +115,15 @@ function getAddrValues(c, fieldKey) {
   return [...new Set(vals)];
 }
 
-function getFieldValue(c, f, firmMap, contactProductMap) {
+function getFieldValue(c, f, firmMap, contactProductMap, contactPortfolioMap) {
   if (f.key.startsWith("addr_")) {
     return getAddrValues(c, f.key);
   }
   if (f.key === "product_name") {
     return contactProductMap[c.id] || [];
+  }
+  if (f.key === "portfolio_name") {
+    return contactPortfolioMap[c.id] || [];
   }
   if (f.key === "firm_name") {
     const firmIds = c.firm_ids || [];
@@ -96,7 +134,7 @@ function getFieldValue(c, f, firmMap, contactProductMap) {
 }
 
 // Pure filter function: text search + per-field multi-select
-export function filterSectionContacts(contacts, text, selected, firmMap, contactProductMap) {
+export function filterSectionContacts(contacts, text, selected, firmMap, contactProductMap, contactPortfolioMap) {
   const q = text.trim().toLowerCase();
   return contacts.filter((c) => {
     if (q) {
@@ -111,7 +149,7 @@ export function filterSectionContacts(contacts, text, selected, firmMap, contact
       for (const f of group.fields) {
         const sel = selected[f.key];
         if (!sel || sel.size === 0) continue;
-        const vals = getFieldValue(c, f, firmMap, contactProductMap);
+        const vals = getFieldValue(c, f, firmMap, contactProductMap, contactPortfolioMap);
         if (!vals.some((v) => sel.has(v))) return false;
       }
     }
@@ -119,7 +157,7 @@ export function filterSectionContacts(contacts, text, selected, firmMap, contact
   });
 }
 
-export default function ContactsSectionFilters({ contacts, firms, products, text, onTextChange, selected, onToggle, onClear }) {
+export default function ContactsSectionFilters({ contacts, firms, products, portfolios, text, onTextChange, selected, onToggle, onClear }) {
   const [showFilters, setShowFilters] = useState(false);
 
   const firmMap = useMemo(
@@ -132,6 +170,11 @@ export default function ContactsSectionFilters({ contacts, firms, products, text
     [products]
   );
 
+  const contactPortfolioMap = useMemo(
+    () => buildContactPortfolioMap(portfolios, contacts),
+    [portfolios, contacts]
+  );
+
   // Derive available options from the current contact set
   const options = useMemo(() => {
     const opts = {};
@@ -139,13 +182,13 @@ export default function ContactsSectionFilters({ contacts, firms, products, text
       for (const f of group.fields) {
         const set = new Set();
         for (const c of contacts) {
-          getFieldValue(c, f, firmMap, contactProductMap).forEach((v) => v && set.add(v));
+          getFieldValue(c, f, firmMap, contactProductMap, contactPortfolioMap).forEach((v) => v && set.add(v));
         }
         opts[f.key] = Array.from(set).sort();
       }
     }
     return opts;
-  }, [contacts, firmMap, contactProductMap]);
+  }, [contacts, firmMap, contactProductMap, contactPortfolioMap]);
 
   const activeCount = Object.values(selected).reduce((n, s) => n + (s ? s.size : 0), 0) + (text.trim() ? 1 : 0);
 

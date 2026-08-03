@@ -777,6 +777,7 @@ export default function Home() {
           contacts={activeContacts}
           firms={activeFirms}
           products={activeProducts}
+          portfolios={portfolios.filter(p => !p.deleted_at)}
           onContactClick={(contact) => setViewingContact(contact)}
           onFirmClick={(firm) => handleEdit(firm, false, false)}
           onAddContact={() => setAddContactOpen(true)}

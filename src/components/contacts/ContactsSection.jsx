@@ -46,7 +46,7 @@ function ContactAvatar({ contact }) {
   );
 }
 
-export default function ContactsSection({ contacts, firms, products, onContactClick, onAddContact, onFirmClick, forceExpanded }) {
+export default function ContactsSection({ contacts, firms, products, portfolios, onContactClick, onAddContact, onFirmClick, forceExpanded }) {
   const [expanded, setExpanded] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState({});
   const [expandedFirms, setExpandedFirms] = useState({});
@@ -92,11 +92,33 @@ export default function ContactsSection({ contacts, firms, products, onContactCl
     return map;
   }, [products]);
 
+  // Build contactId -> portfolio names map via firm associations
+  const contactPortfolioMap = useMemo(() => {
+    const map = {};
+    if (!portfolios || !contacts) return map;
+    const firmPortfolioMap = {};
+    for (const p of portfolios) {
+      if (p.deleted_at) continue;
+      for (const fid of [p.firm_id, p.advisor_firm_id].filter(Boolean)) {
+        if (!firmPortfolioMap[fid]) firmPortfolioMap[fid] = [];
+        if (!firmPortfolioMap[fid].includes(p.portfolio_name)) firmPortfolioMap[fid].push(p.portfolio_name);
+      }
+    }
+    for (const c of contacts) {
+      const names = new Set();
+      for (const fid of c.firm_ids || []) {
+        for (const name of firmPortfolioMap[fid] || []) names.add(name);
+      }
+      if (names.size > 0) map[c.id] = Array.from(names);
+    }
+    return map;
+  }, [portfolios, contacts]);
+
   const hasFilters = filterText.trim() || Object.keys(filterSelected).length > 0;
   const filteredContacts = useMemo(() => {
     if (!hasFilters) return contacts;
-    return filterSectionContacts(contacts, filterText, filterSelected, firmMap, contactProductMap);
-  }, [contacts, filterText, filterSelected, firmMap, contactProductMap, hasFilters]);
+    return filterSectionContacts(contacts, filterText, filterSelected, firmMap, contactProductMap, contactPortfolioMap);
+  }, [contacts, filterText, filterSelected, firmMap, contactProductMap, contactPortfolioMap, hasFilters]);
 
   // Group contacts: by firm type → by firm → sorted by last name
   const grouped = FIRM_TYPES.reduce((acc, groupType) => {
@@ -190,6 +212,7 @@ export default function ContactsSection({ contacts, firms, products, onContactCl
             contacts={contacts}
             firms={firms}
             products={products}
+            portfolios={portfolios}
             text={filterText}
             onTextChange={setFilterText}
             selected={filterSelected}
