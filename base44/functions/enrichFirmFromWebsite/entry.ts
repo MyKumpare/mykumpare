@@ -1563,13 +1563,44 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Re-sort pageContents so people/team pages come first (after the homepage),
-    // ensuring the LLM sees the most important content first. The Wayback merge
-    // may have added team pages at the end — this moves them up so they're not
-    // lost when the combined content is truncated for the LLM prompt.
+    // Deduplicate and re-sort pageContents so people/team pages come first.
+    // Without dedup, many COMMON_PATHS URLs return the same content via
+    // different paths (e.g. /about/board and /board are the same page),
+    // pushing the actual staff page past the 150K LLM prompt limit.
     if (pageContents.length > 1) {
       const homepageEntry = pageContents[0];
-      const rest = pageContents.slice(1);
+      let rest = pageContents.slice(1);
+
+      // Filter out individual profile pages and blog posts that dilute content
+      // and slow down the LLM extraction.
+      rest = rest.filter((page) => {
+        // Skip individual profile pages (e.g. /staff/helen-holton/) — their info
+        // is already on the listing page, and they add ~15K chars of noise.
+        if (/\/staff\/[^/]+\/?$/i.test(page.url) && page.text.length < 8000) return false;
+        // Skip blog posts (URLs with year/month/date patterns)
+        if (/\/\d{4}\/\d{2}\/\d{2}\//.test(page.url)) return false;
+        return true;
+      });
+
+      // Deduplicate by content: if two pages share the same first 500 chars,
+      // keep only the one with the shorter URL (usually the canonical path).
+      const seen = new Map<string, { url: string; text: string }>();
+      for (const page of rest) {
+        const fingerprint = page.text.substring(0, 500).replace(/\s+/g, ' ').trim();
+        let matchedKey: string | null = null;
+        for (const [key] of seen) {
+          if (fingerprint === key) { matchedKey = key; break; }
+        }
+        if (matchedKey) {
+          const existing = seen.get(matchedKey)!;
+          if (page.url.length < existing.url.length) seen.set(matchedKey, page);
+        } else {
+          seen.set(fingerprint, page);
+        }
+      }
+      rest = [...seen.values()];
+
+      // Sort: people/team pages first
       rest.sort((a, b) => {
         const aPeople = /\/(people|our-people|team|our-team|leadership|staff|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b/i.test(a.url) ? 0 : 1;
         const bPeople = /\/(people|our-people|team|our-team|leadership|staff|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b/i.test(b.url) ? 0 : 1;
