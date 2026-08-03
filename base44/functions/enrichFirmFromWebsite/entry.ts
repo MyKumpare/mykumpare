@@ -14,11 +14,37 @@ const COMMON_PATHS = [
   '/about/people',
   '/about/leadership',
   '/about/staff',
+  '/about/board',
+  '/about/board-of-directors',
+  '/about/board-of-trustees',
+  '/about/governance',
+  '/about/administration',
+  '/about/administrators',
+  '/about/executive-leadership',
+  '/about/executive-team',
+  '/about/executive',
+  '/about/consultants',
+  '/about/our-consultants',
   '/team',
   '/our-team',
   '/people',
   '/our-people',
   '/leadership',
+  '/leadership-team',
+  '/executive-leadership',
+  '/executive-team',
+  '/executive',
+  '/executives',
+  '/board',
+  '/board-of-directors',
+  '/board-of-trustees',
+  '/boards',
+  '/trustees',
+  '/governance',
+  '/administration',
+  '/administrators',
+  '/consultants',
+  '/our-consultants',
   '/team-members',
   '/staff',
   '/contact',
@@ -29,6 +55,14 @@ const COMMON_PATHS = [
   '/about-us/our-people',
   '/about-us/leadership',
   '/about-us/staff',
+  '/about-us/board',
+  '/about-us/board-of-directors',
+  '/about-us/board-of-trustees',
+  '/about-us/governance',
+  '/about-us/administration',
+  '/about-us/executive-leadership',
+  '/about-us/executive-team',
+  '/about-us/consultants',
   '/company',
   '/philosophy',
   '/approach',
@@ -639,7 +673,7 @@ async function discoverBioUrlByPattern(
     if (/\/(people|our-people|team|our-team|leadership|staff)\b/i.test(page.url)) {
       let base = page.url;
       if (!base.endsWith('/')) base = base + '/';
-      const kwMatch = base.match(/(.*?\/(?:people|our-people|team|our-team|leadership|staff|personnel|professionals)\/)/i);
+      const kwMatch = base.match(/(.*?\/(?:people|our-people|team|our-team|leadership|staff|personnel|professionals|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\/)/i);
       if (kwMatch) {
         baseCandidates.push(kwMatch[1]);
       } else {
@@ -910,11 +944,11 @@ async function enrichFirmViaWebSearch(
     // Step 1: Use web search to gather raw information about the firm
     const rawContent = await base44.integrations.Core.InvokeLLM({
       prompt: `Search the web for the investment firm "${firmName}" (official website: ${website}).
-Find their team/leadership page and list ALL team members visible on that page. Also find their firm's description, LinkedIn URL, year founded, address, and phone.
+Find their team/leadership page and list ALL team members visible on that page — INCLUDING board members, trustees, executive leadership, administrators, and consultants, not just investment team members. Also find their firm's description, LinkedIn URL, year founded, address, and phone.
 
 For EACH team member, include:
 - Their full name
-- Their title/role (e.g. CEO, COO, Director of Partnerships)
+- Their title/role (e.g. CEO, COO, Director of Partnerships, Trustee, Board Member, Administrator, Consultant)
 - Their LinkedIn profile URL if visible on the page
 - The FULL URL of their profile photo — this typically looks like ${website}/wp-content/uploads/... Search the page source for image URLs on the ${website} domain.
 - Their biography if available
@@ -1200,7 +1234,7 @@ Deno.serve(async (req) => {
       if (!fullUrl || fullUrl === website) return null;
       const text = await fetchPage(fullUrl);
       if (text && text.length > 100) {
-        const isPeoplePage = /\/(people|our-people|team|our-team|leadership|staff|about-us)\b/i.test(path);
+        const isPeoplePage = /\/(people|our-people|team|our-team|leadership|staff|about-us|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b/i.test(path);
         const limit = isPeoplePage ? 80000 : 12000;
         return { url: fullUrl, text: text.substring(0, limit) };
       }
@@ -1225,7 +1259,7 @@ Deno.serve(async (req) => {
           let linkHost = '';
           try { linkHost = new URL(url).host.toLowerCase(); } catch { /* ignore */ }
           if (!linkHost || linkHost !== baseHost) continue;
-          if (/\/(people|our-people|team|our-team|leadership|staff|personnel|professionals)\b/i.test(url)) {
+          if (/\/(people|our-people|team|our-team|leadership|staff|personnel|professionals|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b/i.test(url)) {
             if (url !== website) discovered.add(url);
           }
         }
@@ -1234,7 +1268,7 @@ Deno.serve(async (req) => {
       // look like team pages from any internal links (catches /about-xponance/people/
       // even when the full URL doesn't match the keyword regex).
       for (const text of allText) {
-        const pathRegex = /\[LINK:\s*https?:\/\/[^^\]]*?\/[^[\]]*?(people|our-people|team|our-team|leadership)\b[^\]]*\]/gi;
+        const pathRegex = /\[LINK:\s*https?:\/\/[^^\]]*?\/[^[\]]*?(people|our-people|team|our-team|leadership|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b[^\]]*\]/gi;
         let pmatch: RegExpExecArray | null;
         while ((pmatch = pathRegex.exec(text)) !== null) {
           const url = pmatch[0].replace(/\[LINK:\s*/, '').replace(/\]$/, '').trim();
@@ -1256,8 +1290,8 @@ Deno.serve(async (req) => {
     // Sort so people/team pages come first (most important for contact extraction),
     // keeping homepage at the front.
     subPages.sort((a, b) => {
-      const aPeople = /\/(people|our-people|team|our-team|leadership|staff)\b/i.test(a.url) ? 0 : 1;
-      const bPeople = /\/(people|our-people|team|our-team|leadership|staff)\b/i.test(b.url) ? 0 : 1;
+      const aPeople = /\/(people|our-people|team|our-team|leadership|staff|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b/i.test(a.url) ? 0 : 1;
+      const bPeople = /\/(people|our-people|team|our-team|leadership|staff|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b/i.test(b.url) ? 0 : 1;
       return aPeople - bPeople;
     });
     for (const page of subPages) {
@@ -1337,10 +1371,10 @@ Extract the following information from this website content:
 
 CRITICAL — EXTRACT EVERY PERSON:
 - You MUST extract EVERY single person listed on the people/team page. Do NOT stop after the first few.
-- The people page is organized in sections (Executive, Investment Team, Portfolio Operations, Corporate, Sales & Client Service, etc.). Go through EVERY section and extract EVERY person in EVERY section.
+- The people page is organized in sections (Executive Leadership, Investment Team, Portfolio Operations, Corporate, Sales & Client Service, Board of Directors, Board of Trustees, Administrators, Consultants, etc.). Go through EVERY section and extract EVERY person in EVERY section. You MUST include board members, trustees, executive leadership, administrators, and consultants — these are contacts just like investment team members.
 - Some pages use tabbed or filtered layouts (e.g. "All Teams", "Our Leaders", "Domestic Equities Experts", "Emerging Markets Equities Experts", "Global Equities Experts", "Marketing and Client Service", "Administration and Trading"). ALL of these tabs/sections are included in the content below — you must process EVERY one of them, not just the first.
 - If a person appears in multiple sections, extract them once with their most detailed title.
-- CRITICAL: Section/tab labels like "Our Leaders", "Domestic Equities Experts", "Emerging Markets Equities Experts", "Global Equities Experts", "Marketing and Client Service", "Administration and Trading", "Company Board of Directors", "Mutual Fund Board of Trustees", "All Teams" are TAB HEADERS, NOT people. Do NOT include them as people entries. Only extract entries that have a real person's first and last name.
+- CRITICAL: Section/tab labels like "Our Leaders", "Domestic Equities Experts", "Emerging Markets Equities Experts", "Global Equities Experts", "Marketing and Client Service", "Administration and Trading", "Company Board of Directors", "Mutual Fund Board of Trustees", "All Teams" are TAB HEADERS, NOT people. Do NOT include the LABELS themselves as people entries. But DO extract every REAL PERSON listed under those sections — board members, trustees, executive leadership, administrators, and consultants are all contacts that must be included. Only extract entries that have a real person's first and last name.
 - Each person card typically has a photo (shown as [IMAGE: ...]), a name (usually in a heading like "#### Name"), and a title/role below it.
 - IMPORTANT: Some sites embed team data as JSON inside <script> tags. This data has been extracted and appears as [PERSON: name="..." title="..." photo_url="..." bio_url="..."] markers in the "Embedded Team Data" section. You MUST extract EVERY [PERSON: ...] marker as a person entry. Each marker provides the person's name, title, photo_url, and bio_url (their individual profile page). Use these fields directly — do NOT skip any [PERSON: ...] marker.
 - Do NOT skip anyone. If you see 40+ people on the page, return all 40+ in the people array.
