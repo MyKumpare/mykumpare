@@ -983,41 +983,79 @@ async function fetchViaWayback(url: string): Promise<string> {
   }
 }
 
-// Fetch the homepage + key team/people sub-pages from the Wayback Machine.
+// Fetch the homepage + team/people sub-pages from the Wayback Machine.
 // Returns an array of {url, text} in the same format as pageContents.
+//
+// Two-pass discovery: (1) fetch the homepage + common sub-page paths, then
+// (2) scan ALL fetched pages for additional team/people links and fetch those.
+// The Wayback Machine wraps internal links as
+// https://web.archive.org/web/{timestamp}/{original_url}, so we unwrap them
+// to recover the original URLs. This catches non-standard paths like
+// /about-us/executive-staff/ that are only linked from sub-pages, not the homepage.
 async function fetchPagesViaWayback(
   website: string,
 ): Promise<{ url: string; text: string }[]> {
   const pages: { url: string; text: string }[] = [];
   try {
+    let baseHost = '';
+    try { baseHost = new URL(website).host.toLowerCase(); } catch { /* ignore */ }
+
+    // Helper: scan text for team/people page URLs (unwrapping Wayback URLs)
+    const discoverLinks = (text: string, found: Set<string>) => {
+      const linkRegex = /\[LINK:\s*(https?:\/\/[^\]]+)\]/gi;
+      let lmatch: RegExpExecArray | null;
+      while ((lmatch = linkRegex.exec(text)) !== null) {
+        const originalUrl = unwrapWaybackUrl(lmatch[1]);
+        let linkHost = '';
+        try { linkHost = new URL(originalUrl).host.toLowerCase(); } catch { /* ignore */ }
+        if (!linkHost || linkHost !== baseHost) continue;
+        if (/\/(people|our-people|team|our-team|leadership|staff|personnel|professionals|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b/i.test(originalUrl)) {
+          if (originalUrl !== website) found.add(originalUrl);
+        }
+      }
+    };
+
     // Fetch the homepage first
     const homepageText = await fetchViaWayback(website);
     if (!homepageText || homepageText.length < 100) return pages;
     pages.push({ url: website, text: homepageText.substring(0, 20000) });
 
-    // Fetch the most important team/people sub-pages in parallel
-    const keyPaths = [
-      '/about', '/about/our-team', '/about/team', '/about/people',
-      '/about/leadership', '/about/board', '/about/board-of-directors',
-      '/about/board-of-trustees', '/about/governance',
-      '/team', '/our-team', '/people', '/our-people', '/leadership',
-      '/board', '/board-of-directors', '/board-of-trustees', '/trustees',
-      '/about-us', '/about-us/our-team', '/about-us/team',
-      '/company', '/contact',
-    ];
-    const subResults = await Promise.all(
-      keyPaths.map(async (path) => {
-        const fullUrl = resolveUrl(website, path);
-        if (!fullUrl || fullUrl === website) return null;
-        const text = await fetchViaWayback(fullUrl);
+    // Pass 1: common paths + links discovered from the homepage
+    const pass1Urls = new Set<string>();
+    COMMON_PATHS.map((p) => resolveUrl(website, p)).filter((u): u is string => !!u && u !== website).forEach((u) => pass1Urls.add(u));
+    discoverLinks(homepageText, pass1Urls);
+
+    const pass1Results = await Promise.all(
+      [...pass1Urls].slice(0, 12).map(async (originalUrl) => {
+        const text = await fetchViaWayback(originalUrl);
         if (!text || text.length < 100) return null;
-        const isPeoplePage = /\/(people|our-people|team|our-team|leadership|board|trustees|governance|about-us)\b/i.test(path);
+        const isPeoplePage = /\/(people|our-people|team|our-team|leadership|board|trustees|governance|administration|administrators|executive|executives|consultants|directors|about-us|about)\b/i.test(originalUrl);
         const limit = isPeoplePage ? 80000 : 12000;
-        return { url: fullUrl, text: text.substring(0, limit) };
+        return { url: originalUrl, text: text.substring(0, limit) };
       }),
     );
-    for (const p of subResults) {
+    for (const p of pass1Results) {
       if (p) pages.push(p);
+    }
+
+    // Pass 2: scan all fetched pages for additional team/people links not yet fetched
+    const fetchedUrls = new Set(pages.map((p) => p.url));
+    const pass2Urls = new Set<string>();
+    for (const page of pages) {
+      discoverLinks(page.text, pass2Urls);
+    }
+    const toFetch2 = [...pass2Urls].filter((u) => !fetchedUrls.has(u)).slice(0, 5);
+    if (toFetch2.length > 0) {
+      const pass2Results = await Promise.all(
+        toFetch2.map(async (originalUrl) => {
+          const text = await fetchViaWayback(originalUrl);
+          if (!text || text.length < 100) return null;
+          return { url: originalUrl, text: text.substring(0, 80000) };
+        }),
+      );
+      for (const p of pass2Results) {
+        if (p) pages.push(p);
+      }
     }
   } catch {
     // non-fatal — return whatever we have
@@ -1332,7 +1370,13 @@ Deno.serve(async (req) => {
     const subPagePromises = COMMON_PATHS.map(async (path) => {
       const fullUrl = resolveUrl(website, path);
       if (!fullUrl || fullUrl === website) return null;
-      const text = await fetchPage(fullUrl);
+      let text = await fetchPage(fullUrl);
+      // If the direct fetch failed (captcha/anti-bot 403), try the Wayback
+      // Machine for this specific sub-page — it bypasses the target site's
+      // protections and may have the team/people listing we need.
+      if ((!text || text.length < 100) && fullUrl.startsWith('http')) {
+        text = await fetchViaWayback(fullUrl);
+      }
       if (text && text.length > 100) {
         const isPeoplePage = /\/(people|our-people|team|our-team|leadership|staff|about-us|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b/i.test(path);
         const limit = isPeoplePage ? 80000 : 12000;
@@ -1379,7 +1423,14 @@ Deno.serve(async (req) => {
       const toFetch = [...discovered].filter((u) => !existingUrls.has(u)).slice(0, 5);
       const teamPages = (await Promise.all(
         toFetch.map(async (teamUrl) => {
-          const text = await fetchPage(teamUrl);
+          let text = await fetchPage(teamUrl);
+          // If the direct fetch failed (captcha/anti-bot), try the Wayback
+          // Machine for this specific team page — it bypasses the target
+          // site's protections and often has the full team listing.
+          if ((!text || text.length < 100) && teamUrl.startsWith('http')) {
+            console.log(`enrichFirmFromWebsite: direct fetch failed for ${teamUrl}, trying Wayback...`);
+            text = await fetchViaWayback(teamUrl);
+          }
           if (text && text.length > 100) return { url: teamUrl, text: text.substring(0, 80000) };
           return null;
         }),
@@ -1409,30 +1460,60 @@ Deno.serve(async (req) => {
       homepageRaw.length < 1000;
     const subPageContentLength = subPages.reduce((sum, p) => sum + (p?.text?.length || 0), 0);
 
-    // Wayback Machine fallback: if the direct fetch was captcha-blocked or
-    // returned insufficient content, try fetching cached snapshots from the
-    // Internet Archive. The Wayback Machine serves from its own archive, so
-    // it bypasses the target site's captcha/anti-bot protections entirely —
-    // and provides the full HTML (photos, bios, complete team listings) that
-    // the LLM web-search fallback can't.
+    // Wayback Machine fallback: if the direct fetch was captcha-blocked,
+    // returned insufficient content, or didn't fetch enough team/people
+    // sub-pages, try fetching cached snapshots from the Internet Archive.
+    // The Wayback Machine serves from its own archive, so it bypasses the
+    // target site's captcha/anti-bot protections entirely — and provides the
+    // full HTML (photos, bios, complete team listings) that the LLM
+    // web-search fallback can't.
+    //
+    // We MERGE Wayback pages with the direct-fetch pages (adding only pages
+    // not already fetched) rather than replacing them, so we don't lose any
+    // content the direct fetch successfully retrieved.
+    const peoplePageCount = subPages.filter((p) =>
+      /\/(people|our-people|team|our-team|leadership|staff|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b/i.test(p.url)
+    ).length;
     let waybackUsed = false;
-    if ((isHomepageCaptcha || combinedContent.length < 50) && website) {
-      console.log('enrichFirmFromWebsite: direct fetch insufficient, trying Wayback Machine fallback...');
+    if ((isHomepageCaptcha || combinedContent.length < 5000 || peoplePageCount < 2) && website) {
+      console.log(`enrichFirmFromWebsite: direct fetch insufficient (captcha=${isHomepageCaptcha}, content=${combinedContent.length} chars, peoplePages=${peoplePageCount}), trying Wayback Machine fallback...`);
       const waybackPages = await fetchPagesViaWayback(website);
       if (waybackPages.length > 0) {
-        pageContents.length = 0;
-        pageContents.push(...waybackPages);
+        const existingUrls = new Set(pageContents.map((p) => p.url));
+        for (const wp of waybackPages) {
+          if (!existingUrls.has(wp.url)) {
+            pageContents.push(wp);
+            existingUrls.add(wp.url);
+          }
+        }
         combinedContent = pageContents.map((p) => `[Page: ${p.url}]\n${p.text}`).join('\n\n---\n\n');
-        waybackUsed = combinedContent.length >= 50;
-        console.log(`enrichFirmFromWebsite: Wayback provided ${waybackPages.length} pages, ${combinedContent.length} chars, succeeded=${waybackUsed}`);
+        waybackUsed = true;
+        console.log(`enrichFirmFromWebsite: Wayback merged ${waybackPages.length} pages, total ${pageContents.length} pages, ${combinedContent.length} chars`);
       }
+    }
+
+    // Re-sort pageContents so people/team pages come first (after the homepage),
+    // ensuring the LLM sees the most important content first. The Wayback merge
+    // may have added team pages at the end — this moves them up so they're not
+    // lost when the combined content is truncated for the LLM prompt.
+    if (pageContents.length > 1) {
+      const homepageEntry = pageContents[0];
+      const rest = pageContents.slice(1);
+      rest.sort((a, b) => {
+        const aPeople = /\/(people|our-people|team|our-team|leadership|staff|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b/i.test(a.url) ? 0 : 1;
+        const bPeople = /\/(people|our-people|team|our-team|leadership|staff|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b/i.test(b.url) ? 0 : 1;
+        return aPeople - bPeople;
+      });
+      pageContents.length = 0;
+      pageContents.push(homepageEntry, ...rest);
+      combinedContent = pageContents.map((p) => `[Page: ${p.url}]\n${p.text}`).join('\n\n---\n\n');
     }
 
     // Only fall back to web search if the homepage was captcha-blocked, the
     // sub-pages didn't have enough content, AND the Wayback Machine didn't
     // help. Some sites block the homepage fetch but still allow direct
     // sub-page access — in that case we have enough content to proceed.
-    const isCaptchaBlocked = isHomepageCaptcha && subPageContentLength < 500 && !waybackUsed;
+    const isCaptchaBlocked = isHomepageCaptcha && subPageContentLength < 500 && !waybackUsed && combinedContent.length < 5000;
     if (isCaptchaBlocked) {
       const fallback = await enrichFirmViaWebSearch(base44, firm_name, website);
       if (fallback && (fallback.name || (Array.isArray(fallback.people) && fallback.people.length > 0))) {
