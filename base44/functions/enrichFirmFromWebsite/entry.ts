@@ -944,40 +944,42 @@ function unwrapWaybackUrl(url: string): string {
 }
 
 // Fetch a single page from the Wayback Machine. Returns the page text (via
-// htmlToText) or '' if no snapshot is available. Uses the original URL as the
-// base for resolveUrl so image/link URLs are resolved against the original
-// domain.
+// htmlToText) or '' if no snapshot is available. Uses a direct Wayback URL
+// format (/web/{year}/{url}) which the Wayback Machine auto-redirects to the
+// closest snapshot — this avoids the rate-limited availability API (which
+// returns 429 errors when too many requests are made in rapid succession).
 async function fetchViaWayback(url: string): Promise<string> {
+  if (!url || !url.startsWith('http')) return '';
   try {
-    // Step 1: Use the availability API to find the closest snapshot
-    const availabilityUrl = `https://archive.org/wayback/available?url=${encodeURIComponent(url)}`;
-    const availController = new AbortController();
-    const availTimeout = setTimeout(() => availController.abort(), 10000);
-    const availResp = await fetch(availabilityUrl, {
-      headers: { 'Accept': 'application/json' },
-      signal: availController.signal,
-    });
-    clearTimeout(availTimeout);
-    if (!availResp.ok) return '';
-    const availData = await availResp.json();
-    const snapshotUrl: string | undefined = availData?.archived_snapshots?.closest?.url;
-    if (!snapshotUrl) return '';
-
-    // Step 2: Fetch the snapshot HTML
-    const snapController = new AbortController();
-    const snapTimeout = setTimeout(() => snapController.abort(), 15000);
-    const snapResp = await fetch(snapshotUrl, {
+    // Use a direct Wayback URL with a recent year — the Wayback Machine
+    // redirects to the closest available snapshot. This avoids the
+    // availability API (which is rate-limited and causes 429 errors).
+    const waybackUrl = `https://web.archive.org/web/2024/${url}`;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    const resp = await fetch(waybackUrl, {
       headers: browserHeaders(''),
       redirect: 'follow',
-      signal: snapController.signal,
+      signal: controller.signal,
     });
-    clearTimeout(snapTimeout);
-    if (!snapResp.ok) return '';
-    const contentType = snapResp.headers.get('content-type') || '';
+    clearTimeout(timeout);
+    if (!resp.ok) return '';
+    const contentType = resp.headers.get('content-type') || '';
     if (!contentType.includes('text') && !contentType.includes('html')) return '';
-    const html = await snapResp.text();
+    const html = await resp.text();
     if (!html || html.length < 100) return '';
-    return htmlToText(html, url);
+    // Rewrite Wayback-wrapped URLs (href/src) to their original form so that
+    // htmlToText can use the ORIGINAL url as the base. This way:
+    // - Internal links resolve to the original domain (correct for discovery)
+    // - Image URLs (e.g. /getmedia/...) resolve to the original domain
+    //   (fetchable by rehostImages, since the root domain is usually not
+    //   captcha-blocked even when /about-us/ sub-pages are)
+    // Wayback wraps links as: /web/{timestamp}/{original_url}
+    const processedHtml = html.replace(
+      /((?:href|src)\s*=\s*["'])(?:https?:\/\/web\.archive\.org)?\/web\/\d+(?:[a-z_]+)?\//gi,
+      '$1',
+    );
+    return htmlToText(processedHtml, url);
   } catch {
     return '';
   }
