@@ -4,22 +4,37 @@ const NOMINATIM_URL = "https://nominatim.openstreetmap.org/search";
 
 async function geocodeOne(query) {
   if (!query || !query.trim()) return null;
-  const url = `${NOMINATIM_URL}?q=${encodeURIComponent(query.trim())}&format=json&limit=1`;
-  try {
-    const resp = await fetch(url, {
-      headers: { "User-Agent": "MyKumpare/1.0" }
-    });
-    if (!resp.ok) return null;
-    const data = await resp.json();
-    if (!Array.isArray(data) || data.length === 0) return null;
-    return {
-      lat: parseFloat(data[0].lat),
-      lon: parseFloat(data[0].lon),
-      displayName: data[0].display_name
-    };
-  } catch {
-    return null;
+  let q = query.trim();
+  // Build the list of Nominatim URLs to try in order. For US zip codes
+  // (5 digits, optionally +4), try the structured postalcode search
+  // with countrycodes=us first, then fall back to a text search with
+  // ", USA" appended. For everything else, just use the text search.
+  const zipMatch = q.match(/^(\d{5})(?:-(\d{4}))?$/);
+  const urls = zipMatch
+    ? [
+        `${NOMINATIM_URL}?postalcode=${encodeURIComponent(zipMatch[1])}&countrycodes=us&format=json&limit=1`,
+        `${NOMINATIM_URL}?q=${encodeURIComponent(`${q}, USA`)}&format=json&limit=1`,
+      ]
+    : [`${NOMINATIM_URL}?q=${encodeURIComponent(q)}&format=json&limit=1`];
+  for (const url of urls) {
+    try {
+      const resp = await fetch(url, {
+        headers: { "User-Agent": "MyKumpare/1.0" }
+      });
+      if (!resp.ok) continue;
+      const data = await resp.json();
+      if (Array.isArray(data) && data.length > 0) {
+        return {
+          lat: parseFloat(data[0].lat),
+          lon: parseFloat(data[0].lon),
+          displayName: data[0].display_name
+        };
+      }
+    } catch {
+      // try next url
+    }
   }
+  return null;
 }
 
 // Geocode a batch of queries with limited concurrency (2 at a time)
