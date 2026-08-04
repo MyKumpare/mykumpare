@@ -446,8 +446,13 @@ export default function MapSearchModal({
         }
       }
 
+      // Use stored geocode where available; only geocode the rest
       const locationsToGeocode = candidateResults
-        .filter((r) => r.address)
+        .filter(
+          (r) =>
+            r.address &&
+            !(typeof r.address.latitude === "number" && typeof r.address.longitude === "number")
+        )
         .map((r) => ({
           key: r.id,
           addressLine1: r.address.address_line1,
@@ -472,6 +477,14 @@ export default function MapSearchModal({
 
       let finalResults = candidateResults
         .map((r) => {
+          // Prefer stored geocode
+          if (
+            r.address &&
+            typeof r.address.latitude === "number" &&
+            typeof r.address.longitude === "number"
+          ) {
+            return { ...r, lat: r.address.latitude, lon: r.address.longitude };
+          }
           const geo = geocodedMap[r.id];
           if (!geo) return null;
           return { ...r, lat: geo.lat, lon: geo.lon };

@@ -296,6 +296,14 @@
           },
           "address_line2": {
             "type": "string"
+          },
+          "latitude": {
+            "type": "number",
+            "description": "Geocoded latitude for this address (used by map search to skip re-geocoding)"
+          },
+          "longitude": {
+            "type": "number",
+            "description": "Geocoded longitude for this address (used by map search to skip re-geocoding)"
           }
         }
       }

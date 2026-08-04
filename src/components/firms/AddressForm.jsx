@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { MapPin, Trash2, Star, ExternalLink } from "lucide-react";
+import { MapPin, Trash2, Star, ExternalLink, Loader2, LocateFixed } from "lucide-react";
 import { COUNTRIES, getStatesForCountry } from "./geoData";
 import { useZipCodeLookup } from "./useZipCodeLookup";
+import { base44 } from "@/api/base44Client";
 
 function buildMapsUrl(address) {
   const parts = [
@@ -23,8 +24,22 @@ function buildMapsUrl(address) {
   return `https://www.google.com/maps/dir/?api=1&destination=${query}`;
 }
 
+function buildAddressString(address) {
+  const parts = [
+    address.address_line1,
+    address.address_line2,
+    address.city,
+    address.state,
+    address.postal_code,
+    COUNTRIES.find(c => c.code === address.country)?.name,
+  ].filter(Boolean);
+  return parts.join(", ");
+}
+
 export default function AddressForm({ address, onChange, onDelete, onSetHeadquarters, isHeadquarters, isEditing, isOnly }) {
   const [manualCity, setManualCity] = useState(false);
+  const [geocoding, setGeocoding] = useState(false);
+  const [geoError, setGeoError] = useState(null);
   const { lookupZip, getCitiesForState, saveZipMapping } = useZipCodeLookup();
 
   const states = getStatesForCountry(address.country || "");
@@ -62,6 +77,36 @@ export default function AddressForm({ address, onChange, onDelete, onSetHeadquar
     } else {
       setManualCity(false);
       onChange({ ...address, city: val });
+    }
+  };
+
+  const handleAutoLocate = async () => {
+    const addrStr = buildAddressString(address);
+    if (!addrStr) {
+      setGeoError("Fill in address fields first.");
+      return;
+    }
+    setGeocoding(true);
+    setGeoError(null);
+    try {
+      const resp = await base44.functions.invoke("geocodeLocations", {
+        centerQuery: addrStr,
+        locations: [],
+      });
+      const data = resp?.data ?? resp ?? {};
+      if (!data.center) {
+        setGeoError("Could not geocode this address. Try a more specific address.");
+        return;
+      }
+      onChange({
+        ...address,
+        latitude: data.center.lat,
+        longitude: data.center.lon,
+      });
+    } catch (err) {
+      setGeoError(err?.message || "Failed to geocode address.");
+    } finally {
+      setGeocoding(false);
     }
   };
 
@@ -287,7 +332,75 @@ export default function AddressForm({ address, onChange, onDelete, onSetHeadquar
               onChange={(e) => onChange({ ...address, address_line2: e.target.value })}
             />
           )}
+
+          {/* Geocode (Latitude / Longitude) */}
+          <div className="rounded-lg border border-gray-200 bg-white/60 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-medium text-gray-600 flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-gray-400" />
+                Geocode (Latitude, Longitude)
+              </Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-xs gap-1"
+                onClick={handleAutoLocate}
+                disabled={geocoding}
+              >
+                {geocoding ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <LocateFixed className="w-3.5 h-3.5" />
+                )}
+                {geocoding ? "Locating..." : "Auto-locate"}
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {field("Latitude",
+                <Input
+                  className="h-9 bg-white"
+                  type="number"
+                  step="any"
+                  placeholder="e.g. 39.9526"
+                  value={address.latitude ?? ""}
+                  onChange={(e) => {
+                    const val = e.target.value === "" ? undefined : parseFloat(e.target.value);
+                    onChange({ ...address, latitude: Number.isNaN(val) ? undefined : val });
+                  }}
+                />
+              )}
+              {field("Longitude",
+                <Input
+                  className="h-9 bg-white"
+                  type="number"
+                  step="any"
+                  placeholder="e.g. -75.1652"
+                  value={address.longitude ?? ""}
+                  onChange={(e) => {
+                    const val = e.target.value === "" ? undefined : parseFloat(e.target.value);
+                    onChange({ ...address, longitude: Number.isNaN(val) ? undefined : val });
+                  }}
+                />
+              )}
+            </div>
+            {geoError && (
+              <div className="text-xs text-red-500">{geoError}</div>
+            )}
+            {address.latitude != null && address.longitude != null && !geoError && (
+              <div className="text-xs text-green-600 flex items-center gap-1">
+                <MapPin className="w-3 h-3" />
+                Coordinates set — map search will use these directly.
+              </div>
+            )}
+          </div>
         </>
+      )}
+      {!isEditing && address.latitude != null && address.longitude != null && (
+        <div className="text-xs text-gray-400 flex items-center gap-1 px-1">
+          <MapPin className="w-3 h-3" />
+          {Number(address.latitude).toFixed(6)}, {Number(address.longitude).toFixed(6)}
+        </div>
       )}
     </div>
   );
