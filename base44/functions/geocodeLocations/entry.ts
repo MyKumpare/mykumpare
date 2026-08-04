@@ -66,7 +66,7 @@ export default async function(req) {
     const pending = []; // [{ addrStr, keys }]
     const addrIndex = {}; // addrStr -> index in pending
     for (const loc of locations) {
-      const parts = [loc.city, loc.state, loc.postalCode, loc.country].filter(Boolean);
+      const parts = [loc.addressLine1, loc.city, loc.state, loc.postalCode, loc.country].filter(Boolean);
       if (parts.length === 0) continue;
       const addrStr = parts.join(", ");
       if (addrIndex[addrStr] === undefined) {

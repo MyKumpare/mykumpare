@@ -182,6 +182,51 @@ function ResultItem({ result, highlighted, onHover, onClick, selectable, selecte
   );
 }
 
+// ── Legend row with hover popover ─────────────────────────────────────────
+
+function LegendRow({ label, count, color, items, onHover, onClick }) {
+  const [showList, setShowList] = useState(false);
+  if (count === 0) return null;
+  return (
+    <div
+      className="relative"
+      onMouseEnter={() => setShowList(true)}
+      onMouseLeave={() => setShowList(false)}
+    >
+      <div className="flex items-center gap-1.5 cursor-pointer hover:bg-gray-100 rounded px-1 -mx-1 transition-colors">
+        <span className={`w-2.5 h-2.5 rounded-full ${color} border border-white`} />
+        {label} ({count})
+      </div>
+      {showList && items.length > 0 && (
+        <div className="absolute bottom-full left-0 mb-1 w-64 bg-white rounded-lg shadow-lg border border-gray-200 max-h-60 overflow-y-auto z-[1001]">
+          <div className="px-3 py-2 text-xs font-semibold text-gray-500 border-b border-gray-100 sticky top-0 bg-white">
+            {label} ({count})
+          </div>
+          {items.slice(0, 50).map((r) => (
+            <button
+              key={r.id}
+              onMouseEnter={() => onHover(r.id)}
+              onMouseLeave={() => onHover(null)}
+              onClick={() => { setShowList(false); onClick(r); }}
+              className="w-full text-left px-3 py-1.5 hover:bg-gray-50 border-b border-gray-50 last:border-0 transition-colors"
+            >
+              <div className="text-xs font-medium text-gray-900 truncate">{r.name}</div>
+              {r.addressLabel && (
+                <div className="text-[10px] text-gray-400 truncate">{r.addressLabel}</div>
+              )}
+            </button>
+          ))}
+          {items.length > 50 && (
+            <div className="px-3 py-1.5 text-[10px] text-gray-400 text-center">
+              Showing 50 of {items.length}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── View toggle ──────────────────────────────────────────────────────────
 
 function ViewToggle({ viewMode, onChange }) {
@@ -405,6 +450,7 @@ export default function MapSearchModal({
         .filter((r) => r.address)
         .map((r) => ({
           key: r.id,
+          addressLine1: r.address.address_line1,
           city: r.address.city,
           state: r.address.state,
           country: r.address.country,
@@ -569,18 +615,16 @@ export default function MapSearchModal({
       if (result.type === "firm") {
         const firm = activeFirms.find((f) => f.id === result.entityId);
         if (firm && onFirmClick) {
-          onClose();
           onFirmClick(firm);
         }
       } else {
         const contact = activeContacts.find((c) => c.id === result.entityId);
         if (contact && onContactClick) {
-          onClose();
           onContactClick(contact);
         }
       }
     },
-    [activeFirms, activeContacts, onFirmClick, onContactClick, onClose]
+    [activeFirms, activeContacts, onFirmClick, onContactClick]
   );
 
   const handleClose = useCallback(() => {
@@ -791,15 +835,23 @@ export default function MapSearchModal({
 
               {/* Legend */}
               {results.length > 0 && !route && (
-                <div className="absolute bottom-3 left-3 z-[1000] bg-white/95 rounded-lg shadow-md px-3 py-2 text-xs space-y-1 pointer-events-none">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 border border-white" />
-                    Firm ({firmResults.length})
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-pink-500 border border-white" />
-                    Contact ({contactResults.length})
-                  </div>
+                <div className="absolute bottom-3 left-3 z-[1000] bg-white/95 rounded-lg shadow-md px-3 py-2 text-xs space-y-1">
+                  <LegendRow
+                    label="Firm"
+                    count={firmResults.length}
+                    color="bg-indigo-600"
+                    items={firmResults}
+                    onHover={setHoveredId}
+                    onClick={handleResultClick}
+                  />
+                  <LegendRow
+                    label="Contact"
+                    count={contactResults.length}
+                    color="bg-pink-500"
+                    items={contactResults}
+                    onHover={setHoveredId}
+                    onClick={handleResultClick}
+                  />
                   {center && (
                     <div className="flex items-center gap-1.5">
                       <span className="w-2.5 h-2.5 rounded-full bg-red-500 border border-white" />
