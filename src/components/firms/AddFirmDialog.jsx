@@ -72,6 +72,46 @@ function getCountryCodeFromCountryName(countryName) {
 import { parsePhoneString, computeContactUpdates } from "../ai/firmEnrichment";
 import { toast } from "@/components/ui/use-toast";
 
+// Auto-geocode addresses that don't have lat/long, using the batch
+// geocodeLocations backend function. Called after enrichment applies
+// new addresses so they (and any pre-existing un-geocoded addresses)
+// get coordinates for map search without requiring a manual "Auto-locate".
+async function autoGeocodeAddresses(addressList, setAddressesFn) {
+  const needsGeo = addressList.some(
+    (a) => (a.latitude == null || a.longitude == null) && (a.address_line1 || a.city || a.postal_code)
+  );
+  if (!needsGeo) return;
+
+  const locations = addressList.map((a, i) => ({
+    key: `addr_${i}`,
+    addressLine1: a.address_line1,
+    city: a.city,
+    state: a.state,
+    postalCode: a.postal_code,
+    country: a.country,
+  }));
+
+  try {
+    const resp = await base44.functions.invoke("geocodeLocations", {
+      centerQuery: null,
+      locations,
+    });
+    const data = resp?.data ?? resp ?? {};
+    const geocoded = data.geocoded || {};
+
+    const updated = addressList.map((a, i) => {
+      const geo = geocoded[`addr_${i}`];
+      if (geo && (a.latitude == null || a.longitude == null)) {
+        return { ...a, latitude: geo.lat, longitude: geo.lon };
+      }
+      return a;
+    });
+    setAddressesFn(updated);
+  } catch {
+    // Silently fail — addresses are still set, just without geocodes
+  }
+}
+
 const FIRM_TYPES = [
   "Manager of Managers",
   "Investment Manager",
@@ -445,6 +485,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
       const added = merged.length - firmTypes.length;
       if (added > 0) { setFirmTypes(merged); applied.push("Firm Types"); }
     }
+    let finalAddrs = addresses;
     if (selected.addresses?.length) {
       const newAddrs = selected.addresses.filter((a) => {
         // Robust duplicate check (normalized street/city/state/zip/country),
@@ -454,13 +495,18 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         return !addresses.some((ex) => addressesAreExact(a, ex));
       });
       if (newAddrs.length > 0) {
-        const mergedAddrs = [...addresses];
-        if (mergedAddrs.length === 0) newAddrs[0].is_headquarters = true;
-        mergedAddrs.push(...newAddrs);
-        setAddresses(mergedAddrs);
+        finalAddrs = [...addresses];
+        if (finalAddrs.length === 0) newAddrs[0].is_headquarters = true;
+        finalAddrs.push(...newAddrs);
+        setAddresses(finalAddrs);
         applied.push(`${newAddrs.length} Address(es)`);
       }
     }
+
+    // Auto-geocode any addresses (existing or newly added) that don't
+    // have lat/long — fires the same batch geocoder as the "Auto-locate"
+    // button so map search can use stored coordinates directly.
+    autoGeocodeAddresses(finalAddrs, setAddresses);
     if (selected.phones?.length) {
       const existingNums = new Set(phones.map((p) => `${p.area_code}${p.number_mid}${p.number_last}`));
       const newPhs = selected.phones.filter((p) => !existingNums.has(`${p.area_code}${p.number_mid}${p.number_last}`));
