@@ -167,9 +167,21 @@ export default function PhotoCaptureModal({ open, onOpenChange, contacts, onCont
 
   const contactsWithPhotos = (contacts || []).filter((c) => c.photo_url && !c.deleted_at);
 
+  const isBusy = stage === "searching";
+
+  const handleOpenChange = (next) => {
+    if (isBusy && !next) return;
+    onOpenChange(next);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent
+        className="max-w-md"
+        onPointerDownOutside={(e) => { if (isBusy) e.preventDefault(); }}
+        onInteractOutside={(e) => { if (isBusy) e.preventDefault(); }}
+        onEscapeKeyDown={(e) => { if (isBusy) e.preventDefault(); }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Camera className="w-4 h-4 text-indigo-500" />
