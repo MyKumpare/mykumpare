@@ -44,7 +44,7 @@ function newAddress() {
   return { id: crypto.randomUUID(), is_primary: false, country: "", state: "", city: "", postal_code: "", address_line1: "", address_line2: "" };
 }
 
-export default function AddContactDialog({ open, onOpenChange, editingContact, currentFirmId, firms: firmsProp = [], viewMode: initialViewMode = false, onNavigateToOwnership, onContactCreated, onProductClick, onFirmClick, onContactClick }) {
+export default function AddContactDialog({ open, onOpenChange, editingContact, currentFirmId, firms: firmsProp = [], viewMode: initialViewMode = false, initialPhotoUrl = null, onNavigateToOwnership, onContactCreated, onProductClick, onFirmClick, onContactClick }) {
   const [viewMode, setViewMode] = useState(initialViewMode);
   const { data: liveFirms = [] } = useQuery({
     queryKey: ["firms"],
@@ -130,7 +130,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setPhones(editingContact.phones?.length > 0 ? editingContact.phones : [newPhone()]);
         setAddresses(editingContact.addresses?.length > 0 ? editingContact.addresses : [newAddress()]);
       } else {
-        setPhotoUrl("");
+        setPhotoUrl(initialPhotoUrl || "");
         setSalutation("");
         setFirstName("");
         setMiddleName("");
@@ -164,7 +164,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
       setShowQuickAddFirm(false);
       setViewMode(initialViewMode);
     }
-  }, [open, editingContact, currentFirmId, initialViewMode]);
+  }, [open, editingContact, currentFirmId, initialViewMode, initialPhotoUrl]);
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Contact.create(data),

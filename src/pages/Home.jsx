@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, FileText, Files, ShieldCheck, X, LayoutDashboard, FlaskConical, MapPin } from "lucide-react";
+import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, FileText, Files, ShieldCheck, X, LayoutDashboard, FlaskConical, MapPin, Camera } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,6 +18,7 @@ import AddProductDialog from "../components/products/AddProductDialog";
 import StatsListModal from "../components/stats/StatsListModal";
 import ContactsListModal from "../components/contacts/ContactsListModal";
 import AddContactDialog from "../components/contacts/AddContactDialog";
+import PhotoCaptureModal from "../components/contacts/PhotoCaptureModal";
 import SearchResults from "../components/search/SearchResults";
 import AddPortfolioDialog from "../components/portfolios/AddPortfolioDialog";
 import AddDueDiligenceDialog from "../components/firms/AddDueDiligenceDialog";
@@ -112,6 +113,8 @@ export default function Home() {
   const [ddAddOpen, setDdAddOpen] = useState(false);
   const [addDocOpen, setAddDocOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [photoCaptureOpen, setPhotoCaptureOpen] = useState(false);
+  const [addContactPhotoUrl, setAddContactPhotoUrl] = useState(null);
 
   const portfoliosRef = useRef(null);
   const firmsRef = useRef(null);
@@ -633,6 +636,15 @@ export default function Home() {
             </div>
           )}
 
+          {/* Photo ID — camera search */}
+          <button
+            onClick={() => setPhotoCaptureOpen(true)}
+            title="Search by Photo"
+            className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/15 hover:bg-white/25 border border-white/20 text-white transition-colors flex-shrink-0"
+          >
+            <Camera className="w-4 h-4" />
+          </button>
+
           {/* Desktop nav — single row of icon buttons */}
           <div className="hidden sm:flex items-center gap-0.5 ml-2">
             {mobileNavItems.map(({ label, icon: NavIcon, ref, onClick }) => (
@@ -784,6 +796,7 @@ export default function Home() {
           onContactClick={(contact) => setViewingContact(contact)}
           onFirmClick={(firm) => handleEdit(firm, false, false)}
           onAddContact={() => setAddContactOpen(true)}
+          onPhotoSearch={() => setPhotoCaptureOpen(true)}
           forceExpanded={allExpanded}
         />
 
@@ -989,11 +1002,20 @@ export default function Home() {
       />
 
       <AddContactDialog
-        open={addContactOpen}
-        onOpenChange={setAddContactOpen}
+        open={addContactOpen || !!addContactPhotoUrl}
+        onOpenChange={(open) => { if (!open) { setAddContactOpen(false); setAddContactPhotoUrl(null); } }}
         editingContact={null}
         currentFirmId={null}
         firms={firms}
+        initialPhotoUrl={addContactPhotoUrl}
+      />
+
+      <PhotoCaptureModal
+        open={photoCaptureOpen}
+        onOpenChange={setPhotoCaptureOpen}
+        contacts={activeContacts}
+        onContactClick={(contact) => setViewingContact(contact)}
+        onAddContactWithPhoto={(photoUrl) => setAddContactPhotoUrl(photoUrl)}
       />
 
       <AddContactDialog

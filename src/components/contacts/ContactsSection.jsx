@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, ChevronDown, ChevronRight, User } from "lucide-react";
+import { Plus, ChevronDown, ChevronRight, User, Camera } from "lucide-react";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
 import ContactsSectionFilters, { filterSectionContacts } from "@/components/contacts/ContactsSectionFilters";
 import { useViewMode } from "@/hooks/useViewMode";
@@ -46,7 +46,7 @@ function ContactAvatar({ contact }) {
   );
 }
 
-export default function ContactsSection({ contacts, firms, products, portfolios, onContactClick, onAddContact, onFirmClick, forceExpanded }) {
+export default function ContactsSection({ contacts, firms, products, portfolios, onContactClick, onAddContact, onPhotoSearch, onFirmClick, forceExpanded }) {
   const [expanded, setExpanded] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState({});
   const [expandedFirms, setExpandedFirms] = useState({});
@@ -194,6 +194,15 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
         </button>
         <div className="flex items-center gap-2">
           <ViewModeToggle value={viewMode} onChange={(m) => { setViewMode(m); setExpanded(true); }} />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs"
+            onClick={onPhotoSearch}
+          >
+            <Camera className="w-3.5 h-3.5" />
+            Photo ID
+          </Button>
           <Button
             variant="ghost"
             size="sm"
