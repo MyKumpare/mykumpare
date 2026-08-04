@@ -865,15 +865,6 @@ export default function MapSearchModal({
                   </span>
                 )}
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleClose}
-                className="h-8 w-8 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
-                aria-label="Close map search"
-              >
-                <X className="w-4 h-4" />
-              </Button>
             </div>
           </div>
           {/* Search inputs */}
