@@ -562,6 +562,15 @@ export function mergeContactEnrichment(people, existingContacts, firmId) {
   const newPeople = [];
   const allUpdatedFields = [];
 
+  // Track the growing list of known contacts (existing DB contacts + contacts
+  // matched/created in this same batch) so we can deduplicate WITHIN the
+  // enrichment batch — not just against the database. Without this, a firm's
+  // website that lists the same person on multiple pages with slightly
+  // different name formats (e.g. "Cesar Gonzales, Jr." on the team page and
+  // "Mr. Cesar Gonzales, Jr., CMFC" on a board page) would create two
+  // separate contact records for the same person.
+  const batchContacts = [...(existingContacts || []).filter((c) => !c.deleted_at)];
+
   for (const person of (people || [])) {
     if (!person.first_name && !person.last_name) continue;
 
@@ -571,10 +580,10 @@ export function mergeContactEnrichment(people, existingContacts, firmId) {
       email: person.email || "",
     };
 
-    const dups = findContactDuplicates(contactData, existingContacts);
+    const dups = findContactDuplicates(contactData, batchContacts);
     // Fallback: normalized first+last name match catches cases where
     // suffixes/designations are embedded in the name field.
-    const normDups = dups.length > 0 ? [] : findContactsByNormalizedName(contactData, existingContacts);
+    const normDups = dups.length > 0 ? [] : findContactsByNormalizedName(contactData, batchContacts);
 
     if (dups.length > 0 || normDups.length > 0) {
       const bestMatch = (dups[0]?.contact) || normDups[0]?.contact;
@@ -587,6 +596,19 @@ export function mergeContactEnrichment(people, existingContacts, firmId) {
       }
     } else {
       newPeople.push(person);
+      // Add the new person to batchContacts so subsequent people in this
+      // batch are checked against them, preventing within-batch duplicates.
+      batchContacts.push({
+        id: `batch_new_${newPeople.length}`,
+        first_name: person.first_name || "",
+        last_name: person.last_name || "",
+        email: person.email || "",
+        photo_url: person.photo_url || "",
+        phones: [],
+        designations: [],
+        education: [],
+        professional_experience: [],
+      });
     }
   }
 

@@ -252,9 +252,26 @@ export function validateEnrichment(enrichedData, existingFirm = {}, existingCont
     items.push({ key: `phone_${i}`, label: `Phone ${phone.phone_type ? `(${phone.phone_type})` : `#${i + 1}`}`, status: res.status, similarity: res.similarity, value: phone });
   });
 
+  // Within-batch deduplication: a firm's website often lists the same person
+  // on multiple pages with slightly different name formats (e.g. "Cesar
+  // Gonzales, Jr." on the team page and "Mr. Cesar Gonzales, Jr., CMFC" on a
+  // board page). Without checking people against each other within the same
+  // enrichment batch, both would be marked "new" and both would be created as
+  // separate contacts. Here we compare each person against both existing
+  // contacts AND previously-seen people in this batch.
+  const seenBatchPeople = [];
   (enrichedData.people || []).forEach((person, i) => {
     if (!person.first_name && !person.last_name) return;
-    const res = compareContact(person, existingContacts);
+    let res = compareContact(person, existingContacts);
+    // If no DB match, check against other people already seen in this batch.
+    if (res.status === "new" && seenBatchPeople.length > 0) {
+      const batchRes = compareContact(person, seenBatchPeople);
+      if (batchRes.status !== "new") {
+        res = batchRes;
+      }
+    }
+    // Track this person for subsequent within-batch comparisons.
+    seenBatchPeople.push(person);
     const fullName = [person.first_name, person.last_name].filter(Boolean).join(" ");
     items.push({ key: `person_${i}`, label: `Person: ${fullName}${person.title ? ` — ${person.title}` : ""}`, status: res.status, similarity: res.similarity, value: person, match: res.match });
   });
