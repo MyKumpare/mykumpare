@@ -12,6 +12,7 @@ import {
   ArrowUp, ArrowDown, Trash2, ExternalLink, CheckCircle2,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
+import MapSearchAutocomplete from "@/components/search/MapSearchAutocomplete";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -349,6 +350,51 @@ export default function MapSearchModal({
   const radiusMeters = radiusMiles ? radiusMiles * 1609.34 : null;
 
   const selectedStopIds = useMemo(() => new Set(stops.map((s) => s.id)), [stops]);
+
+  // ── Autocomplete suggestions ──────────────────────────────────────────
+  // Firm + contact name suggestions for the firm name field
+  const firmNameSuggestions = useMemo(() => {
+    const list = [];
+    for (const f of activeFirms) {
+      list.push({ label: f.name, subLabel: "Firm", type: "firm" });
+    }
+    for (const c of activeContacts) {
+      const name = [c.first_name, c.last_name].filter(Boolean).join(" ");
+      if (name) list.push({ label: name, subLabel: c.title || "Contact", type: "contact" });
+    }
+    return list;
+  }, [activeFirms, activeContacts]);
+
+  // Location suggestions from all firm/contact addresses (city, state, country, zip)
+  const locationSuggestions = useMemo(() => {
+    const seen = new Set();
+    const list = [];
+    const add = (label, subLabel) => {
+      const key = label.toLowerCase();
+      if (!label || seen.has(key)) return;
+      seen.add(key);
+      list.push({ label, subLabel, type: "location" });
+    };
+    for (const f of activeFirms) {
+      for (const addr of f.addresses || []) {
+        add([addr.city, addr.state].filter(Boolean).join(", "), addr.country);
+        if (addr.state) add(addr.state, addr.country);
+        if (addr.city) add(addr.city, addr.state);
+        if (addr.postal_code) add(addr.postal_code, [addr.city, addr.state].filter(Boolean).join(", "));
+        if (addr.country) add(addr.country, null);
+      }
+    }
+    for (const c of activeContacts) {
+      for (const addr of c.addresses || []) {
+        add([addr.city, addr.state].filter(Boolean).join(", "), addr.country);
+        if (addr.state) add(addr.state, addr.country);
+        if (addr.city) add(addr.city, addr.state);
+        if (addr.postal_code) add(addr.postal_code, [addr.city, addr.state].filter(Boolean).join(", "));
+        if (addr.country) add(addr.country, null);
+      }
+    }
+    return list;
+  }, [activeFirms, activeContacts]);
 
   const handleSearch = useCallback(async () => {
     if (!locationInput.trim() && !firmNameInput.trim()) {
@@ -761,12 +807,12 @@ export default function MapSearchModal({
               <label className="text-xs text-gray-500 font-medium mb-1 block">
                 Location (city, state, country, zip, postal code)
               </label>
-              <Input
-                placeholder="e.g. Atlanta, GA or 30303 or London"
+              <MapSearchAutocomplete
                 value={locationInput}
-                onChange={(e) => setLocationInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                className="h-9 text-sm"
+                onChange={setLocationInput}
+                onKeyDown={(e) => { if (e.key === "Enter") handleSearch(); }}
+                placeholder="e.g. Atlanta, GA or 30303 or London"
+                suggestions={locationSuggestions}
               />
             </div>
             <div className="w-[120px]">
@@ -787,12 +833,12 @@ export default function MapSearchModal({
               <label className="text-xs text-gray-500 font-medium mb-1 block">
                 Firm name (optional)
               </label>
-              <Input
-                placeholder="e.g. BlackRock or Vanguard"
+              <MapSearchAutocomplete
                 value={firmNameInput}
-                onChange={(e) => setFirmNameInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                className="h-9 text-sm"
+                onChange={setFirmNameInput}
+                onKeyDown={(e) => { if (e.key === "Enter") handleSearch(); }}
+                placeholder="e.g. BlackRock or Vanguard"
+                suggestions={firmNameSuggestions}
               />
             </div>
             <Button onClick={handleSearch} disabled={loading} className="h-9">
