@@ -37,12 +37,20 @@ export default function PhoneForm({ phone, onChange, onDelete, onSetDefault, isD
 
   const areaCodes = useMemo(() => {
     if (!phone.country_code) return [];
+    let codes;
     // Filter area codes by city if selected address has a city
     if (selectedAddress?.city && phone.country_code === "1") {
-      return getAreaCodesForCity(selectedAddress.city) || getAreaCodesForCountry(phone.country_code);
+      codes = getAreaCodesForCity(selectedAddress.city) || getAreaCodesForCountry(phone.country_code);
+    } else {
+      codes = getAreaCodesForCountry(phone.country_code);
     }
-    return getAreaCodesForCountry(phone.country_code);
-  }, [phone.country_code, selectedAddress?.city]);
+    // Ensure the current area_code (e.g. toll-free 888/866/800) is always
+    // selectable even if it isn't in the city/country list.
+    if (phone.area_code && !codes.some((c) => c.code === phone.area_code)) {
+      codes = [{ code: phone.area_code, label: phone.area_code }, ...codes];
+    }
+    return codes;
+  }, [phone.country_code, selectedAddress?.city, phone.area_code]);
 
   const handleAddressChange = (addressId) => {
     const selectedAddr = addresses.find(a => a.id === addressId);
