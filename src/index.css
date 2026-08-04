@@ -125,6 +125,17 @@ textarea {
   }
 }
 
+/* Map search markers — bounce animation for highlighted items */
+@keyframes map-bounce {
+  from { transform: translateY(0); }
+  to { transform: translateY(-6px); }
+}
+
+.map-search-marker { background: transparent !important; border: none !important; }
+
+/* Ensure leaflet panes stay within dialog stacking context */
+.leaflet-container { z-index: 0; }
+
 /* Quill rich-text preview (read-only) */
 .quill-preview p { margin: 0 0 4px; }
 .quill-preview ul, .quill-preview ol { padding-left: 18px; margin: 0 0 4px; }
