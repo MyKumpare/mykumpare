@@ -81,7 +81,15 @@ export default function AddressForm({ address, onChange, onDelete, onSetHeadquar
   };
 
   const handleAutoLocate = async () => {
-    const addrStr = buildAddressString(address);
+    // Exclude suite/floor (address_line2) — Nominatim can't resolve
+    // unit-level details and will fail if they're included in the query.
+    const addrStr = [
+      address.address_line1,
+      address.city,
+      address.state,
+      address.postal_code,
+      COUNTRIES.find(c => c.code === address.country)?.name,
+    ].filter(Boolean).join(", ");
     if (!addrStr) {
       setGeoError("Fill in address fields first.");
       return;
