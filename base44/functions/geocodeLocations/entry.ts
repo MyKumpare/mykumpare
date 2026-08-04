@@ -37,11 +37,11 @@ async function geocodeOne(query) {
   return null;
 }
 
-// Geocode a batch of queries with limited concurrency (2 at a time)
-// to respect Nominatim's fair-use policy.
+// Geocode a batch of queries with limited concurrency (4 at a time)
+// to respect Nominatim's fair-use policy while keeping latency reasonable.
 async function geocodeBatch(queries) {
   const results = {};
-  const concurrency = 2;
+  const concurrency = 4;
   for (let i = 0; i < queries.length; i += concurrency) {
     const batch = queries.slice(i, i + concurrency);
     const batchResults = await Promise.all(
@@ -91,9 +91,9 @@ export default async function(req) {
       pending[addrIndex[addrStr]].keys.push(loc.key);
     }
 
-    // Geocode unique addresses (cap at 40 unique locations)
+    // Geocode unique addresses (cap at 200 unique locations)
     if (pending.length > 0) {
-      const geocoded = await geocodeBatch(pending.slice(0, 40));
+      const geocoded = await geocodeBatch(pending.slice(0, 200));
       result.geocoded = geocoded;
     }
 
