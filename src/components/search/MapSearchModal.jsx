@@ -2,10 +2,15 @@ import React, { useState, useMemo, useRef, useEffect, useCallback } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MapContainer, TileLayer, Marker, Popup, Circle, Tooltip, useMap } from "react-leaflet";
+import { Checkbox } from "@/components/ui/checkbox";
+import { MapContainer, TileLayer, Marker, Popup, Circle, Tooltip, useMap, Polyline } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { MapPin, Search, Building, User, Navigation, Loader2, X } from "lucide-react";
+import {
+  MapPin, Search, Building, User, Navigation, Loader2, X,
+  Map as MapIcon, List, Columns2, Route as RouteIcon, Plus,
+  ArrowUp, ArrowDown, Trash2, ExternalLink, CheckCircle2,
+} from "lucide-react";
 import { base44 } from "@/api/base44Client";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
@@ -53,7 +58,7 @@ function buildAddressString(addr) {
 // ── Leaflet Icons ────────────────────────────────────────────────────────
 
 function makeIcon(type, highlighted) {
-  const colors = { firm: "#4f46e5", contact: "#ec4899", center: "#ef4444" };
+  const colors = { firm: "#4f46e5", contact: "#ec4899", center: "#ef4444", stop: "#2563eb" };
   const color = colors[type] || colors.firm;
   const size = highlighted ? 36 : 24;
   const innerSize = highlighted ? 18 : 12;
@@ -68,9 +73,22 @@ function makeIcon(type, highlighted) {
   });
 }
 
-// ── Map controller: auto-fit bounds ─────────────────────────────────────
+function makeNumberedIcon(num, highlighted) {
+  const size = highlighted ? 34 : 28;
+  return L.divIcon({
+    className: "map-search-marker",
+    html: `<div style="width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;${
+      highlighted ? "animation:map-bounce 0.5s ease infinite alternate;" : ""
+    }"><div style="width:${size}px;height:${size}px;border-radius:50%;background:#2563eb;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:700;">${num}</div></div>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -size / 2],
+  });
+}
 
-function MapBoundsController({ points, center, radius }) {
+// ── Map controllers ─────────────────────────────────────────────────────
+
+function MapBoundsController({ points, center, radius, routeCoords }) {
   const map = useMap();
   useEffect(() => {
     const pts = [];
@@ -78,6 +96,9 @@ function MapBoundsController({ points, center, radius }) {
     points.forEach((p) => {
       if (p.lat != null && p.lon != null) pts.push([p.lat, p.lon]);
     });
+    if (routeCoords) {
+      routeCoords.forEach(([lat, lon]) => pts.push([lat, lon]));
+    }
     if (pts.length === 0) return;
     if (pts.length === 1) {
       const zoom = radius ? Math.max(4, Math.round(14 - Math.log2(radius / 5))) : 11;
@@ -85,7 +106,7 @@ function MapBoundsController({ points, center, radius }) {
     } else {
       map.fitBounds(pts, { padding: [50, 50], maxZoom: 14 });
     }
-  }, [points, center, radius, map]);
+  }, [points, center, radius, routeCoords, map]);
   return null;
 }
 
@@ -98,31 +119,52 @@ function MapInitializer() {
   return null;
 }
 
+// Viewport resizer — invalidates map size when the container becomes visible
+function MapResizeOnView({ viewMode, directionsActive }) {
+  const map = useMap();
+  useEffect(() => {
+    const timer = setTimeout(() => map.invalidateSize(), 200);
+    return () => clearTimeout(timer);
+  }, [viewMode, directionsActive, map]);
+  return null;
+}
+
 // ── Result item component ────────────────────────────────────────────────
 
-function ResultItem({ result, highlighted, onHover, onClick }) {
+function ResultItem({ result, highlighted, onHover, onClick, selectable, selected, onToggleSelect, stopNumber }) {
   const isFirm = result.type === "firm";
   return (
     <div
       onMouseEnter={() => onHover(result.id)}
       onMouseLeave={() => onHover(null)}
-      onClick={() => onClick(result)}
-      className={`px-3 py-2.5 rounded-lg cursor-pointer transition-colors border ${
+      className={`px-3 py-2.5 rounded-lg transition-colors border ${
         highlighted
           ? "bg-indigo-50 border-indigo-300 shadow-sm"
           : "bg-white border-gray-100 hover:bg-gray-50"
       }`}
     >
       <div className="flex items-start gap-2.5">
+        {selectable && (
+          <div className="flex-shrink-0 mt-0.5">
+            <Checkbox checked={selected} onCheckedChange={() => onToggleSelect(result)} />
+          </div>
+        )}
         <div
           className={`flex-shrink-0 mt-0.5 w-8 h-8 rounded-lg flex items-center justify-center ${
             isFirm ? "bg-indigo-100 text-indigo-600" : "bg-pink-100 text-pink-600"
-          }`}
+          } ${!selectable ? "cursor-pointer" : ""}`}
+          onClick={!selectable ? () => onClick(result) : undefined}
         >
           {isFirm ? <Building className="w-4 h-4" /> : <User className="w-4 h-4" />}
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium text-gray-900 truncate">{result.name}</div>
+        <div
+          className={`flex-1 min-w-0 ${!selectable ? "cursor-pointer" : ""}`}
+          onClick={!selectable ? () => onClick(result) : undefined}
+        >
+          <div className="text-sm font-medium text-gray-900 truncate">
+            {stopNumber != null && <span className="text-blue-600 mr-1">#{stopNumber}</span>}
+            {result.name}
+          </div>
           {result.title && (
             <div className="text-xs text-gray-500 truncate">{result.title}</div>
           )}
@@ -136,6 +178,34 @@ function ResultItem({ result, highlighted, onHover, onClick }) {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── View toggle ──────────────────────────────────────────────────────────
+
+function ViewToggle({ viewMode, onChange }) {
+  const options = [
+    { value: "map", icon: MapIcon, label: "Map" },
+    { value: "split", icon: Columns2, label: "Split" },
+    { value: "list", icon: List, label: "List" },
+  ];
+  return (
+    <div className="flex items-center gap-0.5 bg-gray-100 rounded-lg p-0.5">
+      {options.map(({ value, icon: Icon, label }) => (
+        <button
+          key={value}
+          onClick={() => onChange(value)}
+          className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+            viewMode === value
+              ? "bg-white text-gray-900 shadow-sm"
+              : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          <Icon className="w-3.5 h-3.5" />
+          {label}
+        </button>
+      ))}
     </div>
   );
 }
@@ -161,11 +231,23 @@ export default function MapSearchModal({
   const [hasSearched, setHasSearched] = useState(false);
   const [searchMode, setSearchMode] = useState(null);
 
+  // View + Directions state
+  const [viewMode, setViewMode] = useState("split");
+  const [directionsActive, setDirectionsActive] = useState(false);
+  const [stops, setStops] = useState([]); // [{ id, label, subLabel, lat, lon }]
+  const [customAddrInput, setCustomAddrInput] = useState("");
+  const [geocodingCustom, setGeocodingCustom] = useState(false);
+  const [route, setRoute] = useState(null);
+  const [routing, setRouting] = useState(false);
+  const [routeError, setRouteError] = useState(null);
+
   const activeFirms = useMemo(() => firms.filter((f) => !f.deleted_at), [firms]);
   const activeContacts = useMemo(() => contacts.filter((c) => !c.deleted_at), [contacts]);
 
   const radiusMiles = radiusInput ? parseFloat(radiusInput) : null;
   const radiusMeters = radiusMiles ? radiusMiles * 1609.34 : null;
+
+  const selectedStopIds = useMemo(() => new Set(stops.map((s) => s.id)), [stops]);
 
   const handleSearch = useCallback(async () => {
     if (!locationInput.trim() && !firmNameInput.trim()) {
@@ -175,6 +257,8 @@ export default function MapSearchModal({
     setLoading(true);
     setError(null);
     setHasSearched(true);
+    setRoute(null);
+    setRouteError(null);
 
     try {
       let centerQuery = null;
@@ -193,7 +277,6 @@ export default function MapSearchModal({
           return;
         }
 
-        // Collect all addresses for matching firms (firm's own + contacts')
         for (const firm of matchingFirms) {
           for (const addr of firm.addresses || []) {
             candidateResults.push({
@@ -207,7 +290,6 @@ export default function MapSearchModal({
               firmName: firm.name,
             });
           }
-          // Contacts at this firm
           const firmContacts = activeContacts.filter(
             (c) => (c.firm_ids || []).includes(firm.id)
           );
@@ -228,7 +310,6 @@ export default function MapSearchModal({
           }
         }
 
-        // If radius is set, use the first matching firm's HQ as center
         if (radiusMiles && matchingFirms.length > 0) {
           const hqFirm = matchingFirms[0];
           const hqAddr =
@@ -237,7 +318,6 @@ export default function MapSearchModal({
           if (hqAddr) {
             centerQuery = buildAddressString(hqAddr);
           }
-          // Also add ALL other firms/contacts as candidates for radius filtering
           const existingIds = new Set(candidateResults.map((r) => r.id));
           for (const firm of activeFirms) {
             if (matchingFirms.some((mf) => mf.id === firm.id)) continue;
@@ -245,34 +325,22 @@ export default function MapSearchModal({
               const rid = `firm-${firm.id}-${addr.id || addr.address_line1 || JSON.stringify(addr)}`;
               if (!existingIds.has(rid)) {
                 candidateResults.push({
-                  id: rid,
-                  type: "firm",
-                  entityId: firm.id,
-                  name: firm.name,
-                  address: addr,
-                  addressLabel: formatAddress(addr),
-                  firmId: firm.id,
-                  firmName: firm.name,
+                  id: rid, type: "firm", entityId: firm.id, name: firm.name,
+                  address: addr, addressLabel: formatAddress(addr),
+                  firmId: firm.id, firmName: firm.name,
                 });
               }
             }
-            const firmContacts = activeContacts.filter(
-              (c) => (c.firm_ids || []).includes(firm.id)
-            );
+            const firmContacts = activeContacts.filter((c) => (c.firm_ids || []).includes(firm.id));
             for (const contact of firmContacts) {
               for (const addr of contact.addresses || []) {
                 const rid = `contact-${contact.id}-${addr.id || addr.address_line1 || JSON.stringify(addr)}`;
                 if (!existingIds.has(rid)) {
                   candidateResults.push({
-                    id: rid,
-                    type: "contact",
-                    entityId: contact.id,
+                    id: rid, type: "contact", entityId: contact.id,
                     name: [contact.first_name, contact.last_name].filter(Boolean).join(" "),
-                    title: contact.title,
-                    address: addr,
-                    addressLabel: formatAddress(addr),
-                    firmId: firm.id,
-                    firmName: firm.name,
+                    title: contact.title, address: addr, addressLabel: formatAddress(addr),
+                    firmId: firm.id, firmName: firm.name,
                   });
                 }
               }
@@ -280,24 +348,18 @@ export default function MapSearchModal({
           }
         }
       } else {
-        // Location search mode
         mode = "location";
         centerQuery = locationInput.trim();
         const locQ = locationInput.toLowerCase().trim();
 
         if (radiusMiles) {
-          // Radius search: add all firms and contacts as candidates
           for (const firm of activeFirms) {
             for (const addr of firm.addresses || []) {
               candidateResults.push({
                 id: `firm-${firm.id}-${addr.id || addr.address_line1 || JSON.stringify(addr)}`,
-                type: "firm",
-                entityId: firm.id,
-                name: firm.name,
-                address: addr,
-                addressLabel: formatAddress(addr),
-                firmId: firm.id,
-                firmName: firm.name,
+                type: "firm", entityId: firm.id, name: firm.name,
+                address: addr, addressLabel: formatAddress(addr),
+                firmId: firm.id, firmName: firm.name,
               });
             }
           }
@@ -305,29 +367,21 @@ export default function MapSearchModal({
             for (const addr of contact.addresses || []) {
               candidateResults.push({
                 id: `contact-${contact.id}-${addr.id || addr.address_line1 || JSON.stringify(addr)}`,
-                type: "contact",
-                entityId: contact.id,
+                type: "contact", entityId: contact.id,
                 name: [contact.first_name, contact.last_name].filter(Boolean).join(" "),
-                title: contact.title,
-                address: addr,
-                addressLabel: formatAddress(addr),
+                title: contact.title, address: addr, addressLabel: formatAddress(addr),
               });
             }
           }
         } else {
-          // Exact text match on address fields
           for (const firm of activeFirms) {
             for (const addr of firm.addresses || []) {
               if (matchesLocationText(addr, locQ)) {
                 candidateResults.push({
                   id: `firm-${firm.id}-${addr.id || addr.address_line1 || JSON.stringify(addr)}`,
-                  type: "firm",
-                  entityId: firm.id,
-                  name: firm.name,
-                  address: addr,
-                  addressLabel: formatAddress(addr),
-                  firmId: firm.id,
-                  firmName: firm.name,
+                  type: "firm", entityId: firm.id, name: firm.name,
+                  address: addr, addressLabel: formatAddress(addr),
+                  firmId: firm.id, firmName: firm.name,
                 });
               }
             }
@@ -337,12 +391,9 @@ export default function MapSearchModal({
               if (matchesLocationText(addr, locQ)) {
                 candidateResults.push({
                   id: `contact-${contact.id}-${addr.id || addr.address_line1 || JSON.stringify(addr)}`,
-                  type: "contact",
-                  entityId: contact.id,
+                  type: "contact", entityId: contact.id,
                   name: [contact.first_name, contact.last_name].filter(Boolean).join(" "),
-                  title: contact.title,
-                  address: addr,
-                  addressLabel: formatAddress(addr),
+                  title: contact.title, address: addr, addressLabel: formatAddress(addr),
                 });
               }
             }
@@ -350,7 +401,6 @@ export default function MapSearchModal({
         }
       }
 
-      // Geocode all candidate addresses + center
       const locationsToGeocode = candidateResults
         .filter((r) => r.address)
         .map((r) => ({
@@ -374,7 +424,6 @@ export default function MapSearchModal({
         geocodedMap = data.geocoded || {};
       }
 
-      // Attach coordinates to results and filter out un-geocoded ones
       let finalResults = candidateResults
         .map((r) => {
           const geo = geocodedMap[r.id];
@@ -383,7 +432,6 @@ export default function MapSearchModal({
         })
         .filter(Boolean);
 
-      // If radius is set, filter by distance from center
       if (radiusMiles && centerCoords) {
         finalResults = finalResults
           .map((r) => ({
@@ -405,6 +453,116 @@ export default function MapSearchModal({
       setLoading(false);
     }
   }, [locationInput, radiusInput, firmNameInput, activeFirms, activeContacts, radiusMiles]);
+
+  // ── Directions handlers ────────────────────────────────────────────────
+
+  const toggleStopSelection = useCallback((result) => {
+    setStops((prev) => {
+      if (prev.some((s) => s.id === result.id)) {
+        return prev.filter((s) => s.id !== result.id);
+      }
+      return [
+        ...prev,
+        {
+          id: result.id,
+          label: result.name,
+          subLabel: result.addressLabel,
+          lat: result.lat,
+          lon: result.lon,
+        },
+      ];
+    });
+    setRoute(null);
+    setRouteError(null);
+  }, []);
+
+  const removeStop = useCallback((id) => {
+    setStops((prev) => prev.filter((s) => s.id !== id));
+    setRoute(null);
+    setRouteError(null);
+  }, []);
+
+  const moveStop = useCallback((index, dir) => {
+    setStops((prev) => {
+      const next = [...prev];
+      const target = index + dir;
+      if (target < 0 || target >= next.length) return prev;
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+    setRoute(null);
+    setRouteError(null);
+  }, []);
+
+  const addCustomStop = useCallback(async () => {
+    const q = customAddrInput.trim();
+    if (!q) return;
+    setGeocodingCustom(true);
+    setRouteError(null);
+    try {
+      const resp = await base44.functions.invoke("geocodeLocations", {
+        centerQuery: q,
+        locations: [],
+      });
+      const data = resp?.data ?? resp ?? {};
+      if (!data.center) {
+        setRouteError("Could not find that address. Try a more specific address.");
+        return;
+      }
+      const id = `custom-${Date.now()}`;
+      setStops((prev) => [
+        ...prev,
+        {
+          id,
+          label: q,
+          subLabel: data.center.displayName || "",
+          lat: data.center.lat,
+          lon: data.center.lon,
+        },
+      ]);
+      setCustomAddrInput("");
+      setRoute(null);
+    } catch (err) {
+      setRouteError(err?.message || "Failed to geocode address.");
+    } finally {
+      setGeocodingCustom(false);
+    }
+  }, [customAddrInput]);
+
+  const getRoute = useCallback(async () => {
+    if (stops.length < 2) {
+      setRouteError("Select at least 2 stops to get directions.");
+      return;
+    }
+    setRouting(true);
+    setRouteError(null);
+    try {
+      const resp = await base44.functions.invoke("getDrivingRoute", {
+        stops: stops.map((s) => ({ lat: s.lat, lon: s.lon })),
+      });
+      const data = resp?.data ?? resp ?? {};
+      if (data.error) {
+        setRouteError(data.error);
+        return;
+      }
+      setRoute(data);
+    } catch (err) {
+      setRouteError(err?.message || "Failed to get driving route.");
+    } finally {
+      setRouting(false);
+    }
+  }, [stops]);
+
+  // Build a Google Maps directions URL for the current stops
+  const googleMapsUrl = useMemo(() => {
+    if (stops.length < 2) return null;
+    const origin = `${stops[0].lat},${stops[0].lon}`;
+    const dest = `${stops[stops.length - 1].lat},${stops[stops.length - 1].lon}`;
+    const waypoints = stops.slice(1, -1).map((s) => `${s.lat},${s.lon}`).join("|");
+    let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}`;
+    if (waypoints) url += `&waypoints=${waypoints}`;
+    return url;
+  }, [stops]);
 
   const handleResultClick = useCallback(
     (result) => {
@@ -434,12 +592,22 @@ export default function MapSearchModal({
     setHoveredId(null);
     setError(null);
     setHasSearched(false);
+    setViewMode("split");
+    setDirectionsActive(false);
+    setStops([]);
+    setCustomAddrInput("");
+    setRoute(null);
+    setRouteError(null);
     onClose();
   }, [onClose]);
 
   const mapPoints = results.filter((r) => r.lat != null && r.lon != null);
   const firmResults = results.filter((r) => r.type === "firm");
   const contactResults = results.filter((r) => r.type === "contact");
+  const routeLineCoords = route ? route.coordinates.map((c) => [c.lat, c.lon]) : null;
+
+  const showMap = viewMode === "map" || viewMode === "split";
+  const showList = viewMode === "list" || viewMode === "split";
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
@@ -449,6 +617,23 @@ export default function MapSearchModal({
             <div className="flex items-center gap-2">
               <MapPin className="w-5 h-5 text-rose-500" />
               <DialogTitle className="text-lg">Map Search</DialogTitle>
+            </div>
+            <div className="flex items-center gap-2">
+              <ViewToggle viewMode={viewMode} onChange={setViewMode} />
+              <Button
+                variant={directionsActive ? "default" : "outline"}
+                size="sm"
+                onClick={() => setDirectionsActive((v) => !v)}
+                className="h-8"
+              >
+                <RouteIcon className="w-4 h-4" />
+                Directions
+                {stops.length > 0 && (
+                  <span className="ml-1 bg-white text-blue-600 rounded-full px-1.5 text-xs font-bold">
+                    {stops.length}
+                  </span>
+                )}
+              </Button>
             </div>
           </div>
           {/* Search inputs */}
@@ -505,139 +690,301 @@ export default function MapSearchModal({
         {/* Main content: map + list */}
         <div className="flex-1 flex flex-col sm:flex-row min-h-0">
           {/* Map */}
-          <div className="flex-1 min-h-[300px] relative">
-            <MapContainer
-              center={[39.8283, -98.5795]}
-              zoom={4}
-              className="w-full h-full"
-              style={{ background: "#e5e7eb" }}
-            >
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              />
-              <MapInitializer />
-              <MapBoundsController points={mapPoints} center={center} radius={radiusMiles} />
-
-              {/* Center marker */}
-              {center && (
-                <Marker position={[center.lat, center.lon]} icon={makeIcon("center", false)}>
-                  <Tooltip permanent>Search center</Tooltip>
-                </Marker>
-              )}
-
-              {/* Radius circle */}
-              {center && radiusMeters && (
-                <Circle
-                  center={[center.lat, center.lon]}
-                  radius={radiusMeters}
-                  pathOptions={{ color: "#ef4444", fillColor: "#ef4444", fillOpacity: 0.08, weight: 1.5 }}
+          {showMap && (
+            <div className={`flex-1 min-h-[200px] relative ${viewMode === "split" ? "" : "flex-1"}`}>
+              <MapContainer
+                center={[39.8283, -98.5795]}
+                zoom={4}
+                className="w-full h-full"
+                style={{ background: "#e5e7eb" }}
+              >
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 />
+                <MapInitializer />
+                <MapBoundsController points={mapPoints} center={center} radius={radiusMiles} routeCoords={routeLineCoords} />
+                <MapResizeOnView viewMode={viewMode} directionsActive={directionsActive} />
+
+                {/* Center marker */}
+                {center && (
+                  <Marker position={[center.lat, center.lon]} icon={makeIcon("center", false)}>
+                    <Tooltip permanent>Search center</Tooltip>
+                  </Marker>
+                )}
+
+                {/* Radius circle */}
+                {center && radiusMeters && (
+                  <Circle
+                    center={[center.lat, center.lon]}
+                    radius={radiusMeters}
+                    pathOptions={{ color: "#ef4444", fillColor: "#ef4444", fillOpacity: 0.08, weight: 1.5 }}
+                  />
+                )}
+
+                {/* Route line */}
+                {routeLineCoords && routeLineCoords.length > 1 && (
+                  <Polyline
+                    positions={routeLineCoords}
+                    pathOptions={{ color: "#2563eb", weight: 5, opacity: 0.7 }}
+                  />
+                )}
+
+                {/* Result markers — hidden when directions route is showing to reduce clutter */}
+                {mapPoints
+                  .filter((r) => !(route && selectedStopIds.has(r.id)))
+                  .map((r) => (
+                    <Marker
+                      key={r.id}
+                      position={[r.lat, r.lon]}
+                      icon={makeIcon(r.type, hoveredId === r.id)}
+                      zIndexOffset={hoveredId === r.id ? 1000 : 0}
+                    >
+                      <Popup>
+                        <div className="text-sm">
+                          <div className="font-semibold">{r.name}</div>
+                          {r.title && <div className="text-gray-500">{r.title}</div>}
+                          {r.addressLabel && (
+                            <div className="text-gray-400 text-xs mt-1">{r.addressLabel}</div>
+                          )}
+                          {r.distance != null && (
+                            <div className="text-indigo-600 font-medium mt-1">
+                              {r.distance.toFixed(1)} mi from center
+                            </div>
+                          )}
+                        </div>
+                      </Popup>
+                    </Marker>
+                  ))}
+
+                {/* Numbered stop markers for directions */}
+                {directionsActive && stops.map((s, i) => (
+                  <Marker
+                    key={s.id}
+                    position={[s.lat, s.lon]}
+                    icon={makeNumberedIcon(i + 1, hoveredId === s.id)}
+                    zIndexOffset={hoveredId === s.id ? 1100 : 100}
+                  >
+                    <Popup>
+                      <div className="text-sm">
+                        <div className="font-semibold text-blue-600">Stop #{i + 1}</div>
+                        <div className="font-medium">{s.label}</div>
+                        {s.subLabel && <div className="text-gray-400 text-xs mt-1">{s.subLabel}</div>}
+                      </div>
+                    </Popup>
+                  </Marker>
+                ))}
+              </MapContainer>
+
+              {/* Route summary overlay */}
+              {route && (
+                <div className="absolute top-3 left-3 z-[1000] bg-white/95 rounded-lg shadow-md px-4 py-2.5 text-sm pointer-events-none">
+                  <div className="font-semibold text-gray-900 flex items-center gap-1.5">
+                    <RouteIcon className="w-4 h-4 text-blue-600" />
+                    Driving Route
+                  </div>
+                  <div className="text-gray-600 mt-0.5">
+                    {stops.length} stops · {route.distance} · {route.duration}
+                  </div>
+                </div>
               )}
 
-              {/* Result markers */}
-              {mapPoints.map((r) => (
-                <Marker
-                  key={r.id}
-                  position={[r.lat, r.lon]}
-                  icon={makeIcon(r.type, hoveredId === r.id)}
-                  zIndexOffset={hoveredId === r.id ? 1000 : 0}
-                >
-                  <Popup>
-                    <div className="text-sm">
-                      <div className="font-semibold">{r.name}</div>
-                      {r.title && <div className="text-gray-500">{r.title}</div>}
-                      {r.addressLabel && (
-                        <div className="text-gray-400 text-xs mt-1">{r.addressLabel}</div>
-                      )}
-                      {r.distance != null && (
-                        <div className="text-indigo-600 font-medium mt-1">
-                          {r.distance.toFixed(1)} mi from center
-                        </div>
-                      )}
-                    </div>
-                  </Popup>
-                </Marker>
-              ))}
-            </MapContainer>
-
-            {/* Legend */}
-            {results.length > 0 && (
-              <div className="absolute bottom-3 left-3 z-[1000] bg-white/95 rounded-lg shadow-md px-3 py-2 text-xs space-y-1 pointer-events-none">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 border border-white" />
-                  Firm ({firmResults.length})
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-pink-500 border border-white" />
-                  Contact ({contactResults.length})
-                </div>
-                {center && (
+              {/* Legend */}
+              {results.length > 0 && !route && (
+                <div className="absolute bottom-3 left-3 z-[1000] bg-white/95 rounded-lg shadow-md px-3 py-2 text-xs space-y-1 pointer-events-none">
                   <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 border border-white" />
-                    Center
+                    <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 border border-white" />
+                    Firm ({firmResults.length})
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-pink-500 border border-white" />
+                    Contact ({contactResults.length})
+                  </div>
+                  {center && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-red-500 border border-white" />
+                      Center
+                    </div>
+                  )}
+                  {directionsActive && stops.length > 0 && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-blue-600 border border-white" />
+                      Stop ({stops.length})
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Results list / Directions panel */}
+          {showList && (
+            <div className={`w-full ${viewMode === "split" ? "sm:w-[340px] sm:border-l" : ""} border-t sm:border-t-0 border-gray-200 flex flex-col min-h-0 ${viewMode === "split" ? "max-h-[40vh] sm:max-h-none" : ""}`}>
+              {/* Directions builder */}
+              {directionsActive && (
+                <div className="border-b border-gray-200 bg-blue-50/40">
+                  <div className="px-4 py-2.5 flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-sm font-semibold text-gray-700">
+                      <RouteIcon className="w-4 h-4 text-blue-600" />
+                      Directions
+                    </div>
+                    {stops.length > 0 && (
+                      <button
+                        onClick={() => { setStops([]); setRoute(null); setRouteError(null); }}
+                        className="text-xs text-gray-500 hover:text-gray-700 underline"
+                      >
+                        Clear all
+                      </button>
+                    )}
+                  </div>
+                  {/* Stop list */}
+                  {stops.length > 0 && (
+                    <div className="px-3 pb-2 space-y-1 max-h-[200px] overflow-y-auto">
+                      {stops.map((s, i) => (
+                        <div key={s.id} className="flex items-center gap-1.5 bg-white rounded-md border border-gray-200 px-2 py-1.5"
+                          onMouseEnter={() => setHoveredId(s.id)}
+                          onMouseLeave={() => setHoveredId(null)}
+                        >
+                          <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
+                            {i + 1}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs font-medium text-gray-900 truncate">{s.label}</div>
+                            {s.subLabel && <div className="text-xs text-gray-400 truncate">{s.subLabel}</div>}
+                          </div>
+                          <div className="flex flex-col">
+                            <button onClick={() => moveStop(i, -1)} disabled={i === 0}
+                              className="text-gray-400 hover:text-gray-700 disabled:opacity-30">
+                              <ArrowUp className="w-3.5 h-3.5" />
+                            </button>
+                            <button onClick={() => moveStop(i, 1)} disabled={i === stops.length - 1}
+                              className="text-gray-400 hover:text-gray-700 disabled:opacity-30">
+                              <ArrowDown className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                          <button onClick={() => removeStop(s.id)}
+                            className="text-gray-400 hover:text-red-500">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {/* Custom address entry */}
+                  <div className="px-3 pb-2 flex gap-1.5">
+                    <Input
+                      placeholder="Add a custom address..."
+                      value={customAddrInput}
+                      onChange={(e) => setCustomAddrInput(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && addCustomStop()}
+                      className="h-8 text-xs flex-1"
+                    />
+                    <Button size="icon" variant="outline" className="h-8 w-8 flex-shrink-0"
+                      onClick={addCustomStop} disabled={geocodingCustom || !customAddrInput.trim()}>
+                      {geocodingCustom ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                    </Button>
+                  </div>
+                  {/* Action buttons */}
+                  <div className="px-3 pb-3 flex gap-1.5">
+                    <Button size="sm" className="h-8 flex-1" onClick={getRoute}
+                      disabled={routing || stops.length < 2}>
+                      {routing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Navigation className="w-3.5 h-3.5" />}
+                      Get Route
+                    </Button>
+                    {googleMapsUrl && (
+                      <Button size="sm" variant="outline" className="h-8" asChild>
+                        <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          Google Maps
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                  {/* Route summary */}
+                  {route && (
+                    <div className="mx-3 mb-2 bg-white rounded-md border border-blue-200 px-3 py-2 text-xs">
+                      <div className="font-semibold text-gray-900">
+                        {route.distance} · {route.duration}
+                      </div>
+                      <div className="text-gray-500">{stops.length} stops</div>
+                    </div>
+                  )}
+                  {routeError && (
+                    <div className="mx-3 mb-2 text-xs text-red-500">{routeError}</div>
+                  )}
+                  {stops.length < 2 && (
+                    <div className="px-3 pb-2 text-xs text-gray-400">
+                      Select {2 - stops.length} more stop{2 - stops.length === 1 ? "" : "s"} from the list below, or add a custom address.
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Results list header */}
+              <div className="px-4 py-2.5 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+                <span className="text-sm font-semibold text-gray-700">
+                  {loading
+                    ? "Searching..."
+                    : hasSearched
+                    ? `${results.length} result${results.length !== 1 ? "s" : ""}`
+                    : "Enter search criteria"}
+                </span>
+                {results.length > 0 && !directionsActive && (
+                  <span className="text-xs text-gray-400">
+                    {searchMode === "firm" ? "Firm name search" : "Location search"}
+                  </span>
+                )}
+                {directionsActive && stops.length > 0 && (
+                  <span className="text-xs text-blue-600 font-medium">
+                    {stops.length} stop{stops.length !== 1 ? "s" : ""} selected
+                  </span>
+                )}
+              </div>
+              <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
+                {loading && (
+                  <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                    <Loader2 className="w-6 h-6 animate-spin mb-2" />
+                    <span className="text-sm">Geocoding addresses...</span>
+                  </div>
+                )}
+                {!loading && error && (
+                  <div className="text-sm text-red-500 text-center py-8 px-4">{error}</div>
+                )}
+                {!loading && !error && hasSearched && results.length === 0 && (
+                  <div className="text-sm text-gray-400 text-center py-8 px-4">
+                    No results found. Try a different location or firm name.
+                  </div>
+                )}
+                {!loading && !error && !hasSearched && (
+                  <div className="text-sm text-gray-400 text-center py-8 px-4">
+                    <MapPin className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                    Search for firms and contacts by location or firm name.
+                    {directionsActive && " Select results to build a driving route."}
+                  </div>
+                )}
+                {!loading &&
+                  !error &&
+                  results.slice(0, 150).map((r) => (
+                    <ResultItem
+                      key={r.id}
+                      result={r}
+                      highlighted={hoveredId === r.id}
+                      onHover={setHoveredId}
+                      onClick={handleResultClick}
+                      selectable={directionsActive}
+                      selected={selectedStopIds.has(r.id)}
+                      onToggleSelect={toggleStopSelection}
+                      stopNumber={directionsActive && selectedStopIds.has(r.id) ? stops.findIndex((s) => s.id === r.id) + 1 : null}
+                    />
+                  ))}
+                {!loading && !error && results.length > 150 && (
+                  <div className="text-xs text-gray-400 text-center py-2">
+                    Showing 150 of {results.length} results. Refine your search to see more.
                   </div>
                 )}
               </div>
-            )}
-          </div>
-
-          {/* Results list */}
-          <div className="w-full sm:w-[320px] sm:border-l border-t sm:border-t-0 border-gray-200 flex flex-col min-h-0 max-h-[40vh] sm:max-h-none">
-            <div className="px-4 py-2.5 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
-              <span className="text-sm font-semibold text-gray-700">
-                {loading
-                  ? "Searching..."
-                  : hasSearched
-                  ? `${results.length} result${results.length !== 1 ? "s" : ""}`
-                  : "Enter search criteria"}
-              </span>
-              {results.length > 0 && (
-                <span className="text-xs text-gray-400">
-                  {searchMode === "firm" ? "Firm name search" : "Location search"}
-                </span>
-              )}
             </div>
-            <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
-              {loading && (
-                <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-                  <Loader2 className="w-6 h-6 animate-spin mb-2" />
-                  <span className="text-sm">Geocoding addresses...</span>
-                </div>
-              )}
-              {!loading && error && (
-                <div className="text-sm text-red-500 text-center py-8 px-4">{error}</div>
-              )}
-              {!loading && !error && hasSearched && results.length === 0 && (
-                <div className="text-sm text-gray-400 text-center py-8 px-4">
-                  No results found. Try a different location or firm name.
-                </div>
-              )}
-              {!loading && !error && !hasSearched && (
-                <div className="text-sm text-gray-400 text-center py-8 px-4">
-                  <MapPin className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                  Search for firms and contacts by location or firm name. Hover over a result to
-                  see it on the map.
-                </div>
-              )}
-              {!loading &&
-                !error &&
-                results.slice(0, 150).map((r) => (
-                  <ResultItem
-                    key={r.id}
-                    result={r}
-                    highlighted={hoveredId === r.id}
-                    onHover={setHoveredId}
-                    onClick={handleResultClick}
-                  />
-                ))}
-              {!loading && !error && results.length > 150 && (
-                <div className="text-xs text-gray-400 text-center py-2">
-                  Showing 150 of {results.length} results. Refine your search to see more.
-                </div>
-              )}
-            </div>
-          </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
