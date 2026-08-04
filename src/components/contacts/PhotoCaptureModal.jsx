@@ -109,46 +109,57 @@ export default function PhotoCaptureModal({ open, onOpenChange, contacts, onCont
     setStage("searching");
     setError(null);
     setSearchProgress({ done: 0, total: withPhotos.length });
-    try {
-      const BATCH = 5;
-      const allMatches = [];
-      for (let i = 0; i < withPhotos.length; i += BATCH) {
-        const batch = withPhotos.slice(i, i + BATCH);
-        const file_urls = [capturedUrl, ...batch.map((c) => c.photo_url)];
-        const prompt = `The FIRST image (index 1) is a reference photo of a person. Images 2 through ${batch.length + 1} are photos of contacts from a database. For EACH image from index 2 onward, compare it to the first image and determine how likely it is the SAME person. Return a confidence score from 0 to 100. Only include entries with confidence >= 20.`;
-        const schema = {
-          type: "object",
-          properties: {
-            matches: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  image_index: { type: "number", description: "1-based index into file_urls (2 = second image)" },
-                  confidence: { type: "number", description: "0-100" },
-                  reason: { type: "string" },
-                },
+    const BATCH = 3;
+    const allMatches = [];
+    let failedBatches = 0;
+    for (let i = 0; i < withPhotos.length; i += BATCH) {
+      const batch = withPhotos.slice(i, i + BATCH);
+      const file_urls = [capturedUrl, ...batch.map((c) => c.photo_url)];
+      const prompt = `The FIRST image (index 1) is a reference photo of a person. Images 2 through ${batch.length + 1} are photos of contacts from a database. For EACH image from index 2 onward, compare it to the first image and determine how likely it is the SAME person. Return a confidence score from 0 to 100. Only include entries with confidence >= 20.`;
+      const schema = {
+        type: "object",
+        properties: {
+          matches: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                image_index: { type: "number", description: "1-based index into file_urls (2 = second image)" },
+                confidence: { type: "number", description: "0-100" },
+                reason: { type: "string" },
               },
             },
           },
-        };
-        const res = await base44.integrations.Core.InvokeLLM({
-          prompt, file_urls, response_json_schema: schema,
-        });
+        },
+      };
+      let res = null;
+      for (let attempt = 0; attempt < 2 && !res; attempt++) {
+        try {
+          res = await base44.integrations.Core.InvokeLLM({
+            prompt, file_urls, response_json_schema: schema,
+          });
+        } catch (batchErr) {
+          if (attempt === 1) failedBatches++;
+        }
+      }
+      if (res) {
         for (const m of res?.matches || []) {
           const idx = m.image_index - 2;
           if (idx >= 0 && idx < batch.length && m.confidence >= 20) {
             allMatches.push({ contact: batch[idx], confidence: m.confidence, reason: m.reason });
           }
         }
-        setSearchProgress({ done: Math.min(i + BATCH, withPhotos.length), total: withPhotos.length });
       }
-      allMatches.sort((a, b) => b.confidence - a.confidence);
-      setMatches(allMatches.slice(0, 8));
-      setStage("results");
-    } catch (e) {
-      setError("Photo search failed: " + (e.message || "unknown error"));
+      setSearchProgress({ done: Math.min(i + BATCH, withPhotos.length), total: withPhotos.length });
+    }
+    allMatches.sort((a, b) => b.confidence - a.confidence);
+    setMatches(allMatches.slice(0, 8));
+    setStage("results");
+    if (failedBatches > 0 && allMatches.length === 0) {
+      setError(`Search failed after retrying ${failedBatches} batch(es). Please try again or add as a new contact.`);
       setStage("review");
+    } else if (failedBatches > 0) {
+      setError(`${failedBatches} batch(es) were skipped due to errors, but ${allMatches.length} match(es) were found.`);
     }
   };
 
