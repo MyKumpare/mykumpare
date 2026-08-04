@@ -339,6 +339,13 @@ export default function MapSearchModal({
   const [stops, setStops] = useState([]); // [{ id, label, subLabel, lat, lon }]
   const [customAddrInput, setCustomAddrInput] = useState("");
   const [geocodingCustom, setGeocodingCustom] = useState(false);
+  const [addrInputFocused, setAddrInputFocused] = useState(false);
+  const [addrHistory, setAddrHistory] = useState(() => {
+    try {
+      const stored = localStorage.getItem("mapSearch_customAddrHistory");
+      return stored ? JSON.parse(stored) : [];
+    } catch { return []; }
+  });
   const [route, setRoute] = useState(null);
   const [routing, setRouting] = useState(false);
   const [routeError, setRouteError] = useState(null);
@@ -350,6 +357,15 @@ export default function MapSearchModal({
   const radiusMeters = radiusMiles ? radiusMiles * 1609.34 : null;
 
   const selectedStopIds = useMemo(() => new Set(stops.map((s) => s.id)), [stops]);
+
+  // Address history autocomplete — filters previously used custom addresses
+  const addrSuggestions = useMemo(() => {
+    const q = customAddrInput.toLowerCase().trim();
+    if (!q) return [];
+    return addrHistory
+      .filter((h) => h.query.toLowerCase().includes(q))
+      .slice(0, 5);
+  }, [customAddrInput, addrHistory]);
 
   // ── Autocomplete suggestions ──────────────────────────────────────────
   // Firm + contact name suggestions for the firm name field
@@ -719,6 +735,13 @@ export default function MapSearchModal({
           lon: data.center.lon,
         },
       ]);
+      // Save to address history (deduped by query, most recent first)
+      setAddrHistory((prev) => {
+        const filtered = prev.filter((h) => h.query.toLowerCase() !== q.toLowerCase());
+        const next = [{ query: q, lat: data.center.lat, lon: data.center.lon, displayName: data.center.displayName || "" }, ...filtered].slice(0, 20);
+        try { localStorage.setItem("mapSearch_customAddrHistory", JSON.stringify(next)); } catch { /* ignore */ }
+        return next;
+      });
       setCustomAddrInput("");
       setRoute(null);
     } catch (err) {
@@ -727,6 +750,17 @@ export default function MapSearchModal({
       setGeocodingCustom(false);
     }
   }, [customAddrInput]);
+
+  const addStopFromHistory = useCallback((h) => {
+    const id = `custom-${Date.now()}`;
+    setStops((prev) => [
+      ...prev,
+      { id, label: h.query, subLabel: h.displayName, lat: h.lat, lon: h.lon },
+    ]);
+    setCustomAddrInput("");
+    setRoute(null);
+    setRouteError(null);
+  }, []);
 
   const getRoute = useCallback(async () => {
     if (stops.length < 2) {
@@ -1105,14 +1139,33 @@ export default function MapSearchModal({
                     </div>
                   )}
                   {/* Custom address entry */}
-                  <div className="px-3 pb-2 flex gap-1.5">
-                    <Input
-                      placeholder="Add a custom address..."
-                      value={customAddrInput}
-                      onChange={(e) => setCustomAddrInput(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && addCustomStop()}
-                      className="h-8 text-xs flex-1"
-                    />
+                  <div className="px-3 pb-2 flex gap-1.5 relative">
+                    <div className="flex-1 relative">
+                      <Input
+                        placeholder="Add a custom address..."
+                        value={customAddrInput}
+                        onChange={(e) => setCustomAddrInput(e.target.value)}
+                        onFocus={() => setAddrInputFocused(true)}
+                        onBlur={() => setTimeout(() => setAddrInputFocused(false), 150)}
+                        onKeyDown={(e) => e.key === "Enter" && addCustomStop()}
+                        className="h-8 text-xs flex-1"
+                      />
+                      {addrInputFocused && addrSuggestions.length > 0 && (
+                        <div className="absolute top-full left-0 right-0 bg-white rounded-md shadow-lg border border-gray-200 z-[1001] max-h-48 overflow-y-auto">
+                          {addrSuggestions.map((h, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              onMouseDown={(e) => { e.preventDefault(); addStopFromHistory(h); }}
+                              className="w-full text-left px-3 py-1.5 hover:bg-gray-50 border-b border-gray-50 last:border-0 transition-colors"
+                            >
+                              <div className="text-xs font-medium text-gray-900 truncate">{h.query}</div>
+                              {h.displayName && <div className="text-[10px] text-gray-400 truncate">{h.displayName}</div>}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <Button size="icon" variant="outline" className="h-8 w-8 flex-shrink-0"
                       onClick={addCustomStop} disabled={geocodingCustom || !customAddrInput.trim()}>
                       {geocodingCustom ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
