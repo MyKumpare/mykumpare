@@ -139,6 +139,7 @@ textarea {
 /* Leaflet tooltips — wrap content so long names/addresses are fully visible within the map */
 .leaflet-tooltip {
   white-space: normal !important;
+  width: max-content !important;
   max-width: 280px !important;
   overflow-wrap: break-word !important;
   word-break: break-word !important;
