@@ -86,6 +86,62 @@ function makeNumberedIcon(num, highlighted) {
   });
 }
 
+// ── Geocode persistence ──────────────────────────────────────────────────
+// Saves newly geocoded lat/lng back onto the entity's address record so
+// subsequent searches skip the geocode API call for that address.
+
+function matchAddress(addr, target) {
+  if (addr.id && target.id && addr.id === target.id) return true;
+  return (
+    addr.address_line1 === target.address_line1 &&
+    addr.city === target.city &&
+    addr.state === target.state
+  );
+}
+
+async function persistGeocodedResults(results, firms, contacts) {
+  const firmUpdates = new Map();
+  const contactUpdates = new Map();
+
+  for (const r of results) {
+    if (r.lat == null || r.lon == null) continue;
+    // Skip addresses that already had stored coordinates
+    if (r.address && typeof r.address.latitude === "number") continue;
+
+    if (r.type === "firm") {
+      if (!firmUpdates.has(r.entityId)) firmUpdates.set(r.entityId, []);
+      firmUpdates.get(r.entityId).push({ address: r.address, lat: r.lat, lon: r.lon });
+    } else if (r.type === "contact") {
+      if (!contactUpdates.has(r.entityId)) contactUpdates.set(r.entityId, []);
+      contactUpdates.get(r.entityId).push({ address: r.address, lat: r.lat, lon: r.lon });
+    }
+  }
+
+  for (const [firmId, updates] of firmUpdates) {
+    const firm = firms.find((f) => f.id === firmId);
+    if (!firm?.addresses) continue;
+    const newAddresses = firm.addresses.map((addr) => {
+      const u = updates.find((up) => matchAddress(addr, up.address));
+      return u ? { ...addr, latitude: u.lat, longitude: u.lon } : addr;
+    });
+    try {
+      await base44.entities.Firm.update(firmId, { addresses: newAddresses });
+    } catch { /* non-critical background save */ }
+  }
+
+  for (const [contactId, updates] of contactUpdates) {
+    const contact = contacts.find((c) => c.id === contactId);
+    if (!contact?.addresses) continue;
+    const newAddresses = contact.addresses.map((addr) => {
+      const u = updates.find((up) => matchAddress(addr, up.address));
+      return u ? { ...addr, latitude: u.lat, longitude: u.lon } : addr;
+    });
+    try {
+      await base44.entities.Contact.update(contactId, { addresses: newAddresses });
+    } catch { /* non-critical background save */ }
+  }
+}
+
 // ── Map controllers ─────────────────────────────────────────────────────
 
 function MapBoundsController({ points, center, radius, routeCoords }) {
@@ -504,6 +560,12 @@ export default function MapSearchModal({
       setCenter(centerCoords);
       setResults(finalResults);
       setSearchMode(mode);
+
+      // Persist newly geocoded coordinates back to entity records (fire-and-forget)
+      // so subsequent searches skip geocoding for those addresses.
+      if (finalResults.length > 0) {
+        persistGeocodedResults(finalResults, activeFirms, activeContacts);
+      }
     } catch (err) {
       setError(err?.message || "Search failed. Please try again.");
       setResults([]);
