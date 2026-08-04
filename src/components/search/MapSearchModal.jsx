@@ -209,14 +209,14 @@ function ResultItem({ result, highlighted, onHover, onClick, selectable, selecte
         <div
           className={`flex-shrink-0 mt-0.5 w-8 h-8 rounded-lg flex items-center justify-center ${
             isFirm ? "bg-indigo-100 text-indigo-600" : "bg-pink-100 text-pink-600"
-          } ${!selectable ? "cursor-pointer" : ""}`}
-          onClick={!selectable ? () => onClick(result) : undefined}
+          } cursor-pointer hover:opacity-80 transition-opacity`}
+          onClick={() => onClick(result)}
         >
           {isFirm ? <Building className="w-4 h-4" /> : <User className="w-4 h-4" />}
         </div>
         <div
-          className={`flex-1 min-w-0 ${!selectable ? "cursor-pointer" : ""}`}
-          onClick={!selectable ? () => onClick(result) : undefined}
+          className="flex-1 min-w-0 cursor-pointer"
+          onClick={() => onClick(result)}
         >
           <div className="text-sm font-medium text-gray-900 truncate">
             {stopNumber != null && <span className="text-blue-600 mr-1">#{stopNumber}</span>}

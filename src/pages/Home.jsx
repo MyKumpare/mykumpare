@@ -1135,8 +1135,8 @@ export default function Home() {
         onClose={() => setMapSearchOpen(false)}
         firms={firms}
         contacts={contacts}
-        onFirmClick={handleEdit}
-        onContactClick={(contact) => setViewingContact(contact)}
+        onFirmClick={(firm) => { setMapSearchOpen(false); handleEdit(firm); }}
+        onContactClick={(contact) => { setMapSearchOpen(false); setViewingContact(contact); }}
       />
 
       {/* Standalone Add Due Diligence dialog (from the "+ Add Due Diligence" header button) */}
