@@ -858,21 +858,29 @@ export default function MapSearchModal({
                       position={[r.lat, r.lon]}
                       icon={makeIcon(r.type, hoveredId === r.id)}
                       zIndexOffset={hoveredId === r.id ? 1000 : 0}
+                      eventHandlers={{
+                        click: () => handleResultClick(r),
+                        mouseover: () => setHoveredId(r.id),
+                        mouseout: () => setHoveredId(null),
+                      }}
                     >
-                      <Popup>
+                      <Tooltip direction="top" offset={[0, -12]} opacity={1}>
                         <div className="text-sm">
                           <div className="font-semibold">{r.name}</div>
-                          {r.title && <div className="text-gray-500">{r.title}</div>}
+                          {r.title && <div className="text-gray-500 text-xs">{r.title}</div>}
                           {r.addressLabel && (
-                            <div className="text-gray-400 text-xs mt-1">{r.addressLabel}</div>
+                            <div className="text-gray-400 text-xs mt-0.5">{r.addressLabel}</div>
                           )}
                           {r.distance != null && (
-                            <div className="text-indigo-600 font-medium mt-1">
+                            <div className="text-indigo-600 font-medium text-xs mt-0.5">
                               {r.distance.toFixed(1)} mi from center
                             </div>
                           )}
+                          <div className="text-blue-600 text-xs mt-1 font-medium">
+                            Click to open {r.type === "firm" ? "firm" : "contact"}
+                          </div>
                         </div>
-                      </Popup>
+                      </Tooltip>
                     </Marker>
                   ))}
 
