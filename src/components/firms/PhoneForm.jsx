@@ -123,17 +123,15 @@ export default function PhoneForm({ phone, onChange, onDelete, onSetDefault, isD
               <Star className={`w-3.5 h-3.5 ${isDefault ? "fill-amber-400 text-amber-500" : ""}`} />
               <span>{isDefault ? "Default" : "Set Default"}</span>
             </Button>
-            {!isOnly && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-7 w-7 p-0 text-red-400 hover:text-red-600 hover:bg-red-50"
-                onClick={onDelete}
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </Button>
-            )}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 text-red-400 hover:text-red-600 hover:bg-red-50"
+              onClick={onDelete}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </Button>
           </div>
         )}
       </div>
