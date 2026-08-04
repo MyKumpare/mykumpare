@@ -417,7 +417,13 @@ export default function MapSearchModal({
         const q = firmNameInput.toLowerCase().trim();
         const matchingFirms = activeFirms.filter((f) => f.name.toLowerCase().includes(q));
 
-        if (matchingFirms.length === 0) {
+        // Also match contact names (first + last)
+        const matchingContacts = activeContacts.filter((c) => {
+          const fullName = [c.first_name, c.last_name].filter(Boolean).join(" ").toLowerCase();
+          return fullName.includes(q);
+        });
+
+        if (matchingFirms.length === 0 && matchingContacts.length === 0) {
           setResults([]);
           setCenter(null);
           setSearchMode(mode);
@@ -457,13 +463,37 @@ export default function MapSearchModal({
           }
         }
 
-        if (radiusMiles && matchingFirms.length > 0) {
-          const hqFirm = matchingFirms[0];
-          const hqAddr =
-            (hqFirm.addresses || []).find((a) => a.is_headquarters) ||
-            (hqFirm.addresses || [])[0];
-          if (hqAddr) {
-            centerQuery = buildAddressString(hqAddr);
+        // Add matching contacts (by name) and their addresses
+        for (const contact of matchingContacts) {
+          for (const addr of contact.addresses || []) {
+            const rid = `contact-${contact.id}-${addr.id || addr.address_line1 || JSON.stringify(addr)}`;
+            if (candidateResults.some((r) => r.id === rid)) continue;
+            candidateResults.push({
+              id: rid,
+              type: "contact",
+              entityId: contact.id,
+              name: [contact.first_name, contact.last_name].filter(Boolean).join(" "),
+              title: contact.title,
+              address: addr,
+              addressLabel: formatAddress(addr),
+            });
+          }
+        }
+
+        if (radiusMiles) {
+          if (matchingFirms.length > 0) {
+            const hqFirm = matchingFirms[0];
+            const hqAddr =
+              (hqFirm.addresses || []).find((a) => a.is_headquarters) ||
+              (hqFirm.addresses || [])[0];
+            if (hqAddr) {
+              centerQuery = buildAddressString(hqAddr);
+            }
+          } else if (matchingContacts.length > 0) {
+            const firstAddr = (matchingContacts[0].addresses || [])[0];
+            if (firstAddr) {
+              centerQuery = buildAddressString(firstAddr);
+            }
           }
           const existingIds = new Set(candidateResults.map((r) => r.id));
           for (const firm of activeFirms) {
@@ -831,7 +861,7 @@ export default function MapSearchModal({
             </div>
             <div className="flex-1 min-w-[180px]">
               <label className="text-xs text-gray-500 font-medium mb-1 block">
-                Firm name (optional)
+                Firm or contact name (optional)
               </label>
               <MapSearchAutocomplete
                 value={firmNameInput}
@@ -1119,7 +1149,7 @@ export default function MapSearchModal({
                 </span>
                 {results.length > 0 && !directionsActive && (
                   <span className="text-xs text-gray-400">
-                    {searchMode === "firm" ? "Firm name search" : "Location search"}
+                    {searchMode === "firm" ? "Name search" : "Location search"}
                   </span>
                 )}
                 {directionsActive && stops.length > 0 && (
