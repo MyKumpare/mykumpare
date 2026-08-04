@@ -131,7 +131,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
   const { data: allContacts = [] } = useQuery({
     queryKey: ["contacts"],
-    queryFn: () => base44.entities.Contact.list("-created_date", 500),
+    queryFn: () => base44.entities.Contact.list("-created_date", 5000),
   });
   const logoInputRef = useRef(null);
   const { user } = useAuth();

@@ -96,7 +96,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
 
   const { data: allContacts = [] } = useQuery({
     queryKey: ["contacts"],
-    queryFn: () => base44.entities.Contact.list("-created_date", 500),
+    queryFn: () => base44.entities.Contact.list("-created_date", 5000),
   });
 
   useEffect(() => {

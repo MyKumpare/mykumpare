@@ -50,7 +50,7 @@ export default function ActivityLogPickerModal({ open, onClose, onAddActivity, o
 
   const { data: contacts = [] } = useQuery({
     queryKey: ["contacts"],
-    queryFn: () => base44.entities.Contact.list(),
+    queryFn: () => base44.entities.Contact.list("-created_date", 5000),
     enabled: open,
   });
 
