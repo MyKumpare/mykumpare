@@ -897,15 +897,22 @@ export default function MapSearchModal({
 
               {/* Route summary overlay */}
               {route && (
-                <div className="absolute top-3 left-3 z-[1000] bg-white/95 rounded-lg shadow-md px-4 py-2.5 text-sm pointer-events-none">
+                <a
+                  href={googleMapsUrl || "#"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="absolute top-3 left-3 z-[1000] bg-white/95 rounded-lg shadow-md px-4 py-2.5 text-sm cursor-pointer hover:shadow-lg hover:bg-white transition-all no-underline"
+                  title="Open in Google Maps"
+                >
                   <div className="font-semibold text-gray-900 flex items-center gap-1.5">
                     <RouteIcon className="w-4 h-4 text-blue-600" />
                     Driving Route
+                    <ExternalLink className="w-3 h-3 text-gray-400 ml-0.5" />
                   </div>
                   <div className="text-gray-600 mt-0.5">
                     {stops.length} stops · {route.distance} · {route.duration}
                   </div>
-                </div>
+                </a>
               )}
 
               {/* Legend */}
