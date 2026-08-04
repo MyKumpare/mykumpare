@@ -81,6 +81,7 @@ export default function EditFirmDocumentDialog({
     mutationFn: ({ id, data }) => base44.entities.FirmDocument.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["firm-documents", firmId] });
+      queryClient.invalidateQueries({ queryKey: ["all-firm-documents"] });
     },
   });
 

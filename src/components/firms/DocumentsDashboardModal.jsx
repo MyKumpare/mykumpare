@@ -35,6 +35,7 @@ import { format, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import AddDocumentDialog from "./AddDocumentDialog";
+import EditFirmDocumentDialog from "./EditFirmDocumentDialog";
 
 const fmtDate = (iso) => {
   if (!iso) return "—";
@@ -54,6 +55,7 @@ export default function DocumentsDashboardModal({ open, onClose }) {
   const [filterSubCategory, setFilterSubCategory] = useState("all");
   const [filterDocDate, setFilterDocDate] = useState("");
   const [addOpen, setAddOpen] = useState(false);
+  const [editDoc, setEditDoc] = useState(null);
   const [sortKey, setSortKey] = useState("entry_date");
   const [sortDir, setSortDir] = useState("desc");
 
@@ -313,19 +315,31 @@ export default function DocumentsDashboardModal({ open, onClose }) {
                   >
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-teal-500 flex-shrink-0" />
+                        {doc.file_url ? (
+                          <a
+                            href={doc.file_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex-shrink-0 text-teal-500 hover:text-teal-700"
+                            title="Open file"
+                          >
+                            <FileText className="w-4 h-4" />
+                          </a>
+                        ) : (
+                          <FileText className="w-4 h-4 text-teal-500 flex-shrink-0" />
+                        )}
                         <div className="min-w-0">
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <a
-                                href={doc.file_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-sm font-medium text-gray-800 hover:text-teal-600 truncate block max-w-xs cursor-help"
+                              <button
+                                type="button"
+                                onClick={() => setEditDoc(doc)}
+                                className="text-sm font-medium text-teal-700 hover:text-teal-800 hover:underline truncate block max-w-xs text-left cursor-pointer"
                                 title={doc.file_name}
                               >
                                 {doc.file_name}
-                              </a>
+                              </button>
                             </TooltipTrigger>
                             <TooltipContent
                               side="bottom"
@@ -409,6 +423,12 @@ export default function DocumentsDashboardModal({ open, onClose }) {
         </div>
 
         <AddDocumentDialog open={addOpen} onOpenChange={setAddOpen} />
+        <EditFirmDocumentDialog
+          open={!!editDoc}
+          onOpenChange={(o) => !o && setEditDoc(null)}
+          document={editDoc}
+          firmId={editDoc?.firm_id}
+        />
       </DialogContent>
     </Dialog>
   );
