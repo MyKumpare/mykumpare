@@ -666,6 +666,8 @@ export default function MapSearchModal({
           subLabel: result.addressLabel,
           lat: result.lat,
           lon: result.lon,
+          type: result.type,
+          entityId: result.entityId,
         },
       ];
     });
@@ -967,14 +969,28 @@ export default function MapSearchModal({
                     position={[s.lat, s.lon]}
                     icon={makeNumberedIcon(i + 1, hoveredId === s.id)}
                     zIndexOffset={hoveredId === s.id ? 1100 : 100}
+                    eventHandlers={{
+                      click: () => {
+                        if (s.type === "firm" || s.type === "contact") {
+                          handleResultClick({ type: s.type, entityId: s.entityId });
+                        }
+                      },
+                      mouseover: () => setHoveredId(s.id),
+                      mouseout: () => setHoveredId(null),
+                    }}
                   >
-                    <Popup>
+                    <Tooltip direction="top" offset={[0, -12]} opacity={1}>
                       <div className="text-sm">
                         <div className="font-semibold text-blue-600">Stop #{i + 1}</div>
                         <div className="font-medium">{s.label}</div>
                         {s.subLabel && <div className="text-gray-400 text-xs mt-1">{s.subLabel}</div>}
+                        {(s.type === "firm" || s.type === "contact") && (
+                          <div className="text-blue-600 text-xs mt-1 font-medium">
+                            Click to open {s.type === "firm" ? "firm" : "contact"}
+                          </div>
+                        )}
                       </div>
-                    </Popup>
+                    </Tooltip>
                   </Marker>
                 ))}
               </MapContainer>
