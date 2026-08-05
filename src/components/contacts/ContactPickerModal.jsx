@@ -99,7 +99,7 @@ export default function ContactPickerModal({ open, onClose, contacts, firms, pro
       const primaryFirmId = (c.firm_ids || [])[0];
       const firmTypes = primaryFirmId ? (firmTypeMap[primaryFirmId] || []) : [];
       const type = firmTypes[0] || "Other";
-      const firmName = primaryFirmId ? (firmMap[primaryFirmId] || "Unknown Firm") : "No Firm";
+      const firmName = primaryFirmId ? (firmMap[primaryFirmId]?.name || "Unknown Firm") : "No Firm";
       if (!result[type]) result[type] = {};
       if (!result[type][firmName]) result[type][firmName] = [];
       result[type][firmName].push(c);
@@ -139,7 +139,7 @@ export default function ContactPickerModal({ open, onClose, contacts, firms, pro
         </div>
 
         {/* Filters */}
-        <div className="px-4 py-3 border-b border-gray-100">
+        <div className="px-4 py-3 border-b border-gray-100 max-h-[40vh] overflow-y-auto">
           <ContactsSectionFilters
             contacts={contacts}
             firms={firms}
