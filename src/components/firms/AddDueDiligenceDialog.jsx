@@ -15,9 +15,7 @@ import { ChevronDown, Check, Plus, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { findContactDuplicates } from "@/components/contacts/contactDuplicateCheck";
 import { useFirmOwner } from "@/components/admin/useFirmOwner";
-
-const DD_STATUSES = ["Pipeline", "Buy List", "Rejected"];
-const PROCESS_STATUSES = ["Not Started", "In-process", "Completed"];
+import StatusOptionSelect from "./StatusOptionSelect";
 const PRODUCT_TYPES = ["Investment Manager Product", "Multi-Manager Product"];
 const FIRM_TYPES = ["Manager of Managers", "Investment Manager", "Allocator", "Investment Consultant", "Securities Brokerage", "Trade Organizations"];
 
@@ -621,23 +619,23 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
           {/* Status */}
           <div className="space-y-1.5">
             <Label className="text-xs font-medium text-gray-700">Due Diligence Status</Label>
-            <Select value={status} onValueChange={(v) => { setStatus(v); if (v === "Buy List") setProcessStatus("Completed"); }}>
-              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {DD_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <StatusOptionSelect
+              value={status}
+              onChange={(v) => { setStatus(v); if (v === "Buy List") setProcessStatus("Completed"); }}
+              category="Due Diligence Status"
+              placeholder="Select status..."
+            />
           </div>
 
           {/* Process status */}
           <div className="space-y-1.5">
             <Label className="text-xs font-medium text-gray-700">Due Diligence Process Status</Label>
-            <Select value={processStatus} onValueChange={setProcessStatus}>
-              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {PROCESS_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <StatusOptionSelect
+              value={processStatus}
+              onChange={setProcessStatus}
+              category="Due Diligence Process Status"
+              placeholder="Select process status..."
+            />
           </div>
 
           {/* Primary analyst */}

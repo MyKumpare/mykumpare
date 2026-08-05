@@ -24,23 +24,13 @@
     },
     "status": {
       "type": "string",
-      "enum": [
-        "Pipeline",
-        "Buy List",
-        "Rejected"
-      ],
       "default": "Pipeline",
-      "description": "Due diligence status"
+      "description": "Due diligence status (extensible via DueDiligenceStatusOption master list)"
     },
     "process_status": {
       "type": "string",
-      "enum": [
-        "Not Started",
-        "In-process",
-        "Completed"
-      ],
       "default": "Not Started",
-      "description": "Due diligence process status"
+      "description": "Due diligence process status (extensible via DueDiligenceStatusOption master list)"
     },
     "primary_analyst_contact_id": {
       "type": "string",
