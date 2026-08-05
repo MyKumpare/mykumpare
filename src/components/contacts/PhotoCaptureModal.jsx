@@ -3,8 +3,9 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
-  Camera, Upload, Search, UserPlus, RefreshCw, Loader2, AlertTriangle,
+  Camera, Upload, Search, UserPlus, RefreshCw, Loader2, AlertTriangle, UserCheck, ArrowLeft,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 
@@ -33,6 +34,8 @@ export default function PhotoCaptureModal({ open, onOpenChange, contacts, onCont
   const [matches, setMatches] = useState([]);
   const [error, setError] = useState(null);
   const [searchProgress, setSearchProgress] = useState({ done: 0, total: 0 });
+  const [contactQuery, setContactQuery] = useState("");
+  const [savingContactId, setSavingContactId] = useState(null);
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -168,6 +171,32 @@ export default function PhotoCaptureModal({ open, onOpenChange, contacts, onCont
     onOpenChange(false);
   };
 
+  const filteredContacts = (contacts || [])
+    .filter((c) => !c.deleted_at)
+    .filter((c) => {
+      if (!contactQuery.trim()) return true;
+      const q = contactQuery.toLowerCase();
+      const name = formatName(c).toLowerCase();
+      const firm = (c.firm_ids || []).length ? "" : "";
+      return name.includes(q) || (c.title || "").toLowerCase().includes(q) || (c.email || "").toLowerCase().includes(q);
+    })
+    .sort((a, b) => formatName(a).localeCompare(formatName(b), undefined, { sensitivity: "base" }))
+    .slice(0, 50);
+
+  const handleSaveToContact = async (contact) => {
+    try {
+      setSavingContactId(contact.id);
+      setError(null);
+      await base44.entities.Contact.update(contact.id, { photo_url: capturedUrl });
+      onContactClick({ ...contact, photo_url: capturedUrl });
+      onOpenChange(false);
+    } catch (e) {
+      setError("Failed to save photo: " + (e.message || "unknown error"));
+    } finally {
+      setSavingContactId(null);
+    }
+  };
+
   const retake = () => {
     setStage("capture");
     setCapturedUrl(null);
@@ -256,9 +285,62 @@ export default function PhotoCaptureModal({ open, onOpenChange, contacts, onCont
               <Button onClick={handleAddAsNew} variant="outline" className="w-full gap-2">
                 <UserPlus className="w-4 h-4" /> Add as New Contact
               </Button>
+              <Button onClick={() => { setStage("select-contact"); setContactQuery(""); }} variant="ghost" size="sm" className="w-full gap-2 text-indigo-600 hover:text-indigo-700">
+                <UserCheck className="w-4 h-4" /> Add to Existing Contact
+              </Button>
               <Button onClick={retake} variant="ghost" size="sm" className="w-full gap-1 text-gray-500">
                 <RefreshCw className="w-3.5 h-3.5" /> Retake Photo
               </Button>
+            </div>
+          </div>
+        )}
+
+        {stage === "select-contact" && capturedUrl && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Button onClick={() => setStage("review")} variant="ghost" size="sm" className="gap-1 px-2 text-gray-500">
+                <ArrowLeft className="w-4 h-4" /> Back
+              </Button>
+            </div>
+            <div className="rounded-xl overflow-hidden bg-gray-100 max-h-32">
+              <img src={capturedUrl} alt="Captured" className="w-full object-contain max-h-32" />
+            </div>
+            <Input
+              autoFocus
+              placeholder="Search contacts by name, title, or email..."
+              value={contactQuery}
+              onChange={(e) => setContactQuery(e.target.value)}
+            />
+            <div className="max-h-64 overflow-y-auto space-y-1">
+              {filteredContacts.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-4">No contacts found.</p>
+              ) : (
+                filteredContacts.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => handleSaveToContact(c)}
+                    disabled={savingContactId !== null}
+                    className="w-full flex items-center gap-3 p-2 rounded-xl border border-gray-100 bg-white hover:bg-indigo-50 hover:border-indigo-200 transition-colors text-left disabled:opacity-50"
+                  >
+                    {c.photo_url ? (
+                      <img src={c.photo_url} alt="" className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-500 flex-shrink-0">
+                        {(c.first_name?.[0] || "?")}{(c.last_name?.[0] || "")}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-gray-800 truncate">{formatName(c)}</div>
+                      {c.title && <div className="text-xs text-gray-400 truncate">{c.title}</div>}
+                    </div>
+                    {savingContactId === c.id ? (
+                      <Loader2 className="w-4 h-4 text-indigo-500 animate-spin flex-shrink-0" />
+                    ) : (
+                      <UserCheck className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+                    )}
+                  </button>
+                ))
+              )}
             </div>
           </div>
         )}
