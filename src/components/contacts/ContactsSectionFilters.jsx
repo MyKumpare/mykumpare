@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Search, SlidersHorizontal, MapPin, Package, Tag, Users, Shield, Building2, Briefcase } from "lucide-react";
+import { Search, SlidersHorizontal, MapPin, Package, Tag, Users, Shield, Building2, Briefcase, ChevronDown, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -159,6 +159,15 @@ export function filterSectionContacts(contacts, text, selected, firmMap, contact
 
 export default function ContactsSectionFilters({ contacts, firms, products, portfolios, text, onTextChange, selected, onToggle, onClear }) {
   const [showFilters, setShowFilters] = useState(false);
+  const [collapsedGroups, setCollapsedGroups] = useState(() => new Set(FIELD_GROUPS.map((g) => g.label)));
+
+  const toggleGroup = (label) =>
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
+    });
 
   const firmMap = useMemo(
     () => Object.fromEntries((firms || []).map((f) => [f.id, f])),
@@ -235,13 +244,32 @@ export default function ContactsSectionFilters({ contacts, firms, products, port
             const GroupIcon = group.icon;
             const hasAny = group.fields.some((f) => (options[f.key] || []).length > 0);
             if (!hasAny) return null;
+            const isCollapsed = collapsedGroups.has(group.label);
+            const groupActiveCount = group.fields.reduce(
+              (n, f) => n + ((selected[f.key] || new Set()).size),
+              0
+            );
             return (
               <div key={group.label} className="space-y-1.5">
-                <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(group.label)}
+                  className="flex items-center gap-1.5 w-full text-left"
+                >
+                  {isCollapsed ? (
+                    <ChevronRight className="w-3 h-3 text-gray-400" />
+                  ) : (
+                    <ChevronDown className="w-3 h-3 text-gray-400" />
+                  )}
                   <GroupIcon className="w-3 h-3 text-gray-500" />
                   <p className="text-xs font-semibold text-gray-700">{group.label}</p>
-                </div>
-                {group.fields.map((f) => {
+                  {groupActiveCount > 0 && (
+                    <span className="ml-0.5 inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-pink-600 text-white text-[10px]">
+                      {groupActiveCount}
+                    </span>
+                  )}
+                </button>
+                {!isCollapsed && group.fields.map((f) => {
                   const opts = options[f.key] || [];
                   if (opts.length === 0) return null;
                   return (
