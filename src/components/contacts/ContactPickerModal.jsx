@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
-import { X, User, Plus, Search, ChevronRight, ChevronDown, Building } from "lucide-react";
+import { X, User, Plus, ChevronRight, ChevronDown, Building } from "lucide-react";
+import ContactsSectionFilters, { filterSectionContacts } from "./ContactsSectionFilters";
 
 const getFullName = (c) => {
   const name = [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ");
@@ -18,21 +19,61 @@ const byFirstName = (a, b) => {
   return (a.last_name || "").localeCompare(b.last_name || "", undefined, { sensitivity: "base" });
 };
 
-export default function ContactPickerModal({ open, onClose, contacts, firms, onContactClick, onAddContact }) {
+export default function ContactPickerModal({ open, onClose, contacts, firms, products = [], portfolios = [], onContactClick, onAddContact }) {
   const [search, setSearch] = useState("");
+  const [filterSelected, setFilterSelected] = useState({});
   const [collapsedTypes, setCollapsedTypes] = useState({});
   const [collapsedFirms, setCollapsedFirms] = useState({});
 
   const toggleType = (type) => setCollapsedTypes(prev => ({ ...prev, [type]: !prev[type] }));
   const toggleFirm = (key) => setCollapsedFirms(prev => ({ ...prev, [key]: !prev[key] }));
 
-  const q = search.toLowerCase();
+  const firmMap = useMemo(() => Object.fromEntries((firms || []).map(f => [f.id, f])), [firms]);
 
-  const firmMap = useMemo(() => {
+  const contactProductMap = useMemo(() => {
     const map = {};
-    (firms || []).forEach(f => { map[f.id] = f.name; });
+    for (const p of products || []) {
+      for (const member of (p.investment_team || [])) {
+        const cid = member.contact_id;
+        if (!cid) continue;
+        if (!map[cid]) map[cid] = [];
+        if (!map[cid].includes(p.name)) map[cid].push(p.name);
+      }
+    }
     return map;
-  }, [firms]);
+  }, [products]);
+
+  const contactPortfolioMap = useMemo(() => {
+    const map = {};
+    if (!portfolios || !contacts) return map;
+    const firmPortfolioMap = {};
+    for (const p of portfolios) {
+      if (p.deleted_at) continue;
+      for (const fid of [p.firm_id, p.advisor_firm_id].filter(Boolean)) {
+        if (!firmPortfolioMap[fid]) firmPortfolioMap[fid] = [];
+        if (!firmPortfolioMap[fid].includes(p.portfolio_name)) firmPortfolioMap[fid].push(p.portfolio_name);
+      }
+    }
+    for (const c of contacts) {
+      const names = new Set();
+      for (const fid of c.firm_ids || []) {
+        for (const name of firmPortfolioMap[fid] || []) names.add(name);
+      }
+      if (names.size > 0) map[c.id] = Array.from(names);
+    }
+    return map;
+  }, [portfolios, contacts]);
+
+  const handleToggleFilter = (fieldKey, value) => {
+    setFilterSelected(prev => {
+      const next = { ...prev };
+      const s = new Set(next[fieldKey] || []);
+      if (s.has(value)) s.delete(value); else s.add(value);
+      if (s.size === 0) delete next[fieldKey]; else next[fieldKey] = s;
+      return next;
+    });
+  };
+  const handleClearFilters = () => { setFilterSelected({}); setSearch(""); };
 
   const firmTypeMap = useMemo(() => {
     const map = {};
@@ -45,16 +86,11 @@ export default function ContactPickerModal({ open, onClose, contacts, firms, onC
 
   const activeContacts = useMemo(() => contacts.filter(c => !c.deleted_at), [contacts]);
 
-  const filtered = useMemo(() =>
-    activeContacts.filter(c => {
-      if (!q) return true;
-      const name = getFullName(c).toLowerCase();
-      const email = (c.email || "").toLowerCase();
-      const title = (c.title || "").toLowerCase();
-      const type = (c.contact_type || "").toLowerCase();
-      const firmNames = (c.firm_ids || []).map(id => (firmMap[id] || "").toLowerCase()).join(" ");
-      return name.includes(q) || email.includes(q) || title.includes(q) || type.includes(q) || firmNames.includes(q);
-    }), [activeContacts, q, firmMap]);
+  const hasFilters = search.trim() || Object.keys(filterSelected).length > 0;
+  const filtered = useMemo(() => {
+    if (!hasFilters) return activeContacts;
+    return filterSectionContacts(activeContacts, search, filterSelected, firmMap, contactProductMap, contactPortfolioMap);
+  }, [activeContacts, search, filterSelected, firmMap, contactProductMap, contactPortfolioMap, hasFilters]);
 
   // Group: firm_type → firm_name → contacts (all sorted ascending alphabetically)
   const grouped = useMemo(() => {
@@ -102,24 +138,19 @@ export default function ContactPickerModal({ open, onClose, contacts, firms, onC
           </button>
         </div>
 
-        {/* Search */}
+        {/* Filters */}
         <div className="px-4 py-3 border-b border-gray-100">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-            <input
-              autoFocus
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search by name, firm, title, or type..."
-              className="w-full h-9 pl-9 pr-8 text-sm rounded-lg border border-gray-200 outline-none focus:border-pink-400 bg-gray-50"
-            />
-            {search && (
-              <button type="button" onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2">
-                <X className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" />
-              </button>
-            )}
-          </div>
+          <ContactsSectionFilters
+            contacts={contacts}
+            firms={firms}
+            products={products}
+            portfolios={portfolios}
+            text={search}
+            onTextChange={setSearch}
+            selected={filterSelected}
+            onToggle={handleToggleFilter}
+            onClear={handleClearFilters}
+          />
         </div>
 
         {/* List */}

@@ -1133,6 +1133,8 @@ export default function Home() {
         onClose={() => setContactPickerOpen(false)}
         contacts={contacts}
         firms={firms}
+        products={products}
+        portfolios={portfolios}
         onContactClick={(contact) => setViewingContact(contact)}
         onAddContact={() => setAddContactOpen(true)}
       />
