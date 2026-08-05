@@ -139,7 +139,7 @@ export default function ContactPickerModal({ open, onClose, contacts, firms, pro
         </div>
 
         {/* Filters */}
-        <div className="px-4 py-3 border-b border-gray-100 max-h-[40vh] overflow-y-auto">
+        <div className="px-4 py-3 border-b border-gray-100">
           <ContactsSectionFilters
             contacts={contacts}
             firms={firms}

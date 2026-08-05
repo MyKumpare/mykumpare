@@ -203,7 +203,7 @@ export default function ContactsSectionFilters({ contacts, firms, products, port
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 pb-1">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
           <Input
@@ -231,7 +231,7 @@ export default function ContactsSectionFilters({ contacts, firms, products, port
       </div>
 
       {showFilters && (
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-3">
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-3 max-h-[28vh] overflow-y-auto">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-gray-600">Filter contacts</span>
             {activeCount > 0 && (
