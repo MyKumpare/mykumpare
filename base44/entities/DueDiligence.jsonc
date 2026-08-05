@@ -47,6 +47,21 @@
     "secondary_analyst_name": {
       "type": "string",
       "description": "Full name of the secondary analyst (denormalized)"
+    },
+    "stages": {
+      "type": "array",
+      "description": "User-defined due diligence stages (shown when process status is In-process). Each stage has an id and a name.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      }
     }
   },
   "required": [

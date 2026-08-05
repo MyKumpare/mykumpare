@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ChevronDown, Check, Plus, AlertTriangle } from "lucide-react";
+import DueDiligenceStagesEditor from "./DueDiligenceStagesEditor";
 import { cn } from "@/lib/utils";
 import { findContactDuplicates } from "@/components/contacts/contactDuplicateCheck";
 import { useFirmOwner } from "@/components/admin/useFirmOwner";
@@ -346,6 +347,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
   const [addingPrimary, setAddingPrimary] = useState(false);
   const [addingSecondary, setAddingSecondary] = useState(false);
   const [showSecondaryAnalyst, setShowSecondaryAnalyst] = useState(false);
+  const [stages, setStages] = useState([]);
   const [localProducts, setLocalProducts] = useState([]);
   const [localContacts, setLocalContacts] = useState([]);
   const [selectedFirmId, setSelectedFirmId] = useState("");
@@ -435,6 +437,9 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
       setSecondaryId(editingRecord.secondary_analyst_contact_id || "");
       setSelectedFirmId(editingRecord.firm_id || "");
       setSelectedFirmName(editingRecord.firm_name || "");
+      setStages(editingRecord.stages && editingRecord.stages.length > 0
+        ? editingRecord.stages
+        : (editingRecord.process_status === "In-process" ? [{ id: `stage_${Date.now()}_1`, name: "Stage 1" }] : []));
     } else {
       setProductId(preselectProductId || "");
       setStatus("Not Started"); // default for new due diligence
@@ -443,6 +448,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
       setSecondaryId("");
       setSelectedFirmId("");
       setSelectedFirmName("");
+      setStages([]);
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -521,6 +527,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
       primary_analyst_name: primaryId ? contactName(primaryContact) || "" : undefined,
       secondary_analyst_contact_id: secondaryId || undefined,
       secondary_analyst_name: secondaryId ? contactName(secondaryContact) || "" : undefined,
+      stages: processStatus === "In-process" ? stages : undefined,
     });
   };
 
@@ -642,6 +649,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
                 setPrimaryId("");
                 setSecondaryId("");
                 setShowSecondaryAnalyst(false);
+                setStages([]);
               }}
               category="Due Diligence Status"
               placeholder="Select status..."
@@ -657,17 +665,27 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
                 onChange={(v) => {
                   const wasInProcess = processStatus === "In-process";
                   setProcessStatus(v);
-                  // Clear analysts when leaving "In-process"
+                  // Clear analysts and stages when leaving "In-process"
                   if (v !== "In-process" && wasInProcess) {
                     setPrimaryId("");
                     setSecondaryId("");
                     setShowSecondaryAnalyst(false);
+                    setStages([]);
+                  }
+                  // Auto-create Stage 1 when entering "In-process" with no stages
+                  if (v === "In-process" && (!stages || stages.length === 0)) {
+                    setStages([{ id: `stage_${Date.now()}_1`, name: "Stage 1" }]);
                   }
                 }}
                 category="Due Diligence Process Status"
                 placeholder="Select process status..."
               />
             </div>
+          )}
+
+          {/* Due Diligence Stages — shown when process status is "In-process" */}
+          {processStatus === "In-process" && (
+            <DueDiligenceStagesEditor stages={stages} onChange={setStages} />
           )}
 
           {/* Primary analyst — shown when process status is "In-process" (or already set) */}
