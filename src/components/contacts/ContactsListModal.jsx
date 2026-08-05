@@ -1,26 +1,37 @@
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { User, Search } from "lucide-react";
+import { User } from "lucide-react";
 import AddContactDialog from "./AddContactDialog";
+import ContactsSectionFilters, { filterSectionContacts } from "./ContactsSectionFilters";
 
-export default function ContactsListModal({ open, onOpenChange, contacts = [], firms = [], onNavigateToOwnership, onProductClick, onFirmClick }) {
+export default function ContactsListModal({ open, onOpenChange, contacts = [], firms = [], products = [], portfolios = [], onNavigateToOwnership, onProductClick, onFirmClick }) {
   const [search, setSearch] = useState("");
+  const [filterSelected, setFilterSelected] = useState({});
   const [viewingContact, setViewingContact] = useState(null);
 
   const getFirmName = (id) => firms.find((f) => f.id === id)?.name || "";
 
-  const filtered = contacts.filter((c) => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    const fullName = [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ").toLowerCase();
-    return (
-      fullName.includes(q) ||
-      c.firm_ids?.some((fid) => getFirmName(fid).toLowerCase().includes(q)) ||
-      c.email?.toLowerCase().includes(q) ||
-      c.title?.toLowerCase().includes(q)
-    );
-  });
+  const firmMap = React.useMemo(
+    () => Object.fromEntries((firms || []).map((f) => [f.id, f])),
+    [firms]
+  );
+
+  const filtered = filterSectionContacts(contacts, search, filterSelected, firmMap, products, portfolios);
+
+  const handleToggleFilter = (fieldKey, value) => {
+    setFilterSelected((prev) => {
+      const next = { ...prev };
+      const s = new Set(next[fieldKey] || []);
+      if (s.has(value)) s.delete(value); else s.add(value);
+      next[fieldKey] = s;
+      return next;
+    });
+  };
+
+  const handleClearFilters = () => {
+    setFilterSelected({});
+    setSearch("");
+  };
 
   const SALUTATIONS = ["mr.", "mrs.", "ms.", "dr.", "prof.", "hon.", "mr", "mrs", "ms", "dr", "prof", "hon"];
   const stripSalutation = (name) => {
@@ -52,18 +63,20 @@ export default function ContactsListModal({ open, onOpenChange, contacts = [], f
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>All Contacts ({contacts.length})</DialogTitle>
+          <DialogTitle>All Contacts ({filtered.length})</DialogTitle>
         </DialogHeader>
 
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <Input
-            placeholder="Search by name, firm, email, or title..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 h-9"
-          />
-        </div>
+        <ContactsSectionFilters
+          contacts={contacts}
+          firms={firms}
+          products={products}
+          portfolios={portfolios}
+          text={search}
+          onTextChange={setSearch}
+          selected={filterSelected}
+          onToggle={handleToggleFilter}
+          onClear={handleClearFilters}
+        />
 
         <div className="overflow-y-auto flex-1 space-y-2 mt-1">
           {grouped.length === 0 ? (

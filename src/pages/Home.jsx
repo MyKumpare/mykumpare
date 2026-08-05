@@ -995,6 +995,8 @@ export default function Home() {
         onOpenChange={setContactsModalOpen}
         contacts={contacts}
         firms={firms}
+        products={products}
+        portfolios={portfolios}
         onNavigateToOwnership={handleNavigateToOwnership}
         onProductClick={(product) => handleEditProduct(product, true)}
         onFirmClick={(firm) => firm && handleEdit(firm, false, true)}
