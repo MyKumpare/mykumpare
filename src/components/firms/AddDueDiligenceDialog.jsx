@@ -345,6 +345,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
   const [productMode, setProductMode] = useState("select"); // "select" | "new"
   const [addingPrimary, setAddingPrimary] = useState(false);
   const [addingSecondary, setAddingSecondary] = useState(false);
+  const [showSecondaryAnalyst, setShowSecondaryAnalyst] = useState(false);
   const [localProducts, setLocalProducts] = useState([]);
   const [localContacts, setLocalContacts] = useState([]);
   const [selectedFirmId, setSelectedFirmId] = useState("");
@@ -424,6 +425,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
     setProductMode("select");
     setAddingPrimary(false);
     setAddingSecondary(false);
+    setShowSecondaryAnalyst(false);
     setFirmMode("select");
     if (editingRecord) {
       setProductId(editingRecord.product_id || "");
@@ -435,7 +437,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
       setSelectedFirmName(editingRecord.firm_name || "");
     } else {
       setProductId(preselectProductId || "");
-      setStatus("Pipeline"); // auto-select Pipeline for new due diligence
+      setStatus("Not Started"); // default for new due diligence
       setProcessStatus("Not Started");
       setPrimaryId("");
       setSecondaryId("");
@@ -445,9 +447,11 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-assign primary analyst from the signed-in user, matched among the
-  // OWNER firm's contacts. Runs once contacts resolve; never overrides a selection.
+  // OWNER firm's contacts. Triggers when process status becomes "In-process";
+  // never overrides a selection.
   useEffect(() => {
     if (!open || editingRecord || primaryId) return;
+    if (processStatus !== "In-process") return;
     (async () => {
       try {
         const user = await base44.auth.me();
@@ -462,7 +466,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
         if (match) setPrimaryId(match.id);
       } catch { /* not logged in — leave manual */ }
     })();
-  }, [open, editingRecord, analystContacts, primaryId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, editingRecord, analystContacts, primaryId, processStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const allProducts = useMemo(() => {
     const ids = new Set(localProducts.map((p) => p.id));
@@ -495,8 +499,14 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
   const primaryContact = allContacts.find((c) => c.id === primaryId);
   const secondaryContact = allContacts.find((c) => c.id === secondaryId);
 
+  // Primary analyst is only visible when process status is "In-process" (or
+  // already set from editing). When visible it must have a value.
+  const showPrimaryAnalyst = processStatus === "In-process" || !!primaryId;
+  const showSecondaryPrompt = showPrimaryAnalyst && !!primaryId && !showSecondaryAnalyst && !secondaryId;
+  const showSecondaryAnalystField = showSecondaryAnalyst || !!secondaryId;
+
   // Validation: a contact picked for one analyst cannot be the other.
-  const isValid = !!effectiveFirmId && productId && primaryId && (primaryId !== secondaryId);
+  const isValid = !!effectiveFirmId && productId && (!showPrimaryAnalyst || primaryId) && (primaryId !== secondaryId);
 
   const handleSave = () => {
     if (!isValid) return;
@@ -507,8 +517,8 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
       product_name: selectedProduct?.name || "",
       status,
       process_status: status === "Buy List" ? "Completed" : processStatus,
-      primary_analyst_contact_id: primaryId,
-      primary_analyst_name: contactName(primaryContact) || "",
+      primary_analyst_contact_id: primaryId || undefined,
+      primary_analyst_name: primaryId ? contactName(primaryContact) || "" : undefined,
       secondary_analyst_contact_id: secondaryId || undefined,
       secondary_analyst_name: secondaryId ? contactName(secondaryContact) || "" : undefined,
     });
@@ -621,69 +631,110 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
             <Label className="text-xs font-medium text-gray-700">Due Diligence Status</Label>
             <StatusOptionSelect
               value={status}
-              onChange={(v) => { setStatus(v); if (v === "Buy List") setProcessStatus("Completed"); }}
+              onChange={(v) => {
+                setStatus(v);
+                if (v === "Pipeline") {
+                  setProcessStatus("Not Started");
+                } else if (v === "Buy List") {
+                  setProcessStatus("Completed");
+                }
+                // Clear analyst selections when leaving the Pipeline flow
+                setPrimaryId("");
+                setSecondaryId("");
+                setShowSecondaryAnalyst(false);
+              }}
               category="Due Diligence Status"
               placeholder="Select status..."
             />
           </div>
 
-          {/* Process status */}
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-gray-700">Due Diligence Process Status</Label>
-            <StatusOptionSelect
-              value={processStatus}
-              onChange={setProcessStatus}
-              category="Due Diligence Process Status"
-              placeholder="Select process status..."
-            />
-          </div>
+          {/* Process status — shown only when status is "Pipeline" */}
+          {status === "Pipeline" && (
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-gray-700">Due Diligence Process Status</Label>
+              <StatusOptionSelect
+                value={processStatus}
+                onChange={(v) => {
+                  const wasInProcess = processStatus === "In-process";
+                  setProcessStatus(v);
+                  // Clear analysts when leaving "In-process"
+                  if (v !== "In-process" && wasInProcess) {
+                    setPrimaryId("");
+                    setSecondaryId("");
+                    setShowSecondaryAnalyst(false);
+                  }
+                }}
+                category="Due Diligence Process Status"
+                placeholder="Select process status..."
+              />
+            </div>
+          )}
 
-          {/* Primary analyst */}
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-gray-700">Primary Analyst <span className="text-red-400">*</span></Label>
-            {addingPrimary ? (
-              <NewContactForm
-                firmId={ownerFirmId || firmId}
-                existingContacts={allContacts}
-                onCreated={(c) => { setLocalContacts((prev) => [...prev, c]); setPrimaryId(c.id); setAddingPrimary(false); }}
-                onCancel={() => setAddingPrimary(false)}
-              />
-            ) : (
-              <SearchableSelect
-                options={contactOptions}
-                value={primaryId}
-                onChange={setPrimaryId}
-                placeholder="Select primary analyst..."
-                excludeValues={secondaryId ? [secondaryId] : []}
-                footer={primaryFooter}
-              />
-            )}
-          </div>
+          {/* Primary analyst — shown when process status is "In-process" (or already set) */}
+          {showPrimaryAnalyst && (
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-gray-700">Primary Analyst {processStatus === "In-process" && <span className="text-red-400">*</span>}</Label>
+              {addingPrimary ? (
+                <NewContactForm
+                  firmId={ownerFirmId || firmId}
+                  existingContacts={allContacts}
+                  onCreated={(c) => { setLocalContacts((prev) => [...prev, c]); setPrimaryId(c.id); setAddingPrimary(false); }}
+                  onCancel={() => setAddingPrimary(false)}
+                />
+              ) : (
+                <SearchableSelect
+                  options={contactOptions}
+                  value={primaryId}
+                  onChange={setPrimaryId}
+                  placeholder="Select primary analyst..."
+                  excludeValues={secondaryId ? [secondaryId] : []}
+                  footer={primaryFooter}
+                />
+              )}
+            </div>
+          )}
 
-          {/* Secondary analyst */}
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-gray-700">Secondary Analyst</Label>
-            {addingSecondary ? (
-              <NewContactForm
-                firmId={ownerFirmId || firmId}
-                existingContacts={allContacts}
-                onCreated={(c) => { setLocalContacts((prev) => [...prev, c]); setSecondaryId(c.id); setAddingSecondary(false); }}
-                onCancel={() => setAddingSecondary(false)}
-              />
-            ) : (
-              <SearchableSelect
-                options={contactOptions}
-                value={secondaryId}
-                onChange={setSecondaryId}
-                placeholder="Select secondary analyst (optional)..."
-                excludeValues={primaryId ? [primaryId] : []}
-                footer={secondaryFooter}
-              />
-            )}
-            {primaryId && secondaryId && primaryId === secondaryId && (
-              <p className="text-xs text-red-600">Primary and secondary analyst cannot be the same contact.</p>
-            )}
-          </div>
+          {/* Secondary analyst prompt — shown after primary analyst is selected */}
+          {showSecondaryPrompt && (
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-gray-700">Assign a secondary analyst?</Label>
+              <div className="flex gap-2">
+                <Button type="button" size="sm" className="h-8 text-xs bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => setShowSecondaryAnalyst(true)}>
+                  Yes
+                </Button>
+                <Button type="button" size="sm" variant="outline" className="h-8 text-xs" onClick={() => setShowSecondaryAnalyst(false)}>
+                  No
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Secondary analyst — shown after user confirms */}
+          {showSecondaryAnalystField && (
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-gray-700">Secondary Analyst</Label>
+              {addingSecondary ? (
+                <NewContactForm
+                  firmId={ownerFirmId || firmId}
+                  existingContacts={allContacts}
+                  onCreated={(c) => { setLocalContacts((prev) => [...prev, c]); setSecondaryId(c.id); setAddingSecondary(false); }}
+                  onCancel={() => setAddingSecondary(false)}
+                />
+              ) : (
+                <SearchableSelect
+                  options={contactOptions}
+                  value={secondaryId}
+                  onChange={setSecondaryId}
+                  placeholder="Select secondary analyst..."
+                  excludeValues={primaryId ? [primaryId] : []}
+                  footer={secondaryFooter}
+                />
+              )}
+              {primaryId && secondaryId && primaryId === secondaryId && (
+                <p className="text-xs text-red-600">Primary and secondary analyst cannot be the same contact.</p>
+              )}
+            </div>
+          )}
         </div>
         <DialogFooter className="gap-2 pt-2 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
