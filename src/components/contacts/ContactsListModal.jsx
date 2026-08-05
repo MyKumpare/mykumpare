@@ -86,8 +86,20 @@ export default function ContactsListModal({ open, onOpenChange, contacts = [], f
           ) : (
             grouped.map((group) => (
               <div key={group.name} className="space-y-1.5">
-                <div className="sticky top-0 z-10 bg-white/95 backdrop-blur px-1 pt-2 pb-1 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                  {group.name}
+                <div className="sticky top-0 z-10 bg-white/95 backdrop-blur px-1 pt-2 pb-1 text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1">
+                  <span>{group.name}</span>
+                  {(() => {
+                    const firmId = (group.items[0]?.firm_ids || [])[0];
+                    const firmObj = firmId ? firms.find(f => f.id === firmId) : null;
+                    return firmObj && onFirmClick ? (
+                      <button
+                        onClick={() => { onFirmClick(firmObj); onOpenChange(false); }}
+                        className="text-[10px] text-indigo-600 hover:text-indigo-700 hover:underline font-medium normal-case"
+                      >
+                        View →
+                      </button>
+                    ) : null;
+                  })()}
                 </div>
                 {group.items.map((c) => (
                   <div key={c.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100 hover:bg-indigo-50 hover:border-indigo-100 transition-colors cursor-pointer" onClick={() => setViewingContact(c)}>
@@ -105,11 +117,18 @@ export default function ContactsListModal({ open, onOpenChange, contacts = [], f
                       {c.email && <a href={`mailto:${c.email}`} className="text-xs text-indigo-600 hover:underline" onClick={(e) => e.stopPropagation()}>{c.email}</a>}
                       {c.firm_ids?.length > 1 && (
                         <div className="flex flex-wrap gap-1 mt-1">
-                          {c.firm_ids.slice(1).map((fid) => (
-                            <span key={fid} className="text-xs bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded">
-                              {getFirmName(fid)}
-                            </span>
-                          ))}
+                          {c.firm_ids.slice(1).map((fid) => {
+                            const firmObj = firms.find(f => f.id === fid);
+                            return (
+                              <button
+                                key={fid}
+                                onClick={(e) => { e.stopPropagation(); if (firmObj && onFirmClick) { onFirmClick(firmObj); onOpenChange(false); } }}
+                                className="text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 hover:underline px-1.5 py-0.5 rounded cursor-pointer"
+                              >
+                                {getFirmName(fid)}
+                              </button>
+                            );
+                          })}
                         </div>
                       )}
                     </div>

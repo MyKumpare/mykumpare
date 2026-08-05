@@ -19,7 +19,7 @@ const byFirstName = (a, b) => {
   return (a.last_name || "").localeCompare(b.last_name || "", undefined, { sensitivity: "base" });
 };
 
-export default function ContactPickerModal({ open, onClose, contacts, firms, products = [], portfolios = [], onContactClick, onAddContact }) {
+export default function ContactPickerModal({ open, onClose, contacts, firms, products = [], portfolios = [], onContactClick, onAddContact, onFirmClick }) {
   const [search, setSearch] = useState("");
   const [filterSelected, setFilterSelected] = useState({});
   const [collapsedTypes, setCollapsedTypes] = useState({});
@@ -192,19 +192,34 @@ export default function ContactPickerModal({ open, onClose, contacts, firms, pro
                           return (
                             <div key={firmKey}>
                               {/* Firm Sub-header */}
-                              <button
-                                type="button"
-                                onClick={() => toggleFirm(firmKey)}
-                                className="w-full flex items-center gap-2 pl-8 pr-4 py-1 hover:bg-gray-50 transition-colors"
-                              >
-                                {isFirmCollapsed
-                                  ? <ChevronRight className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                                  : <ChevronDown className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                                }
-                                <Building className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                                <span className="text-[11px] font-semibold text-gray-500 truncate">{firm}</span>
+                              <div className="w-full flex items-center gap-2 pl-8 pr-4 py-1 hover:bg-gray-50 transition-colors">
+                                <button
+                                  type="button"
+                                  onClick={() => toggleFirm(firmKey)}
+                                  className="flex items-center gap-2 flex-1 min-w-0"
+                                >
+                                  {isFirmCollapsed
+                                    ? <ChevronRight className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                                    : <ChevronDown className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                                  }
+                                  <Building className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                                  <span className="text-[11px] font-semibold text-gray-500 truncate">{firm}</span>
+                                </button>
+                                {(() => {
+                                  const firmId = (firmContacts[0]?.firm_ids || [])[0];
+                                  const firmObj = firmId ? firmMap[firmId] : null;
+                                  return firmObj && onFirmClick ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => { onFirmClick(firmObj); onClose(); }}
+                                      className="text-[10px] text-indigo-600 hover:text-indigo-700 hover:underline font-medium flex-shrink-0"
+                                    >
+                                      View →
+                                    </button>
+                                  ) : null;
+                                })()}
                                 <span className="text-[10px] text-gray-300 ml-auto">{firmContacts.length}</span>
-                              </button>
+                              </div>
 
                               {/* Contacts under firm */}
                               {!isFirmCollapsed && (

@@ -1137,6 +1137,7 @@ export default function Home() {
         portfolios={portfolios}
         onContactClick={(contact) => setViewingContact(contact)}
         onAddContact={() => setAddContactOpen(true)}
+        onFirmClick={(firm) => firm && handleEdit(firm, false, true)}
       />
 
       <ActivityLogPickerModal
