@@ -64,11 +64,11 @@
     "current_stage_index": {
       "type": "integer",
       "default": 0,
-      "description": "0-based index of the currently active stage. Stages must be completed in numerical order."
+      "description": "0-based index of the currently active stage."
     },
     "stages": {
       "type": "array",
-      "description": "Due diligence stages (loaded from template). Each stage tracks completion status and date. Stages must be completed in numerical order.",
+      "description": "Due diligence stages (loaded from template). Each stage tracks completion status, supervisor approval, and dates. Sub-stages within a stage can be worked on in any order (non-sequential). A stage is completed only when all sub-stages are completed and the supervisor approves.",
       "items": {
         "type": "object",
         "properties": {
@@ -80,16 +80,50 @@
           },
           "completed": {
             "type": "boolean",
-            "description": "Whether this stage has been completed"
+            "description": "Whether this stage has been completed (all sub-stages done + supervisor approved)"
           },
           "completed_date": {
             "type": "string",
             "format": "date",
             "description": "Date the stage was completed (YYYY-MM-DD)"
           },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "description": "Date work began on this stage (auto-set when first sub-stage is started, user-editable). Stored as YYYY-MM-DD."
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "description": "Date work ended on this stage (auto-set on supervisor approval, user-editable). Stored as YYYY-MM-DD."
+          },
+          "supervisor_status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "rejected",
+              "on_hold"
+            ],
+            "default": "pending",
+            "description": "Supervisor approval status for this stage. Stage is only completed when status is 'approved'."
+          },
+          "supervisor_contact_id": {
+            "type": "string",
+            "description": "ID of the supervisor who approved/rejected/put on hold"
+          },
+          "supervisor_name": {
+            "type": "string",
+            "description": "Name of the supervisor (denormalized)"
+          },
+          "supervisor_date": {
+            "type": "string",
+            "format": "date",
+            "description": "Date the supervisor action was taken (YYYY-MM-DD)"
+          },
           "sub_stages": {
             "type": "array",
-            "description": "Ordered sub-stages within this stage (loaded from template)",
+            "description": "Ordered sub-stages within this stage (loaded from template). Sub-stages can be worked on in any order.",
             "items": {
               "type": "object",
               "properties": {
@@ -98,6 +132,83 @@
                 },
                 "name": {
                   "type": "string"
+                },
+                "start_date": {
+                  "type": "string",
+                  "format": "date",
+                  "description": "Date work began on this sub-stage (auto-set to today when started, user-editable). Stored as YYYY-MM-DD."
+                },
+                "end_date": {
+                  "type": "string",
+                  "format": "date",
+                  "description": "Date work ended on this sub-stage (auto-set to today when completed, user-editable). Stored as YYYY-MM-DD."
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "not_started",
+                    "in_process",
+                    "completed"
+                  ],
+                  "default": "not_started",
+                  "description": "Completion status of this sub-stage"
+                },
+                "performed_by_contact_id": {
+                  "type": "string",
+                  "description": "ID of the contact who performed/completed this sub-stage (auto-set to primary analyst, user-editable)"
+                },
+                "performed_by_name": {
+                  "type": "string",
+                  "description": "Name of the contact who performed this sub-stage (denormalized)"
+                },
+                "assignments": {
+                  "type": "array",
+                  "description": "Team members assigned to this sub-stage, each with their own due date and status",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "contact_id": {
+                        "type": "string",
+                        "description": "ID of the assigned team member"
+                      },
+                      "contact_name": {
+                        "type": "string",
+                        "description": "Name of the assigned team member (denormalized)"
+                      },
+                      "assigned_date": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "Date the sub-stage was assigned to this member (auto-set to today)"
+                      },
+                      "due_date": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "Due date for this assignment (user-set)"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "not_started",
+                          "in_process",
+                          "completed"
+                        ],
+                        "default": "not_started",
+                        "description": "Status of this assignment for this team member"
+                      },
+                      "status_date": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "Date the assignment status was last changed"
+                      },
+                      "notes": {
+                        "type": "string",
+                        "description": "Notes from the assigned team member"
+                      }
+                    }
+                  }
                 }
               }
             }

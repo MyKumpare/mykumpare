@@ -713,6 +713,9 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
               onStartDateChange={setStartDate}
               onStagesChange={setStages}
               onCurrentStageChange={setCurrentStageIndex}
+              primaryAnalystId={primaryId}
+              primaryAnalystName={primaryId ? contactName(primaryContact) : ""}
+              teamMembers={contactOptions}
             />
           )}
 
