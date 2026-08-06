@@ -169,6 +169,8 @@ export default function DueDiligenceTemplateFlow({
   // The supervisor_contact_id/name are preserved from when they were
   // assigned via "Submit for Approval" — this only changes the status.
   const handleSupervisorAction = (index, action) => {
+    // Guard: supervisor cannot approve/reject/on_hold unless all sub-stages are completed
+    if (!allSubStagesCompleted(stagesList[index])) return;
     const newStages = stagesList.map((s, i) => {
       if (i !== index) return s;
       const updated = {
