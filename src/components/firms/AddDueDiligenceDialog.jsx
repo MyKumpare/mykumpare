@@ -720,7 +720,15 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
     if (!editingRecord?.id) return;
     setDeleting(true);
     try {
-      await base44.entities.DueDiligence.delete(editingRecord.id);
+      // Cascading delete: removes the DD record plus all related
+      // stage note versions (prior approvals) and notifications
+      // (approver + assigned team members).
+      await base44.functions.invoke("deleteDueDiligenceCascade", {
+        due_diligence_id: editingRecord.id,
+      });
+      queryClient.invalidateQueries({ queryKey: ["due-diligence"] });
+      queryClient.invalidateQueries({ queryKey: ["dd-stage-note-versions"] });
+      queryClient.invalidateQueries({ queryKey: ["dd-notifications"] });
       setShowDeleteConfirm(false);
       onOpenChange(false);
       if (onDelete) onDelete(editingRecord.id);
