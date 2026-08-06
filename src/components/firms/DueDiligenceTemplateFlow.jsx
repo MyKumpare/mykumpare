@@ -208,6 +208,8 @@ export default function DueDiligenceTemplateFlow({
 
   // Assign a supervisor to a stage (submit for approval)
   const handleAssignSupervisor = (index, stageId) => {
+    // Guard: cannot submit for approval unless all sub-stages are completed
+    if (!allSubStagesCompleted(stagesList[index])) return;
     const supId = pendingSupervisor[stageId];
     if (!supId) return;
     const member = teamMembers.find((m) => m.value === supId);
