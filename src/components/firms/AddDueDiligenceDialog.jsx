@@ -787,6 +787,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
               currentUserId={currentUserId}
               currentUserName={currentUserName}
               teamMembers={contactOptions}
+              dueDiligenceId={editingRecord?.id || ""}
             />
           )}
 

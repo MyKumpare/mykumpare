@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, ClipboardCheck, Pencil, Trash2 } from "lucide-react";
 import AddDueDiligenceDialog from "./AddDueDiligenceDialog";
 import { syncDdNotifications, syncProductStatusFromDd } from "./ddNotificationSync";
+import { saveStageNoteVersions } from "./ddNoteVersionSync";
 import DdFilterTabs, { getDdCounts, filterDdRecords } from "./DdFilterTabs";
 
 const STATUS_STYLES = {
@@ -44,18 +45,25 @@ export default function FirmDueDiligenceTab({ firmId, firmName, contacts = [], o
       const savedRecord = await base44.entities.DueDiligence.create(data);
       await syncDdNotifications(savedRecord);
       await syncProductStatusFromDd(savedRecord, queryClient);
+      await saveStageNoteVersions(savedRecord, null);
       return savedRecord;
     },
     onSuccess: (savedRecord) => { queryClient.invalidateQueries({ queryKey: ["due-diligence", firmId] }); setShowDialog(false); },
   });
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }) => {
+      const previousRecord = await base44.entities.DueDiligence.get(id);
       const savedRecord = await base44.entities.DueDiligence.update(id, data);
       await syncDdNotifications(savedRecord);
       await syncProductStatusFromDd(savedRecord, queryClient);
+      await saveStageNoteVersions(savedRecord, previousRecord);
       return savedRecord;
     },
-    onSuccess: (savedRecord) => { queryClient.invalidateQueries({ queryKey: ["due-diligence", firmId] }); setShowDialog(false); },
+    onSuccess: (savedRecord) => {
+      queryClient.invalidateQueries({ queryKey: ["due-diligence", firmId] });
+      queryClient.invalidateQueries({ queryKey: ["dd-stage-note-versions"] });
+      setShowDialog(false);
+    },
   });
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.DueDiligence.delete(id),

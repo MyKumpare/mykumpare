@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import AddDueDiligenceDialog from "../firms/AddDueDiligenceDialog";
 import { syncDdNotifications } from "../firms/ddNotificationSync";
+import { saveStageNoteVersions } from "../firms/ddNoteVersionSync";
 
 const TYPE_CONFIG = {
   supervisor_request: {
@@ -66,12 +67,15 @@ export default function ContactNotificationsTab({ contactId, contactName, onCont
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }) => {
+      const previousRecord = await base44.entities.DueDiligence.get(id);
       const savedRecord = await base44.entities.DueDiligence.update(id, data);
       await syncDdNotifications(savedRecord);
+      await saveStageNoteVersions(savedRecord, previousRecord);
       return savedRecord;
     },
     onSuccess: (savedRecord) => {
       queryClient.invalidateQueries({ queryKey: ["dd-notifications", contactId] });
+      queryClient.invalidateQueries({ queryKey: ["dd-stage-note-versions"] });
       if (editing?.firm_id) queryClient.invalidateQueries({ queryKey: ["due-diligence", editing.firm_id] });
       setShowDialog(false);
     },

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ClipboardCheck, Pencil, Plus } from "lucide-react";
 import AddDueDiligenceDialog from "../firms/AddDueDiligenceDialog";
 import { syncDdNotifications, syncProductStatusFromDd } from "../firms/ddNotificationSync";
+import { saveStageNoteVersions } from "../firms/ddNoteVersionSync";
 import DdFilterTabs, { getDdCounts, filterDdRecords } from "../firms/DdFilterTabs";
 
 const STATUS_STYLES = {
@@ -53,9 +54,11 @@ export default function ContactDueDiligenceTab({ contactId, contactName, onConta
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }) => {
+      const previousRecord = await base44.entities.DueDiligence.get(id);
       const savedRecord = await base44.entities.DueDiligence.update(id, data);
       await syncDdNotifications(savedRecord);
       await syncProductStatusFromDd(savedRecord, queryClient);
+      await saveStageNoteVersions(savedRecord, previousRecord);
       return savedRecord;
     },
     onSuccess: (savedRecord) => {
@@ -63,6 +66,7 @@ export default function ContactDueDiligenceTab({ contactId, contactName, onConta
       queryClient.invalidateQueries({ queryKey: ["dd-secondary-analyst", contactId] });
       queryClient.invalidateQueries({ queryKey: ["dd-assigned-tasks", contactId] });
       queryClient.invalidateQueries({ queryKey: ["dd-notifications", contactId] });
+      queryClient.invalidateQueries({ queryKey: ["dd-stage-note-versions"] });
       if (editing?.firm_id) queryClient.invalidateQueries({ queryKey: ["due-diligence", editing.firm_id] });
       setShowDialog(false);
     },
@@ -72,6 +76,7 @@ export default function ContactDueDiligenceTab({ contactId, contactName, onConta
       const savedRecord = await base44.entities.DueDiligence.create(data);
       await syncDdNotifications(savedRecord);
       await syncProductStatusFromDd(savedRecord, queryClient);
+      await saveStageNoteVersions(savedRecord, null);
       return savedRecord;
     },
     onSuccess: (savedRecord, variables) => {
@@ -79,6 +84,7 @@ export default function ContactDueDiligenceTab({ contactId, contactName, onConta
       queryClient.invalidateQueries({ queryKey: ["dd-secondary-analyst", contactId] });
       queryClient.invalidateQueries({ queryKey: ["dd-assigned-tasks", contactId] });
       queryClient.invalidateQueries({ queryKey: ["dd-notifications", contactId] });
+      queryClient.invalidateQueries({ queryKey: ["dd-stage-note-versions"] });
       if (variables?.firm_id) queryClient.invalidateQueries({ queryKey: ["due-diligence", variables.firm_id] });
       setShowDialog(false);
     },

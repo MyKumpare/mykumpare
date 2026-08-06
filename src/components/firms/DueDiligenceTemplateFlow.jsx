@@ -38,6 +38,7 @@ export default function DueDiligenceTemplateFlow({
   templateId, templateName, stages, startDate, currentStageIndex,
   onTemplateSelect, onStartDateChange, onStagesChange, onCurrentStageChange,
   primaryAnalystId, primaryAnalystName, currentUserId, currentUserName, teamMembers = [],
+  dueDiligenceId = "",
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -445,6 +446,9 @@ export default function DueDiligenceTemplateFlow({
                             onStagesChange(newStages);
                           }}
                           label="Stage Notes"
+                          dueDiligenceId={dueDiligenceId}
+                          stageId={stage.id || ""}
+                          stageName={stage.name || ""}
                         />
 
                         {/* Sub-stage items */}

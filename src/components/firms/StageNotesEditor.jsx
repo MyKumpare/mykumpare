@@ -3,8 +3,9 @@ import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { StickyNote, ChevronDown, ChevronRight } from "lucide-react";
+import { StickyNote, ChevronDown, ChevronRight, History } from "lucide-react";
 import { cn } from "@/lib/utils";
+import StageNotesHistoryDialog from "./StageNotesHistoryDialog";
 
 const QUILL_MODULES = {
   toolbar: [
@@ -38,9 +39,13 @@ const QUILL_FORMATS = [
  *   value: string (HTML)
  *   onChange: (html) => void
  *   label: string (optional, defaults to "Notes")
+ *   dueDiligenceId: string (optional — enables History button when provided)
+ *   stageId: string (optional — enables History button when provided)
+ *   stageName: string (optional — for display in the history dialog)
  */
-export default function StageNotesEditor({ value = "", onChange, label = "Notes" }) {
+export default function StageNotesEditor({ value = "", onChange, label = "Notes", dueDiligenceId = "", stageId = "", stageName = "" }) {
   const [expanded, setExpanded] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const quillRef = useRef(null);
 
   // Auto-expand if there's existing content on first mount
@@ -51,6 +56,7 @@ export default function StageNotesEditor({ value = "", onChange, label = "Notes"
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const hasContent = value && value.trim() && value !== "<p><br></p>";
+  const canShowHistory = !!dueDiligenceId && !!stageId;
 
   return (
     <div className="space-y-1">
@@ -70,6 +76,18 @@ export default function StageNotesEditor({ value = "", onChange, label = "Notes"
             <span className="ml-1 text-[9px] text-indigo-500">(has notes)</span>
           )}
         </button>
+
+        {canShowHistory && (
+          <button
+            type="button"
+            onClick={() => setShowHistory(true)}
+            className="flex items-center gap-0.5 text-[9px] text-gray-400 hover:text-indigo-600 font-medium"
+            title="View edit history"
+          >
+            <History className="w-2.5 h-2.5" />
+            History
+          </button>
+        )}
       </div>
 
       {expanded && (
@@ -85,6 +103,16 @@ export default function StageNotesEditor({ value = "", onChange, label = "Notes"
             style={{ fontSize: "13px" }}
           />
         </div>
+      )}
+
+      {canShowHistory && (
+        <StageNotesHistoryDialog
+          open={showHistory}
+          onOpenChange={setShowHistory}
+          dueDiligenceId={dueDiligenceId}
+          stageId={stageId}
+          stageName={stageName || label}
+        />
       )}
     </div>
   );

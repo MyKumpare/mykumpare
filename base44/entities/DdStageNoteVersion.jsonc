@@ -1,0 +1,81 @@
+{
+  "name": "DdStageNoteVersion",
+  "type": "object",
+  "properties": {
+    "due_diligence_id": {
+      "type": "string",
+      "description": "ID of the DueDiligence record this version belongs to"
+    },
+    "stage_id": {
+      "type": "string",
+      "description": "ID of the stage within the due diligence record"
+    },
+    "stage_name": {
+      "type": "string",
+      "description": "Name of the stage (denormalized for display)"
+    },
+    "notes_content": {
+      "type": "string",
+      "description": "Full HTML content of the stage notes at this version"
+    },
+    "edited_by_id": {
+      "type": "string",
+      "description": "ID of the user who saved this version"
+    },
+    "edited_by_name": {
+      "type": "string",
+      "description": "Name of the user who saved this version (denormalized)"
+    },
+    "edited_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when this version was saved"
+    }
+  },
+  "required": [
+    "due_diligence_id",
+    "stage_id",
+    "notes_content"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "user"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": null,
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
