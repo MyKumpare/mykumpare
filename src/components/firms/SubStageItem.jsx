@@ -169,7 +169,7 @@ export default function SubStageItem({ subStage, primaryAnalystId, primaryAnalys
           <div className="space-y-0.5">
             <Label className="text-[10px] text-gray-500">Performed By</Label>
             <Select
-              value={subStage.performed_by_contact_id || undefined}
+              value={subStage.performed_by_contact_id || primaryAnalystId}
               onValueChange={(v) => {
                 const member = teamMembers.find((m) => m.value === v);
                 update({ performed_by_contact_id: v, performed_by_name: member?.label || primaryAnalystName });
