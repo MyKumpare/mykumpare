@@ -22,6 +22,7 @@ import { useFirmOwner } from "@/components/admin/useFirmOwner";
 import StatusOptionSelect from "./StatusOptionSelect";
 const PRODUCT_TYPES = ["Investment Manager Product", "Multi-Manager Product"];
 const FIRM_TYPES = ["Manager of Managers", "Investment Manager", "Allocator", "Investment Consultant", "Securities Brokerage", "Trade Organizations"];
+const NOT_STARTED_ALLOWED = ["In-process"];
 
 const contactName = (c) => [c?.first_name, c?.last_name].filter(Boolean).join(" ").trim();
 
@@ -785,7 +786,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
                 }}
                 category="Due Diligence Process Status"
                 placeholder="Select process status..."
-                allowedOptions={processStatus === "Not Started" ? ["In-process"] : undefined}
+                allowedOptions={processStatus === "Not Started" ? NOT_STARTED_ALLOWED : undefined}
               />
             </div>
           )}
