@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
-import { Search, Plus, FileText, Filter, Pencil, Trash2, Copy } from "lucide-react";
+import { Search, Plus, FileText, Filter, Pencil, Trash2, Copy, ArrowDownUp } from "lucide-react";
 import { format } from "date-fns";
 import AddTemplateDialog from "./AddTemplateDialog";
 
@@ -31,6 +31,7 @@ export default function TemplatePickerModal({ open, onClose }) {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("name_asc");
   const [addOpen, setAddOpen] = useState(false);
   const [editTemplate, setEditTemplate] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -81,11 +82,28 @@ export default function TemplatePickerModal({ open, onClose }) {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-    return templates
+    const result = templates
       .filter((t) => typeFilter === "all" || t.template_type === typeFilter)
-      .filter((t) => !q || (t.name || "").toLowerCase().includes(q) || (t.template_type || "").toLowerCase().includes(q))
-      .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-  }, [templates, search, typeFilter]);
+      .filter((t) => !q || (t.name || "").toLowerCase().includes(q) || (t.template_type || "").toLowerCase().includes(q));
+    switch (sortBy) {
+      case "name_asc":
+        result.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+        break;
+      case "name_desc":
+        result.sort((a, b) => (b.name || "").localeCompare(a.name || ""));
+        break;
+      case "date_desc":
+        result.sort((a, b) => (b.create_date || "").localeCompare(a.create_date || ""));
+        break;
+      case "date_asc":
+        result.sort((a, b) => (a.create_date || "").localeCompare(b.create_date || ""));
+        break;
+      case "type_asc":
+        result.sort((a, b) => (a.template_type || "").localeCompare(b.template_type || "") || (a.name || "").localeCompare(b.name || ""));
+        break;
+    }
+    return result;
+  }, [templates, search, typeFilter, sortBy]);
 
   return (
     <>
@@ -131,6 +149,21 @@ export default function TemplatePickerModal({ open, onClose }) {
                   {t.name}
                 </button>
               ))}
+              <div className="ml-auto flex items-center gap-1 text-xs text-gray-500">
+                <ArrowDownUp className="w-3.5 h-3.5" />
+                <span>Sort:</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="px-2 py-0.5 rounded-md border border-gray-200 bg-white text-xs text-gray-700 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                >
+                  <option value="name_asc">Name (A–Z)</option>
+                  <option value="name_desc">Name (Z–A)</option>
+                  <option value="date_desc">Date (Newest)</option>
+                  <option value="date_asc">Date (Oldest)</option>
+                  <option value="type_asc">Type (A–Z)</option>
+                </select>
+              </div>
             </div>
           </div>
 
