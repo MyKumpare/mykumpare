@@ -114,23 +114,34 @@ export async function syncDdNotifications(ddRecord) {
 }
 
 /**
- * When a due diligence record reaches "Buy List" status (meaning the product
- * has completed DD and been added to the buy list), automatically convert the
- * associated product's product_status to "Approved".
+ * Synchronizes the product_status from the due diligence record:
+ *
+ * - When a DD is started (created) for a product whose status is "Not Reviewed",
+ *   the product is automatically moved to "In-Process".
+ * - When a DD reaches "Buy List" status, the product is automatically moved
+ *   to "Approved".
  *
  * @param {object} ddRecord - The saved DueDiligence record (must include product_id + status).
  * @param {object} queryClient - React Query client for cache invalidation.
  */
 export async function syncProductStatusFromDd(ddRecord, queryClient) {
   if (!ddRecord?.product_id) return;
-  if (ddRecord.status !== "Buy List") return;
 
   try {
     const product = await base44.entities.Product.get(ddRecord.product_id);
-    if (!product || product.product_status === "Approved") return;
-    await base44.entities.Product.update(ddRecord.product_id, { product_status: "Approved" });
-    if (queryClient) {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
+    if (!product) return;
+
+    // "Buy List" → "Approved" (terminal state — highest priority)
+    if (ddRecord.status === "Buy List" && product.product_status !== "Approved") {
+      await base44.entities.Product.update(ddRecord.product_id, { product_status: "Approved" });
+      if (queryClient) queryClient.invalidateQueries({ queryKey: ["products"] });
+      return;
+    }
+
+    // DD started for a product still in "Not Reviewed" → move to "In-Process"
+    if (product.product_status === "Not Reviewed") {
+      await base44.entities.Product.update(ddRecord.product_id, { product_status: "In-Process" });
+      if (queryClient) queryClient.invalidateQueries({ queryKey: ["products"] });
     }
   } catch { /* product not found or update failed — no-op */ }
 }

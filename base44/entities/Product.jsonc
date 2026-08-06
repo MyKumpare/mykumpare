@@ -34,13 +34,14 @@
       "type": "string",
       "enum": [
         "Not Reviewed",
+        "In-Process",
         "On-Hold",
         "Rejected",
         "Approved",
         "Removed"
       ],
       "default": "Not Reviewed",
-      "description": "Product-level status decision (separate from due diligence). 'Rejected' here is a product decision; the due diligence 'Rejected' is a separate DD decision."
+      "description": "Product-level status decision (separate from due diligence). 'In-Process' is set automatically when a due diligence is started. 'Approved' is set automatically when the DD reaches 'Buy List'. 'Rejected' here is a product decision; the due diligence 'Rejected' is a separate DD decision."
     },
     "asset_class": {
       "type": "string",
