@@ -63,6 +63,16 @@ export default function DueDiligenceStagesEditor({ stages, onChange }) {
   const [error, setError] = useState("");
   const [expandedStages, setExpandedStages] = useState({});
   const toggleExpand = (id) => setExpandedStages((prev) => ({ ...prev, [id]: !prev[id] }));
+  const allExpanded = stages.length > 0 && stages.every((s) => expandedStages[s.id]);
+  const toggleAll = () => {
+    if (allExpanded) {
+      setExpandedStages({});
+    } else {
+      const next = {};
+      stages.forEach((s) => { next[s.id] = true; });
+      setExpandedStages(next);
+    }
+  };
 
   const addStage = (name) => {
     const trimmed = (name || "").trim();
@@ -112,7 +122,24 @@ export default function DueDiligenceStagesEditor({ stages, onChange }) {
 
   return (
     <div className="space-y-2">
-      <Label className="text-xs font-medium text-gray-700">Due Diligence Stages</Label>
+      <div className="flex items-center justify-between">
+        <Label className="text-xs font-medium text-gray-700">Due Diligence Stages</Label>
+        {stages.length > 0 && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-6 text-xs text-gray-500 hover:text-gray-700 px-2"
+            onClick={toggleAll}
+          >
+            {allExpanded ? (
+              <><ChevronDown className="w-3 h-3" /> Collapse All</>
+            ) : (
+              <><ChevronRight className="w-3 h-3" /> Expand All</>
+            )}
+          </Button>
+        )}
+      </div>
 
       <DragDropContext onDragEnd={handleDragEnd}>
         <Droppable droppableId="stages-list">

@@ -41,6 +41,16 @@ export default function DueDiligenceTemplateFlow({
   const [showProgressModal, setShowProgressModal] = useState(false);
   const [expandedStages, setExpandedStages] = useState({});
   const toggleExpand = (id) => setExpandedStages((prev) => ({ ...prev, [id]: !prev[id] }));
+  const allExpanded = stagesList.length > 0 && stagesList.every((s) => expandedStages[s.id]);
+  const toggleAll = () => {
+    if (allExpanded) {
+      setExpandedStages({});
+    } else {
+      const next = {};
+      stagesList.forEach((s) => { next[s.id] = true; });
+      setExpandedStages(next);
+    }
+  };
 
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ["templates"],
@@ -275,6 +285,23 @@ export default function DueDiligenceTemplateFlow({
           {/* Stages list */}
           {isStarted && (
             <div className="space-y-1.5">
+              {stagesList.length > 0 && (
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-xs text-gray-500 hover:text-gray-700 px-2"
+                    onClick={toggleAll}
+                  >
+                    {allExpanded ? (
+                      <><ChevronDown className="w-3 h-3" /> Collapse All</>
+                    ) : (
+                      <><ChevronRight className="w-3 h-3" /> Expand All</>
+                    )}
+                  </Button>
+                </div>
+              )}
               {stagesList.map((stage, index) => {
                 const isCurrent =
                   index === currentStageIndex && !stage.completed;
