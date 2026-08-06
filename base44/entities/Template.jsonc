@@ -18,6 +18,21 @@
       "type": "string",
       "format": "date",
       "description": "Date the template was created (auto-set to today, user-editable). Stored as YYYY-MM-DD."
+    },
+    "stages": {
+      "type": "array",
+      "description": "Due diligence stages for Manager Due Diligence templates (ordered list). Each stage has an id and a name.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      }
     }
   },
   "required": [
