@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, ClipboardCheck, Pencil, Trash2 } from "lucide-react";
 import AddDueDiligenceDialog from "./AddDueDiligenceDialog";
 import { syncDdNotifications } from "./ddNotificationSync";
+import DdFilterTabs, { getDdCounts, filterDdRecords } from "./DdFilterTabs";
 
 const STATUS_STYLES = {
   "Pipeline": "bg-blue-50 text-blue-700 border-blue-200",
@@ -22,6 +23,7 @@ export default function FirmDueDiligenceTab({ firmId, firmName, contacts = [], o
   const queryClient = useQueryClient();
   const [showDialog, setShowDialog] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [activeTab, setActiveTab] = useState("active");
 
   const { data: records = [], isLoading } = useQuery({
     queryKey: ["due-diligence", firmId],
@@ -56,6 +58,8 @@ export default function FirmDueDiligenceTab({ firmId, firmName, contacts = [], o
   };
 
   const sorted = [...records].sort((a, b) => (a.status || "").localeCompare(b.status || ""));
+  const counts = getDdCounts(sorted);
+  const filtered = filterDdRecords(sorted, activeTab);
 
   const findContact = (id) => contacts.find((c) => c.id === id && !c.deleted_at);
   const findProduct = (id) => products.find((p) => p.id === id && !p.deleted_at);
@@ -85,15 +89,23 @@ export default function FirmDueDiligenceTab({ firmId, firmName, contacts = [], o
         </Button>
       </div>
 
+      {sorted.length > 0 && (
+        <DdFilterTabs activeTab={activeTab} onChange={setActiveTab} counts={counts} />
+      )}
+
       {isLoading ? (
         <div className="text-xs text-gray-400 italic py-4 text-center">Loading...</div>
       ) : sorted.length === 0 ? (
         <div className="text-sm text-gray-400 italic py-4 text-center border border-dashed border-gray-200 rounded-xl">
           No due diligence records yet
         </div>
+      ) : filtered.length === 0 ? (
+        <div className="text-sm text-gray-400 italic py-4 text-center border border-dashed border-gray-200 rounded-xl">
+          No {activeTab === "pending_approval" ? "pending approval" : activeTab} records
+        </div>
       ) : (
         <div className="space-y-2">
-          {sorted.map((rec) => (
+          {filtered.map((rec) => (
             <div
               key={rec.id}
               role="button"

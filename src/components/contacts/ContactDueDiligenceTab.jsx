@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ClipboardCheck, Pencil, Plus } from "lucide-react";
 import AddDueDiligenceDialog from "../firms/AddDueDiligenceDialog";
 import { syncDdNotifications } from "../firms/ddNotificationSync";
+import DdFilterTabs, { getDdCounts, filterDdRecords } from "../firms/DdFilterTabs";
 
 const STATUS_STYLES = {
   "Pipeline": "bg-blue-50 text-blue-700 border-blue-200",
@@ -24,6 +25,7 @@ export default function ContactDueDiligenceTab({ contactId, contactName, onConta
   const queryClient = useQueryClient();
   const [showDialog, setShowDialog] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [activeTab, setActiveTab] = useState("active");
 
   const { data: primary = [], isLoading: lp } = useQuery({
     queryKey: ["dd-primary-analyst", contactId],
@@ -87,6 +89,10 @@ export default function ContactDueDiligenceTab({ contactId, contactName, onConta
     return [...map.values()];
   }, [primary, secondary, assigned]);
 
+  const sorted = [...records].sort((a, b) => (a.status || "").localeCompare(b.status || ""));
+  const counts = getDdCounts(sorted);
+  const filtered = filterDdRecords(sorted, activeTab);
+
   const handleSubmit = (data) => {
     if (editing) updateMutation.mutate({ id: editing.id, data });
     else createMutation.mutate(data);
@@ -142,15 +148,23 @@ export default function ContactDueDiligenceTab({ contactId, contactName, onConta
         </Button>
       </div>
 
+      {sorted.length > 0 && (
+        <DdFilterTabs activeTab={activeTab} onChange={setActiveTab} counts={counts} />
+      )}
+
       {isLoading ? (
         <div className="text-xs text-gray-400 italic py-4 text-center">Loading...</div>
       ) : records.length === 0 ? (
         <div className="text-sm text-gray-400 italic py-4 text-center border border-dashed border-gray-200 rounded-xl">
           No due diligence records where {contactName || "this contact"} is an analyst or task assignee.
         </div>
+      ) : filtered.length === 0 ? (
+        <div className="text-sm text-gray-400 italic py-4 text-center border border-dashed border-gray-200 rounded-xl">
+          No {activeTab === "pending_approval" ? "pending approval" : activeTab} records.
+        </div>
       ) : (
         <div className="space-y-2">
-          {records.map((rec) => (
+          {filtered.map((rec) => (
             <div
               key={rec.id}
               role="button"
