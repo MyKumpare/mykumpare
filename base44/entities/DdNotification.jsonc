@@ -56,10 +56,11 @@
       "type": "string",
       "enum": [
         "unread",
-        "read"
+        "read",
+        "completed"
       ],
       "default": "unread",
-      "description": "Whether the notification has been read"
+      "description": "Whether the notification has been read. 'completed' means the requested action has been fulfilled (e.g. supervisor made a decision)."
     }
   },
   "required": [

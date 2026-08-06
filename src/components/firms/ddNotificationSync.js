@@ -1,13 +1,15 @@
 import { base44 } from "@/api/base44Client";
 
 /**
- * Creates DdNotification records based on the supervisor assignments and
- * decisions stored in a DueDiligence record's stages.
+ * Creates and updates DdNotification records based on the supervisor assignments
+ * and decisions stored in a DueDiligence record's stages.
  *
  * - When a supervisor is assigned to a stage (supervisor_contact_id set),
  *   a "supervisor_request" notification is created for that supervisor.
  * - When a supervisor has made a decision (status != "pending"), an
  *   "approval_decision" notification is created for the primary analyst.
+ * - When a decision is made, the original "supervisor_request" notification
+ *   for that stage is marked as "completed".
  *
  * Deduplication: before creating, we check whether a notification with the
  * same (due_diligence_id, contact_id, type, stage_name, supervisor_status)
@@ -87,6 +89,25 @@ export async function syncDdNotifications(ddRecord) {
           supervisor_status: supStatus,
           status: "unread",
         });
+      }
+
+      // 3. Mark the original supervisor_request notification as "completed"
+      //    since the supervisor has now made a decision.
+      const pendingRequests = await base44.entities.DdNotification.filter(
+        {
+          due_diligence_id: ddRecord.id,
+          contact_id: stage.supervisor_contact_id,
+          type: "supervisor_request",
+          stage_name: stage.name || "",
+        },
+        "-created_date",
+        10
+      );
+
+      for (const req of pendingRequests) {
+        if (req.status !== "completed") {
+          await base44.entities.DdNotification.update(req.id, { status: "completed" });
+        }
       }
     }
   }

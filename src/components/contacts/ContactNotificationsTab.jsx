@@ -4,6 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import {
   ShieldCheck, ShieldX, ShieldAlert, Clock, Bell, Eye, Loader2,
+  CheckCircle2, ExternalLink,
 } from "lucide-react";
 import AddDueDiligenceDialog from "../firms/AddDueDiligenceDialog";
 
@@ -43,6 +44,7 @@ export default function ContactNotificationsTab({ contactId, contactName, onCont
   const [showDialog, setShowDialog] = useState(false);
   const [editing, setEditing] = useState(null);
   const [reviewing, setReviewing] = useState(null);
+  const [hideCompleted, setHideCompleted] = useState(true);
 
   const { data: notifications = [], isLoading } = useQuery({
     queryKey: ["dd-notifications", contactId],
@@ -63,7 +65,7 @@ export default function ContactNotificationsTab({ contactId, contactName, onCont
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.DueDiligence.update(id, data),
-    onSuccess: () => {
+    onSuccess: (savedRecord) => {
       queryClient.invalidateQueries({ queryKey: ["dd-notifications", contactId] });
       if (editing?.firm_id) queryClient.invalidateQueries({ queryKey: ["due-diligence", editing.firm_id] });
       setShowDialog(false);
@@ -98,7 +100,12 @@ export default function ContactNotificationsTab({ contactId, contactName, onCont
     );
   }
 
-  const unreadCount = notifications.filter((n) => n.status === "unread").length;
+  const completedNotifications = notifications.filter((n) => n.status === "completed");
+  const pendingNotifications = notifications.filter((n) => n.status !== "completed");
+  const unreadCount = pendingNotifications.filter((n) => n.status === "unread").length;
+  const hasCompleted = completedNotifications.length > 0;
+
+  const visibleNotifications = hideCompleted ? pendingNotifications : notifications;
 
   return (
     <div className="space-y-2 py-1">
@@ -116,23 +123,51 @@ export default function ContactNotificationsTab({ contactId, contactName, onCont
               <Bell className="w-3.5 h-3.5" /> {unreadCount} unread notification{unreadCount > 1 ? "s" : ""}
             </div>
           )}
-          {notifications.map((n) => {
+
+          {hasCompleted && (
+            <button
+              type="button"
+              onClick={() => setHideCompleted((v) => !v)}
+              className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1 w-full text-left"
+            >
+              {hideCompleted ? (
+                <><Eye className="w-3.5 h-3.5" /> Show {completedNotifications.length} completed notification{completedNotifications.length > 1 ? "s" : ""}</>
+              ) : (
+                <><Eye className="w-3.5 h-3.5 rotate-180" /> Hide {completedNotifications.length} completed notification{completedNotifications.length > 1 ? "s" : ""}</>
+              )}
+            </button>
+          )}
+
+          {visibleNotifications.map((n) => {
             const cfg = TYPE_CONFIG[n.type] || TYPE_CONFIG.approval_decision;
             const Icon = cfg.icon;
             const DecIcon = n.supervisor_status ? DECISION_ICON[n.supervisor_status] : null;
             const isUnread = n.status === "unread";
+            const isCompleted = n.status === "completed";
 
             return (
               <div
                 key={n.id}
-                className={`flex items-start gap-3 px-3 py-2.5 rounded-lg border ${cfg.bgClass} ${isUnread ? "ring-1 ring-indigo-200" : "opacity-75"} transition-opacity`}
+                className={`flex items-start gap-3 px-3 py-2.5 rounded-lg border transition-opacity ${
+                  isCompleted
+                    ? "bg-gray-50 border-gray-200 opacity-60"
+                    : `${cfg.bgClass} ${isUnread ? "ring-1 ring-indigo-200" : "opacity-80"}`
+                }`}
               >
-                <div className={`mt-0.5 ${cfg.iconClass}`}>
-                  {DecIcon ? <DecIcon className={`w-4 h-4 ${n.supervisor_status ? DECISION_CLASS[n.supervisor_status] : ""}`} /> : <Icon className="w-4 h-4" />}
+                <div className={`mt-0.5 ${isCompleted ? "text-gray-400" : cfg.iconClass}`}>
+                  {isCompleted ? (
+                    <CheckCircle2 className="w-4 h-4" />
+                  ) : DecIcon ? (
+                    <DecIcon className={`w-4 h-4 ${n.supervisor_status ? DECISION_CLASS[n.supervisor_status] : ""}`} />
+                  ) : (
+                    <Icon className="w-4 h-4" />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${cfg.badgeClass}`}>{cfg.label}</span>
+                    <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${isCompleted ? "bg-gray-200 text-gray-500" : cfg.badgeClass}`}>
+                      {isCompleted ? "Completed" : cfg.label}
+                    </span>
                     {n.product_name && (
                       <span className="text-[10px] text-gray-500 truncate">{n.product_name}</span>
                     )}
@@ -140,7 +175,13 @@ export default function ContactNotificationsTab({ contactId, contactName, onCont
                       <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
                     )}
                   </div>
-                  <p className="text-sm font-medium text-gray-800 mt-0.5">{n.title}</p>
+                  <button
+                    type="button"
+                    onClick={() => handleReview(n)}
+                    className={`text-sm font-medium mt-0.5 text-left hover:underline ${isCompleted ? "text-gray-500 hover:text-gray-700" : "text-gray-800 hover:text-indigo-700"}`}
+                  >
+                    {n.title}
+                  </button>
                   <p className="text-xs text-gray-500 mt-0.5">{n.message}</p>
                   {n.created_date && (
                     <p className="text-[10px] text-gray-400 mt-1">
@@ -157,8 +198,14 @@ export default function ContactNotificationsTab({ contactId, contactName, onCont
                     disabled={reviewing?.id === n.id}
                     onClick={() => handleReview(n)}
                   >
-                    {reviewing?.id === n.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Eye className="w-3 h-3" />}
-                    {cfg.actionLabel}
+                    {reviewing?.id === n.id ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : isCompleted ? (
+                      <ExternalLink className="w-3 h-3" />
+                    ) : (
+                      <Eye className="w-3 h-3" />
+                    )}
+                    {isCompleted ? "Open" : cfg.actionLabel}
                   </Button>
                 </div>
               </div>
