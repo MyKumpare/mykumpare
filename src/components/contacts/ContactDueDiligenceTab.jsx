@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { ClipboardCheck, Pencil, Plus } from "lucide-react";
 import AddDueDiligenceDialog from "../firms/AddDueDiligenceDialog";
-import { syncDdNotifications } from "../firms/ddNotificationSync";
+import { syncDdNotifications, syncProductStatusFromDd } from "../firms/ddNotificationSync";
 import DdFilterTabs, { getDdCounts, filterDdRecords } from "../firms/DdFilterTabs";
 
 const STATUS_STYLES = {
@@ -55,6 +55,7 @@ export default function ContactDueDiligenceTab({ contactId, contactName, onConta
     mutationFn: ({ id, data }) => base44.entities.DueDiligence.update(id, data),
     onSuccess: (savedRecord) => {
       syncDdNotifications(savedRecord);
+      syncProductStatusFromDd(savedRecord, queryClient);
       queryClient.invalidateQueries({ queryKey: ["dd-primary-analyst", contactId] });
       queryClient.invalidateQueries({ queryKey: ["dd-secondary-analyst", contactId] });
       queryClient.invalidateQueries({ queryKey: ["dd-assigned-tasks", contactId] });
@@ -67,6 +68,7 @@ export default function ContactDueDiligenceTab({ contactId, contactName, onConta
     mutationFn: (data) => base44.entities.DueDiligence.create(data),
     onSuccess: (savedRecord, variables) => {
       syncDdNotifications(savedRecord);
+      syncProductStatusFromDd(savedRecord, queryClient);
       queryClient.invalidateQueries({ queryKey: ["dd-primary-analyst", contactId] });
       queryClient.invalidateQueries({ queryKey: ["dd-secondary-analyst", contactId] });
       queryClient.invalidateQueries({ queryKey: ["dd-assigned-tasks", contactId] });

@@ -112,3 +112,25 @@ export async function syncDdNotifications(ddRecord) {
     }
   }
 }
+
+/**
+ * When a due diligence record reaches "Buy List" status (meaning the product
+ * has completed DD and been added to the buy list), automatically convert the
+ * associated product's product_status to "Approved".
+ *
+ * @param {object} ddRecord - The saved DueDiligence record (must include product_id + status).
+ * @param {object} queryClient - React Query client for cache invalidation.
+ */
+export async function syncProductStatusFromDd(ddRecord, queryClient) {
+  if (!ddRecord?.product_id) return;
+  if (ddRecord.status !== "Buy List") return;
+
+  try {
+    const product = await base44.entities.Product.get(ddRecord.product_id);
+    if (!product || product.product_status === "Approved") return;
+    await base44.entities.Product.update(ddRecord.product_id, { product_status: "Approved" });
+    if (queryClient) {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    }
+  } catch { /* product not found or update failed — no-op */ }
+}
