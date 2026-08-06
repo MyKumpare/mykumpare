@@ -3,7 +3,7 @@ import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { StickyNote, ChevronDown, ChevronRight, History } from "lucide-react";
+import { StickyNote, ChevronDown, ChevronRight, History, Save, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import StageNotesHistoryDialog from "./StageNotesHistoryDialog";
 
@@ -46,6 +46,8 @@ const QUILL_FORMATS = [
 export default function StageNotesEditor({ value = "", onChange, label = "Notes", dueDiligenceId = "", stageId = "", stageName = "" }) {
   const [expanded, setExpanded] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [localValue, setLocalValue] = useState(value || "");
   const quillRef = useRef(null);
 
   // Auto-expand if there's existing content on first mount
@@ -55,8 +57,32 @@ export default function StageNotesEditor({ value = "", onChange, label = "Notes"
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Sync local buffer when external value changes and not actively editing
+  useEffect(() => {
+    if (!isEditing) {
+      setLocalValue(value || "");
+    }
+  }, [value, isEditing]);
+
   const hasContent = value && value.trim() && value !== "<p><br></p>";
   const canShowHistory = !!dueDiligenceId && !!stageId;
+
+  const isDirty = localValue !== (value || "");
+
+  const handleSave = () => {
+    onChange?.(localValue);
+    setIsEditing(false);
+  };
+
+  const handleEdit = () => {
+    setLocalValue(value || "");
+    setIsEditing(true);
+  };
+
+  const handleCancel = () => {
+    setLocalValue(value || "");
+    setIsEditing(false);
+  };
 
   return (
     <div className="space-y-1">
@@ -95,13 +121,42 @@ export default function StageNotesEditor({ value = "", onChange, label = "Notes"
           <ReactQuill
             ref={quillRef}
             theme="snow"
-            value={value || ""}
-            onChange={onChange}
+            value={localValue}
+            onChange={setLocalValue}
+            readOnly={!isEditing}
             modules={QUILL_MODULES}
             formats={QUILL_FORMATS}
             placeholder="Enter notes here..."
             style={{ fontSize: "13px" }}
           />
+          <div className="flex items-center justify-between px-2 py-1.5 border-t border-gray-100 bg-gray-50/50">
+            {isEditing ? (
+              <>
+                {isDirty && (
+                  <span className="text-[9px] text-amber-600 font-medium flex items-center gap-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" /> Unsaved changes
+                  </span>
+                )}
+                <div className="flex items-center gap-1 ml-auto">
+                  {isDirty && (
+                    <Button type="button" size="sm" variant="ghost" className="h-6 text-[10px] px-2 text-gray-500" onClick={handleCancel}>
+                      Cancel
+                    </Button>
+                  )}
+                  <Button type="button" size="sm" className="h-6 text-[10px] px-3 gap-1" disabled={!isDirty} onClick={handleSave}>
+                    <Save className="w-2.5 h-2.5" /> Save
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <span className="text-[9px] text-gray-400">Read-only</span>
+                <Button type="button" size="sm" variant="outline" className="h-6 text-[10px] px-3 gap-1 ml-auto" onClick={handleEdit}>
+                  <Pencil className="w-2.5 h-2.5" /> Edit
+                </Button>
+              </>
+            )}
+          </div>
         </div>
       )}
 
