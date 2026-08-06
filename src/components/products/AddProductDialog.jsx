@@ -28,6 +28,7 @@ import ProductAnalyticsTab from "./ProductAnalyticsTab";
 import ProductDueDiligenceTab from "./ProductDueDiligenceTab";
 import ConstituentProductMultiSelect from "./ConstituentProductMultiSelect";
 import AddIMProductValidatedDialog from "./AddIMProductValidatedDialog";
+import ProductStatusBadge from "./ProductStatusBadge";
 import { base44 } from "@/api/base44Client";
 
 // Map product type -> firm type(s) that can be associated
@@ -385,7 +386,10 @@ export default function AddProductDialog({
         {/* Sticky product name banner (view mode only) */}
         {!isAddMode && productName && (
           <div className="px-1 pb-2 border-b mb-1">
-            <p className="text-sm font-semibold text-indigo-700 truncate">{productName}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-semibold text-indigo-700 truncate">{productName}</p>
+              <ProductStatusBadge status={productStatus} />
+            </div>
             {(editingProduct?.firm_name || firms.find((f) => f.id === firmId)?.name) && (() => {
               const firmName = editingProduct?.firm_name || firms.find((f) => f.id === firmId)?.name;
               const firm = firms.find((f) => f.id === firmId || f.name === editingProduct?.firm_name);
