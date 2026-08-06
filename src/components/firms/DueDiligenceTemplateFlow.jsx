@@ -41,16 +41,6 @@ export default function DueDiligenceTemplateFlow({
   const [showProgressModal, setShowProgressModal] = useState(false);
   const [expandedStages, setExpandedStages] = useState({});
   const toggleExpand = (id) => setExpandedStages((prev) => ({ ...prev, [id]: !prev[id] }));
-  const allExpanded = stagesList.length > 0 && stagesList.every((s) => expandedStages[s.id]);
-  const toggleAll = () => {
-    if (allExpanded) {
-      setExpandedStages({});
-    } else {
-      const next = {};
-      stagesList.forEach((s) => { next[s.id] = true; });
-      setExpandedStages(next);
-    }
-  };
 
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ["templates"],
@@ -86,6 +76,16 @@ export default function DueDiligenceTemplateFlow({
       : 0;
   const allComplete =
     stagesList.length > 0 && completedCount === stagesList.length;
+  const allExpanded = stagesList.length > 0 && stagesList.every((s) => expandedStages[s.id]);
+  const toggleAll = () => {
+    if (allExpanded) {
+      setExpandedStages({});
+    } else {
+      const next = {};
+      stagesList.forEach((s) => { next[s.id] = true; });
+      setExpandedStages(next);
+    }
+  };
 
   const todayStr = format(new Date(), "yyyy-MM-dd");
 
