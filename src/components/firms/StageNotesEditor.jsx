@@ -3,7 +3,7 @@ import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { StickyNote, ChevronDown, ChevronRight, History, Save, Pencil } from "lucide-react";
+import { StickyNote, ChevronDown, ChevronRight, History, Save, Pencil, Maximize2, Minimize2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import StageNotesHistoryDialog from "./StageNotesHistoryDialog";
 
@@ -48,6 +48,7 @@ export default function StageNotesEditor({ value = "", onChange, label = "Notes"
   const [showHistory, setShowHistory] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [localValue, setLocalValue] = useState(value || "");
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const quillRef = useRef(null);
 
   // Auto-expand if there's existing content on first mount
@@ -103,17 +104,28 @@ export default function StageNotesEditor({ value = "", onChange, label = "Notes"
           )}
         </button>
 
-        {canShowHistory && (
+        <div className="flex items-center gap-2">
+          {canShowHistory && (
+            <button
+              type="button"
+              onClick={() => setShowHistory(true)}
+              className="flex items-center gap-0.5 text-[9px] text-gray-400 hover:text-indigo-600 font-medium"
+              title="View edit history"
+            >
+              <History className="w-2.5 h-2.5" />
+              History
+            </button>
+          )}
           <button
             type="button"
-            onClick={() => setShowHistory(true)}
+            onClick={() => setIsFullscreen(true)}
             className="flex items-center gap-0.5 text-[9px] text-gray-400 hover:text-indigo-600 font-medium"
-            title="View edit history"
+            title="Open in full screen"
           >
-            <History className="w-2.5 h-2.5" />
-            History
+            <Maximize2 className="w-2.5 h-2.5" />
+            Full Screen
           </button>
-        )}
+        </div>
       </div>
 
       {expanded && (
@@ -168,6 +180,64 @@ export default function StageNotesEditor({ value = "", onChange, label = "Notes"
           stageId={stageId}
           stageName={stageName || label}
         />
+      )}
+
+      {isFullscreen && (
+        <div className="fixed inset-0 z-[100] bg-white flex flex-col">
+          {/* Full-screen header */}
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 bg-gray-50">
+            <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+              <StickyNote className="w-4 h-4 text-indigo-500" />
+              {label}
+              {isDirty && (
+                <span className="text-[10px] text-amber-600 font-medium flex items-center gap-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400" /> Unsaved changes
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5">
+              {isEditing ? (
+                <>
+                  {isDirty && (
+                    <Button type="button" size="sm" variant="ghost" className="h-7 text-xs" onClick={handleCancel}>
+                      Cancel
+                    </Button>
+                  )}
+                  <Button type="button" size="sm" className="h-7 text-xs gap-1" disabled={!isDirty} onClick={handleSave}>
+                    <Save className="w-3.5 h-3.5" /> Save
+                  </Button>
+                </>
+              ) : (
+                <Button type="button" size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={handleEdit}>
+                  <Pencil className="w-3.5 h-3.5" /> Edit
+                </Button>
+              )}
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs gap-1"
+                onClick={() => setIsFullscreen(false)}
+                title="Exit full screen"
+              >
+                <Minimize2 className="w-3.5 h-3.5" /> Exit
+              </Button>
+            </div>
+          </div>
+          {/* Full-screen editor */}
+          <div className="flex-1 overflow-hidden">
+            <ReactQuill
+              theme="snow"
+              value={localValue}
+              onChange={setLocalValue}
+              readOnly={!isEditing}
+              modules={QUILL_MODULES}
+              formats={QUILL_FORMATS}
+              placeholder="Enter notes here..."
+              style={{ height: "100%", paddingBottom: 42 }}
+            />
+          </div>
+        </div>
       )}
     </div>
   );
