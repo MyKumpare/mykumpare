@@ -49,7 +49,7 @@ function checkSimilarity(input, existing) {
   return null;
 }
 
-export default function StatusOptionSelect({ value, onChange, category, placeholder = "Select..." }) {
+export default function StatusOptionSelect({ value, onChange, category, placeholder = "Select...", allowedOptions }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -69,8 +69,12 @@ export default function StatusOptionSelect({ value, onChange, category, placehol
     const defaults = DEFAULTS[category] || [];
     const set = new Set(defaults);
     dbOptions.forEach((o) => set.add(o.name));
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [dbOptions, category]);
+    let opts = Array.from(set).sort((a, b) => a.localeCompare(b));
+    if (allowedOptions) {
+      opts = opts.filter((o) => allowedOptions.includes(o));
+    }
+    return opts;
+  }, [dbOptions, category, allowedOptions]);
 
   const filtered = useMemo(
     () => allOptions.filter((o) => o.toLowerCase().includes(search.toLowerCase())),
@@ -208,6 +212,7 @@ export default function StatusOptionSelect({ value, onChange, category, placehol
                 ))
               )}
             </div>
+            {!allowedOptions && (
             <div className="border-t">
               <button
                 type="button"
@@ -217,6 +222,7 @@ export default function StatusOptionSelect({ value, onChange, category, placehol
                 <Plus className="w-3.5 h-3.5" /> Add new option
               </button>
             </div>
+            )}
           </>
         )}
       </PopoverContent>
