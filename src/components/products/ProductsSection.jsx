@@ -36,7 +36,7 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
   const searchLower = search.toLowerCase().trim();
   const filteredProducts = React.useMemo(() => {
     if (!searchLower) return products;
-    return filteredProducts.filter((p) => {
+    return products.filter((p) => {
       const name = (p.name || "").toLowerCase();
       const assetClass = (p.asset_class || "").toLowerCase();
       const firm = (firmMap[p.firm_id]?.name || "").toLowerCase();
