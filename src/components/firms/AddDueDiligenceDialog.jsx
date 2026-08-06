@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import {
@@ -11,7 +11,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ChevronDown, Check, Plus, AlertTriangle, ShieldAlert, History, Trash2, Loader2 } from "lucide-react";
+import { ChevronDown, Check, Plus, AlertTriangle, ShieldAlert, History, Trash2, Loader2, Cloud } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
@@ -20,6 +20,8 @@ import { cn } from "@/lib/utils";
 import { findContactDuplicates } from "@/components/contacts/contactDuplicateCheck";
 import { useFirmOwner } from "@/components/admin/useFirmOwner";
 import StatusOptionSelect from "./StatusOptionSelect";
+import { syncDdNotifications, syncProductStatusFromDd } from "./ddNotificationSync";
+import { saveStageNoteVersions } from "./ddNoteVersionSync";
 const PRODUCT_TYPES = ["Investment Manager Product", "Multi-Manager Product"];
 const FIRM_TYPES = ["Manager of Managers", "Investment Manager", "Allocator", "Investment Consultant", "Securities Brokerage", "Trade Organizations"];
 const NOT_STARTED_ALLOWED = ["In-process"];
@@ -343,6 +345,7 @@ function NewFirmForm({ existingFirms, onCreated, onCancel }) {
 }
 
 export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firmName, products = [], contacts = [], editingRecord, onSubmit, onDelete, firmSelectionMode = false, preselectProductId = "" }) {
+  const queryClient = useQueryClient();
   const [productId, setProductId] = useState("");
   const [status, setStatus] = useState("Pipeline");
   const [processStatus, setProcessStatus] = useState("Not Started");
@@ -569,8 +572,128 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
     return [...ids];
   }, [stages, primaryId, secondaryId]);
 
+  // ─── Auto-save: persist changes immediately so no data is lost ───
+  const [saveStatus, setSaveStatus] = useState("idle"); // "idle" | "saving" | "saved" | "error"
+  const autoSaveTimerRef = useRef(null);
+  const lastSavedPayloadRef = useRef("");
+  const isInitializedRef = useRef(false);
+  const isAutoSavingRef = useRef(false);
+
+  // Build the same payload handleSave sends — used by both auto-save and manual save.
+  const buildPayload = useCallback(() => ({
+    firm_id: effectiveFirmId,
+    firm_name: effectiveFirmName,
+    product_id: productId,
+    product_name: selectedProduct?.name || "",
+    status,
+    process_status: status === "Buy List" ? "Completed" : processStatus,
+    primary_analyst_contact_id: primaryId || undefined,
+    primary_analyst_name: primaryId ? contactName(primaryContact) || "" : undefined,
+    secondary_analyst_contact_id: secondaryId || undefined,
+    secondary_analyst_name: secondaryId ? contactName(secondaryContact) || "" : undefined,
+    stages: processStatus === "In-process" ? stages : undefined,
+    documentation_checklist: processStatus === "In-process" ? docChecklist : undefined,
+    approval_process: processStatus === "In-process" ? approvalProcess : undefined,
+    approval_process_logic: processStatus === "In-process" ? approvalLogic : undefined,
+    template_id: processStatus === "In-process" ? (templateId || undefined) : undefined,
+    template_name: processStatus === "In-process" ? (templateName || undefined) : undefined,
+    start_date: processStatus === "In-process" ? (startDate || undefined) : undefined,
+    current_stage_index: processStatus === "In-process" ? currentStageIndex : undefined,
+    assigned_contact_ids: processStatus === "In-process" ? assignedContactIds : undefined,
+  }), [effectiveFirmId, effectiveFirmName, productId, selectedProduct, status, processStatus, primaryId, primaryContact, secondaryId, secondaryContact, stages, docChecklist, approvalProcess, approvalLogic, templateId, templateName, startDate, currentStageIndex, assignedContactIds]);
+
+  // Debounced auto-save — fires 800ms after the last change to any tracked field.
+  useEffect(() => {
+    // Only auto-save when editing an existing record that's been initialized.
+    if (!open || !editingRecord?.id || !isInitializedRef.current) return;
+
+    const payload = buildPayload();
+    const payloadStr = JSON.stringify(payload);
+    // Skip if nothing changed since the last save.
+    if (payloadStr === lastSavedPayloadRef.current) return;
+
+    // Clear any pending timer.
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+
+    autoSaveTimerRef.current = setTimeout(async () => {
+      isAutoSavingRef.current = true;
+      setSaveStatus("saving");
+      try {
+        const previousRecord = await base44.entities.DueDiligence.get(editingRecord.id);
+        const savedRecord = await base44.entities.DueDiligence.update(editingRecord.id, payload);
+        await syncDdNotifications(savedRecord);
+        await syncProductStatusFromDd(savedRecord, queryClient);
+        await saveStageNoteVersions(savedRecord, previousRecord);
+        queryClient.invalidateQueries({ queryKey: ["due-diligence"] });
+        queryClient.invalidateQueries({ queryKey: ["dd-stage-note-versions"] });
+        lastSavedPayloadRef.current = payloadStr;
+        setSaveStatus("saved");
+      } catch (err) {
+        console.error("Auto-save failed:", err);
+        setSaveStatus("error");
+      } finally {
+        isAutoSavingRef.current = false;
+      }
+    }, 800);
+
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+  }, [open, editingRecord, buildPayload, queryClient]);
+
+  // Mark initialized after the load effect has populated state for an editing record.
+  useEffect(() => {
+    if (open && editingRecord) {
+      const timer = setTimeout(() => {
+        isInitializedRef.current = true;
+        // Seed the last-saved payload so we don't immediately re-save the same data.
+        lastSavedPayloadRef.current = JSON.stringify(buildPayload());
+        setSaveStatus("idle");
+      }, 100);
+      return () => clearTimeout(timer);
+    } else if (!open) {
+      isInitializedRef.current = false;
+      setSaveStatus("idle");
+    }
+  }, [open, editingRecord, buildPayload]);
+
+  // Flush any pending auto-save before the user closes or clicks Save.
+  const flushAutoSave = useCallback(async () => {
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+    }
+    if (!editingRecord?.id || !isInitializedRef.current) return;
+    const payload = buildPayload();
+    const payloadStr = JSON.stringify(payload);
+    if (payloadStr === lastSavedPayloadRef.current) return;
+    isAutoSavingRef.current = true;
+    setSaveStatus("saving");
+    try {
+      const previousRecord = await base44.entities.DueDiligence.get(editingRecord.id);
+      const savedRecord = await base44.entities.DueDiligence.update(editingRecord.id, payload);
+      await syncDdNotifications(savedRecord);
+      await syncProductStatusFromDd(savedRecord, queryClient);
+      await saveStageNoteVersions(savedRecord, previousRecord);
+      queryClient.invalidateQueries({ queryKey: ["due-diligence"] });
+      queryClient.invalidateQueries({ queryKey: ["dd-stage-note-versions"] });
+      lastSavedPayloadRef.current = payloadStr;
+      setSaveStatus("saved");
+    } catch (err) {
+      console.error("Flush save failed:", err);
+      setSaveStatus("error");
+    } finally {
+      isAutoSavingRef.current = false;
+    }
+  }, [editingRecord, buildPayload, queryClient]);
+
   const handleSave = () => {
     if (!isValid) return;
+    // Clear any pending auto-save timer to avoid a race with the manual save.
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+    }
     // Check for existing DD records on this product (skip when editing).
     if (!editingRecord && productId) {
       const existing = allDueDiligences.filter(
@@ -590,27 +713,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
         return;
       }
     }
-    onSubmit({
-      firm_id: effectiveFirmId,
-      firm_name: effectiveFirmName,
-      product_id: productId,
-      product_name: selectedProduct?.name || "",
-      status,
-      process_status: status === "Buy List" ? "Completed" : processStatus,
-      primary_analyst_contact_id: primaryId || undefined,
-      primary_analyst_name: primaryId ? contactName(primaryContact) || "" : undefined,
-      secondary_analyst_contact_id: secondaryId || undefined,
-      secondary_analyst_name: secondaryId ? contactName(secondaryContact) || "" : undefined,
-      stages: processStatus === "In-process" ? stages : undefined,
-      documentation_checklist: processStatus === "In-process" ? docChecklist : undefined,
-      approval_process: processStatus === "In-process" ? approvalProcess : undefined,
-      approval_process_logic: processStatus === "In-process" ? approvalLogic : undefined,
-      template_id: processStatus === "In-process" ? (templateId || undefined) : undefined,
-      template_name: processStatus === "In-process" ? (templateName || undefined) : undefined,
-      start_date: processStatus === "In-process" ? (startDate || undefined) : undefined,
-      current_stage_index: processStatus === "In-process" ? currentStageIndex : undefined,
-      assigned_contact_ids: processStatus === "In-process" ? assignedContactIds : undefined,
-    });
+    onSubmit(buildPayload());
   };
 
   const handleDelete = async () => {
@@ -899,9 +1002,31 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
               <Trash2 className="w-4 h-4" /> Delete
             </Button>
           )}
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          {/* Auto-save status indicator */}
+          {editingRecord?.id && saveStatus !== "idle" && (
+            <div className="flex items-center gap-1.5 text-xs mr-auto">
+              {saveStatus === "saving" && (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-500" />
+                  <span className="text-indigo-600">Saving…</span>
+                </>
+              )}
+              {saveStatus === "saved" && (
+                <>
+                  <Cloud className="w-3.5 h-3.5 text-emerald-500" />
+                  <span className="text-emerald-600">All changes saved</span>
+                </>
+              )}
+              {saveStatus === "error" && (
+                <span className="text-red-600">Save failed — click Done to retry</span>
+              )}
+            </div>
+          )}
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            {editingRecord ? "Close" : "Cancel"}
+          </Button>
           <Button className="bg-indigo-600 hover:bg-indigo-700 text-white" disabled={!isValid} onClick={handleSave}>
-            {editingRecord ? "Save Changes" : "Add Due Diligence"}
+            {editingRecord ? "Done" : "Add Due Diligence"}
           </Button>
         </DialogFooter>
 
@@ -1015,32 +1140,12 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
                 </Button>
                 {duplicateCheck.canCreate && (
                   <Button
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white"
-                    onClick={() => {
-                      setDuplicateCheck(null);
-                      onSubmit({
-                        firm_id: effectiveFirmId,
-                        firm_name: effectiveFirmName,
-                        product_id: productId,
-                        product_name: selectedProduct?.name || "",
-                        status,
-                        process_status: status === "Buy List" ? "Completed" : processStatus,
-                        primary_analyst_contact_id: primaryId || undefined,
-                        primary_analyst_name: primaryId ? contactName(primaryContact) || "" : undefined,
-                        secondary_analyst_contact_id: secondaryId || undefined,
-                        secondary_analyst_name: secondaryId ? contactName(secondaryContact) || "" : undefined,
-                        stages: processStatus === "In-process" ? stages : undefined,
-                        documentation_checklist: processStatus === "In-process" ? docChecklist : undefined,
-                        approval_process: processStatus === "In-process" ? approvalProcess : undefined,
-                        approval_process_logic: processStatus === "In-process" ? approvalLogic : undefined,
-                        template_id: processStatus === "In-process" ? (templateId || undefined) : undefined,
-                        template_name: processStatus === "In-process" ? (templateName || undefined) : undefined,
-                        start_date: processStatus === "In-process" ? (startDate || undefined) : undefined,
-                        current_stage_index: processStatus === "In-process" ? currentStageIndex : undefined,
-                        assigned_contact_ids: processStatus === "In-process" ? assignedContactIds : undefined,
-                        });
-                        }}
-                        >
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                  onClick={() => {
+                    setDuplicateCheck(null);
+                    onSubmit(buildPayload());
+                      }}
+                      >
                         Create New Due Diligence
                   </Button>
                 )}
