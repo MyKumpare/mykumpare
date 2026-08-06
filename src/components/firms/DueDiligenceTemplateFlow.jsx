@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -52,8 +52,45 @@ export default function DueDiligenceTemplateFlow({
   const [showProgressModal, setShowProgressModal] = useState(false);
   const [expandedStages, setExpandedStages] = useState({});
   const [pendingSupervisor, setPendingSupervisor] = useState({}); // { [stageId]: contactId }
+  const prevApproverRef = useRef(undefined); // tracks previous approver ID to skip mount
 
   const toggleExpand = (id) => setExpandedStages((prev) => ({ ...prev, [id]: !prev[id] }));
+
+  // ─── Auto-populate supervisor for all stages when approver is selected ───
+  // When the user selects an approver in the Approval Process tab, that person
+  // is automatically set as the supervisor on ALL pending stages (not yet
+  // approved/rejected/on_hold). The user can still edit per-stage via "Change".
+  useEffect(() => {
+    const approverId = approvalProcess?.approver_contact_id || "";
+
+    // Skip on mount (first run) — don't override existing supervisors when editing
+    if (prevApproverRef.current === undefined) {
+      prevApproverRef.current = approverId;
+      return;
+    }
+    if (prevApproverRef.current === approverId) return;
+    prevApproverRef.current = approverId;
+
+    if (!approverId) return;
+    const approverName = approvalProcess?.approver_name || "";
+
+    // Update all pending stages (not yet approved/rejected/on_hold) with the approver
+    const needsUpdate = stagesList.some(
+      (s) => (s.supervisor_status || "pending") === "pending" && s.supervisor_contact_id !== approverId
+    );
+    if (!needsUpdate) return;
+
+    const newStages = stagesList.map((s) => {
+      if ((s.supervisor_status || "pending") !== "pending") return s;
+      return { ...s, supervisor_contact_id: approverId, supervisor_name: approverName };
+    });
+    onStagesChange(newStages);
+
+    // Pre-fill pendingSupervisor for all stages (dropdown pre-selection on reset)
+    const newPending = {};
+    stagesList.forEach((s) => { newPending[s.id] = approverId; });
+    setPendingSupervisor((prev) => ({ ...prev, ...newPending }));
+  }, [approvalProcess?.approver_contact_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ["templates"],
@@ -100,6 +137,8 @@ export default function DueDiligenceTemplateFlow({
 
   const handleSelectTemplate = (template) => {
     onTemplateSelect(template.id, template.name);
+    const approverId = approvalProcess?.approver_contact_id || "";
+    const approverName = approvalProcess?.approver_name || "";
     const newStages = (template.stages || []).map((s) => ({
       id: s.id,
       name: s.name,
@@ -108,8 +147,8 @@ export default function DueDiligenceTemplateFlow({
       start_date: null,
       end_date: null,
       supervisor_status: "pending",
-      supervisor_contact_id: null,
-      supervisor_name: null,
+      supervisor_contact_id: approverId || null,
+      supervisor_name: approverName || null,
       supervisor_date: null,
       sub_stages: (s.sub_stages || []).map((ss) => ({
         id: ss.id,
@@ -124,6 +163,12 @@ export default function DueDiligenceTemplateFlow({
     }));
     onStagesChange(newStages);
     onCurrentStageChange(0);
+    // Pre-fill pendingSupervisor with the approver for all stages
+    if (approverId) {
+      const newPending = {};
+      newStages.forEach((s) => { newPending[s.id] = approverId; });
+      setPendingSupervisor((prev) => ({ ...prev, ...newPending }));
+    }
     // Copy documentation checklist from template
     if (onDocChecklistChange) {
       const newChecklist = (template.documentation_checklist || []).map((it) => ({
