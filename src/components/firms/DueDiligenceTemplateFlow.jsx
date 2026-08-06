@@ -8,8 +8,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import {
   ChevronDown, Check, Plus, Play, CheckCircle2, Circle,
   Clock, BarChart3, Calendar, X, ChevronRight, Lock,
-  ShieldCheck, ShieldX, ShieldAlert,
+  ShieldCheck, ShieldX, ShieldAlert, UserCheck,
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SubStageItem from "./SubStageItem";
 import DatePicker from "@/components/ui/date-picker";
 import AddTemplateDialog from "@/components/templates/AddTemplateDialog";
@@ -42,6 +43,7 @@ export default function DueDiligenceTemplateFlow({
   const [addTemplateOpen, setAddTemplateOpen] = useState(false);
   const [showProgressModal, setShowProgressModal] = useState(false);
   const [expandedStages, setExpandedStages] = useState({});
+  const [pendingSupervisor, setPendingSupervisor] = useState({}); // { [stageId]: contactId }
 
   const toggleExpand = (id) => setExpandedStages((prev) => ({ ...prev, [id]: !prev[id] }));
 
@@ -123,7 +125,9 @@ export default function DueDiligenceTemplateFlow({
     onCurrentStageChange(0);
   };
 
-  // Supervisor action: approve / reject / on_hold
+  // Supervisor action: approve / reject / on_hold.
+  // The supervisor_contact_id/name are preserved from when they were
+  // assigned via "Submit for Approval" — this only changes the status.
   const handleSupervisorAction = (index, action) => {
     const newStages = stagesList.map((s, i) => {
       if (i !== index) return s;
@@ -131,8 +135,6 @@ export default function DueDiligenceTemplateFlow({
         ...s,
         supervisor_status: action,
         supervisor_date: todayStr,
-        supervisor_contact_id: primaryAnalystId,
-        supervisor_name: primaryAnalystName,
       };
       if (action === "approved") {
         updated.completed = true;
@@ -144,6 +146,34 @@ export default function DueDiligenceTemplateFlow({
       }
       return updated;
     });
+    onStagesChange(newStages);
+  };
+
+  // Assign a supervisor to a stage (submit for approval)
+  const handleAssignSupervisor = (index, stageId) => {
+    const supId = pendingSupervisor[stageId];
+    if (!supId) return;
+    const member = teamMembers.find((m) => m.value === supId);
+    const newStages = stagesList.map((s, i) =>
+      i === index
+        ? { ...s, supervisor_contact_id: supId, supervisor_name: member?.label || "", supervisor_status: "pending", supervisor_date: todayStr }
+        : s
+    );
+    onStagesChange(newStages);
+    setPendingSupervisor((prev) => {
+      const next = { ...prev };
+      delete next[stageId];
+      return next;
+    });
+  };
+
+  // Remove the assigned supervisor (reset back to no supervisor)
+  const handleResetSupervisor = (index) => {
+    const newStages = stagesList.map((s, i) =>
+      i === index
+        ? { ...s, supervisor_contact_id: null, supervisor_name: null, supervisor_status: "pending", supervisor_date: null }
+        : s
+    );
     onStagesChange(newStages);
   };
 
@@ -384,22 +414,66 @@ export default function DueDiligenceTemplateFlow({
 
                         {/* Supervisor approval controls */}
                         {!isCompleted && subsCompleted && (
-                          <div className="mt-2 p-2 rounded-md bg-amber-50 border border-amber-200 space-y-1">
-                            <p className="text-[11px] font-medium text-amber-700 flex items-center gap-1">
-                              <SupIcon className="w-3 h-3" /> Supervisor Approval Required
-                            </p>
-                            <p className="text-[10px] text-amber-600">All sub-stages completed. Approve to complete this stage.</p>
-                            <div className="flex gap-1.5">
-                              <Button type="button" size="sm" className="h-7 text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => handleSupervisorAction(index, "approved")}>
-                                <ShieldCheck className="w-3 h-3" /> Approve
-                              </Button>
-                              <Button type="button" size="sm" variant="outline" className="h-7 text-[10px] border-red-300 text-red-600 hover:bg-red-50" onClick={() => handleSupervisorAction(index, "rejected")}>
-                                <ShieldX className="w-3 h-3" /> Reject
-                              </Button>
-                              <Button type="button" size="sm" variant="outline" className="h-7 text-[10px] border-orange-300 text-orange-600 hover:bg-orange-50" onClick={() => handleSupervisorAction(index, "on_hold")}>
-                                <ShieldAlert className="w-3 h-3" /> On Hold
-                              </Button>
-                            </div>
+                          <div className="mt-2 p-2 rounded-md bg-amber-50 border border-amber-200 space-y-1.5">
+                            {stage.supervisor_contact_id ? (
+                              supStatus === "pending" ? (
+                                <>
+                                  <p className="text-[11px] font-medium text-amber-700 flex items-center gap-1">
+                                    <UserCheck className="w-3 h-3" /> Awaiting approval from {stage.supervisor_name || "supervisor"}
+                                  </p>
+                                  <p className="text-[10px] text-amber-600">The supervisor can review all sub-stages above, then approve, reject, or put on hold.</p>
+                                  <div className="flex gap-1.5 flex-wrap">
+                                    <Button type="button" size="sm" className="h-7 text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => handleSupervisorAction(index, "approved")}>
+                                      <ShieldCheck className="w-3 h-3" /> Approve
+                                    </Button>
+                                    <Button type="button" size="sm" variant="outline" className="h-7 text-[10px] border-red-300 text-red-600 hover:bg-red-50" onClick={() => handleSupervisorAction(index, "rejected")}>
+                                      <ShieldX className="w-3 h-3" /> Reject
+                                    </Button>
+                                    <Button type="button" size="sm" variant="outline" className="h-7 text-[10px] border-orange-300 text-orange-600 hover:bg-orange-50" onClick={() => handleSupervisorAction(index, "on_hold")}>
+                                      <ShieldAlert className="w-3 h-3" /> On Hold
+                                    </Button>
+                                    <Button type="button" size="sm" variant="ghost" className="h-7 text-[10px] text-gray-500 hover:text-gray-700" onClick={() => handleResetSupervisor(index)}>
+                                      Change
+                                    </Button>
+                                  </div>
+                                </>
+                              ) : (
+                                <p className="text-[11px] font-medium flex items-center gap-1">
+                                  <SupIcon className={cn("w-3 h-3", supCfg.class)} /> {stage.supervisor_name || "Supervisor"} — {supCfg.label}{stage.supervisor_date ? ` on ${stage.supervisor_date}` : ""}
+                                </p>
+                              )
+                            ) : (
+                              <>
+                                <p className="text-[11px] font-medium text-amber-700 flex items-center gap-1">
+                                  <ShieldCheck className="w-3 h-3" /> Select Supervisor for Approval
+                                </p>
+                                <p className="text-[10px] text-amber-600">All sub-stages completed. Select a supervisor to review and approve this stage.</p>
+                                <div className="flex gap-1.5 items-center">
+                                  <Select
+                                    value={pendingSupervisor[stage.id] || ""}
+                                    onValueChange={(v) => setPendingSupervisor((prev) => ({ ...prev, [stage.id]: v }))}
+                                  >
+                                    <SelectTrigger className="h-7 text-xs flex-1">
+                                      <SelectValue placeholder="Select supervisor..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {teamMembers.map((m) => (
+                                        <SelectItem key={m.value} value={m.value} className="text-xs">{m.label}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    className="h-7 text-[10px] bg-indigo-600 hover:bg-indigo-700 text-white"
+                                    disabled={!pendingSupervisor[stage.id]}
+                                    onClick={() => handleAssignSupervisor(index, stage.id)}
+                                  >
+                                    <UserCheck className="w-3 h-3" /> Submit for Approval
+                                  </Button>
+                                </div>
+                              </>
+                            )}
                           </div>
                         )}
                         {!isCompleted && !subsCompleted && stageSubs.length > 0 && (

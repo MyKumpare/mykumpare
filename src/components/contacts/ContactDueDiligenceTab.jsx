@@ -4,6 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { ClipboardCheck, Pencil, Plus } from "lucide-react";
 import AddDueDiligenceDialog from "../firms/AddDueDiligenceDialog";
+import { syncDdNotifications } from "../firms/ddNotificationSync";
 
 const STATUS_STYLES = {
   "Pipeline": "bg-blue-50 text-blue-700 border-blue-200",
@@ -50,20 +51,24 @@ export default function ContactDueDiligenceTab({ contactId, contactName, onConta
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.DueDiligence.update(id, data),
-    onSuccess: () => {
+    onSuccess: (savedRecord) => {
+      syncDdNotifications(savedRecord);
       queryClient.invalidateQueries({ queryKey: ["dd-primary-analyst", contactId] });
       queryClient.invalidateQueries({ queryKey: ["dd-secondary-analyst", contactId] });
       queryClient.invalidateQueries({ queryKey: ["dd-assigned-tasks", contactId] });
+      queryClient.invalidateQueries({ queryKey: ["dd-notifications", contactId] });
       if (editing?.firm_id) queryClient.invalidateQueries({ queryKey: ["due-diligence", editing.firm_id] });
       setShowDialog(false);
     },
   });
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.DueDiligence.create(data),
-    onSuccess: (_res, variables) => {
+    onSuccess: (savedRecord, variables) => {
+      syncDdNotifications(savedRecord);
       queryClient.invalidateQueries({ queryKey: ["dd-primary-analyst", contactId] });
       queryClient.invalidateQueries({ queryKey: ["dd-secondary-analyst", contactId] });
       queryClient.invalidateQueries({ queryKey: ["dd-assigned-tasks", contactId] });
+      queryClient.invalidateQueries({ queryKey: ["dd-notifications", contactId] });
       if (variables?.firm_id) queryClient.invalidateQueries({ queryKey: ["due-diligence", variables.firm_id] });
       setShowDialog(false);
     },

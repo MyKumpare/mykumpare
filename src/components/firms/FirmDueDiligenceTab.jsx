@@ -4,6 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Plus, ClipboardCheck, Pencil, Trash2 } from "lucide-react";
 import AddDueDiligenceDialog from "./AddDueDiligenceDialog";
+import { syncDdNotifications } from "./ddNotificationSync";
 
 const STATUS_STYLES = {
   "Pipeline": "bg-blue-50 text-blue-700 border-blue-200",

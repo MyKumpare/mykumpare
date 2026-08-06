@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import {   X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload, TrendingUp, Tag, GraduationCap, Briefcase, Activity, Package, AlertTriangle, Linkedin, Loader2, ClipboardCheck, Image as ImageIcon } from "lucide-react";
+import {   X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload, TrendingUp, Tag, GraduationCap, Briefcase, Activity, Package, AlertTriangle, Linkedin, Loader2, ClipboardCheck, Image as ImageIcon, Bell } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
@@ -23,6 +23,7 @@ import ContactEducationTab from "./ContactEducationTab";
 import ContactProfessionalExperienceTab from "./ContactProfessionalExperienceTab";
 import ContactActivitiesTab from "./ContactActivitiesTab";
 import ContactDueDiligenceTab from "./ContactDueDiligenceTab";
+import ContactNotificationsTab from "./ContactNotificationsTab";
 import ContactProductsTab from "./ContactProductsTab";
 import ContactRolePicker from "./ContactRolePicker";
 import ContactDepartmentPicker from "./ContactDepartmentPicker";
@@ -720,6 +721,9 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                   <TabsTrigger value="due-diligence" className="flex items-center gap-1.5">
                     <ClipboardCheck className="w-3.5 h-3.5" /> Due Diligence
                   </TabsTrigger>
+                  <TabsTrigger value="notifications" className="flex items-center gap-1.5">
+                    <Bell className="w-3.5 h-3.5" /> Notifications
+                  </TabsTrigger>
                 </TabsList>
               </div>
             </div>
@@ -1372,6 +1376,15 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
             {/* ── DUE DILIGENCE TAB ── */}
             <TabsContent value="due-diligence" className="mt-0">
               <ContactDueDiligenceTab
+                contactId={editingContact?.id}
+                contactName={[firstName, lastName].filter(Boolean).join(" ")}
+                onContactClick={onContactClick ? (contact) => { onOpenChange(false); onContactClick(contact); } : undefined}
+                onProductClick={onProductClick ? (product) => { onOpenChange(false); onProductClick(product); } : undefined}
+              />
+            </TabsContent>
+            {/* ── NOTIFICATIONS TAB ── */}
+            <TabsContent value="notifications" className="mt-0">
+              <ContactNotificationsTab
                 contactId={editingContact?.id}
                 contactName={[firstName, lastName].filter(Boolean).join(" ")}
                 onContactClick={onContactClick ? (contact) => { onOpenChange(false); onContactClick(contact); } : undefined}

@@ -1,0 +1,111 @@
+{
+  "name": "DdNotification",
+  "type": "object",
+  "properties": {
+    "contact_id": {
+      "type": "string",
+      "description": "ID of the contact to notify"
+    },
+    "contact_name": {
+      "type": "string",
+      "description": "Name of the notified contact (denormalized)"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "supervisor_request",
+        "approval_decision"
+      ],
+      "description": "Type of due diligence notification"
+    },
+    "title": {
+      "type": "string",
+      "description": "Short title of the notification"
+    },
+    "message": {
+      "type": "string",
+      "description": "Detailed message body"
+    },
+    "due_diligence_id": {
+      "type": "string",
+      "description": "ID of the related DueDiligence record"
+    },
+    "firm_name": {
+      "type": "string",
+      "description": "Firm name (denormalized)"
+    },
+    "product_name": {
+      "type": "string",
+      "description": "Product name (denormalized)"
+    },
+    "stage_name": {
+      "type": "string",
+      "description": "Stage name this notification refers to (denormalized)"
+    },
+    "supervisor_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected",
+        "on_hold"
+      ],
+      "description": "Supervisor status this notification was created for"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "unread",
+        "read"
+      ],
+      "default": "unread",
+      "description": "Whether the notification has been read"
+    }
+  },
+  "required": [
+    "contact_id",
+    "type",
+    "title"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "user"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": null,
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

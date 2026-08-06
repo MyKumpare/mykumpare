@@ -1,0 +1,93 @@
+import { base44 } from "@/api/base44Client";
+
+/**
+ * Creates DdNotification records based on the supervisor assignments and
+ * decisions stored in a DueDiligence record's stages.
+ *
+ * - When a supervisor is assigned to a stage (supervisor_contact_id set),
+ *   a "supervisor_request" notification is created for that supervisor.
+ * - When a supervisor has made a decision (status != "pending"), an
+ *   "approval_decision" notification is created for the primary analyst.
+ *
+ * Deduplication: before creating, we check whether a notification with the
+ * same (due_diligence_id, contact_id, type, stage_name, supervisor_status)
+ * already exists.
+ *
+ * @param {object} ddRecord - The saved DueDiligence record (must include id + stages).
+ */
+export async function syncDdNotifications(ddRecord) {
+  if (!ddRecord?.id || !Array.isArray(ddRecord.stages)) return;
+
+  for (const stage of ddRecord.stages) {
+    if (!stage.supervisor_contact_id) continue;
+
+    const supStatus = stage.supervisor_status || "pending";
+
+    // 1. Supervisor request — created when a supervisor is assigned and
+    //    status is still "pending". Only one per (stage, supervisor) pair.
+    if (supStatus === "pending") {
+      const existing = await base44.entities.DdNotification.filter(
+        {
+          due_diligence_id: ddRecord.id,
+          contact_id: stage.supervisor_contact_id,
+          type: "supervisor_request",
+          stage_name: stage.name || "",
+        },
+        "-created_date",
+        10
+      );
+
+      if (existing.length === 0) {
+        await base44.entities.DdNotification.create({
+          contact_id: stage.supervisor_contact_id,
+          contact_name: stage.supervisor_name || "",
+          type: "supervisor_request",
+          title: `Supervisor approval requested: "${stage.name || "Stage"}"`,
+          message: `Stage "${stage.name || "Stage"}" of ${ddRecord.product_name || "due diligence"}${ddRecord.firm_name ? ` for ${ddRecord.firm_name}` : ""} requires your review and approval.`,
+          due_diligence_id: ddRecord.id,
+          firm_name: ddRecord.firm_name || "",
+          product_name: ddRecord.product_name || "",
+          stage_name: stage.name || "",
+          supervisor_status: "pending",
+          status: "unread",
+        });
+      }
+    }
+
+    // 2. Approval decision — created when the supervisor has made a decision,
+    //    notifying the primary analyst. One per (stage, decision) pair.
+    if (supStatus !== "pending" && ddRecord.primary_analyst_contact_id) {
+      const existing = await base44.entities.DdNotification.filter(
+        {
+          due_diligence_id: ddRecord.id,
+          contact_id: ddRecord.primary_analyst_contact_id,
+          type: "approval_decision",
+          stage_name: stage.name || "",
+          supervisor_status: supStatus,
+        },
+        "-created_date",
+        10
+      );
+
+      if (existing.length === 0) {
+        const label =
+          supStatus === "approved" ? "approved" :
+          supStatus === "rejected" ? "rejected" : "put on hold";
+
+        await base44.entities.DdNotification.create({
+          contact_id: ddRecord.primary_analyst_contact_id,
+          contact_name: ddRecord.primary_analyst_name || "",
+          type: "approval_decision",
+          title: `Stage "${stage.name || "Stage"}" ${label}`,
+          message: `${stage.supervisor_name || "Supervisor"} has ${label} stage "${stage.name || "Stage"}" for ${ddRecord.product_name || "due diligence"}${ddRecord.firm_name ? ` (${ddRecord.firm_name})` : ""}.`,
+          due_diligence_id: ddRecord.id,
+          firm_name: ddRecord.firm_name || "",
+          product_name: ddRecord.product_name || "",
+          stage_name: stage.name || "",
+          supervisor_status: supStatus,
+          status: "unread",
+        });
+      }
+    }
+  }
+}
