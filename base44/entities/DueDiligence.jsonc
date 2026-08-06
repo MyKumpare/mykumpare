@@ -48,9 +48,27 @@
       "type": "string",
       "description": "Full name of the secondary analyst (denormalized)"
     },
+    "template_id": {
+      "type": "string",
+      "description": "ID of the due diligence template that defines the stages for this record"
+    },
+    "template_name": {
+      "type": "string",
+      "description": "Name of the due diligence template (denormalized)"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the due diligence was started (auto-set to today, user-editable). Stored as YYYY-MM-DD."
+    },
+    "current_stage_index": {
+      "type": "integer",
+      "default": 0,
+      "description": "0-based index of the currently active stage. Stages must be completed in numerical order."
+    },
     "stages": {
       "type": "array",
-      "description": "User-defined due diligence stages (shown when process status is In-process). Each stage has an id and a name.",
+      "description": "Due diligence stages (loaded from template). Each stage tracks completion status and date. Stages must be completed in numerical order.",
       "items": {
         "type": "object",
         "properties": {
@@ -59,6 +77,15 @@
           },
           "name": {
             "type": "string"
+          },
+          "completed": {
+            "type": "boolean",
+            "description": "Whether this stage has been completed"
+          },
+          "completed_date": {
+            "type": "string",
+            "format": "date",
+            "description": "Date the stage was completed (YYYY-MM-DD)"
           }
         }
       }
