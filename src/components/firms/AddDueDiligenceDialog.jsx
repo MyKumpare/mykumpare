@@ -519,7 +519,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
     } else {
       products.forEach((p) => { if (!ids.has(p.id)) merged.push(p); });
     }
-    return merged;
+    return merged.filter((p) => !p.deleted_at);
   }, [localProducts, products, firmProducts, firmSelectionMode]);
 
   const allContacts = useMemo(() => {
