@@ -54,10 +54,12 @@ export default function ApprovalProcessTab({
   };
 
   const startStep = (step) => {
+    const approverId = approvalProcess.approver_contact_id;
+    const approverName = approvalProcess.approver_name;
     updateStep(step.id, {
       start_date: step.start_date || todayStr(),
-      performed_by_contact_id: step.performed_by_contact_id || currentUserId,
-      performed_by_name: step.performed_by_name || currentUserName,
+      performed_by_contact_id: step.performed_by_contact_id || approverId || currentUserId,
+      performed_by_name: step.performed_by_name || approverName || currentUserName,
     });
   };
 
@@ -210,7 +212,7 @@ export default function ApprovalProcessTab({
                       <div className="space-y-0.5">
                         <Label className="text-[10px] text-gray-500">Performed By</Label>
                         <Select
-                          value={step.performed_by_contact_id || currentUserId || ""}
+                          value={step.performed_by_contact_id || approvalProcess.approver_contact_id || currentUserId || ""}
                           onValueChange={(v) => {
                             const member = teamMembers.find((m) => m.value === v);
                             updateStep(step.id, { performed_by_contact_id: v, performed_by_name: member?.label || currentUserName });
