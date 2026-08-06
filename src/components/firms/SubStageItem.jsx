@@ -185,7 +185,8 @@ export default function SubStageItem({ subStage, primaryAnalystId, primaryAnalys
             </div>
           </div>
 
-          {/* Performed by */}
+          {/* Performed by — hidden for supervisor sub-stages (auto-set from stage supervisor) */}
+          {!isSupervisorStage && (
           <div className="space-y-0.5">
             <Label className="text-[10px] text-gray-500">Performed By</Label>
             <Select
@@ -205,6 +206,7 @@ export default function SubStageItem({ subStage, primaryAnalystId, primaryAnalys
               </SelectContent>
             </Select>
           </div>
+          )}
 
           {/* Attachments */}
           <div className="space-y-1">
@@ -240,7 +242,8 @@ export default function SubStageItem({ subStage, primaryAnalystId, primaryAnalys
             onChange={(html) => update({ notes: html })}
           />
 
-          {/* Assignments */}
+          {/* Assignments — hidden for supervisor sub-stages (supervisor assigned at stage level) */}
+          {!isSupervisorStage && (
           <div className="space-y-1">
             <div className="flex items-center justify-between">
               <Label className="text-[10px] text-gray-500">Assignments</Label>
@@ -306,6 +309,7 @@ export default function SubStageItem({ subStage, primaryAnalystId, primaryAnalys
               </div>
             )}
           </div>
+          )}
         </div>
       )}
     </div>
