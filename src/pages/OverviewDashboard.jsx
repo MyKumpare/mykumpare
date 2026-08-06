@@ -9,6 +9,7 @@ import {
 import {
   Building, ListChecks, ArrowLeft, TrendingUp, Clock,
   CheckCircle2, XCircle, Loader2, UserCircle, Globe,
+  ShieldCheck, AlertCircle,
 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 
@@ -47,6 +48,11 @@ export default function OverviewDashboard() {
   const { data: tasks = [], isLoading: tasksLoading } = useQuery({
     queryKey: ["follow_up_tasks_search"],
     queryFn: () => base44.entities.FollowUpTask.list("-due_date"),
+  });
+
+  const { data: dueDiligences = [], isLoading: ddLoading } = useQuery({
+    queryKey: ["due-diligence-search"],
+    queryFn: () => base44.entities.DueDiligence.list("-created_date", 5000),
   });
 
   const scopedFirms = useMemo(() => {
@@ -91,6 +97,33 @@ export default function OverviewDashboard() {
       count: active.filter((t) => t.status === status).length,
     }));
   }, [tasks]);
+
+  const scopedDueDiligences = useMemo(() => {
+    if (dataScope === "all" || !linkedFirmId) return dueDiligences;
+    return dueDiligences.filter((dd) => dd.tenant_id === linkedFirmId);
+  }, [dueDiligences, dataScope, linkedFirmId]);
+
+  // Count stages pending supervisor approval, grouped by firm.
+  // A stage is "pending approval" when a supervisor has been assigned
+  // (supervisor_contact_id set) and the status is still "pending".
+  const ddPendingByFirm = useMemo(() => {
+    const counts = {};
+    for (const dd of scopedDueDiligences) {
+      const stages = dd.stages || [];
+      const pendingCount = stages.filter(
+        (s) => s.supervisor_status === "pending" && s.supervisor_contact_id
+      ).length;
+      if (pendingCount > 0) {
+        const key = dd.firm_name || "Unknown Firm";
+        counts[key] = (counts[key] || 0) + pendingCount;
+      }
+    }
+    return Object.entries(counts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [scopedDueDiligences]);
+
+  const totalPendingApprovals = ddPendingByFirm.reduce((sum, f) => sum + f.count, 0);
 
   const totalFirms = scopedFirms.length;
   const totalTasks = scopedTasks.length;
@@ -159,6 +192,13 @@ export default function OverviewDashboard() {
             icon={TrendingUp}
             color="bg-emerald-500"
             loading={tasksLoading}
+          />
+          <SummaryCard
+            label="DD Pending Approval"
+            value={totalPendingApprovals}
+            icon={ShieldCheck}
+            color="bg-amber-500"
+            loading={ddLoading}
           />
         </div>
 
@@ -235,6 +275,53 @@ export default function OverviewDashboard() {
               </ResponsiveContainer>
             )}
           </div>
+        </div>
+
+        {/* DD Pending Approval by Firm */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-amber-600" />
+              <h2 className="text-sm font-semibold text-gray-800">Due Diligence Pending Supervisor Approval by Firm</h2>
+            </div>
+            {totalPendingApprovals > 0 && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-medium">
+                <AlertCircle className="w-3.5 h-3.5" />
+                {totalPendingApprovals} pending
+              </span>
+            )}
+          </div>
+          {ddLoading ? (
+            <div className="h-24 flex items-center justify-center text-gray-400 text-sm">Loading...</div>
+          ) : ddPendingByFirm.length === 0 ? (
+            <div className="h-24 flex items-center justify-center text-gray-400 text-sm">
+              No due diligence tasks pending supervisor approval
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {ddPendingByFirm.map((entry) => {
+                const pct = totalPendingApprovals > 0 ? Math.round((entry.count / totalPendingApprovals) * 100) : 0;
+                return (
+                  <div key={entry.name} className="flex items-center gap-3">
+                    <div className="w-40 sm:w-56 flex-shrink-0 truncate text-xs font-medium text-gray-700" title={entry.name}>
+                      {entry.name}
+                    </div>
+                    <div className="flex-1 h-7 rounded-lg bg-gray-100 overflow-hidden relative">
+                      <div
+                        className="h-full rounded-lg transition-all flex items-center justify-end pr-2"
+                        style={{ width: `${Math.max(pct, 8)}%`, backgroundColor: "#f59e0b" }}
+                      >
+                        <span className="text-[10px] font-bold text-white">{pct}%</span>
+                      </div>
+                    </div>
+                    <div className="w-8 flex-shrink-0 text-right">
+                      <span className="text-sm font-bold text-gray-900">{entry.count}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Task status breakdown list */}
