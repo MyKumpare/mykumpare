@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useRef, useEffect } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { ClipboardCheck, Plus } from "lucide-react";
 
@@ -77,51 +77,38 @@ const OTHER_BADGE = {
   },
 };
 
-function Card({ rec, columnField, onCardClick, onProductClick, onFirmClick, onContactClick }) {
+function Card({ rec, columnField, onCardClick }) {
   const other = OTHER_BADGE[columnField];
   const otherVal = rec[other.key];
+  const cardRef = useRef(null);
+
+  // Use a native event listener to bypass @hello-pangea/dnd's dragHandleProps
+  // which intercepts React synthetic onClick events on the parent draggable div.
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el || !onCardClick) return;
+    const handler = (e) => {
+      if (e.detail === 0) return; // skip programmatic clicks
+      e.stopPropagation();
+      onCardClick(rec);
+    };
+    el.addEventListener("click", handler);
+    return () => el.removeEventListener("click", handler);
+  }, [rec, onCardClick]);
+
   return (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-2.5 hover:border-indigo-300 transition-colors">
+    <div
+      ref={cardRef}
+      className="bg-white rounded-lg border border-gray-200 shadow-sm p-2.5 hover:border-indigo-300 hover:shadow-md transition-all cursor-pointer"
+    >
       <div className="flex items-start gap-2">
         <ClipboardCheck className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0 mt-0.5" />
         <div className="flex-1 min-w-0">
-          {rec.product_id && onProductClick ? (
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onProductClick(rec.product_id); }}
-              className="text-xs font-semibold text-indigo-600 hover:underline truncate text-left block"
-            >
-              {rec.product_name || "—"}
-            </button>
-          ) : (
-            <p className="text-xs font-semibold text-gray-800 truncate">{rec.product_name || "—"}</p>
-          )}
-          {rec.firm_id && onFirmClick ? (
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onFirmClick(rec.firm_id); }}
-              className="text-[11px] text-indigo-500 hover:underline truncate text-left block"
-            >
-              {rec.firm_name || "—"}
-            </button>
-          ) : (
-            <p className="text-[11px] text-gray-500 truncate">{rec.firm_name || "—"}</p>
-          )}
-          <p className="text-[11px] text-gray-500 truncate">
-            P: {rec.primary_analyst_contact_id && onContactClick ? (
-              <button type="button" onClick={(e) => { e.stopPropagation(); onContactClick(rec.primary_analyst_contact_id); }} className="text-indigo-500 hover:underline">
-                {rec.primary_analyst_name || "—"}
-              </button>
-            ) : <span>{rec.primary_analyst_name || "—"}</span>}
-          </p>
+          <p className="text-xs font-semibold text-gray-800 truncate">{rec.product_name || "—"}</p>
+          <p className="text-[11px] text-gray-500 truncate">{rec.firm_name || "—"}</p>
+          <p className="text-[11px] text-gray-500 truncate">P: {rec.primary_analyst_name || "—"}</p>
           {rec.secondary_analyst_name && (
-            <p className="text-[11px] text-gray-500 truncate">
-              S: {rec.secondary_analyst_contact_id && onContactClick ? (
-                <button type="button" onClick={(e) => { e.stopPropagation(); onContactClick(rec.secondary_analyst_contact_id); }} className="text-indigo-500 hover:underline">
-                  {rec.secondary_analyst_name}
-                </button>
-              ) : <span>{rec.secondary_analyst_name}</span>}
-            </p>
+            <p className="text-[11px] text-gray-500 truncate">S: {rec.secondary_analyst_name}</p>
           )}
         </div>
       </div>
@@ -131,13 +118,7 @@ function Card({ rec, columnField, onCardClick, onProductClick, onFirmClick, onCo
             {otherVal}
           </span>
         )}
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onCardClick(rec); }}
-          className="text-[10px] text-indigo-500 hover:text-indigo-700 hover:underline ml-auto"
-        >
-          Edit
-        </button>
+        <span className="text-[10px] text-indigo-500 font-medium ml-auto">Edit →</span>
       </div>
     </div>
   );
@@ -202,16 +183,14 @@ export default function DueDiligenceKanbanBoard({
                               ref={prov.innerRef}
                               {...prov.draggableProps}
                               {...prov.dragHandleProps}
+
                               style={prov.draggableProps.style}
-                              className={snap.isDragging ? "opacity-80 shadow-lg" : ""}
+                              className={snap.isDragging ? "opacity-80 shadow-lg" : "cursor-pointer"}
                             >
                               <Card
                                 rec={rec}
                                 columnField={columnField}
                                 onCardClick={onCardClick}
-                                onProductClick={onProductClick}
-                                onFirmClick={onFirmClick}
-                                onContactClick={onContactClick}
                               />
                             </div>
                           )}
