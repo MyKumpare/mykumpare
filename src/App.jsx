@@ -8,6 +8,8 @@ import Analytics from './pages/Analytics';
 import UserManagement from './pages/UserManagement';
 import OverviewDashboard from './pages/OverviewDashboard';
 import ResearchAssistant from './pages/ResearchAssistant';
+import DueDiligenceKanban from './pages/DueDiligenceKanban';
+import DueDiligenceDashboard from './pages/DueDiligenceDashboard';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import OnboardingGuard from '@/components/onboarding/OnboardingGuard';
@@ -67,6 +69,8 @@ const AuthenticatedApp = () => {
       ))}
 
       <Route path="/Overview" element={<LayoutWrapper currentPageName="Overview"><OverviewDashboard /></LayoutWrapper>} />
+      <Route path="/DueDiligenceKanban" element={<LayoutWrapper currentPageName="DueDiligenceKanban"><DueDiligenceKanban /></LayoutWrapper>} />
+      <Route path="/DueDiligenceDashboard" element={<LayoutWrapper currentPageName="DueDiligenceDashboard"><DueDiligenceDashboard /></LayoutWrapper>} />
       <Route path="/ResearchAssistant" element={<LayoutWrapper currentPageName="ResearchAssistant"><ResearchAssistant /></LayoutWrapper>} />
       <Route path="/Analytics" element={<LayoutWrapper currentPageName="Analytics"><Analytics /></LayoutWrapper>} />
       <Route path="/UserManagement" element={<LayoutWrapper currentPageName="UserManagement"><UserManagement /></LayoutWrapper>} />

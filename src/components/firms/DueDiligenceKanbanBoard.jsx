@@ -13,6 +13,11 @@ const COLUMN_DEFS = {
     title: "Process Status",
     columns: ["Not Started", "In-process", "Completed"],
   },
+  approval_status: {
+    key: "approval_status",
+    title: "Approval Pipeline",
+    columns: ["In Pipeline", "Awaiting Approval", "Approved"],
+  },
 };
 
 const COLUMN_ACCENTS = {
@@ -22,7 +27,28 @@ const COLUMN_ACCENTS = {
   "Not Started": "border-gray-300 bg-gray-50/40",
   "In-process": "border-amber-300 bg-amber-50/40",
   "Completed": "border-emerald-300 bg-emerald-50/40",
+  "In Pipeline": "border-blue-300 bg-blue-50/40",
+  "Awaiting Approval": "border-amber-300 bg-amber-50/40",
+  "Approved": "border-emerald-300 bg-emerald-50/40",
 };
+
+/**
+ * Computes an "approval_status" for a DD record based on its stages.
+ * - "Awaiting Approval": at least one stage has supervisor_status "pending" with a supervisor assigned
+ * - "Approved": all stages completed (or process_status "Completed")
+ * - "In Pipeline": everything else (in progress, no pending approval)
+ */
+export function computeApprovalStatus(rec) {
+  if (rec.process_status === "Completed" || rec.status === "Buy List") return "Approved";
+  const stages = rec.stages || [];
+  if (stages.length === 0) return "In Pipeline";
+  const hasPending = stages.some(
+    (s) => (s.supervisor_status || "pending") === "pending" && s.supervisor_contact_id
+  );
+  const allApproved = stages.every((s) => (s.supervisor_status || "pending") === "approved");
+  if (allApproved) return "Approved";
+  return hasPending ? "Awaiting Approval" : "In Pipeline";
+}
 
 const OTHER_BADGE = {
   status: {
@@ -34,6 +60,14 @@ const OTHER_BADGE = {
     },
   },
   process_status: {
+    key: "status",
+    styles: {
+      "Pipeline": "bg-blue-100 text-blue-700",
+      "Buy List": "bg-emerald-100 text-emerald-700",
+      "Rejected": "bg-red-100 text-red-700",
+    },
+  },
+  approval_status: {
     key: "status",
     styles: {
       "Pipeline": "bg-blue-100 text-blue-700",

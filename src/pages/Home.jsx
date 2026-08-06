@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, FileText, Files, ShieldCheck, X, LayoutDashboard, FlaskConical, MapPin, Camera } from "lucide-react";
+import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, FileText, Files, ShieldCheck, X, LayoutDashboard, FlaskConical, MapPin, Camera, LayoutGrid, PieChart } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -537,6 +537,8 @@ export default function Home() {
     { label: "Research", icon: FlaskConical, ref: null, color: "text-violet-300", activeBg: "bg-violet-50", onClick: () => navigate("/ResearchAssistant") },
     { label: "Portfolios", icon: BarChart3, ref: null, color: "text-emerald-600", activeBg: "bg-emerald-50", onClick: () => setPortfolioPickerOpen(true) },
     { label: "Due Diligence", icon: ShieldCheck, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => setDueDiligencePickerOpen(true) },
+    { label: "DD Board", icon: LayoutGrid, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => navigate("/DueDiligenceKanban") },
+    { label: "DD Stats", icon: PieChart, ref: null, color: "text-cyan-600", activeBg: "bg-cyan-50", onClick: () => navigate("/DueDiligenceDashboard") },
     { label: "Firms", icon: Building, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => setFirmPickerOpen(true) },
     { label: "Products", icon: Package, ref: null, color: "text-violet-600", activeBg: "bg-violet-50", onClick: () => setProductPickerOpen(true) },
     { label: "Contacts", icon: User, ref: null, color: "text-pink-600", activeBg: "bg-pink-50", onClick: () => setContactPickerOpen(true) },

@@ -73,6 +73,24 @@ export async function syncDdNotifications(ddRecord) {
           supervisor_status: "pending",
           status: "unread",
         });
+
+        // ─── Send email notification to the supervisor ───
+        // SendEmail only reaches registered app users; if the supervisor is not
+        // a registered user the call is silently skipped (in-app notification still works).
+        try {
+          const supervisorContact = await base44.entities.Contact.get(stage.supervisor_contact_id);
+          if (supervisorContact?.email) {
+            await base44.integrations.Core.SendEmail({
+              to: supervisorContact.email,
+              subject: `Approval Request: "${stage.name || "Stage"}" — ${ddRecord.product_name || "Due Diligence"}`,
+              body: `<p>Hello ${stage.supervisor_name || supervisorContact.first_name || ""},</p>` +
+                `<p>You have been requested to review and approve stage <strong>"${stage.name || "Stage"}"</strong> ` +
+                `for <strong>${ddRecord.product_name || "due diligence"}</strong>${ddRecord.firm_name ? ` at <strong>${ddRecord.firm_name}</strong>` : ""}.</p>` +
+                `<p>Please log in to MyKumpare to review the sub-stages and approve, reject, or put on hold.</p>` +
+                `<p style="color:#888;font-size:12px;margin-top:16px;">This is an automated notification from MyKumpare.</p>`,
+            });
+          }
+        } catch { /* supervisor not a registered user — in-app notification still works */ }
       }
     }
 
