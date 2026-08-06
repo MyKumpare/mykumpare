@@ -76,7 +76,11 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
     e.preventDefault();
     if (!name.trim()) return;
     const isMDD = templateType === "Manager Due Diligence";
-    const payloadStages = isMDD ? stages.filter((s) => (s.name || "").trim()).map((s) => ({ id: s.id, name: s.name.trim() })) : undefined;
+    const payloadStages = isMDD ? stages.filter((s) => (s.name || "").trim()).map((s) => ({
+      id: s.id,
+      name: s.name.trim(),
+      sub_stages: (s.sub_stages || []).filter((ss) => (ss.name || "").trim()).map((ss) => ({ id: ss.id, name: ss.name.trim() }))
+    })) : undefined;
     if (isMDD && payloadStages && payloadStages.length === 0) {
       toast({ title: "Stages required", description: "Please add at least one stage with a name.", variant: "destructive" });
       return;
