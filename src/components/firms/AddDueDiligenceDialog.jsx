@@ -11,7 +11,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ChevronDown, Check, Plus, AlertTriangle } from "lucide-react";
+import { ChevronDown, Check, Plus, AlertTriangle, ShieldAlert, History } from "lucide-react";
 import DueDiligenceTemplateFlow from "./DueDiligenceTemplateFlow";
 import { cn } from "@/lib/utils";
 import { findContactDuplicates } from "@/components/contacts/contactDuplicateCheck";
@@ -357,6 +357,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
   const [selectedFirmId, setSelectedFirmId] = useState("");
   const [selectedFirmName, setSelectedFirmName] = useState("");
   const [firmMode, setFirmMode] = useState("select"); // "select" | "new"
+  const [duplicateCheck, setDuplicateCheck] = useState(null); // { records, canCreate } | null
 
   // Analysts are sourced from the OWNER firm (the firm that owns this app),
   // not the firm under due diligence. The owner firm is resolved from the
@@ -412,6 +413,12 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
     queryKey: ["products", effectiveFirmId],
     queryFn: () => base44.entities.Product.filter({ firm_id: effectiveFirmId }),
     enabled: !!effectiveFirmId && firmSelectionMode,
+  });
+
+  // All DD records — used to check if the selected product already has DD.
+  const { data: allDueDiligences = [] } = useQuery({
+    queryKey: ["due-diligence-search"],
+    queryFn: () => base44.entities.DueDiligence.list("-created_date", 5000),
   });
 
   // Firm options for the picker (firm-selection mode only).
@@ -543,6 +550,24 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
 
   const handleSave = () => {
     if (!isValid) return;
+    // Check for existing DD records on this product (skip when editing).
+    if (!editingRecord && productId) {
+      const existing = allDueDiligences.filter(
+        (dd) => dd.product_id === productId
+      );
+      if (existing.length > 0) {
+        // A new DD is only allowed if the product was previously removed
+        // (most recent DD status is "Rejected"). Active DD records (Pipeline,
+        // Buy List, etc.) block creation.
+        const sorted = [...existing].sort(
+          (a, b) => new Date(b.created_date) - new Date(a.created_date)
+        );
+        const latest = sorted[0];
+        const canCreate = latest.status === "Rejected";
+        setDuplicateCheck({ records: sorted, canCreate });
+        return;
+      }
+    }
     onSubmit({
       firm_id: effectiveFirmId,
       firm_name: effectiveFirmName,
@@ -809,6 +834,107 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
             {editingRecord ? "Save Changes" : "Add Due Diligence"}
           </Button>
         </DialogFooter>
+
+        {/* Duplicate DD confirmation dialog */}
+        {duplicateCheck && (
+          <Dialog open={true} onOpenChange={() => setDuplicateCheck(null)}>
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <ShieldAlert className="w-5 h-5 text-amber-500" />
+                  Existing Due Diligence Found
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3 py-1">
+                <p className="text-sm text-gray-600">
+                  This product already has due diligence record(s). Review the
+                  existing records below before proceeding.
+                </p>
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {duplicateCheck.records.map((rec) => (
+                    <div
+                      key={rec.id}
+                      className="flex items-center gap-3 rounded-lg border border-gray-200 p-2.5"
+                    >
+                      <History className="w-4 h-4 text-gray-400 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-800 truncate">
+                          {rec.product_name || "—"}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {rec.firm_name || "—"}
+                          {rec.start_date ? ` · Started ${rec.start_date}` : ""}
+                        </p>
+                      </div>
+                      <span
+                        className={cn(
+                          "shrink-0 px-2 py-0.5 rounded-full text-[11px] font-medium",
+                          rec.status === "Rejected"
+                            ? "bg-red-100 text-red-700"
+                            : rec.status === "Buy List"
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-indigo-100 text-indigo-700"
+                        )}
+                      >
+                        {rec.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                {duplicateCheck.canCreate ? (
+                  <div className="rounded-lg bg-amber-50 border border-amber-200 p-3">
+                    <p className="text-xs text-amber-800">
+                      The most recent due diligence for this product was{" "}
+                      <strong>Rejected</strong> (removed). You may start a new
+                      due diligence. The original record will be retained.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="rounded-lg bg-red-50 border border-red-200 p-3">
+                    <p className="text-xs text-red-800">
+                      This product has an active due diligence record. A new due
+                      diligence can only be started after the existing one has
+                      been removed (status "Rejected").
+                    </p>
+                  </div>
+                )}
+              </div>
+              <DialogFooter className="gap-2 pt-2 border-t">
+                <Button variant="outline" onClick={() => setDuplicateCheck(null)}>
+                  Cancel
+                </Button>
+                {duplicateCheck.canCreate && (
+                  <Button
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                    onClick={() => {
+                      setDuplicateCheck(null);
+                      onSubmit({
+                        firm_id: effectiveFirmId,
+                        firm_name: effectiveFirmName,
+                        product_id: productId,
+                        product_name: selectedProduct?.name || "",
+                        status,
+                        process_status: status === "Buy List" ? "Completed" : processStatus,
+                        primary_analyst_contact_id: primaryId || undefined,
+                        primary_analyst_name: primaryId ? contactName(primaryContact) || "" : undefined,
+                        secondary_analyst_contact_id: secondaryId || undefined,
+                        secondary_analyst_name: secondaryId ? contactName(secondaryContact) || "" : undefined,
+                        stages: processStatus === "In-process" ? stages : undefined,
+                        template_id: processStatus === "In-process" ? (templateId || undefined) : undefined,
+                        template_name: processStatus === "In-process" ? (templateName || undefined) : undefined,
+                        start_date: processStatus === "In-process" ? (startDate || undefined) : undefined,
+                        current_stage_index: processStatus === "In-process" ? currentStageIndex : undefined,
+                        assigned_contact_ids: processStatus === "In-process" ? assignedContactIds : undefined,
+                      });
+                    }}
+                  >
+                    Create New Due Diligence
+                  </Button>
+                )}
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
       </DialogContent>
     </Dialog>
   );
