@@ -10,7 +10,6 @@ import DatePicker from "@/components/ui/date-picker";
 import TemplateTypePicker from "./TemplateTypePicker";
 import TemplateStagesSection from "./TemplateStagesSection";
 import DocumentationChecklistSection from "./DocumentationChecklistSection";
-import ApprovalProcessLogicSection from "./ApprovalProcessLogicSection";
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 
@@ -26,7 +25,6 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
   const [createDate, setCreateDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [stages, setStages] = useState([]);
   const [docChecklist, setDocChecklist] = useState([]);
-  const [approvalLogic, setApprovalLogic] = useState([]);
 
   useEffect(() => {
     if (open) {
@@ -36,14 +34,12 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
         setCreateDate(editTemplate.create_date || format(new Date(), "yyyy-MM-dd"));
         setStages(Array.isArray(editTemplate.stages) ? editTemplate.stages.map((s) => ({ ...s })) : []);
         setDocChecklist(Array.isArray(editTemplate.documentation_checklist) ? editTemplate.documentation_checklist.map((it) => ({ ...it })) : []);
-        setApprovalLogic(Array.isArray(editTemplate.approval_process_logic) ? editTemplate.approval_process_logic.map((s) => ({ ...s })) : []);
       } else {
         setName("");
         setTemplateType("");
         setCreateDate(format(new Date(), "yyyy-MM-dd"));
         setStages([]);
         setDocChecklist([]);
-        setApprovalLogic([]);
       }
     }
   }, [open, editTemplate]);
@@ -53,7 +49,6 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
     if (templateType !== "Manager Due Diligence") {
       setStages([]);
       setDocChecklist([]);
-      setApprovalLogic([]);
     }
   }, [templateType]);
 
@@ -92,14 +87,6 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
       sub_stages: (s.sub_stages || []).filter((ss) => (ss.name || "").trim()).map((ss) => ({ id: ss.id, name: ss.name.trim() }))
     })) : undefined;
     const payloadDocChecklist = isMDD ? docChecklist.filter((it) => (it.name || "").trim()).map((it) => ({ id: it.id, name: it.name.trim() })) : undefined;
-    const payloadApprovalLogic = isMDD ? approvalLogic.filter((s) => (s.name || "").trim()).map((s) => ({
-      id: s.id,
-      name: s.name.trim(),
-      stage_id: s.stage_id || "",
-      stage_name: s.stage_name || "",
-      sub_stage_id: s.sub_stage_id || "",
-      sub_stage_name: s.sub_stage_name || "",
-    })) : undefined;
     if (isMDD && payloadStages && payloadStages.length === 0) {
       toast({ title: "Stages required", description: "Please add at least one stage with a name.", variant: "destructive" });
       return;
@@ -110,7 +97,6 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
       create_date: createDate,
       stages: payloadStages,
       documentation_checklist: payloadDocChecklist,
-      approval_process_logic: payloadApprovalLogic,
     };
     if (editTemplate) {
       updateMutation.mutate({ id: editTemplate.id, data: payload });
@@ -151,7 +137,6 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
             <>
               <TemplateStagesSection stages={stages} onChange={setStages} />
               <DocumentationChecklistSection items={docChecklist} onChange={setDocChecklist} />
-              <ApprovalProcessLogicSection steps={approvalLogic} stages={stages} onChange={setApprovalLogic} />
             </>
           )}
           <DialogFooter>
