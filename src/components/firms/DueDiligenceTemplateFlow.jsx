@@ -235,8 +235,6 @@ export default function DueDiligenceTemplateFlow({
 
   // Assign a supervisor to a stage (submit for approval)
   const handleAssignSupervisor = (index, stageId) => {
-    // Guard: cannot submit for approval unless all sub-stages are completed
-    if (!allSubStagesCompleted(stagesList[index])) return;
     const supId = pendingSupervisor[stageId];
     if (!supId) return;
     const member = teamMembers.find((m) => m.value === supId);
@@ -266,6 +264,7 @@ export default function DueDiligenceTemplateFlow({
   // Sub-stage change: update the sub-stage within its stage,
   // and auto-set stage start_date when a sub-stage is started
   const handleSubStageChange = (stageIndex, newSubStage) => {
+    const stage = stagesList[stageIndex];
     const newStages = stagesList.map((s, i) => {
       if (i !== stageIndex) return s;
       const newSubs = (s.sub_stages || []).map((ss) =>
@@ -278,6 +277,16 @@ export default function DueDiligenceTemplateFlow({
       return { ...s, sub_stages: newSubs, ...updates };
     });
     onStagesChange(newStages);
+
+    // Auto-populate pendingSupervisor from first assigned member
+    // (only if no supervisor set and no pending selection already)
+    if (stage && !pendingSupervisor[stage.id] && !stage.supervisor_contact_id) {
+      const assignments = newSubStage.assignments || [];
+      const firstAssigned = assignments.find((a) => a.contact_id);
+      if (firstAssigned) {
+        setPendingSupervisor((prev) => ({ ...prev, [stage.id]: firstAssigned.contact_id }));
+      }
+    }
   };
 
   const allExpanded = stagesList.length > 0 && stagesList.every((s) => expandedStages[s.id]);
@@ -541,7 +550,7 @@ export default function DueDiligenceTemplateFlow({
                         })}
 
                         {/* Supervisor approval controls */}
-                        {!isCompleted && subsCompleted && (
+                        {!isCompleted && (
                           <div className="mt-2 p-2 rounded-md bg-amber-50 border border-amber-200 space-y-1.5">
                             {stage.supervisor_contact_id ? (
                               supStatus === "pending" ? (
@@ -551,19 +560,22 @@ export default function DueDiligenceTemplateFlow({
                                   </p>
                                   <p className="text-[10px] text-amber-600">The supervisor can review all sub-stages above, then approve, reject, or put on hold.</p>
                                   <div className="flex gap-1.5 flex-wrap">
-                                    <Button type="button" size="sm" className="h-7 text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => handleSupervisorAction(index, "approved")}>
+                                    <Button type="button" size="sm" className="h-7 text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white" disabled={!subsCompleted} title={!subsCompleted ? "Complete all sub-stages first" : undefined} onClick={() => handleSupervisorAction(index, "approved")}>
                                       <ShieldCheck className="w-3 h-3" /> Approve
                                     </Button>
-                                    <Button type="button" size="sm" variant="outline" className="h-7 text-[10px] border-red-300 text-red-600 hover:bg-red-50" onClick={() => handleSupervisorAction(index, "rejected")}>
+                                    <Button type="button" size="sm" variant="outline" className="h-7 text-[10px] border-red-300 text-red-600 hover:bg-red-50" disabled={!subsCompleted} title={!subsCompleted ? "Complete all sub-stages first" : undefined} onClick={() => handleSupervisorAction(index, "rejected")}>
                                       <ShieldX className="w-3 h-3" /> Reject
                                     </Button>
-                                    <Button type="button" size="sm" variant="outline" className="h-7 text-[10px] border-orange-300 text-orange-600 hover:bg-orange-50" onClick={() => handleSupervisorAction(index, "on_hold")}>
+                                    <Button type="button" size="sm" variant="outline" className="h-7 text-[10px] border-orange-300 text-orange-600 hover:bg-orange-50" disabled={!subsCompleted} title={!subsCompleted ? "Complete all sub-stages first" : undefined} onClick={() => handleSupervisorAction(index, "on_hold")}>
                                       <ShieldAlert className="w-3 h-3" /> On Hold
                                     </Button>
                                     <Button type="button" size="sm" variant="ghost" className="h-7 text-[10px] text-gray-500 hover:text-gray-700" onClick={() => handleResetSupervisor(index)}>
                                       Change
                                     </Button>
                                   </div>
+                                  {!subsCompleted && (
+                                    <p className="text-[10px] text-amber-600">Complete all sub-stages before the supervisor can approve.</p>
+                                  )}
                                 </>
                               ) : (
                                 <p className="text-[11px] font-medium flex items-center gap-1">
@@ -575,7 +587,7 @@ export default function DueDiligenceTemplateFlow({
                                 <p className="text-[11px] font-medium text-amber-700 flex items-center gap-1">
                                   <ShieldCheck className="w-3 h-3" /> Select Supervisor for Approval
                                 </p>
-                                <p className="text-[10px] text-amber-600">All sub-stages completed. Select a supervisor to review and approve this stage.</p>
+                                <p className="text-[10px] text-amber-600">Select a supervisor to review and approve this stage.</p>
                                 <div className="flex gap-1.5 items-center">
                                   <Select
                                     value={pendingSupervisor[stage.id] || ""}
@@ -604,10 +616,10 @@ export default function DueDiligenceTemplateFlow({
                             )}
                           </div>
                         )}
-                        {!isCompleted && !subsCompleted && stageSubs.length > 0 && (
+                        {!isCompleted && !subsCompleted && stageSubs.length > 0 && !stage.supervisor_contact_id && (
                           <div className="mt-1 p-1.5 rounded-md bg-gray-50 border border-gray-200">
                             <p className="text-[10px] text-gray-500 flex items-center gap-1">
-                              <Clock className="w-2.5 h-2.5" /> Complete all sub-stages to unlock supervisor approval
+                              <Clock className="w-2.5 h-2.5" /> Assign a supervisor to submit for approval
                             </p>
                           </div>
                         )}
