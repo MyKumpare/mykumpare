@@ -468,7 +468,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
       setCurrentStageIndex(editingRecord.current_stage_index ?? 0);
     } else {
       setProductId(preselectProductId || "");
-      setStatus("Not Started"); // default for new due diligence
+      setStatus("Pipeline"); // default for new due diligence
       setProcessStatus("Not Started");
       setPrimaryId("");
       setSecondaryId("");
@@ -550,7 +550,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
   const showSecondaryAnalystField = showSecondaryAnalyst || !!secondaryId;
 
   // Validation: a contact picked for one analyst cannot be the other.
-  const isValid = !!effectiveFirmId && productId && (!showPrimaryAnalyst || primaryId) && (primaryId !== secondaryId);
+  const isValid = !!effectiveFirmId && productId && (!showPrimaryAnalyst || primaryId) && (!primaryId || !secondaryId || primaryId !== secondaryId);
 
   // Compute denormalized list of all contact IDs assigned to any sub-stage,
   // so the contact Due Diligence tab can find records where this contact has tasks.
