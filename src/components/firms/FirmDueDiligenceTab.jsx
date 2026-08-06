@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Plus, ClipboardCheck, Pencil, Trash2 } from "lucide-react";
 import AddDueDiligenceDialog from "./AddDueDiligenceDialog";
-import { syncDdNotifications, syncProductStatusFromDd } from "./ddNotificationSync";
+import { syncDdNotifications, syncProductStatusFromDd, deleteDdNotifications } from "./ddNotificationSync";
 import { saveStageNoteVersions } from "./ddNoteVersionSync";
 import DdFilterTabs, { getDdCounts, filterDdRecords } from "./DdFilterTabs";
 
@@ -67,8 +67,14 @@ export default function FirmDueDiligenceTab({ firmId, firmName, contacts = [], o
     },
   });
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.DueDiligence.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["due-diligence", firmId] }),
+    mutationFn: async (id) => {
+      await deleteDdNotifications(id);
+      await base44.entities.DueDiligence.delete(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["due-diligence", firmId] });
+      queryClient.invalidateQueries({ queryKey: ["dd-notifications"] });
+    },
   });
 
   const handleSubmit = (data) => {

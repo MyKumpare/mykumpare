@@ -134,6 +134,26 @@ export async function syncDdNotifications(ddRecord) {
 }
 
 /**
+ * Deletes all DdNotification records associated with a due diligence record.
+ * Called when a DD record is deleted to prevent orphaned notifications.
+ *
+ * @param {string} ddId - The ID of the deleted DueDiligence record.
+ */
+export async function deleteDdNotifications(ddId) {
+  if (!ddId) return;
+  try {
+    const notifs = await base44.entities.DdNotification.filter(
+      { due_diligence_id: ddId },
+      "-created_date",
+      200
+    );
+    for (const n of notifs) {
+      await base44.entities.DdNotification.delete(n.id);
+    }
+  } catch { /* no-op — best effort cleanup */ }
+}
+
+/**
  * Synchronizes the product_status from the due diligence record:
  *
  * - When a DD is started (created) for a product whose status is "Not Reviewed",

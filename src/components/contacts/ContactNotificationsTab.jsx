@@ -7,7 +7,7 @@ import {
   CheckCircle2, ExternalLink,
 } from "lucide-react";
 import AddDueDiligenceDialog from "../firms/AddDueDiligenceDialog";
-import { syncDdNotifications } from "../firms/ddNotificationSync";
+import { syncDdNotifications, deleteDdNotifications } from "../firms/ddNotificationSync";
 import { saveStageNoteVersions } from "../firms/ddNoteVersionSync";
 
 const TYPE_CONFIG = {
@@ -50,7 +50,24 @@ export default function ContactNotificationsTab({ contactId, contactName, onCont
 
   const { data: notifications = [], isLoading } = useQuery({
     queryKey: ["dd-notifications", contactId],
-    queryFn: () => base44.entities.DdNotification.filter({ contact_id: contactId }, "-created_date", 200),
+    queryFn: async () => {
+      const all = await base44.entities.DdNotification.filter({ contact_id: contactId }, "-created_date", 200);
+      // Filter out orphaned notifications whose DD record has been deleted
+      const ddIds = [...new Set(all.map((n) => n.due_diligence_id).filter(Boolean))];
+      const validDdIds = new Set();
+      for (const ddId of ddIds) {
+        try {
+          await base44.entities.DueDiligence.get(ddId);
+          validDdIds.add(ddId);
+        } catch { /* DD deleted — skip */ }
+      }
+      const orphaned = all.filter((n) => n.due_diligence_id && !validDdIds.has(n.due_diligence_id));
+      // Best-effort cleanup of orphaned notifications
+      for (const n of orphaned) {
+        try { await base44.entities.DdNotification.delete(n.id); } catch { /* no-op */ }
+      }
+      return all.filter((n) => !n.due_diligence_id || validDdIds.has(n.due_diligence_id));
+    },
     enabled: !!contactId,
   });
 
@@ -81,7 +98,10 @@ export default function ContactNotificationsTab({ contactId, contactName, onCont
     },
   });
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.DueDiligence.delete(id),
+    mutationFn: async (id) => {
+      await deleteDdNotifications(id);
+      await base44.entities.DueDiligence.delete(id);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dd-notifications", contactId] });
       if (editing?.firm_id) queryClient.invalidateQueries({ queryKey: ["due-diligence", editing.firm_id] });
