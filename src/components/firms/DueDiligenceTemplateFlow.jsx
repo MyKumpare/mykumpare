@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   ChevronDown, Check, Plus, Play, CheckCircle2, Circle,
-  Loader2, BarChart3, Calendar, X,
+  Clock, BarChart3, Calendar, X,
 } from "lucide-react";
 import DatePicker from "@/components/ui/date-picker";
 import AddTemplateDialog from "@/components/templates/AddTemplateDialog";
@@ -291,7 +291,7 @@ export default function DueDiligenceTemplateFlow({
                     {stage.completed ? (
                       <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                     ) : isCurrent ? (
-                      <Loader2 className="w-4 h-4 text-indigo-600 shrink-0 animate-spin" />
+                      <Clock className="w-4 h-4 text-indigo-600 shrink-0" />
                     ) : (
                       <Circle className="w-4 h-4 text-gray-300 shrink-0" />
                     )}
@@ -400,7 +400,7 @@ export default function DueDiligenceTemplateFlow({
                   {stage.completed ? (
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                   ) : index === currentStageIndex ? (
-                    <Loader2 className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                    <Clock className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
                   ) : (
                     <Circle className="w-3.5 h-3.5 text-gray-300 shrink-0" />
                   )}
