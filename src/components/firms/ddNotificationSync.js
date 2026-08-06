@@ -21,9 +21,29 @@ export async function syncDdNotifications(ddRecord) {
   if (!ddRecord?.id || !Array.isArray(ddRecord.stages)) return;
 
   for (const stage of ddRecord.stages) {
-    if (!stage.supervisor_contact_id) continue;
-
     const supStatus = stage.supervisor_status || "pending";
+
+    // 0. Clean up stale supervisor_request notifications for this stage.
+    //    If the assigned supervisor has changed (or been removed), mark the
+    //    previous approver's pending notification as "completed" so they can
+    //    no longer see or act on the approval buttons.
+    const stageRequests = await base44.entities.DdNotification.filter(
+      {
+        due_diligence_id: ddRecord.id,
+        type: "supervisor_request",
+        stage_name: stage.name || "",
+      },
+      "-created_date",
+      50
+    );
+    for (const req of stageRequests) {
+      if (req.status === "completed") continue;
+      if (req.contact_id !== stage.supervisor_contact_id) {
+        await base44.entities.DdNotification.update(req.id, { status: "completed" });
+      }
+    }
+
+    if (!stage.supervisor_contact_id) continue;
 
     // 1. Supervisor request — created when a supervisor is assigned and
     //    status is still "pending". Only one per (stage, supervisor) pair.

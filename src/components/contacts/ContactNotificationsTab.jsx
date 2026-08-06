@@ -67,6 +67,7 @@ export default function ContactNotificationsTab({ contactId, contactName, onCont
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.DueDiligence.update(id, data),
     onSuccess: (savedRecord) => {
+      syncDdNotifications(savedRecord);
       queryClient.invalidateQueries({ queryKey: ["dd-notifications", contactId] });
       if (editing?.firm_id) queryClient.invalidateQueries({ queryKey: ["due-diligence", editing.firm_id] });
       setShowDialog(false);
@@ -77,6 +78,12 @@ export default function ContactNotificationsTab({ contactId, contactName, onCont
     mutationFn: async ({ notification, decision }) => {
       const dd = await base44.entities.DueDiligence.get(notification.due_diligence_id);
       if (!dd || !dd.stages) throw new Error("Due diligence record not found");
+      // Guard: only the currently assigned supervisor can approve. If the
+      // supervisor was changed since this notification was created, block.
+      const stage = dd.stages.find((s) => s.name === notification.stage_name);
+      if (stage && stage.supervisor_contact_id !== notification.contact_id) {
+        throw new Error("You are no longer the assigned supervisor for this stage.");
+      }
       const todayStr = new Date().toISOString().split("T")[0];
       const updatedStages = dd.stages.map((stage) => {
         if (stage.name !== notification.stage_name) return stage;
