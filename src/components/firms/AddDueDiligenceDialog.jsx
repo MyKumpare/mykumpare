@@ -785,7 +785,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
                 }}
                 category="Due Diligence Process Status"
                 placeholder="Select process status..."
-                allowedOptions={!editingRecord ? ["Not Started", "In-process"] : undefined}
+                allowedOptions={processStatus === "Not Started" ? ["In-process"] : undefined}
               />
             </div>
           )}
