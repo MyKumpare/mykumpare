@@ -503,13 +503,37 @@ export default function DueDiligenceTemplateFlow({
                         {/* Supervisor approval controls */}
                         {!isCompleted && (
                           <div className="mt-2 p-2 rounded-md bg-amber-50 border border-amber-200 space-y-1.5">
+                            {/* Editable supervisor dropdown — auto-populated from approver, editable per stage */}
+                            <div className="flex items-center gap-2">
+                              <Label className="text-[10px] text-amber-700 font-medium shrink-0 flex items-center gap-1">
+                                <ShieldCheck className="w-3 h-3" /> Supervisor
+                              </Label>
+                              <Select
+                                value={stage.supervisor_contact_id || ""}
+                                onValueChange={(v) => {
+                                  const member = teamMembers.find((m) => m.value === v);
+                                  const newStages = stagesList.map((s, i) =>
+                                    i === index
+                                      ? { ...s, supervisor_contact_id: v, supervisor_name: member?.label || "" }
+                                      : s
+                                  );
+                                  onStagesChange(newStages);
+                                }}
+                              >
+                                <SelectTrigger className="h-7 text-xs flex-1">
+                                  <SelectValue placeholder="Select supervisor..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {teamMembers.map((m) => (
+                                    <SelectItem key={m.value} value={m.value} className="text-xs">{m.label}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
                             {stage.supervisor_contact_id ? (
                               supStatus === "pending" ? (
                                 <>
-                                  <p className="text-[11px] font-medium text-amber-700 flex items-center gap-1">
-                                    <UserCheck className="w-3 h-3" /> Awaiting approval from {stage.supervisor_name || "supervisor"}
-                                  </p>
-                                  <p className="text-[10px] text-amber-600">The supervisor can review all sub-stages above, then approve, reject, or put on hold.</p>
+                                  <p className="text-[10px] text-amber-600">Awaiting approval — the supervisor can review all sub-stages above, then approve, reject, or put on hold.</p>
                                   <div className="flex gap-1.5 flex-wrap">
                                     <Button type="button" size="sm" className="h-7 text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white" disabled={!subsCompleted} title={!subsCompleted ? "Complete all sub-stages first" : undefined} onClick={() => handleSupervisorAction(index, "approved")}>
                                       <ShieldCheck className="w-3 h-3" /> Approve
@@ -531,9 +555,7 @@ export default function DueDiligenceTemplateFlow({
                                 </p>
                               )
                             ) : (
-                              <p className="text-[11px] font-medium text-amber-700 flex items-center gap-1">
-                                <ShieldCheck className="w-3 h-3" /> Select an approver in the Approval Process tab to assign a supervisor.
-                              </p>
+                              <p className="text-[10px] text-amber-600 italic">Select a supervisor above, or choose an approver in the Approval Process tab to auto-fill all stages.</p>
                             )}
                           </div>
                         )}
