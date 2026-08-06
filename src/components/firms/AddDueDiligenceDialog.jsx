@@ -64,6 +64,7 @@ function SearchableSelect({ options, value, onChange, placeholder, excludeValues
               <button
                 key={o.value}
                 type="button"
+                title={o.label}
                 className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center gap-2 whitespace-nowrap"
                 onClick={() => { onChange(o.value); setOpen(false); setSearch(""); }}
               >
