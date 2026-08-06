@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Package, Trash2, X } from "lucide-react";
 import AddProductDialog from "@/components/products/AddProductDialog";
+import ProductStatusBadge from "@/components/products/ProductStatusBadge";
 
 const PRODUCT_TYPES = ["Investment Manager Product", "Multi-Manager Product"];
 
@@ -18,6 +19,7 @@ function ProductRow({ product, onClick }) {
     >
       <Package className="w-4 h-4 text-indigo-400 flex-shrink-0" />
       <div className="text-sm font-medium text-gray-800 truncate">{product.name}</div>
+      <ProductStatusBadge status={product.product_status} className="ml-auto" />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, ChevronDown, ChevronRight, Package } from "lucide-react";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
 import SectionSearch from "@/components/common/SectionSearch";
+import ProductStatusBadge from "@/components/products/ProductStatusBadge";
 import { useViewMode } from "@/hooks/useViewMode";
 
 const PRODUCT_GROUP_TYPES = ["Manager of Managers", "Investment Manager"];
@@ -82,6 +83,7 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
             <Package className="w-3.5 h-3.5 text-violet-500" />
           </div>
           <span className="text-sm font-medium text-gray-800 truncate">{product.name}</span>
+          <ProductStatusBadge status={product.product_status} className="ml-auto" />
         </div>
         {firm && <p className="text-xs text-gray-400 truncate pl-9">{firm.name}</p>}
         {product.asset_class && (
@@ -194,8 +196,9 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
                                   <span className="text-sm text-gray-800 group-hover:text-violet-700 font-medium truncate">
                                     {product.name}
                                   </span>
+                                  <ProductStatusBadge status={product.product_status} className="ml-auto" />
                                   {product.asset_class && (
-                                    <span className="ml-auto text-xs text-gray-400 flex-shrink-0">
+                                    <span className="text-xs text-gray-400 flex-shrink-0">
                                       {product.asset_class}
                                     </span>
                                   )}
