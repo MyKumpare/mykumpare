@@ -97,6 +97,7 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
       create_date: createDate,
       stages: payloadStages,
       documentation_checklist: payloadDocChecklist,
+      approval_process_logic: [], // explicitly clear legacy data
     };
     if (editTemplate) {
       updateMutation.mutate({ id: editTemplate.id, data: payload });

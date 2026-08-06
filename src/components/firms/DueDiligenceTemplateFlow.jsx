@@ -183,24 +183,6 @@ export default function DueDiligenceTemplateFlow({
       }));
       onDocChecklistChange(newChecklist);
     }
-    // Copy approval process logic from template
-    if (onApprovalLogicChange) {
-      const newLogic = (template.approval_process_logic || []).map((s) => ({
-        id: s.id,
-        name: s.name,
-        stage_id: s.stage_id || "",
-        stage_name: s.stage_name || "",
-        sub_stage_id: s.sub_stage_id || "",
-        sub_stage_name: s.sub_stage_name || "",
-        start_date: "",
-        performed_by_contact_id: "",
-        performed_by_name: "",
-        documents: [],
-        notes: "",
-        task_assignments: [],
-      }));
-      onApprovalLogicChange(newLogic);
-    }
     setOpen(false);
     setSearch("");
   };
