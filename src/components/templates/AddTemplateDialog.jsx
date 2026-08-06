@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import DatePicker from "@/components/ui/date-picker";
 import TemplateTypePicker from "./TemplateTypePicker";
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "@/components/ui/use-toast";
@@ -18,15 +20,18 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
   const { user } = useAuth();
   const [name, setName] = useState("");
   const [templateType, setTemplateType] = useState("");
+  const [createDate, setCreateDate] = useState(format(new Date(), "yyyy-MM-dd"));
 
   useEffect(() => {
     if (open) {
       if (editTemplate) {
         setName(editTemplate.name || "");
         setTemplateType(editTemplate.template_type || "");
+        setCreateDate(editTemplate.create_date || format(new Date(), "yyyy-MM-dd"));
       } else {
         setName("");
         setTemplateType("");
+        setCreateDate(format(new Date(), "yyyy-MM-dd"));
       }
     }
   }, [open, editTemplate]);
@@ -60,9 +65,9 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
     e.preventDefault();
     if (!name.trim()) return;
     if (editTemplate) {
-      updateMutation.mutate({ id: editTemplate.id, data: { name: name.trim(), template_type: templateType || undefined } });
+      updateMutation.mutate({ id: editTemplate.id, data: { name: name.trim(), template_type: templateType || undefined, create_date: createDate } });
     } else {
-      createMutation.mutate({ name: name.trim(), template_type: templateType || undefined });
+      createMutation.mutate({ name: name.trim(), template_type: templateType || undefined, create_date: createDate });
     }
   };
 
@@ -89,6 +94,10 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
           <div className="space-y-1.5">
             <Label>Template Type</Label>
             <TemplateTypePicker value={templateType} onChange={setTemplateType} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Create Date</Label>
+            <DatePicker value={createDate} onChange={setCreateDate} />
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

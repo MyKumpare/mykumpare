@@ -10,6 +10,16 @@ import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, A
 import { Search, Plus, FileText, Filter, Pencil, Trash2 } from "lucide-react";
 import AddTemplateDialog from "./AddTemplateDialog";
 
+const fmtDate = (iso) => {
+  if (!iso) return "";
+  try {
+    const [y, m, d] = iso.split("-");
+    return `${m}/${d}/${y}`;
+  } catch {
+    return iso;
+  }
+};
+
 /**
  * Modal for browsing, searching, and filtering templates.
  * - Search by name
@@ -131,6 +141,9 @@ export default function TemplatePickerModal({ open, onClose }) {
                         <Badge variant="secondary" className="text-xs">
                           {t.template_type}
                         </Badge>
+                      )}
+                      {t.create_date && (
+                        <span className="text-[11px] text-gray-400">{fmtDate(t.create_date)}</span>
                       )}
                       <button
                         onClick={() => { setEditTemplate(t); setAddOpen(true); }}

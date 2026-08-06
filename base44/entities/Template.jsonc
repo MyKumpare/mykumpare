@@ -13,6 +13,11 @@
     "template_type": {
       "type": "string",
       "description": "Type category of the template (managed via TemplateType master list)"
+    },
+    "create_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the template was created (auto-set to today, user-editable). Stored as YYYY-MM-DD."
     }
   },
   "required": [
