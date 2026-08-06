@@ -39,11 +39,11 @@ export default function FirmDueDiligenceTab({ firmId, firmName, contacts = [], o
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.DueDiligence.create(data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["due-diligence", firmId] }); setShowDialog(false); },
+    onSuccess: (savedRecord) => { syncDdNotifications(savedRecord); queryClient.invalidateQueries({ queryKey: ["due-diligence", firmId] }); setShowDialog(false); },
   });
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.DueDiligence.update(id, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["due-diligence", firmId] }); setShowDialog(false); },
+    onSuccess: (savedRecord) => { syncDdNotifications(savedRecord); queryClient.invalidateQueries({ queryKey: ["due-diligence", firmId] }); setShowDialog(false); },
   });
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.DueDiligence.delete(id),
