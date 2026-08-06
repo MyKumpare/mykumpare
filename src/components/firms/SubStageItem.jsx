@@ -138,7 +138,15 @@ export default function SubStageItem({ subStage, primaryAnalystId, primaryAnalys
         </span>
 
         {status === "not_started" && (
-          <Button type="button" size="sm" variant="outline" className="h-6 text-[10px] px-2 shrink-0" onClick={handleStart}>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-6 text-[10px] px-2 shrink-0"
+            disabled={supervisorBlocked}
+            title={supervisorBlocked ? "Complete all other sub-stages first" : undefined}
+            onClick={handleStart}
+          >
             <Play className="w-2.5 h-2.5" /> Start
           </Button>
         )}
