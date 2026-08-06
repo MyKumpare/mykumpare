@@ -323,6 +323,8 @@ export default function DueDiligenceTemplateFlow({
                 const unlocked = isStageUnlocked(index);
                 const stageSubs = stage.sub_stages || [];
                 const subsCompleted = stageSubs.length > 0 && stageSubs.every((ss) => (ss.status || "not_started") === "completed");
+                const subsCompletedCount = stageSubs.filter((ss) => (ss.status || "not_started") === "completed").length;
+                const subsProgressPct = stageSubs.length > 0 ? Math.round((subsCompletedCount / stageSubs.length) * 100) : 0;
                 const supStatus = stage.supervisor_status || "pending";
                 const supCfg = SUP_STATUS[supStatus] || SUP_STATUS.pending;
                 const SupIcon = supCfg.icon;
@@ -332,34 +334,39 @@ export default function DueDiligenceTemplateFlow({
                   <div
                     key={stage.id}
                     className={cn(
-                      "rounded-md border px-2 py-1.5 transition-colors space-y-1.5",
+                      "rounded-lg border px-3 py-2 transition-colors space-y-2",
                       isCompleted && "bg-emerald-50 border-emerald-200",
-                      !isCompleted && unlocked && "bg-indigo-50 border-indigo-300",
+                      !isCompleted && unlocked && "bg-[#F4F5FF] border-[#D1D1E0]",
                       !unlocked && "bg-gray-50 border-gray-200"
                     )}
                   >
                     <div className="flex items-center gap-2">
-                      {/* Status icon */}
-                      {isCompleted ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      ) : !unlocked ? (
-                        <Lock className="w-4 h-4 text-gray-300 shrink-0" />
-                      ) : (
-                        <Clock className="w-4 h-4 text-indigo-600 shrink-0" />
-                      )}
+                      {/* Circular status icon */}
+                      <div className={cn(
+                        "w-7 h-7 rounded-full flex items-center justify-center shrink-0",
+                        isCompleted ? "bg-emerald-100" : !unlocked ? "bg-gray-100" : "bg-[#4B45A8]"
+                      )}>
+                        {isCompleted ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        ) : !unlocked ? (
+                          <Lock className="w-3.5 h-3.5 text-gray-400" />
+                        ) : (
+                          <Clock className="w-3.5 h-3.5 text-white" />
+                        )}
+                      </div>
 
-                      {/* Expand sub-stages */}
+                      {/* Expand toggle */}
                       {unlocked && (
-                        <button type="button" onClick={() => toggleExpand(stage.id)} className="text-gray-400 hover:text-gray-600 shrink-0">
-                          {expandedStages[stage.id] ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                        <button type="button" onClick={() => toggleExpand(stage.id)} className="text-[#4B45A8] hover:text-[#3a3580] shrink-0">
+                          {expandedStages[stage.id] ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                         </button>
                       )}
 
-                      {/* Stage label */}
+                      {/* Stage label + progress */}
                       <div className="flex-1 min-w-0">
                         <span className={cn(
                           "text-sm font-medium truncate block",
-                          isCompleted ? "text-emerald-700" : unlocked ? "text-indigo-700" : "text-gray-400"
+                          isCompleted ? "text-emerald-700" : unlocked ? "text-[#4B45A8]" : "text-gray-400"
                         )}>
                           Stage {index + 1}: {stage.name || "Unnamed"}
                         </span>
@@ -368,6 +375,14 @@ export default function DueDiligenceTemplateFlow({
                         )}
                         {!isCompleted && !unlocked && (
                           <span className="text-[11px] text-gray-400">Locked — complete previous stage first</span>
+                        )}
+                        {unlocked && !isCompleted && stageSubs.length > 0 && (
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <div className="h-1 w-20 bg-gray-200 rounded-full overflow-hidden">
+                              <div className="h-full bg-[#4B45A8] rounded-full transition-all" style={{ width: `${subsProgressPct}%` }} />
+                            </div>
+                            <span className="text-[10px] text-gray-500">{subsCompletedCount}/{stageSubs.length} completed</span>
+                          </div>
                         )}
                       </div>
 
@@ -385,14 +400,14 @@ export default function DueDiligenceTemplateFlow({
                         {/* Stage dates */}
                         <div className="grid grid-cols-2 gap-2 mb-1">
                           <div className="space-y-0.5">
-                            <Label className="text-[10px] text-gray-500">Stage Start</Label>
+                            <Label className="text-[10px] text-[#75758C]">Stage Start</Label>
                             <DatePicker value={stage.start_date || ""} onChange={(d) => {
                               const newStages = stagesList.map((s, i) => i === index ? { ...s, start_date: d } : s);
                               onStagesChange(newStages);
                             }} allowEmpty className="h-7 text-xs" />
                           </div>
                           <div className="space-y-0.5">
-                            <Label className="text-[10px] text-gray-500">Stage End</Label>
+                            <Label className="text-[10px] text-[#75758C]">Stage End</Label>
                             <DatePicker value={stage.end_date || ""} onChange={(d) => {
                               const newStages = stagesList.map((s, i) => i === index ? { ...s, end_date: d } : s);
                               onStagesChange(newStages);
