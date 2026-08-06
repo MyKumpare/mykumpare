@@ -284,7 +284,7 @@ export default function DueDiligenceTemplateFlow({
 
           {/* Stages list */}
           {isStarted && (
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 max-h-80 overflow-y-auto pr-1">
               {stagesList.length > 0 && (
                 <div className="flex justify-end">
                   <Button
