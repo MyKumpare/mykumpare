@@ -13,7 +13,7 @@ import { toast } from "@/components/ui/use-toast";
  * Dialog for creating a new Template.
  * Fields: Template Name, Template Type (with add-new + duplicate validation).
  */
-export default function AddTemplateDialog({ open, onOpenChange, onCreated }) {
+export default function AddTemplateDialog({ open, onOpenChange, onCreated, editTemplate }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [name, setName] = useState("");
@@ -21,10 +21,15 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated }) {
 
   useEffect(() => {
     if (open) {
-      setName("");
-      setTemplateType("");
+      if (editTemplate) {
+        setName(editTemplate.name || "");
+        setTemplateType(editTemplate.template_type || "");
+      } else {
+        setName("");
+        setTemplateType("");
+      }
     }
-  }, [open]);
+  }, [open, editTemplate]);
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Template.create({ ...data, tenant_id: user?.linked_firm_id }),
@@ -39,17 +44,36 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated }) {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Template.update(id, data),
+    onSuccess: (updated) => {
+      queryClient.invalidateQueries({ queryKey: ["templates"] });
+      toast({ title: "Template updated", description: `"${updated.name}" has been saved.` });
+      onOpenChange(false);
+    },
+    onError: (err) => {
+      toast({ title: "Failed to update template", description: err?.message || "Please try again.", variant: "destructive" });
+    },
+  });
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!name.trim()) return;
-    createMutation.mutate({ name: name.trim(), template_type: templateType || undefined });
+    if (editTemplate) {
+      updateMutation.mutate({ id: editTemplate.id, data: { name: name.trim(), template_type: templateType || undefined } });
+    } else {
+      createMutation.mutate({ name: name.trim(), template_type: templateType || undefined });
+    }
   };
+
+  const isEditing = !!editTemplate;
+  const isPending = createMutation.isPending || updateMutation.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Template</DialogTitle>
+          <DialogTitle>{isEditing ? "Edit Template" : "Add Template"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
@@ -70,8 +94,8 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated }) {
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={!name.trim() || createMutation.isPending}>
-              Add Template
+            <Button type="submit" disabled={!name.trim() || isPending}>
+              {isEditing ? "Save Changes" : "Add Template"}
             </Button>
           </DialogFooter>
         </form>

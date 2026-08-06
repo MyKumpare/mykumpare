@@ -1,11 +1,13 @@
 import React, { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, Plus, FileText, Filter } from "lucide-react";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
+import { Search, Plus, FileText, Filter, Pencil, Trash2 } from "lucide-react";
 import AddTemplateDialog from "./AddTemplateDialog";
 
 /**
@@ -15,9 +17,23 @@ import AddTemplateDialog from "./AddTemplateDialog";
  * - Add new template via AddTemplateDialog
  */
 export default function TemplatePickerModal({ open, onClose }) {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [addOpen, setAddOpen] = useState(false);
+  const [editTemplate, setEditTemplate] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.Template.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["templates"] });
+      toast({ title: "Template deleted" });
+    },
+    onError: (err) => {
+      toast({ title: "Failed to delete template", description: err?.message || "Please try again.", variant: "destructive" });
+    },
+  });
 
   const { data: templates = [] } = useQuery({
     queryKey: ["templates"],
@@ -99,17 +115,38 @@ export default function TemplatePickerModal({ open, onClose }) {
                 {filtered.map((t) => (
                   <div
                     key={t.id}
-                    className="flex items-center justify-between px-3 py-2 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors"
+                    className="flex items-center justify-between px-3 py-2 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors group"
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                      <span className="text-sm font-medium text-gray-700 truncate">{t.name}</span>
+                      <button
+                        onClick={() => { setEditTemplate(t); setAddOpen(true); }}
+                        className="text-sm font-medium text-cyan-600 hover:text-cyan-700 hover:underline truncate text-left"
+                      >
+                        {t.name}
+                      </button>
                     </div>
-                    {t.template_type && (
-                      <Badge variant="secondary" className="text-xs flex-shrink-0">
-                        {t.template_type}
-                      </Badge>
-                    )}
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      {t.template_type && (
+                        <Badge variant="secondary" className="text-xs">
+                          {t.template_type}
+                        </Badge>
+                      )}
+                      <button
+                        onClick={() => { setEditTemplate(t); setAddOpen(true); }}
+                        className="p-1 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Edit"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => setDeleteTarget(t)}
+                        className="p-1 rounded hover:bg-red-100 text-gray-500 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -128,7 +165,31 @@ export default function TemplatePickerModal({ open, onClose }) {
         </DialogContent>
       </Dialog>
 
-      <AddTemplateDialog open={addOpen} onOpenChange={setAddOpen} />
+      <AddTemplateDialog
+        open={addOpen}
+        onOpenChange={(o) => { setAddOpen(o); if (!o) setEditTemplate(null); }}
+        editTemplate={editTemplate}
+      />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete template?</AlertDialogTitle>
+            <p className="text-sm text-gray-500">
+              Are you sure you want to delete <span className="font-medium text-gray-700">"{deleteTarget?.name}"</span>? This action cannot be undone.
+            </p>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => { if (deleteTarget) deleteMutation.mutate(deleteTarget.id); setDeleteTarget(null); }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
