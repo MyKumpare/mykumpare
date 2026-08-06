@@ -52,7 +52,7 @@ function SearchableSelect({ options, value, onChange, placeholder, excludeValues
           <ChevronDown className="w-4 h-4 opacity-50 shrink-0" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[320px] p-0" align="start">
+      <PopoverContent className="w-auto min-w-[320px] max-w-[560px] p-0" align="start">
         <div className="p-2 border-b">
           <Input placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="h-8 text-sm" autoFocus />
         </div>
@@ -64,11 +64,11 @@ function SearchableSelect({ options, value, onChange, placeholder, excludeValues
               <button
                 key={o.value}
                 type="button"
-                className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center gap-2"
+                className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center gap-2 whitespace-nowrap"
                 onClick={() => { onChange(o.value); setOpen(false); setSearch(""); }}
               >
                 <Check className={cn("w-3.5 h-3.5 shrink-0", value === o.value ? "opacity-100 text-indigo-600" : "opacity-0")} />
-                <span className="truncate">{o.label}</span>
+                <span className="text-left">{o.label}</span>
               </button>
             ))
           )}
