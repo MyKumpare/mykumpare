@@ -556,9 +556,10 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
         (dd) => dd.product_id === productId
       );
       if (existing.length > 0) {
-        // A new DD is only allowed if the product was previously removed
-        // (most recent DD status is "Rejected"). Active DD records (Pipeline,
-        // Buy List, etc.) block creation.
+        // A new DD is only allowed if the most recent DD decision was
+        // "Rejected" (a due diligence decision). Active DD records
+        // (Pipeline, Buy List, etc.) block creation. "Terminated" is a
+        // product status — a separate decision — and is not checked here.
         const sorted = [...existing].sort(
           (a, b) => new Date(b.created_date) - new Date(a.created_date)
         );
@@ -884,17 +885,17 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
                 {duplicateCheck.canCreate ? (
                   <div className="rounded-lg bg-amber-50 border border-amber-200 p-3">
                     <p className="text-xs text-amber-800">
-                      The most recent due diligence for this product was{" "}
-                      <strong>Rejected</strong> (removed). You may start a new
-                      due diligence. The original record will be retained.
+                      The most recent due diligence decision for this product
+                      was <strong>Rejected</strong>. You may start a new due
+                      diligence. The original record will be retained.
                     </p>
                   </div>
                 ) : (
                   <div className="rounded-lg bg-red-50 border border-red-200 p-3">
                     <p className="text-xs text-red-800">
                       This product has an active due diligence record. A new due
-                      diligence can only be started after the existing one has
-                      been removed (status "Rejected").
+                      diligence can only be started after the existing one has a
+                      decision of "Rejected".
                     </p>
                   </div>
                 )}
