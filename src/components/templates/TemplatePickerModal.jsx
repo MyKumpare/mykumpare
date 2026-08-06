@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
-import { Search, Plus, FileText, Filter, Pencil, Trash2 } from "lucide-react";
+import { Search, Plus, FileText, Filter, Pencil, Trash2, Copy } from "lucide-react";
+import { format } from "date-fns";
 import AddTemplateDialog from "./AddTemplateDialog";
 
 const fmtDate = (iso) => {
@@ -42,6 +43,27 @@ export default function TemplatePickerModal({ open, onClose }) {
     },
     onError: (err) => {
       toast({ title: "Failed to delete template", description: err?.message || "Please try again.", variant: "destructive" });
+    },
+  });
+
+  const copyMutation = useMutation({
+    mutationFn: async (template) => {
+      const payload = {
+        name: `${template.name} (Copy)`,
+        template_type: template.template_type || undefined,
+        create_date: format(new Date(), "yyyy-MM-dd"),
+        stages: template.stages || [],
+      };
+      return base44.entities.Template.create(payload);
+    },
+    onSuccess: (created) => {
+      queryClient.invalidateQueries({ queryKey: ["templates"] });
+      toast({ title: "Template copied" });
+      setEditTemplate(created);
+      setAddOpen(true);
+    },
+    onError: (err) => {
+      toast({ title: "Failed to copy template", description: err?.message || "Please try again.", variant: "destructive" });
     },
   });
 
@@ -145,6 +167,13 @@ export default function TemplatePickerModal({ open, onClose }) {
                       {t.create_date && (
                         <span className="text-[11px] text-gray-400">{fmtDate(t.create_date)}</span>
                       )}
+                      <button
+                        onClick={() => copyMutation.mutate(t)}
+                        className="p-1 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Copy as new version"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
                       <button
                         onClick={() => { setEditTemplate(t); setAddOpen(true); }}
                         className="p-1 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity"
