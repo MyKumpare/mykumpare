@@ -504,13 +504,12 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
   const currentUserId = currentUserContact?.id || "";
   const currentUserName = currentUserContact ? contactName(currentUserContact) : "";
 
-  // Auto-assign primary analyst from the signed-in user. Triggers when process
-  // status becomes "In-process"; never overrides a selection.
+  // Auto-assign primary analyst from the signed-in user when the dialog opens
+  // for a new record. Never overrides an existing selection (editable afterward).
   useEffect(() => {
     if (!open || editingRecord || primaryId) return;
-    if (processStatus !== "In-process") return;
     if (currentUserId) setPrimaryId(currentUserId);
-  }, [open, editingRecord, primaryId, processStatus, currentUserId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, editingRecord, primaryId, currentUserId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const allProducts = useMemo(() => {
     const ids = new Set(localProducts.map((p) => p.id));
