@@ -524,6 +524,23 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
   // Validation: a contact picked for one analyst cannot be the other.
   const isValid = !!effectiveFirmId && productId && (!showPrimaryAnalyst || primaryId) && (primaryId !== secondaryId);
 
+  // Compute denormalized list of all contact IDs assigned to any sub-stage,
+  // so the contact Due Diligence tab can find records where this contact has tasks.
+  const assignedContactIds = useMemo(() => {
+    const ids = new Set();
+    (stages || []).forEach((s) => {
+      (s.sub_stages || []).forEach((ss) => {
+        (ss.assignments || []).forEach((a) => {
+          if (a.contact_id) ids.add(a.contact_id);
+        });
+        if (ss.performed_by_contact_id) ids.add(ss.performed_by_contact_id);
+      });
+    });
+    if (primaryId) ids.add(primaryId);
+    if (secondaryId) ids.add(secondaryId);
+    return [...ids];
+  }, [stages, primaryId, secondaryId]);
+
   const handleSave = () => {
     if (!isValid) return;
     onSubmit({
@@ -542,6 +559,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
       template_name: processStatus === "In-process" ? (templateName || undefined) : undefined,
       start_date: processStatus === "In-process" ? (startDate || undefined) : undefined,
       current_stage_index: processStatus === "In-process" ? currentStageIndex : undefined,
+      assigned_contact_ids: processStatus === "In-process" ? assignedContactIds : undefined,
     });
   };
 

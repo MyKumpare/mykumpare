@@ -66,6 +66,13 @@
       "default": 0,
       "description": "0-based index of the currently active stage."
     },
+    "assigned_contact_ids": {
+      "type": "array",
+      "description": "Denormalized list of all contact IDs assigned to any sub-stage in this record. Used for fast lookup in the contact Due Diligence tab.",
+      "items": {
+        "type": "string"
+      }
+    },
     "stages": {
       "type": "array",
       "description": "Due diligence stages (loaded from template). Each stage tracks completion status, supervisor approval, and dates. Sub-stages within a stage can be worked on in any order (non-sequential). A stage is completed only when all sub-stages are completed and the supervisor approves.",
@@ -206,6 +213,34 @@
                       "notes": {
                         "type": "string",
                         "description": "Notes from the assigned team member"
+                      }
+                    }
+                  }
+                },
+                "attachments": {
+                  "type": "array",
+                  "description": "Files attached to this sub-stage",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string",
+                        "description": "Display name for the file"
+                      },
+                      "file_url": {
+                        "type": "string",
+                        "description": "URL of the uploaded file"
+                      },
+                      "file_type": {
+                        "type": "string",
+                        "description": "MIME type or extension"
+                      },
+                      "uploaded_at": {
+                        "type": "string",
+                        "format": "date-time"
                       }
                     }
                   }

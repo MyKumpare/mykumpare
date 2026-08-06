@@ -1,13 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
+import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import DatePicker from "@/components/ui/date-picker";
-import { Play, CheckCircle2, Circle, Clock, UserPlus, Trash2, ChevronDown, ChevronRight } from "lucide-react";
+import { Play, CheckCircle2, Circle, Clock, UserPlus, Trash2, ChevronDown, ChevronRight, Paperclip, FileText, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
 const generateId = () => `asg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+const generateAttachmentId = () => `att_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
 const STATUS_CONFIG = {
   not_started: { label: "Not Started", icon: Circle, badgeClass: "bg-gray-100 text-gray-500", iconClass: "text-gray-300", bgClass: "bg-gray-50 border-gray-200" },
@@ -75,6 +77,38 @@ export default function SubStageItem({ subStage, primaryAnalystId, primaryAnalys
 
   const removeAssignment = (id) => {
     update({ assignments: assignments.filter((a) => a.id !== id) });
+  };
+
+  // ─── File attachments ───
+  const attachments = subStage.attachments || [];
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const handleFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      update({
+        attachments: [...attachments, {
+          id: generateAttachmentId(),
+          name: file.name,
+          file_url,
+          file_type: file.type || file.name.split(".").pop() || "",
+          uploaded_at: new Date().toISOString(),
+        }],
+      });
+    } catch (err) {
+      console.error("File upload failed", err);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const removeAttachment = (id) => {
+    update({ attachments: attachments.filter((a) => a.id !== id) });
   };
 
   return (
@@ -150,6 +184,34 @@ export default function SubStageItem({ subStage, primaryAnalystId, primaryAnalys
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Attachments */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <Label className="text-[10px] text-gray-500">Attachments</Label>
+              <Button type="button" size="sm" variant="ghost" className="h-6 text-[10px] px-2 text-indigo-600" disabled={uploading} onClick={() => fileInputRef.current?.click()}>
+                {uploading ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Paperclip className="w-2.5 h-2.5" />} Upload
+              </Button>
+              <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelect} />
+            </div>
+            {attachments.length === 0 ? (
+              <p className="text-[10px] text-gray-400 italic">No attachments</p>
+            ) : (
+              <div className="space-y-0.5">
+                {attachments.map((att) => (
+                  <div key={att.id} className="flex items-center gap-1 rounded border border-gray-200 bg-white px-1.5 py-1">
+                    <FileText className="w-2.5 h-2.5 text-gray-400 shrink-0" />
+                    <a href={att.file_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-indigo-600 hover:underline truncate flex-1" title={att.name}>
+                      {att.name}
+                    </a>
+                    <button type="button" className="text-gray-300 hover:text-red-500 shrink-0" onClick={() => removeAttachment(att.id)}>
+                      <Trash2 className="w-2.5 h-2.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Assignments */}

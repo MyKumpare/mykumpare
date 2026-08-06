@@ -34,6 +34,12 @@ export default function ContactDueDiligenceTab({ contactId, contactName, onConta
     queryFn: () => base44.entities.DueDiligence.filter({ secondary_analyst_contact_id: contactId }, "-created_date", 500),
     enabled: !!contactId,
   });
+  // DD records where this contact is assigned to a sub-stage task (denormalized lookup)
+  const { data: assigned = [], isLoading: la } = useQuery({
+    queryKey: ["dd-assigned-tasks", contactId],
+    queryFn: () => base44.entities.DueDiligence.filter({ assigned_contact_ids: contactId }, "-created_date", 500),
+    enabled: !!contactId,
+  });
 
   // Products of the firm on the record being edited (populates the picker).
   const { data: editProducts = [] } = useQuery({
@@ -47,6 +53,7 @@ export default function ContactDueDiligenceTab({ contactId, contactName, onConta
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dd-primary-analyst", contactId] });
       queryClient.invalidateQueries({ queryKey: ["dd-secondary-analyst", contactId] });
+      queryClient.invalidateQueries({ queryKey: ["dd-assigned-tasks", contactId] });
       if (editing?.firm_id) queryClient.invalidateQueries({ queryKey: ["due-diligence", editing.firm_id] });
       setShowDialog(false);
     },
@@ -56,20 +63,24 @@ export default function ContactDueDiligenceTab({ contactId, contactName, onConta
     onSuccess: (_res, variables) => {
       queryClient.invalidateQueries({ queryKey: ["dd-primary-analyst", contactId] });
       queryClient.invalidateQueries({ queryKey: ["dd-secondary-analyst", contactId] });
+      queryClient.invalidateQueries({ queryKey: ["dd-assigned-tasks", contactId] });
       if (variables?.firm_id) queryClient.invalidateQueries({ queryKey: ["due-diligence", variables.firm_id] });
       setShowDialog(false);
     },
   });
 
-  // Merge primary + secondary, dedupe by id, tag the contact's role on each record.
+  // Merge primary + secondary + assigned, dedupe by id, tag the contact's role on each record.
   const records = useMemo(() => {
     const map = new Map();
     primary.forEach((r) => map.set(r.id, { ...r, _role: "Primary" }));
     secondary.forEach((r) => {
       if (!map.has(r.id)) map.set(r.id, { ...r, _role: "Secondary" });
     });
+    assigned.forEach((r) => {
+      if (!map.has(r.id)) map.set(r.id, { ...r, _role: "Task Assignee" });
+    });
     return [...map.values()];
-  }, [primary, secondary]);
+  }, [primary, secondary, assigned]);
 
   const handleSubmit = (data) => {
     if (editing) updateMutation.mutate({ id: editing.id, data });
@@ -110,7 +121,7 @@ export default function ContactDueDiligenceTab({ contactId, contactName, onConta
     );
   }
 
-  const isLoading = lp || ls;
+  const isLoading = lp || ls || la;
 
   return (
     <div className="space-y-2 py-1">
@@ -130,7 +141,7 @@ export default function ContactDueDiligenceTab({ contactId, contactName, onConta
         <div className="text-xs text-gray-400 italic py-4 text-center">Loading...</div>
       ) : records.length === 0 ? (
         <div className="text-sm text-gray-400 italic py-4 text-center border border-dashed border-gray-200 rounded-xl">
-          No due diligence records where {contactName || "this contact"} is an analyst.
+          No due diligence records where {contactName || "this contact"} is an analyst or task assignee.
         </div>
       ) : (
         <div className="space-y-2">
