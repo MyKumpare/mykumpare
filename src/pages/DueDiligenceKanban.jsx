@@ -3,15 +3,16 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import DueDiligenceKanbanBoard, { computeApprovalStatus } from "@/components/firms/DueDiligenceKanbanBoard";
+import DdSummaryChart from "@/components/firms/DdSummaryChart";
 import AddDueDiligenceDialog from "@/components/firms/AddDueDiligenceDialog";
 import DdFilterTabs, { getDdCounts, filterDdRecords } from "@/components/firms/DdFilterTabs";
 import { LayoutDashboard, List, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const GROUP_MODES = [
-  { key: "approval_status", label: "Approval Pipeline" },
-  { key: "status", label: "DD Status" },
-  { key: "process_status", label: "Process Status" },
+  { key: "approval_status", label: "Approval Pipeline", columns: ["In Pipeline", "Awaiting Approval", "Approved"] },
+  { key: "status", label: "DD Status", columns: ["Pipeline", "Buy List", "Rejected"] },
+  { key: "process_status", label: "Process Status", columns: ["Not Started", "In-process", "Completed"] },
 ];
 
 export default function DueDiligenceKanban() {
@@ -129,6 +130,16 @@ export default function DueDiligenceKanban() {
           </button>
         ))}
       </div>
+
+      {/* Summary statistics chart */}
+      {!isLoading && filtered.length > 0 && (
+        <DdSummaryChart
+          records={filtered}
+          groupMode={groupMode}
+          columns={GROUP_MODES.find((m) => m.key === groupMode).columns}
+          onRecordClick={handleCardClick}
+        />
+      )}
 
       {/* Kanban board */}
       {isLoading ? (
