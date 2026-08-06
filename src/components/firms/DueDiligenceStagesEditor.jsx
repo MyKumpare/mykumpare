@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { AlertCircle, GripVertical, Plus, Trash2 } from "lucide-react";
+import { AlertCircle, ChevronDown, ChevronRight, GripVertical, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import SubStagesEditor from "./SubStagesEditor";
 
 let _stageIdCounter = 0;
 const nextStageId = () => `stage_${Date.now()}_${++_stageIdCounter}`;
@@ -60,6 +61,8 @@ const findDuplicate = (name, existing, excludeId) => {
 export default function DueDiligenceStagesEditor({ stages, onChange }) {
   const [newStageName, setNewStageName] = useState("");
   const [error, setError] = useState("");
+  const [expandedStages, setExpandedStages] = useState({});
+  const toggleExpand = (id) => setExpandedStages((prev) => ({ ...prev, [id]: !prev[id] }));
 
   const addStage = (name) => {
     const trimmed = (name || "").trim();
@@ -121,33 +124,53 @@ export default function DueDiligenceStagesEditor({ stages, onChange }) {
                     <div
                       ref={dragProvided.innerRef}
                       {...dragProvided.draggableProps}
-                      className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-md px-2 py-1.5"
+                      className="bg-gray-50 border border-gray-200 rounded-md px-2 py-1.5 space-y-1.5"
                     >
-                      <span
-                        {...dragProvided.dragHandleProps}
-                        className="cursor-grab text-gray-400 hover:text-gray-600 touch-none"
-                      >
-                        <GripVertical className="w-4 h-4" />
-                      </span>
-                      <span className="text-xs font-medium text-gray-500 shrink-0 w-16">
-                        Stage {index + 1}
-                      </span>
-                      <Input
-                        value={stage.name}
-                        onChange={(e) => renameStage(stage.id, e.target.value)}
-                        onBlur={(e) => commitStage(stage.id, e.target.value)}
-                        className="h-8 text-sm flex-1 border-none bg-transparent shadow-none focus-visible:ring-0"
-                        placeholder="Define stage..."
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-gray-400 hover:text-red-600 shrink-0"
-                        onClick={() => removeStage(stage.id)}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <span
+                          {...dragProvided.dragHandleProps}
+                          className="cursor-grab text-gray-400 hover:text-gray-600 touch-none"
+                        >
+                          <GripVertical className="w-4 h-4" />
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => toggleExpand(stage.id)}
+                          className="text-gray-400 hover:text-gray-600 shrink-0"
+                        >
+                          {expandedStages[stage.id] ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                        </button>
+                        <span className="text-xs font-medium text-gray-500 shrink-0 w-16">
+                          Stage {index + 1}
+                        </span>
+                        <Input
+                          value={stage.name}
+                          onChange={(e) => renameStage(stage.id, e.target.value)}
+                          onBlur={(e) => commitStage(stage.id, e.target.value)}
+                          className="h-8 text-sm flex-1 border-none bg-transparent shadow-none focus-visible:ring-0"
+                          placeholder="Define stage..."
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-gray-400 hover:text-red-600 shrink-0"
+                          onClick={() => removeStage(stage.id)}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                      {expandedStages[stage.id] && (
+                        <div className="pl-6">
+                          <SubStagesEditor
+                            subStages={stage.sub_stages || []}
+                            droppableId={`tmpl-subst-${stage.id}`}
+                            onChange={(newSubs) =>
+                              onChange(stages.map((s) => (s.id === stage.id ? { ...s, sub_stages: newSubs } : s)))
+                            }
+                          />
+                        </div>
+                      )}
                     </div>
                   )}
                 </Draggable>

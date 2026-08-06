@@ -21,7 +21,7 @@
     },
     "stages": {
       "type": "array",
-      "description": "Due diligence stages for Manager Due Diligence templates (ordered list). Each stage has an id and a name.",
+      "description": "Due diligence stages for Manager Due Diligence templates (ordered list). Each stage has an id, a name, and optional sub-stages.",
       "items": {
         "type": "object",
         "properties": {
@@ -30,6 +30,21 @@
           },
           "name": {
             "type": "string"
+          },
+          "sub_stages": {
+            "type": "array",
+            "description": "Ordered sub-stages within this stage",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                }
+              }
+            }
           }
         }
       }

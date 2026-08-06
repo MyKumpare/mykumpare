@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   ChevronDown, Check, Plus, Play, CheckCircle2, Circle,
-  Clock, BarChart3, Calendar, X,
+  Clock, BarChart3, Calendar, X, ChevronRight,
 } from "lucide-react";
+import SubStagesEditor from "./SubStagesEditor";
 import DatePicker from "@/components/ui/date-picker";
 import AddTemplateDialog from "@/components/templates/AddTemplateDialog";
 import { format } from "date-fns";
@@ -38,6 +39,8 @@ export default function DueDiligenceTemplateFlow({
   const [search, setSearch] = useState("");
   const [addTemplateOpen, setAddTemplateOpen] = useState(false);
   const [showProgressModal, setShowProgressModal] = useState(false);
+  const [expandedStages, setExpandedStages] = useState({});
+  const toggleExpand = (id) => setExpandedStages((prev) => ({ ...prev, [id]: !prev[id] }));
 
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ["templates"],
@@ -84,6 +87,7 @@ export default function DueDiligenceTemplateFlow({
       name: s.name,
       completed: false,
       completed_date: null,
+      sub_stages: (s.sub_stages || []).map((ss) => ({ id: ss.id, name: ss.name })),
     }));
     onStagesChange(newStages);
     onCurrentStageChange(0);
@@ -281,53 +285,80 @@ export default function DueDiligenceTemplateFlow({
                   <div
                     key={stage.id}
                     className={cn(
-                      "flex items-center gap-2 rounded-md border px-2 py-1.5 transition-colors",
+                      "rounded-md border px-2 py-1.5 transition-colors space-y-1.5",
                       stage.completed && "bg-emerald-50 border-emerald-200",
                       isCurrent && "bg-indigo-50 border-indigo-300",
                       isUpcoming && "bg-gray-50 border-gray-200"
                     )}
                   >
-                    {/* Status icon */}
-                    {stage.completed ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    ) : isCurrent ? (
-                      <Clock className="w-4 h-4 text-indigo-600 shrink-0" />
-                    ) : (
-                      <Circle className="w-4 h-4 text-gray-300 shrink-0" />
-                    )}
+                    <div className="flex items-center gap-2">
+                      {/* Status icon */}
+                      {stage.completed ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      ) : isCurrent ? (
+                        <Clock className="w-4 h-4 text-indigo-600 shrink-0" />
+                      ) : (
+                        <Circle className="w-4 h-4 text-gray-300 shrink-0" />
+                      )}
 
-                    {/* Stage label */}
-                    <div className="flex-1 min-w-0">
-                      <span
-                        className={cn(
-                          "text-sm font-medium truncate block",
-                          stage.completed
-                            ? "text-emerald-700"
-                            : isCurrent
-                              ? "text-indigo-700"
-                              : "text-gray-500"
-                        )}
+                      {/* Expand sub-stages */}
+                      <button
+                        type="button"
+                        onClick={() => toggleExpand(stage.id)}
+                        className="text-gray-400 hover:text-gray-600 shrink-0"
                       >
-                        Stage {index + 1}: {stage.name || "Unnamed"}
-                      </span>
-                      {stage.completed && stage.completed_date && (
-                        <span className="text-[11px] text-emerald-500">
-                          Completed {stage.completed_date}
+                        {expandedStages[stage.id] ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                      </button>
+
+                      {/* Stage label */}
+                      <div className="flex-1 min-w-0">
+                        <span
+                          className={cn(
+                            "text-sm font-medium truncate block",
+                            stage.completed
+                              ? "text-emerald-700"
+                              : isCurrent
+                                ? "text-indigo-700"
+                                : "text-gray-500"
+                          )}
+                        >
+                          Stage {index + 1}: {stage.name || "Unnamed"}
                         </span>
+                        {stage.completed && stage.completed_date && (
+                          <span className="text-[11px] text-emerald-500">
+                            Completed {stage.completed_date}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Complete button — only for current stage */}
+                      {isCurrent && !allComplete && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs shrink-0 border-indigo-300 text-indigo-600 hover:bg-indigo-50"
+                          onClick={() => handleCompleteStage(index)}
+                        >
+                          Complete
+                        </Button>
                       )}
                     </div>
 
-                    {/* Complete button — only for current stage */}
-                    {isCurrent && !allComplete && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs shrink-0 border-indigo-300 text-indigo-600 hover:bg-indigo-50"
-                        onClick={() => handleCompleteStage(index)}
-                      >
-                        Complete
-                      </Button>
+                    {/* Sub-stages editor */}
+                    {expandedStages[stage.id] && (
+                      <div className="pl-6">
+                        <SubStagesEditor
+                          subStages={stage.sub_stages || []}
+                          droppableId={`dd-subst-${stage.id}`}
+                          onChange={(newSubs) => {
+                            const newStages = stagesList.map((s, i) =>
+                              i === index ? { ...s, sub_stages: newSubs } : s
+                            );
+                            onStagesChange(newStages);
+                          }}
+                        />
+                      </div>
                     )}
                   </div>
                 );

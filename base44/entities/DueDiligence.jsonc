@@ -86,6 +86,21 @@
             "type": "string",
             "format": "date",
             "description": "Date the stage was completed (YYYY-MM-DD)"
+          },
+          "sub_stages": {
+            "type": "array",
+            "description": "Ordered sub-stages within this stage (loaded from template)",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                }
+              }
+            }
           }
         }
       }
