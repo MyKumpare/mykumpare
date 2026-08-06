@@ -104,6 +104,10 @@
             "format": "date",
             "description": "Date work ended on this stage (auto-set on supervisor approval, user-editable). Stored as YYYY-MM-DD."
           },
+          "notes": {
+            "type": "string",
+            "description": "Rich text notes (HTML) for this stage, entered by the user in a Word-style editor."
+          },
           "supervisor_status": {
             "type": "string",
             "enum": [
@@ -159,6 +163,10 @@
                   ],
                   "default": "not_started",
                   "description": "Completion status of this sub-stage"
+                },
+                "notes": {
+                  "type": "string",
+                  "description": "Rich text notes (HTML) for this sub-stage, entered by the user in a Word-style editor."
                 },
                 "performed_by_contact_id": {
                   "type": "string",

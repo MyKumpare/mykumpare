@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SubStageItem from "./SubStageItem";
+import StageNotesEditor from "./StageNotesEditor";
 import DatePicker from "@/components/ui/date-picker";
 import AddTemplateDialog from "@/components/templates/AddTemplateDialog";
 import { format } from "date-fns";
@@ -435,6 +436,16 @@ export default function DueDiligenceTemplateFlow({
                             }} allowEmpty className="h-7 text-xs" />
                           </div>
                         </div>
+
+                        {/* Stage-level rich text notes */}
+                        <StageNotesEditor
+                          value={stage.notes || ""}
+                          onChange={(html) => {
+                            const newStages = stagesList.map((s, i) => i === index ? { ...s, notes: html } : s);
+                            onStagesChange(newStages);
+                          }}
+                          label="Stage Notes"
+                        />
 
                         {/* Sub-stage items */}
                         {stageSubs.map((ss) => (

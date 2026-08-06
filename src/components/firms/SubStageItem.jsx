@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import DatePicker from "@/components/ui/date-picker";
+import StageNotesEditor from "./StageNotesEditor";
 import { Play, CheckCircle2, Circle, Clock, UserPlus, Trash2, ChevronDown, ChevronRight, Paperclip, FileText, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -213,6 +214,12 @@ export default function SubStageItem({ subStage, primaryAnalystId, primaryAnalys
               </div>
             )}
           </div>
+
+          {/* Rich text notes */}
+          <StageNotesEditor
+            value={subStage.notes || ""}
+            onChange={(html) => update({ notes: html })}
+          />
 
           {/* Assignments */}
           <div className="space-y-1">
