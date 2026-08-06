@@ -136,6 +136,21 @@ export default function DueDiligenceTemplateFlow({
         supervisor_status: action,
         supervisor_date: todayStr,
       };
+      // Mark the supervisor approval sub-step as completed
+      if (s.sub_stages && s.sub_stages.length > 0) {
+        updated.sub_stages = s.sub_stages.map((ss) => {
+          if (ss.name && ss.name.toLowerCase().includes("supervisor")) {
+            return {
+              ...ss,
+              status: "completed",
+              end_date: todayStr,
+              performed_by_contact_id: s.supervisor_contact_id,
+              performed_by_name: s.supervisor_name,
+            };
+          }
+          return ss;
+        });
+      }
       if (action === "approved") {
         updated.completed = true;
         updated.completed_date = todayStr;
@@ -388,9 +403,15 @@ export default function DueDiligenceTemplateFlow({
 
                       {/* Supervisor status badge */}
                       {unlocked && !isCompleted && subsCompleted && (
-                        <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 flex items-center gap-1", supCfg.badge)}>
-                          <SupIcon className="w-2.5 h-2.5" /> {supCfg.label}
-                        </span>
+                        stage.supervisor_contact_id && supStatus === "pending" ? (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 flex items-center gap-1 bg-amber-100 text-amber-700">
+                            <UserCheck className="w-2.5 h-2.5" /> Approval Request Submitted
+                          </span>
+                        ) : (
+                          <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 flex items-center gap-1", supCfg.badge)}>
+                            <SupIcon className="w-2.5 h-2.5" /> {supCfg.label}
+                          </span>
+                        )
                       )}
                     </div>
 

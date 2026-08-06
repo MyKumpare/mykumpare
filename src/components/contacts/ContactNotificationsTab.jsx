@@ -7,6 +7,7 @@ import {
   CheckCircle2, ExternalLink,
 } from "lucide-react";
 import AddDueDiligenceDialog from "../firms/AddDueDiligenceDialog";
+import { syncDdNotifications } from "../firms/ddNotificationSync";
 
 const TYPE_CONFIG = {
   supervisor_request: {
@@ -69,6 +70,43 @@ export default function ContactNotificationsTab({ contactId, contactName, onCont
       queryClient.invalidateQueries({ queryKey: ["dd-notifications", contactId] });
       if (editing?.firm_id) queryClient.invalidateQueries({ queryKey: ["due-diligence", editing.firm_id] });
       setShowDialog(false);
+    },
+  });
+
+  const decideMutation = useMutation({
+    mutationFn: async ({ notification, decision }) => {
+      const dd = await base44.entities.DueDiligence.get(notification.due_diligence_id);
+      if (!dd || !dd.stages) throw new Error("Due diligence record not found");
+      const todayStr = new Date().toISOString().split("T")[0];
+      const updatedStages = dd.stages.map((stage) => {
+        if (stage.name !== notification.stage_name) return stage;
+        const updated = { ...stage, supervisor_status: decision, supervisor_date: todayStr };
+        if (stage.sub_stages) {
+          updated.sub_stages = stage.sub_stages.map((ss) => {
+            if (ss.name && ss.name.toLowerCase().includes("supervisor")) {
+              return {
+                ...ss,
+                status: "completed",
+                end_date: todayStr,
+                performed_by_contact_id: stage.supervisor_contact_id,
+                performed_by_name: stage.supervisor_name,
+              };
+            }
+            return ss;
+          });
+        }
+        if (decision === "approved") {
+          updated.completed = true;
+          updated.completed_date = todayStr;
+          updated.end_date = todayStr;
+        }
+        return updated;
+      });
+      return base44.entities.DueDiligence.update(dd.id, { stages: updatedStages });
+    },
+    onSuccess: (savedRecord) => {
+      syncDdNotifications(savedRecord);
+      queryClient.invalidateQueries({ queryKey: ["dd-notifications", contactId] });
     },
   });
 
@@ -183,6 +221,19 @@ export default function ContactNotificationsTab({ contactId, contactName, onCont
                     {n.title}
                   </button>
                   <p className="text-xs text-gray-500 mt-0.5">{n.message}</p>
+                  {n.type === "supervisor_request" && !isCompleted && (
+                    <div className="flex gap-1.5 mt-1.5">
+                      <Button type="button" size="sm" className="h-6 text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white" disabled={decideMutation.isPending} onClick={() => decideMutation.mutate({ notification: n, decision: "approved" })}>
+                        <ShieldCheck className="w-3 h-3" /> Approve
+                      </Button>
+                      <Button type="button" size="sm" variant="outline" className="h-6 text-[10px] border-red-300 text-red-600 hover:bg-red-50" disabled={decideMutation.isPending} onClick={() => decideMutation.mutate({ notification: n, decision: "rejected" })}>
+                        <ShieldX className="w-3 h-3" /> Reject
+                      </Button>
+                      <Button type="button" size="sm" variant="outline" className="h-6 text-[10px] border-orange-300 text-orange-600 hover:bg-orange-50" disabled={decideMutation.isPending} onClick={() => decideMutation.mutate({ notification: n, decision: "on_hold" })}>
+                        <ShieldAlert className="w-3 h-3" /> On Hold
+                      </Button>
+                    </div>
+                  )}
                   {n.created_date && (
                     <p className="text-[10px] text-gray-400 mt-1">
                       {new Date(n.created_date).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
