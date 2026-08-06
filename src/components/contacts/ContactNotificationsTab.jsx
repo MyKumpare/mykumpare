@@ -65,9 +65,12 @@ export default function ContactNotificationsTab({ contactId, contactName, onCont
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.DueDiligence.update(id, data),
+    mutationFn: async ({ id, data }) => {
+      const savedRecord = await base44.entities.DueDiligence.update(id, data);
+      await syncDdNotifications(savedRecord);
+      return savedRecord;
+    },
     onSuccess: (savedRecord) => {
-      syncDdNotifications(savedRecord);
       queryClient.invalidateQueries({ queryKey: ["dd-notifications", contactId] });
       if (editing?.firm_id) queryClient.invalidateQueries({ queryKey: ["due-diligence", editing.firm_id] });
       setShowDialog(false);
@@ -109,10 +112,11 @@ export default function ContactNotificationsTab({ contactId, contactName, onCont
         }
         return updated;
       });
-      return base44.entities.DueDiligence.update(dd.id, { stages: updatedStages });
+      const savedRecord = await base44.entities.DueDiligence.update(dd.id, { stages: updatedStages });
+      await syncDdNotifications(savedRecord);
+      return savedRecord;
     },
     onSuccess: (savedRecord) => {
-      syncDdNotifications(savedRecord);
       queryClient.invalidateQueries({ queryKey: ["dd-notifications", contactId] });
     },
   });

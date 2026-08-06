@@ -40,12 +40,22 @@ export default function FirmDueDiligenceTab({ firmId, firmName, contacts = [], o
   const firmContacts = contacts.filter((c) => !c.deleted_at && (c.firm_ids || []).includes(firmId));
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.DueDiligence.create(data),
-    onSuccess: (savedRecord) => { syncDdNotifications(savedRecord); syncProductStatusFromDd(savedRecord, queryClient); queryClient.invalidateQueries({ queryKey: ["due-diligence", firmId] }); setShowDialog(false); },
+    mutationFn: async (data) => {
+      const savedRecord = await base44.entities.DueDiligence.create(data);
+      await syncDdNotifications(savedRecord);
+      await syncProductStatusFromDd(savedRecord, queryClient);
+      return savedRecord;
+    },
+    onSuccess: (savedRecord) => { queryClient.invalidateQueries({ queryKey: ["due-diligence", firmId] }); setShowDialog(false); },
   });
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.DueDiligence.update(id, data),
-    onSuccess: (savedRecord) => { syncDdNotifications(savedRecord); syncProductStatusFromDd(savedRecord, queryClient); queryClient.invalidateQueries({ queryKey: ["due-diligence", firmId] }); setShowDialog(false); },
+    mutationFn: async ({ id, data }) => {
+      const savedRecord = await base44.entities.DueDiligence.update(id, data);
+      await syncDdNotifications(savedRecord);
+      await syncProductStatusFromDd(savedRecord, queryClient);
+      return savedRecord;
+    },
+    onSuccess: (savedRecord) => { queryClient.invalidateQueries({ queryKey: ["due-diligence", firmId] }); setShowDialog(false); },
   });
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.DueDiligence.delete(id),

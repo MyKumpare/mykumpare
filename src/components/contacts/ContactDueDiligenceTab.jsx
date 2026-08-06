@@ -52,10 +52,13 @@ export default function ContactDueDiligenceTab({ contactId, contactName, onConta
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.DueDiligence.update(id, data),
+    mutationFn: async ({ id, data }) => {
+      const savedRecord = await base44.entities.DueDiligence.update(id, data);
+      await syncDdNotifications(savedRecord);
+      await syncProductStatusFromDd(savedRecord, queryClient);
+      return savedRecord;
+    },
     onSuccess: (savedRecord) => {
-      syncDdNotifications(savedRecord);
-      syncProductStatusFromDd(savedRecord, queryClient);
       queryClient.invalidateQueries({ queryKey: ["dd-primary-analyst", contactId] });
       queryClient.invalidateQueries({ queryKey: ["dd-secondary-analyst", contactId] });
       queryClient.invalidateQueries({ queryKey: ["dd-assigned-tasks", contactId] });
@@ -65,10 +68,13 @@ export default function ContactDueDiligenceTab({ contactId, contactName, onConta
     },
   });
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.DueDiligence.create(data),
+    mutationFn: async (data) => {
+      const savedRecord = await base44.entities.DueDiligence.create(data);
+      await syncDdNotifications(savedRecord);
+      await syncProductStatusFromDd(savedRecord, queryClient);
+      return savedRecord;
+    },
     onSuccess: (savedRecord, variables) => {
-      syncDdNotifications(savedRecord);
-      syncProductStatusFromDd(savedRecord, queryClient);
       queryClient.invalidateQueries({ queryKey: ["dd-primary-analyst", contactId] });
       queryClient.invalidateQueries({ queryKey: ["dd-secondary-analyst", contactId] });
       queryClient.invalidateQueries({ queryKey: ["dd-assigned-tasks", contactId] });
