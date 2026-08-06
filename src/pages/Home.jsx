@@ -11,19 +11,21 @@ import { parsePhoneString } from "@/components/ai/firmEnrichment";
 import { detectDesignations } from "@/components/contacts/designationDetector";
 import { toast } from "@/components/ui/use-toast";
 
-import AddFirmDialog from "../components/firms/AddFirmDialog";
-import DeleteConfirmDialog from "../components/firms/DeleteConfirmDialog";
-import DeleteProductConfirmDialog from "../components/products/DeleteProductConfirmDialog";
-import AddProductDialog from "../components/products/AddProductDialog";
-import StatsListModal from "../components/stats/StatsListModal";
-import ContactsListModal from "../components/contacts/ContactsListModal";
-import AddContactDialog from "../components/contacts/AddContactDialog";
-import PhotoCaptureModal from "../components/contacts/PhotoCaptureModal";
+import { lazyDialog } from "@/components/common/lazyDialog";
 import SearchResults from "../components/search/SearchResults";
-import AddPortfolioDialog from "../components/portfolios/AddPortfolioDialog";
-import AddDueDiligenceDialog from "../components/firms/AddDueDiligenceDialog";
-import AddDocumentDialog from "../components/firms/AddDocumentDialog";
-import TemplatePickerModal from "../components/templates/TemplatePickerModal";
+
+const AddFirmDialog = lazyDialog(() => import("../components/firms/AddFirmDialog"));
+const DeleteConfirmDialog = lazyDialog(() => import("../components/firms/DeleteConfirmDialog"));
+const DeleteProductConfirmDialog = lazyDialog(() => import("../components/products/DeleteProductConfirmDialog"));
+const AddProductDialog = lazyDialog(() => import("../components/products/AddProductDialog"));
+const StatsListModal = lazyDialog(() => import("../components/stats/StatsListModal"));
+const ContactsListModal = lazyDialog(() => import("../components/contacts/ContactsListModal"));
+const AddContactDialog = lazyDialog(() => import("../components/contacts/AddContactDialog"));
+const PhotoCaptureModal = lazyDialog(() => import("../components/contacts/PhotoCaptureModal"));
+const AddPortfolioDialog = lazyDialog(() => import("../components/portfolios/AddPortfolioDialog"));
+const AddDueDiligenceDialog = lazyDialog(() => import("../components/firms/AddDueDiligenceDialog"));
+const AddDocumentDialog = lazyDialog(() => import("../components/firms/AddDocumentDialog"));
+const TemplatePickerModal = lazyDialog(() => import("../components/templates/TemplatePickerModal"));
 import PortfoliosSection from "../components/portfolios/PortfoliosSection";
 import FirmsSection from "../components/firms/FirmsSection";
 import ProductsSection from "../components/products/ProductsSection";
@@ -31,23 +33,24 @@ import ContactsSection from "../components/contacts/ContactsSection";
 import UtilitySection from "../components/utility/UtilitySection";
 import ReportsSection from "../components/reports/ReportsSection";
 import PickerSection from "../components/common/PickerSection";
-import ReportsPickerModal from "../components/reports/ReportsPickerModal";
-import DocumentsDashboardModal from "../components/firms/DocumentsDashboardModal";
-import MapSearchModal from "../components/search/MapSearchModal";
-import AddBenchmarkDialog from "../components/utility/AddBenchmarkDialog";
 import AnalyticsSection from "../components/analytics/AnalyticsSection";
-import EditAnalysisDialog from "../components/analytics/EditAnalysisDialog";
-import GlobalActivityLogModal from "../components/activity/GlobalActivityLogModal";
-import PortfolioPickerModal from "../components/portfolios/PortfolioPickerModal";
-import FirmPickerModal from "../components/firms/FirmPickerModal";
-import DueDiligencePickerModal from "../components/firms/DueDiligencePickerModal";
-import ProductPickerModal from "../components/products/ProductPickerModal";
-import ContactPickerModal from "../components/contacts/ContactPickerModal";
-import ActivityLogPickerModal from "../components/activity/ActivityLogPickerModal";
-import ActivityDetailModal from "../components/activity/ActivityDetailModal";
-import FollowUpTaskPickerModal from "../components/activity/FollowUpTaskPickerModal";
-import TaskDetailModal from "../components/activity/TaskDetailModal";
-import UserProfileDialog from "../components/user/UserProfileDialog";
+
+const ReportsPickerModal = lazyDialog(() => import("../components/reports/ReportsPickerModal"));
+const DocumentsDashboardModal = lazyDialog(() => import("../components/firms/DocumentsDashboardModal"));
+const MapSearchModal = lazyDialog(() => import("../components/search/MapSearchModal"));
+const AddBenchmarkDialog = lazyDialog(() => import("../components/utility/AddBenchmarkDialog"));
+const EditAnalysisDialog = lazyDialog(() => import("../components/analytics/EditAnalysisDialog"));
+const GlobalActivityLogModal = lazyDialog(() => import("../components/activity/GlobalActivityLogModal"));
+const PortfolioPickerModal = lazyDialog(() => import("../components/portfolios/PortfolioPickerModal"));
+const FirmPickerModal = lazyDialog(() => import("../components/firms/FirmPickerModal"));
+const DueDiligencePickerModal = lazyDialog(() => import("../components/firms/DueDiligencePickerModal"));
+const ProductPickerModal = lazyDialog(() => import("../components/products/ProductPickerModal"));
+const ContactPickerModal = lazyDialog(() => import("../components/contacts/ContactPickerModal"));
+const ActivityLogPickerModal = lazyDialog(() => import("../components/activity/ActivityLogPickerModal"));
+const ActivityDetailModal = lazyDialog(() => import("../components/activity/ActivityDetailModal"));
+const FollowUpTaskPickerModal = lazyDialog(() => import("../components/activity/FollowUpTaskPickerModal"));
+const TaskDetailModal = lazyDialog(() => import("../components/activity/TaskDetailModal"));
+const UserProfileDialog = lazyDialog(() => import("../components/user/UserProfileDialog"));
 import { useFirmOwner } from "@/components/admin/useFirmOwner";
 
 const FIRM_TYPES = [
@@ -189,26 +192,31 @@ export default function Home() {
   const { data: activities = [] } = useQuery({
     queryKey: ["contact_activities_search"],
     queryFn: () => base44.entities.ContactActivity.list("-activity_date"),
+    enabled: searchFocused,
   });
 
   const { data: followUpTasks = [] } = useQuery({
     queryKey: ["follow_up_tasks_search"],
     queryFn: () => base44.entities.FollowUpTask.list("-due_date"),
+    enabled: searchFocused,
   });
 
   const { data: documents = [] } = useQuery({
     queryKey: ["firm_documents_search"],
     queryFn: () => base44.entities.FirmDocument.list("-entry_date", 1000),
+    enabled: searchFocused,
   });
 
   const { data: dueDiligences = [] } = useQuery({
     queryKey: ["due-diligence-search"],
     queryFn: () => base44.entities.DueDiligence.list("-created_date", 5000),
+    enabled: searchFocused,
   });
 
   const { data: customReports = [] } = useQuery({
     queryKey: ["custom_reports_search"],
     queryFn: () => base44.entities.CustomReport.list("-created_date"),
+    enabled: searchFocused,
   });
 
   const deletedCount = deletedFirms.length + deletedProducts.length + deletedContacts.length + deletedPortfolios.length;
