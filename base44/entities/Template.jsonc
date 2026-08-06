@@ -48,6 +48,53 @@
           }
         }
       }
+    },
+    "documentation_checklist": {
+      "type": "array",
+      "description": "Documentation checklist items defined in the template. Each item has an id and a name. When a due diligence is created from this template, these items are copied as the starting checklist for the user to attach documents, complete, and add notes.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "approval_process_logic": {
+      "type": "array",
+      "description": "Approval process logic steps defined in the template. Each step references a due diligence stage (and optionally a sub-stage) to determine the workflow. When a due diligence is created from this template, these steps are copied as the starting approval process for the user to execute.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name/description of the approval process step"
+          },
+          "stage_id": {
+            "type": "string",
+            "description": "ID of the referenced due diligence stage"
+          },
+          "stage_name": {
+            "type": "string",
+            "description": "Name of the referenced stage (denormalized for display)"
+          },
+          "sub_stage_id": {
+            "type": "string",
+            "description": "ID of the referenced sub-stage (optional, for finer-grained workflow)"
+          },
+          "sub_stage_name": {
+            "type": "string",
+            "description": "Name of the referenced sub-stage (denormalized for display)"
+          }
+        }
+      }
     }
   },
   "required": [

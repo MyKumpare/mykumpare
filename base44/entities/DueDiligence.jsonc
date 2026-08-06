@@ -258,6 +258,192 @@
           }
         }
       }
+    },
+    "documentation_checklist": {
+      "type": "array",
+      "description": "Documentation checklist items for this due diligence record (copied from template on creation). Each item tracks the attached document, add date, completion status, and notes.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the checklist item (from template)"
+          },
+          "document_id": {
+            "type": "string",
+            "description": "ID of the attached FirmDocument record (from the document list related to the product and firm)"
+          },
+          "document_name": {
+            "type": "string",
+            "description": "Display name of the attached document (denormalized)"
+          },
+          "document_url": {
+            "type": "string",
+            "description": "URL of the attached document file (denormalized for quick access)"
+          },
+          "add_date": {
+            "type": "string",
+            "format": "date",
+            "description": "Date the document was attached (auto-set to today, user-editable). Stored as YYYY-MM-DD."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "reviewed",
+              "completed"
+            ],
+            "default": "pending",
+            "description": "Completion status of this checklist item"
+          },
+          "notes": {
+            "type": "string",
+            "description": "Rich text notes (HTML) for this checklist item"
+          }
+        }
+      }
+    },
+    "approval_process": {
+      "type": "object",
+      "description": "Approval process configuration for this due diligence record. The user selects an approver from their team, which is used to populate the approval team.",
+      "properties": {
+        "approver_contact_id": {
+          "type": "string",
+          "description": "ID of the selected approver (a contact from the user's team)"
+        },
+        "approver_name": {
+          "type": "string",
+          "description": "Name of the selected approver (denormalized)"
+        }
+      }
+    },
+    "approval_process_logic": {
+      "type": "array",
+      "description": "Approval process logic steps for this due diligence record (copied from template on creation). Each step references a due diligence stage/sub-stage and tracks execution data: start date, performer, documents, notes, and task assignments.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name/description of the process step (from template)"
+          },
+          "stage_id": {
+            "type": "string",
+            "description": "ID of the referenced due diligence stage (from template)"
+          },
+          "stage_name": {
+            "type": "string",
+            "description": "Name of the referenced stage (denormalized)"
+          },
+          "sub_stage_id": {
+            "type": "string",
+            "description": "ID of the referenced sub-stage (optional, from template)"
+          },
+          "sub_stage_name": {
+            "type": "string",
+            "description": "Name of the referenced sub-stage (denormalized)"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "description": "Date work began on this process step (auto-set to today, user-editable). Stored as YYYY-MM-DD."
+          },
+          "performed_by_contact_id": {
+            "type": "string",
+            "description": "ID of the contact who performed this step (auto-set to current user, user-editable)"
+          },
+          "performed_by_name": {
+            "type": "string",
+            "description": "Name of the contact who performed this step (denormalized)"
+          },
+          "documents": {
+            "type": "array",
+            "description": "Documents attached to this process step. Each document is also saved as a FirmDocument record in the document tab for the related firm and product.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Display name for the document"
+                },
+                "file_url": {
+                  "type": "string",
+                  "description": "URL of the document file"
+                },
+                "file_type": {
+                  "type": "string",
+                  "description": "MIME type or extension"
+                },
+                "firm_document_id": {
+                  "type": "string",
+                  "description": "ID of the corresponding FirmDocument record created for this document (links to the document tab)"
+                },
+                "uploaded_at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            }
+          },
+          "notes": {
+            "type": "string",
+            "description": "Rich text notes (HTML) for this process step"
+          },
+          "task_assignments": {
+            "type": "array",
+            "description": "Tasks assigned to team members for this process step. These show up in the assignee's notification tab and due diligence tab.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "contact_id": {
+                  "type": "string",
+                  "description": "ID of the assigned team member"
+                },
+                "contact_name": {
+                  "type": "string",
+                  "description": "Name of the assigned team member (denormalized)"
+                },
+                "due_date": {
+                  "type": "string",
+                  "format": "date",
+                  "description": "Due date for this task (user-set)"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "not_started",
+                    "in_process",
+                    "completed"
+                  ],
+                  "default": "not_started",
+                  "description": "Status of this task assignment"
+                },
+                "status_date": {
+                  "type": "string",
+                  "format": "date",
+                  "description": "Date the task status was last changed"
+                },
+                "notes": {
+                  "type": "string",
+                  "description": "Notes for this task assignment"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "required": [

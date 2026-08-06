@@ -351,6 +351,9 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
   const [addingSecondary, setAddingSecondary] = useState(false);
   const [showSecondaryAnalyst, setShowSecondaryAnalyst] = useState(false);
   const [stages, setStages] = useState([]);
+  const [docChecklist, setDocChecklist] = useState([]);
+  const [approvalProcess, setApprovalProcess] = useState({});
+  const [approvalLogic, setApprovalLogic] = useState([]);
   const [templateId, setTemplateId] = useState("");
   const [templateName, setTemplateName] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -454,6 +457,9 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
       setSelectedFirmId(editingRecord.firm_id || "");
       setSelectedFirmName(editingRecord.firm_name || "");
       setStages(Array.isArray(editingRecord.stages) ? editingRecord.stages : []);
+      setDocChecklist(Array.isArray(editingRecord.documentation_checklist) ? editingRecord.documentation_checklist : []);
+      setApprovalProcess(editingRecord.approval_process || {});
+      setApprovalLogic(Array.isArray(editingRecord.approval_process_logic) ? editingRecord.approval_process_logic : []);
       setTemplateId(editingRecord.template_id || "");
       setTemplateName(editingRecord.template_name || "");
       setStartDate(editingRecord.start_date || "");
@@ -467,6 +473,9 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
       setSelectedFirmId("");
       setSelectedFirmName("");
       setStages([]);
+      setDocChecklist([]);
+      setApprovalProcess({});
+      setApprovalLogic([]);
       setTemplateId("");
       setTemplateName("");
       setStartDate("");
@@ -591,6 +600,9 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
       secondary_analyst_contact_id: secondaryId || undefined,
       secondary_analyst_name: secondaryId ? contactName(secondaryContact) || "" : undefined,
       stages: processStatus === "In-process" ? stages : undefined,
+      documentation_checklist: processStatus === "In-process" ? docChecklist : undefined,
+      approval_process: processStatus === "In-process" ? approvalProcess : undefined,
+      approval_process_logic: processStatus === "In-process" ? approvalLogic : undefined,
       template_id: processStatus === "In-process" ? (templateId || undefined) : undefined,
       template_name: processStatus === "In-process" ? (templateName || undefined) : undefined,
       start_date: processStatus === "In-process" ? (startDate || undefined) : undefined,
@@ -733,6 +745,9 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
                 setSecondaryId("");
                 setShowSecondaryAnalyst(false);
                 setStages([]);
+                setDocChecklist([]);
+                setApprovalProcess({});
+                setApprovalLogic([]);
                 setTemplateId("");
                 setTemplateName("");
                 setStartDate("");
@@ -758,6 +773,9 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
                     setSecondaryId("");
                     setShowSecondaryAnalyst(false);
                     setStages([]);
+                    setDocChecklist([]);
+                    setApprovalProcess({});
+                    setApprovalLogic([]);
                     setTemplateId("");
                     setTemplateName("");
                     setStartDate("");
@@ -788,6 +806,17 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
               currentUserName={currentUserName}
               teamMembers={contactOptions}
               dueDiligenceId={editingRecord?.id || ""}
+              docChecklist={docChecklist}
+              onDocChecklistChange={setDocChecklist}
+              approvalProcess={approvalProcess}
+              onApprovalProcessChange={setApprovalProcess}
+              approvalLogic={approvalLogic}
+              onApprovalLogicChange={setApprovalLogic}
+              firmId={effectiveFirmId}
+              firmName={effectiveFirmName}
+              productId={productId}
+              productName={selectedProduct?.name || ""}
+              tenantId={currentUser?.linked_firm_id || ""}
             />
           )}
 
@@ -998,15 +1027,18 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
                         secondary_analyst_contact_id: secondaryId || undefined,
                         secondary_analyst_name: secondaryId ? contactName(secondaryContact) || "" : undefined,
                         stages: processStatus === "In-process" ? stages : undefined,
+                        documentation_checklist: processStatus === "In-process" ? docChecklist : undefined,
+                        approval_process: processStatus === "In-process" ? approvalProcess : undefined,
+                        approval_process_logic: processStatus === "In-process" ? approvalLogic : undefined,
                         template_id: processStatus === "In-process" ? (templateId || undefined) : undefined,
                         template_name: processStatus === "In-process" ? (templateName || undefined) : undefined,
                         start_date: processStatus === "In-process" ? (startDate || undefined) : undefined,
                         current_stage_index: processStatus === "In-process" ? currentStageIndex : undefined,
                         assigned_contact_ids: processStatus === "In-process" ? assignedContactIds : undefined,
-                      });
-                    }}
-                  >
-                    Create New Due Diligence
+                        });
+                        }}
+                        >
+                        Create New Due Diligence
                   </Button>
                 )}
               </DialogFooter>

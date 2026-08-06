@@ -13,6 +13,8 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SubStageItem from "./SubStageItem";
 import StageNotesEditor from "./StageNotesEditor";
+import DocumentationChecklistTab from "./DocumentationChecklistTab";
+import ApprovalProcessTab from "./ApprovalProcessTab";
 import DatePicker from "@/components/ui/date-picker";
 import AddTemplateDialog from "@/components/templates/AddTemplateDialog";
 import { format } from "date-fns";
@@ -39,6 +41,10 @@ export default function DueDiligenceTemplateFlow({
   onTemplateSelect, onStartDateChange, onStagesChange, onCurrentStageChange,
   primaryAnalystId, primaryAnalystName, currentUserId, currentUserName, teamMembers = [],
   dueDiligenceId = "",
+  docChecklist = [], onDocChecklistChange,
+  approvalProcess = {}, onApprovalProcessChange,
+  approvalLogic = [], onApprovalLogicChange,
+  firmId = "", firmName = "", productId = "", productName = "", tenantId = "",
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -118,6 +124,38 @@ export default function DueDiligenceTemplateFlow({
     }));
     onStagesChange(newStages);
     onCurrentStageChange(0);
+    // Copy documentation checklist from template
+    if (onDocChecklistChange) {
+      const newChecklist = (template.documentation_checklist || []).map((it) => ({
+        id: it.id,
+        name: it.name,
+        document_id: "",
+        document_name: "",
+        document_url: "",
+        add_date: "",
+        status: "pending",
+        notes: "",
+      }));
+      onDocChecklistChange(newChecklist);
+    }
+    // Copy approval process logic from template
+    if (onApprovalLogicChange) {
+      const newLogic = (template.approval_process_logic || []).map((s) => ({
+        id: s.id,
+        name: s.name,
+        stage_id: s.stage_id || "",
+        stage_name: s.stage_name || "",
+        sub_stage_id: s.sub_stage_id || "",
+        sub_stage_name: s.sub_stage_name || "",
+        start_date: "",
+        performed_by_contact_id: "",
+        performed_by_name: "",
+        documents: [],
+        notes: "",
+        task_assignments: [],
+      }));
+      onApprovalLogicChange(newLogic);
+    }
     setOpen(false);
     setSearch("");
   };
@@ -542,6 +580,34 @@ export default function DueDiligenceTemplateFlow({
                 );
               })}
             </div>
+          )}
+
+          {/* Documentation Checklist Tab */}
+          {docChecklist.length > 0 && onDocChecklistChange && (
+            <DocumentationChecklistTab
+              items={docChecklist}
+              firmId={firmId}
+              productId={productId}
+              onChange={onDocChecklistChange}
+            />
+          )}
+
+          {/* Approval Process Tab */}
+          {(approvalLogic.length > 0 || approvalProcess.approver_contact_id) && onApprovalProcessChange && (
+            <ApprovalProcessTab
+              approvalProcess={approvalProcess}
+              logicSteps={approvalLogic}
+              teamMembers={teamMembers}
+              currentUserId={currentUserId}
+              currentUserName={currentUserName}
+              firmId={firmId}
+              firmName={firmName}
+              productId={productId}
+              productName={productName}
+              tenantId={tenantId}
+              onChangeProcess={onApprovalProcessChange}
+              onChangeLogic={onApprovalLogicChange}
+            />
           )}
 
           {/* All complete message */}
