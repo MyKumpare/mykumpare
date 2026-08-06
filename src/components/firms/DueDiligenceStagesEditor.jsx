@@ -37,6 +37,10 @@ const similarity = (a, b) => {
 
 const SIMILARITY_THRESHOLD = 0.85;
 
+// Capitalize the first letter of each word
+const capitalizeWords = (str) =>
+  (str || "").replace(/\b([a-z])/g, (_, c) => c.toUpperCase());
+
 // Find a stage in `existing` that is an exact or similar match to `name` (excluding `excludeId`)
 const findDuplicate = (name, existing, excludeId) => {
   const target = normalize(name);
@@ -65,11 +69,12 @@ export default function DueDiligenceStagesEditor({ stages, onChange }) {
       setError(`"${trimmed}" is too similar to existing stage "${dup.name}"`);
       return;
     }
-    onChange([...stages, { id: nextStageId(), name: trimmed }]);
+    onChange([...stages, { id: nextStageId(), name: capitalizeWords(trimmed) }]);
     setNewStageName("");
     setError("");
   };
 
+  // Store raw value (preserve spaces during typing); duplicate check uses normalized value
   const renameStage = (id, name) => {
     const trimmed = (name || "").trim();
     if (trimmed) {
@@ -80,7 +85,13 @@ export default function DueDiligenceStagesEditor({ stages, onChange }) {
       }
     }
     setError("");
-    onChange(stages.map((s) => (s.id === id ? { ...s, name: trimmed } : s)));
+    onChange(stages.map((s) => (s.id === id ? { ...s, name } : s)));
+  };
+
+  // On blur: capitalize first letter of each word and trim
+  const commitStage = (id, name) => {
+    const capitalized = capitalizeWords((name || "").trim());
+    onChange(stages.map((s) => (s.id === id ? { ...s, name: capitalized } : s)));
   };
 
   const removeStage = (id) => {
@@ -124,6 +135,7 @@ export default function DueDiligenceStagesEditor({ stages, onChange }) {
                       <Input
                         value={stage.name}
                         onChange={(e) => renameStage(stage.id, e.target.value)}
+                        onBlur={(e) => commitStage(stage.id, e.target.value)}
                         className="h-8 text-sm flex-1 border-none bg-transparent shadow-none focus-visible:ring-0"
                         placeholder="Define stage..."
                       />
