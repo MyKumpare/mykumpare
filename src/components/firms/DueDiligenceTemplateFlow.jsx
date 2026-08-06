@@ -269,7 +269,7 @@ export default function DueDiligenceTemplateFlow({
   };
 
   return (
-    <div className="space-y-3 rounded-md border border-blue-200 bg-blue-50/40 p-3">
+    <div className="space-y-3 rounded-md border border-blue-200 bg-blue-50/40 p-3 min-w-0">
       {/* Header with progress icon */}
       <div className="flex items-center justify-between">
         <Label className="text-xs font-medium text-gray-700">Due Diligence Template</Label>
@@ -366,7 +366,7 @@ export default function DueDiligenceTemplateFlow({
 
           {/* Stages list */}
           {isStarted && (
-            <div className="space-y-1.5 max-h-96 overflow-y-auto pr-1">
+            <div className="space-y-1.5 max-h-96 overflow-y-auto overflow-x-hidden pr-1">
               {stagesList.length > 0 && (
                 <div className="flex justify-end">
                   <Button type="button" variant="ghost" size="sm" className="h-6 text-xs text-gray-500 hover:text-gray-700 px-2" onClick={toggleAll}>

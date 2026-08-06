@@ -98,7 +98,7 @@ export default function DocumentationChecklistTab({ items = [], firmId, productI
   }
 
   return (
-    <div className="space-y-2 rounded-md border border-teal-200 bg-teal-50/30 p-3">
+    <div className="space-y-2 rounded-md border border-teal-200 bg-teal-50/30 p-3 min-w-0">
       {/* Header with progress */}
       <div className="flex items-center justify-between">
         <Label className="text-xs font-medium text-gray-700">Documentation Checklist</Label>
@@ -143,9 +143,9 @@ export default function DocumentationChecklistTab({ items = [], firmId, productI
 
               {/* Expanded detail */}
               {isExpanded && (
-                <div className="mt-2 space-y-2 pl-5">
+                <div className="mt-2 space-y-2 pl-5 grid grid-cols-1 lg:grid-cols-[1fr_auto_auto] lg:items-start lg:gap-x-3">
                   {/* Document attachment */}
-                  <div className="space-y-1">
+                  <div className="space-y-1 min-w-0">
                     <Label className="text-[10px] text-gray-500">Attached Document</Label>
                     {item.document_id ? (
                       <div className="flex items-center gap-1.5 rounded border border-teal-200 bg-teal-50/50 px-2 py-1">
@@ -217,32 +217,32 @@ export default function DocumentationChecklistTab({ items = [], firmId, productI
                   </div>
 
                   {/* Add date + status */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-0.5">
-                      <Label className="text-[10px] text-gray-500">Add Date</Label>
-                      <DatePicker value={item.add_date || ""} onChange={(d) => updateItem(item.id, { add_date: d })} allowEmpty className="h-7 text-xs" />
-                    </div>
-                    <div className="space-y-0.5">
-                      <Label className="text-[10px] text-gray-500">Status</Label>
-                      <Select value={item.status || "pending"} onValueChange={(v) => handleStatusChange(item.id, v)}>
-                        <SelectTrigger className="h-7 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending" className="text-xs">Pending</SelectItem>
-                          <SelectItem value="reviewed" className="text-xs">Reviewed</SelectItem>
-                          <SelectItem value="completed" className="text-xs">Completed</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  <div className="space-y-0.5">
+                    <Label className="text-[10px] text-gray-500">Add Date</Label>
+                    <DatePicker value={item.add_date || ""} onChange={(d) => updateItem(item.id, { add_date: d })} allowEmpty className="h-7 text-xs" />
+                  </div>
+                  <div className="space-y-0.5">
+                    <Label className="text-[10px] text-gray-500">Status</Label>
+                    <Select value={item.status || "pending"} onValueChange={(v) => handleStatusChange(item.id, v)}>
+                      <SelectTrigger className="h-7 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending" className="text-xs">Pending</SelectItem>
+                        <SelectItem value="reviewed" className="text-xs">Reviewed</SelectItem>
+                        <SelectItem value="completed" className="text-xs">Completed</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   {/* Rich text notes */}
-                  <StageNotesEditor
-                    value={item.notes || ""}
-                    onChange={(html) => updateItem(item.id, { notes: html })}
-                    label="Notes"
-                  />
+                  <div className="lg:col-span-3">
+                    <StageNotesEditor
+                      value={item.notes || ""}
+                      onChange={(html) => updateItem(item.id, { notes: html })}
+                      label="Notes"
+                    />
+                  </div>
                 </div>
               )}
             </div>
