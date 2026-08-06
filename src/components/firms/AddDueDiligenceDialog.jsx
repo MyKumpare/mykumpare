@@ -469,27 +469,32 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-assign primary analyst from the signed-in user, matched among the
-  // OWNER firm's contacts. Triggers when process status becomes "In-process";
-  // never overrides a selection.
+  // Resolve the signed-in user's contact from the OWNER firm's contacts.
+  // Used to auto-assign the primary analyst AND to default "Performed By" in
+  // sub-stages to the current user.
+  const currentUserContact = useMemo(() => {
+    if (!currentUser) return null;
+    let match = null;
+    if (currentUser.linked_contact_id) {
+      match = analystContacts.find((c) => c.id === currentUser.linked_contact_id) || null;
+    }
+    if (!match && currentUser.email) {
+      const email = currentUser.email.toLowerCase();
+      match = analystContacts.find((c) => (c.email || "").toLowerCase() === email) || null;
+    }
+    return match;
+  }, [currentUser, analystContacts]);
+
+  const currentUserId = currentUserContact?.id || "";
+  const currentUserName = currentUserContact ? contactName(currentUserContact) : "";
+
+  // Auto-assign primary analyst from the signed-in user. Triggers when process
+  // status becomes "In-process"; never overrides a selection.
   useEffect(() => {
     if (!open || editingRecord || primaryId) return;
     if (processStatus !== "In-process") return;
-    (async () => {
-      try {
-        const user = await base44.auth.me();
-        let match = null;
-        if (user?.linked_contact_id) {
-          match = analystContacts.find((c) => c.id === user.linked_contact_id) || null;
-        }
-        if (!match && user?.email) {
-          const email = user.email.toLowerCase();
-          match = analystContacts.find((c) => (c.email || "").toLowerCase() === email) || null;
-        }
-        if (match) setPrimaryId(match.id);
-      } catch { /* not logged in — leave manual */ }
-    })();
-  }, [open, editingRecord, analystContacts, primaryId, processStatus]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (currentUserId) setPrimaryId(currentUserId);
+  }, [open, editingRecord, primaryId, processStatus, currentUserId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const allProducts = useMemo(() => {
     const ids = new Set(localProducts.map((p) => p.id));
@@ -759,6 +764,8 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
               onCurrentStageChange={setCurrentStageIndex}
               primaryAnalystId={primaryId}
               primaryAnalystName={primaryId ? contactName(primaryContact) : ""}
+              currentUserId={currentUserId}
+              currentUserName={currentUserName}
               teamMembers={contactOptions}
             />
           )}

@@ -37,7 +37,7 @@ import { cn } from "@/lib/utils";
 export default function DueDiligenceTemplateFlow({
   templateId, templateName, stages, startDate, currentStageIndex,
   onTemplateSelect, onStartDateChange, onStagesChange, onCurrentStageChange,
-  primaryAnalystId, primaryAnalystName, teamMembers = [],
+  primaryAnalystId, primaryAnalystName, currentUserId, currentUserName, teamMembers = [],
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -454,6 +454,8 @@ export default function DueDiligenceTemplateFlow({
                             subStage={ss}
                             primaryAnalystId={primaryAnalystId}
                             primaryAnalystName={primaryAnalystName}
+                            currentUserId={currentUserId}
+                            currentUserName={currentUserName}
                             teamMembers={teamMembers}
                             onChange={(updated) => handleSubStageChange(index, updated)}
                           />

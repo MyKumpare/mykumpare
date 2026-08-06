@@ -29,7 +29,7 @@ const STATUS_CONFIG = {
  *   teamMembers: [{ value, label }]
  *   onChange: (updatedSubStage) => void
  */
-export default function SubStageItem({ subStage, primaryAnalystId, primaryAnalystName, teamMembers = [], onChange }) {
+export default function SubStageItem({ subStage, primaryAnalystId, primaryAnalystName, currentUserId, currentUserName, teamMembers = [], onChange }) {
   const [expanded, setExpanded] = useState(false);
 
   const status = subStage.status || "not_started";
@@ -44,8 +44,8 @@ export default function SubStageItem({ subStage, primaryAnalystId, primaryAnalys
     update({
       status: "in_process",
       start_date: subStage.start_date || todayStr,
-      performed_by_contact_id: subStage.performed_by_contact_id || primaryAnalystId,
-      performed_by_name: subStage.performed_by_name || primaryAnalystName,
+      performed_by_contact_id: subStage.performed_by_contact_id || currentUserId || primaryAnalystId,
+      performed_by_name: subStage.performed_by_name || currentUserName || primaryAnalystName,
     });
   };
 
@@ -170,10 +170,10 @@ export default function SubStageItem({ subStage, primaryAnalystId, primaryAnalys
           <div className="space-y-0.5">
             <Label className="text-[10px] text-gray-500">Performed By</Label>
             <Select
-              value={subStage.performed_by_contact_id || primaryAnalystId}
+              value={subStage.performed_by_contact_id || currentUserId || primaryAnalystId}
               onValueChange={(v) => {
                 const member = teamMembers.find((m) => m.value === v);
-                update({ performed_by_contact_id: v, performed_by_name: member?.label || primaryAnalystName });
+                update({ performed_by_contact_id: v, performed_by_name: member?.label || currentUserName || primaryAnalystName });
               }}
             >
               <SelectTrigger className="h-7 text-xs">
