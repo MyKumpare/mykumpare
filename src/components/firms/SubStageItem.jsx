@@ -29,7 +29,7 @@ const STATUS_CONFIG = {
  *   teamMembers: [{ value, label }]
  *   onChange: (updatedSubStage) => void
  */
-export default function SubStageItem({ subStage, primaryAnalystId, primaryAnalystName, currentUserId, currentUserName, teamMembers = [], onChange }) {
+export default function SubStageItem({ subStage, primaryAnalystId, primaryAnalystName, currentUserId, currentUserName, teamMembers = [], allOtherSubStagesCompleted = true, onChange }) {
   const [expanded, setExpanded] = useState(false);
 
   const status = subStage.status || "not_started";
@@ -37,6 +37,9 @@ export default function SubStageItem({ subStage, primaryAnalystId, primaryAnalys
   const StatusIcon = statusCfg.icon;
   const todayStr = format(new Date(), "yyyy-MM-dd");
   const assignments = subStage.assignments || [];
+
+  const isSupervisorStage = (subStage.name || "").toLowerCase().includes("supervisor");
+  const supervisorBlocked = isSupervisorStage && !allOtherSubStagesCompleted;
 
   const update = (updates) => onChange({ ...subStage, ...updates });
 
@@ -140,7 +143,15 @@ export default function SubStageItem({ subStage, primaryAnalystId, primaryAnalys
           </Button>
         )}
         {status === "in_process" && (
-          <Button type="button" size="sm" variant="outline" className="h-6 text-[10px] px-2 shrink-0 border-emerald-300 text-emerald-600 hover:bg-emerald-50" onClick={handleComplete}>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-6 text-[10px] px-2 shrink-0 border-emerald-300 text-emerald-600 hover:bg-emerald-50"
+            disabled={supervisorBlocked}
+            title={supervisorBlocked ? "Complete all other sub-stages first" : undefined}
+            onClick={handleComplete}
+          >
             <CheckCircle2 className="w-2.5 h-2.5" /> Complete
           </Button>
         )}

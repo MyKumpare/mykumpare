@@ -494,7 +494,11 @@ export default function DueDiligenceTemplateFlow({
                         />
 
                         {/* Sub-stage items */}
-                        {stageSubs.map((ss) => (
+                        {stageSubs.map((ss) => {
+                          const otherSubsCompleted = stageSubs
+                            .filter((s) => s.id !== ss.id)
+                            .every((s) => (s.status || "not_started") === "completed");
+                          return (
                           <SubStageItem
                             key={ss.id}
                             subStage={ss}
@@ -503,9 +507,11 @@ export default function DueDiligenceTemplateFlow({
                             currentUserId={currentUserId}
                             currentUserName={currentUserName}
                             teamMembers={teamMembers}
+                            allOtherSubStagesCompleted={otherSubsCompleted}
                             onChange={(updated) => handleSubStageChange(index, updated)}
                           />
-                        ))}
+                          );
+                        })}
 
                         {/* Supervisor approval controls */}
                         {!isCompleted && subsCompleted && (
