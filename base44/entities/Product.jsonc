@@ -30,6 +30,18 @@
       "type": "string",
       "description": "Name of the associated firm (denormalized)"
     },
+    "product_status": {
+      "type": "string",
+      "enum": [
+        "Not Reviewed",
+        "On-Hold",
+        "Rejected",
+        "Approved",
+        "Removed"
+      ],
+      "default": "Not Reviewed",
+      "description": "Product-level status decision (separate from due diligence). 'Rejected' here is a product decision; the due diligence 'Rejected' is a separate DD decision."
+    },
     "asset_class": {
       "type": "string",
       "description": "Asset class classification"

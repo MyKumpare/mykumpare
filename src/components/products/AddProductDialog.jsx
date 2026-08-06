@@ -38,6 +38,16 @@ const PRODUCT_TYPE_TO_FIRM_TYPE = {
 
 const PRODUCT_TYPES = ["Investment Manager Product", "Multi-Manager Product"];
 
+const PRODUCT_STATUSES = ["Not Reviewed", "On-Hold", "Rejected", "Approved", "Removed"];
+
+const PRODUCT_STATUS_STYLES = {
+  "Not Reviewed": "bg-gray-100 text-gray-700",
+  "On-Hold": "bg-amber-100 text-amber-700",
+  "Rejected": "bg-red-100 text-red-700",
+  "Approved": "bg-emerald-100 text-emerald-700",
+  "Removed": "bg-red-100 text-red-700",
+};
+
 // Capitalize the first letter of each word in a product name (preserves acronyms/numbers like "S&P 500").
 function titleCaseProductName(str) {
   return str.replace(/\b([a-z])/g, (m) => m.toUpperCase());
@@ -88,6 +98,7 @@ export default function AddProductDialog({
   const [firmId, setFirmId] = useState("");
   const [productName, setProductName] = useState("");
   const [description, setDescription] = useState("");
+  const [productStatus, setProductStatus] = useState("Not Reviewed");
   const [classifications, setClassifications] = useState(EMPTY_CLASSIFICATIONS);
   const [investmentDescriptions, setInvestmentDescriptions] = useState({});
   const [constituentProductIds, setConstituentProductIds] = useState([]);
@@ -112,6 +123,7 @@ export default function AddProductDialog({
         firm_id: editingProduct.firm_id,
         name: editingProduct.name,
         description: editingProduct.description || "",
+        product_status: editingProduct.product_status || "Not Reviewed",
         classifications: classificationsFromProduct(editingProduct),
         descriptions: {
           investment_edge: editingProduct.inv_desc_edge || "",
@@ -140,6 +152,7 @@ export default function AddProductDialog({
       setFirmId(snapshot.firm_id);
       setProductName(snapshot.name);
       setDescription(snapshot.description);
+      setProductStatus(snapshot.product_status);
       setClassifications(snapshot.classifications);
       setInvestmentDescriptions(snapshot.descriptions);
       setConstituentProductIds(snapshot.constituent_product_ids);
@@ -150,6 +163,7 @@ export default function AddProductDialog({
       setFirmId(preselectedFirmId || "");
       setProductName("");
       setDescription("");
+      setProductStatus("Not Reviewed");
       setClassifications(EMPTY_CLASSIFICATIONS);
       setInvestmentDescriptions({});
       setConstituentProductIds([]);
@@ -225,6 +239,7 @@ export default function AddProductDialog({
       productType !== originalSnapshotRef.current.product_type ||
       firmId !== originalSnapshotRef.current.firm_id ||
       description !== originalSnapshotRef.current.description ||
+      productStatus !== (originalSnapshotRef.current.product_status || "Not Reviewed") ||
       JSON.stringify(constituentProductIds) !== JSON.stringify(originalSnapshotRef.current.constituent_product_ids || []) ||
       JSON.stringify(classifications) !== JSON.stringify(originalSnapshotRef.current.classifications) ||
       JSON.stringify(investmentDescriptions.product_biases ?? {}) !== JSON.stringify(originalDescriptions.product_biases ?? {}) ||
@@ -259,6 +274,7 @@ export default function AddProductDialog({
       firm_name: selectedFirm?.name || "",
       name: isAddMode ? titleCaseProductName(productName.trim()) : productName.trim(),
       description,
+      product_status: productStatus,
       ...classifications,
       inv_desc_edge: investmentDescriptions.investment_edge || "",
       inv_desc_philosophy: investmentDescriptions.investment_philosophy || "",
@@ -284,6 +300,7 @@ export default function AddProductDialog({
     setFirmId("");
     setProductName("");
     setDescription("");
+    setProductStatus("Not Reviewed");
     setClassifications(EMPTY_CLASSIFICATIONS);
     setConstituentProductIds([]);
   };
@@ -300,6 +317,7 @@ export default function AddProductDialog({
     setFirmId(snap.firm_id);
     setProductName(snap.name);
     setDescription(snap.description);
+    setProductStatus(snap.product_status);
     setClassifications(snap.classifications);
     setInvestmentDescriptions(snap.descriptions);
     setConstituentProductIds(snap.constituent_product_ids);
@@ -528,6 +546,33 @@ export default function AddProductDialog({
                     onChange={(e) => setDescription(e.target.value)}
                     className="min-h-[72px]"
                   />
+                )}
+              </div>
+
+              {/* Product Status */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Product Status</Label>
+                {!activelyEditing ? (
+                  <div className="h-9 px-3 flex items-center rounded-md border bg-gray-50">
+                    {productStatus ? (
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${PRODUCT_STATUS_STYLES[productStatus] || "bg-gray-100 text-gray-700"}`}>
+                        {productStatus}
+                      </span>
+                    ) : (
+                      <span className="text-sm text-gray-400">—</span>
+                    )}
+                  </div>
+                ) : (
+                  <Select value={productStatus} onValueChange={setProductStatus}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Select product status..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PRODUCT_STATUSES.map((s) => (
+                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
               </div>
 
