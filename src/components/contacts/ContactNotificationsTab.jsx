@@ -295,6 +295,7 @@ export default function ContactNotificationsTab({ contactId, contactName, onCont
         editingRecord={editing}
         firmSelectionMode
         onSubmit={handleSubmit}
+        onDelete={(id) => { setShowDialog(false); setEditing(null); deleteMutation.mutate(id); }}
       />
     </div>
   );

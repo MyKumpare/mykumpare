@@ -271,6 +271,7 @@ export default function ContactDueDiligenceTab({ contactId, contactName, onConta
         editingRecord={editing}
         firmSelectionMode
         onSubmit={handleSubmit}
+        onDelete={(id) => { setShowDialog(false); setEditing(null); deleteMutation.mutate(id); }}
       />
     </div>
   );
