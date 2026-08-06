@@ -23,6 +23,7 @@ import SearchResults from "../components/search/SearchResults";
 import AddPortfolioDialog from "../components/portfolios/AddPortfolioDialog";
 import AddDueDiligenceDialog from "../components/firms/AddDueDiligenceDialog";
 import AddDocumentDialog from "../components/firms/AddDocumentDialog";
+import TemplatePickerModal from "../components/templates/TemplatePickerModal";
 import PortfoliosSection from "../components/portfolios/PortfoliosSection";
 import FirmsSection from "../components/firms/FirmsSection";
 import ProductsSection from "../components/products/ProductsSection";
@@ -112,6 +113,7 @@ export default function Home() {
   const [mapSearchOpen, setMapSearchOpen] = useState(false);
   const [ddAddOpen, setDdAddOpen] = useState(false);
   const [addDocOpen, setAddDocOpen] = useState(false);
+  const [templatesPickerOpen, setTemplatesPickerOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [photoCaptureOpen, setPhotoCaptureOpen] = useState(false);
   const [addContactPhotoUrl, setAddContactPhotoUrl] = useState(null);
@@ -225,6 +227,8 @@ export default function Home() {
       base44.entities.Benchmark.subscribe(() => invalidate([["benchmarks"]])),
       base44.entities.DueDiligence.subscribe(() => invalidate([["due-diligence-search"], ["due-diligence-all"]])),
       base44.entities.CustomReport.subscribe(() => invalidate([["custom_reports_search"], ["custom_reports"]])),
+      base44.entities.Template.subscribe(() => invalidate([["templates"]])),
+      base44.entities.TemplateType.subscribe(() => invalidate([["template_types"]])),
     ];
     return () => subs.forEach((unsub) => unsub && unsub());
   }, [queryClient]);
@@ -537,6 +541,7 @@ export default function Home() {
     { label: "Analytics", icon: LineChart, ref: analyticsRef, color: "text-cyan-600", activeBg: "bg-cyan-50", onClick: () => setAnalyticsLaunchOpen(true) },
     { label: "Reports", icon: FileText, ref: reportsRef, color: "text-blue-600", activeBg: "bg-blue-50", onClick: () => setReportsPickerOpen(true) },
     { label: "Documents", icon: Files, ref: null, color: "text-teal-600", activeBg: "bg-teal-50", onClick: () => setDocumentsPickerOpen(true) },
+    { label: "Templates", icon: FileText, ref: null, color: "text-cyan-600", activeBg: "bg-cyan-50", onClick: () => setTemplatesPickerOpen(true) },
     { label: "Map Search", icon: MapPin, ref: null, color: "text-rose-600", activeBg: "bg-rose-50", onClick: () => setMapSearchOpen(true) },
     { label: "Utilities", icon: Wrench, ref: utilityRef, color: "text-gray-600", activeBg: "bg-gray-100", onClick: () => { setUtilityForceExpanded(true); scrollTo(utilityRef); } },
   ];
@@ -889,6 +894,23 @@ export default function Home() {
           forceExpanded={allExpanded}
         />
 
+        {/* Templates section */}
+        <PickerSection
+          label="Templates"
+          icon={FileText}
+          iconColor="text-cyan-500"
+          entityName="Template"
+          onOpen={() => setTemplatesPickerOpen(true)}
+          onAdd={() => setAddDocOpen(true)}
+          addLabel="Add Template"
+          addColor="text-cyan-600"
+          addHoverColor="hover:text-cyan-700"
+          addHoverBg="hover:bg-cyan-50"
+          openLabel="Open Templates"
+          description="Open the templates picker to browse and manage templates."
+          forceExpanded={allExpanded}
+        />
+
         {/* Utility section */}
         <div ref={utilityRef} />
         <UtilitySection deletedCount={deletedCount} forceExpanded={allExpanded || utilityForceExpanded} />
@@ -1155,6 +1177,11 @@ export default function Home() {
       <DocumentsDashboardModal
         open={documentsPickerOpen}
         onClose={() => setDocumentsPickerOpen(false)}
+      />
+
+      <TemplatePickerModal
+        open={templatesPickerOpen}
+        onClose={() => setTemplatesPickerOpen(false)}
       />
 
       <MapSearchModal
