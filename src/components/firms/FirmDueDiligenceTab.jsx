@@ -36,6 +36,7 @@ export default function FirmDueDiligenceTab({ firmId, firmName, contacts = [], o
     queryKey: ["products", firmId],
     queryFn: () => base44.entities.Product.filter({ firm_id: firmId }),
     enabled: !!firmId,
+    select: (data) => data.filter((p) => !p.deleted_at),
   });
 
   const firmContacts = contacts.filter((c) => !c.deleted_at && (c.firm_ids || []).includes(firmId));

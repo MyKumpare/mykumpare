@@ -422,6 +422,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
     queryKey: ["products", effectiveFirmId],
     queryFn: () => base44.entities.Product.filter({ firm_id: effectiveFirmId }),
     enabled: !!effectiveFirmId && firmSelectionMode,
+    select: (data) => data.filter((p) => !p.deleted_at),
   });
 
   // All DD records — used to check if the selected product already has DD.

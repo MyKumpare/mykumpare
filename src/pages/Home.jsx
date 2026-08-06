@@ -135,21 +135,25 @@ export default function Home() {
   const { data: firms = [], isLoading } = useQuery({
     queryKey: ["firms"],
     queryFn: () => base44.entities.Firm.list("-created_date"),
+    select: (data) => data.filter((f) => !f.deleted_at),
   });
 
   const { data: products = [] } = useQuery({
     queryKey: ["products"],
     queryFn: () => base44.entities.Product.list("-created_date"),
+    select: (data) => data.filter((p) => !p.deleted_at),
   });
 
   const { data: contacts = [] } = useQuery({
     queryKey: ["contacts"],
     queryFn: () => base44.entities.Contact.list("-created_date", 5000),
+    select: (data) => data.filter((c) => !c.deleted_at),
   });
 
   const { data: portfolios = [] } = useQuery({
     queryKey: ["portfolios"],
     queryFn: () => base44.entities.Portfolio.list("-created_date"),
+    select: (data) => data.filter((p) => !p.deleted_at),
   });
 
   const { data: deletedFirms = [] } = useQuery({
