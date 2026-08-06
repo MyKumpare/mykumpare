@@ -11,7 +11,10 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ChevronDown, Check, Plus, AlertTriangle, ShieldAlert, History } from "lucide-react";
+import { ChevronDown, Check, Plus, AlertTriangle, ShieldAlert, History, Trash2, Loader2 } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import DueDiligenceTemplateFlow from "./DueDiligenceTemplateFlow";
 import { cn } from "@/lib/utils";
 import { findContactDuplicates } from "@/components/contacts/contactDuplicateCheck";
@@ -337,7 +340,7 @@ function NewFirmForm({ existingFirms, onCreated, onCancel }) {
   );
 }
 
-export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firmName, products = [], contacts = [], editingRecord, onSubmit, firmSelectionMode = false, preselectProductId = "" }) {
+export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firmName, products = [], contacts = [], editingRecord, onSubmit, onDelete, firmSelectionMode = false, preselectProductId = "" }) {
   const [productId, setProductId] = useState("");
   const [status, setStatus] = useState("Pipeline");
   const [processStatus, setProcessStatus] = useState("Not Started");
@@ -358,6 +361,8 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
   const [selectedFirmName, setSelectedFirmName] = useState("");
   const [firmMode, setFirmMode] = useState("select"); // "select" | "new"
   const [duplicateCheck, setDuplicateCheck] = useState(null); // { records, canCreate } | null
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Analysts are sourced from the OWNER firm (the firm that owns this app),
   // not the firm under due diligence. The owner firm is resolved from the
@@ -592,6 +597,21 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
       current_stage_index: processStatus === "In-process" ? currentStageIndex : undefined,
       assigned_contact_ids: processStatus === "In-process" ? assignedContactIds : undefined,
     });
+  };
+
+  const handleDelete = async () => {
+    if (!editingRecord?.id) return;
+    setDeleting(true);
+    try {
+      await base44.entities.DueDiligence.delete(editingRecord.id);
+      setShowDeleteConfirm(false);
+      onOpenChange(false);
+      if (onDelete) onDelete(editingRecord.id);
+    } catch (e) {
+      console.error("Failed to delete due diligence", e);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const firmFooter = (
@@ -837,11 +857,60 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
           )}
         </div>
         <DialogFooter className="gap-2 pt-2 border-t">
+          {editingRecord && (
+            <Button
+              variant="ghost"
+              className="text-red-600 hover:text-red-700 hover:bg-red-50 mr-auto"
+              onClick={() => setShowDeleteConfirm(true)}
+            >
+              <Trash2 className="w-4 h-4" /> Delete
+            </Button>
+          )}
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button className="bg-indigo-600 hover:bg-indigo-700 text-white" disabled={!isValid} onClick={handleSave}>
             {editingRecord ? "Save Changes" : "Add Due Diligence"}
           </Button>
         </DialogFooter>
+
+        {/* Delete confirmation dialog */}
+        <AlertDialog open={showDeleteConfirm} onOpenChange={(o) => { if (!deleting) setShowDeleteConfirm(o); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+                Delete Due Diligence Record
+              </AlertDialogTitle>
+              <AlertDialogDescription className="mt-2 text-base">
+                Are you sure you want to delete this due diligence record
+                {editingRecord?.product_name ? (
+                  <> for <span className="font-semibold text-foreground">"{editingRecord.product_name}"</span></>
+                ) : null}?
+                <p className="mt-3 text-sm text-red-700 bg-red-50 p-3 rounded-md">
+                  <strong>Warning:</strong> This will permanently delete the due diligence record,
+                  including all stages, sub-stages, assignments, notes, and attachments. This action
+                  cannot be undone.
+                </p>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={deleting}
+                onClick={(e) => { e.preventDefault(); handleDelete(); }}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                {deleting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Deleting…
+                  </>
+                ) : (
+                  "Delete"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Duplicate DD confirmation dialog */}
         {duplicateCheck && (

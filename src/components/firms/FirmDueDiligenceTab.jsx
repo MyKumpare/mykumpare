@@ -198,6 +198,7 @@ export default function FirmDueDiligenceTab({ firmId, firmName, contacts = [], o
         contacts={firmContacts}
         editingRecord={editing}
         onSubmit={handleSubmit}
+        onDelete={(id) => { setShowDialog(false); setEditing(null); deleteMutation.mutate(id); }}
       />
     </div>
   );

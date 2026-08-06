@@ -76,6 +76,15 @@ export default function ContactNotificationsTab({ contactId, contactName, onCont
       setShowDialog(false);
     },
   });
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.DueDiligence.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dd-notifications", contactId] });
+      if (editing?.firm_id) queryClient.invalidateQueries({ queryKey: ["due-diligence", editing.firm_id] });
+      setShowDialog(false);
+      setEditing(null);
+    },
+  });
 
   const decideMutation = useMutation({
     mutationFn: async ({ notification, decision }) => {

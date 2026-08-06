@@ -83,6 +83,16 @@ export default function ContactDueDiligenceTab({ contactId, contactName, onConta
       setShowDialog(false);
     },
   });
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.DueDiligence.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dd-primary-analyst", contactId] });
+      queryClient.invalidateQueries({ queryKey: ["dd-secondary-analyst", contactId] });
+      queryClient.invalidateQueries({ queryKey: ["dd-assigned-tasks", contactId] });
+      queryClient.invalidateQueries({ queryKey: ["dd-notifications", contactId] });
+      if (editing?.firm_id) queryClient.invalidateQueries({ queryKey: ["due-diligence", editing.firm_id] });
+    },
+  });
 
   // Merge primary + secondary + assigned, dedupe by id, tag the contact's role on each record.
   const records = useMemo(() => {
