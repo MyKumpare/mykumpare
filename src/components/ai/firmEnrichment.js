@@ -734,6 +734,7 @@ export async function createFirmFromEnrichment(enrichedData, tenantId) {
         biography: person.biography || "",
         photo_url: person.photo_url || "",
         firm_ids: [createdFirm.id],
+        employee_status: "Employee",
       };
       if (designations.length > 0) contactData.designations = designations;
       const parsedPhone = person.phone ? parsePhoneString(person.phone) : null;

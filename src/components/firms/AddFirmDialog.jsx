@@ -541,6 +541,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
             biography: person.biography || "",
             photo_url: person.photo_url || "",
             firm_ids: [editingFirm.id],
+            employee_status: "Employee",
           };
           if (designations.length > 0) contactData.designations = designations;
           const parsedPhone = person.phone ? parsePhoneString(person.phone) : null;

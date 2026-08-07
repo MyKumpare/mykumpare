@@ -325,6 +325,7 @@ export default function AIAssistant() {
               biography: person.biography || "",
               photo_url: person.photo_url || "",
               firm_ids: [pendingCreation.firmId],
+              employee_status: "Employee",
             };
             await base44.entities.Contact.create(contactData);
             contactsCreated++;
