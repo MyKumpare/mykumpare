@@ -23,6 +23,7 @@ export default function ContactChatTab({ contactId, contactName, firmIds = [], f
   const { user } = useAuth();
   const [message, setMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const userContactId = user?.linked_contact_id;
   const userIsContact = userContactId === contactId;
@@ -100,17 +101,27 @@ export default function ContactChatTab({ contactId, contactName, firmIds = [], f
   const [respondingTo, setRespondingTo] = useState(null);
   const [responseText, setResponseText] = useState("");
 
+  const statusCounts = useMemo(() => ({
+    all: externalChats.length,
+    pending: externalChats.filter((c) => c.status === "pending").length,
+    completed: externalChats.filter((c) => c.status === "completed").length,
+  }), [externalChats]);
+
   const filteredChats = useMemo(() => {
-    if (!searchTerm.trim()) return externalChats;
+    let result = externalChats;
+    if (statusFilter !== "all") {
+      result = result.filter((c) => c.status === statusFilter);
+    }
+    if (!searchTerm.trim()) return result;
     const q = searchTerm.toLowerCase();
-    return externalChats.filter((c) =>
+    return result.filter((c) =>
       (c.sender_name || "").toLowerCase().includes(q) ||
       (c.external_contact_name || "").toLowerCase().includes(q) ||
       (c.analyst_name || "").toLowerCase().includes(q) ||
       (c.message || "").toLowerCase().includes(q) ||
       (c.response || "").toLowerCase().includes(q)
     );
-  }, [externalChats, searchTerm]);
+  }, [externalChats, searchTerm, statusFilter]);
 
   const sortedChats = useMemo(() => {
     return [...filteredChats].sort((a, b) =>
@@ -155,17 +166,44 @@ export default function ContactChatTab({ contactId, contactName, firmIds = [], f
         </div>
       )}
 
-      {/* Search */}
+      {/* Status filter tabs + search */}
       {externalChats.length > 0 && (
-        <div className="relative">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-          <input
-            type="text"
-            className="w-full h-8 pl-7 pr-3 text-xs border border-gray-200 rounded-md"
-            placeholder="Search chats..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div className="space-y-2">
+          <div className="flex gap-1 border-b border-gray-200">
+            {[
+              { key: "all", label: "All", count: statusCounts.all },
+              { key: "pending", label: "Pending", count: statusCounts.pending },
+              { key: "completed", label: "Completed", count: statusCounts.completed },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setStatusFilter(tab.key)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border-b-2 -mb-px transition-colors ${
+                  statusFilter === tab.key
+                    ? "border-indigo-600 text-indigo-700"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                {tab.label}
+                <span className={`px-1.5 py-0.5 rounded-full text-[9px] ${
+                  statusFilter === tab.key ? "bg-indigo-100 text-indigo-700" : "bg-gray-100 text-gray-500"
+                }`}>
+                  {tab.count}
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+            <input
+              type="text"
+              className="w-full h-8 pl-7 pr-3 text-xs border border-gray-200 rounded-md"
+              placeholder="Search chats..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
         </div>
       )}
 
