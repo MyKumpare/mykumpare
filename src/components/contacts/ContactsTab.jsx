@@ -93,6 +93,17 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
     [firmContacts, filterText, filterSelected]
   );
 
+  // Count breakdown by employee status for a quick at-a-glance summary.
+  const contactCounts = useMemo(() => {
+    let employees = 0;
+    let nonEmployees = 0;
+    for (const c of firmContacts) {
+      if (c.employee_status === "Employee") employees += 1;
+      else if (c.employee_status === "Non-Employee") nonEmployees += 1;
+    }
+    return { total: firmContacts.length, employees, nonEmployees };
+  }, [firmContacts]);
+
   const handleView = (contact) => {
     setEditingContact(contact);
     setViewMode(true);
@@ -157,21 +168,37 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        {firmContacts.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setTeamView(v => !v)}
-            className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md transition-colors ${
-              teamView ? "bg-indigo-100 text-indigo-700" : "text-gray-500 hover:bg-gray-100"
-            }`}
-          >
-            {teamView ? (
-              <><ListIcon className="w-3.5 h-3.5" /> List view</>
-            ) : (
-              <><NetworkIcon className="w-3.5 h-3.5" /> Team structure</>
-            )}
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {firmContacts.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setTeamView(v => !v)}
+              className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md transition-colors ${
+                teamView ? "bg-indigo-100 text-indigo-700" : "text-gray-500 hover:bg-gray-100"
+              }`}
+            >
+              {teamView ? (
+                <><ListIcon className="w-3.5 h-3.5" /> List view</>
+              ) : (
+                <><NetworkIcon className="w-3.5 h-3.5" /> Team structure</>
+              )}
+            </button>
+          )}
+          {firmContacts.length > 0 && (
+            <div className="flex items-center gap-1.5 text-xs">
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-medium">
+                <User className="w-3 h-3" />
+                {contactCounts.total} total
+              </span>
+              <span className="inline-flex items-center px-2 py-1 rounded-md bg-indigo-50 text-indigo-700 font-medium">
+                {contactCounts.employees} Employee{contactCounts.employees === 1 ? "" : "s"}
+              </span>
+              <span className="inline-flex items-center px-2 py-1 rounded-md bg-amber-50 text-amber-700 font-medium">
+                {contactCounts.nonEmployees} Non-Employee{contactCounts.nonEmployees === 1 ? "" : "s"}
+              </span>
+            </div>
+          )}
+        </div>
         <Button
           type="button"
           variant="ghost"
