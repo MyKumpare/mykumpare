@@ -57,7 +57,14 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
     enabled: open && !!myFirmId,
   });
 
+  // duplicateReview = { duplicates, onUseExisting, onCreateNew } | null
   const [duplicateReview, setDuplicateReview] = useState(null);
+
+  // inline "add new contact" form (contact mode)
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newFirstName, setNewFirstName] = useState("");
+  const [newLastName, setNewLastName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
 
   const { data: firms = [] } = useQuery({
     queryKey: ["firms"],
@@ -129,7 +136,11 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
       contacts
     );
     if (dups.length > 0) {
-      setDuplicateReview(dups);
+      setDuplicateReview({
+        duplicates: dups,
+        onUseExisting: (contact) => completeInviteEmail(contact),
+        onCreateNew: () => completeInviteEmail(null),
+      });
       return;
     }
     await completeInviteEmail(null);
@@ -213,6 +224,144 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
     }
   };
 
+  // ---- Contact mode: add a new contact + send invite ----
+  // The firm to associate the new contact with = the firm filter selection
+  // (or the user's own firm when "My firm" / __all__ is selected).
+  const targetFirmId = firmFilter === "__all__" ? myFirmId : firmFilter;
+
+  const inviteContact = async (contact) => {
+    setSaving(true);
+    try {
+      try {
+        await base44.users.inviteUser(contact.email.trim(), role);
+      } catch (e) {
+        const msg = (e?.message || "").toLowerCase();
+        if (!msg.includes("already") && !msg.includes("exist") && !msg.includes("registered") && !msg.includes("invited")) {
+          throw e;
+        }
+      }
+      const firm = firms.find((f) => f.id === targetFirmId);
+      await base44.entities.PendingInvitation.create({
+        email: contact.email.trim(),
+        firm_id: targetFirmId,
+        firm_name: firm?.name || "",
+        firm_role: firmRole,
+        can_edit: canEdit,
+        can_delete: canDelete,
+        first_name: contact.first_name || "",
+        last_name: contact.last_name || "",
+        contact_id: contact.id,
+        invited_by_name: user?.full_name || user?.email || "",
+        accepted: false,
+      });
+      queryClient.invalidateQueries({ queryKey: ["pending_invitations"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      toast({
+        title: "Invitation sent",
+        description: `${contact.email.trim()} will be added to ${firm?.name || "the firm"} when they sign in.`,
+      });
+      reset();
+      setDuplicateReview(null);
+      setShowAddForm(false);
+      setNewFirstName(""); setNewLastName(""); setNewEmail("");
+      onInvited && onInvited();
+      onClose();
+    } catch (e) {
+      toast({ title: "Invitation failed", description: e?.message || "Could not send invite.", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const createAndInviteNewContact = async () => {
+    const em = newEmail.trim();
+    setSaving(true);
+    try {
+      let contactId = null;
+      try {
+        const contact = await base44.entities.Contact.create({
+          first_name: newFirstName.trim(),
+          last_name: newLastName.trim(),
+          email: em,
+          firm_ids: targetFirmId ? [targetFirmId] : [],
+          tenant_id: targetFirmId || undefined,
+          contact_status: "Active",
+        });
+        contactId = contact?.id || null;
+      } catch {
+        /* best-effort; invitation still recorded */
+      }
+      try {
+        await base44.users.inviteUser(em, role);
+      } catch (e) {
+        const msg = (e?.message || "").toLowerCase();
+        if (!msg.includes("already") && !msg.includes("exist") && !msg.includes("registered") && !msg.includes("invited")) {
+          throw e;
+        }
+      }
+      const firm = firms.find((f) => f.id === targetFirmId);
+      await base44.entities.PendingInvitation.create({
+        email: em,
+        firm_id: targetFirmId,
+        firm_name: firm?.name || "",
+        firm_role: firmRole,
+        can_edit: canEdit,
+        can_delete: canDelete,
+        first_name: newFirstName.trim(),
+        last_name: newLastName.trim(),
+        contact_id: contactId,
+        invited_by_name: user?.full_name || user?.email || "",
+        accepted: false,
+      });
+      queryClient.invalidateQueries({ queryKey: ["pending_invitations"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      toast({
+        title: "Invitation sent",
+        description: `${em} will be added to ${firm?.name || "the firm"} when they sign in.`,
+      });
+      reset();
+      setDuplicateReview(null);
+      setShowAddForm(false);
+      setNewFirstName(""); setNewLastName(""); setNewEmail("");
+      onInvited && onInvited();
+      onClose();
+    } catch (e) {
+      toast({ title: "Invitation failed", description: e?.message || "Could not send invite.", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddAndInvite = async () => {
+    const em = newEmail.trim();
+    if (!newFirstName.trim() || !newLastName.trim()) {
+      toast({ title: "Enter first and last name", variant: "destructive" });
+      return;
+    }
+    if (!EMAIL_RE.test(em)) {
+      toast({ title: "Enter a valid email address", variant: "destructive" });
+      return;
+    }
+    if (!targetFirmId) {
+      toast({ title: "Select a firm to associate the contact with", variant: "destructive" });
+      return;
+    }
+    // Duplicate check against all loaded contacts
+    const dups = findContactDuplicates(
+      { first_name: newFirstName.trim(), last_name: newLastName.trim(), email: em },
+      contacts
+    );
+    if (dups.length > 0) {
+      setDuplicateReview({
+        duplicates: dups,
+        onUseExisting: (contact) => { setDuplicateReview(null); inviteContact(contact); },
+        onCreateNew: () => { setDuplicateReview(null); createAndInviteNewContact(); },
+      });
+      return;
+    }
+    await createAndInviteNewContact();
+  };
+
   const fieldCls = "h-8 text-sm";
 
   return (
@@ -278,7 +427,7 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
               <div className="max-h-44 overflow-y-auto border rounded-lg divide-y">
                 {isLoading && <div className="p-3 text-sm text-gray-400 text-center">Loading…</div>}
                 {!isLoading && firmContacts.length === 0 && (
-                  <div className="p-3 text-sm text-gray-400 text-center">No contacts found. Add the person as a contact first, or use “Invite by email”.</div>
+                  <div className="p-3 text-sm text-gray-400 text-center">No contacts found. Add a new contact below.</div>
                 )}
                 {firmContacts.map((c) => {
                   const name = [c.first_name, c.last_name].filter(Boolean).join(" ") || "(no name)";
@@ -298,12 +447,53 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
                   );
                 })}
               </div>
+              {!showAddForm && (
+                <button
+                  type="button"
+                  onClick={() => { setShowAddForm(true); setSelectedId(""); }}
+                  className="text-xs font-medium text-indigo-600 hover:text-indigo-700 flex items-center gap-1 pt-1"
+                >
+                  <UserPlus className="w-3.5 h-3.5" /> Add new contact
+                </button>
+              )}
             </div>
 
-            <div className="space-y-1">
-              <Label className="text-xs font-medium text-gray-700">Invite email</Label>
-              <Input value={selected?.email || ""} readOnly className="h-8 text-sm bg-gray-50" placeholder="Select a contact above" />
-            </div>
+            {showAddForm ? (
+              <div className="space-y-2 border rounded-lg p-3 bg-gray-50/50">
+                <p className="text-xs font-medium text-gray-700">New contact details</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-gray-600">First name *</Label>
+                    <Input value={newFirstName} onChange={(e) => setNewFirstName(e.target.value)} className={fieldCls} placeholder="Jane" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-gray-600">Last name *</Label>
+                    <Input value={newLastName} onChange={(e) => setNewLastName(e.target.value)} className={fieldCls} placeholder="Smith" />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[11px] text-gray-600">Email *</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                    <Input
+                      type="email"
+                      value={newEmail}
+                      onChange={(e) => setNewEmail(e.target.value)}
+                      placeholder="employee@firm.com"
+                      className="pl-8 h-8 text-sm"
+                    />
+                  </div>
+                </div>
+                <p className="text-[11px] text-gray-400">
+                  We'll check for duplicates before creating the contact and sending the invite.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <Label className="text-xs font-medium text-gray-700">Invite email</Label>
+                <Input value={selected?.email || ""} readOnly className="h-8 text-sm bg-gray-50" placeholder="Select a contact above" />
+              </div>
+            )}
             <div className="space-y-1">
               <Label className="text-xs font-medium text-gray-700">Platform role</Label>
               <Select value={role} onValueChange={setRole}>
@@ -319,16 +509,33 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
             </div>
 
             <div className="flex gap-2 justify-end pt-1">
-              <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={onClose}>Cancel</Button>
-              <Button
-                type="button"
-                size="sm"
-                className="h-8 text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
-                disabled={!selected || saving}
-                onClick={handleInviteContact}
-              >
-                {saving ? "Sending..." : "Send Invite"}
-              </Button>
+              {showAddForm ? (
+                <>
+                  <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={() => setShowAddForm(false)}>Back</Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-8 text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
+                    disabled={!newEmail.trim() || !newFirstName.trim() || !newLastName.trim() || saving}
+                    onClick={handleAddAndInvite}
+                  >
+                    {saving ? "Sending..." : "Add & Invite"}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={onClose}>Cancel</Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-8 text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
+                    disabled={!selected || saving}
+                    onClick={handleInviteContact}
+                  >
+                    {saving ? "Sending..." : "Send Invite"}
+                  </Button>
+                </>
+              )}
             </div>
           </>
         )}
@@ -430,9 +637,9 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
 
       {duplicateReview && (
         <InviteDuplicateReviewDialog
-          duplicates={duplicateReview}
-          onUseExisting={(contact) => completeInviteEmail(contact)}
-          onCreateNew={() => completeInviteEmail(null)}
+          duplicates={duplicateReview.duplicates}
+          onUseExisting={duplicateReview.onUseExisting}
+          onCreateNew={duplicateReview.onCreateNew}
           onCancel={() => setDuplicateReview(null)}
         />
       )}
