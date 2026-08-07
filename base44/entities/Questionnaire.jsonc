@@ -224,6 +224,9 @@
         },
         {
           "data.tenant_id": "{{user.data.linked_firm_id}}"
+        },
+        {
+          "data.assignee_contact_id": "{{user.data.linked_contact_id}}"
         }
       ]
     },
@@ -259,6 +262,9 @@
               ]
             }
           ]
+        },
+        {
+          "data.assignee_contact_id": "{{user.data.linked_contact_id}}"
         }
       ]
     },
