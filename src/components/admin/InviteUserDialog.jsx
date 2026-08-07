@@ -32,6 +32,7 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
   // contact mode
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState("");
+  const [firmFilter, setFirmFilter] = useState("__all__");
 
   // email mode
   const [email, setEmail] = useState("");
@@ -57,20 +58,24 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
   const { data: firms = [] } = useQuery({
     queryKey: ["firms"],
     queryFn: () => base44.entities.Firm.list(),
-    enabled: open && mode === "email",
+    enabled: open,
   });
 
   const firmContacts = useMemo(() => {
     const q = query.trim().toLowerCase();
     return (contacts || [])
-      .filter((c) => !c.deleted_at && Array.isArray(c.firm_ids) && c.firm_ids.includes(myFirmId) && c.email)
+      .filter((c) => !c.deleted_at && c.email)
+      .filter((c) => {
+        if (firmFilter === "__all__") return Array.isArray(c.firm_ids) && c.firm_ids.includes(myFirmId);
+        return Array.isArray(c.firm_ids) && c.firm_ids.includes(firmFilter);
+      })
       .filter((c) => {
         if (!q) return true;
         const name = `${c.first_name} ${c.last_name}`.toLowerCase();
         return name.includes(q) || (c.email || "").toLowerCase().includes(q);
       })
       .slice(0, 50);
-  }, [contacts, myFirmId, query]);
+  }, [contacts, myFirmId, firmFilter, query]);
 
   const selected = firmContacts.find((c) => c.id === selectedId) || null;
 
@@ -78,6 +83,7 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
 
   const reset = () => {
     setEmail(""); setFirstName(""); setLastName(""); setQuery(""); setSelectedId("");
+    setFirmFilter("__all__");
     setRole("user"); setFirmRole("user"); setCanEdit(false); setCanDelete(false);
   };
 
@@ -210,6 +216,19 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
               Choose an existing contact from your firm. Their email is used for the invite, and they'll
               be automatically linked to this firm when they sign in.
             </p>
+
+            <div className="space-y-1">
+              <Label className="text-xs font-medium text-gray-700">Filter by firm</Label>
+              <Select value={firmFilter} onValueChange={setFirmFilter}>
+                <SelectTrigger className={fieldCls}><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">My firm ({firms.find((f) => f.id === myFirmId)?.name || "default"})</SelectItem>
+                  {firms.filter((f) => !f.deleted_at && f.id !== myFirmId).map((f) => (
+                    <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             <div className="space-y-1">
               <Label className="text-xs font-medium text-gray-700">Select a contact *</Label>
