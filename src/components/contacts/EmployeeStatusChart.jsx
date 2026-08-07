@@ -69,6 +69,7 @@ export default function EmployeeStatusChart({
   onStatusFilter,
 }) {
   const [viewKey, setViewKey] = useState("team");
+  const [ethPctMode, setEthPctMode] = useState("subset"); // "subset" | "overall"
   const config = VIEWS[viewKey];
 
   const total = contacts.length;
@@ -231,24 +232,38 @@ export default function EmployeeStatusChart({
       {/* Secondary ethnicity breakdown shown when a gender category is selected */}
       {ethnicityBreakdown && ethnicityBreakdown.subsetTotal > 0 && (
         <div className="border-t border-gray-100 pt-2.5 space-y-1.5">
-          <p className="text-xs font-medium text-gray-500">
-            Ethnicity breakdown: {activeFilter === UNCLASSIFIED ? "Undetermined" : activeFilter}
-          </p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-medium text-gray-500">
+              Ethnicity breakdown: {activeFilter === UNCLASSIFIED ? "Undetermined" : activeFilter}
+            </p>
+            <button
+              type="button"
+              onClick={() => setEthPctMode((m) => (m === "subset" ? "overall" : "subset"))}
+              className="text-[10px] font-medium text-indigo-600 hover:text-indigo-700 hover:underline flex-shrink-0"
+            >
+              {ethPctMode === "subset" ? "% of subset" : "% of overall"}
+            </button>
+          </div>
+          <div className="flex items-center gap-2 pb-0.5 border-b border-gray-100">
+            <span className="flex-1 min-w-0" />
+            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide flex-shrink-0 w-8 text-right">Count</span>
+            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide flex-shrink-0 w-10 text-right">
+              {ethPctMode === "subset" ? "% of Total" : "% Overall"}
+            </span>
+          </div>
           {VIEWS.ethnicity.categories.map((cat) => {
             const count = ethnicityBreakdown.counts[cat.value] || 0;
             if (count === 0) return null;
-            const subPct = ethnicityBreakdown.subsetTotal
-              ? Math.round((count / ethnicityBreakdown.subsetTotal) * 100)
-              : 0;
+            const base = ethPctMode === "subset" ? ethnicityBreakdown.subsetTotal : total;
+            const pctVal = base ? Math.round((count / base) * 100) : 0;
             return (
-              <div key={cat.value} className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5 min-w-0">
+              <div key={cat.value} className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 min-w-0 flex-1">
                   <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />
                   <span className="text-xs text-gray-600 truncate">{cat.label}</span>
                 </div>
-                <span className="text-xs font-semibold text-gray-800 flex-shrink-0">
-                  {count} · {subPct}%
-                </span>
+                <span className="text-xs font-semibold text-gray-800 flex-shrink-0 w-8 text-right">{count}</span>
+                <span className="text-xs font-semibold text-gray-800 flex-shrink-0 w-10 text-right">{pctVal}%</span>
               </div>
             );
           })}
