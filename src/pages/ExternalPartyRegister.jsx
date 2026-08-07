@@ -274,7 +274,7 @@ export default function ExternalPartyRegister() {
               </div>
               <div>
                 <Label className="text-xs font-medium text-gray-600">Middle Name</Label>
-                <Input className="h-9 mt-1" placeholder="Robert" value={form.middle_name}
+                <Input className="h-9 mt-1" placeholder="" value={form.middle_name}
                   onChange={(e) => setName("middle_name", e.target.value)} />
               </div>
               <div>
