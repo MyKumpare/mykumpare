@@ -11,6 +11,7 @@ import { toast } from "@/components/ui/use-toast";
 import AddContactDialog from "./AddContactDialog";
 import ContactsTabFilters, { filterContacts } from "./ContactsTabFilters";
 import MergeDuplicateContactsDialog from "./MergeDuplicateContactsDialog";
+import EmployeeStatusChart from "./EmployeeStatusChart";
 import { useDuplicateReviews } from "./useDuplicateReviews";
 
 export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership, onProductClick, onFirmClick }) {
@@ -190,12 +191,6 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
                 <User className="w-3 h-3" />
                 {contactCounts.total} total
               </span>
-              <span className="inline-flex items-center px-2 py-1 rounded-md bg-indigo-50 text-indigo-700 font-medium">
-                {contactCounts.employees} Employee{contactCounts.employees === 1 ? "" : "s"}
-              </span>
-              <span className="inline-flex items-center px-2 py-1 rounded-md bg-amber-50 text-amber-700 font-medium">
-                {contactCounts.nonEmployees} Non-Employee{contactCounts.nonEmployees === 1 ? "" : "s"}
-              </span>
             </div>
           )}
         </div>
@@ -278,6 +273,13 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
         onToggle={handleToggleFilter}
         onClear={handleClearFilters}
       />
+
+      {firmContacts.length > 0 && (
+        <EmployeeStatusChart
+          employees={contactCounts.employees}
+          nonEmployees={contactCounts.nonEmployees}
+        />
+      )}
 
       {firmContacts.length === 0 ? (
         <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
