@@ -56,7 +56,6 @@ export default function LegalComplianceTab({ firmId, isEditing, contacts = [] })
   const queryClient = useQueryClient();
   const [legalEntityName, setLegalEntityName] = useState("");
   const [entityType, setEntityType] = useState("");
-  const [crdNumber, setCrdNumber] = useState("");
   const [entityJurisdiction, setEntityJurisdiction] = useState("");
   const [jurisdictionCountry, setJurisdictionCountry] = useState("");
   const [registrationNumber, setRegistrationNumber] = useState("");
@@ -75,7 +74,6 @@ export default function LegalComplianceTab({ firmId, isEditing, contacts = [] })
         const data = JSON.parse(stored);
         setLegalEntityName(data.legalEntityName || "");
         setEntityType(data.entityType || "");
-        setCrdNumber(data.crdNumber || "");
         setEntityJurisdiction(data.entityJurisdiction || "");
         setJurisdictionCountry(data.jurisdictionCountry || "");
         setRegistrationNumber(data.registrationNumber || "");
@@ -125,7 +123,7 @@ export default function LegalComplianceTab({ firmId, isEditing, contacts = [] })
   const handleSave = () => {
     if (!firmId) return;
     const data = {
-      legalEntityName, entityType, crdNumber,
+      legalEntityName, entityType,
       entityJurisdiction, jurisdictionCountry, registrationNumber,
       complianceOfficerId,
       complianceOfficerName: selectedContact ? contactDisplayName(selectedContact) : "",
@@ -187,15 +185,6 @@ export default function LegalComplianceTab({ firmId, isEditing, contacts = [] })
           </Select>
         </div>
 
-        <div className="space-y-1.5">
-          <Label className="text-sm font-medium text-gray-700">SEC CRD Number</Label>
-          <Input
-            placeholder="e.g. 123456"
-            value={crdNumber}
-            onChange={(e) => setCrdNumber(e.target.value)}
-            disabled={!isEditing}
-          />
-        </div>
       </div>
 
       {/* Entity Jurisdiction Section */}
