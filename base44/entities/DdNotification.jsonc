@@ -17,9 +17,10 @@
         "approval_decision",
         "questionnaire_sent",
         "questionnaire_submitted",
-        "questionnaire_completed"
+        "questionnaire_completed",
+        "external_chat"
       ],
-      "description": "Type of notification"
+      "description": "Type of notification. 'external_chat' is a chat message from an external firm user to the primary analyst."
     },
     "title": {
       "type": "string",
@@ -59,6 +60,10 @@
       ],
       "description": "Supervisor status this notification was created for"
     },
+    "external_chat_id": {
+      "type": "string",
+      "description": "ID of the related ExternalChat record (for external_chat notifications)"
+    },
     "status": {
       "type": "string",
       "enum": [
@@ -67,7 +72,7 @@
         "completed"
       ],
       "default": "unread",
-      "description": "Whether the notification has been read. 'completed' means the requested action has been fulfilled (e.g. supervisor made a decision)."
+      "description": "Whether the notification has been read. 'completed' means the requested action has been fulfilled (e.g. supervisor made a decision, analyst responded to a chat)."
     }
   },
   "required": [
@@ -100,6 +105,9 @@
           "user_condition": {
             "role": "admin"
           }
+        },
+        {
+          "data.contact_id": "{{user.data.linked_contact_id}}"
         }
       ]
     },
