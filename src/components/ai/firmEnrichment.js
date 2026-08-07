@@ -297,8 +297,15 @@ export async function enrichFirmFromWeb(firmName, websiteUrl) {
   // If the backend returned an error, throw it so the UI can display it
   if (data.error) throw new Error(data.error);
 
-  // Safety net: clean up string "null" values the LLM sometimes returns
-  const cleanStr = (v) => (v === 'null' || v === 'undefined' ? '' : v);
+  // Safety net: clean up placeholder strings the LLM sometimes returns for
+  // missing fields ("null", "undefined", "not provided", "N/A", "none", etc.)
+  // so they are stored as blank instead of as literal field values.
+  const PLACEHOLDER_VALUES = ['null', 'undefined', 'n/a', 'na', 'none', 'not provided', 'not available', 'unknown', '-'];
+  const cleanStr = (v) => {
+    if (v == null) return '';
+    const s = String(v).trim().toLowerCase();
+    return PLACEHOLDER_VALUES.includes(s) ? '' : v;
+  };
   data.logo_url = cleanStr(data.logo_url) || '';
   data.email = cleanStr(data.email) || '';
   data.linkedin_url = cleanStr(data.linkedin_url) || '';

@@ -1620,7 +1620,12 @@ Deno.serve(async (req) => {
       const fallback = await enrichFirmViaWebSearch(base44, firm_name, website);
       if (fallback && (fallback.name || (Array.isArray(fallback.people) && fallback.people.length > 0))) {
         if (!fallback.name) fallback.name = firm_name;
-        const cleanStr = (v: any): any => (v === 'null' || v === 'undefined' ? '' : v);
+        const cleanStr = (v: any): any => {
+    if (v == null) return '';
+    const s = String(v).trim().toLowerCase();
+    if (['null', 'undefined', 'n/a', 'na', 'none', 'not provided', 'not available', 'unknown', '-'].includes(s)) return '';
+    return v;
+  };
         fallback.logo_url = cleanStr(fallback.logo_url) || '';
         if (isSocialOrIconUrl(fallback.logo_url)) {
           console.log('fallback: rejecting social/icon logo_url =', fallback.logo_url);
@@ -1787,7 +1792,12 @@ IMPORTANT:
     }
 
     // Clean up string "null" values that the LLM sometimes returns for missing fields
-    const cleanStr = (v: any): any => (v === 'null' || v === 'undefined' ? '' : v);
+    const cleanStr = (v: any): any => {
+    if (v == null) return '';
+    const s = String(v).trim().toLowerCase();
+    if (['null', 'undefined', 'n/a', 'na', 'none', 'not provided', 'not available', 'unknown', '-'].includes(s)) return '';
+    return v;
+  };
     enrichedData.logo_url = cleanStr(enrichedData.logo_url) || '';
     if (isSocialOrIconUrl(enrichedData.logo_url)) {
       console.log('enrichedData: rejecting social/icon logo_url =', enrichedData.logo_url);
@@ -1840,7 +1850,12 @@ IMPORTANT:
         console.log(`enrichFirmFromWebsite: web search fallback found ${fallback.people.length} people, merging...`);
         // Merge: keep the main extraction's firm data but use the web search's
         // people array if it found more.
-        const cleanStr2 = (v: any): any => (v === 'null' || v === 'undefined' ? '' : v);
+        const cleanStr2 = (v: any): any => {
+    if (v == null) return '';
+    const s = String(v).trim().toLowerCase();
+    if (['null', 'undefined', 'n/a', 'na', 'none', 'not provided', 'not available', 'unknown', '-'].includes(s)) return '';
+    return v;
+  };
         fallback.logo_url = cleanStr2(fallback.logo_url) || '';
         if (isSocialOrIconUrl(fallback.logo_url)) fallback.logo_url = '';
         fallback.email = cleanStr2(fallback.email) || enrichedData.email || '';
