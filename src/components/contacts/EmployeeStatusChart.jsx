@@ -188,6 +188,24 @@ export default function EmployeeStatusChart({
     setViewKey(newKey);
   };
 
+  const handleTotalClick = () => {
+    if (!onChartFilter) return;
+    onChartFilter(config.field, null);
+    // Clear any secondary drill-down filters so the full set shows.
+    for (const sk of secondaryKeys) {
+      const sf = VIEWS[sk].field;
+      if (filterSelected[sf] && onChartFilter) onChartFilter(sf, null);
+    }
+  };
+
+  // Total row is "active" when no primary or secondary filter is set for this view.
+  const totalActive =
+    !activeFilter &&
+    secondaryKeys.every((sk) => {
+      const sf = VIEWS[sk].field;
+      return !filterSelected[sf] || filterSelected[sf].size === 0;
+    });
+
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-3 space-y-3">
       {/* View toggle */}
@@ -291,6 +309,21 @@ export default function EmployeeStatusChart({
               </div>
             );
           })}
+          {/* Total row — click to clear filters and show all contacts */}
+          <div className="flex items-center gap-2 border-t border-gray-200 pt-1.5">
+            <button
+              type="button"
+              onClick={handleTotalClick}
+              disabled={!onChartFilter}
+              className={`flex items-center gap-1.5 min-w-0 flex-1 group ${onChartFilter ? "cursor-pointer" : "cursor-default"}`}
+            >
+              <span className={`text-xs font-bold truncate ${totalActive ? "text-indigo-700 underline" : "text-gray-900 group-hover:text-indigo-700 group-hover:underline"}`}>
+                Total
+              </span>
+            </button>
+            <span className="text-xs font-bold text-gray-900 flex-shrink-0 w-8 text-right">{total}</span>
+            <span className="text-xs font-bold text-gray-900 flex-shrink-0 w-10 text-right">100%</span>
+          </div>
         </div>
       </div>
 
