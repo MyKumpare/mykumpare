@@ -1,47 +1,113 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
-const COLORS = {
-  Employee: "#5D5FEF",
-  "Non-Employee": "#F59E0B",
-  "__unclassified__": "#9CA3AF",
+const UNCLASSIFIED = "__unclassified__";
+
+const VIEWS = {
+  team: {
+    key: "team",
+    label: "Team Distribution",
+    field: "employee_status",
+    categories: [
+      { label: "Employees", value: "Employee", color: "#5D5FEF" },
+      { label: "Non-Employees", value: "Non-Employee", color: "#F59E0B" },
+      { label: "Unclassified", value: UNCLASSIFIED, color: "#9CA3AF" },
+    ],
+  },
+  demographics: {
+    key: "demographics",
+    label: "Demographics",
+    field: "gender",
+    categories: [
+      { label: "Male", value: "Male", color: "#3B82F6" },
+      { label: "Female", value: "Female", color: "#EC4899" },
+      { label: "Undetermined", value: UNCLASSIFIED, color: "#9CA3AF" },
+    ],
+  },
+  ownership: {
+    key: "ownership",
+    label: "Ownership",
+    field: "veteran_status",
+    categories: [
+      { label: "Veteran Owned", value: "Veteran Owned", color: "#059669" },
+      { label: "Non-Veteran Owned", value: "Non-Veteran Owned", color: "#F59E0B" },
+      { label: "Undetermined", value: UNCLASSIFIED, color: "#9CA3AF" },
+    ],
+  },
 };
 
-const UNCLASSIFIED_SENTINEL = "__unclassified__";
-
-const CATEGORIES = [
-  { label: "Employees", key: "Employee", valueKey: "employees" },
-  { label: "Non-Employees", key: "Non-Employee", valueKey: "nonEmployees" },
-  { label: "Unclassified", key: UNCLASSIFIED_SENTINEL, valueKey: "unclassified" },
-];
-
 export default function EmployeeStatusChart({
-  employees = 0,
-  nonEmployees = 0,
-  unclassified = 0,
-  active = 0,
-  inactive = 0,
-  activeFilter = null,
-  onFilter,
+  contacts = [],
+  filterSelected = {},
+  onChartFilter,
   activeStatusFilter = null,
   onStatusFilter,
 }) {
-  const total = employees + nonEmployees + unclassified;
-  const data = CATEGORIES.map((c) => ({
-    name: c.label,
-    value: c.valueKey === "employees" ? employees : c.valueKey === "nonEmployees" ? nonEmployees : unclassified,
-    key: c.key,
-  })).filter((d) => d.value > 0);
+  const [viewKey, setViewKey] = useState("team");
+  const config = VIEWS[viewKey];
+
+  const total = contacts.length;
+
+  const counts = useMemo(() => {
+    const result = {};
+    for (const cat of config.categories) result[cat.value] = 0;
+    for (const c of contacts) {
+      const val = c[config.field];
+      if (val && result[val] !== undefined) result[val] += 1;
+      else if (!val) result[UNCLASSIFIED] += 1;
+    }
+    return result;
+  }, [contacts, config]);
+
+  const active = useMemo(
+    () => contacts.filter((c) => (c.contact_status || "Active") === "Active").length,
+    [contacts]
+  );
+  const inactive = total - active;
+
+  const data = config.categories
+    .map((cat) => ({ name: cat.label, value: counts[cat.value] || 0, key: cat.value, color: cat.color }))
+    .filter((d) => d.value > 0);
 
   const pct = (n) => (total ? Math.round((n / total) * 100) : 0);
 
-  const handleLabelClick = (key) => {
-    if (!onFilter) return;
-    onFilter(activeFilter === key ? null : key);
+  const fieldSel = filterSelected[config.field];
+  const activeFilter =
+    fieldSel && fieldSel.size > 0
+      ? config.categories.find((cat) => fieldSel.has(cat.value))?.value || null
+      : null;
+
+  const handleLabelClick = (value) => {
+    if (!onChartFilter) return;
+    onChartFilter(config.field, activeFilter === value ? null : value);
+  };
+
+  const handleViewChange = (newKey) => {
+    if (newKey === viewKey) return;
+    // Clear the previous view's filter so stale filters don't persist invisibly.
+    const prevField = VIEWS[viewKey].field;
+    if (filterSelected[prevField] && onChartFilter) onChartFilter(prevField, null);
+    setViewKey(newKey);
   };
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-3 space-y-3">
+      {/* View toggle */}
+      <div className="flex gap-0.5 p-0.5 bg-gray-100 rounded-lg">
+        {Object.values(VIEWS).map((v) => (
+          <button
+            key={v.key}
+            type="button"
+            onClick={() => handleViewChange(v.key)}
+            className={`flex-1 text-[11px] font-medium px-1.5 py-1 rounded-md transition-colors whitespace-nowrap ${
+              viewKey === v.key ? "bg-white text-indigo-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            {v.label}
+          </button>
+        ))}
+      </div>
+
       <div className="flex items-center gap-4">
         <div className="relative w-24 h-24 flex-shrink-0">
           {total === 0 ? (
@@ -62,7 +128,7 @@ export default function EmployeeStatusChart({
                     stroke="none"
                   >
                     {data.map((entry) => (
-                      <Cell key={entry.key} fill={COLORS[entry.key]} />
+                      <Cell key={entry.key} fill={entry.color} />
                     ))}
                   </Pie>
                   <Tooltip
@@ -80,21 +146,21 @@ export default function EmployeeStatusChart({
         </div>
 
         <div className="flex-1 space-y-1.5 min-w-0">
-          <p className="text-xs font-medium text-gray-500">Team Distribution</p>
-          {CATEGORIES.map((c) => {
-            const count = c.valueKey === "employees" ? employees : c.valueKey === "nonEmployees" ? nonEmployees : unclassified;
-            const isActive = activeFilter === c.key;
+          <p className="text-xs font-medium text-gray-500">{config.label}</p>
+          {config.categories.map((cat) => {
+            const count = counts[cat.value] || 0;
+            const isActive = activeFilter === cat.value;
             return (
-              <div key={c.key} className="flex items-center justify-between gap-2">
+              <div key={cat.value} className="flex items-center justify-between gap-2">
                 <button
                   type="button"
-                  onClick={() => handleLabelClick(c.key)}
-                  disabled={!onFilter}
-                  className={`flex items-center gap-1.5 min-w-0 group ${onFilter ? "cursor-pointer" : "cursor-default"}`}
+                  onClick={() => handleLabelClick(cat.value)}
+                  disabled={!onChartFilter}
+                  className={`flex items-center gap-1.5 min-w-0 group ${onChartFilter ? "cursor-pointer" : "cursor-default"}`}
                 >
-                  <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[c.key] }} />
+                  <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />
                   <span className={`text-xs truncate ${isActive ? "font-semibold text-gray-900 underline" : "text-gray-600 group-hover:text-gray-900 group-hover:underline"}`}>
-                    {c.label}
+                    {cat.label}
                   </span>
                 </button>
                 <span className="text-xs font-semibold text-gray-800 flex-shrink-0">

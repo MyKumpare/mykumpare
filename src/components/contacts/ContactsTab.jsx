@@ -116,23 +116,15 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
     return { total: firmContacts.length, employees, nonEmployees, unclassified, active, inactive };
   }, [firmContacts]);
 
-  // Clicking a team-distribution label toggles an employee_status filter.
-  const activeEmpFilter = useMemo(() => {
-    const sel = filterSelected.employee_status;
-    if (!sel || sel.size === 0) return null;
-    if (sel.has("__unclassified__")) return "__unclassified__";
-    if (sel.has("Employee")) return "Employee";
-    if (sel.has("Non-Employee")) return "Non-Employee";
-    return null;
-  }, [filterSelected]);
-
-  const handleChartFilter = (key) => {
+  // Clicking a chart legend label toggles a filter on the corresponding field
+  // (employee_status, gender, or veteran_status depending on the active chart view).
+  const handleChartFilter = (field, value) => {
     setFilterSelected((prev) => {
       const next = { ...prev };
-      if (!key) {
-        delete next.employee_status;
+      if (!value) {
+        delete next[field];
       } else {
-        next.employee_status = new Set([key]);
+        next[field] = new Set([value]);
       }
       return next;
     });
@@ -425,13 +417,9 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
 
       {firmContacts.length > 0 && (
         <EmployeeStatusChart
-          employees={contactCounts.employees}
-          nonEmployees={contactCounts.nonEmployees}
-          unclassified={contactCounts.unclassified}
-          active={contactCounts.active}
-          inactive={contactCounts.inactive}
-          activeFilter={activeEmpFilter}
-          onFilter={handleChartFilter}
+          contacts={firmContacts}
+          filterSelected={filterSelected}
+          onChartFilter={handleChartFilter}
           activeStatusFilter={activeStatusFilter}
           onStatusFilter={handleStatusFilter}
         />
