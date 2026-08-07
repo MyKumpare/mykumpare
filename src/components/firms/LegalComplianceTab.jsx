@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,19 +6,39 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Scale, Plus, Trash2 } from "lucide-react";
+import { Scale, Plus, UserPlus, X } from "lucide-react";
+import { base44 } from "@/api/base44Client";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/lib/AuthContext";
+import { toast } from "@/components/ui/use-toast";
 
 const ENTITY_TYPES = ["LLC", "LP", "LLLP", "Corporation", "Trust", "Other"];
 
-export default function LegalComplianceTab({ firmId, isEditing }) {
+function isComplianceContact(c) {
+  const roles = [...(c.contact_roles || []), ...(c.contact_firm_roles || [])];
+  return roles.some((r) => (r || "").toLowerCase().includes("compliance"));
+}
+
+function contactDisplayName(c) {
+  const parts = [c.first_name, c.last_name].filter(Boolean);
+  let name = parts.join(" ");
+  if (c.suffix) name += `, ${c.suffix}`;
+  return name || c.email || "Unnamed";
+}
+
+export default function LegalComplianceTab({ firmId, isEditing, contacts = [] }) {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [legalEntityName, setLegalEntityName] = useState("");
   const [entityType, setEntityType] = useState("");
   const [crdNumber, setCrdNumber] = useState("");
-  const [complianceOfficerName, setComplianceOfficerName] = useState("");
-  const [complianceOfficerEmail, setComplianceOfficerEmail] = useState("");
+  const [complianceOfficerId, setComplianceOfficerId] = useState("");
   const [notes, setNotes] = useState("");
+  const [showAddContact, setShowAddContact] = useState(false);
+  const [newContactFirst, setNewContactFirst] = useState("");
+  const [newContactLast, setNewContactLast] = useState("");
+  const [addingContact, setAddingContact] = useState(false);
 
-  // Load from localStorage keyed by firmId so data persists per firm
   useEffect(() => {
     if (!firmId) return;
     try {
@@ -28,17 +48,57 @@ export default function LegalComplianceTab({ firmId, isEditing }) {
         setLegalEntityName(data.legalEntityName || "");
         setEntityType(data.entityType || "");
         setCrdNumber(data.crdNumber || "");
-        setComplianceOfficerName(data.complianceOfficerName || "");
-        setComplianceOfficerEmail(data.complianceOfficerEmail || "");
+        setComplianceOfficerId(data.complianceOfficerId || "");
         setNotes(data.notes || "");
       }
     } catch {}
   }, [firmId]);
 
+  const firmContacts = useMemo(
+    () => contacts.filter((c) => (c.firm_ids || []).includes(firmId) && !c.deleted_at),
+    [contacts, firmId]
+  );
+
+  const { complianceOfficers, otherContacts } = useMemo(() => {
+    const officers = firmContacts.filter(isComplianceContact);
+    const others = firmContacts.filter((c) => !isComplianceContact(c));
+    return { complianceOfficers: officers, otherContacts: others };
+  }, [firmContacts]);
+
+  const selectedContact = firmContacts.find((c) => c.id === complianceOfficerId);
+
   const handleSave = () => {
     if (!firmId) return;
-    const data = { legalEntityName, entityType, crdNumber, complianceOfficerName, complianceOfficerEmail, notes };
+    const data = {
+      legalEntityName, entityType, crdNumber,
+      complianceOfficerId,
+      complianceOfficerName: selectedContact ? contactDisplayName(selectedContact) : "",
+      notes,
+    };
     localStorage.setItem(`legal_compliance_${firmId}`, JSON.stringify(data));
+  };
+
+  const handleAddContact = async () => {
+    if (!newContactFirst.trim() || !newContactLast.trim()) return;
+    setAddingContact(true);
+    try {
+      const created = await base44.entities.Contact.create({
+        first_name: newContactFirst.trim(),
+        last_name: newContactLast.trim(),
+        firm_ids: [firmId],
+        contact_roles: ["Compliance Officer"],
+        tenant_id: user?.linked_firm_id,
+      });
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      setComplianceOfficerId(created.id);
+      setShowAddContact(false);
+      setNewContactFirst("");
+      setNewContactLast("");
+      toast({ title: "Contact created", description: `${created.first_name} ${created.last_name} added as compliance officer.` });
+    } catch (err) {
+      toast({ title: "Failed to create contact", description: err.message, variant: "destructive" });
+    }
+    setAddingContact(false);
   };
 
   return (
@@ -48,17 +108,19 @@ export default function LegalComplianceTab({ firmId, isEditing }) {
         <h4 className="text-sm font-semibold">Legal & Compliance Information</h4>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label className="text-sm font-medium text-gray-700">Legal Entity Name</Label>
-          <Input
-            placeholder="Official legal entity name..."
-            value={legalEntityName}
-            onChange={(e) => setLegalEntityName(e.target.value)}
-            disabled={!isEditing}
-          />
-        </div>
+      {/* Row 1: Legal Entity Name (full width) */}
+      <div className="space-y-1.5">
+        <Label className="text-sm font-medium text-gray-700">Legal Entity Name</Label>
+        <Input
+          placeholder="Official legal entity name..."
+          value={legalEntityName}
+          onChange={(e) => setLegalEntityName(e.target.value)}
+          disabled={!isEditing}
+        />
+      </div>
 
+      {/* Row 2: Entity Type + SEC CRD Number */}
+      <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label className="text-sm font-medium text-gray-700">Entity Type</Label>
           <Select value={entityType} onValueChange={setEntityType} disabled={!isEditing}>
@@ -78,29 +140,66 @@ export default function LegalComplianceTab({ firmId, isEditing }) {
             disabled={!isEditing}
           />
         </div>
-
-        <div className="space-y-1.5">
-          <Label className="text-sm font-medium text-gray-700">Compliance Officer</Label>
-          <Input
-            placeholder="Full name..."
-            value={complianceOfficerName}
-            onChange={(e) => setComplianceOfficerName(e.target.value)}
-            disabled={!isEditing}
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <Label className="text-sm font-medium text-gray-700">Compliance Officer Email</Label>
-          <Input
-            type="email"
-            placeholder="compliance@firm.com"
-            value={complianceOfficerEmail}
-            onChange={(e) => setComplianceOfficerEmail(e.target.value)}
-            disabled={!isEditing}
-          />
-        </div>
       </div>
 
+      {/* Row 3: Compliance Officer dropdown */}
+      <div className="space-y-1.5">
+        <Label className="text-sm font-medium text-gray-700">Compliance Officer</Label>
+        {!isEditing ? (
+          <div className="h-9 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-900">
+            {selectedContact ? contactDisplayName(selectedContact) : <span className="text-gray-400">—</span>}
+          </div>
+        ) : showAddContact ? (
+          <div className="space-y-2 rounded-lg border border-indigo-200 bg-indigo-50/30 p-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-indigo-700">New Compliance Officer</span>
+              <Button type="button" variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setShowAddContact(false)}>
+                <X className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Input placeholder="First name" value={newContactFirst} onChange={(e) => setNewContactFirst(e.target.value)} className="h-8" />
+              <Input placeholder="Last name" value={newContactLast} onChange={(e) => setNewContactLast(e.target.value)} className="h-8" />
+            </div>
+            <Button type="button" size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white w-full" onClick={handleAddContact} disabled={addingContact || !newContactFirst.trim() || !newContactLast.trim()}>
+              {addingContact ? "Creating..." : "Create & Select"}
+            </Button>
+          </div>
+        ) : (
+          <Select value={complianceOfficerId} onValueChange={setComplianceOfficerId}>
+            <SelectTrigger><SelectValue placeholder="Select compliance officer..." /></SelectTrigger>
+            <SelectContent>
+              {complianceOfficers.length > 0 && (
+                <>
+                  <div className="px-3 py-1 text-xs font-semibold text-gray-500">Compliance Officers</div>
+                  {complianceOfficers.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{contactDisplayName(c)}</SelectItem>
+                  ))}
+                </>
+              )}
+              {otherContacts.length > 0 && (
+                <>
+                  <div className="px-3 py-1 text-xs font-semibold text-gray-500 border-t mt-1 pt-2">Other Contacts</div>
+                  {otherContacts.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{contactDisplayName(c)}</SelectItem>
+                  ))}
+                </>
+              )}
+              <div className="border-t mt-1 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowAddContact(true)}
+                  className="flex items-center gap-1.5 w-full px-3 py-1.5 text-sm text-indigo-600 hover:bg-indigo-50 text-left"
+                >
+                  <UserPlus className="w-3.5 h-3.5" /> Add New Contact
+                </button>
+              </div>
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+
+      {/* Notes */}
       <div className="space-y-1.5">
         <Label className="text-sm font-medium text-gray-700">Notes</Label>
         <Textarea
