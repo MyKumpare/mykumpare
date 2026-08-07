@@ -301,13 +301,11 @@ export default function LegalComplianceTab({ firmId, isEditing, contacts = [] })
         />
       </div>
 
-      {isEditing && (
-        <div className="flex justify-end">
-          <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={handleSave}>
-            Save Legal & Compliance
-          </Button>
-        </div>
-      )}
+      <div className="flex justify-end">
+        <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={handleSave} disabled={!firmId}>
+          Save Legal & Compliance
+        </Button>
+      </div>
     </div>
   );
 }
