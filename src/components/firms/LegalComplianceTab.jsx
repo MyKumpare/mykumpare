@@ -67,6 +67,21 @@ export default function LegalComplianceTab({ firmId, isEditing, contacts = [] })
 
   const selectedContact = firmContacts.find((c) => c.id === complianceOfficerId);
 
+  const handleSelectOfficer = async (contactId) => {
+    setComplianceOfficerId(contactId);
+    const contact = firmContacts.find((c) => c.id === contactId);
+    if (contact && !isComplianceContact(contact)) {
+      try {
+        const updatedRoles = [...(contact.contact_roles || []), "Compliance Officer"];
+        await base44.entities.Contact.update(contact.id, { contact_roles: updatedRoles });
+        queryClient.invalidateQueries({ queryKey: ["contacts"] });
+        toast({ title: "Role updated", description: `${contact.first_name} ${contact.last_name} tagged as Compliance Officer.` });
+      } catch (err) {
+        toast({ title: "Failed to tag role", description: err.message, variant: "destructive" });
+      }
+    }
+  };
+
   const handleSave = () => {
     if (!firmId) return;
     const data = {
@@ -166,7 +181,7 @@ export default function LegalComplianceTab({ firmId, isEditing, contacts = [] })
             </Button>
           </div>
         ) : (
-          <Select value={complianceOfficerId} onValueChange={setComplianceOfficerId}>
+          <Select value={complianceOfficerId} onValueChange={handleSelectOfficer}>
             <SelectTrigger><SelectValue placeholder="Select compliance officer..." /></SelectTrigger>
             <SelectContent>
               {complianceOfficers.length > 0 && (
