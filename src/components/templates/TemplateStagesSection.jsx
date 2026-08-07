@@ -12,7 +12,7 @@ const nextId = () => `tstage_${Date.now()}_${++_tid}`;
  * blank stages, then the user fills in each Stage Name and can re-arrange
  * via drag-and-drop (handled by DueDiligenceStagesEditor).
  */
-export default function TemplateStagesSection({ stages, onChange }) {
+export default function TemplateStagesSection({ stages, onChange, sectionLabel = "Stage" }) {
   const [countInput, setCountInput] = useState(stages.length > 0 ? String(stages.length) : "");
 
   const applyCount = (raw) => {
@@ -30,7 +30,7 @@ export default function TemplateStagesSection({ stages, onChange }) {
   return (
     <div className="space-y-3 rounded-md border border-blue-200 bg-blue-50/40 p-3">
       <div className="space-y-1.5">
-        <Label className="text-xs font-medium text-gray-700">Number of Stages *</Label>
+        <Label className="text-xs font-medium text-gray-700">Number of {sectionLabel}s *</Label>
         <div className="flex items-center gap-2">
           <Input
             type="number"
@@ -40,10 +40,10 @@ export default function TemplateStagesSection({ stages, onChange }) {
             onChange={(e) => setCountInput(e.target.value)}
             onBlur={(e) => applyCount(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyCount(e.target.value); } }}
-            placeholder="Enter number of stages..."
+            placeholder={`Enter number of ${sectionLabel.toLowerCase()}s...`}
             className="h-8 text-sm w-48"
           />
-          <span className="text-xs text-gray-500">{stages.length} stage{stages.length === 1 ? "" : "s"} created</span>
+          <span className="text-xs text-gray-500">{stages.length} {sectionLabel.toLowerCase()}{stages.length === 1 ? "" : "s"} created</span>
         </div>
       </div>
 

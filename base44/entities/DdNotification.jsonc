@@ -14,9 +14,12 @@
       "type": "string",
       "enum": [
         "supervisor_request",
-        "approval_decision"
+        "approval_decision",
+        "questionnaire_sent",
+        "questionnaire_submitted",
+        "questionnaire_completed"
       ],
-      "description": "Type of due diligence notification"
+      "description": "Type of notification"
     },
     "title": {
       "type": "string",
@@ -29,6 +32,10 @@
     "due_diligence_id": {
       "type": "string",
       "description": "ID of the related DueDiligence record"
+    },
+    "questionnaire_id": {
+      "type": "string",
+      "description": "ID of the related Questionnaire record (for questionnaire notifications)"
     },
     "firm_name": {
       "type": "string",

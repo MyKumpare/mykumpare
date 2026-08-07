@@ -1,0 +1,301 @@
+{
+  "name": "Questionnaire",
+  "type": "object",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "ID of the firm (tenant) that owns this questionnaire record. Set on creation to the creator's linked_firm_id; drives tenant isolation via RLS."
+    },
+    "template_id": {
+      "type": "string",
+      "description": "ID of the template this questionnaire was created from"
+    },
+    "template_name": {
+      "type": "string",
+      "description": "Name of the template (denormalized)"
+    },
+    "name": {
+      "type": "string",
+      "description": "Questionnaire name/identifier"
+    },
+    "requester_id": {
+      "type": "string",
+      "description": "User ID of the person requesting the questionnaire (auto-set to current user, editable)"
+    },
+    "requester_name": {
+      "type": "string",
+      "description": "Full name of the requester (denormalized)"
+    },
+    "request_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the questionnaire was requested (auto-set to today, user-editable). Stored as YYYY-MM-DD."
+    },
+    "assignee_contact_id": {
+      "type": "string",
+      "description": "ID of the contact who will receive and answer the questionnaire"
+    },
+    "assignee_contact_name": {
+      "type": "string",
+      "description": "Full name of the assignee (denormalized)"
+    },
+    "firm_id": {
+      "type": "string",
+      "description": "ID of the firm this questionnaire belongs to"
+    },
+    "firm_name": {
+      "type": "string",
+      "description": "Name of the associated firm (denormalized)"
+    },
+    "product_id": {
+      "type": "string",
+      "description": "ID of the product this questionnaire is related to (for document tagging)"
+    },
+    "product_name": {
+      "type": "string",
+      "description": "Name of the associated product (denormalized)"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Due date for the questionnaire to be completed (user-set). Stored as YYYY-MM-DD."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Draft",
+        "Sent",
+        "In Progress",
+        "Submitted",
+        "Under Review",
+        "Completed"
+      ],
+      "default": "Draft",
+      "description": "Workflow status of the questionnaire"
+    },
+    "sent_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the questionnaire was sent to the assignee (auto-set). Stored as YYYY-MM-DD."
+    },
+    "submitted_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the assignee submitted the completed questionnaire (auto-set). Stored as YYYY-MM-DD."
+    },
+    "reviewed_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the requester completed their review (auto-set). Stored as YYYY-MM-DD."
+    },
+    "reviewer_id": {
+      "type": "string",
+      "description": "User ID of the person who reviewed the submitted questionnaire"
+    },
+    "reviewer_name": {
+      "type": "string",
+      "description": "Full name of the reviewer (denormalized)"
+    },
+    "sections": {
+      "type": "array",
+      "description": "Questionnaire sections (copied from template on creation). Each section contains sub-sections that the assignee answers.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sub_sections": {
+            "type": "array",
+            "description": "Sub-sections within this section. Each tracks answering status, start/end dates, notes, and file attachments.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "start_date": {
+                  "type": "string",
+                  "format": "date",
+                  "description": "Date the assignee started answering this sub-section (auto-set to today when answering begins, user-editable). Stored as YYYY-MM-DD."
+                },
+                "end_date": {
+                  "type": "string",
+                  "format": "date",
+                  "description": "Date the assignee saved/completed this sub-section (auto-set to today when saved, user-editable). Stored as YYYY-MM-DD."
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "not_started",
+                    "in_progress",
+                    "completed"
+                  ],
+                  "default": "not_started",
+                  "description": "Answering status of this sub-section"
+                },
+                "notes": {
+                  "type": "string",
+                  "description": "Rich text notes (HTML) entered by the assignee in a Word-style editor."
+                },
+                "attachments": {
+                  "type": "array",
+                  "description": "Files uploaded by the assignee for this sub-section. Each file is named, categorized, and pushed as a FirmDocument record tagged to the relevant product.",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string",
+                        "description": "Display name for the file (user-entered)"
+                      },
+                      "file_url": {
+                        "type": "string",
+                        "description": "URL of the uploaded file"
+                      },
+                      "file_type": {
+                        "type": "string",
+                        "description": "MIME type or extension"
+                      },
+                      "categories": {
+                        "type": "array",
+                        "description": "Document categories (multi-select, pushed to FirmDocument)",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "product_ids": {
+                        "type": "array",
+                        "description": "IDs of products this document is tagged to",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "firm_document_id": {
+                        "type": "string",
+                        "description": "ID of the FirmDocument record created when this file was categorized (links to the document tab)"
+                      },
+                      "uploaded_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "name",
+    "firm_id",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_edit": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_delete": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

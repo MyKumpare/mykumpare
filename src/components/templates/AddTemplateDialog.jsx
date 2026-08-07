@@ -44,9 +44,9 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
     }
   }, [open, editTemplate]);
 
-  // Clear stages when switching away from Manager Due Diligence
+  // Clear stages when switching away from Manager Due Diligence or Manager Questionnaire
   useEffect(() => {
-    if (templateType !== "Manager Due Diligence") {
+    if (templateType !== "Manager Due Diligence" && templateType !== "Manager Questionnaire") {
       setStages([]);
       setDocChecklist([]);
     }
@@ -81,14 +81,16 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
     e.preventDefault();
     if (!name.trim()) return;
     const isMDD = templateType === "Manager Due Diligence";
-    const payloadStages = isMDD ? stages.filter((s) => (s.name || "").trim()).map((s) => ({
+    const isMQ = templateType === "Manager Questionnaire";
+    const showStages = isMDD || isMQ;
+    const payloadStages = showStages ? stages.filter((s) => (s.name || "").trim()).map((s) => ({
       id: s.id,
       name: s.name.trim(),
       sub_stages: (s.sub_stages || []).filter((ss) => (ss.name || "").trim()).map((ss) => ({ id: ss.id, name: ss.name.trim() }))
     })) : undefined;
     const payloadDocChecklist = isMDD ? docChecklist.filter((it) => (it.name || "").trim()).map((it) => ({ id: it.id, name: it.name.trim() })) : undefined;
-    if (isMDD && payloadStages && payloadStages.length === 0) {
-      toast({ title: "Stages required", description: "Please add at least one stage with a name.", variant: "destructive" });
+    if (showStages && payloadStages && payloadStages.length === 0) {
+      toast({ title: "Sections required", description: "Please add at least one section with a name.", variant: "destructive" });
       return;
     }
     const payload = {
@@ -134,10 +136,16 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
             <Label>Create Date</Label>
             <DatePicker value={createDate} onChange={setCreateDate} />
           </div>
-          {templateType === "Manager Due Diligence" && (
+          {(templateType === "Manager Due Diligence" || templateType === "Manager Questionnaire") && (
             <>
-              <TemplateStagesSection stages={stages} onChange={setStages} />
-              <DocumentationChecklistSection items={docChecklist} onChange={setDocChecklist} />
+              <TemplateStagesSection
+                stages={stages}
+                onChange={setStages}
+                sectionLabel={templateType === "Manager Questionnaire" ? "Section" : "Stage"}
+              />
+              {templateType === "Manager Due Diligence" && (
+                <DocumentationChecklistSection items={docChecklist} onChange={setDocChecklist} />
+              )}
             </>
           )}
           <DialogFooter>

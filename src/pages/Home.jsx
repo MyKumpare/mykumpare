@@ -44,6 +44,8 @@ const GlobalActivityLogModal = lazyDialog(() => import("../components/activity/G
 const PortfolioPickerModal = lazyDialog(() => import("../components/portfolios/PortfolioPickerModal"));
 const FirmPickerModal = lazyDialog(() => import("../components/firms/FirmPickerModal"));
 const DueDiligencePickerModal = lazyDialog(() => import("../components/firms/DueDiligencePickerModal"));
+const QuestionnairePickerModal = lazyDialog(() => import("../components/questionnaires/QuestionnairePickerModal"));
+const QuestionnaireDialog = lazyDialog(() => import("../components/questionnaires/QuestionnaireDialog"));
 const ProductPickerModal = lazyDialog(() => import("../components/products/ProductPickerModal"));
 const ContactPickerModal = lazyDialog(() => import("../components/contacts/ContactPickerModal"));
 const ActivityLogPickerModal = lazyDialog(() => import("../components/activity/ActivityLogPickerModal"));
@@ -117,6 +119,8 @@ export default function Home() {
   const [ddAddOpen, setDdAddOpen] = useState(false);
   const [addDocOpen, setAddDocOpen] = useState(false);
   const [templatesPickerOpen, setTemplatesPickerOpen] = useState(false);
+  const [questionnairePickerOpen, setQuestionnairePickerOpen] = useState(false);
+  const [questionnaireAddOpen, setQuestionnaireAddOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [photoCaptureOpen, setPhotoCaptureOpen] = useState(false);
   const [addContactPhotoUrl, setAddContactPhotoUrl] = useState(null);
@@ -238,6 +242,7 @@ export default function Home() {
       base44.entities.Analysis.subscribe(() => invalidate([["analyses"]])),
       base44.entities.Benchmark.subscribe(() => invalidate([["benchmarks"]])),
       base44.entities.DueDiligence.subscribe(() => invalidate([["due-diligence-search"], ["due-diligence-all"]])),
+      base44.entities.Questionnaire.subscribe(() => invalidate([["questionnaires"], ["picker_count", "Questionnaire"]])),
       base44.entities.CustomReport.subscribe(() => invalidate([["custom_reports_search"], ["custom_reports"]])),
       base44.entities.Template.subscribe(() => invalidate([["templates"]])),
       base44.entities.TemplateType.subscribe(() => invalidate([["template_types"]])),
@@ -765,6 +770,23 @@ export default function Home() {
           forceExpanded={allExpanded}
         />
 
+        {/* Questionnaires section */}
+        <PickerSection
+          label="Questionnaires"
+          icon={ClipboardList}
+          iconColor="text-violet-500"
+          entityName="Questionnaire"
+          onOpen={() => setQuestionnairePickerOpen(true)}
+          onAdd={() => setQuestionnaireAddOpen(true)}
+          addLabel="Add Questionnaire"
+          addColor="text-violet-600"
+          addHoverColor="hover:text-violet-700"
+          addHoverBg="hover:bg-violet-50"
+          openLabel="Open Questionnaires"
+          description="Open the questionnaire picker to view and manage records."
+          forceExpanded={allExpanded}
+        />
+
         {/* Firms section */}
         <div ref={firmsRef} />
         {isLoading ? (
@@ -1217,6 +1239,31 @@ export default function Home() {
 
       {/* Standalone Add Document dialog (from the "+ Add Document" header button) */}
       <AddDocumentDialog open={addDocOpen} onOpenChange={setAddDocOpen} />
+
+      <QuestionnairePickerModal
+        open={questionnairePickerOpen}
+        onClose={() => setQuestionnairePickerOpen(false)}
+        user={user}
+        firms={firms}
+        contacts={contacts}
+        products={products}
+        onFirmClick={(firmId) => { const full = firms.find(x => x.id === firmId); if (full) handleEdit(full); }}
+        onContactClick={(contact) => setViewingContact(contact)}
+        onProductClick={(product) => handleEditProduct(product)}
+      />
+
+      <QuestionnaireDialog
+        open={questionnaireAddOpen}
+        onOpenChange={setQuestionnaireAddOpen}
+        editQuestionnaire={null}
+        user={user}
+        firms={firms}
+        contacts={contacts}
+        products={products}
+        onFirmClick={(firmId) => { const full = firms.find(x => x.id === firmId); if (full) handleEdit(full); }}
+        onContactClick={(contact) => setViewingContact(contact)}
+        onProductClick={(product) => handleEditProduct(product)}
+      />
 
       <ActivityDetailModal
         open={!!viewingActivity}
