@@ -8,15 +8,24 @@
     },
     "external_firm_id": {
       "type": "string",
-      "description": "ID of the external firm sending the chat"
+      "description": "ID of the external firm involved in the chat"
     },
     "external_firm_name": {
       "type": "string",
       "description": "External firm name (denormalized)"
     },
+    "direction": {
+      "type": "string",
+      "enum": [
+        "inbound",
+        "outbound"
+      ],
+      "default": "inbound",
+      "description": "Direction of the initial message. 'inbound' = external firm sent to analyst, 'outbound' = analyst sent to external firm."
+    },
     "sender_contact_id": {
       "type": "string",
-      "description": "ID of the external contact who sent the chat"
+      "description": "ID of the contact who sent the initial message"
     },
     "sender_name": {
       "type": "string",
@@ -26,9 +35,17 @@
       "type": "string",
       "description": "Email of the sender (denormalized)"
     },
+    "external_contact_id": {
+      "type": "string",
+      "description": "ID of the external firm contact involved in the chat (sender for inbound, recipient for outbound)"
+    },
+    "external_contact_name": {
+      "type": "string",
+      "description": "Name of the external contact (denormalized)"
+    },
     "analyst_contact_id": {
       "type": "string",
-      "description": "ID of the primary analyst who receives the chat"
+      "description": "ID of the primary analyst (internal user) involved in the chat"
     },
     "analyst_name": {
       "type": "string",
@@ -40,21 +57,21 @@
     },
     "message": {
       "type": "string",
-      "description": "Chat message from the external firm"
+      "description": "Initial chat message"
     },
     "response": {
       "type": "string",
-      "description": "Response from the analyst"
+      "description": "Response from the other party"
     },
     "received_date": {
       "type": "string",
       "format": "date",
-      "description": "Date the chat was received (auto-set to today, stored YYYY-MM-DD)"
+      "description": "Date the initial message was sent (auto-set to today, stored YYYY-MM-DD)"
     },
     "responded_date": {
       "type": "string",
       "format": "date",
-      "description": "Date the analyst responded (auto-set to today, stored YYYY-MM-DD)"
+      "description": "Date the response was sent (auto-set to today, stored YYYY-MM-DD)"
     },
     "status": {
       "type": "string",
@@ -63,7 +80,7 @@
         "completed"
       ],
       "default": "pending",
-      "description": "Whether the chat has been responded to. 'pending' = awaiting analyst response, 'completed' = analyst has responded."
+      "description": "Whether the chat has been responded to. 'pending' = awaiting response, 'completed' = response sent."
     }
   },
   "required": [
@@ -87,6 +104,9 @@
         },
         {
           "data.analyst_contact_id": "{{user.data.linked_contact_id}}"
+        },
+        {
+          "data.external_contact_id": "{{user.data.linked_contact_id}}"
         }
       ]
     },
@@ -102,6 +122,9 @@
         },
         {
           "data.external_firm_id": "{{user.data.linked_firm_id}}"
+        },
+        {
+          "data.external_contact_id": "{{user.data.linked_contact_id}}"
         }
       ]
     },
