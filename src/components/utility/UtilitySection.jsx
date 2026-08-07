@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search, ArrowLeft, Users, Sparkles, ScrollText, ShieldCheck } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search, ArrowLeft, Users, Sparkles, ScrollText, ShieldCheck, Ghost } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import AddBenchmarkDialog from "./AddBenchmarkDialog";
 import DuplicateContactsReview from "@/components/contacts/DuplicateContactsReview";
 import EnrichmentLogsView from "./EnrichmentLogsView";
+import OrphanRecordCleanup from "./OrphanRecordCleanup";
 
 function BenchmarkItem({ b, onClick }) {
   return (
@@ -53,7 +54,7 @@ export default function UtilitySection({ deletedCount, forceExpanded = false }) 
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [expanded, setExpanded] = useState(false);
-  // 'menu' = selection screen, 'benchmark' = benchmark list + search, 'cleanup' = contact cleanup
+  // 'menu' = selection screen, 'benchmark' = benchmark list + search, 'cleanup' = contact cleanup, 'orphans' = orphan record cleanup
   const [view, setView] = useState("menu");
   const [benchmarkDialogOpen, setBenchmarkDialogOpen] = useState(false);
   const [selectedBenchmark, setSelectedBenchmark] = useState(null);
@@ -195,6 +196,16 @@ export default function UtilitySection({ deletedCount, forceExpanded = false }) 
                 <span className="text-sm font-semibold text-gray-700">Enrichment Logs</span>
                 <span className="text-[11px] text-gray-400">Review enrichment results</span>
               </button>
+              <button
+                onClick={() => setView("orphans")}
+                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
+              >
+                <div className="w-9 h-9 rounded-full bg-amber-50 flex items-center justify-center">
+                  <Ghost className="w-4.5 h-4.5 text-amber-600" />
+                </div>
+                <span className="text-sm font-semibold text-gray-700">Orphan Cleanup</span>
+                <span className="text-[11px] text-gray-400">Find & remove stale records</span>
+              </button>
               {isAdmin && (
                 <button
                   onClick={() => navigate("/UserManagement")}
@@ -316,6 +327,11 @@ export default function UtilitySection({ deletedCount, forceExpanded = false }) 
           {/* Enrichment logs view */}
           {view === "enrichment-logs" && (
             <EnrichmentLogsView />
+          )}
+
+          {/* Orphan record cleanup view */}
+          {view === "orphans" && (
+            <OrphanRecordCleanup />
           )}
         </div>
       )}
