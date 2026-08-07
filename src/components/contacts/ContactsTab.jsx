@@ -117,7 +117,7 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
   }, [firmContacts]);
 
   // Clicking a chart legend label toggles a filter on the corresponding field
-  // (employee_status, gender, or veteran_status depending on the active chart view).
+  // (employee_status, gender, ethnicity, veteran_status, or disability_status depending on the active chart view).
   const handleChartFilter = (field, value) => {
     setFilterSelected((prev) => {
       const next = { ...prev };

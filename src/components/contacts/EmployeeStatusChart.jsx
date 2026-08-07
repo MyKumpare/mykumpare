@@ -6,7 +6,7 @@ const UNCLASSIFIED = "__unclassified__";
 const VIEWS = {
   team: {
     key: "team",
-    label: "Team Distribution",
+    label: "Employee Status",
     field: "employee_status",
     categories: [
       { label: "Employees", value: "Employee", color: "#5D5FEF" },
@@ -14,9 +14,9 @@ const VIEWS = {
       { label: "Unclassified", value: UNCLASSIFIED, color: "#9CA3AF" },
     ],
   },
-  demographics: {
-    key: "demographics",
-    label: "Demographics",
+  gender: {
+    key: "gender",
+    label: "Gender",
     field: "gender",
     categories: [
       { label: "Male", value: "Male", color: "#3B82F6" },
@@ -24,13 +24,38 @@ const VIEWS = {
       { label: "Undetermined", value: UNCLASSIFIED, color: "#9CA3AF" },
     ],
   },
-  ownership: {
-    key: "ownership",
-    label: "Ownership",
+  ethnicity: {
+    key: "ethnicity",
+    label: "Ethnicity",
+    field: "ethnicity",
+    isArray: true,
+    categories: [
+      { label: "African American", value: "African American", color: "#7C3AED" },
+      { label: "Asian American", value: "Asian American", color: "#F59E0B" },
+      { label: "Caucasian", value: "Caucasian", color: "#3B82F6" },
+      { label: "Latino American", value: "Latino American", color: "#EC4899" },
+      { label: "Native American Indian", value: "Native American Indian", color: "#10B981" },
+      { label: "Native Alaskan Indian", value: "Native Alaskan Indian", color: "#06B6D4" },
+      { label: "Unclassified", value: UNCLASSIFIED, color: "#9CA3AF" },
+    ],
+  },
+  veteran: {
+    key: "veteran",
+    label: "Veteran",
     field: "veteran_status",
     categories: [
       { label: "Veteran Owned", value: "Veteran Owned", color: "#059669" },
       { label: "Non-Veteran Owned", value: "Non-Veteran Owned", color: "#F59E0B" },
+      { label: "Undetermined", value: UNCLASSIFIED, color: "#9CA3AF" },
+    ],
+  },
+  disability: {
+    key: "disability",
+    label: "Disability",
+    field: "disability_status",
+    categories: [
+      { label: "Disabled", value: "Disabled", color: "#EF4444" },
+      { label: "Non-Disabled", value: "Non-Disabled", color: "#10B981" },
       { label: "Undetermined", value: UNCLASSIFIED, color: "#9CA3AF" },
     ],
   },
@@ -53,8 +78,15 @@ export default function EmployeeStatusChart({
     for (const cat of config.categories) result[cat.value] = 0;
     for (const c of contacts) {
       const val = c[config.field];
-      if (val && result[val] !== undefined) result[val] += 1;
-      else if (!val) result[UNCLASSIFIED] += 1;
+      if (config.isArray) {
+        const vals = Array.isArray(val) ? val : [];
+        if (vals.length === 0) result[UNCLASSIFIED] += 1;
+        else for (const v of vals) if (result[v] !== undefined) result[v] += 1;
+      } else if (val && result[val] !== undefined) {
+        result[val] += 1;
+      } else if (!val) {
+        result[UNCLASSIFIED] += 1;
+      }
     }
     return result;
   }, [contacts, config]);
