@@ -174,7 +174,19 @@ export default function InviteToPortalDialog({
 
       // Send the branded invitation email (best-effort)
       try {
-        const regUrl = `${window.location.origin}/#/register`;
+        const inviteFirst = addingNew ? ncFirst.trim() : (selectedContact?.first_name || "");
+        const inviteLast = addingNew ? ncLast.trim() : (selectedContact?.last_name || "");
+        const inviteSalutation = addingNew ? ncSalutation : (selectedContact?.salutation || "");
+        const inviteSuffix = addingNew ? ncSuffix : (selectedContact?.suffix || "");
+        const params = new URLSearchParams({
+          firm: selectedFirm.name || "",
+          first: inviteFirst,
+          last: inviteLast,
+          email: email.trim(),
+        });
+        if (inviteSalutation) params.set("salutation", inviteSalutation);
+        if (inviteSuffix) params.set("suffix", inviteSuffix);
+        const regUrl = `${window.location.origin}/#/register?${params.toString()}`;
         await base44.functions.invoke("sendExternalInvitationEmail", {
           email: email.trim().toLowerCase(),
           inviteeName,

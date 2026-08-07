@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Building2, CheckCircle2, ArrowLeft, AlertCircle, Loader2 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 const SALUTATIONS = ["Mr.", "Ms.", "Mrs.", "Dr.", "Prof.", "Hon."];
 const SUFFIXES = ["Jr.", "Sr.", "II", "III", "IV", "Esq.", "CFA", "CPA", "MBA", "PhD", "MD"];
@@ -28,6 +28,7 @@ const COUNTRY_CODES = [
 const cap = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 
 export default function ExternalPartyRegister() {
+  const [searchParams] = useSearchParams();
   const [form, setForm] = useState({
     firm_name: "", firm_types: [], salutation: "",
     first_name: "", middle_name: "", last_name: "", suffix: "",
@@ -40,6 +41,59 @@ export default function ExternalPartyRegister() {
 
   const set = (field, val) => setForm((f) => ({ ...f, [field]: val }));
   const setName = (field, val) => setForm((f) => ({ ...f, [field]: cap(val) }));
+
+  // Pre-populate from the invitation link query params, or fall back to the
+  // logged-in user's most recent external-party pending invitation.
+  useEffect(() => {
+    const firm = searchParams.get("firm") || "";
+    const first = searchParams.get("first") || "";
+    const middle = searchParams.get("middle") || "";
+    const last = searchParams.get("last") || "";
+    const email = searchParams.get("email") || "";
+    const salutation = searchParams.get("salutation") || "";
+    const suffix = searchParams.get("suffix") || "";
+
+    if (firm || first || last || email) {
+      setForm((f) => ({
+        ...f,
+        firm_name: firm || f.firm_name,
+        first_name: first || f.first_name,
+        middle_name: middle || f.middle_name,
+        last_name: last || f.last_name,
+        email: email || f.email,
+        salutation: salutation || f.salutation,
+        suffix: suffix || f.suffix,
+      }));
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const authed = await base44.auth.isAuthenticated();
+        if (!authed || cancelled) return;
+        const me = await base44.auth.me();
+        if (!me?.email || cancelled) return;
+        const invitations = await base44.entities.PendingInvitation.filter(
+          { email: me.email, invitation_type: "external_party" },
+          "-created_date",
+          5
+        );
+        if (cancelled || !invitations.length) return;
+        const inv = invitations[0];
+        setForm((f) => ({
+          ...f,
+          firm_name: inv.firm_name || f.firm_name,
+          first_name: inv.first_name || f.first_name,
+          last_name: inv.last_name || f.last_name,
+          email: me.email || f.email,
+        }));
+      } catch {
+        // not logged in or no invitation — leave the form blank
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [searchParams]);
 
   const toggleFirmType = (type) => {
     setForm((f) => ({
