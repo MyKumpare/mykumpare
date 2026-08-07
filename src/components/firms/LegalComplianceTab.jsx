@@ -256,36 +256,50 @@ export default function LegalComplianceTab({ firmId, isEditing, contacts = [] })
             </Button>
           </div>
         ) : (
-          <Select value={complianceOfficerId} onValueChange={handleSelectOfficer}>
-            <SelectTrigger><SelectValue placeholder="Select compliance officer..." /></SelectTrigger>
-            <SelectContent>
-              {complianceOfficers.length > 0 && (
-                <>
-                  <div className="px-3 py-1 text-xs font-semibold text-gray-500">Compliance Officers</div>
-                  {complianceOfficers.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{contactDisplayName(c)}</SelectItem>
-                  ))}
-                </>
-              )}
-              {otherContacts.length > 0 && (
-                <>
-                  <div className="px-3 py-1 text-xs font-semibold text-gray-500 border-t mt-1 pt-2">Other Contacts</div>
-                  {otherContacts.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{contactDisplayName(c)}</SelectItem>
-                  ))}
-                </>
-              )}
-              <div className="border-t mt-1 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowAddContact(true)}
-                  className="flex items-center gap-1.5 w-full px-3 py-1.5 text-sm text-indigo-600 hover:bg-indigo-50 text-left"
-                >
-                  <UserPlus className="w-3.5 h-3.5" /> Add New Contact
-                </button>
-              </div>
-            </SelectContent>
-          </Select>
+          <div className="flex gap-2">
+            <Select value={complianceOfficerId} onValueChange={handleSelectOfficer}>
+              <SelectTrigger><SelectValue placeholder="Select compliance officer..." /></SelectTrigger>
+              <SelectContent>
+                {complianceOfficers.length > 0 && (
+                  <>
+                    <div className="px-3 py-1 text-xs font-semibold text-gray-500">Compliance Officers</div>
+                    {complianceOfficers.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{contactDisplayName(c)}</SelectItem>
+                    ))}
+                  </>
+                )}
+                {otherContacts.length > 0 && (
+                  <>
+                    <div className="px-3 py-1 text-xs font-semibold text-gray-500 border-t mt-1 pt-2">Other Contacts</div>
+                    {otherContacts.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{contactDisplayName(c)}</SelectItem>
+                    ))}
+                  </>
+                )}
+                <div className="border-t mt-1 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddContact(true)}
+                    className="flex items-center gap-1.5 w-full px-3 py-1.5 text-sm text-indigo-600 hover:bg-indigo-50 text-left"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" /> Add New Contact
+                  </button>
+                </div>
+              </SelectContent>
+            </Select>
+            {complianceOfficerId && (
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="shrink-0"
+                title="Clear selection"
+                onClick={() => setComplianceOfficerId("")}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
         )}
       </div>
 
