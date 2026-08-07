@@ -25,14 +25,17 @@ const ICONS = { Crown, Building2, Briefcase, Layers, TrendingUp, BarChart3, Sett
 const ICON_KEYS = Object.keys(ICONS);
 
 // ─── Default categories ───
+// Grouping is driven by the contact's department classification (contact_firm_roles).
 const DEFAULT_CATEGORIES = [
-  { id: "board",  label: "Board & Trustees",      iconKey: "Crown",     colorKey: "amber",  patterns: ["board chair", "chair of the board", "vice chair", "board member", "trustee", "chairman", "chairperson"], departmentPatterns: ["board"] },
-  { id: "exec",   label: "Executive Leadership",  iconKey: "Building2", colorKey: "indigo", patterns: ["chief ", "ceo", "cio", "cfo", "coo", "cto", "ccio", "president", "executive director", "general counsel", "executive officer"] },
-  { id: "smgmt",  label: "Senior Management",      iconKey: "Briefcase",  colorKey: "blue",   patterns: ["managing director", "senior managing director", "partner", "head of", "deputy ", "co-head", "svp", "senior vice president", "executive vice president", "evp"] },
-  { id: "dir",    label: "Directors & VPs",        iconKey: "Layers",     colorKey: "purple", patterns: ["director", "vice president", " vp", "vp ", "vp,", "vp.", "vp/", "deputy director"] },
-  { id: "pm",     label: "Portfolio Managers",     iconKey: "TrendingUp", colorKey: "teal",   patterns: ["portfolio manager", " pm ", " pm,", " pm.", "pm/", "lead pm", "co-pm", "investment manager", "fund manager"] },
-  { id: "analyst",label: "Analysts & Associates",  iconKey: "BarChart3",  colorKey: "green",  patterns: ["analyst", "associate", "research", "trader", "quant", "strategist"] },
-  { id: "other",  label: "Operations & Other",     iconKey: "Settings2",  colorKey: "gray",   patterns: [] },
+  { id: "board",  label: "Board",                       iconKey: "Crown",     colorKey: "amber",  patterns: [], departmentPatterns: ["board"] },
+  { id: "exec",   label: "Executives",                  iconKey: "Building2", colorKey: "indigo", patterns: [], departmentPatterns: ["executive"] },
+  { id: "mgmt",   label: "Management Team",             iconKey: "Briefcase", colorKey: "blue",   patterns: [], departmentPatterns: ["management"] },
+  { id: "inv",    label: "Investments",                 iconKey: "TrendingUp", colorKey: "teal",   patterns: [], departmentPatterns: ["investments"] },
+  { id: "legal",  label: "Compliance & Legal",          iconKey: "Settings2", colorKey: "purple", patterns: [], departmentPatterns: ["compliance", "legal"] },
+  { id: "mkt",    label: "Marketing & Client Services",  iconKey: "BarChart3", colorKey: "pink",   patterns: [], departmentPatterns: ["marketing", "client services"] },
+  { id: "ops",    label: "Operations",                  iconKey: "Settings2", colorKey: "green",  patterns: [], departmentPatterns: ["operations"] },
+  { id: "admin",  label: "Administration",              iconKey: "Layers",    colorKey: "cyan",   patterns: [], departmentPatterns: ["administration"] },
+  { id: "other",  label: "Other",                       iconKey: "Users",     colorKey: "gray",   patterns: [] },
 ];
 
 const STORAGE_PREFIX = "mk_teamHierarchy_";
@@ -64,7 +67,9 @@ function matchCategories(person, categories) {
     ? person.contact_firm_roles.map((r) => (r || "").toLowerCase().trim()).filter(Boolean)
     : [];
   for (const cat of categories) {
-    if (!cat.patterns || cat.patterns.length === 0) continue; // skip catch-all
+    const hasTitlePatterns = cat.patterns && cat.patterns.length > 0;
+    const hasDeptPatterns = cat.departmentPatterns && cat.departmentPatterns.length > 0;
+    if (!hasTitlePatterns && !hasDeptPatterns) continue; // skip catch-all
     let titleMatch = false;
     if (title) {
       for (const pat of cat.patterns) {
