@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search, ArrowLeft, Users, Sparkles, ScrollText, ShieldCheck, Ghost } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search, ArrowLeft, Users, Sparkles, ScrollText, ShieldCheck, Ghost, Upload } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -9,6 +9,7 @@ import AddBenchmarkDialog from "./AddBenchmarkDialog";
 import DuplicateContactsReview from "@/components/contacts/DuplicateContactsReview";
 import EnrichmentLogsView from "./EnrichmentLogsView";
 import OrphanRecordCleanup from "./OrphanRecordCleanup";
+import CsvContactImport from "./CsvContactImport";
 
 function BenchmarkItem({ b, onClick }) {
   return (
@@ -206,6 +207,16 @@ export default function UtilitySection({ deletedCount, forceExpanded = false }) 
                 <span className="text-sm font-semibold text-gray-700">Orphan Cleanup</span>
                 <span className="text-[11px] text-gray-400">Find & remove stale records</span>
               </button>
+              <button
+                onClick={() => setView("import-contacts")}
+                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
+              >
+                <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center">
+                  <Upload className="w-5 h-5 text-emerald-600" />
+                </div>
+                <span className="text-sm font-semibold text-gray-700">Import Contacts</span>
+                <span className="text-[11px] text-gray-400">Bulk upload from CSV</span>
+              </button>
               {isAdmin && (
                 <button
                   onClick={() => navigate("/UserManagement")}
@@ -332,6 +343,11 @@ export default function UtilitySection({ deletedCount, forceExpanded = false }) 
           {/* Orphan record cleanup view */}
           {view === "orphans" && (
             <OrphanRecordCleanup />
+          )}
+
+          {/* CSV contact import view */}
+          {view === "import-contacts" && (
+            <CsvContactImport />
           )}
         </div>
       )}
