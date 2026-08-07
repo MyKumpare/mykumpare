@@ -3,8 +3,13 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
 const UNCLASSIFIED = "__unclassified__";
 
-// Maps a primary view to the secondary drill-down view shown when a row is clicked.
-const BREAKDOWN_MAP = { gender: "ethnicity", ethnicity: "gender" };
+// Maps a primary view to the secondary drill-down view(s) shown when a row is clicked.
+const BREAKDOWN_MAP = {
+  gender: ["ethnicity"],
+  ethnicity: ["gender"],
+  veteran: ["gender", "ethnicity"],
+  disability: ["gender", "ethnicity"],
+};
 
 const VIEWS = {
   team: {
@@ -120,11 +125,12 @@ export default function EmployeeStatusChart({
       ? config.categories.find((cat) => fieldSel.has(cat.value))?.value || null
       : null;
 
-  // Cross-tab drill-down: Gender→Ethnicity and Ethnicity→Gender.
-  const secondaryKey = BREAKDOWN_MAP[viewKey] || null;
+  // Cross-tab drill-down: Gender→Ethnicity, Ethnicity→Gender,
+  // Veteran/Disability→Gender then Ethnicity.
+  const secondaryKeys = BREAKDOWN_MAP[viewKey] || [];
 
-  const secondaryBreakdown = useMemo(() => {
-    if (!secondaryKey || !activeFilter) return null;
+  const secondaryBreakdowns = useMemo(() => {
+    if (!activeFilter || secondaryKeys.length === 0) return [];
     const subset = scopedContacts.filter((c) => {
       const val = c[config.field];
       if (activeFilter === UNCLASSIFIED) {
@@ -134,23 +140,25 @@ export default function EmployeeStatusChart({
       if (config.isArray) return Array.isArray(val) && val.includes(activeFilter);
       return val === activeFilter;
     });
-    const secConfig = VIEWS[secondaryKey];
-    const result = {};
-    for (const cat of secConfig.categories) result[cat.value] = 0;
-    for (const c of subset) {
-      const val = c[secConfig.field];
-      if (secConfig.isArray) {
-        const vals = Array.isArray(val) ? val : [];
-        if (vals.length === 0) result[UNCLASSIFIED] += 1;
-        else for (const v of vals) if (result[v] !== undefined) result[v] += 1;
-      } else if (val && val !== "Undetermined" && result[val] !== undefined) {
-        result[val] += 1;
-      } else {
-        result[UNCLASSIFIED] += 1;
+    return secondaryKeys.map((secKey) => {
+      const secConfig = VIEWS[secKey];
+      const result = {};
+      for (const cat of secConfig.categories) result[cat.value] = 0;
+      for (const c of subset) {
+        const val = c[secConfig.field];
+        if (secConfig.isArray) {
+          const vals = Array.isArray(val) ? val : [];
+          if (vals.length === 0) result[UNCLASSIFIED] += 1;
+          else for (const v of vals) if (result[v] !== undefined) result[v] += 1;
+        } else if (val && val !== "Undetermined" && result[val] !== undefined) {
+          result[val] += 1;
+        } else {
+          result[UNCLASSIFIED] += 1;
+        }
       }
-    }
-    return { subsetTotal: subset.length, counts: result, secConfig };
-  }, [scopedContacts, viewKey, secondaryKey, activeFilter, config]);
+      return { subsetTotal: subset.length, counts: result, secConfig };
+    });
+  }, [scopedContacts, viewKey, secondaryKeys, activeFilter, config]);
 
   const handleLabelClick = (value) => {
     if (!onChartFilter) return;
@@ -271,12 +279,12 @@ export default function EmployeeStatusChart({
         </div>
       </div>
 
-      {/* Secondary drill-down breakdown shown when a primary category is selected */}
-      {secondaryBreakdown && secondaryBreakdown.subsetTotal > 0 && (
-        <div className="border-t border-gray-100 pt-2.5 space-y-1.5">
+      {/* Secondary drill-down breakdown(s) shown when a primary category is selected */}
+      {secondaryBreakdowns.filter((b) => b.subsetTotal > 0).map((breakdown, bi) => (
+        <div key={bi} className="border-t border-gray-100 pt-2.5 space-y-1.5">
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-medium text-gray-500">
-              {secondaryBreakdown.secConfig.label} breakdown: {activeFilter === UNCLASSIFIED ? "Undetermined" : activeFilter}
+              {breakdown.secConfig.label} breakdown: {activeFilter === UNCLASSIFIED ? "Undetermined" : activeFilter}
             </p>
             <button
               type="button"
@@ -293,10 +301,10 @@ export default function EmployeeStatusChart({
               {ethPctMode === "subset" ? "% of Total" : "% Overall"}
             </span>
           </div>
-          {secondaryBreakdown.secConfig.categories.map((cat) => {
-            const count = secondaryBreakdown.counts[cat.value] || 0;
+          {breakdown.secConfig.categories.map((cat) => {
+            const count = breakdown.counts[cat.value] || 0;
             if (count === 0) return null;
-            const base = ethPctMode === "subset" ? secondaryBreakdown.subsetTotal : total;
+            const base = ethPctMode === "subset" ? breakdown.subsetTotal : total;
             const pctVal = base ? Math.round((count / base) * 100) : 0;
             return (
               <div key={cat.value} className="flex items-center gap-2">
@@ -310,7 +318,7 @@ export default function EmployeeStatusChart({
             );
           })}
         </div>
-      )}
+      ))}
 
       <div className="border-t border-gray-100 pt-2.5 flex items-center justify-between gap-3">
         <button
