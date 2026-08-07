@@ -7,6 +7,7 @@ import {
 import { toast } from "@/components/ui/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
 // ─── Color palette (literal strings so Tailwind purger sees them) ───
 const COLORS = {
@@ -76,6 +77,28 @@ function loadAssignments(firmId) {
 function saveAssignments(firmId, map) {
   if (!firmId) return;
   try { localStorage.setItem(ASSIGN_PREFIX + firmId, JSON.stringify(map)); } catch { /* ignore */ }
+}
+
+// Per-category contact ordering (drag-rearranged). Stored as a map of
+// categoryId -> [contactId, ...]. Contacts not in the list keep their
+// original grouping order, appended after the ordered ones.
+const ORDER_PREFIX = "mk_teamHierarchyOrder_";
+
+function loadOrders(firmId) {
+  if (!firmId) return {};
+  try {
+    const raw = localStorage.getItem(ORDER_PREFIX + firmId);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") return parsed;
+    }
+  } catch { /* ignore */ }
+  return {};
+}
+
+function saveOrders(firmId, map) {
+  if (!firmId) return;
+  try { localStorage.setItem(ORDER_PREFIX + firmId, JSON.stringify(map)); } catch { /* ignore */ }
 }
 
 // ─── Classification ───
@@ -238,21 +261,62 @@ function LevelRow({ cat, people, idx, total, onContactClick, canEdit, categories
         </button>
       </div>
       {!collapsed && (
-        <div className="flex flex-wrap gap-4 justify-center mb-2">
-          {people.map((person, i) => (
-            <PersonCard
-              key={i}
-              person={person}
-              colorClass={color.card}
-              onClick={onContactClick}
-              canEdit={canEdit}
-              categories={categories}
-              assignedCategoryIds={manualAssignments[person.id]}
-              onAssign={onAssign}
-              onResetAuto={onResetAuto}
-            />
-          ))}
-        </div>
+        canEdit ? (
+          <Droppable droppableId={cat.id} type={cat.id} direction="horizontal">
+            {(provided) => (
+              <div
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                className="flex flex-wrap gap-4 justify-center mb-2"
+              >
+                {people.map((person, i) => (
+                  <Draggable
+                    key={`${cat.id}__${person.id}`}
+                    draggableId={`${cat.id}__${person.id}`}
+                    index={i}
+                  >
+                    {(prov) => (
+                      <div
+                        ref={prov.innerRef}
+                        {...prov.draggableProps}
+                        {...prov.dragHandleProps}
+                        style={prov.draggableProps.style}
+                      >
+                        <PersonCard
+                          person={person}
+                          colorClass={color.card}
+                          onClick={onContactClick}
+                          canEdit={canEdit}
+                          categories={categories}
+                          assignedCategoryIds={manualAssignments[person.id]}
+                          onAssign={onAssign}
+                          onResetAuto={onResetAuto}
+                        />
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        ) : (
+          <div className="flex flex-wrap gap-4 justify-center mb-2">
+            {people.map((person, i) => (
+              <PersonCard
+                key={i}
+                person={person}
+                colorClass={color.card}
+                onClick={onContactClick}
+                canEdit={canEdit}
+                categories={categories}
+                assignedCategoryIds={manualAssignments[person.id]}
+                onAssign={onAssign}
+                onResetAuto={onResetAuto}
+              />
+            ))}
+          </div>
+        )
       )}
       {showConnector && <div className="w-px h-6 bg-gray-300 mb-2" />}
     </div>
@@ -362,6 +426,7 @@ export default function TeamHierarchyView({ people, firmName, firmId, editable, 
   const canEdit = editable !== undefined ? editable : !!firmId;
   const [categories, setCategories] = useState(() => loadCategories(firmId));
   const [manualAssignments, setManualAssignments] = useState(() => loadAssignments(firmId));
+  const [categoryOrders, setCategoryOrders] = useState(() => loadOrders(firmId));
   const [manageMode, setManageMode] = useState(false);
   const [printing, setPrinting] = useState(false);
   const hierarchyRef = useRef(null);
@@ -375,6 +440,26 @@ export default function TeamHierarchyView({ people, firmName, firmId, editable, 
   const updateAssignments = (next) => {
     setManualAssignments(next);
     saveAssignments(firmId, next);
+  };
+
+  const updateOrders = (next) => {
+    setCategoryOrders(next);
+    saveOrders(firmId, next);
+  };
+
+  // Reorder a contact within its category (drag-and-drop). Cross-category
+  // drags are blocked by per-category Droppable types, so this only fires for
+  // same-category moves.
+  const handleDragEnd = (result) => {
+    const { source, destination } = result;
+    if (!destination || source.droppableId !== destination.droppableId) return;
+    if (source.index === destination.index) return;
+    const bucket = grouped.find((b) => b.id === destination.droppableId);
+    if (!bucket) return;
+    const reordered = Array.from(bucket.people);
+    const [moved] = reordered.splice(source.index, 1);
+    reordered.splice(destination.index, 0, moved);
+    updateOrders({ ...categoryOrders, [destination.droppableId]: reordered.map((p) => p.id) });
   };
 
   const handleAssign = (contactId, categoryIds) => {
@@ -402,8 +487,24 @@ export default function TeamHierarchyView({ people, firmName, firmId, editable, 
         }
       }
     }
+    // Apply any saved per-category ordering (from drag-rearrange). Contacts in
+    // the saved order list come first in that order; any not in the list
+    // append in their original grouping order.
+    for (const bucket of buckets) {
+      const order = categoryOrders[bucket.id] || [];
+      if (!order.length) continue;
+      const orderIndex = new Map(order.map((id, i) => [id, i]));
+      const ordered = [];
+      const rest = [];
+      for (const p of bucket.people) {
+        if (orderIndex.has(p.id)) ordered.push({ p, i: orderIndex.get(p.id) });
+        else rest.push(p);
+      }
+      ordered.sort((a, b) => a.i - b.i);
+      bucket.people = [...ordered.map((x) => x.p), ...rest];
+    }
     return buckets.filter(b => b.people.length > 0);
-  }, [people, categories, manualAssignments]);
+  }, [people, categories, manualAssignments, categoryOrders]);
 
   const totalPeople = people.length;
 
@@ -566,7 +667,7 @@ export default function TeamHierarchyView({ people, firmName, firmId, editable, 
       {canEdit && !manageMode && (
         <p className="text-[11px] text-gray-400 px-1 flex items-center gap-1">
           <Move className="w-3 h-3" />
-          Use the move button on a card to assign a contact to one or more categories.
+          Use the move button on a card to assign a contact to one or more categories. Drag a card to reorder it within its category.
         </p>
       )}
 
@@ -616,25 +717,27 @@ export default function TeamHierarchyView({ people, firmName, firmId, editable, 
             {firmName && (
               <h3 className="text-sm font-bold text-gray-800 mb-3 text-center">{firmName} — Team Structure</h3>
             )}
-            {grouped.length === 0 ? (
-              <p className="text-sm text-gray-400 py-8">No contacts match your categories.</p>
-            ) : (
-              grouped.map((level, idx) => (
-                <LevelRow
-                  key={level.id}
-                  cat={level}
-                  people={level.people}
-                  idx={idx}
-                  total={grouped.length}
-                  onContactClick={onContactClick}
-                  canEdit={canEdit}
-                  categories={categories}
-                  manualAssignments={manualAssignments}
-                  onAssign={handleAssign}
-                  onResetAuto={handleResetAuto}
-                />
-              ))
-            )}
+            <DragDropContext onDragEnd={handleDragEnd}>
+              {grouped.length === 0 ? (
+                <p className="text-sm text-gray-400 py-8">No contacts match your categories.</p>
+              ) : (
+                grouped.map((level, idx) => (
+                  <LevelRow
+                    key={level.id}
+                    cat={level}
+                    people={level.people}
+                    idx={idx}
+                    total={grouped.length}
+                    onContactClick={onContactClick}
+                    canEdit={canEdit}
+                    categories={categories}
+                    manualAssignments={manualAssignments}
+                    onAssign={handleAssign}
+                    onResetAuto={handleResetAuto}
+                  />
+                ))
+              )}
+            </DragDropContext>
           </div>
         </div>
       )}
