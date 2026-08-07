@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import {
   ShieldCheck, ShieldX, ShieldAlert, Clock, Bell, Eye, Loader2,
-  CheckCircle2, ExternalLink,
+  CheckCircle2, ExternalLink, MessageSquare, Send,
 } from "lucide-react";
 import AddDueDiligenceDialog from "../firms/AddDueDiligenceDialog";
 import { syncDdNotifications, deleteDdNotifications } from "../firms/ddNotificationSync";
@@ -27,6 +27,14 @@ const TYPE_CONFIG = {
     badgeClass: "bg-indigo-100 text-indigo-700",
     actionLabel: "View",
   },
+  external_chat: {
+    label: "External Chat",
+    icon: MessageSquare,
+    iconClass: "text-violet-600",
+    bgClass: "bg-violet-50 border-violet-200",
+    badgeClass: "bg-violet-100 text-violet-700",
+    actionLabel: "Respond",
+  },
 };
 
 const DECISION_ICON = {
@@ -47,6 +55,8 @@ export default function ContactNotificationsTab({ contactId, contactName, onCont
   const [editing, setEditing] = useState(null);
   const [reviewing, setReviewing] = useState(null);
   const [hideCompleted, setHideCompleted] = useState(true);
+  const [respondingTo, setRespondingTo] = useState(null);
+  const [responseText, setResponseText] = useState("");
 
   const { data: notifications = [], isLoading } = useQuery({
     queryKey: ["dd-notifications", contactId],
@@ -107,6 +117,27 @@ export default function ContactNotificationsTab({ contactId, contactName, onCont
       if (editing?.firm_id) queryClient.invalidateQueries({ queryKey: ["due-diligence", editing.firm_id] });
       setShowDialog(false);
       setEditing(null);
+    },
+  });
+
+  const respondChatMutation = useMutation({
+    mutationFn: async ({ notification, response }) => {
+      const todayStr = new Date().toISOString().split("T")[0];
+      // Update the ExternalChat record with the response
+      if (notification.external_chat_id) {
+        await base44.entities.ExternalChat.update(notification.external_chat_id, {
+          response,
+          responded_date: todayStr,
+          status: "completed",
+        });
+      }
+      // Mark the notification as completed
+      return base44.entities.DdNotification.update(notification.id, { status: "completed" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dd-notifications", contactId] });
+      setRespondingTo(null);
+      setResponseText("");
     },
   });
 
@@ -276,6 +307,31 @@ export default function ContactNotificationsTab({ contactId, contactName, onCont
                       <Button type="button" size="sm" variant="outline" className="h-6 text-[10px] border-orange-300 text-orange-600 hover:bg-orange-50" disabled={decideMutation.isPending} onClick={() => decideMutation.mutate({ notification: n, decision: "on_hold" })}>
                         <ShieldAlert className="w-3 h-3" /> On Hold
                       </Button>
+                    </div>
+                  )}
+                  {n.type === "external_chat" && !isCompleted && (
+                    <div className="mt-1.5">
+                      {respondingTo?.id === n.id ? (
+                        <div className="space-y-1.5">
+                          <textarea
+                            className="w-full text-xs border border-gray-200 rounded-md p-2 min-h-[60px] focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                            placeholder="Type your response..."
+                            value={responseText}
+                            onChange={(e) => setResponseText(e.target.value)}
+                            disabled={respondChatMutation.isPending}
+                          />
+                          <div className="flex gap-1.5">
+                            <Button type="button" size="sm" className="h-6 text-[10px] bg-indigo-600 hover:bg-indigo-700 text-white" disabled={respondChatMutation.isPending || !responseText.trim()} onClick={() => respondChatMutation.mutate({ notification: n, response: responseText.trim() })}>
+                              {respondChatMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />} Send Response
+                            </Button>
+                            <Button type="button" size="sm" variant="outline" className="h-6 text-[10px]" onClick={() => { setRespondingTo(null); setResponseText(""); }}>Cancel</Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <Button type="button" size="sm" className="h-6 text-[10px] bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => { if (n.status === "unread") markReadMutation.mutate(n.id); setRespondingTo(n); }}>
+                          <MessageSquare className="w-3 h-3" /> Respond
+                        </Button>
+                      )}
                     </div>
                   )}
                   {n.created_date && (

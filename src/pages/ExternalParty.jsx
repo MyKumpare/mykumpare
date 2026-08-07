@@ -14,10 +14,11 @@ import {
 } from "@/components/ui/dialog";
 import QuestionnaireDialog from "@/components/questionnaires/QuestionnaireDialog";
 import ExternalProductSubmission from "@/components/external/ExternalProductSubmission";
+import ExternalAnalystChat from "@/components/external/ExternalAnalystChat";
 import {
   ClipboardList, Clock, Building2, Calendar, CheckCircle2, Play, LogOut,
   MapPin, Phone, Globe, Users, Package, FileText, Plus, Trash2, Mail, Loader2,
-  ExternalLink, ShieldCheck, Crown, UserPlus, X, ChevronRight,
+  ExternalLink, ShieldCheck, Crown, UserPlus, X, ChevronRight, MessageSquare,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
@@ -52,6 +53,7 @@ const TABS = [
   { id: "overview", label: "Overview", icon: Building2 },
   { id: "products", label: "Products", icon: Package },
   { id: "questionnaires", label: "Questionnaires", icon: ClipboardList },
+  { id: "analyst_chat", label: "Analyst Chat", icon: MessageSquare },
   { id: "users", label: "Users", icon: Users },
 ];
 
@@ -349,6 +351,17 @@ export default function ExternalParty() {
                   </>
                 )}
               </div>
+            )}
+
+            {/* ── Analyst Chat Tab ── */}
+            {tab === "analyst_chat" && (
+              <ExternalAnalystChat
+                firmId={firmId}
+                firmName={firm?.name}
+                contactId={contactId}
+                contactName={user?.full_name}
+                readOnly={readOnly}
+              />
             )}
 
             {/* ── Users Tab ── */}
