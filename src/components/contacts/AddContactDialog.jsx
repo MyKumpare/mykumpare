@@ -724,11 +724,15 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                   <TabsTrigger value="due-diligence" className="flex items-center gap-1.5">
                     <ClipboardCheck className="w-3.5 h-3.5" /> Due Diligence
                   </TabsTrigger>
-                  <TabsTrigger value="notifications" className="flex items-center gap-1.5">
-                    <Bell className="w-3.5 h-3.5" /> Notifications
-                  </TabsTrigger>
                   <TabsTrigger value="chat" className="flex items-center gap-1.5">
                     <MessageSquare className="w-3.5 h-3.5" /> Chat
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+              <div className="flex gap-1">
+                <TabsList className="">
+                  <TabsTrigger value="notifications" className="flex items-center gap-1.5">
+                    <Bell className="w-3.5 h-3.5" /> Notifications
                   </TabsTrigger>
                 </TabsList>
               </div>
