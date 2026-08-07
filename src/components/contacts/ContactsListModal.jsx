@@ -1,8 +1,10 @@
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { User } from "lucide-react";
+import { User, Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import AddContactDialog from "./AddContactDialog";
 import ContactsSectionFilters, { filterSectionContacts } from "./ContactsSectionFilters";
+import { exportContactsToCSV } from "./exportContactsCsv";
 
 export default function ContactsListModal({ open, onOpenChange, contacts = [], firms = [], products = [], portfolios = [], onNavigateToOwnership, onProductClick, onFirmClick }) {
   const [search, setSearch] = useState("");
@@ -63,7 +65,19 @@ export default function ContactsListModal({ open, onOpenChange, contacts = [], f
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>All Contacts ({filtered.length})</DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle>All Contacts ({filtered.length})</DialogTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-gray-600 hover:text-gray-700 hover:bg-gray-100 gap-1 text-xs"
+              onClick={() => exportContactsToCSV(filtered, firms)}
+              title="Export contacts to CSV"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Export
+            </Button>
+          </div>
         </DialogHeader>
 
         <ContactsSectionFilters

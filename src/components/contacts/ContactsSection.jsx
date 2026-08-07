@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, ChevronDown, ChevronRight, User, Camera } from "lucide-react";
+import { Plus, ChevronDown, ChevronRight, User, Camera, Download } from "lucide-react";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
 import ContactsSectionFilters, { filterSectionContacts } from "@/components/contacts/ContactsSectionFilters";
 import { useViewMode } from "@/hooks/useViewMode";
+import { exportContactsToCSV } from "./exportContactsCsv";
 
 const FIRM_TYPES = [
   "Manager of Managers",
@@ -202,6 +203,16 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
           >
             <Camera className="w-3.5 h-3.5" />
             Photo ID
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-gray-600 hover:text-gray-700 hover:bg-gray-100 gap-1 text-xs"
+            onClick={() => exportContactsToCSV(filteredContacts, firms)}
+            title="Export contacts to CSV"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Export
           </Button>
           <Button
             variant="ghost"
