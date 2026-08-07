@@ -2,9 +2,11 @@ import React, { useMemo, useState, useRef } from "react";
 import {
   User, ChevronDown, ChevronRight, Users, Layers,
   Crown, Briefcase, TrendingUp, BarChart3, Settings2, Building2,
-  Printer, Download, Plus, Trash2, ArrowUp, ArrowDown, Pencil, RotateCcw, X, Check, Loader2,
+  Printer, Download, Plus, Trash2, ArrowUp, ArrowDown, Pencil, RotateCcw, X, Check, Loader2, Move, Pin,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // ─── Color palette (literal strings so Tailwind purger sees them) ───
 const COLORS = {
@@ -57,6 +59,25 @@ function saveCategories(firmId, cats) {
   try { localStorage.setItem(STORAGE_PREFIX + firmId, JSON.stringify(cats)); } catch { /* ignore */ }
 }
 
+const ASSIGN_PREFIX = "mk_teamHierarchyAssign_";
+
+function loadAssignments(firmId) {
+  if (!firmId) return {};
+  try {
+    const raw = localStorage.getItem(ASSIGN_PREFIX + firmId);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") return parsed;
+    }
+  } catch { /* ignore */ }
+  return {};
+}
+
+function saveAssignments(firmId, map) {
+  if (!firmId) return;
+  try { localStorage.setItem(ASSIGN_PREFIX + firmId, JSON.stringify(map)); } catch { /* ignore */ }
+}
+
 // ─── Classification ───
 // Returns the set of category ids a person matches (by title OR department).
 // A person may match multiple categories (e.g. a board member who is also an executive).
@@ -92,14 +113,83 @@ function getFullName(person) {
   return [person.first_name, person.last_name].filter(Boolean).join(" ") || "Unknown";
 }
 
+// ─── Category assignment popover (move / copy a contact to categories) ───
+function CategoryAssignPopover({ person, categories, assignedCategoryIds, onAssign, onResetAuto }) {
+  const [open, setOpen] = useState(false);
+  const manual = Array.isArray(assignedCategoryIds) ? assignedCategoryIds : null;
+  const autoIds = useMemo(() => matchCategories(person, categories), [person, categories]);
+  const currentIds = manual !== null ? manual : autoIds;
+  // All categories except the catch-all (last) are manually assignable.
+  const selectable = categories.slice(0, -1);
+
+  const toggle = (catId) => {
+    const base = new Set(manual !== null ? manual : autoIds);
+    if (base.has(catId)) base.delete(catId); else base.add(catId);
+    const arr = Array.from(base);
+    if (arr.length === 0) { onResetAuto(person.id); }
+    else { onAssign(person.id, arr); }
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          onClick={(e) => e.stopPropagation()}
+          className="w-6 h-6 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-500 hover:text-indigo-600 hover:border-indigo-300 transition-colors"
+          title="Move / copy to categories"
+        >
+          <Move className="w-3 h-3" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-60 p-2" onClick={(e) => e.stopPropagation()} align="start">
+        <p className="text-xs font-semibold text-gray-700 mb-1.5">Assign to categories</p>
+        <div className="max-h-56 overflow-y-auto space-y-0.5">
+          {selectable.map((cat) => (
+            <label key={cat.id} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-gray-50 px-1.5 py-1 rounded">
+              <Checkbox
+                checked={currentIds.includes(cat.id)}
+                onCheckedChange={() => toggle(cat.id)}
+              />
+              <span className="text-gray-700">{cat.label}</span>
+            </label>
+          ))}
+        </div>
+        {manual !== null && (
+          <button
+            type="button"
+            onClick={() => { onResetAuto(person.id); setOpen(false); }}
+            className="mt-2 w-full text-[11px] text-gray-500 hover:text-red-600 border-t border-gray-100 pt-1.5 flex items-center justify-center gap-1"
+          >
+            <RotateCcw className="w-3 h-3" />
+            Reset to auto
+          </button>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 // ─── Person card ───
-function PersonCard({ person, colorClass, onClick }) {
+function PersonCard({ person, colorClass, onClick, canEdit, categories, assignedCategoryIds, onAssign, onResetAuto }) {
   const name = getFullName(person);
   const clickable = !!onClick;
+  const hasManual = Array.isArray(assignedCategoryIds);
   return (
-    <div className="flex flex-col items-center" style={{ minWidth: 130 }}>
+    <div className="flex flex-col items-center relative" style={{ minWidth: 130 }}>
+      {canEdit && (
+        <div className="absolute -top-1.5 -right-1.5 z-20">
+          <CategoryAssignPopover
+            person={person}
+            categories={categories}
+            assignedCategoryIds={assignedCategoryIds}
+            onAssign={onAssign}
+            onResetAuto={onResetAuto}
+          />
+        </div>
+      )}
       <div
-        className={`flex flex-col items-center p-2.5 rounded-xl border-2 bg-white shadow-sm ${colorClass} ${clickable ? "cursor-pointer hover:shadow-md hover:ring-2 hover:ring-indigo-300 hover:border-indigo-400 transition-all" : ""}`}
+        className={`flex flex-col items-center p-2.5 rounded-xl border-2 bg-white shadow-sm relative ${colorClass} ${clickable ? "cursor-pointer hover:shadow-md hover:ring-2 hover:ring-indigo-300 hover:border-indigo-400 transition-all" : ""}`}
         style={{ width: 130, minHeight: 110 }}
         onClick={clickable ? () => onClick(person) : undefined}
         role={clickable ? "button" : undefined}
@@ -120,13 +210,18 @@ function PersonCard({ person, colorClass, onClick }) {
             {person.title}
           </p>
         )}
+        {hasManual && (
+          <span className="absolute bottom-1 left-1 text-indigo-500" title="Manually assigned">
+            <Pin className="w-3 h-3" />
+          </span>
+        )}
       </div>
     </div>
   );
 }
 
 // ─── Level row (display) ───
-function LevelRow({ cat, people, idx, total, onContactClick }) {
+function LevelRow({ cat, people, idx, total, onContactClick, canEdit, categories, manualAssignments, onAssign, onResetAuto }) {
   const [collapsed, setCollapsed] = useState(false);
   const Icon = ICONS[cat.iconKey] || Users;
   const color = COLORS[cat.colorKey] || COLORS.gray;
@@ -145,7 +240,17 @@ function LevelRow({ cat, people, idx, total, onContactClick }) {
       {!collapsed && (
         <div className="flex flex-wrap gap-4 justify-center mb-2">
           {people.map((person, i) => (
-            <PersonCard key={i} person={person} colorClass={color.card} onClick={onContactClick} />
+            <PersonCard
+              key={i}
+              person={person}
+              colorClass={color.card}
+              onClick={onContactClick}
+              canEdit={canEdit}
+              categories={categories}
+              assignedCategoryIds={manualAssignments[person.id]}
+              onAssign={onAssign}
+              onResetAuto={onResetAuto}
+            />
           ))}
         </div>
       )}
@@ -256,6 +361,7 @@ function CategoryEditor({ cat, idx, total, onChange, onDelete, onMoveUp, onMoveD
 export default function TeamHierarchyView({ people, firmName, firmId, editable, onContactClick }) {
   const canEdit = editable !== undefined ? editable : !!firmId;
   const [categories, setCategories] = useState(() => loadCategories(firmId));
+  const [manualAssignments, setManualAssignments] = useState(() => loadAssignments(firmId));
   const [manageMode, setManageMode] = useState(false);
   const [printing, setPrinting] = useState(false);
   const hierarchyRef = useRef(null);
@@ -266,10 +372,27 @@ export default function TeamHierarchyView({ people, firmName, firmId, editable, 
     saveCategories(firmId, next);
   };
 
+  const updateAssignments = (next) => {
+    setManualAssignments(next);
+    saveAssignments(firmId, next);
+  };
+
+  const handleAssign = (contactId, categoryIds) => {
+    updateAssignments({ ...manualAssignments, [contactId]: categoryIds });
+  };
+  const handleResetAuto = (contactId) => {
+    const next = { ...manualAssignments };
+    delete next[contactId];
+    updateAssignments(next);
+  };
+
   const grouped = useMemo(() => {
     const buckets = categories.map(c => ({ ...c, people: [] }));
     for (const person of people) {
-      const matchedIds = matchCategories(person, categories);
+      const manual = manualAssignments[person.id];
+      const matchedIds = Array.isArray(manual)
+        ? manual.filter((id) => categories.some((c) => c.id === id))
+        : matchCategories(person, categories);
       if (matchedIds.length === 0) {
         buckets[buckets.length - 1].people.push(person);
       } else {
@@ -280,7 +403,7 @@ export default function TeamHierarchyView({ people, firmName, firmId, editable, 
       }
     }
     return buckets.filter(b => b.people.length > 0);
-  }, [people, categories]);
+  }, [people, categories, manualAssignments]);
 
   const totalPeople = people.length;
 
@@ -440,6 +563,13 @@ export default function TeamHierarchyView({ people, firmName, firmId, editable, 
         )}
       </div>
 
+      {canEdit && !manageMode && (
+        <p className="text-[11px] text-gray-400 px-1 flex items-center gap-1">
+          <Move className="w-3 h-3" />
+          Use the move button on a card to assign a contact to one or more categories.
+        </p>
+      )}
+
       {/* Manage mode: category editors */}
       {manageMode ? (
         <div className="space-y-2">
@@ -497,6 +627,11 @@ export default function TeamHierarchyView({ people, firmName, firmId, editable, 
                   idx={idx}
                   total={grouped.length}
                   onContactClick={onContactClick}
+                  canEdit={canEdit}
+                  categories={categories}
+                  manualAssignments={manualAssignments}
+                  onAssign={handleAssign}
+                  onResetAuto={handleResetAuto}
                 />
               ))
             )}
