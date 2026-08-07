@@ -221,7 +221,7 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
               <Label className="text-xs font-medium text-gray-700">Filter by firm</Label>
               <Select value={firmFilter} onValueChange={setFirmFilter}>
                 <SelectTrigger className={fieldCls}><SelectValue /></SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[70]">
                   <SelectItem value="__all__">My firm ({firms.find((f) => f.id === myFirmId)?.name || "default"})</SelectItem>
                   {firms.filter((f) => !f.deleted_at && f.id !== myFirmId).map((f) => (
                     <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
@@ -274,7 +274,7 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
               <Label className="text-xs font-medium text-gray-700">Platform role</Label>
               <Select value={role} onValueChange={setRole}>
                 <SelectTrigger className={fieldCls}><SelectValue /></SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[70]">
                   <SelectItem value="user">User — standard access</SelectItem>
                   <SelectItem value="admin">Administrator — platform-level access</SelectItem>
                 </SelectContent>
@@ -335,7 +335,7 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
               <Label className="text-xs font-medium text-gray-700">Firm portal *</Label>
               <Select value={firmId} onValueChange={setFirmId}>
                 <SelectTrigger className={fieldCls}><SelectValue placeholder="Select a firm" /></SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[70]">
                   {firms.filter((f) => !f.deleted_at).map((f) => (
                     <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
                   ))}
@@ -348,7 +348,7 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
                 <Label className="text-xs font-medium text-gray-700">Platform role</Label>
                 <Select value={role} onValueChange={setRole}>
                   <SelectTrigger className={fieldCls}><SelectValue /></SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[70]">
                     <SelectItem value="user">User</SelectItem>
                     <SelectItem value="admin">Administrator</SelectItem>
                   </SelectContent>
@@ -358,7 +358,7 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
                 <Label className="text-xs font-medium text-gray-700">Firm role</Label>
                 <Select value={firmRole} onValueChange={setFirmRole}>
                   <SelectTrigger className={fieldCls}><SelectValue /></SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[70]">
                     <SelectItem value="user">Member</SelectItem>
                     <SelectItem value="co-admin">Co-Admin</SelectItem>
                     <SelectItem value="admin">Firm Admin</SelectItem>
