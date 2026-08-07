@@ -51,7 +51,17 @@ export default function UserManagement() {
     queryFn: () => base44.entities.ExternalPartyRequest.list("-created_date", 500),
     enabled: isAdmin,
   });
-  const externalPartyCount = (externalRequests || []).filter((r) => r.status === "approved").length;
+  const thirdPartyFirmIds = new Set(
+    (externalRequests || [])
+      .filter((r) => r.status === "approved" && r.created_firm_id)
+      .map((r) => r.created_firm_id)
+  );
+
+  const isThirdParty = (u) => !!u.linked_firm_id && thirdPartyFirmIds.has(u.linked_firm_id);
+  const internalUsers = users.filter((u) => !isThirdParty(u));
+  const thirdPartyUsers = users.filter(isThirdParty);
+  const internalAdmins = internalUsers.filter((u) => u.role === "admin").length;
+  const thirdPartyAdmins = thirdPartyUsers.filter((u) => u.role === "admin").length;
 
   const owner = users.find((u) => u.is_owner);
   const adminCount = users.filter((u) => u.role === "admin").length;
@@ -169,16 +179,18 @@ export default function UserManagement() {
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="rounded-xl border border-gray-200 bg-white p-3">
-            <div className="flex items-center gap-1.5 text-[11px] font-medium text-gray-500"><UsersIcon className="w-3.5 h-3.5" /> Total users</div>
-            <p className="text-xl font-bold text-gray-800 mt-0.5">{users.length}</p>
+            <div className="flex items-center gap-1.5 text-[11px] font-medium text-gray-500"><UsersIcon className="w-3.5 h-3.5" /> Internal users</div>
+            <p className="text-xl font-bold text-gray-800 mt-0.5">{internalUsers.length}</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">{internalAdmins} {internalAdmins === 1 ? "admin" : "admins"}</p>
           </div>
           <div className="rounded-xl border border-gray-200 bg-white p-3">
-            <div className="flex items-center gap-1.5 text-[11px] font-medium text-gray-500"><ShieldCheck className="w-3.5 h-3.5 text-indigo-500" /> Administrators</div>
-            <p className="text-xl font-bold text-gray-800 mt-0.5">{adminCount}</p>
+            <div className="flex items-center gap-1.5 text-[11px] font-medium text-gray-500"><ShieldCheck className="w-3.5 h-3.5 text-indigo-500" /> Internal admins</div>
+            <p className="text-xl font-bold text-gray-800 mt-0.5">{internalAdmins}</p>
           </div>
           <div className="rounded-xl border border-gray-200 bg-white p-3">
-            <div className="flex items-center gap-1.5 text-[11px] font-medium text-gray-500"><ExternalLink className="w-3.5 h-3.5 text-violet-500" /> External Party users</div>
-            <p className="text-xl font-bold text-gray-800 mt-0.5">{externalPartyCount}</p>
+            <div className="flex items-center gap-1.5 text-[11px] font-medium text-gray-500"><ExternalLink className="w-3.5 h-3.5 text-violet-500" /> Third Party users</div>
+            <p className="text-xl font-bold text-gray-800 mt-0.5">{thirdPartyUsers.length}</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">{thirdPartyAdmins} {thirdPartyAdmins === 1 ? "admin" : "admins"}</p>
           </div>
           <div className="rounded-xl border border-gray-200 bg-white p-3">
             <div className="flex items-center gap-1.5 text-[11px] font-medium text-gray-500"><Crown className="w-3.5 h-3.5 text-amber-500" /> Owner</div>
