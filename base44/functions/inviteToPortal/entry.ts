@@ -90,7 +90,25 @@ export default async function(req) {
       return Response.json({ success: true, invitation });
     }
 
-    return Response.json({ error: 'Invalid action. Use "list" or "invite".' }, { status: 400 });
+    // ── RESCIND: delete a pending external-party invitation ──
+    if (action === 'rescind') {
+      const { invitation_id } = body;
+      if (!invitation_id) return Response.json({ error: 'invitation_id is required' }, { status: 400 });
+
+      const inv = await svc.entities.PendingInvitation.get(invitation_id);
+      if (!inv) return Response.json({ error: 'Invitation not found' }, { status: 404 });
+      if (inv.invitation_type !== 'external_party') {
+        return Response.json({ error: 'Only external party invitations can be rescinded' }, { status: 400 });
+      }
+      if (inv.accepted) {
+        return Response.json({ error: 'This invitation has already been accepted and cannot be rescinded' }, { status: 400 });
+      }
+
+      await svc.entities.PendingInvitation.delete(invitation_id);
+      return Response.json({ success: true });
+    }
+
+    return Response.json({ error: 'Invalid action. Use "list", "invite", or "rescind".' }, { status: 400 });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }

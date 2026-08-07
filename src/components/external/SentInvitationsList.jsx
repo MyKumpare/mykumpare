@@ -7,8 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/use-toast";
 import {
-  Mail, Loader2, Bell, CheckCircle2, Clock, Building2, Send, Search,
+  Mail, Loader2, Bell, CheckCircle2, Clock, Building2, Send, Search, Trash2,
 } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const fmtDate = (d) => {
   if (!d) return "—";
@@ -20,6 +24,8 @@ export default function SentInvitationsList() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [reminding, setReminding] = useState(null);
+  const [rescinding, setRescinding] = useState(null);
+  const [confirmRescind, setConfirmRescind] = useState(null);
   const [search, setSearch] = useState("");
 
   const { data: invitations = [], isLoading } = useQuery({
@@ -56,6 +62,25 @@ export default function SentInvitationsList() {
       toast({ title: "Reminder failed", description: err?.message || "Could not send reminder.", variant: "destructive" });
     } finally {
       setReminding(null);
+    }
+  };
+
+  const handleRescind = async () => {
+    if (!confirmRescind) return;
+    setRescinding(confirmRescind.id);
+    try {
+      const res = await base44.functions.invoke("inviteToPortal", {
+        action: "rescind",
+        invitation_id: confirmRescind.id,
+      });
+      if (res.data?.error) throw new Error(res.data.error);
+      await queryClient.invalidateQueries({ queryKey: ["portal_invitations"] });
+      toast({ title: "Invitation rescinded", description: `The invitation to ${confirmRescind.email} has been removed.` });
+    } catch (err) {
+      toast({ title: "Could not rescind", description: err?.message || "Please try again.", variant: "destructive" });
+    } finally {
+      setRescinding(null);
+      setConfirmRescind(null);
     }
   };
 
@@ -116,22 +141,57 @@ export default function SentInvitationsList() {
                   <p className="text-[10px] text-gray-400 mt-0.5">Sent {fmtDate(inv.created_date)}</p>
                 </div>
                 {!inv.accepted && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-xs flex-shrink-0"
-                    disabled={reminding === inv.id}
-                    onClick={() => handleRemind(inv)}
-                  >
-                    {reminding === inv.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Bell className="w-3 h-3" />}
-                    Remind
-                  </Button>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs"
+                      disabled={reminding === inv.id || rescinding === inv.id}
+                      onClick={() => handleRemind(inv)}
+                    >
+                      {reminding === inv.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Bell className="w-3 h-3" />}
+                      Remind
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs text-rose-600 border-rose-200 hover:bg-rose-50"
+                      disabled={rescinding === inv.id}
+                      onClick={() => setConfirmRescind(inv)}
+                    >
+                      {rescinding === inv.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                      Rescind
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>
           ))}
         </div>
       )}
+
+      <AlertDialog open={!!confirmRescind} onOpenChange={(open) => { if (!open) setConfirmRescind(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rescind invitation?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove the pending invitation to{" "}
+              <span className="font-medium">{confirmRescind?.email}</span>
+              {" "}at <span className="font-medium">{confirmRescind?.firm_name}</span>.
+              The contact will no longer be able to register from this invitation link.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-rose-600 hover:bg-rose-700 text-white"
+              onClick={handleRescind}
+            >
+              Rescind Invitation
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
