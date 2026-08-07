@@ -46,6 +46,13 @@ export default function UserManagement() {
   });
   const pending = (pendingInvites || []).filter((i) => !i.accepted);
 
+  const { data: externalRequests = [] } = useQuery({
+    queryKey: ["external_party_requests"],
+    queryFn: () => base44.entities.ExternalPartyRequest.list("-created_date", 500),
+    enabled: isAdmin,
+  });
+  const externalPartyCount = (externalRequests || []).filter((r) => r.status === "approved").length;
+
   const owner = users.find((u) => u.is_owner);
   const adminCount = users.filter((u) => u.role === "admin").length;
 
@@ -160,7 +167,7 @@ export default function UserManagement() {
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-5">
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="rounded-xl border border-gray-200 bg-white p-3">
             <div className="flex items-center gap-1.5 text-[11px] font-medium text-gray-500"><UsersIcon className="w-3.5 h-3.5" /> Total users</div>
             <p className="text-xl font-bold text-gray-800 mt-0.5">{users.length}</p>
@@ -168,6 +175,10 @@ export default function UserManagement() {
           <div className="rounded-xl border border-gray-200 bg-white p-3">
             <div className="flex items-center gap-1.5 text-[11px] font-medium text-gray-500"><ShieldCheck className="w-3.5 h-3.5 text-indigo-500" /> Administrators</div>
             <p className="text-xl font-bold text-gray-800 mt-0.5">{adminCount}</p>
+          </div>
+          <div className="rounded-xl border border-gray-200 bg-white p-3">
+            <div className="flex items-center gap-1.5 text-[11px] font-medium text-gray-500"><ExternalLink className="w-3.5 h-3.5 text-violet-500" /> External Party users</div>
+            <p className="text-xl font-bold text-gray-800 mt-0.5">{externalPartyCount}</p>
           </div>
           <div className="rounded-xl border border-gray-200 bg-white p-3">
             <div className="flex items-center gap-1.5 text-[11px] font-medium text-gray-500"><Crown className="w-3.5 h-3.5 text-amber-500" /> Owner</div>
