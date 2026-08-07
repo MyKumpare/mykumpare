@@ -162,7 +162,16 @@ export default function EmployeeStatusChart({
 
   const handleLabelClick = (value) => {
     if (!onChartFilter) return;
-    onChartFilter(config.field, activeFilter === value ? null : value);
+    const clearing = activeFilter === value;
+    onChartFilter(config.field, clearing ? null : value);
+    // When deselecting the primary category, clear any secondary drill-down
+    // filters so the contact list doesn't stay filtered after the breakdown hides.
+    if (clearing) {
+      for (const sk of secondaryKeys) {
+        const sf = VIEWS[sk].field;
+        if (filterSelected[sf] && onChartFilter) onChartFilter(sf, null);
+      }
+    }
   };
 
   const handleViewChange = (newKey) => {
@@ -170,6 +179,12 @@ export default function EmployeeStatusChart({
     // Clear the previous view's filter so stale filters don't persist invisibly.
     const prevField = VIEWS[viewKey].field;
     if (filterSelected[prevField] && onChartFilter) onChartFilter(prevField, null);
+    // Clear secondary drill-down filters from the previous view so they don't bleed into the new view.
+    const prevSecondaryKeys = BREAKDOWN_MAP[viewKey] || [];
+    for (const sk of prevSecondaryKeys) {
+      const sf = VIEWS[sk].field;
+      if (filterSelected[sf] && onChartFilter) onChartFilter(sf, null);
+    }
     setViewKey(newKey);
   };
 
@@ -306,12 +321,25 @@ export default function EmployeeStatusChart({
             if (count === 0) return null;
             const base = ethPctMode === "subset" ? breakdown.subsetTotal : total;
             const pctVal = base ? Math.round((count / base) * 100) : 0;
+            const secFieldSel = filterSelected[breakdown.secConfig.field];
+            const secActive = secFieldSel && secFieldSel.size > 0 && secFieldSel.has(cat.value);
+            const handleSecClick = () => {
+              if (!onChartFilter) return;
+              onChartFilter(breakdown.secConfig.field, secActive ? null : cat.value);
+            };
             return (
               <div key={cat.value} className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                <button
+                  type="button"
+                  onClick={handleSecClick}
+                  disabled={!onChartFilter}
+                  className={`flex items-center gap-1.5 min-w-0 flex-1 group ${onChartFilter ? "cursor-pointer" : "cursor-default"}`}
+                >
                   <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />
-                  <span className="text-xs text-gray-600 truncate">{cat.label}</span>
-                </div>
+                  <span className={`text-xs truncate ${secActive ? "font-semibold text-indigo-700 underline" : "text-gray-600 group-hover:text-indigo-700 group-hover:underline"}`}>
+                    {cat.label}
+                  </span>
+                </button>
                 <span className="text-xs font-semibold text-gray-800 flex-shrink-0 w-8 text-right">{count}</span>
                 <span className="text-xs font-semibold text-gray-800 flex-shrink-0 w-10 text-right">{pctVal}%</span>
               </div>
