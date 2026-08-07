@@ -26,7 +26,7 @@ const ICON_KEYS = Object.keys(ICONS);
 
 // ─── Default categories ───
 const DEFAULT_CATEGORIES = [
-  { id: "board",  label: "Board & Trustees",      iconKey: "Crown",     colorKey: "amber",  patterns: ["board chair", "chair of the board", "vice chair", "board member", "trustee", "chairman", "chairperson"] },
+  { id: "board",  label: "Board & Trustees",      iconKey: "Crown",     colorKey: "amber",  patterns: ["board chair", "chair of the board", "vice chair", "board member", "trustee", "chairman", "chairperson"], departmentPatterns: ["board"] },
   { id: "exec",   label: "Executive Leadership",  iconKey: "Building2", colorKey: "indigo", patterns: ["chief ", "ceo", "cio", "cfo", "coo", "cto", "ccio", "president", "executive director", "general counsel", "executive officer"] },
   { id: "smgmt",  label: "Senior Management",      iconKey: "Briefcase",  colorKey: "blue",   patterns: ["managing director", "senior managing director", "partner", "head of", "deputy ", "co-head", "svp", "senior vice president", "executive vice president", "evp"] },
   { id: "dir",    label: "Directors & VPs",        iconKey: "Layers",     colorKey: "purple", patterns: ["director", "vice president", " vp", "vp ", "vp,", "vp.", "vp/", "deputy director"] },
@@ -55,18 +55,32 @@ function saveCategories(firmId, cats) {
 }
 
 // ─── Classification ───
-function classifyPerson(title, categories) {
-  if (title) {
-    const lower = title.toLowerCase().trim();
-    for (const cat of categories) {
-      if (!cat.patterns || cat.patterns.length === 0) continue;
+// Returns the set of category ids a person matches (by title OR department).
+// A person may match multiple categories (e.g. a board member who is also an executive).
+function matchCategories(person, categories) {
+  const matched = [];
+  const title = person.title ? person.title.toLowerCase().trim() : "";
+  const roles = Array.isArray(person.contact_firm_roles)
+    ? person.contact_firm_roles.map((r) => (r || "").toLowerCase().trim()).filter(Boolean)
+    : [];
+  for (const cat of categories) {
+    if (!cat.patterns || cat.patterns.length === 0) continue; // skip catch-all
+    let titleMatch = false;
+    if (title) {
       for (const pat of cat.patterns) {
-        if (lower.includes(pat.toLowerCase())) return cat;
+        if (title.includes(pat.toLowerCase())) { titleMatch = true; break; }
       }
     }
+    let deptMatch = false;
+    if (cat.departmentPatterns && cat.departmentPatterns.length) {
+      for (const pat of cat.departmentPatterns) {
+        const p = pat.toLowerCase().trim();
+        if (roles.some((r) => r.includes(p))) { deptMatch = true; break; }
+      }
+    }
+    if (titleMatch || deptMatch) matched.push(cat.id);
   }
-  // Fallback: last category (catch-all)
-  return categories[categories.length - 1];
+  return matched;
 }
 
 function getFullName(person) {
@@ -188,6 +202,20 @@ function CategoryEditor({ cat, idx, total, onChange, onDelete, onMoveUp, onMoveD
             placeholder={isCatchAll ? "Catch-all — receives unmatched contacts" : "e.g. director, vp, manager"}
           />
         </div>
+        <div>
+          <label className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">Department keywords (comma-separated)</label>
+          <input
+            type="text"
+            value={(cat.departmentPatterns || []).join(", ")}
+            onChange={(e) => {
+              const departmentPatterns = e.target.value.split(",").map(s => s.trim()).filter(Boolean);
+              onChange({ ...cat, departmentPatterns });
+            }}
+            disabled={isCatchAll}
+            className="w-full text-xs bg-white/70 rounded px-2 py-1 border border-gray-200 focus:outline-none focus:border-indigo-400 disabled:opacity-60"
+            placeholder={isCatchAll ? "Catch-all — receives unmatched contacts" : "e.g. board, investments"}
+          />
+        </div>
         <div className="flex gap-3">
           <div className="flex-1">
             <label className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">Color</label>
@@ -236,10 +264,15 @@ export default function TeamHierarchyView({ people, firmName, firmId, editable, 
   const grouped = useMemo(() => {
     const buckets = categories.map(c => ({ ...c, people: [] }));
     for (const person of people) {
-      const cat = classifyPerson(person.title, categories);
-      const bucket = buckets.find(b => b.id === cat.id);
-      if (bucket) bucket.people.push(person);
-      else buckets[buckets.length - 1].people.push(person);
+      const matchedIds = matchCategories(person, categories);
+      if (matchedIds.length === 0) {
+        buckets[buckets.length - 1].people.push(person);
+      } else {
+        for (const id of matchedIds) {
+          const bucket = buckets.find(b => b.id === id);
+          if (bucket) bucket.people.push(person);
+        }
+      }
     }
     return buckets.filter(b => b.people.length > 0);
   }, [people, categories]);
