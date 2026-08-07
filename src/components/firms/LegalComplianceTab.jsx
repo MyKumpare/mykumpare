@@ -65,6 +65,7 @@ export default function LegalComplianceTab({ firmId, isEditing, contacts = [] })
   const [newContactFirst, setNewContactFirst] = useState("");
   const [newContactLast, setNewContactLast] = useState("");
   const [addingContact, setAddingContact] = useState(false);
+  const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
     if (!firmId) return;
@@ -101,12 +102,14 @@ export default function LegalComplianceTab({ firmId, isEditing, contacts = [] })
   const handleJurisdictionChange = (value) => {
     setEntityJurisdiction(value);
     setJurisdictionCountry("");
+    setDirty(true);
   };
 
   const selectedContact = firmContacts.find((c) => c.id === complianceOfficerId);
 
   const handleSelectOfficer = async (contactId) => {
     setComplianceOfficerId(contactId);
+    setDirty(true);
     const contact = firmContacts.find((c) => c.id === contactId);
     if (contact && !isComplianceContact(contact)) {
       try {
@@ -130,6 +133,8 @@ export default function LegalComplianceTab({ firmId, isEditing, contacts = [] })
       notes,
     };
     localStorage.setItem(`legal_compliance_${firmId}`, JSON.stringify(data));
+    setDirty(false);
+    toast({ title: "Saved", description: "Legal & Compliance information saved." });
   };
 
   const handleAddContact = async () => {
@@ -168,7 +173,7 @@ export default function LegalComplianceTab({ firmId, isEditing, contacts = [] })
         <Input
           placeholder="Official legal entity name..."
           value={legalEntityName}
-          onChange={(e) => setLegalEntityName(e.target.value)}
+          onChange={(e) => { setLegalEntityName(e.target.value); setDirty(true); }}
           disabled={!isEditing}
         />
       </div>
@@ -177,7 +182,7 @@ export default function LegalComplianceTab({ firmId, isEditing, contacts = [] })
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label className="text-sm font-medium text-gray-700">Entity Type</Label>
-          <Select value={entityType} onValueChange={setEntityType} disabled={!isEditing}>
+          <Select value={entityType} onValueChange={(v) => { setEntityType(v); setDirty(true); }} disabled={!isEditing}>
             <SelectTrigger><SelectValue placeholder="Select type..." /></SelectTrigger>
             <SelectContent>
               {ENTITY_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
@@ -203,7 +208,7 @@ export default function LegalComplianceTab({ firmId, isEditing, contacts = [] })
           </div>
           <div className="space-y-1.5">
             <Label className="text-sm font-medium text-gray-700">Country / Region</Label>
-            <Select value={jurisdictionCountry} onValueChange={setJurisdictionCountry} disabled={!isEditing || !entityJurisdiction}>
+            <Select value={jurisdictionCountry} onValueChange={(v) => { setJurisdictionCountry(v); setDirty(true); }} disabled={!isEditing || !entityJurisdiction}>
               <SelectTrigger><SelectValue placeholder="Select country..." /></SelectTrigger>
               <SelectContent>
                 {entityJurisdiction && Object.keys(JURISDICTION_DATA[entityJurisdiction]).map((c) => (
@@ -225,7 +230,7 @@ export default function LegalComplianceTab({ firmId, isEditing, contacts = [] })
             <Input
               placeholder="e.g. 801-123456"
               value={registrationNumber}
-              onChange={(e) => setRegistrationNumber(e.target.value)}
+              onChange={(e) => { setRegistrationNumber(e.target.value); setDirty(true); }}
               disabled={!isEditing}
             />
           </div>
@@ -294,7 +299,7 @@ export default function LegalComplianceTab({ firmId, isEditing, contacts = [] })
                 size="icon"
                 className="shrink-0"
                 title="Clear selection"
-                onClick={() => setComplianceOfficerId("")}
+                onClick={() => { setComplianceOfficerId(""); setDirty(true); }}
               >
                 <X className="w-4 h-4" />
               </Button>
@@ -309,17 +314,19 @@ export default function LegalComplianceTab({ firmId, isEditing, contacts = [] })
         <Textarea
           placeholder="Regulatory notes, disclosures, form ADV details..."
           value={notes}
-          onChange={(e) => setNotes(e.target.value)}
+          onChange={(e) => { setNotes(e.target.value); setDirty(true); }}
           className="min-h-20"
           disabled={!isEditing}
         />
       </div>
 
-      <div className="flex justify-end">
-        <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={handleSave} disabled={!firmId}>
-          Save Legal & Compliance
-        </Button>
-      </div>
+      {dirty && (
+        <div className="flex justify-end">
+          <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={handleSave} disabled={!firmId}>
+            Save Legal & Compliance
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
