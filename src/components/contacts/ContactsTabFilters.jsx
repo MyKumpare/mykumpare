@@ -33,7 +33,9 @@ export const FIELD_GROUPS = [
 
 function getFieldValues(c, f) {
   const v = c[f.key];
-  return f.isArray ? (Array.isArray(v) ? v : []) : v ? [v] : [];
+  if (f.isArray) return Array.isArray(v) ? v : [];
+  // Treat "Undetermined", null, undefined, and empty string as unclassified
+  return v && v !== "Undetermined" ? [v] : [];
 }
 
 // Pure filter: text search (name/title/email/type/designations) ANDed with
