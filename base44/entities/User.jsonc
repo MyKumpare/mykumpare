@@ -26,11 +26,11 @@
     },
     "linked_firm_id": {
       "type": "string",
-      "description": "ID of the firm (tenant) this user is affiliated with. Acts as the tenant boundary for multi-tenant data isolation."
+      "description": "ID of the firm (tenant) this user is affiliated with. Acts as the tenant boundary for multi-tenant data isolation. Not set for external party users."
     },
     "linked_contact_id": {
       "type": "string",
-      "description": "ID of the contact record this user is linked to (self-linked from profile)"
+      "description": "ID of the contact record this user is linked to (self-linked from profile or from external party invitation)"
     },
     "firm_role": {
       "type": "string",
@@ -55,6 +55,11 @@
     "onboarded": {
       "type": "boolean",
       "description": "True once the user has completed the firm onboarding/join step (linked to a firm and contact record).",
+      "default": false
+    },
+    "is_external_party": {
+      "type": "boolean",
+      "description": "True if this user is an external party (e.g., an external firm contact invited to complete a questionnaire). External party users only see questionnaires assigned to them via their linked_contact_id. They do not have linked_firm_id set and cannot access tenant-scoped data.",
       "default": false
     }
   },

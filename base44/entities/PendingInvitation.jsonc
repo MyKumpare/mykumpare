@@ -8,7 +8,7 @@
     },
     "firm_id": {
       "type": "string",
-      "description": "ID of the firm (tenant) the invitee should be linked to on first login"
+      "description": "ID of the firm (tenant) the invitee should be linked to on first login. For external party invitations, this is the inviting (admin's) firm."
     },
     "firm_name": {
       "type": "string",
@@ -46,6 +46,10 @@
       "type": "string",
       "description": "ID of the pre-created contact record for this invitee (linked to the user on first login)"
     },
+    "contact_name": {
+      "type": "string",
+      "description": "Full name of the contact being invited (denormalized, for display in pending invitations list)"
+    },
     "invited_by_name": {
       "type": "string",
       "description": "Name of the admin who sent the invitation"
@@ -54,6 +58,23 @@
       "type": "boolean",
       "default": false,
       "description": "True once the invitee has logged in and been auto-linked to the firm"
+    },
+    "invitation_type": {
+      "type": "string",
+      "enum": [
+        "internal",
+        "external_party"
+      ],
+      "default": "internal",
+      "description": "Type of invitation: 'internal' for firm employees, 'external_party' for external firm contacts invited to complete questionnaires."
+    },
+    "questionnaire_id": {
+      "type": "string",
+      "description": "ID of the questionnaire this external party invitation is for (only for invitation_type='external_party')"
+    },
+    "questionnaire_name": {
+      "type": "string",
+      "description": "Name of the questionnaire (denormalized, for display)"
     }
   },
   "required": [
