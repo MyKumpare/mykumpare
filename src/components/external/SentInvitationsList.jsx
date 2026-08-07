@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -7,8 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/use-toast";
 import {
-  Mail, Loader2, Bell, CheckCircle2, Clock, Building2, Send, Search, Trash2,
+  Mail, Loader2, Bell, CheckCircle2, Clock, Building2, Send, Search, Trash2, ExternalLink,
 } from "lucide-react";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -27,6 +31,8 @@ export default function SentInvitationsList() {
   const [rescinding, setRescinding] = useState(null);
   const [confirmRescind, setConfirmRescind] = useState(null);
   const [search, setSearch] = useState("");
+  const [firmFilter, setFirmFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const { data: invitations = [], isLoading } = useQuery({
     queryKey: ["portal_invitations"],
@@ -36,7 +42,23 @@ export default function SentInvitationsList() {
     },
   });
 
+  const firmOptions = useMemo(() => {
+    const map = new Map();
+    invitations.forEach((inv) => {
+      if (inv.firm_id && inv.firm_name && !map.has(inv.firm_id)) {
+        map.set(inv.firm_id, inv.firm_name);
+      }
+    });
+    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [invitations]);
+
   const filtered = invitations.filter((inv) => {
+    if (firmFilter !== "all" && inv.firm_id !== firmFilter) return false;
+    if (statusFilter !== "all") {
+      const isRegistered = !!inv.accepted;
+      if (statusFilter === "registered" && !isRegistered) return false;
+      if (statusFilter === "pending" && isRegistered) return false;
+    }
     if (!search.trim()) return true;
     const q = search.toLowerCase();
     return (
@@ -93,14 +115,37 @@ export default function SentInvitationsList() {
       </div>
 
       {invitations.length > 0 && (
-        <div className="relative mb-2">
-          <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-          <Input
-            placeholder="Search by name, email, or firm..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-8 text-xs pl-8"
-          />
+        <div className="flex flex-wrap items-center gap-2 mb-2">
+          <div className="relative flex-1 min-w-[160px]">
+            <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+            <Input
+              placeholder="Search by name, email, or firm..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-8 text-xs pl-8"
+            />
+          </div>
+          <Select value={firmFilter} onValueChange={setFirmFilter}>
+            <SelectTrigger className="h-8 text-xs w-[150px]">
+              <SelectValue placeholder="Filter by firm" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All firms</SelectItem>
+              {firmOptions.map(([id, name]) => (
+                <SelectItem key={id} value={id}>{name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="h-8 text-xs w-[140px]">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="registered">Registered</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       )}
 
@@ -118,9 +163,19 @@ export default function SentInvitationsList() {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <p className="text-sm font-semibold text-gray-800 truncate">
-                      {inv.contact_name || [inv.first_name, inv.last_name].filter(Boolean).join(" ") || inv.email}
-                    </p>
+                    {inv.accepted && inv.firm_id ? (
+                      <Link
+                        to={`/ExternalPortal?firmId=${encodeURIComponent(inv.firm_id)}`}
+                        className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 hover:underline truncate flex items-center gap-1"
+                      >
+                        {inv.contact_name || [inv.first_name, inv.last_name].filter(Boolean).join(" ") || inv.email}
+                        <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                      </Link>
+                    ) : (
+                      <p className="text-sm font-semibold text-gray-800 truncate">
+                        {inv.contact_name || [inv.first_name, inv.last_name].filter(Boolean).join(" ") || inv.email}
+                      </p>
+                    )}
                     {inv.accepted ? (
                       <Badge className="text-[9px] bg-emerald-50 text-emerald-700 border-emerald-200 flex items-center gap-0.5">
                         <CheckCircle2 className="w-2.5 h-2.5" /> Registered
