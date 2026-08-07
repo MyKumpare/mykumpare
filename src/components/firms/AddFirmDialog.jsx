@@ -29,6 +29,7 @@ import FirmPortfoliosTab from "./FirmPortfoliosTab";
 import FirmActivityLogTab from "./FirmActivityLogTab";
 import FirmDocumentsTab from "./FirmDocumentsTab";
 import FirmDueDiligenceTab from "./FirmDueDiligenceTab";
+import LegalComplianceTab from "./LegalComplianceTab";
 import EnrichmentApprovalDialog from "./EnrichmentApprovalDialog";
 import SimilarAddressDialog from "../SimilarAddressDialog";
 import { findAddressIssues, addressesAreExact } from "../addressDuplicateCheck";
@@ -1100,7 +1101,8 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                <TabsTrigger value="contacts">Contacts</TabsTrigger>
                <TabsTrigger value="addresses">Addresses</TabsTrigger>
                <TabsTrigger value="phones">Phones</TabsTrigger>
-               {!hideProductTabs && (
+                 <TabsTrigger value="legal-compliance">Legal & Compliance</TabsTrigger>
+                 {!hideProductTabs && (
                  <>
                    {showPortfolioTab && <TabsTrigger value="portfolios">Portfolios</TabsTrigger>}
                    {showAdvisorPortfolioTab && <TabsTrigger value="advisor-portfolios">Portfolios</TabsTrigger>}
@@ -1269,6 +1271,16 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                       </div>
                     ) : null;
                   })()}
+                </div>
+              )}
+              </TabsContent>
+
+              <TabsContent value="legal-compliance" className="space-y-3">
+              {editingFirm ? (
+                <LegalComplianceTab firmId={editingFirm.id} isEditing={activelyEditing} />
+              ) : (
+                <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
+                  Save the firm first to add legal & compliance information
                 </div>
               )}
               </TabsContent>
