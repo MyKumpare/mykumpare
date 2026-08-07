@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { MWBE_CATEGORIES, getMwbeCategory, isInMwbeSet } from "./mwbe";
 
 const UNCLASSIFIED = "__unclassified__";
 
@@ -9,6 +10,7 @@ const BREAKDOWN_MAP = {
   ethnicity: ["gender"],
   veteran: ["gender", "ethnicity"],
   disability: ["gender", "ethnicity"],
+  mwbe: ["ethnicity"],
 };
 
 const VIEWS = {
@@ -67,6 +69,16 @@ const VIEWS = {
       { label: "Undetermined", value: UNCLASSIFIED, color: "#9CA3AF" },
     ],
   },
+  mwbe: {
+    key: "mwbe",
+    label: "MWBE",
+    field: "mwbe",
+    custom: true,
+    // Only contacts in the MWBE set (Female and/or Ethnic Minority) are in scope.
+    scopeFilter: isInMwbeSet,
+    matchContact: getMwbeCategory,
+    categories: MWBE_CATEGORIES,
+  },
 };
 
 export default function EmployeeStatusChart({
@@ -82,10 +94,12 @@ export default function EmployeeStatusChart({
   const config = VIEWS[viewKey];
 
   // Scope contacts by the employee-status toggle so every stat adjusts dynamically.
-  const scopedContacts = useMemo(
-    () => empFilter === "all" ? contacts : contacts.filter((c) => c.employee_status === empFilter),
-    [contacts, empFilter]
-  );
+  // Custom views (MWBE) additionally narrow to their own population.
+  const scopedContacts = useMemo(() => {
+    let result = empFilter === "all" ? contacts : contacts.filter((c) => c.employee_status === empFilter);
+    if (config.scopeFilter) result = result.filter(config.scopeFilter);
+    return result;
+  }, [contacts, empFilter, config]);
 
   const total = scopedContacts.length;
 
@@ -93,6 +107,11 @@ export default function EmployeeStatusChart({
     const result = {};
     for (const cat of config.categories) result[cat.value] = 0;
     for (const c of scopedContacts) {
+      if (config.custom) {
+        const cat = config.matchContact(c);
+        if (cat && result[cat] !== undefined) result[cat] += 1;
+        continue;
+      }
       const val = c[config.field];
       if (config.isArray) {
         const vals = Array.isArray(val) ? val : [];
@@ -132,6 +151,7 @@ export default function EmployeeStatusChart({
   const secondaryBreakdowns = useMemo(() => {
     if (!activeFilter || secondaryKeys.length === 0) return [];
     const subset = scopedContacts.filter((c) => {
+      if (config.custom) return config.matchContact(c) === activeFilter;
       const val = c[config.field];
       if (activeFilter === UNCLASSIFIED) {
         if (config.isArray) return !Array.isArray(val) || val.length === 0;

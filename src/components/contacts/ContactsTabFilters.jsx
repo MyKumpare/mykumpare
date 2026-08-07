@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { getMwbeCategory } from "./mwbe";
 
 // Filter categories mapped to Contact entity fields.
 // Classification -> role/type/employment, Demographics -> gender/ethnicity/disability,
@@ -58,6 +59,13 @@ export function filterContacts(contacts, text, selected) {
         const matchesUnclassified = sel.has("__unclassified__") && vals.length === 0;
         if (!matches && !matchesUnclassified) return false;
       }
+    }
+    // MWBE synthetic filter (toggled from the chart's MWBE tab). Not a real
+    // contact field — membership is computed from gender + ethnicity.
+    const mwbeSel = selected.mwbe;
+    if (mwbeSel && mwbeSel.size > 0) {
+      const cat = getMwbeCategory(c);
+      if (!cat || !mwbeSel.has(cat)) return false;
     }
     // Contact-status filter (toggled from the chart footer, not the filters panel).
     const statusSel = selected.contact_status;
