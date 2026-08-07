@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, FileText, Files, ShieldCheck, X, LayoutDashboard, FlaskConical, MapPin, Camera, LayoutGrid, PieChart, Bot, ExternalLink } from "lucide-react";
+import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, FileText, Files, ShieldCheck, X, LayoutDashboard, FlaskConical, MapPin, Camera, LayoutGrid, PieChart, Bot, ExternalLink, ChevronDown } from "lucide-react";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -552,9 +553,10 @@ export default function Home() {
     { label: "Dashboard", icon: LayoutDashboard, ref: null, color: "text-indigo-300", activeBg: "bg-indigo-50", onClick: () => navigate("/Overview") },
     { label: "AI Agents", icon: Bot, ref: null, color: "text-violet-300", activeBg: "bg-violet-50", onClick: () => navigate("/AiAgents") },
     { label: "Portfolios", icon: BarChart3, ref: null, color: "text-emerald-600", activeBg: "bg-emerald-50", onClick: () => setPortfolioPickerOpen(true) },
-    { label: "Due Diligence", icon: ShieldCheck, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => setDueDiligencePickerOpen(true) },
-    { label: "DD Board", icon: LayoutGrid, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => navigate("/DueDiligenceKanban") },
-    { label: "DD Stats", icon: PieChart, ref: null, color: "text-cyan-600", activeBg: "bg-cyan-50", onClick: () => navigate("/DueDiligenceDashboard") },
+    { label: "Due Diligence", icon: ShieldCheck, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => setDueDiligencePickerOpen(true), submenu: [
+      { label: "DD Board", icon: LayoutGrid, onClick: () => navigate("/DueDiligenceKanban") },
+      { label: "DD Stats", icon: PieChart, onClick: () => navigate("/DueDiligenceDashboard") },
+    ] },
     { label: "Firms", icon: Building, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => setFirmPickerOpen(true) },
     { label: "Products", icon: Package, ref: null, color: "text-violet-600", activeBg: "bg-violet-50", onClick: () => setProductPickerOpen(true) },
     { label: "Contacts", icon: User, ref: null, color: "text-pink-600", activeBg: "bg-pink-50", onClick: () => setContactPickerOpen(true) },
@@ -676,12 +678,42 @@ export default function Home() {
 
           {/* Desktop nav — single row of icon buttons */}
           <div className="hidden sm:flex items-center gap-0.5 ml-2">
-            {mobileNavItems.map(({ label, icon: NavIcon, ref, onClick }) => (
-              <button key={label} onClick={() => onClick ? onClick() : scrollTo(ref)} title={label}
-                className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg hover:bg-white/15 transition-colors group">
-                <NavIcon className="w-4 h-4 text-white/80 group-hover:text-white" />
-                <span className="text-[9px] text-white/70 group-hover:text-white font-medium leading-none">{label}</span>
-              </button>
+            {mobileNavItems.map(({ label, icon: NavIcon, ref, onClick, submenu }) => (
+              submenu ? (
+                <DropdownMenu key={label}>
+                  <DropdownMenuTrigger asChild>
+                    <button title={label}
+                      className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg hover:bg-white/15 transition-colors group">
+                      <div className="relative">
+                        <NavIcon className="w-4 h-4 text-white/80 group-hover:text-white" />
+                        <ChevronDown className="w-2.5 h-2.5 text-white/50 group-hover:text-white absolute -bottom-1 -right-1" />
+                      </div>
+                      <span className="text-[9px] text-white/70 group-hover:text-white font-medium leading-none">{label}</span>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="min-w-[10rem]">
+                    <DropdownMenuItem onClick={onClick} className="gap-2 cursor-pointer">
+                      <NavIcon className="w-4 h-4" />
+                      <span>{label}</span>
+                    </DropdownMenuItem>
+                    {submenu.map((sub) => {
+                      const SubIcon = sub.icon;
+                      return (
+                        <DropdownMenuItem key={sub.label} onClick={sub.onClick} className="gap-2 cursor-pointer">
+                          <SubIcon className="w-4 h-4" />
+                          <span>{sub.label}</span>
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <button key={label} onClick={() => onClick ? onClick() : scrollTo(ref)} title={label}
+                  className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg hover:bg-white/15 transition-colors group">
+                  <NavIcon className="w-4 h-4 text-white/80 group-hover:text-white" />
+                  <span className="text-[9px] text-white/70 group-hover:text-white font-medium leading-none">{label}</span>
+                </button>
+              )
             ))}
             <button
               onClick={() => setAllExpanded(v => !v)}
@@ -955,17 +987,49 @@ export default function Home() {
         style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}
       >
         <div className="flex overflow-x-auto scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
-          {mobileNavItems.map(({ label, icon: MobileIcon, color, ref, onClick }) => (
-            <button
-              key={label}
-              onTouchEnd={(e) => { e.preventDefault(); onClick ? onClick() : scrollTo(ref); }}
-              onClick={() => onClick ? onClick() : scrollTo(ref)}
-              className="flex flex-col items-center gap-1 py-2.5 flex-shrink-0 transition-colors"
-              style={{ minWidth: 72 }}
-            >
-              <MobileIcon className={`w-5 h-5 ${color}`} />
-              <span className={`text-[10px] font-medium ${color}`}>{label}</span>
-            </button>
+          {mobileNavItems.map(({ label, icon: MobileIcon, color, ref, onClick, submenu }) => (
+            submenu ? (
+              <DropdownMenu key={label}>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="flex flex-col items-center gap-1 py-2.5 flex-shrink-0 transition-colors"
+                    style={{ minWidth: 72 }}
+                  >
+                    <div className="relative">
+                      <MobileIcon className={`w-5 h-5 ${color}`} />
+                      <ChevronDown className="w-3 h-3 text-gray-400 absolute -bottom-1 -right-1" />
+                    </div>
+                    <span className={`text-[10px] font-medium ${color}`}>{label}</span>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="top" className="min-w-[10rem]">
+                  <DropdownMenuItem onClick={onClick} className="gap-2 cursor-pointer">
+                    <MobileIcon className="w-4 h-4" />
+                    <span>{label}</span>
+                  </DropdownMenuItem>
+                  {submenu.map((sub) => {
+                    const SubIcon = sub.icon;
+                    return (
+                      <DropdownMenuItem key={sub.label} onClick={sub.onClick} className="gap-2 cursor-pointer">
+                        <SubIcon className="w-4 h-4" />
+                        <span>{sub.label}</span>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <button
+                key={label}
+                onTouchEnd={(e) => { e.preventDefault(); onClick ? onClick() : scrollTo(ref); }}
+                onClick={() => onClick ? onClick() : scrollTo(ref)}
+                className="flex flex-col items-center gap-1 py-2.5 flex-shrink-0 transition-colors"
+                style={{ minWidth: 72 }}
+              >
+                <MobileIcon className={`w-5 h-5 ${color}`} />
+                <span className={`text-[10px] font-medium ${color}`}>{label}</span>
+              </button>
+            )
           ))}
           <button
             onTouchEnd={(e) => { e.preventDefault(); setAllExpanded(v => !v); }}
