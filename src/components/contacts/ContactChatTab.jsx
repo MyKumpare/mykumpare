@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,13 @@ const fmtDate = (iso) => {
   try { return format(parseISO(iso), "MM/dd/yyyy"); } catch { return iso; }
 };
 
-export default function ContactChatTab({ contactId, contactName, firmIds = [], firms = [] }) {
+const STATUS_CONFIG = {
+  open: { label: "Open", badge: "bg-blue-50 text-blue-700 border-blue-200", dot: "bg-blue-500" },
+  pending: { label: "Waiting for Reply", badge: "bg-amber-50 text-amber-700 border-amber-200", dot: "bg-amber-500" },
+  completed: { label: "Resolved", badge: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
+};
+
+export default function ContactChatTab({ contactId, contactName, firmIds = [], firms = [], highlightChatId }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -101,8 +107,46 @@ export default function ContactChatTab({ contactId, contactName, firmIds = [], f
   const [respondingTo, setRespondingTo] = useState(null);
   const [responseText, setResponseText] = useState("");
 
+  // Real-time: refresh chats when new messages arrive or statuses change
+  useEffect(() => {
+    if (!contactId) return;
+    const unsubscribe = base44.entities.ExternalChat.subscribe(() => {
+      queryClient.invalidateQueries({ queryKey: ["contact-external-chats", contactId] });
+    });
+    return unsubscribe;
+  }, [contactId, queryClient]);
+
+  // Scroll to and highlight a specific chat (e.g. when navigated from a notification)
+  useEffect(() => {
+    if (!highlightChatId) return;
+    setStatusFilter("all");
+    const timer = setTimeout(() => {
+      const el = document.querySelector(`[data-chat-id="${highlightChatId}"]`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("ring-2", "ring-indigo-400");
+        setTimeout(() => el.classList.remove("ring-2", "ring-indigo-400"), 4000);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [highlightChatId]);
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ chatId, status }) => {
+      return base44.entities.ExternalChat.update(chatId, { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contact-external-chats", contactId] });
+      toast({ title: "Status updated" });
+    },
+    onError: (err) => {
+      toast({ title: "Failed to update status", description: err?.message, variant: "destructive" });
+    },
+  });
+
   const statusCounts = useMemo(() => ({
     all: externalChats.length,
+    open: externalChats.filter((c) => c.status === "open").length,
     pending: externalChats.filter((c) => c.status === "pending").length,
     completed: externalChats.filter((c) => c.status === "completed").length,
   }), [externalChats]);
@@ -172,8 +216,9 @@ export default function ContactChatTab({ contactId, contactName, firmIds = [], f
           <div className="flex gap-1 border-b border-gray-200">
             {[
               { key: "all", label: "All", count: statusCounts.all },
-              { key: "pending", label: "Pending", count: statusCounts.pending },
-              { key: "completed", label: "Completed", count: statusCounts.completed },
+              { key: "open", label: "Open", count: statusCounts.open },
+              { key: "pending", label: "Waiting", count: statusCounts.pending },
+              { key: "completed", label: "Resolved", count: statusCounts.completed },
             ].map((tab) => (
               <button
                 key={tab.key}
@@ -223,7 +268,8 @@ export default function ContactChatTab({ contactId, contactName, firmIds = [], f
             return (
               <div
                 key={chat.id}
-                className={`rounded-lg border p-3 ${
+                data-chat-id={chat.id}
+                className={`rounded-lg border p-3 transition-all ${
                   isCompleted
                     ? "bg-gray-50 border-gray-200"
                     : isOutbound
@@ -244,15 +290,24 @@ export default function ContactChatTab({ contactId, contactName, firmIds = [], f
                   <span className="text-xs text-gray-500">
                     {isOutbound ? chat.external_contact_name : chat.analyst_name}
                   </span>
-                  <Badge
-                    className={`text-[9px] ml-auto ${
-                      isCompleted
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                        : "bg-amber-50 text-amber-700 border-amber-200"
-                    }`}
-                  >
-                    {isCompleted ? "Responded" : "Pending"}
-                  </Badge>
+                  <div className="ml-auto flex items-center gap-1">
+                    <Badge className={`text-[9px] flex items-center gap-1 ${STATUS_CONFIG[chat.status]?.badge || STATUS_CONFIG.pending.badge}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${STATUS_CONFIG[chat.status]?.dot || "bg-amber-500"}`} />
+                      {STATUS_CONFIG[chat.status]?.label || "Pending"}
+                    </Badge>
+                    {!userIsContact && (
+                      <select
+                        className="text-[9px] border border-gray-200 rounded px-1 py-0.5 bg-white cursor-pointer hover:border-indigo-300 disabled:opacity-50"
+                        value={chat.status}
+                        onChange={(e) => e.target.value !== chat.status && updateStatusMutation.mutate({ chatId: chat.id, status: e.target.value })}
+                        disabled={updateStatusMutation.isPending && updateStatusMutation.variables?.chatId === chat.id}
+                      >
+                        <option value="open">Open</option>
+                        <option value="pending">Waiting</option>
+                        <option value="completed">Resolved</option>
+                      </select>
+                    )}
+                  </div>
                 </div>
                 <div className="ml-1 space-y-1.5">
                   <div className={`rounded-lg px-3 py-2 ${isOutbound ? "bg-indigo-100/60" : "bg-violet-100/60"}`}>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -49,7 +49,7 @@ const DECISION_CLASS = {
   on_hold: "text-orange-600",
 };
 
-export default function ContactNotificationsTab({ contactId, contactName, onContactClick, onProductClick }) {
+export default function ContactNotificationsTab({ contactId, contactName, onContactClick, onProductClick, onOpenChat }) {
   const queryClient = useQueryClient();
   const [showDialog, setShowDialog] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -80,6 +80,15 @@ export default function ContactNotificationsTab({ contactId, contactName, onCont
     },
     enabled: !!contactId,
   });
+
+  // Real-time: refresh notifications when new ones arrive (e.g. external firm sends a chat)
+  useEffect(() => {
+    if (!contactId) return;
+    const unsubscribe = base44.entities.DdNotification.subscribe(() => {
+      queryClient.invalidateQueries({ queryKey: ["dd-notifications", contactId] });
+    });
+    return unsubscribe;
+  }, [contactId, queryClient]);
 
   const { data: editProducts = [] } = useQuery({
     queryKey: ["products", editing?.firm_id],
@@ -188,6 +197,11 @@ export default function ContactNotificationsTab({ contactId, contactName, onCont
   const handleReview = async (notification) => {
     if (notification.status === "unread") {
       markReadMutation.mutate(notification.id);
+    }
+    // For external chat notifications, link directly to the chat thread
+    if (notification.type === "external_chat" && notification.external_chat_id && onOpenChat) {
+      onOpenChat(notification.external_chat_id);
+      return;
     }
     setReviewing(notification);
     try {

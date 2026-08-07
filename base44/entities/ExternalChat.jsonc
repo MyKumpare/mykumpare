@@ -76,11 +76,12 @@
     "status": {
       "type": "string",
       "enum": [
+        "open",
         "pending",
         "completed"
       ],
       "default": "pending",
-      "description": "Whether the chat has been responded to. 'pending' = awaiting response, 'completed' = response sent."
+      "description": "Conversation status. 'open' = active/open conversation, 'pending' = waiting for a reply, 'completed' = resolved."
     }
   },
   "required": [

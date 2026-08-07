@@ -48,6 +48,8 @@ function newAddress() {
 
 export default function AddContactDialog({ open, onOpenChange, editingContact, currentFirmId, firms: firmsProp = [], viewMode: initialViewMode = false, initialPhotoUrl = null, onNavigateToOwnership, onContactCreated, onProductClick, onFirmClick, onContactClick }) {
   const [viewMode, setViewMode] = useState(initialViewMode);
+  const [activeTab, setActiveTab] = useState("info");
+  const [highlightChatId, setHighlightChatId] = useState(null);
   const { data: liveFirms = [] } = useQuery({
     queryKey: ["firms"],
     queryFn: () => base44.entities.Firm.list("-created_date"),
@@ -679,7 +681,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
         </DialogHeader>
 
         <div className="overflow-y-auto flex-1 py-2 pr-1">
-          <Tabs defaultValue="info">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
             <div className="space-y-1 mb-4">
               <TabsList className="w-full">
                 <TabsTrigger value="info" className="flex-1 flex items-center gap-1.5">
@@ -1393,6 +1395,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                 contactName={[firstName, lastName].filter(Boolean).join(" ")}
                 onContactClick={onContactClick ? (contact) => { onOpenChange(false); onContactClick(contact); } : undefined}
                 onProductClick={onProductClick ? (product) => { onOpenChange(false); onProductClick(product); } : undefined}
+                onOpenChat={(chatId) => { setHighlightChatId(chatId); setActiveTab("chat"); }}
               />
             </TabsContent>
 
@@ -1404,6 +1407,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                   contactName={[editingContact.first_name, editingContact.last_name].filter(Boolean).join(" ")}
                   firmIds={firmIds}
                   firms={firms}
+                  highlightChatId={highlightChatId}
                 />
               ) : (
                 <div className="text-sm text-gray-400 italic py-4 text-center">
