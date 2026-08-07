@@ -1,0 +1,114 @@
+{
+  "name": "ExternalChat",
+  "type": "object",
+  "properties": {
+    "due_diligence_id": {
+      "type": "string",
+      "description": "ID of the related DueDiligence record"
+    },
+    "external_firm_id": {
+      "type": "string",
+      "description": "ID of the external firm sending the chat"
+    },
+    "external_firm_name": {
+      "type": "string",
+      "description": "External firm name (denormalized)"
+    },
+    "sender_contact_id": {
+      "type": "string",
+      "description": "ID of the external contact who sent the chat"
+    },
+    "sender_name": {
+      "type": "string",
+      "description": "Name of the sender (denormalized)"
+    },
+    "sender_email": {
+      "type": "string",
+      "description": "Email of the sender (denormalized)"
+    },
+    "analyst_contact_id": {
+      "type": "string",
+      "description": "ID of the primary analyst who receives the chat"
+    },
+    "analyst_name": {
+      "type": "string",
+      "description": "Name of the primary analyst (denormalized)"
+    },
+    "product_name": {
+      "type": "string",
+      "description": "Product name associated with the due diligence (denormalized)"
+    },
+    "message": {
+      "type": "string",
+      "description": "Chat message from the external firm"
+    },
+    "response": {
+      "type": "string",
+      "description": "Response from the analyst"
+    },
+    "received_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the chat was received (auto-set to today, stored YYYY-MM-DD)"
+    },
+    "responded_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the analyst responded (auto-set to today, stored YYYY-MM-DD)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "completed"
+      ],
+      "default": "pending",
+      "description": "Whether the chat has been responded to. 'pending' = awaiting analyst response, 'completed' = analyst has responded."
+    }
+  },
+  "required": [
+    "external_firm_id",
+    "sender_contact_id",
+    "analyst_contact_id",
+    "message",
+    "status"
+  ],
+  "rls": {
+    "create": null,
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.external_firm_id": "{{user.data.linked_firm_id}}"
+        },
+        {
+          "data.analyst_contact_id": "{{user.data.linked_contact_id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.analyst_contact_id": "{{user.data.linked_contact_id}}"
+        },
+        {
+          "data.external_firm_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
