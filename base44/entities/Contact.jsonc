@@ -344,6 +344,9 @@
         },
         {
           "data.tenant_id": "{{user.data.linked_firm_id}}"
+        },
+        {
+          "data.id": "{{user.data.linked_contact_id}}"
         }
       ]
     },
@@ -379,6 +382,9 @@
               ]
             }
           ]
+        },
+        {
+          "data.id": "{{user.data.linked_contact_id}}"
         }
       ]
     },
