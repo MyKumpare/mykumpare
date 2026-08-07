@@ -1,0 +1,66 @@
+{
+  "name": "InvitationHistory",
+  "type": "object",
+  "properties": {
+    "invitation_id": {
+      "type": "string",
+      "description": "ID of the PendingInvitation this event belongs to"
+    },
+    "email": {
+      "type": "string",
+      "description": "Invitee email (denormalized for display)"
+    },
+    "firm_name": {
+      "type": "string",
+      "description": "Firm name (denormalized for display)"
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "sent",
+        "rescinded",
+        "reminder_sent",
+        "registered",
+        "accepted"
+      ],
+      "description": "Lifecycle event type: 'sent' = invitation created, 'rescinded' = invitation deleted, 'reminder_sent' = reminder email sent, 'registered' = invitee submitted registration form, 'accepted' = invitee logged in and was linked to the firm"
+    },
+    "actor_name": {
+      "type": "string",
+      "description": "Name of the person who triggered the event (admin or invitee)"
+    },
+    "details": {
+      "type": "string",
+      "description": "Additional context about the event"
+    }
+  },
+  "required": [
+    "invitation_id",
+    "event_type"
+  ],
+  "rls": {
+    "create": null,
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.email": "{{user.email}}"
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

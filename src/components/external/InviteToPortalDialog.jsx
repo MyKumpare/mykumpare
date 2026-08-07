@@ -157,20 +157,26 @@ export default function InviteToPortalDialog({
 
     setSending(true);
     try {
+      const firmTypes = (selectedFirm.firm_types && selectedFirm.firm_types.length)
+        ? selectedFirm.firm_types
+        : (selectedFirm.firm_type ? [selectedFirm.firm_type] : []);
       const res = await base44.functions.invoke("inviteToPortal", {
         action: "invite",
         firm_id: selectedFirm.id,
         firm_name: selectedFirm.name,
+        firm_types: firmTypes,
         contact_id: selectedContact?.id || null,
         first_name: addingNew ? ncFirst.trim() : (selectedContact?.first_name || ""),
         last_name: addingNew ? ncLast.trim() : (selectedContact?.last_name || ""),
         email: email.trim(),
         is_new_contact: addingNew,
-        salutation: addingNew ? ncSalutation : undefined,
-        suffix: addingNew ? ncSuffix : undefined,
+        salutation: addingNew ? ncSalutation : (selectedContact?.salutation || undefined),
+        suffix: addingNew ? ncSuffix : (selectedContact?.suffix || undefined),
       });
       if (res.data?.error) throw new Error(res.data.error);
       if (!res.data?.success) throw new Error(res.data?.error || "Could not send invitation.");
+
+      const invitationId = res.data?.invitation?.id;
 
       // Send the branded invitation email (best-effort)
       try {
@@ -178,15 +184,13 @@ export default function InviteToPortalDialog({
         const inviteLast = addingNew ? ncLast.trim() : (selectedContact?.last_name || "");
         const inviteSalutation = addingNew ? ncSalutation : (selectedContact?.salutation || "");
         const inviteSuffix = addingNew ? ncSuffix : (selectedContact?.suffix || "");
-        const firmTypes = (selectedFirm.firm_types && selectedFirm.firm_types.length)
-          ? selectedFirm.firm_types
-          : (selectedFirm.firm_type ? [selectedFirm.firm_type] : []);
         const params = new URLSearchParams({
           firm: selectedFirm.name || "",
           first: inviteFirst,
           last: inviteLast,
           email: email.trim(),
         });
+        if (invitationId) params.set("inv", invitationId);
         if (firmTypes.length) params.set("types", firmTypes.join(","));
         if (inviteSalutation) params.set("salutation", inviteSalutation);
         if (inviteSuffix) params.set("suffix", inviteSuffix);

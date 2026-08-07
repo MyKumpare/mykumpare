@@ -39,8 +39,12 @@ const AuthenticatedApp = () => {
     );
   }
 
-  // Handle authentication errors
-  if (authError) {
+  // The public registration page must be reachable by unauthenticated invitees.
+  // Exempt it from the auth redirect so pre-fill params from the email link survive.
+  const isRegisterRoute = window.location.hash.startsWith('#/register');
+
+  // Handle authentication errors (but allow the /register route through)
+  if (authError && !isRegisterRoute) {
     if (authError.type === 'user_not_registered') {
       return <UserNotRegisteredError />;
     } else if (authError.type === 'auth_required') {
@@ -53,7 +57,7 @@ const AuthenticatedApp = () => {
   // Render the main app
   return (
     <>
-    <OnboardingGuard />
+    {!isRegisterRoute && <OnboardingGuard />}
     <Routes>
       <Route path="/" element={
         <LayoutWrapper currentPageName={mainPageKey}>

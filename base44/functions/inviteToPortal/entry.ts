@@ -1,8 +1,10 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 
 // Handles proactive invitations to the External Portal.
-//   action: "list"   → returns all external_party PendingInvitation records (status display)
-//   action: "invite" → creates a Contact (if new) + platform user invite + PendingInvitation
+//   action: "list"    → returns all external_party PendingInvitation records (status display)
+//   action: "invite"  → creates a Contact (if new) + platform user invite + PendingInvitation + history log
+//   action: "rescind" → deletes a pending external-party invitation + history log
+//   action: "remind"  → records a reminder-sent history event
 // Runs service-role for entity writes so internal (non-admin) users can invite
 // external firms whose tenant_id differs from the inviter's own firm.
 export default async function(req) {
@@ -22,12 +24,13 @@ export default async function(req) {
       return Response.json({ invitations: external });
     }
 
-    // ── INVITE: create contact (if new) + invite platform user + PendingInvitation ──
+    // ── INVITE: create contact (if new) + invite platform user + PendingInvitation + history ──
     if (action === 'invite') {
       const {
         firm_id, firm_name, contact_id,
         first_name, last_name, email,
         is_new_contact, salutation, suffix,
+        firm_types,
       } = body;
 
       if (!firm_id) return Response.json({ error: 'firm_id is required' }, { status: 400 });
@@ -75,11 +78,14 @@ export default async function(req) {
         email: normEmail,
         firm_id,
         firm_name: firm_name || '',
+        firm_types: firm_types || [],
         firm_role: 'user',
         can_edit: true,
         can_delete: false,
         first_name: first_name || '',
         last_name: last_name || '',
+        salutation: salutation || undefined,
+        suffix: suffix || undefined,
         contact_id: finalContactId || undefined,
         contact_name: [first_name, last_name].filter(Boolean).join(' '),
         invited_by_name: user.full_name || user.email,
@@ -87,10 +93,48 @@ export default async function(req) {
         invitation_type: 'external_party',
       });
 
+      // Log the "sent" event in the invitation history
+      try {
+        await svc.entities.InvitationHistory.create({
+          invitation_id: invitation.id,
+          email: normEmail,
+          firm_name: firm_name || '',
+          event_type: 'sent',
+          actor_name: user.full_name || user.email,
+          details: `Invitation sent to ${normEmail} for ${firm_name || 'the portal'}`,
+        });
+      } catch (e) {
+        // History logging is best-effort — don't fail the invite
+      }
+
       return Response.json({ success: true, invitation });
     }
 
-    // ── RESCIND: delete a pending external-party invitation ──
+    // ── REMIND: record a reminder-sent history event ──
+    if (action === 'remind') {
+      const { invitation_id } = body;
+      if (!invitation_id) return Response.json({ error: 'invitation_id is required' }, { status: 400 });
+
+      const inv = await svc.entities.PendingInvitation.get(invitation_id);
+      if (!inv) return Response.json({ error: 'Invitation not found' }, { status: 404 });
+
+      try {
+        await svc.entities.InvitationHistory.create({
+          invitation_id,
+          email: inv.email || '',
+          firm_name: inv.firm_name || '',
+          event_type: 'reminder_sent',
+          actor_name: user.full_name || user.email,
+          details: `Reminder email sent to ${inv.email || 'invitee'}`,
+        });
+      } catch (e) {
+        // best-effort
+      }
+
+      return Response.json({ success: true });
+    }
+
+    // ── RESCIND: delete a pending external-party invitation + history ──
     if (action === 'rescind') {
       const { invitation_id } = body;
       if (!invitation_id) return Response.json({ error: 'invitation_id is required' }, { status: 400 });
@@ -104,11 +148,25 @@ export default async function(req) {
         return Response.json({ error: 'This invitation has already been accepted and cannot be rescinded' }, { status: 400 });
       }
 
+      // Log the "rescinded" event before deleting the invitation
+      try {
+        await svc.entities.InvitationHistory.create({
+          invitation_id,
+          email: inv.email || '',
+          firm_name: inv.firm_name || '',
+          event_type: 'rescinded',
+          actor_name: user.full_name || user.email,
+          details: `Invitation to ${inv.email || 'invitee'} rescinded by ${user.full_name || user.email}`,
+        });
+      } catch (e) {
+        // best-effort
+      }
+
       await svc.entities.PendingInvitation.delete(invitation_id);
       return Response.json({ success: true });
     }
 
-    return Response.json({ error: 'Invalid action. Use "list", "invite", or "rescind".' }, { status: 400 });
+    return Response.json({ error: 'Invalid action. Use "list", "invite", "remind", or "rescind".' }, { status: 400 });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }

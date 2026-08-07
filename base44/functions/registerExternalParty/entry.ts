@@ -3,6 +3,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 // Public endpoint: creates an ExternalPartyRequest without requiring auth.
 // Called from the public registration page (/register).
 // Also checks for existing/similar firm names to flag for admin review.
+// If an invitation_id is passed, marks the invitation as registered and logs the event.
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -56,6 +57,25 @@ Deno.serve(async (req) => {
       status: 'pending',
       is_first_user: isFirstUser,
     });
+
+    // If this registration came from an invitation link, log the "registered" event
+    if (body.invitation_id) {
+      try {
+        const inv = await svc.entities.PendingInvitation.get(body.invitation_id);
+        if (inv && inv.invitation_type === 'external_party' && !inv.accepted) {
+          await svc.entities.InvitationHistory.create({
+            invitation_id: body.invitation_id,
+            email: inv.email || body.email.trim().toLowerCase(),
+            firm_name: inv.firm_name || body.firm_name.trim(),
+            event_type: 'registered',
+            actor_name: [body.first_name, body.last_name].filter(Boolean).join(' '),
+            details: `${body.first_name} ${body.last_name} submitted the registration form`,
+          });
+        }
+      } catch (e) {
+        // best-effort — don't fail the registration
+      }
+    }
 
     return Response.json({
       success: true,

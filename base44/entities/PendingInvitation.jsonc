@@ -14,6 +14,13 @@
       "type": "string",
       "description": "Denormalized firm name (display)"
     },
+    "firm_types": {
+      "type": "array",
+      "description": "Firm types for the external party (stored so the registration page can pre-populate from the invitation)",
+      "items": {
+        "type": "string"
+      }
+    },
     "firm_role": {
       "type": "string",
       "enum": [
@@ -41,6 +48,14 @@
     "last_name": {
       "type": "string",
       "description": "Invitee last name (used to pre-create their contact record)"
+    },
+    "salutation": {
+      "type": "string",
+      "description": "Invitee salutation (stored so the registration page can pre-populate from the invitation)"
+    },
+    "suffix": {
+      "type": "string",
+      "description": "Invitee name suffix (stored so the registration page can pre-populate from the invitation)"
     },
     "contact_id": {
       "type": "string",

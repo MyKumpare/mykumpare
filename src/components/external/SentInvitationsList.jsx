@@ -17,6 +17,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import InvitationHistoryLog from "./InvitationHistoryLog";
 
 const fmtDate = (d) => {
   if (!d) return "—";
@@ -71,7 +72,14 @@ export default function SentInvitationsList() {
   const handleRemind = async (inv) => {
     setReminding(inv.id);
     try {
-      const regUrl = `${window.location.origin}/#/register`;
+      const params = new URLSearchParams({
+        firm: inv.firm_name || "",
+        first: inv.first_name || "",
+        last: inv.last_name || "",
+        email: inv.email || "",
+      });
+      if (inv.id) params.set("inv", inv.id);
+      const regUrl = `${window.location.origin}/#/register?${params.toString()}`;
       await base44.functions.invoke("sendExternalInvitationEmail", {
         email: inv.email,
         inviteeName: inv.contact_name || [inv.first_name, inv.last_name].filter(Boolean).join(" "),
@@ -79,6 +87,11 @@ export default function SentInvitationsList() {
         invitedByName: user?.full_name || user?.email,
         registrationUrl: regUrl,
       });
+      // Log the reminder in the invitation history
+      try {
+        await base44.functions.invoke("inviteToPortal", { action: "remind", invitation_id: inv.id });
+        await queryClient.invalidateQueries({ queryKey: ["invitation_history", inv.id] });
+      } catch {}
       toast({ title: "Reminder sent", description: `A reminder was emailed to ${inv.email}.` });
     } catch (err) {
       toast({ title: "Reminder failed", description: err?.message || "Could not send reminder.", variant: "destructive" });
@@ -97,6 +110,7 @@ export default function SentInvitationsList() {
       });
       if (res.data?.error) throw new Error(res.data.error);
       await queryClient.invalidateQueries({ queryKey: ["portal_invitations"] });
+      await queryClient.invalidateQueries({ queryKey: ["invitation_history", confirmRescind.id] });
       toast({ title: "Invitation rescinded", description: `The invitation to ${confirmRescind.email} has been removed.` });
     } catch (err) {
       toast({ title: "Could not rescind", description: err?.message || "Please try again.", variant: "destructive" });
@@ -194,6 +208,7 @@ export default function SentInvitationsList() {
                     {inv.invited_by_name && <><span className="text-gray-300">·</span> invited by {inv.invited_by_name}</>}
                   </p>
                   <p className="text-[10px] text-gray-400 mt-0.5">Sent {fmtDate(inv.created_date)}</p>
+                  <InvitationHistoryLog invitationId={inv.id} email={inv.email} />
                 </div>
                 {!inv.accepted && (
                   <div className="flex items-center gap-1.5 flex-shrink-0">
