@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/select";
 import { X, UserPlus, Search, Check, Mail } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import { findContactDuplicates } from "@/components/contacts/contactDuplicateCheck";
+import InviteDuplicateReviewDialog from "@/components/admin/InviteDuplicateReviewDialog";
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -52,8 +54,10 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
   const { data: contacts = [], isLoading } = useQuery({
     queryKey: ["firm_invite_contacts", myFirmId],
     queryFn: () => base44.entities.Contact.list("-created_date", 2000),
-    enabled: open && !!myFirmId && mode === "contact",
+    enabled: open && !!myFirmId,
   });
+
+  const [duplicateReview, setDuplicateReview] = useState(null);
 
   const { data: firms = [] } = useQuery({
     queryKey: ["firms"],
@@ -119,6 +123,22 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
       toast({ title: "Select a firm for this employee", variant: "destructive" });
       return;
     }
+    // Check for duplicate contacts (same/similar name or email) before saving.
+    const dups = findContactDuplicates(
+      { first_name: firstName.trim(), last_name: lastName.trim(), email: em },
+      contacts
+    );
+    if (dups.length > 0) {
+      setDuplicateReview(dups);
+      return;
+    }
+    await completeInviteEmail(null);
+  };
+
+  // Completes the email invite. If `existingContact` is provided, it is linked
+  // to the pending invitation instead of creating a new contact record.
+  const completeInviteEmail = async (existingContact) => {
+    const em = email.trim();
     setSaving(true);
     try {
       // 1. Send the platform join email (creates a pending user record)
@@ -131,20 +151,32 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
         }
       }
 
-      // 2. Pre-create a contact so the employee appears in the firm directory
-      let contactId = null;
-      try {
-        const contact = await base44.entities.Contact.create({
-          first_name: firstName.trim(),
-          last_name: lastName.trim(),
-          email: em,
-          firm_ids: [firmId],
-          tenant_id: firmId,
-          contact_status: "Active",
-        });
-        contactId = contact?.id || null;
-      } catch {
-        /* best-effort; invitation still recorded */
+      // 2. Link to an existing contact, or pre-create a new one so the
+      //    employee appears in the firm directory.
+      let contactId = existingContact?.id || null;
+      if (!existingContact) {
+        try {
+          const contact = await base44.entities.Contact.create({
+            first_name: firstName.trim(),
+            last_name: lastName.trim(),
+            email: em,
+            firm_ids: [firmId],
+            tenant_id: firmId,
+            contact_status: "Active",
+          });
+          contactId = contact?.id || null;
+        } catch {
+          /* best-effort; invitation still recorded */
+        }
+      } else if (!Array.isArray(existingContact.firm_ids) || !existingContact.firm_ids.includes(firmId)) {
+        // Ensure the existing contact is associated with the selected firm
+        try {
+          await base44.entities.Contact.update(existingContact.id, {
+            firm_ids: [...(existingContact.firm_ids || []), firmId],
+          });
+        } catch {
+          /* best-effort */
+        }
       }
 
       // 3. Record the pending invitation — the employee is auto-linked to the
@@ -165,11 +197,13 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
       });
 
       queryClient.invalidateQueries({ queryKey: ["pending_invitations"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
       toast({
         title: "Invitation sent",
         description: `${em} will be added to ${firm?.name || "the firm"} when they sign in.`,
       });
       reset();
+      setDuplicateReview(null);
       onInvited && onInvited();
       onClose();
     } catch (e) {
@@ -393,6 +427,15 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
           </>
         )}
       </div>
+
+      {duplicateReview && (
+        <InviteDuplicateReviewDialog
+          duplicates={duplicateReview}
+          onUseExisting={(contact) => completeInviteEmail(contact)}
+          onCreateNew={() => completeInviteEmail(null)}
+          onCancel={() => setDuplicateReview(null)}
+        />
+      )}
     </div>
   );
 }
