@@ -14,6 +14,31 @@ import { toast } from "@/components/ui/use-toast";
 
 const ENTITY_TYPES = ["LLC", "LP", "LLLP", "Corporation", "Trust", "Other"];
 
+const JURISDICTION_DATA = {
+  "North America": {
+    "United States of America": "U.S. Securities Exchange Commission (SEC)",
+    "Canada": "Canadian Securities Administrators (CSA)",
+  },
+  "Europe and United Kingdom": {
+    "United Kingdom": "Financial Conduct Authority (FCA)",
+    "Europe": "European Securities and Markets Authority (ESMA)",
+    "France": "Autorité des Marchés Financiers (AMF)",
+    "Germany": "Bundesanstalt für Finanzdienstleistungsaufsicht (BaFin)",
+    "Luxembourg": "Commission de Surveillance du Secteur Financier (CSSF)",
+  },
+  "Asia-Pacific": {
+    "Hong Kong": "Securities and Futures Commission (SFC)",
+    "Singapore": "Monetary Authority of Singapore (MAS)",
+    "Australia": "Australian Securities and Investments Commission (ASIC)",
+    "Japan": "Financial Services Agency (FSA)",
+  },
+  "Middle East and Offshore Hubs": {
+    "United Arab Emirates": "Dubai Financial Services Authority (DFSA) & Abu Dhabi Global Market (ADGM)",
+    "Cayman Islands": "Cayman Islands Monetary Authority (CIMA)",
+  },
+};
+const JURISDICTION_OPTIONS = Object.keys(JURISDICTION_DATA);
+
 function isComplianceContact(c) {
   const roles = [...(c.contact_roles || []), ...(c.contact_firm_roles || [])];
   return roles.some((r) => (r || "").toLowerCase().includes("compliance"));
@@ -32,6 +57,9 @@ export default function LegalComplianceTab({ firmId, isEditing, contacts = [] })
   const [legalEntityName, setLegalEntityName] = useState("");
   const [entityType, setEntityType] = useState("");
   const [crdNumber, setCrdNumber] = useState("");
+  const [entityJurisdiction, setEntityJurisdiction] = useState("");
+  const [jurisdictionCountry, setJurisdictionCountry] = useState("");
+  const [registrationNumber, setRegistrationNumber] = useState("");
   const [complianceOfficerId, setComplianceOfficerId] = useState("");
   const [notes, setNotes] = useState("");
   const [showAddContact, setShowAddContact] = useState(false);
@@ -48,6 +76,9 @@ export default function LegalComplianceTab({ firmId, isEditing, contacts = [] })
         setLegalEntityName(data.legalEntityName || "");
         setEntityType(data.entityType || "");
         setCrdNumber(data.crdNumber || "");
+        setEntityJurisdiction(data.entityJurisdiction || "");
+        setJurisdictionCountry(data.jurisdictionCountry || "");
+        setRegistrationNumber(data.registrationNumber || "");
         setComplianceOfficerId(data.complianceOfficerId || "");
         setNotes(data.notes || "");
       }
@@ -64,6 +95,15 @@ export default function LegalComplianceTab({ firmId, isEditing, contacts = [] })
     const others = firmContacts.filter((c) => !isComplianceContact(c));
     return { complianceOfficers: officers, otherContacts: others };
   }, [firmContacts]);
+
+  const regulatoryBody = entityJurisdiction && jurisdictionCountry
+    ? JURISDICTION_DATA[entityJurisdiction]?.[jurisdictionCountry] || ""
+    : "";
+
+  const handleJurisdictionChange = (value) => {
+    setEntityJurisdiction(value);
+    setJurisdictionCountry("");
+  };
 
   const selectedContact = firmContacts.find((c) => c.id === complianceOfficerId);
 
@@ -86,6 +126,7 @@ export default function LegalComplianceTab({ firmId, isEditing, contacts = [] })
     if (!firmId) return;
     const data = {
       legalEntityName, entityType, crdNumber,
+      entityJurisdiction, jurisdictionCountry, registrationNumber,
       complianceOfficerId,
       complianceOfficerName: selectedContact ? contactDisplayName(selectedContact) : "",
       notes,
@@ -154,6 +195,51 @@ export default function LegalComplianceTab({ firmId, isEditing, contacts = [] })
             onChange={(e) => setCrdNumber(e.target.value)}
             disabled={!isEditing}
           />
+        </div>
+      </div>
+
+      {/* Entity Jurisdiction Section */}
+      <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50/50 p-3">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium text-gray-700">Entity Jurisdiction</Label>
+            <Select value={entityJurisdiction} onValueChange={handleJurisdictionChange} disabled={!isEditing}>
+              <SelectTrigger><SelectValue placeholder="Select jurisdiction..." /></SelectTrigger>
+              <SelectContent>
+                {JURISDICTION_OPTIONS.map((j) => (
+                  <SelectItem key={j} value={j}>{j}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium text-gray-700">Country / Region</Label>
+            <Select value={jurisdictionCountry} onValueChange={setJurisdictionCountry} disabled={!isEditing || !entityJurisdiction}>
+              <SelectTrigger><SelectValue placeholder="Select country..." /></SelectTrigger>
+              <SelectContent>
+                {entityJurisdiction && Object.keys(JURISDICTION_DATA[entityJurisdiction]).map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium text-gray-700">Governing Regulatory Body</Label>
+            <div className="h-9 px-3 flex items-center rounded-md border bg-white text-sm text-gray-900">
+              {regulatoryBody || <span className="text-gray-400">—</span>}
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium text-gray-700">Registration Number / Identifier</Label>
+            <Input
+              placeholder="e.g. 801-123456"
+              value={registrationNumber}
+              onChange={(e) => setRegistrationNumber(e.target.value)}
+              disabled={!isEditing}
+            />
+          </div>
         </div>
       </div>
 
