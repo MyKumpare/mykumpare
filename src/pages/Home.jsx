@@ -34,6 +34,7 @@ import UtilitySection from "../components/utility/UtilitySection";
 import ReportsSection from "../components/reports/ReportsSection";
 import PickerSection from "../components/common/PickerSection";
 import AnalyticsSection from "../components/analytics/AnalyticsSection";
+import QuestionnaireSection from "../components/questionnaires/QuestionnaireSection";
 
 const ReportsPickerModal = lazyDialog(() => import("../components/reports/ReportsPickerModal"));
 const DocumentsDashboardModal = lazyDialog(() => import("../components/firms/DocumentsDashboardModal"));
@@ -771,20 +772,10 @@ export default function Home() {
         />
 
         {/* Questionnaires section */}
-        <PickerSection
-          label="Questionnaires"
-          icon={ClipboardList}
-          iconColor="text-violet-500"
-          entityName="Questionnaire"
+        <QuestionnaireSection
+          forceExpanded={allExpanded}
           onOpen={() => setQuestionnairePickerOpen(true)}
           onAdd={() => setQuestionnaireAddOpen(true)}
-          addLabel="Add Questionnaire"
-          addColor="text-violet-600"
-          addHoverColor="hover:text-violet-700"
-          addHoverBg="hover:bg-violet-50"
-          openLabel="Open Questionnaires"
-          description="Open the questionnaire picker to view and manage records."
-          forceExpanded={allExpanded}
         />
 
         {/* Firms section */}

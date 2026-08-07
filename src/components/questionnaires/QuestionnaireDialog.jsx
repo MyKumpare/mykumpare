@@ -57,6 +57,7 @@ export default function QuestionnaireDialog({
   onContactClick,
   onProductClick,
   onCreated,
+  isExternalParty = false,
 }) {
   const queryClient = useQueryClient();
 
@@ -207,6 +208,7 @@ export default function QuestionnaireDialog({
         template_name: template.name,
         requester_id: form.requesterId,
         requester_name: form.requesterName,
+        requester_contact_id: user?.linked_contact_id,
         request_date: form.requestDate,
         assignee_contact_id: form.assigneeContactId,
         assignee_contact_name: form.assigneeContactName,
@@ -261,6 +263,39 @@ export default function QuestionnaireDialog({
     try {
       await base44.entities.Questionnaire.update(questionnaire.id, { sections: newSections });
       queryClient.invalidateQueries({ queryKey: ["questionnaires"] });
+
+      // ── Completion milestone notification ──
+      // When a sub-section transitions to "completed", check if the entire
+      // parent section is now fully completed. If so, notify the requester
+      // so they know the assignee hit a completion milestone.
+      const prevSub = (questionnaire.sections || [])
+        .find((s) => s.id === sectionId)?.sub_sections?.find((ss) => ss.id === subSectionId);
+      const wasCompleted = prevSub?.status === "completed";
+      const isNowCompleted = updatedSub.status === "completed";
+
+      if (!wasCompleted && isNowCompleted) {
+        const section = newSections.find((s) => s.id === sectionId);
+        const subs = section?.sub_sections || [];
+        const allDone = subs.length > 0 && subs.every((ss) => ss.status === "completed");
+        if (allDone) {
+          const requesterContactId = questionnaire.requester_contact_id;
+          if (requesterContactId) {
+            try {
+              await base44.entities.DdNotification.create({
+                contact_id: requesterContactId,
+                contact_name: questionnaire.requester_name || "",
+                type: "questionnaire_submitted",
+                title: "Questionnaire section completed",
+                message: `Section "${section.name}" in "${questionnaire.name}" has been fully completed by ${questionnaire.assignee_contact_name || "the assignee"}.`,
+                questionnaire_id: questionnaire.id,
+                firm_name: questionnaire.firm_name,
+                product_name: questionnaire.product_name || undefined,
+                status: "unread",
+              });
+            } catch {}
+          }
+        }
+      }
     } catch (err) {
       toast({ title: "Failed to save", description: err?.message || "Please try again.", variant: "destructive" });
     }
@@ -645,6 +680,7 @@ export default function QuestionnaireDialog({
                           firmName={questionnaire.firm_name}
                           products={products.filter(p => !p.deleted_at && p.firm_id === questionnaire.firm_id)}
                           readOnly={isReadOnly || isReviewMode || !canAnswer}
+                          createFirmDocuments={!isExternalParty}
                           onChange={(updated) => updateSubSection(section.id, ss.id, updated)}
                         />
                       ))}

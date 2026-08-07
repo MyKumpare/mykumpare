@@ -54,6 +54,7 @@ export default function QuestionnaireSubSectionItem({
   firmName,
   products = [],
   readOnly = false,
+  createFirmDocuments = true,
   onChange,
 }) {
   const fileInputRef = useRef(null);
@@ -110,9 +111,25 @@ export default function QuestionnaireSubSectionItem({
     setUploading(true);
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      setPendingFile({ url: file_url, name: file.name, type: file.type });
-      setFileName(file.name);
-      setShowCategorize(true);
+
+      if (!createFirmDocuments) {
+        // External party: save attachment directly without FirmDocument categorization
+        onChange({
+          ...subSection,
+          attachments: [...(subSection.attachments || []), {
+            id: `att_${Date.now()}`,
+            name: file.name,
+            file_url,
+            file_type: file.type,
+            uploaded_at: new Date().toISOString(),
+          }],
+        });
+        toast({ title: "File uploaded", description: `"${file.name}" has been attached.` });
+      } else {
+        setPendingFile({ url: file_url, name: file.name, type: file.type });
+        setFileName(file.name);
+        setShowCategorize(true);
+      }
     } catch (err) {
       toast({ title: "Upload failed", description: err?.message || "Please try again.", variant: "destructive" });
     } finally {
@@ -124,18 +141,27 @@ export default function QuestionnaireSubSectionItem({
     if (!pendingFile || !fileName.trim()) return;
 
     try {
-      // Create FirmDocument record
-      const doc = await base44.entities.FirmDocument.create({
-        firm_id: firmId,
-        firm_name: firmName,
-        file_url: pendingFile.url,
-        file_name: fileName.trim(),
-        file_type: pendingFile.type,
-        entry_date: todayISO(),
-        categories: fileCategories,
-        product_ids: fileProductIds,
-        tenant_id: undefined, // will be set by RLS/creator
-      });
+      // Create FirmDocument record (best-effort: attachment is saved even if this fails)
+      let firmDocId = null;
+      if (createFirmDocuments) {
+        try {
+          const doc = await base44.entities.FirmDocument.create({
+            firm_id: firmId,
+            firm_name: firmName,
+            file_url: pendingFile.url,
+            file_name: fileName.trim(),
+            file_type: pendingFile.type,
+            entry_date: todayISO(),
+            categories: fileCategories,
+            product_ids: fileProductIds,
+            tenant_id: undefined,
+          });
+          firmDocId = doc.id;
+        } catch {
+          // FirmDocument creation failed (e.g. external party without tenant access)
+          // — still save the attachment in the questionnaire without the FirmDocument link
+        }
+      }
 
       // Add attachment to sub-section
       const newAttachment = {
@@ -145,7 +171,7 @@ export default function QuestionnaireSubSectionItem({
         file_type: pendingFile.type,
         categories: fileCategories,
         product_ids: fileProductIds,
-        firm_document_id: doc.id,
+        firm_document_id: firmDocId,
         uploaded_at: new Date().toISOString(),
       };
 
