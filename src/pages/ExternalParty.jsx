@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +17,7 @@ import ExternalProductSubmission from "@/components/external/ExternalProductSubm
 import {
   ClipboardList, Clock, Building2, Calendar, CheckCircle2, Play, LogOut,
   MapPin, Phone, Globe, Users, Package, FileText, Plus, Trash2, Mail, Loader2,
-  ExternalLink, ShieldCheck, Crown, UserPlus,
+  ExternalLink, ShieldCheck, Crown, UserPlus, X,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
@@ -58,6 +58,7 @@ const TABS = [
 export default function ExternalParty() {
   const { user, logout } = useAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [tab, setTab] = useState("overview");
   const [selected, setSelected] = useState(null);
@@ -134,11 +135,18 @@ export default function ExternalParty() {
               </p>
             </div>
           </div>
-          {isExternalUser && (
-            <Button size="sm" variant="ghost" className="h-8 text-xs text-white/80 hover:text-white hover:bg-white/10" onClick={() => logout()}>
-              <LogOut className="w-3.5 h-3.5" /> Sign Out
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {urlFirmId && !isExternalUser && (
+              <Button size="sm" variant="ghost" className="h-8 text-xs text-white/80 hover:text-white hover:bg-white/10" onClick={() => navigate(-1)}>
+                <X className="w-3.5 h-3.5" /> Close Portal
+              </Button>
+            )}
+            {isExternalUser && (
+              <Button size="sm" variant="ghost" className="h-8 text-xs text-white/80 hover:text-white hover:bg-white/10" onClick={() => logout()}>
+                <LogOut className="w-3.5 h-3.5" /> Sign Out
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
