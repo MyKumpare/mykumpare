@@ -17,7 +17,7 @@ import ExternalProductSubmission from "@/components/external/ExternalProductSubm
 import {
   ClipboardList, Clock, Building2, Calendar, CheckCircle2, Play, LogOut,
   MapPin, Phone, Globe, Users, Package, FileText, Plus, Trash2, Mail, Loader2,
-  ExternalLink, ShieldCheck, Crown, UserPlus, X,
+  ExternalLink, ShieldCheck, Crown, UserPlus, X, ChevronRight,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
@@ -116,6 +116,23 @@ export default function ExternalParty() {
 
   return (
     <div className="min-h-screen bg-gray-50/80">
+      {/* Breadcrumb bar */}
+      {!isExternalUser && (
+        <div className="bg-gray-100 border-b border-gray-200">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-2 flex items-center gap-1.5 text-xs text-gray-500">
+            <button onClick={() => navigate("/")} className="hover:text-indigo-600 flex items-center gap-1">
+              <Building2 className="w-3 h-3" /> Dashboard
+            </button>
+            <ChevronRight className="w-3 h-3 text-gray-300" />
+            <button onClick={() => navigate(-1)} className="hover:text-indigo-600">
+              External Portals
+            </button>
+            <ChevronRight className="w-3 h-3 text-gray-300" />
+            <span className="text-gray-700 font-medium truncate">{firm?.name || "Portal"}</span>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-gradient-to-r from-indigo-600 via-indigo-700 to-violet-800 text-white shadow-md">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
