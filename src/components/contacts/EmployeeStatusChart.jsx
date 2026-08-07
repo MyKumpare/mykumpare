@@ -4,7 +4,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 const COLORS = {
   Employee: "#5D5FEF",
   "Non-Employee": "#F59E0B",
-  Unclassified: "#9CA3AF",
+  "__unclassified__": "#9CA3AF",
 };
 
 const UNCLASSIFIED_SENTINEL = "__unclassified__";
