@@ -26,6 +26,10 @@
       "type": "string",
       "description": "Full name of the requester (denormalized)"
     },
+    "requester_contact_id": {
+      "type": "string",
+      "description": "Contact ID of the requester (auto-set to current user's linked_contact_id). Used to route completion milestone notifications back to the requester."
+    },
     "request_date": {
       "type": "string",
       "format": "date",
