@@ -51,7 +51,10 @@ export function filterContacts(contacts, text, selected) {
       for (const f of group.fields) {
         const sel = selected[f.key];
         if (!sel || sel.size === 0) continue;
-        if (!getFieldValues(c, f).some((v) => sel.has(v))) return false;
+        const vals = getFieldValues(c, f);
+        const matches = vals.some((v) => sel.has(v));
+        const matchesUnclassified = sel.has("__unclassified__") && vals.length === 0;
+        if (!matches && !matchesUnclassified) return false;
       }
     }
     return true;

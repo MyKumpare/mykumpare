@@ -98,12 +98,40 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
   const contactCounts = useMemo(() => {
     let employees = 0;
     let nonEmployees = 0;
+    let unclassified = 0;
+    let active = 0;
+    let inactive = 0;
     for (const c of firmContacts) {
       if (c.employee_status === "Employee") employees += 1;
       else if (c.employee_status === "Non-Employee") nonEmployees += 1;
+      else unclassified += 1;
+      if ((c.contact_status || "Active") === "Active") active += 1;
+      else inactive += 1;
     }
-    return { total: firmContacts.length, employees, nonEmployees };
+    return { total: firmContacts.length, employees, nonEmployees, unclassified, active, inactive };
   }, [firmContacts]);
+
+  // Clicking a team-distribution label toggles an employee_status filter.
+  const activeEmpFilter = useMemo(() => {
+    const sel = filterSelected.employee_status;
+    if (!sel || sel.size === 0) return null;
+    if (sel.has("__unclassified__")) return "__unclassified__";
+    if (sel.has("Employee")) return "Employee";
+    if (sel.has("Non-Employee")) return "Non-Employee";
+    return null;
+  }, [filterSelected]);
+
+  const handleChartFilter = (key) => {
+    setFilterSelected((prev) => {
+      const next = { ...prev };
+      if (!key) {
+        delete next.employee_status;
+      } else {
+        next.employee_status = new Set([key]);
+      }
+      return next;
+    });
+  };
 
   const handleView = (contact) => {
     setEditingContact(contact);
@@ -278,6 +306,11 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
         <EmployeeStatusChart
           employees={contactCounts.employees}
           nonEmployees={contactCounts.nonEmployees}
+          unclassified={contactCounts.unclassified}
+          active={contactCounts.active}
+          inactive={contactCounts.inactive}
+          activeFilter={activeEmpFilter}
+          onFilter={handleChartFilter}
         />
       )}
 
