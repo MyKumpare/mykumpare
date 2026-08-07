@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import {   X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload, TrendingUp, Tag, GraduationCap, Briefcase, Activity, Package, AlertTriangle, Linkedin, Loader2, ClipboardCheck, Image as ImageIcon, Bell } from "lucide-react";
+import {   X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload, TrendingUp, Tag, GraduationCap, Briefcase, Activity, Package, AlertTriangle, Linkedin, Loader2, ClipboardCheck, Image as ImageIcon, Bell, MessageSquare } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
@@ -24,6 +24,7 @@ import ContactProfessionalExperienceTab from "./ContactProfessionalExperienceTab
 import ContactActivitiesTab from "./ContactActivitiesTab";
 import ContactDueDiligenceTab from "./ContactDueDiligenceTab";
 import ContactNotificationsTab from "./ContactNotificationsTab";
+import ContactChatTab from "./ContactChatTab";
 import ContactProductsTab from "./ContactProductsTab";
 import ContactRolePicker from "./ContactRolePicker";
 import ContactDepartmentPicker from "./ContactDepartmentPicker";
@@ -724,6 +725,9 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                   <TabsTrigger value="notifications" className="flex items-center gap-1.5">
                     <Bell className="w-3.5 h-3.5" /> Notifications
                   </TabsTrigger>
+                  <TabsTrigger value="chat" className="flex items-center gap-1.5">
+                    <MessageSquare className="w-3.5 h-3.5" /> Chat
+                  </TabsTrigger>
                 </TabsList>
               </div>
             </div>
@@ -1390,6 +1394,22 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                 onContactClick={onContactClick ? (contact) => { onOpenChange(false); onContactClick(contact); } : undefined}
                 onProductClick={onProductClick ? (product) => { onOpenChange(false); onProductClick(product); } : undefined}
               />
+            </TabsContent>
+
+            {/* ── CHAT TAB ── */}
+            <TabsContent value="chat" className="space-y-3 mt-0">
+              {editingContact ? (
+                <ContactChatTab
+                  contactId={editingContact.id}
+                  contactName={[editingContact.first_name, editingContact.last_name].filter(Boolean).join(" ")}
+                  firmIds={firmIds}
+                  firms={firms}
+                />
+              ) : (
+                <div className="text-sm text-gray-400 italic py-4 text-center">
+                  Save the contact to start chatting.
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </div>
