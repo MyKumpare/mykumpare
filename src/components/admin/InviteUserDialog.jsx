@@ -223,7 +223,7 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
                 <SelectTrigger className={fieldCls}><SelectValue /></SelectTrigger>
                 <SelectContent className="z-[70]">
                   <SelectItem value="__all__">My firm ({firms.find((f) => f.id === myFirmId)?.name || "default"})</SelectItem>
-                  {firms.filter((f) => !f.deleted_at && f.id !== myFirmId).map((f) => (
+                  {firms.filter((f) => !f.deleted_at && f.id !== myFirmId).sort((a, b) => (a.name || "").localeCompare(b.name || "")).map((f) => (
                     <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -336,7 +336,7 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
               <Select value={firmId} onValueChange={setFirmId}>
                 <SelectTrigger className={fieldCls}><SelectValue placeholder="Select a firm" /></SelectTrigger>
                 <SelectContent className="z-[70]">
-                  {firms.filter((f) => !f.deleted_at).map((f) => (
+                  {firms.filter((f) => !f.deleted_at).sort((a, b) => (a.name || "").localeCompare(b.name || "")).map((f) => (
                     <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
                   ))}
                 </SelectContent>
