@@ -70,14 +70,21 @@ export default function EmployeeStatusChart({
 }) {
   const [viewKey, setViewKey] = useState("team");
   const [ethPctMode, setEthPctMode] = useState("subset"); // "subset" | "overall"
+  const [empFilter, setEmpFilter] = useState("all"); // "all" | "Employee" | "Non-Employee"
   const config = VIEWS[viewKey];
 
-  const total = contacts.length;
+  // Scope contacts by the employee-status toggle so every stat adjusts dynamically.
+  const scopedContacts = useMemo(
+    () => empFilter === "all" ? contacts : contacts.filter((c) => c.employee_status === empFilter),
+    [contacts, empFilter]
+  );
+
+  const total = scopedContacts.length;
 
   const counts = useMemo(() => {
     const result = {};
     for (const cat of config.categories) result[cat.value] = 0;
-    for (const c of contacts) {
+    for (const c of scopedContacts) {
       const val = c[config.field];
       if (config.isArray) {
         const vals = Array.isArray(val) ? val : [];
@@ -90,11 +97,11 @@ export default function EmployeeStatusChart({
       }
     }
     return result;
-  }, [contacts, config]);
+  }, [scopedContacts, config]);
 
   const active = useMemo(
-    () => contacts.filter((c) => (c.contact_status || "Active") === "Active").length,
-    [contacts]
+    () => scopedContacts.filter((c) => (c.contact_status || "Active") === "Active").length,
+    [scopedContacts]
   );
   const inactive = total - active;
 
@@ -114,7 +121,7 @@ export default function EmployeeStatusChart({
   // the contacts matching that gender so it can be shown as a secondary view.
   const ethnicityBreakdown = useMemo(() => {
     if (viewKey !== "gender" || !activeFilter) return null;
-    const subset = contacts.filter((c) => {
+    const subset = scopedContacts.filter((c) => {
       const val = c[config.field];
       if (activeFilter === UNCLASSIFIED) return !val || val === "Undetermined";
       return val === activeFilter;
@@ -128,7 +135,7 @@ export default function EmployeeStatusChart({
       else for (const v of vals) if (result[v] !== undefined) result[v] += 1;
     }
     return { subsetTotal: subset.length, counts: result };
-  }, [contacts, viewKey, activeFilter, config]);
+  }, [scopedContacts, viewKey, activeFilter, config]);
 
   const handleLabelClick = (value) => {
     if (!onChartFilter) return;
@@ -157,6 +164,26 @@ export default function EmployeeStatusChart({
             }`}
           >
             {v.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Employee-status scope toggle */}
+      <div className="flex gap-0.5 p-0.5 bg-gray-100 rounded-lg">
+        {[
+          { key: "all", label: "All" },
+          { key: "Employee", label: "Employees Only" },
+          { key: "Non-Employee", label: "Non-Employees Only" },
+        ].map((opt) => (
+          <button
+            key={opt.key}
+            type="button"
+            onClick={() => setEmpFilter(opt.key)}
+            className={`flex-1 text-[10px] font-medium px-1.5 py-1 rounded-md transition-colors whitespace-nowrap ${
+              empFilter === opt.key ? "bg-white text-indigo-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            {opt.label}
           </button>
         ))}
       </div>
