@@ -66,7 +66,7 @@ export default function ExternalParty() {
 
   // Determine firm ID and access mode
   const urlFirmId = searchParams.get("firmId");
-  const isExternalUser = user?.is_external_party || (!urlFirmId && user?.linked_firm_id);
+  const isExternalUser = !!(user?.is_external_party || (!urlFirmId && user?.linked_firm_id));
   const firmId = urlFirmId || user?.linked_firm_id;
   const readOnly = !!urlFirmId && !isExternalUser;
 
@@ -489,6 +489,19 @@ function InviteUserModal({ open, onClose, firmId, firmName, user, onInvited }) {
         accepted: false,
         invitation_type: "external_party",
       });
+      // Send automated invitation email via Outlook
+      try {
+        const regUrl = `${window.location.origin}/#/register`;
+        await base44.functions.invoke("sendExternalInvitationEmail", {
+          email: form.email.trim().toLowerCase(),
+          inviteeName: `${form.first_name} ${form.last_name}`.trim(),
+          firmName,
+          invitedByName: user?.full_name || user?.email,
+          registrationUrl: regUrl,
+        });
+      } catch (emailErr) {
+        console.warn("Invitation email failed:", emailErr);
+      }
       toast({ title: "Invitation sent", description: `${form.email} has been invited to ${firmName}.` });
       setForm({ email: "", first_name: "", last_name: "" });
       onInvited();
