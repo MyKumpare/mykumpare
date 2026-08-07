@@ -178,12 +178,16 @@ export default function InviteToPortalDialog({
         const inviteLast = addingNew ? ncLast.trim() : (selectedContact?.last_name || "");
         const inviteSalutation = addingNew ? ncSalutation : (selectedContact?.salutation || "");
         const inviteSuffix = addingNew ? ncSuffix : (selectedContact?.suffix || "");
+        const firmTypes = (selectedFirm.firm_types && selectedFirm.firm_types.length)
+          ? selectedFirm.firm_types
+          : (selectedFirm.firm_type ? [selectedFirm.firm_type] : []);
         const params = new URLSearchParams({
           firm: selectedFirm.name || "",
           first: inviteFirst,
           last: inviteLast,
           email: email.trim(),
         });
+        if (firmTypes.length) params.set("types", firmTypes.join(","));
         if (inviteSalutation) params.set("salutation", inviteSalutation);
         if (inviteSuffix) params.set("suffix", inviteSuffix);
         const regUrl = `${window.location.origin}/#/register?${params.toString()}`;

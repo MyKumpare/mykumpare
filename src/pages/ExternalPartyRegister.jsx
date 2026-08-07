@@ -52,11 +52,16 @@ export default function ExternalPartyRegister() {
     const email = searchParams.get("email") || "";
     const salutation = searchParams.get("salutation") || "";
     const suffix = searchParams.get("suffix") || "";
+    const typesParam = searchParams.get("types") || "";
+    const types = typesParam
+      ? typesParam.split(",").map((t) => t.trim()).filter((t) => FIRM_TYPES.includes(t))
+      : [];
 
     if (firm || first || last || email) {
       setForm((f) => ({
         ...f,
         firm_name: firm || f.firm_name,
+        firm_types: types.length ? types : f.firm_types,
         first_name: first || f.first_name,
         middle_name: middle || f.middle_name,
         last_name: last || f.last_name,
