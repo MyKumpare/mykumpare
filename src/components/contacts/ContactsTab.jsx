@@ -133,6 +133,27 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
     });
   };
 
+  // Active contact-status filter from the chart footer (Total / Active / Inactive).
+  const activeStatusFilter = useMemo(() => {
+    const sel = filterSelected.contact_status;
+    if (!sel || sel.size === 0) return null;
+    if (sel.has("Inactive")) return "Inactive";
+    if (sel.has("Active")) return "Active";
+    return null;
+  }, [filterSelected]);
+
+  const handleStatusFilter = (status) => {
+    setFilterSelected((prev) => {
+      const next = { ...prev };
+      if (!status) {
+        delete next.contact_status;
+      } else {
+        next.contact_status = new Set([status]);
+      }
+      return next;
+    });
+  };
+
   const handleView = (contact) => {
     setEditingContact(contact);
     setViewMode(true);
@@ -311,6 +332,8 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
           inactive={contactCounts.inactive}
           activeFilter={activeEmpFilter}
           onFilter={handleChartFilter}
+          activeStatusFilter={activeStatusFilter}
+          onStatusFilter={handleStatusFilter}
         />
       )}
 

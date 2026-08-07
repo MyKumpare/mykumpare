@@ -57,6 +57,12 @@ export function filterContacts(contacts, text, selected) {
         if (!matches && !matchesUnclassified) return false;
       }
     }
+    // Contact-status filter (toggled from the chart footer, not the filters panel).
+    const statusSel = selected.contact_status;
+    if (statusSel && statusSel.size > 0) {
+      const status = c.contact_status || "Active";
+      if (!statusSel.has(status)) return false;
+    }
     return true;
   });
 }

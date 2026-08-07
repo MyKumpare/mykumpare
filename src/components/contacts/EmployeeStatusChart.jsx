@@ -23,6 +23,8 @@ export default function EmployeeStatusChart({
   inactive = 0,
   activeFilter = null,
   onFilter,
+  activeStatusFilter = null,
+  onStatusFilter,
 }) {
   const total = employees + nonEmployees + unclassified;
   const data = CATEGORIES.map((c) => ({
@@ -105,21 +107,36 @@ export default function EmployeeStatusChart({
       </div>
 
       <div className="border-t border-gray-100 pt-2.5 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs text-gray-500">Total Contacts</span>
-          <span className="text-sm font-semibold text-gray-800">{total}</span>
-        </div>
+        <button
+          type="button"
+          disabled={!onStatusFilter}
+          onClick={() => onStatusFilter?.(null)}
+          className={`flex items-center gap-1.5 ${onStatusFilter ? "cursor-pointer hover:opacity-80" : "cursor-default"}`}
+        >
+          <span className={`text-xs ${activeStatusFilter === null ? "font-semibold text-gray-900" : "text-gray-500"}`}>Total Contacts</span>
+          <span className={`text-sm font-semibold ${activeStatusFilter === null ? "text-indigo-700 underline" : "text-gray-800"}`}>{total}</span>
+        </button>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            disabled={!onStatusFilter}
+            onClick={() => onStatusFilter?.("Active")}
+            className={`flex items-center gap-1.5 ${onStatusFilter ? "cursor-pointer hover:opacity-80" : "cursor-default"}`}
+          >
             <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span className="text-xs text-gray-500">Active</span>
-            <span className="text-xs font-semibold text-gray-800">{active}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
+            <span className={`text-xs ${activeStatusFilter === "Active" ? "font-semibold text-gray-900 underline" : "text-gray-500"}`}>Active</span>
+            <span className={`text-xs font-semibold ${activeStatusFilter === "Active" ? "text-emerald-700" : "text-gray-800"}`}>{active}</span>
+          </button>
+          <button
+            type="button"
+            disabled={!onStatusFilter}
+            onClick={() => onStatusFilter?.("Inactive")}
+            className={`flex items-center gap-1.5 ${onStatusFilter ? "cursor-pointer hover:opacity-80" : "cursor-default"}`}
+          >
             <span className="w-2 h-2 rounded-full bg-red-400" />
-            <span className="text-xs text-gray-500">Inactive</span>
-            <span className="text-xs font-semibold text-gray-800">{inactive}</span>
-          </div>
+            <span className={`text-xs ${activeStatusFilter === "Inactive" ? "font-semibold text-gray-900 underline" : "text-gray-500"}`}>Inactive</span>
+            <span className={`text-xs font-semibold ${activeStatusFilter === "Inactive" ? "text-red-700" : "text-gray-800"}`}>{inactive}</span>
+          </button>
         </div>
       </div>
     </div>
