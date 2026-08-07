@@ -12,6 +12,7 @@ import AddContactDialog from "./AddContactDialog";
 import ContactsTabFilters, { filterContacts } from "./ContactsTabFilters";
 import MergeDuplicateContactsDialog from "./MergeDuplicateContactsDialog";
 import EmployeeStatusChart from "./EmployeeStatusChart";
+import ContactsBulkActionsBar from "./ContactsBulkActionsBar";
 import { useDuplicateReviews } from "./useDuplicateReviews";
 
 export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership, onProductClick, onFirmClick }) {
@@ -26,6 +27,9 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
   const [filterText, setFilterText] = useState("");
   const [filterSelected, setFilterSelected] = useState({});
   const [teamView, setTeamView] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkBusy, setBulkBusy] = useState(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   const handleToggleFilter = (fieldKey, value) => {
     setFilterSelected((prev) => {
@@ -212,6 +216,74 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
     }
   };
 
+  const selectedArray = useMemo(
+    () => filteredContacts.filter((c) => selectedIds.has(c.id)),
+    [filteredContacts, selectedIds]
+  );
+
+  const allFilteredSelected = filteredContacts.length > 0 && filteredContacts.every((c) => selectedIds.has(c.id));
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    setSelectedIds((prev) => {
+      if (allFilteredSelected) {
+        const next = new Set(prev);
+        for (const c of filteredContacts) next.delete(c.id);
+        return next;
+      }
+      const next = new Set(prev);
+      for (const c of filteredContacts) next.add(c.id);
+      return next;
+    });
+  };
+
+  const handleBulkStatus = async (status) => {
+    const targets = selectedArray;
+    if (targets.length === 0) return;
+    setBulkBusy(status === "Active" ? "active" : "inactive");
+    try {
+      await base44.entities.Contact.bulkUpdate(
+        targets.map((c) => ({ id: c.id, contact_status: status }))
+      );
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      toast({ title: "✅ Status updated", description: `${targets.length} contact${targets.length > 1 ? "s" : ""} set to ${status}.` });
+      setSelectedIds(new Set());
+    } catch (error) {
+      toast({ title: "Update failed", description: error.message || "Could not update contacts.", variant: "destructive" });
+    } finally {
+      setBulkBusy(null);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const targets = selectedArray;
+    if (targets.length === 0) return;
+    setBulkBusy("delete");
+    try {
+      const now = new Date().toISOString();
+      await base44.entities.Contact.updateMany(
+        { id: { $in: targets.map((c) => c.id) } },
+        { $set: { deleted_at: now } }
+      );
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["deletedContacts"] });
+      toast({ title: "✅ Contacts deleted", description: `${targets.length} contact${targets.length > 1 ? "s" : ""} removed.` });
+      setSelectedIds(new Set());
+      setBulkDeleteOpen(false);
+    } catch (error) {
+      toast({ title: "Delete failed", description: error.message || "Could not delete contacts.", variant: "destructive" });
+    } finally {
+      setBulkBusy(null);
+    }
+  };
+
   const formatName = (c) =>
     [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ") + (c.designations?.length ? `, ${c.designations.join(", ")}` : "");
 
@@ -337,6 +409,15 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
         />
       )}
 
+      <ContactsBulkActionsBar
+        selectedCount={selectedIds.size}
+        onClear={() => setSelectedIds(new Set())}
+        onSetActive={() => handleBulkStatus("Active")}
+        onSetInactive={() => handleBulkStatus("Inactive")}
+        onDelete={() => setBulkDeleteOpen(true)}
+        busy={bulkBusy}
+      />
+
       {firmContacts.length === 0 ? (
         <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
           No contacts added
@@ -349,6 +430,17 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
         <TeamHierarchyView people={filteredContacts} firmName={firmName} firmId={firmId} onContactClick={handleView} />
       ) : (
         <div className="space-y-2">
+          {filteredContacts.length > 0 && (
+            <div className="flex items-center gap-3 px-3 py-1.5 text-xs text-gray-500">
+              <input
+                type="checkbox"
+                checked={allFilteredSelected}
+                onChange={toggleSelectAll}
+                className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+              />
+              <span>{allFilteredSelected ? "Deselect all" : "Select all"}</span>
+            </div>
+          )}
           {filteredContacts
             .sort((a, b) => {
               const aActive = (a.contact_status || "Active") === "Active" ? 0 : 1;
@@ -368,6 +460,13 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
                   className={`flex items-center gap-3 p-3 rounded-lg border transition-colors cursor-pointer ${isDuplicate ? "bg-amber-50 border-amber-200 hover:bg-amber-100" : "bg-gray-50 border-gray-200 hover:bg-indigo-50 hover:border-indigo-200"}`}
                   onClick={() => handleView(contact)}
                 >
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(contact.id)}
+                    onChange={(e) => { e.stopPropagation(); toggleSelect(contact.id); }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer flex-shrink-0"
+                  />
                   <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
                     {contact.photo_url ? (
                       <img src={contact.photo_url} alt={contact.first_name} className="w-full h-full object-cover" />
@@ -481,6 +580,28 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
             setMergeCluster(null);
           }}
         />
+      )}
+
+      {bulkDeleteOpen && (
+        <Dialog open={true} onOpenChange={() => setBulkDeleteOpen(false)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-red-500" />
+                Delete {selectedArray.length} contact{selectedArray.length > 1 ? "s" : ""}?
+              </DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-gray-600">
+              Are you sure you want to delete <strong>{selectedArray.length}</strong> selected contact{selectedArray.length > 1 ? "s" : ""}? This cannot be undone.
+            </p>
+            <DialogFooter className="gap-2 pt-2">
+              <Button variant="outline" onClick={() => setBulkDeleteOpen(false)} disabled={!!bulkBusy}>Cancel</Button>
+              <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={handleBulkDelete} disabled={!!bulkBusy}>
+                {bulkBusy === "delete" ? "Deleting..." : "Yes, Delete"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
