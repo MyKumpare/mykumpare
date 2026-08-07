@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import {   X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload, TrendingUp, Tag, GraduationCap, Briefcase, Activity, Package, AlertTriangle, Linkedin, Loader2, ClipboardCheck, Image as ImageIcon, Bell, MessageSquare } from "lucide-react";
+import { X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload, TrendingUp, Tag, GraduationCap, Briefcase, Activity, Package, AlertTriangle, Linkedin, Loader2, ClipboardCheck, Image as ImageIcon, Bell, MessageSquare, Mail } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
@@ -34,6 +34,7 @@ import SimilarAddressDialog from "../SimilarAddressDialog";
 import { findAddressIssues } from "../addressDuplicateCheck";
 import SubRecordDuplicateDialog from "./SubRecordDuplicateDialog";
 import { findEducationDuplicates, findExperienceDuplicates, findPhoneDuplicates } from "./subRecordDuplicateCheck";
+import InviteToPortalDialog from "../external/InviteToPortalDialog";
 
 const SALUTATIONS = ["Mr.", "Ms.", "Mrs.", "Dr.", "Prof.", "Hon."];
 const SUFFIXES = ["Jr.", "Sr.", "II", "III", "IV", "Esq.", "CFA", "CPA", "MBA", "PhD", "MD"];
@@ -94,6 +95,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [similarAddressPairs, setSimilarAddressPairs] = useState(null);
   const [subRecordReview, setSubRecordReview] = useState(null);
   const [extracting, setExtracting] = useState(null); // "education" | "experience" | null
+  const [portalInviteOpen, setPortalInviteOpen] = useState(false);
 
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -1444,6 +1446,10 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
               )}
               {!confirmDeleteContact && (
                 <>
+                  <Button variant="outline" size="sm" className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                    onClick={() => setPortalInviteOpen(true)}>
+                    <Mail className="w-4 h-4 mr-1" /> Invite to Portal
+                  </Button>
                   <div className="flex-1" />
                   <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
                   <Button className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => setViewMode(false)}>
@@ -1504,6 +1510,16 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      )}
+
+      {/* Invite to External Portal — launched from view mode */}
+      {editingContact && (
+        <InviteToPortalDialog
+          open={portalInviteOpen}
+          onOpenChange={setPortalInviteOpen}
+          preselectedContact={editingContact}
+          preselectedFirmId={firmIds?.[0] || null}
+        />
       )}
     </Dialog>
     </>

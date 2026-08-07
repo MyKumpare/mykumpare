@@ -8,7 +8,9 @@ import { toast } from "@/components/ui/use-toast";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { UserCheck, UserX, Mail, Building2, AlertCircle, Loader2, ChevronRight } from "lucide-react";
+import { UserCheck, UserX, Mail, Building2, AlertCircle, Loader2, ChevronRight, UserPlus } from "lucide-react";
+import InviteToPortalDialog from "./InviteToPortalDialog";
+import SentInvitationsList from "./SentInvitationsList";
 
 const fmtDate = (d) => {
   if (!d) return "—";
@@ -22,6 +24,7 @@ export default function ExternalPartyRequestsTab() {
   const [rejectMode, setRejectMode] = useState(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [selectedRequest, setSelectedRequest] = useState(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   const { data: requests = [], isLoading } = useQuery({
     queryKey: ["external_party_requests"],
@@ -147,6 +150,16 @@ export default function ExternalPartyRequestsTab() {
 
   return (
     <div className="space-y-4">
+      {/* Invite contact action */}
+      <div className="flex justify-end">
+        <Button size="sm" className="h-8 text-xs bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => setInviteOpen(true)}>
+          <UserPlus className="w-3.5 h-3.5" /> Invite Contact
+        </Button>
+      </div>
+
+      {/* Sent invitations (status + reminders) */}
+      <SentInvitationsList />
+
       {/* Pending requests */}
       <div>
         <h2 className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-1.5">
@@ -170,6 +183,8 @@ export default function ExternalPartyRequestsTab() {
           <div className="space-y-1.5">{processed.slice(0, 10).map(renderRequest)}</div>
         </div>
       )}
+
+      <InviteToPortalDialog open={inviteOpen} onOpenChange={setInviteOpen} />
     </div>
   );
 }
