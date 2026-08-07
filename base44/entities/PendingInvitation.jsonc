@@ -75,6 +75,16 @@
     "questionnaire_name": {
       "type": "string",
       "description": "Name of the questionnaire (denormalized, for display)"
+    },
+    "reminder_sent": {
+      "type": "boolean",
+      "default": false,
+      "description": "True once the 3-day follow-up reminder has been sent to the internal user who created this invitation."
+    },
+    "reminder_sent_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the follow-up reminder was sent (YYYY-MM-DD)."
     }
   },
   "required": [
