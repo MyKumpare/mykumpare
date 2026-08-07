@@ -82,9 +82,9 @@ export default function EmployeeStatusChart({
         const vals = Array.isArray(val) ? val : [];
         if (vals.length === 0) result[UNCLASSIFIED] += 1;
         else for (const v of vals) if (result[v] !== undefined) result[v] += 1;
-      } else if (val && result[val] !== undefined) {
+      } else if (val && val !== "Undetermined" && result[val] !== undefined) {
         result[val] += 1;
-      } else if (!val) {
+      } else {
         result[UNCLASSIFIED] += 1;
       }
     }
@@ -108,6 +108,26 @@ export default function EmployeeStatusChart({
     fieldSel && fieldSel.size > 0
       ? config.categories.find((cat) => fieldSel.has(cat.value))?.value || null
       : null;
+
+  // When a gender category is selected, compute the ethnicity breakdown of
+  // the contacts matching that gender so it can be shown as a secondary view.
+  const ethnicityBreakdown = useMemo(() => {
+    if (viewKey !== "gender" || !activeFilter) return null;
+    const subset = contacts.filter((c) => {
+      const val = c[config.field];
+      if (activeFilter === UNCLASSIFIED) return !val || val === "Undetermined";
+      return val === activeFilter;
+    });
+    const ethCats = VIEWS.ethnicity.categories;
+    const result = {};
+    for (const cat of ethCats) result[cat.value] = 0;
+    for (const c of subset) {
+      const vals = Array.isArray(c.ethnicity) ? c.ethnicity : [];
+      if (vals.length === 0) result[UNCLASSIFIED] += 1;
+      else for (const v of vals) if (result[v] !== undefined) result[v] += 1;
+    }
+    return { subsetTotal: subset.length, counts: result };
+  }, [contacts, viewKey, activeFilter, config]);
 
   const handleLabelClick = (value) => {
     if (!onChartFilter) return;
@@ -203,6 +223,33 @@ export default function EmployeeStatusChart({
           })}
         </div>
       </div>
+
+      {/* Secondary ethnicity breakdown shown when a gender category is selected */}
+      {ethnicityBreakdown && ethnicityBreakdown.subsetTotal > 0 && (
+        <div className="border-t border-gray-100 pt-2.5 space-y-1.5">
+          <p className="text-xs font-medium text-gray-500">
+            Ethnicity breakdown: {activeFilter === UNCLASSIFIED ? "Undetermined" : activeFilter}
+          </p>
+          {VIEWS.ethnicity.categories.map((cat) => {
+            const count = ethnicityBreakdown.counts[cat.value] || 0;
+            if (count === 0) return null;
+            const subPct = ethnicityBreakdown.subsetTotal
+              ? Math.round((count / ethnicityBreakdown.subsetTotal) * 100)
+              : 0;
+            return (
+              <div key={cat.value} className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />
+                  <span className="text-xs text-gray-600 truncate">{cat.label}</span>
+                </div>
+                <span className="text-xs font-semibold text-gray-800 flex-shrink-0">
+                  {count} · {subPct}%
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <div className="border-t border-gray-100 pt-2.5 flex items-center justify-between gap-3">
         <button
