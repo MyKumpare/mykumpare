@@ -8,7 +8,7 @@ import { toast } from "@/components/ui/use-toast";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { UserCheck, UserX, Mail, Building2, AlertCircle, Loader2, ChevronRight, UserPlus } from "lucide-react";
+import { UserCheck, UserX, Mail, Building2, AlertCircle, Loader2, ChevronRight, UserPlus, Trash2 } from "lucide-react";
 import InviteToPortalDialog from "./InviteToPortalDialog";
 import SentInvitationsList from "./SentInvitationsList";
 
@@ -25,6 +25,7 @@ export default function ExternalPartyRequestsTab() {
   const [rejectionReason, setRejectionReason] = useState("");
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [deleteMode, setDeleteMode] = useState(null);
 
   const { data: requests = [], isLoading } = useQuery({
     queryKey: ["external_party_requests"],
@@ -59,8 +60,23 @@ export default function ExternalPartyRequestsTab() {
       setSelectedRequest(null);
       setRejectMode(null);
       setRejectionReason("");
+      setDeleteMode(null);
     } catch (err) {
       toast({ title: "Action failed", description: err?.message, variant: "destructive" });
+    } finally {
+      setActioning(null);
+    }
+  };
+
+  const handleDelete = async (request) => {
+    setActioning(request.id);
+    try {
+      await base44.entities.ExternalPartyRequest.delete(request.id);
+      queryClient.invalidateQueries({ queryKey: ["external_party_requests"] });
+      toast({ title: "Registration deleted", description: `The request from ${request.firm_name} has been removed.` });
+      setDeleteMode(null);
+    } catch (err) {
+      toast({ title: "Delete failed", description: err?.message, variant: "destructive" });
     } finally {
       setActioning(null);
     }
@@ -110,13 +126,31 @@ export default function ExternalPartyRequestsTab() {
             >
               <UserX className="w-3 h-3" /> Reject
             </Button>
+            <Button
+              size="sm" variant="ghost" className="h-7 px-2 text-xs text-gray-400 hover:text-rose-600 hover:bg-rose-50"
+              disabled={actioning === req.id}
+              onClick={() => setDeleteMode(req.id)}
+              title="Delete registration"
+            >
+              <Trash2 className="w-3 h-3" />
+            </Button>
           </div>
         ) : (
-          <Badge variant="outline" className={`text-[9px] flex-shrink-0 ${
-            req.status === "approved" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-rose-50 text-rose-700 border-rose-200"
-          }`}>
-            {req.status}
-          </Badge>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <Badge variant="outline" className={`text-[9px] ${
+              req.status === "approved" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-rose-50 text-rose-700 border-rose-200"
+            }`}>
+              {req.status}
+            </Badge>
+            <Button
+              size="sm" variant="ghost" className="h-7 px-2 text-xs text-gray-400 hover:text-rose-600 hover:bg-rose-50"
+              disabled={actioning === req.id}
+              onClick={() => setDeleteMode(req.id)}
+              title="Delete registration"
+            >
+              <Trash2 className="w-3 h-3" />
+            </Button>
+          </div>
         )}
       </div>
 
@@ -135,6 +169,22 @@ export default function ExternalPartyRequestsTab() {
               disabled={actioning === req.id}
               onClick={() => handleAction(req, "reject", { rejection_reason: rejectionReason })}>
               Confirm Reject
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirmation */}
+      {deleteMode === req.id && (
+        <div className="mt-2 p-2.5 rounded-lg bg-rose-50 border border-rose-200 space-y-2">
+          <p className="text-xs text-rose-700 font-medium">Delete this registration request? This cannot be undone.</p>
+          <div className="flex items-center justify-end gap-1.5">
+            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setDeleteMode(null)}>Cancel</Button>
+            <Button size="sm" className="h-7 text-xs bg-rose-600 hover:bg-rose-700"
+              disabled={actioning === req.id}
+              onClick={() => handleDelete(req)}>
+              {actioning === req.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+              Confirm Delete
             </Button>
           </div>
         </div>
