@@ -199,25 +199,29 @@ export default function EmployeeStatusChart({
 
         <div className="flex-1 space-y-1.5 min-w-0">
           <p className="text-xs font-medium text-gray-500">{config.label}</p>
+          <div className="flex items-center gap-2 pb-0.5 border-b border-gray-100">
+            <span className="flex-1 min-w-0" />
+            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide flex-shrink-0 w-8 text-right">Count</span>
+            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide flex-shrink-0 w-10 text-right">% of Total</span>
+          </div>
           {config.categories.map((cat) => {
             const count = counts[cat.value] || 0;
             const isActive = activeFilter === cat.value;
             return (
-              <div key={cat.value} className="flex items-center justify-between gap-2">
+              <div key={cat.value} className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => handleLabelClick(cat.value)}
                   disabled={!onChartFilter}
-                  className={`flex items-center gap-1.5 min-w-0 group ${onChartFilter ? "cursor-pointer" : "cursor-default"}`}
+                  className={`flex items-center gap-1.5 min-w-0 flex-1 group ${onChartFilter ? "cursor-pointer" : "cursor-default"}`}
                 >
                   <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />
                   <span className={`text-xs truncate ${isActive ? "font-semibold text-gray-900 underline" : "text-gray-600 group-hover:text-gray-900 group-hover:underline"}`}>
                     {cat.label}
                   </span>
                 </button>
-                <span className="text-xs font-semibold text-gray-800 flex-shrink-0">
-                  {count} · {pct(count)}%
-                </span>
+                <span className="text-xs font-semibold text-gray-800 flex-shrink-0 w-8 text-right">{count}</span>
+                <span className="text-xs font-semibold text-gray-800 flex-shrink-0 w-10 text-right">{pct(count)}%</span>
               </div>
             );
           })}
