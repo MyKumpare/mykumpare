@@ -1,0 +1,173 @@
+{
+  "name": "ExternalPartyRequest",
+  "type": "object",
+  "properties": {
+    "firm_name": {
+      "type": "string",
+      "description": "Name of the external firm requesting access"
+    },
+    "firm_types": {
+      "type": "array",
+      "description": "Types of firm (multi-select)",
+      "items": {
+        "type": "string",
+        "enum": [
+          "Investment Manager",
+          "Allocator",
+          "Investment Consultant",
+          "Securities Brokerage",
+          "Trade Organization"
+        ]
+      }
+    },
+    "salutation": {
+      "type": "string",
+      "enum": [
+        "Mr.",
+        "Ms.",
+        "Mrs.",
+        "Dr.",
+        "Prof.",
+        "Hon."
+      ],
+      "description": "Salutation/title prefix"
+    },
+    "first_name": {
+      "type": "string",
+      "description": "First name (auto-capitalized)"
+    },
+    "middle_name": {
+      "type": "string",
+      "description": "Middle name (auto-capitalized)"
+    },
+    "last_name": {
+      "type": "string",
+      "description": "Last name (auto-capitalized)"
+    },
+    "suffix": {
+      "type": "string",
+      "enum": [
+        "Jr.",
+        "Sr.",
+        "II",
+        "III",
+        "IV",
+        "Esq.",
+        "CFA",
+        "CPA",
+        "MBA",
+        "PhD",
+        "MD"
+      ],
+      "description": "Name suffix"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email address of the contact person"
+    },
+    "phone": {
+      "type": "object",
+      "description": "Phone number in system format",
+      "properties": {
+        "country_code": {
+          "type": "string"
+        },
+        "area_code": {
+          "type": "string"
+        },
+        "number_mid": {
+          "type": "string"
+        },
+        "number_last": {
+          "type": "string"
+        },
+        "phone_type": {
+          "type": "string"
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ],
+      "default": "pending",
+      "description": "Approval status of the request"
+    },
+    "approved_by_id": {
+      "type": "string",
+      "description": "User ID of the admin who approved/rejected"
+    },
+    "approved_by_name": {
+      "type": "string",
+      "description": "Name of the approving admin (denormalized)"
+    },
+    "approved_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the request was approved/rejected (YYYY-MM-DD)"
+    },
+    "rejection_reason": {
+      "type": "string",
+      "description": "Reason for rejection (if rejected)"
+    },
+    "created_firm_id": {
+      "type": "string",
+      "description": "ID of the Firm record created when approved (if new firm)"
+    },
+    "created_contact_id": {
+      "type": "string",
+      "description": "ID of the Contact record created when approved"
+    },
+    "is_first_user": {
+      "type": "boolean",
+      "default": false,
+      "description": "True if this is the first user from this firm (becomes default firm admin)"
+    },
+    "admin_notes": {
+      "type": "string",
+      "description": "Internal admin notes about this request"
+    }
+  },
+  "required": [
+    "firm_name",
+    "first_name",
+    "last_name",
+    "email",
+    "status"
+  ],
+  "rls": {
+    "create": null,
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.email": "{{user.email}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.email": "{{user.email}}"
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

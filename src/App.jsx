@@ -14,6 +14,8 @@ import DueDiligenceDashboard from './pages/DueDiligenceDashboard';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import OnboardingGuard from '@/components/onboarding/OnboardingGuard';
+import ExternalPartyRegister from './pages/ExternalPartyRegister';
+import ExternalParty from './pages/ExternalParty';
 
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -76,6 +78,8 @@ const AuthenticatedApp = () => {
       <Route path="/AiAgents" element={<LayoutWrapper currentPageName="AiAgents"><AiAgents /></LayoutWrapper>} />
       <Route path="/Analytics" element={<LayoutWrapper currentPageName="Analytics"><Analytics /></LayoutWrapper>} />
       <Route path="/UserManagement" element={<LayoutWrapper currentPageName="UserManagement"><UserManagement /></LayoutWrapper>} />
+      <Route path="/ExternalPortal" element={<LayoutWrapper currentPageName="ExternalPortal"><ExternalParty /></LayoutWrapper>} />
+      <Route path="/register" element={<ExternalPartyRegister />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
     </>

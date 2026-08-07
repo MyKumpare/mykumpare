@@ -1,0 +1,174 @@
+{
+  "name": "ExternalProductSubmission",
+  "type": "object",
+  "properties": {
+    "firm_id": {
+      "type": "string",
+      "description": "ID of the external firm submitting the product"
+    },
+    "firm_name": {
+      "type": "string",
+      "description": "Name of the firm (denormalized)"
+    },
+    "submitter_contact_id": {
+      "type": "string",
+      "description": "Contact ID of the person who submitted"
+    },
+    "submitter_name": {
+      "type": "string",
+      "description": "Name of the submitter (denormalized)"
+    },
+    "product_name": {
+      "type": "string",
+      "description": "Name of the product being submitted"
+    },
+    "product_type": {
+      "type": "string",
+      "enum": [
+        "Investment Manager Product",
+        "Multi-Manager Product"
+      ],
+      "description": "Auto-set based on firm type. Investment Management firms submit 'Investment Manager Product'."
+    },
+    "asset_class": {
+      "type": "string",
+      "enum": [
+        "Equity",
+        "Fixed Income",
+        "Other"
+      ],
+      "description": "Asset class classification"
+    },
+    "geography": {
+      "type": "string",
+      "enum": [
+        "Global",
+        "Non-US",
+        "Developed Non-US",
+        "Emerging Markets",
+        "Frontier Markets",
+        "US"
+      ],
+      "description": "Geographic focus (for Equity)"
+    },
+    "investment_approach": {
+      "type": "string",
+      "enum": [
+        "Active",
+        "Passive"
+      ],
+      "description": "Investment approach (for Equity)"
+    },
+    "diversification_classification": {
+      "type": "string",
+      "enum": [
+        "Diversified",
+        "Concentrated"
+      ],
+      "description": "Diversification classification (for Equity)"
+    },
+    "vehicle_offerings": {
+      "type": "array",
+      "description": "Vehicle offering types (for Equity)",
+      "items": {
+        "type": "string",
+        "enum": [
+          "Separate Account",
+          "ETF",
+          "Mutual Fund",
+          "Other Commingled Structure"
+        ]
+      }
+    },
+    "inception_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Product inception date (YYYY-MM-DD)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Product description provided by the submitter"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ],
+      "default": "pending",
+      "description": "Admin review status"
+    },
+    "reviewed_by_id": {
+      "type": "string",
+      "description": "User ID of the admin who reviewed"
+    },
+    "reviewed_by_name": {
+      "type": "string",
+      "description": "Name of the reviewer (denormalized)"
+    },
+    "reviewed_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the submission was reviewed (YYYY-MM-DD)"
+    },
+    "rejection_reason": {
+      "type": "string",
+      "description": "Reason for rejection (if rejected)"
+    },
+    "created_product_id": {
+      "type": "string",
+      "description": "ID of the Product record created when approved"
+    },
+    "fixed_income_notice": {
+      "type": "boolean",
+      "default": false,
+      "description": "True if asset class is Fixed Income (we are not currently researching fixed income products)"
+    }
+  },
+  "required": [
+    "firm_id",
+    "product_name",
+    "product_type",
+    "status"
+  ],
+  "rls": {
+    "create": null,
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.firm_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.firm_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.firm_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    }
+  }
+}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
 import { base44 } from "@/api/base44Client";
 import { toast } from "@/components/ui/use-toast";
@@ -9,6 +10,7 @@ import FirmOnboardingDialog from "./FirmOnboardingDialog";
 // the onboarding/join step before using the app.
 export default function OnboardingGuard() {
   const { user, isLoadingAuth, updateUser } = useAuth();
+  const navigate = useNavigate();
   const [linking, setLinking] = useState(false);
   const [checked, setChecked] = useState(false);
 
@@ -54,6 +56,15 @@ export default function OnboardingGuard() {
 
   if (isLoadingAuth || !user) return null;
   if (user.role === "admin") return null;
+
+  // External party users are redirected to their portal
+  if (user.is_external_party && user.linked_firm_id && user.onboarded) {
+    if (window.location.pathname !== "/ExternalPortal" && window.location.pathname !== "/register") {
+      navigate("/ExternalPortal");
+      return null;
+    }
+    return null;
+  }
 
   if (linking || !checked) {
     return (

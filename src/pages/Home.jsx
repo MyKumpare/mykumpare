@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, FileText, Files, ShieldCheck, X, LayoutDashboard, FlaskConical, MapPin, Camera, LayoutGrid, PieChart, Bot } from "lucide-react";
+import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, FileText, Files, ShieldCheck, X, LayoutDashboard, FlaskConical, MapPin, Camera, LayoutGrid, PieChart, Bot, ExternalLink } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -54,6 +54,7 @@ const ActivityDetailModal = lazyDialog(() => import("../components/activity/Acti
 const FollowUpTaskPickerModal = lazyDialog(() => import("../components/activity/FollowUpTaskPickerModal"));
 const TaskDetailModal = lazyDialog(() => import("../components/activity/TaskDetailModal"));
 const UserProfileDialog = lazyDialog(() => import("../components/user/UserProfileDialog"));
+const ExternalPortalPickerModal = lazyDialog(() => import("../components/external/ExternalPortalPickerModal"));
 import { useFirmOwner } from "@/components/admin/useFirmOwner";
 
 const FIRM_TYPES = [
@@ -123,6 +124,7 @@ export default function Home() {
   const [questionnairePickerOpen, setQuestionnairePickerOpen] = useState(false);
   const [questionnaireAddOpen, setQuestionnaireAddOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [externalPortalOpen, setExternalPortalOpen] = useState(false);
   const [photoCaptureOpen, setPhotoCaptureOpen] = useState(false);
   const [addContactPhotoUrl, setAddContactPhotoUrl] = useState(null);
 
@@ -563,6 +565,7 @@ export default function Home() {
     { label: "Documents", icon: Files, ref: null, color: "text-teal-600", activeBg: "bg-teal-50", onClick: () => setDocumentsPickerOpen(true) },
     { label: "Templates", icon: FileText, ref: null, color: "text-cyan-600", activeBg: "bg-cyan-50", onClick: () => setTemplatesPickerOpen(true) },
     { label: "Map Search", icon: MapPin, ref: null, color: "text-rose-600", activeBg: "bg-rose-50", onClick: () => setMapSearchOpen(true) },
+    { label: "Ext Portal", icon: ExternalLink, ref: null, color: "text-teal-600", activeBg: "bg-teal-50", onClick: () => setExternalPortalOpen(true) },
     { label: "Utilities", icon: Wrench, ref: utilityRef, color: "text-gray-600", activeBg: "bg-gray-100", onClick: () => { setUtilityForceExpanded(true); scrollTo(utilityRef); } },
   ];
 
@@ -1314,6 +1317,12 @@ export default function Home() {
         contacts={contacts}
         onSaveLinked={handleSaveProfileLink}
         onLogout={() => { setProfileOpen(false); logout(); }}
+      />
+
+      {/* External Portal Picker */}
+      <ExternalPortalPickerModal
+        open={externalPortalOpen}
+        onClose={() => setExternalPortalOpen(false)}
       />
 
       {/* AI Assistant */}

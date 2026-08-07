@@ -7,8 +7,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  ShieldCheck, Crown, UserPlus, ArrowLeft, Mail, Lock, ShieldAlert, Users as UsersIcon,
+  ShieldCheck, Crown, UserPlus, ArrowLeft, Mail, Lock, ShieldAlert, Users as UsersIcon, ExternalLink,
 } from "lucide-react";
+import ExternalPartyRequestsTab from "@/components/external/ExternalPartyRequestsTab";
 import { Link } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 import InviteUserDialog from "@/components/admin/InviteUserDialog";
@@ -325,6 +326,17 @@ export default function UserManagement() {
           <span className="font-medium text-gray-600"> Users</span> have standard access to firms, contacts, products and activities.
           The <span className="font-medium text-gray-600">Owner</span> is the top-level administrator of this application.
         </p>
+
+        {/* External Party Registration Requests */}
+        <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-1.5">
+            <ExternalLink className="w-3.5 h-3.5 text-violet-500" />
+            <h2 className="text-sm font-bold text-gray-800">External Party Registration Requests</h2>
+          </div>
+          <div className="p-4">
+            <ExternalPartyRequestsTab />
+          </div>
+        </div>
       </div>
 
       <InviteUserDialog open={inviteOpen} onClose={() => setInviteOpen(false)} onInvited={() => queryClient.invalidateQueries({ queryKey: ["users"] })} />
