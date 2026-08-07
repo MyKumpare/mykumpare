@@ -113,6 +113,22 @@ async function autoGeocodeAddresses(addressList, setAddressesFn) {
   }
 }
 
+// Returns the set of contact IDs the user has manually positioned (pinned)
+// in the Team Structure view for this firm. Manual assignments live in
+// localStorage keyed by firm ID (see TeamHierarchyView.jsx). Auto-fill must
+// not touch these contacts — only new contacts should be added — so the
+// user's manual placement is never undone by a re-scrape.
+function getManuallyAssignedContactIds(firmId) {
+  if (!firmId) return new Set();
+  try {
+    const raw = localStorage.getItem("mk_teamHierarchyAssign_" + firmId);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object") return new Set(Object.keys(parsed));
+  } catch { /* ignore */ }
+  return new Set();
+}
+
 const FIRM_TYPES = [
   "Manager of Managers",
   "Investment Manager",
@@ -529,6 +545,10 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
       if (editingFirm) {
         const contactUpdates = [];
         const newContacts = [];
+        // Contacts the user has manually positioned in the Team Structure view.
+        // These are left untouched by auto-fill so their placement isn't undone;
+        // only genuinely new contacts are added.
+        const manuallyAssignedIds = getManuallyAssignedContactIds(editingFirm.id);
         for (const person of selected.people) {
           const fullName = `${person.first_name || ""} ${person.last_name || ""}`.trim();
           const designations = detectDesignations(fullName, person.biography);
@@ -556,6 +576,11 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
           const dups = findContactDuplicates(contactData, firmContacts);
           if (dups.length > 0) {
             const bestMatch = dups[0].contact;
+            // Skip contacts the user has manually positioned in the team
+            // hierarchy — auto-fill must not undo their placement. Only new
+            // contacts are added; manually-positioned existing contacts are
+            // left untouched.
+            if (manuallyAssignedIds.has(bestMatch.id)) continue;
             const { updates, updatedFields, conflicts } = computeContactUpdates(bestMatch, person, editingFirm.id);
             // computeContactUpdates returns field conflicts as an array; extract
             // the biography conflict so the approval dialog + apply handler can
