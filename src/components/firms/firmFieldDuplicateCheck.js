@@ -29,7 +29,12 @@ export function websiteHostname(u) {
 }
 
 export function normalizeEmail(e) {
-  return norm(e);
+  const v = norm(e);
+  // A real email always contains "@". Placeholder values like "not provided"
+  // or "N/A" are not emails and must not trigger exact-match conflicts between
+  // unrelated firms that both happen to have the same placeholder stored.
+  if (!v || !v.includes("@")) return "";
+  return v;
 }
 
 export function emailDomain(e) {
