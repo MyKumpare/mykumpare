@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/use-toast";
 import AddContactDialog from "./AddContactDialog";
+import DeleteContactConfirmDialog from "./DeleteContactConfirmDialog";
 import ContactsTabFilters, { filterContacts } from "./ContactsTabFilters";
 import MergeDuplicateContactsDialog from "./MergeDuplicateContactsDialog";
 import EmployeeStatusChart from "./EmployeeStatusChart";
@@ -186,10 +187,22 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      await base44.entities.Contact.update(deleteTarget.id, { deleted_at: new Date().toISOString() });
+      const res = await base44.functions.invoke("deleteContactCascade", { contact_id: deleteTarget.id });
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
       queryClient.invalidateQueries({ queryKey: ["deletedContacts"] });
-      toast({ title: "✅ Contact deleted", description: `${deleteTarget.first_name} ${deleteTarget.last_name} has been removed.` });
+      queryClient.invalidateQueries({ queryKey: ["pendingInvitations"] });
+      queryClient.invalidateQueries({ queryKey: ["externalChats"] });
+      queryClient.invalidateQueries({ queryKey: ["due-diligence-all"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["questionnaires"] });
+      const deleted = res?.data?.deleted || {};
+      const assocCount = Object.values(deleted).reduce((sum, n) => sum + (Number(n) || 0), 0);
+      toast({
+        title: "✅ Contact deleted",
+        description: assocCount > 0
+          ? `${deleteTarget.first_name} ${deleteTarget.last_name} removed along with ${assocCount} associated record(s).`
+          : `${deleteTarget.first_name} ${deleteTarget.last_name} has been removed.`,
+      });
       setDeleteTarget(null);
     } catch (error) {
       toast({ title: "Delete failed", description: error.message || "Could not delete this contact.", variant: "destructive" });
@@ -267,14 +280,29 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
     if (targets.length === 0) return;
     setBulkBusy("delete");
     try {
-      const now = new Date().toISOString();
-      await base44.entities.Contact.updateMany(
-        { id: { $in: targets.map((c) => c.id) } },
-        { $set: { deleted_at: now } }
-      );
+      let totalAssoc = 0;
+      let successCount = 0;
+      for (const c of targets) {
+        try {
+          const res = await base44.functions.invoke("deleteContactCascade", { contact_id: c.id });
+          const deleted = res?.data?.deleted || {};
+          totalAssoc += Object.values(deleted).reduce((sum, n) => sum + (Number(n) || 0), 0);
+          successCount++;
+        } catch {
+          // Continue with remaining contacts even if one fails
+        }
+      }
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
       queryClient.invalidateQueries({ queryKey: ["deletedContacts"] });
-      toast({ title: "✅ Contacts deleted", description: `${targets.length} contact${targets.length > 1 ? "s" : ""} removed.` });
+      queryClient.invalidateQueries({ queryKey: ["pendingInvitations"] });
+      queryClient.invalidateQueries({ queryKey: ["externalChats"] });
+      queryClient.invalidateQueries({ queryKey: ["due-diligence-all"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["questionnaires"] });
+      toast({
+        title: "✅ Contacts deleted",
+        description: `${successCount} contact${successCount > 1 ? "s" : ""} removed${totalAssoc > 0 ? ` along with ${totalAssoc} associated record(s)` : ""}.`,
+      });
       setSelectedIds(new Set());
       setBulkDeleteOpen(false);
     } catch (error) {
@@ -530,32 +558,13 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
         </div>
       )}
 
-      {deleteTarget && (
-        <Dialog open={true} onOpenChange={() => setDeleteTarget(null)}>
-          <DialogContent className="max-w-sm">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-red-500" />
-                Delete Contact?
-              </DialogTitle>
-            </DialogHeader>
-            <p className="text-sm text-gray-600">
-              Are you sure you want to delete <strong>{formatName(deleteTarget)}</strong>?{deleteTarget.email ? ` (${deleteTarget.email})` : ""}
-              {duplicateGroups.some((g) => g.some((c) => c.id === deleteTarget.id)) && (
-                <span className="block mt-2 text-xs text-amber-700">
-                  ⚠ This contact appears to be a duplicate of another contact with the same name.
-                </span>
-              )}
-            </p>
-            <DialogFooter className="gap-2 pt-2">
-              <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
-              <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={handleDelete} disabled={deleting}>
-                {deleting ? "Deleting..." : "Yes, Delete"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
+      <DeleteContactConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}
+        contact={deleteTarget}
+        onConfirm={handleDelete}
+        deleting={deleting}
+      />
 
       <AddContactDialog
         open={dialogOpen}
@@ -592,7 +601,10 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
               </DialogTitle>
             </DialogHeader>
             <p className="text-sm text-gray-600">
-              Are you sure you want to delete <strong>{selectedArray.length}</strong> selected contact{selectedArray.length > 1 ? "s" : ""}? This cannot be undone.
+              Are you sure you want to delete <strong>{selectedArray.length}</strong> selected contact{selectedArray.length > 1 ? "s" : ""}?
+              <span className="block mt-2 text-xs text-red-700 bg-red-50 p-2 rounded-md">
+                This will permanently remove all associated data for each contact, including external party portal access, activity logs, tasks, due diligence assignments, and chat conversations.
+              </span>
             </p>
             <DialogFooter className="gap-2 pt-2">
               <Button variant="outline" onClick={() => setBulkDeleteOpen(false)} disabled={!!bulkBusy}>Cancel</Button>
