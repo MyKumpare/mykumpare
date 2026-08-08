@@ -69,7 +69,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [biography, setBiography] = useState("");
   const [designations, setDesignations] = useState([]);
-  const [employeeStatus, setEmployeeStatus] = useState("");
+  const [employeeStatus, setEmployeeStatus] = useState("Employee");
   const [contactStatus, setContactStatus] = useState("Active");
   const [contactRole, setContactRole] = useState("");
   const [contactType, setContactType] = useState("");
@@ -146,7 +146,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setDesignations([]);
         setEmail("");
         setLinkedinUrl("");
-        setEmployeeStatus("");
+        setEmployeeStatus("Employee");
         setContactStatus("Active");
         setContactRole("");
         setContactType("");
