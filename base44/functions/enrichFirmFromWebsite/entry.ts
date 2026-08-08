@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { resolveUrl, DOC_KEYWORDS, isLikelyPersonSlug, extractPersonDataFromScripts, discoverCategoryUrlsFromHtml } from '../../shared/enrichmentHelpers.ts';
 
 /**
  * Fetches a website's content directly (homepage + common sub-pages like /about, /team)
@@ -347,80 +348,7 @@ function htmlToText(html: string, baseUrl: string): string {
   return result;
 }
 
-function resolveUrl(base: string, path: string): string {
-  try {
-    return new URL(path, base).href;
-  } catch {
-    return '';
-  }
-}
-
-// Extract person data from embedded JSON in <script> tags. Many WordPress
-// sites render team grids via JavaScript, with the person data embedded as a
-// JSON data object inside a <script> tag (often a page-builder data object).
-// Without this, the htmlToText() function strips all <script> tags and the
-// person data is completely lost — only a few people (found on other pages)
-// are extracted instead of the full team.
-function extractPersonDataFromScripts(html: string): string {
-  const markers: string[] = [];
-  const seen = new Set<string>();
-
-  // Find all <script> tag contents
-  const scriptRegex = /<script[^>]*>([\s\S]*?)<\/script>/gi;
-  let scriptMatch: RegExpExecArray | null;
-  while ((scriptMatch = scriptRegex.exec(html)) !== null) {
-    const content = scriptMatch[1];
-    if (!content.includes('/person/') || !content.includes('"permalink"')) continue;
-
-    // Find all person permalink URLs and extract surrounding data fields.
-    // Each person object typically has: permalink, title, roles[], image{imgSrc}
-    const permalinkRegex = /"permalink"\s*:\s*"(https?:\/\/[^"]*\/person\/[^"]+)"/gi;
-    let pMatch: RegExpExecArray | null;
-    while ((pMatch = permalinkRegex.exec(content)) !== null) {
-      const permalink = pMatch[1];
-      if (seen.has(permalink)) continue;
-      seen.add(permalink);
-
-      // Look for title, roles, and imgSrc within a window AFTER the permalink.
-      // IMPORTANT: start at pMatch.index (NOT pMatch.index - 500) so the regex
-      // doesn't match the PREVIOUS person's title/roles/imgSrc that appears
-      // before the current permalink in the JSON.
-      const windowStart = pMatch.index;
-      const windowEnd = Math.min(content.length, pMatch.index + 2000);
-      const window = content.substring(windowStart, windowEnd);
-
-      // Extract title (person name)
-      const titleMatch = window.match(/"title"\s*:\s*"([^"]+)"/);
-      const name = titleMatch ? titleMatch[1] : '';
-      if (!name) continue;
-
-      // Extract roles
-      const rolesMatch = window.match(/"roles"\s*:\s*\[([\s\S]*?)\]/);
-      let roles = '';
-      if (rolesMatch) {
-        roles = rolesMatch[1]
-          .split(',')
-          .map((r) => r.replace(/"/g, '').trim())
-          .filter(Boolean)
-          .join('; ');
-      }
-
-      // Extract image URL
-      const imgMatch = window.match(/"imgSrc"\s*:\s*"([^"]+)"/);
-      const photoUrl = imgMatch ? imgMatch[1] : '';
-
-      let marker = `[PERSON: name="${name}"`;
-      if (roles) marker += ` title="${roles}"`;
-      if (photoUrl) marker += ` photo_url="${photoUrl}"`;
-      marker += ` bio_url="${permalink}"]`;
-      markers.push(marker);
-    }
-  }
-
-  return markers.length > 0
-    ? '\n--- Embedded Team Data ---\n' + markers.join('\n') + '\n--- End Team Data ---\n'
-    : '';
-}
+// resolveUrl and extractPersonDataFromScripts are imported from shared/enrichmentHelpers.ts
 
 // Fetch an individual biography/profile page and extract the person's full
 // biography text via a focused LLM pass. Returns '' if nothing is found.
@@ -836,53 +764,7 @@ async function enrichMissingBiographies(
   );
 }
 
-// Common document/report keywords that indicate a URL slug is NOT a person
-// name. Used to filter out non-person pages (documents, reports, articles,
-// etc.) that happen to be under /people/ or /team/ paths.
-const DOC_KEYWORDS = new Set([
-  'market', 'markets', 'review', 'outlook', 'quarter', 'report', 'strategy', 'strategies',
-  'management', 'indices', 'index', 'transition', 'trend', 'trends', 'following',
-  'sustainability', 'sustainable', 'whitepaper', 'paper', 'article', 'blog',
-  'newsletter', 'bulletin', 'commentary', 'analysis', 'overview', 'guide',
-  'handbook', 'policy', 'webinar', 'conference', 'presentation', 'committee',
-  'department', 'division', 'portfolio', 'investment', 'benchmark', 'performance',
-  'summary', 'annual', 'quarterly', 'monthly', 'weekly', 'daily',
-  'world', 'global', 'macroeconomic', 'macro', 'interest', 'rate', 'rates',
-  'environment', 'zero', 'bound', 'low', 'todays', 'today', 'update',
-  'insight', 'insights', 'research', 'study', 'survey', 'poll',
-  'fund', 'funds', 'product', 'products', 'offering', 'asset', 'class',
-  'esg', 'impact', 'responsible', 'green', 'private', 'public', 'alternative',
-  'hedge', 'commodity', 'currency', 'yield', 'duration', 'risk', 'return',
-  'fixed', 'income', 'bond', 'bonds', 'equity', 'equities',
-]);
-
-// Check if a URL slug is likely a person name (not a document, report, or
-// other non-person page). Used to filter out non-person URLs from the
-// sitemap/link discovery before creating lightweight contact entries.
-function isLikelyPersonSlug(slug: string): boolean {
-  if (!slug || slug === '#') return false;
-  const lower = slug.toLowerCase();
-
-  // Allow roman numeral / suffix endings: "john-smith-ii", "john-smith-jr"
-  const withoutSuffix = lower.replace(/-(?:ii|iii|iv|v|jr|sr|esq)$/, '');
-
-  // Reject slugs with numbers (person name slugs rarely have numbers)
-  if (/\d/.test(withoutSuffix)) return false;
-
-  const words = withoutSuffix.split(/-/).filter(Boolean);
-
-  // Reject slugs with too many words (> 4) — person names are typically 2-3 words
-  if (words.length > 4) return false;
-  // Reject single-word slugs — person names have at least 2 parts
-  if (words.length < 2) return false;
-
-  // Reject slugs that contain any document/report keyword
-  for (const word of words) {
-    if (DOC_KEYWORDS.has(word)) return false;
-  }
-
-  return true;
-}
+// DOC_KEYWORDS and isLikelyPersonSlug are imported from shared/enrichmentHelpers.ts
 
 // Fetch the site's sitemap(s) and extract individual profile page URLs.
 // Many WordPress sites have a sitemap at /sitemap.xml or /sitemap_index.xml
@@ -2033,6 +1915,53 @@ Deno.serve(async (req) => {
         }),
       )).filter(Boolean) as { url: string; text: string }[];
       subPages = subPages.concat(teamPages);
+    }
+
+    // Category filter discovery: many sites organize their team page with
+    // category filters (e.g. "Investment Professional", "Management", "Board
+    // Member") where each category is a separate page. The [LINK: ...] markers
+    // in the text capture <a href> links, but JavaScript-based filters (buttons,
+    // data attributes, onclick handlers) are missed. Fetch the raw HTML of
+    // team pages and scan for category-filter URLs to fetch as additional pages.
+    {
+      const existingUrls = new Set(pageContents.map((p) => p.url));
+      const teamUrls = pageContents
+        .filter((p) => /\/(people|our-people|team|our-team|leadership|staff|board|trustees)\b/i.test(p.url))
+        .map((p) => p.url)
+        .slice(0, 3);
+      const catUrls = new Set<string>();
+      for (const tu of teamUrls) {
+        if (Date.now() - fnStartTime >= TIME_BUDGET_MS) break;
+        let raw = await fetchRawHtml(tu);
+        if (!raw || raw.length < 100) {
+          try {
+            const c = new AbortController(), t = setTimeout(() => c.abort(), 15000);
+            const r = await fetch(`https://web.archive.org/web/2024/${tu}`, { headers: browserHeaders(''), redirect: 'follow', signal: c.signal });
+            clearTimeout(t);
+            if (r.ok && (r.headers.get('content-type') || '').includes('text')) {
+              const wb = await r.text();
+              if (wb?.length > 100) raw = wb.replace(/((?:href|src)\s*=\s*["'])(?:https?:\/\/web\.archive\.org)?\/web\/\d+(?:[a-z_]+)?\//gi, '$1');
+            }
+          } catch { /* ignore */ }
+        }
+        if (raw && raw.length > 100) {
+          for (const cu of discoverCategoryUrlsFromHtml(raw, tu, website)) {
+            if (!existingUrls.has(cu)) { catUrls.add(cu); existingUrls.add(cu); }
+          }
+        }
+      }
+      const toFetch = [...catUrls].slice(0, 8);
+      if (toFetch.length > 0) {
+        console.log(`enrichFirmFromWebsite: discovered ${toFetch.length} category-filter pages`);
+        const catPages = (await Promise.all(
+          toFetch.map(async (url) => {
+            let text = await fetchPage(url);
+            if (!text || text.length < 100) text = await fetchViaWayback(url);
+            return (text && text.length > 100) ? { url, text: text.substring(0, 80000) } : null;
+          }),
+        )).filter(Boolean) as { url: string; text: string }[];
+        for (const p of catPages) pageContents.push(p);
+      }
     }
 
     // Sort so people/team pages come first (most important for contact extraction),
