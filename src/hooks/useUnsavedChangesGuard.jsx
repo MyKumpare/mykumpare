@@ -58,17 +58,17 @@ export function useUnsavedChangesGuard(hasChanges, onClose, onSave) {
 
   const guardDialog = (
     <Dialog open={showConfirm} onOpenChange={(v) => { if (!v) cancelDiscard(); }}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+      <DialogContent className="max-w-md text-center">
+        <DialogHeader className="items-center space-y-0">
+          <DialogTitle className="flex items-center justify-center gap-2">
             <AlertTriangle className="w-5 h-5 text-amber-500" />
             Unsaved Changes
           </DialogTitle>
         </DialogHeader>
-        <p className="text-sm text-gray-600 py-2">
+        <p className="text-sm text-gray-600 py-2 px-2">
           You have unsaved changes that will be lost. Are you sure you want to close without saving?
         </p>
-        <DialogFooter>
+        <DialogFooter className="sm:justify-center gap-2">
           <Button variant="outline" onClick={cancelDiscard} disabled={saving}>Keep Editing</Button>
           {onSave && (
             <Button variant="default" onClick={handleSave} disabled={saving}>
