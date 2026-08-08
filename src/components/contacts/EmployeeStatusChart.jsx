@@ -341,7 +341,9 @@ export default function EmployeeStatusChart({
             };
             if (!config.hasSubtotal) return config.categories.map(renderRow);
             const mwbeCats = config.categories.filter((c) => c.group === "mwbe");
-            const nonMwbeCats = config.categories.filter((c) => c.group === "non_mwbe");
+            const nonMwbeCats = config.categories.filter(
+              (c) => c.group === "non_mwbe" && (c.value !== "undefined_mwbe" || (counts[c.value] || 0) > 0)
+            );
             const mwbeSubtotal = mwbeCats.reduce((s, c) => s + (counts[c.value] || 0), 0);
             return (
               <>
