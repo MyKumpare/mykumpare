@@ -2161,6 +2161,7 @@ CRITICAL — EXTRACT EVERY PERSON:
 - Some pages use tabbed or filtered layouts (e.g. "All Teams", "Our Leaders", "Domestic Equities Experts", "Emerging Markets Equities Experts", "Global Equities Experts", "Marketing and Client Service", "Administration and Trading"). ALL of these tabs/sections are included in the content below — you must process EVERY one of them, not just the first.
 - If a person appears in multiple sections, extract them once with their most detailed title.
 - CRITICAL: Section/tab labels like "Our Leaders", "Domestic Equities Experts", "Emerging Markets Equities Experts", "Global Equities Experts", "Marketing and Client Service", "Administration and Trading", "Company Board of Directors", "Mutual Fund Board of Trustees", "All Teams" are TAB HEADERS, NOT people. Do NOT include the LABELS themselves as people entries. But DO extract every REAL PERSON listed under those sections — board members, trustees, executive leadership, administrators, and consultants are all contacts that must be included. Only extract entries that have a real person's first and last name.
+- CRITICAL: Do NOT include document titles, research reports, market commentary, publications, articles, white papers, blog posts, or any other non-person content as people entries. Entries like "Third Quarter 2019 Market Review", "Global Macroeconomic Outlook", "World Markets", "Trend Following Strategies", "Transition Management", "Today's Low Interest Rate Environment", "Zero Bound" are DOCUMENTS/ARTICLES, NOT people. If the website has an "Insights", "Research", "Publications", "News", "Commentary", or "Perspectives" section, IGNORE all content in those sections — they contain articles, not personnel. A real person has a recognizable first name and last name (e.g. "John Smith", "Mary Johnson", "David Lee", "Sarah Chen"). If an entry does not have a recognizable person name, do NOT include it in the people array.
 - Each person card typically has a photo (shown as [IMAGE: ...]), a name (usually in a heading like "#### Name"), and a title/role below it.
 - IMPORTANT: Some sites embed team data as JSON inside <script> tags. This data has been extracted and appears as [PERSON: name="..." title="..." photo_url="..." bio_url="..."] markers in the "Embedded Team Data" section. You MUST extract EVERY [PERSON: ...] marker as a person entry. Each marker provides the person's name, title, photo_url, and bio_url (their individual profile page). Use these fields directly — do NOT skip any [PERSON: ...] marker.
 - Do NOT skip anyone. If you see 40+ people on the page, return all 40+ in the people array.
@@ -2315,6 +2316,28 @@ IMPORTANT:
           (last.length <= 4 && SECTION_HEADER_RE.test(first));
       };
       enrichedData.people = enrichedData.people.filter((p: any) => !isSectionHeader(p));
+
+      // Filter out document/report/article titles that the LLM sometimes
+      // extracts as "people" (e.g. "Third Quarter 2019 Market Review", "Trend
+      // Following Strategies", "Transition Management"). These are
+      // publications/insights, not personnel.
+      const DOC_TITLE_RE = /\b(market review|macroeconomic outlook|world markets|market outlook|quarterly (review|outlook|update|commentary)|q[1-4]\s+\d{4}|third quarter|first quarter|second quarter|fourth quarter|trend following|transition management|interest rate environment|zero bound|white ?paper|research (report|paper|note|brief)|market (commentary|perspective|update|analysis|brief|wrap)|investment (outlook|perspective|strategy|strategies)|economic (outlook|update|commentary)|monthly (report|update|commentary)|annual report|newsletter|bulletin|case study|special report|market (update|brief))\b/i;
+      const NAME_PARTICLES = /\b(van|der|de|la|von|di|del|della|le|du|el|al|bin|ibn)\b/i;
+      const NAME_SUFFIXES = /\b(jr|sr|ii|iii|iv|esq|cfa|cpa|mba|phd|md)\b/i;
+      const isDocumentTitle = (p: any): boolean => {
+        const first = (p.first_name || '').trim();
+        const last = (p.last_name || '').trim();
+        const full = `${first} ${last}`.trim();
+        if (!full || full.length < 2) return true;
+        if (DOC_TITLE_RE.test(full)) return true;
+        // A real person name is typically 2-4 words. If the "name" has 5+
+        // words and contains no name particles or suffixes, it's likely a
+        // document title, not a person name.
+        const words = full.split(/\s+/);
+        if (words.length >= 5 && !NAME_PARTICLES.test(full) && !NAME_SUFFIXES.test(full)) return true;
+        return false;
+      };
+      enrichedData.people = enrichedData.people.filter((p: any) => !isDocumentTitle(p));
     }
 
     // Phase 1.4: Enrich biographies for contacts with NO bio (or stub bios).
