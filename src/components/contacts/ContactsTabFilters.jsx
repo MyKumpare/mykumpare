@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Search, SlidersHorizontal } from "lucide-react";
+import { Search, SlidersHorizontal, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { getMwbeCategory } from "./mwbe";
@@ -105,8 +105,18 @@ export default function ContactsTabFilters({ contacts, text, onTextChange, selec
             value={text}
             onChange={(e) => onTextChange(e.target.value)}
             placeholder="Search by name, title, email..."
-            className="h-8 pl-8 text-sm"
+            className="h-8 pl-8 pr-8 text-sm"
           />
+          {text && (
+            <button
+              type="button"
+              onClick={() => onTextChange("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+              title="Clear search"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
         <Button
           type="button"
