@@ -35,6 +35,7 @@ import { findAddressIssues } from "../addressDuplicateCheck";
 import SubRecordDuplicateDialog from "./SubRecordDuplicateDialog";
 import { findEducationDuplicates, findExperienceDuplicates, findPhoneDuplicates } from "./subRecordDuplicateCheck";
 import InviteToPortalDialog from "../external/InviteToPortalDialog";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 
 const SALUTATIONS = ["Mr.", "Ms.", "Mrs.", "Dr.", "Prof.", "Hon."];
 const SUFFIXES = ["Jr.", "Sr.", "II", "III", "IV", "Esq.", "CFA", "CPA", "MBA", "PhD", "MD"];
@@ -592,6 +593,49 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
     <div className={className}>{val || <span className="text-gray-400 italic">—</span>}</div>
   );
 
+  const hasContactChanges = (() => {
+    if (viewMode) return false;
+    if (editingContact) {
+      const e = editingContact;
+      return (
+        photoUrl !== (e.photo_url || "") ||
+        salutation !== (e.salutation || "") ||
+        firstName.trim() !== (e.first_name || "").trim() ||
+        middleName.trim() !== (e.middle_name || "").trim() ||
+        lastName.trim() !== (e.last_name || "").trim() ||
+        suffix !== (e.suffix || "") ||
+        title.trim() !== (e.title || "").trim() ||
+        email.trim() !== (e.email || "").trim() ||
+        linkedinUrl.trim() !== (e.linkedin_url || "").trim() ||
+        biography.trim() !== (e.biography || "").trim() ||
+        notes.trim() !== (e.notes || "").trim() ||
+        employeeStatus !== (e.employee_status || "") ||
+        contactStatus !== (e.contact_status || "Active") ||
+        contactRole !== (e.contact_role || "") ||
+        contactType !== (e.contact_type || "") ||
+        gender !== (e.gender || "Undetermined") ||
+        veteranStatus !== (e.veteran_status || "Undetermined") ||
+        disabilityStatus !== (e.disability_status || "Undetermined") ||
+        JSON.stringify(ethnicity) !== JSON.stringify(e.ethnicity || []) ||
+        JSON.stringify(designations) !== JSON.stringify(e.designations || []) ||
+        JSON.stringify(contactRoles) !== JSON.stringify(e.contact_roles || []) ||
+        JSON.stringify(contactFirmRoles) !== JSON.stringify(e.contact_firm_roles || []) ||
+        JSON.stringify([...firmIds].sort()) !== JSON.stringify([...(e.firm_ids || [])].sort()) ||
+        JSON.stringify(education) !== JSON.stringify(e.education || []) ||
+        JSON.stringify(professionalExperience) !== JSON.stringify(e.professional_experience || []) ||
+        JSON.stringify(phones) !== JSON.stringify(e.phones || []) ||
+        JSON.stringify(addresses) !== JSON.stringify(e.addresses || [])
+      );
+    }
+    return !!(firstName.trim() || lastName.trim() || email.trim() || title.trim() ||
+      biography.trim() || notes.trim() || photoUrl || linkedinUrl.trim() ||
+      firmIds.length > 0 || education.length > 0 || professionalExperience.length > 0 ||
+      phones.some(p => p.area_code || p.number_mid || p.number_last) ||
+      addresses.some(a => a.address_line1 || a.city || a.state));
+  })();
+
+  const { guardedClose, guardDialog } = useUnsavedChangesGuard(hasContactChanges, () => onOpenChange(false));
+
   return (
     <>
     {/* Similar address confirmation */}
@@ -622,7 +666,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
         </DialogContent>
       </Dialog>
     )}
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(v) => { if (!v) guardedClose(); }}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
         <DialogHeader>
           {viewMode && editingContact ? (
@@ -1451,7 +1495,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                     <Mail className="w-4 h-4 mr-1" /> Invite to Portal
                   </Button>
                   <div className="flex-1" />
-                  <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+                  <Button variant="outline" onClick={guardedClose}>Close</Button>
                   <Button className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => setViewMode(false)}>
                     <Pencil className="w-4 h-4 mr-1" /> Edit
                   </Button>
@@ -1460,7 +1504,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
             </>
           ) : (
             <>
-              <Button variant="outline" onClick={() => { setShowUndeterminedWarning(false); editingContact ? setViewMode(true) : onOpenChange(false); }}>Cancel</Button>
+              <Button variant="outline" onClick={() => { setShowUndeterminedWarning(false); editingContact ? setViewMode(true) : guardedClose(); }}>Cancel</Button>
               <Button onClick={handleSubmit} disabled={!isValid} className="bg-indigo-600 hover:bg-indigo-700 text-white">
                 {editingContact ? "Save Changes" : "Add Contact"}
               </Button>
@@ -1521,6 +1565,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
           preselectedFirmId={firmIds?.[0] || null}
         />
       )}
+      {guardDialog}
     </Dialog>
     </>
   );

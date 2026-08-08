@@ -30,6 +30,7 @@ import ConstituentProductMultiSelect from "./ConstituentProductMultiSelect";
 import AddIMProductValidatedDialog from "./AddIMProductValidatedDialog";
 import ProductStatusBadge from "./ProductStatusBadge";
 import { base44 } from "@/api/base44Client";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 
 // Map product type -> firm type(s) that can be associated
 const PRODUCT_TYPE_TO_FIRM_TYPE = {
@@ -250,6 +251,15 @@ export default function AddProductDialog({
       )
     : false;
 
+  // In add mode, any entered data counts as unsaved changes.
+  const hasUnsavedChanges = hasChanges || (isAddMode && !!(
+    productName.trim() || productType || firmId || description ||
+    productStatus !== "Not Reviewed" ||
+    JSON.stringify(classifications) !== JSON.stringify(EMPTY_CLASSIFICATIONS) ||
+    Object.keys(investmentDescriptions).length > 0 ||
+    constituentProductIds.length > 0
+  ));
+
   const matchingProducts =
     productName.trim().length >= 2
       ? existingProducts.filter((p) => {
@@ -311,6 +321,8 @@ export default function AddProductDialog({
     setIsEditing(false);
   };
 
+  const { guardedClose, guardDialog } = useUnsavedChangesGuard(hasUnsavedChanges, handleClose);
+
   const handleCancelEdit = () => {
     const snap = originalSnapshotRef.current;
     if (!snap) return;
@@ -353,7 +365,7 @@ export default function AddProductDialog({
         </DialogContent>
       </Dialog>
     )}
-    <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
+    <Dialog open={open} onOpenChange={(v) => { if (!v) guardedClose(); }}>
       <DialogContent
         className="sm:max-w-lg max-h-[90vh] flex flex-col"
         onInteractOutside={(e) => e.preventDefault()}
@@ -376,7 +388,7 @@ export default function AddProductDialog({
                   Edit
                 </Button>
               )}
-              <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-400 hover:text-gray-600" onClick={handleClose}>
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-400 hover:text-gray-600" onClick={guardedClose}>
                 <X className="w-4 h-4" />
               </Button>
             </div>
@@ -719,7 +731,7 @@ export default function AddProductDialog({
               </>
             ) : isAddMode ? (
               <>
-                <Button variant="outline" onClick={handleClose}>Cancel</Button>
+                <Button variant="outline" onClick={guardedClose}>Cancel</Button>
                 <Button
                   onClick={handleSubmit}
                   disabled={!isValid}
@@ -729,7 +741,7 @@ export default function AddProductDialog({
                 </Button>
               </>
             ) : (
-              <Button variant="outline" onClick={handleClose}>Close</Button>
+              <Button variant="outline" onClick={guardedClose}>Close</Button>
             )}
           </div>
         </DialogFooter>
@@ -749,6 +761,7 @@ export default function AddProductDialog({
         );
       }}
     />
+    {guardDialog}
     </>
     );
     }

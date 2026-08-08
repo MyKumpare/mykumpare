@@ -38,6 +38,7 @@ import { findFirmFieldConflicts } from "./firmFieldDuplicateCheck";
 import LiveFieldConflictWarning from "./LiveFieldConflictWarning";
 import { isFirmNameSimilarToLinkedin } from "./firmNameSimilarity";
 import LinkedinFirmMismatchDialog from "./LinkedinFirmMismatchDialog";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 
 function getCountryCodeFromCountryName(countryName) {
   if (!countryName) return "";
@@ -358,6 +359,15 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
       JSON.stringify(addresses) !== JSON.stringify(editingFirm.addresses || []) ||
       JSON.stringify(phones) !== JSON.stringify(editingFirm.phones || [])
     : false;
+
+  // In add mode, any entered data counts as unsaved changes.
+  const hasUnsavedChanges = editingFirm
+    ? hasChanges
+    : !!(firmName.trim() || firmTypes.length > 0 || logoUrl || website || email ||
+        linkedinUrl || yearFounded || description ||
+        addresses.some(a => a.address_line1 || a.city || a.state || a.postal_code) ||
+        phones.some(p => p.area_code || p.number_mid || p.number_last) ||
+        pendingContacts.length > 0);
 
   const phonesValid = phones.length === 0 || phones.every(p => {
     // Only validate phones that have some number content — empty/partial
@@ -812,6 +822,8 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     setFirmFieldConflicts(null);
   };
 
+  const { guardedClose, guardDialog } = useUnsavedChangesGuard(hasUnsavedChanges, handleClose);
+
   const handleCancelEdit = () => {
     setFirmTypes(editingFirm.firm_types?.length ? editingFirm.firm_types : editingFirm.firm_type ? [editingFirm.firm_type] : []);
     setFirmName(editingFirm.name);
@@ -827,7 +839,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
+    <Dialog open={open} onOpenChange={(v) => { if (!v) guardedClose(); }}>
       <DialogContent
         className="sm:max-w-3xl max-h-[90vh] flex flex-col"
         onInteractOutside={(e) => { if (enrichmentLoading) e.preventDefault(); }}
@@ -1443,13 +1455,13 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               </>
             ) : isAddMode ? (
               <>
-                <Button variant="outline" onClick={handleClose}>Cancel</Button>
+                <Button variant="outline" onClick={guardedClose}>Cancel</Button>
                 <Button onClick={() => handleSubmit()} disabled={!isValid} className="bg-indigo-600 hover:bg-indigo-700 text-white">
                   Add Firm
                 </Button>
               </>
             ) : (
-              <Button variant="outline" onClick={handleClose}>Close</Button>
+              <Button variant="outline" onClick={guardedClose}>Close</Button>
             )}
           </div>
         </DialogFooter>
@@ -1586,6 +1598,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
           setLinkedinMismatch(null);
         }}
       />
+      {guardDialog}
     </Dialog>
   );
 }

@@ -14,6 +14,7 @@ import { CalendarIcon, Plus, X, ChevronDown, Check, Pencil, LayoutList, AlertTri
 import { cn } from "@/lib/utils";
 import AddFirmDialog from "@/components/firms/AddFirmDialog";
 import AddIMProductValidatedDialog from "@/components/products/AddIMProductValidatedDialog";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 
 // ── Searchable dropdown ────────────────────────────────────────────────────────
 function SearchableSelect({ options, value, onChange, placeholder, onAddNew, addNewLabel }) {
@@ -495,6 +496,23 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
   const viewAllocatorName = firms.find((f) => f.id === allocatorId)?.name || allocatorId;
   const viewAdvisorFirmName = firms.find((f) => f.id === advisorFirmId)?.name || advisorFirmId;
 
+  const hasPortfolioChanges = (() => {
+    if (editingPortfolio && !isEditing) return false;
+    const fmt = (d) => d ? format(d, "yyyy-MM-dd") : "";
+    if (editingPortfolio) {
+      return allocatorId !== (editingPortfolio.firm_id || "") ||
+        portfolioName.trim() !== (editingPortfolio.portfolio_name || "") ||
+        fmt(inceptionDate) !== (editingPortfolio.inception_date || "") ||
+        advisorType !== (editingPortfolio.advisor_type || "") ||
+        advisorFirmId !== (editingPortfolio.advisor_firm_id || "") ||
+        fmt(advisorInceptionDate) !== (editingPortfolio.advisor_inception_date || "") ||
+        JSON.stringify(subManagers) !== JSON.stringify(editingPortfolio.sub_managers || []);
+    }
+    return !!(allocatorId || portfolioName.trim() || inceptionDate || advisorType || advisorFirmId || advisorInceptionDate || subManagers.length > 0);
+  })();
+
+  const { guardedClose, guardDialog } = useUnsavedChangesGuard(hasPortfolioChanges, () => onOpenChange(false));
+
   return (
     <>
       {/* Advisor type change warning */}
@@ -536,7 +554,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
           </DialogContent>
         </Dialog>
       )}
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={(v) => { if (!v) guardedClose(); }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between pr-6">
@@ -771,7 +789,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
             </div>
             <div className="flex gap-2 justify-end">
               {editingPortfolio && !isEditing ? (
-                <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+                <Button variant="outline" onClick={guardedClose}>Close</Button>
               ) : editingPortfolio && isEditing ? (
                 <>
                   <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
@@ -785,7 +803,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                 </>
               ) : (
                 <>
-                  <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+                  <Button variant="outline" onClick={guardedClose}>Cancel</Button>
                   <Button
                     onClick={handleSave}
                     disabled={!isValid || createMutation.isPending}
@@ -825,6 +843,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
           );
         }}
       />
+      {guardDialog}
     </>
   );
 }
