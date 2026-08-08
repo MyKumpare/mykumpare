@@ -2121,7 +2121,7 @@ Deno.serve(async (req) => {
         if (!fallback.name) fallback.name = firm_name;
         const cleanStr = (v: any): any => {
     if (v == null) return '';
-    const s = String(v).trim().toLowerCase();
+    const s = String(v).trim().toLowerCase().replace(/_/g, ' ');
     if (['null', 'undefined', 'n/a', 'na', 'none', 'not provided', 'not available', 'unknown', '-'].includes(s)) return '';
     return v;
   };
@@ -2294,7 +2294,7 @@ IMPORTANT:
     // Clean up string "null" values that the LLM sometimes returns for missing fields
     const cleanStr = (v: any): any => {
     if (v == null) return '';
-    const s = String(v).trim().toLowerCase();
+    const s = String(v).trim().toLowerCase().replace(/_/g, ' ');
     if (['null', 'undefined', 'n/a', 'na', 'none', 'not provided', 'not available', 'unknown', '-'].includes(s)) return '';
     return v;
   };
@@ -2399,7 +2399,7 @@ IMPORTANT:
         // people array if it found more.
         const cleanStr2 = (v: any): any => {
     if (v == null) return '';
-    const s = String(v).trim().toLowerCase();
+    const s = String(v).trim().toLowerCase().replace(/_/g, ' ');
     if (['null', 'undefined', 'n/a', 'na', 'none', 'not provided', 'not available', 'unknown', '-'].includes(s)) return '';
     return v;
   };

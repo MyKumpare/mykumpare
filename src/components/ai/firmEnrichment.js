@@ -303,7 +303,7 @@ export async function enrichFirmFromWeb(firmName, websiteUrl) {
   const PLACEHOLDER_VALUES = ['null', 'undefined', 'n/a', 'na', 'none', 'not provided', 'not available', 'unknown', '-'];
   const cleanStr = (v) => {
     if (v == null) return '';
-    const s = String(v).trim().toLowerCase();
+    const s = String(v).trim().toLowerCase().replace(/_/g, ' ');
     return PLACEHOLDER_VALUES.includes(s) ? '' : v;
   };
   data.logo_url = cleanStr(data.logo_url) || '';

@@ -31,7 +31,7 @@ export function browserHeaders(cookieHeader: string): Record<string, string> {
 
 export function cleanStr(v: any): any {
   if (v == null) return '';
-  const s = String(v).trim().toLowerCase();
+  const s = String(v).trim().toLowerCase().replace(/_/g, ' ');
   if (['null', 'undefined', 'n/a', 'na', 'none', 'not provided', 'not available', 'unknown', '-'].includes(s)) return '';
   return v;
 }
