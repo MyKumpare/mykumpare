@@ -809,6 +809,8 @@ async function enrichMissingBiographies(
       if (result.phone && !person.phone) person.phone = result.phone;
       if (result.email && !person.email) person.email = result.email;
       if (result.title && !person.title) person.title = result.title;
+      if (result.photo_url && !person.photo_url) person.photo_url = result.photo_url;
+      if (result.designations?.length) person.designations = result.designations;
       if (result.education?.length) person.education = result.education;
       if (result.professional_experience?.length) person.professional_experience = result.professional_experience;
     }
@@ -1676,7 +1678,7 @@ async function rehostFirmImages(base44: any, data: any, website: string): Promis
 
 Deno.serve(async (req) => {
   const fnStartTime = Date.now();
-  const TIME_BUDGET_MS = 120000;
+  const TIME_BUDGET_MS = 180000;
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
@@ -2189,6 +2191,20 @@ IMPORTANT:
       enrichedData.people = enrichedData.people.filter((p: any) => !isSectionHeader(p));
     }
 
+    // Phase 1.4: Enrich biographies for contacts with NO bio (or stub bios).
+    // This runs BEFORE sitemap discovery so it gets priority within the time
+    // budget. It uses pattern probing (trying common URL patterns like
+    // /{first}-{last}/) to discover each person's individual profile page,
+    // then fetches and extracts the full biography, education, experience,
+    // designations, phone, email, and photo from that page.
+    const elapsedMs1 = Date.now() - fnStartTime;
+    if (elapsedMs1 < TIME_BUDGET_MS) {
+      console.log(`enrichFirmFromWebsite: enriching missing biographies (${Math.round(elapsedMs1 / 1000)}s elapsed)`);
+      await enrichMissingBiographies(base44, enrichedData.people || [], pageContents, website);
+    } else {
+      console.log(`enrichFirmFromWebsite: skipping biography enrichment — time budget exceeded (${Math.round(elapsedMs1 / 1000)}s)`);
+    }
+
     // Phase 1.5: Discover and extract people from individual profile pages
     // that were linked from the team listing but NOT extracted by the Phase 1
     // LLM pass (the LLM sometimes misses people when the listing is large,
@@ -2256,21 +2272,6 @@ IMPORTANT:
     // Many firm "people" pages only show name + title on cards; the full bio lives
     // on a separate profile page linked from each card. For any person missing a
     // biography but with a bio_url, fetch that page and extract the biography.
-    //
-    // TIME BUDGET: These enrichment phases make many LLM calls (one per person
-    // for biography extraction + one per person for education/experience). For
-    // a 20+ person team, that's 40+ LLM calls adding 30-60 seconds. To stay
-    // within platform timeout limits, skip these phases if the function has
-    // already been running for more than 45 seconds — the basic firm data and
-    // contact info (name, title, photo) is already extracted and valuable;
-    // biographies and education can be enriched on a subsequent run.
-    const elapsedMs = Date.now() - fnStartTime;
-    if (elapsedMs < TIME_BUDGET_MS) {
-      await enrichMissingBiographies(base44, enrichedData.people || [], pageContents, website);
-    } else {
-      console.log(`enrichFirmFromWebsite: skipping biography enrichment — time budget exceeded (${Math.round(elapsedMs / 1000)}s)`);
-    }
-
     // Extract education + professional experience from biographies (both the
     // ones just fetched and any real bios already on the listing page).
     if (Date.now() - fnStartTime < TIME_BUDGET_MS) {
