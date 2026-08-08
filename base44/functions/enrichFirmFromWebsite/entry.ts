@@ -443,6 +443,7 @@ Person name: "${personName}"
 Below is the text content of their profile/biography page.
 
 FIRST, locate the section describing THIS person (often near their name, under a heading like "Biography", "About", "Profile", or "Overview").
+IMPORTANT: Many sites use collapsible/accordion sections for detailed information. Look for sections labeled "PROFESSIONAL EXPERIENCE", "EDUCATION", "CREDENTIALS", "EDUCATION AND CREDENTIALS", "EDUCATION, CREDENTIALS AND MEMBERSHIPS", "SERVICE AREAS", or similar. The content of these sections IS present in the page text even though they appear collapsed on the visual page — extract ALL information from them.
 
 EXTRACT THESE FIELDS:
 
@@ -678,6 +679,18 @@ async function discoverBioUrlByPattern(
         baseCandidates.push(base);
       }
     }
+  }
+  // Also try root-level /<keyword>/ as a base — many sites (e.g. Meketa) use
+  // /about-us/people/ for the team listing but /people/<slug>/ for individual
+  // profile pages.
+  if (baseCandidates.length > 0) {
+    try {
+      const origin = new URL(baseCandidates[0]).origin;
+      for (const kw of ['people', 'our-people', 'team', 'our-team', 'staff', 'leadership']) {
+        const rootCandidate = origin + '/' + kw + '/';
+        if (!baseCandidates.includes(rootCandidate)) baseCandidates.push(rootCandidate);
+      }
+    } catch { /* ignore */ }
   }
   if (baseCandidates.length === 0) return { url: '', text: '' };
 
@@ -1235,6 +1248,125 @@ async function enrichEducationExperienceFromBios(base44: any, people: any[]): Pr
       const { education, professional_experience } = await extractEducationExperienceFromBio(base44, fullName, person.biography || '');
       person.education = education;
       person.professional_experience = professional_experience;
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(CONCURRENCY, queue.length) }, () => worker()),
+  );
+}
+
+// For every person who has a bio_url but is missing education, professional
+// experience, or designations, visit their individual profile page and extract
+// those fields. This catches people whose biography was already present on the
+// listing page (so they were skipped by enrichMissingBiographies) but whose
+// education/experience/designations live in accordion sections on their
+// individual profile page (e.g. Meketa's collapsible "PROFESSIONAL EXPERIENCE"
+// and "EDUCATION, CREDENTIALS AND MEMBERSHIPS" sections). For people without a
+// bio_url, try to discover it from internal links or URL patterns first.
+async function enrichEducationFromProfilePages(
+  base44: any,
+  people: any[],
+  pageContents: { url: string; text: string }[],
+  website: string,
+  fnStartTime: number,
+  timeBudgetMs: number,
+): Promise<void> {
+  const MAX = 40;
+  const CONCURRENCY = 10;
+
+  // Only process people who are missing at least one of: education,
+  // professional_experience, or designations.
+  const needsEnrichment = (p: any): boolean => {
+    const hasEducation = Array.isArray(p.education) && p.education.length > 0;
+    const hasExperience = Array.isArray(p.professional_experience) && p.professional_experience.length > 0;
+    const hasDesignations = Array.isArray(p.designations) && p.designations.length > 0;
+    return !hasEducation || !hasExperience || !hasDesignations;
+  };
+
+  let queue = people.filter(needsEnrichment).slice(0, MAX);
+  if (queue.length === 0) return;
+
+  // Phase A: Discover bio_url for people who don't have one.
+  const discoveryQueue = queue.filter((p) => !p.bio_url);
+  if (discoveryQueue.length > 0) {
+    let dCursor = 0;
+    const dWorker = async () => {
+      while (dCursor < discoveryQueue.length) {
+        if (Date.now() - fnStartTime >= timeBudgetMs) return;
+        const i = dCursor++;
+        const person = discoveryQueue[i];
+        // (1) Internal [LINK: ...] marker near the person's name.
+        const linkUrl = discoverBioUrl(pageContents, person.first_name, person.last_name);
+        if (linkUrl) {
+          person.bio_url = linkUrl;
+          continue;
+        }
+        // (2) URL pattern probe (slug-based).
+        const probed = await discoverBioUrlByPattern(pageContents, person.first_name, person.last_name, person.middle_name);
+        if (probed.url) {
+          person.bio_url = probed.url;
+        }
+      }
+    };
+    await Promise.all(
+      Array.from({ length: Math.min(CONCURRENCY, discoveryQueue.length) }, () => dWorker()),
+    );
+  }
+
+  // Re-filter: only people with a bio_url and still needing enrichment.
+  queue = queue.filter((p) => p.bio_url && needsEnrichment(p));
+  if (queue.length === 0) return;
+
+  // Cache fetched page text by URL to avoid re-fetching.
+  const pageCache = new Map<string, string>();
+  for (const page of pageContents) {
+    if (page.url && page.text) pageCache.set(page.url, page.text);
+  }
+
+  // Phase B: Fetch each person's profile page and extract education,
+  // experience, and designations.
+  let cursor = 0;
+  const worker = async () => {
+    while (cursor < queue.length) {
+      if (Date.now() - fnStartTime >= timeBudgetMs) return;
+      const i = cursor++;
+      const person = queue[i];
+      const bioUrl = person.bio_url;
+      if (!bioUrl) continue;
+
+      let pageText = pageCache.get(bioUrl);
+      if (!pageText) {
+        pageText = await fetchPage(bioUrl);
+        if (pageText) pageCache.set(bioUrl, pageText);
+      }
+      if (!pageText || pageText.length < 50) continue;
+
+      const fullName = [person.first_name, person.last_name].filter(Boolean).join(' ').trim();
+      try {
+        const res = await extractBiographyFromPage(base44, fullName, bioUrl, pageText);
+        // Only update fields that are missing — don't overwrite existing data.
+        if (res.education?.length && !(Array.isArray(person.education) && person.education.length > 0)) {
+          person.education = res.education;
+        }
+        if (res.professional_experience?.length && !(Array.isArray(person.professional_experience) && person.professional_experience.length > 0)) {
+          person.professional_experience = res.professional_experience;
+        }
+        if (res.designations?.length && !(Array.isArray(person.designations) && person.designations.length > 0)) {
+          person.designations = res.designations;
+        }
+        // Also fill in bio if it's richer than what we have.
+        if (res.biography && res.biography.length > (person.biography || '').length) {
+          person.biography = res.biography;
+        }
+        // Fill in other missing fields.
+        if (res.phone && !person.phone) person.phone = res.phone;
+        if (res.email && !person.email) person.email = res.email;
+        if (res.title && (!person.title || res.title.length > person.title.length)) person.title = res.title;
+        if (res.photo_url && !person.photo_url) person.photo_url = res.photo_url;
+        console.log(`enrichEducationFromProfilePages: enriched ${fullName} from ${bioUrl}`);
+      } catch {
+        // continue on error
+      }
     }
   };
   await Promise.all(
@@ -2268,12 +2400,20 @@ IMPORTANT:
       }
     }
 
-    // Phase 2: gather individual biographies that weren't on the listing page.
-    // Many firm "people" pages only show name + title on cards; the full bio lives
-    // on a separate profile page linked from each card. For any person missing a
-    // biography but with a bio_url, fetch that page and extract the biography.
-    // Extract education + professional experience from biographies (both the
-    // ones just fetched and any real bios already on the listing page).
+    // Phase 2: Visit individual profile pages for ALL contacts to extract
+    // education, professional experience, and designations from accordion
+    // sections. This runs for every contact — not just those with missing bios —
+    // because many sites (e.g. Meketa) put education/experience/designations in
+    // collapsible sections on individual profile pages that aren't visible on
+    // the team listing page.
+    if (Date.now() - fnStartTime < TIME_BUDGET_MS) {
+      console.log(`enrichFirmFromWebsite: enriching education/experience from profile pages (${Math.round((Date.now() - fnStartTime) / 1000)}s elapsed)`);
+      await enrichEducationFromProfilePages(base44, enrichedData.people || [], pageContents, website, fnStartTime, TIME_BUDGET_MS);
+    }
+
+    // Phase 2b: Extract education + professional experience from biographies
+    // that are already present (for people whose individual profile page wasn't
+    // found or couldn't be fetched).
     if (Date.now() - fnStartTime < TIME_BUDGET_MS) {
       await enrichEducationExperienceFromBios(base44, enrichedData.people || []);
     }
