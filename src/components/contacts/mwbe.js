@@ -16,8 +16,8 @@ export const ETHNIC_MINORITY_VALUES = [
 // minorities)" — the category the user asked to be clickable.
 export const MWBE_CATEGORIES = [
   { label: "Female (Non-Minority)", value: "female_nonminority", color: "#EC4899" },
-  { label: "Ethnic Minority (Non-Female)", value: "minority_nonfemale", color: "#7C3AED" },
-  { label: "Female & Minority", value: "female_minority", color: "#8B5CF6" },
+  { label: "Ethnic Minority (Non-Female)", value: "minority_nonfemale", color: "#4F46E5" },
+  { label: "Female & Minority", value: "female_minority", color: "#0D9488" },
 ];
 
 export function isEthnicMinority(c) {
