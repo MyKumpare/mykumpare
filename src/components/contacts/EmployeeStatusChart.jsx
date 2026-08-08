@@ -82,6 +82,8 @@ const VIEWS = {
 
 export default function EmployeeStatusChart({
   contacts = [],
+  empFilter = "all",
+  onEmpFilter,
   filterSelected = {},
   onChartFilter,
   activeStatusFilter = null,
@@ -89,7 +91,6 @@ export default function EmployeeStatusChart({
 }) {
   const [viewKey, setViewKey] = useState("team");
   const [ethPctMode, setEthPctMode] = useState("subset"); // "subset" | "overall"
-  const [empFilter, setEmpFilter] = useState("all"); // "all" | "Employee" | "Non-Employee"
   const config = VIEWS[viewKey];
 
   // Scope contacts by the employee-status toggle so every stat adjusts dynamically.
@@ -263,7 +264,7 @@ export default function EmployeeStatusChart({
           <button
             key={opt.key}
             type="button"
-            onClick={() => setEmpFilter(opt.key)}
+            onClick={() => onEmpFilter?.(opt.key)}
             className={`flex-1 text-[10px] font-medium px-1.5 py-1 rounded-md transition-colors whitespace-nowrap ${
               empFilter === opt.key ? "bg-white text-indigo-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
             }`}

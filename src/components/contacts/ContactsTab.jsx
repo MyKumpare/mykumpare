@@ -151,6 +151,26 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
     });
   };
 
+  // Employee-status scope from the chart's All / Employees Only / Non-Employees
+  // Only toggle. Unified with the employee_status filter so the contact list
+  // follows the same scope as the chart.
+  const empFilter = useMemo(() => {
+    const sel = filterSelected.employee_status;
+    if (!sel || sel.size === 0) return "all";
+    if (sel.size === 1 && sel.has("Employee")) return "Employee";
+    if (sel.size === 1 && sel.has("Non-Employee")) return "Non-Employee";
+    return "all";
+  }, [filterSelected]);
+
+  const handleEmpFilter = (value) => {
+    setFilterSelected((prev) => {
+      const next = { ...prev };
+      if (!value || value === "all") delete next.employee_status;
+      else next.employee_status = new Set([value]);
+      return next;
+    });
+  };
+
   const handleView = (contact) => {
     setEditingContact(contact);
     setViewMode(true);
@@ -418,6 +438,8 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
       {firmContacts.length > 0 && (
         <EmployeeStatusChart
           contacts={firmContacts}
+          empFilter={empFilter}
+          onEmpFilter={handleEmpFilter}
           filterSelected={filterSelected}
           onChartFilter={handleChartFilter}
           activeStatusFilter={activeStatusFilter}
