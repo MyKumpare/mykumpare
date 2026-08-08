@@ -1763,7 +1763,10 @@ async function rehostFirmImages(base44: any, data: any, website: string): Promis
 
 Deno.serve(async (req) => {
   const fnStartTime = Date.now();
-  const TIME_BUDGET_MS = 180000;
+  // 110 seconds — safely under the 120-second proxy/CDN timeout that returns
+  // a 504 Gateway Timeout to the client. The function must return its response
+  // before the proxy cuts the connection.
+  const TIME_BUDGET_MS = 110000;
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
@@ -1929,7 +1932,7 @@ Deno.serve(async (req) => {
     // in the text capture <a href> links, but JavaScript-based filters (buttons,
     // data attributes, onclick handlers) are missed. Fetch the raw HTML of
     // team pages and scan for category-filter URLs to fetch as additional pages.
-    {
+    if (Date.now() - fnStartTime < TIME_BUDGET_MS) {
       const existingUrls = new Set(pageContents.map((p) => p.url));
       const teamUrls = pageContents
         .filter((p) => /\/(people|our-people|team|our-team|leadership|staff|board|trustees)\b/i.test(p.url))
@@ -2005,7 +2008,7 @@ Deno.serve(async (req) => {
     // JS-rendered sites and sites with non-standard paths (e.g.
     // /about-bcers/staff/) that aren't in COMMON_PATHS and can't be
     // discovered from the Wayback homepage skeleton HTML.
-    if (website) {
+    if (website && Date.now() - fnStartTime < TIME_BUDGET_MS) {
       const discoveredUrls = await discoverSubPageUrlsViaSearch(base44, firm_name, website);
       if (discoveredUrls.length > 0) {
         const existingUrls = new Set(pageContents.map((p) => p.url));
@@ -2032,7 +2035,7 @@ Deno.serve(async (req) => {
     }
 
     let waybackUsed = false;
-    if ((isHomepageCaptcha || combinedContent.length < 5000 || peoplePageCount < 2) && website) {
+    if ((isHomepageCaptcha || combinedContent.length < 5000 || peoplePageCount < 2) && website && Date.now() - fnStartTime < TIME_BUDGET_MS) {
       const waybackPages = await fetchPagesViaWayback(website);
       if (waybackPages.length > 0) {
         const existingUrls = new Set(pageContents.map((p) => p.url));
@@ -2353,7 +2356,7 @@ IMPORTANT:
     // then fetches and extracts the full biography, education, experience,
     // designations, phone, email, and photo from that page.
     const elapsedMs1 = Date.now() - fnStartTime;
-    if (elapsedMs1 < TIME_BUDGET_MS) {
+    if (elapsedMs1 < TIME_BUDGET_MS - 15000) {
       console.log(`enrichFirmFromWebsite: enriching missing biographies (${Math.round(elapsedMs1 / 1000)}s elapsed)`);
       await enrichMissingBiographies(base44, enrichedData.people || [], pageContents, website);
     } else {
@@ -2367,7 +2370,7 @@ IMPORTANT:
     // profile page is fetched and the person is extracted directly — this
     // captures their full biography, phone, email, and title from their
     // individual profile page, which the team listing often doesn't include.
-    if (Date.now() - fnStartTime < TIME_BUDGET_MS) {
+    if (Date.now() - fnStartTime < TIME_BUDGET_MS - 15000) {
       await discoverAndExtractMissingPeople(base44, enrichedData.people || [], pageContents, website);
     }
 
@@ -2375,7 +2378,7 @@ IMPORTANT:
     // people (< 3), the combined content likely didn't include the staff/team
     // page. Try the web search fallback which uses the LLM with web search
     // to find ALL personnel.
-    if (!Array.isArray(enrichedData.people) || enrichedData.people.length < 3) {
+    if ((!Array.isArray(enrichedData.people) || enrichedData.people.length < 3) && Date.now() - fnStartTime < TIME_BUDGET_MS - 15000) {
       console.log(`enrichFirmFromWebsite: LLM extraction found only ${enrichedData.people?.length || 0} people, trying web search fallback...`);
       const fallback = await enrichFirmViaWebSearch(base44, firm_name, website);
       if (fallback && Array.isArray(fallback.people) && fallback.people.length > (enrichedData.people?.length || 0)) {
@@ -2429,15 +2432,16 @@ IMPORTANT:
     // because many sites (e.g. Meketa) put education/experience/designations in
     // collapsible sections on individual profile pages that aren't visible on
     // the team listing page.
-    if (Date.now() - fnStartTime < TIME_BUDGET_MS) {
+    if (Date.now() - fnStartTime < TIME_BUDGET_MS - 15000) {
       console.log(`enrichFirmFromWebsite: enriching education/experience from profile pages (${Math.round((Date.now() - fnStartTime) / 1000)}s elapsed)`);
       await enrichEducationFromProfilePages(base44, enrichedData.people || [], pageContents, website, fnStartTime, TIME_BUDGET_MS);
     }
 
     // Phase 2b: Extract education + professional experience from biographies
     // that are already present (for people whose individual profile page wasn't
-    // found or couldn't be fetched).
-    if (Date.now() - fnStartTime < TIME_BUDGET_MS) {
+    // found or couldn't be fetched). Skip if time budget is nearly exhausted
+    // so the function can still return results before the proxy timeout.
+    if (Date.now() - fnStartTime < TIME_BUDGET_MS - 15000) {
       await enrichEducationExperienceFromBios(base44, enrichedData.people || []);
     }
 
