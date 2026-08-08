@@ -95,6 +95,13 @@ const CONSENT_COOKIES = [
 // homepage's raw HTML. Appended to the baseline CONSENT_COOKIES on every fetch.
 let dynamicConsentCookies = '';
 
+// Wayback Machine rate-limit tracker: if the Wayback Machine returns too many
+// consecutive 429 (rate-limited) responses, stop trying it for the rest of this
+// invocation. Each 429 still costs a network round-trip, so skipping after a
+// threshold saves significant time when the Wayback Machine is throttling us.
+let wayback429Count = 0;
+const WAYBACK_429_LIMIT = 3;
+
 // A complete set of browser-like request headers. Some sites (WAFs / anti-bot
 // plugins) 403 requests that look like a bare scraper — sending the Sec-Fetch-*
 // and sec-ch-ua headers a real browser emits is enough to pass them.
@@ -452,7 +459,13 @@ PROFESSIONAL EXPERIENCE: every employer/company mentioned in the biography, INCL
 - end_year: end year as a string, if stated (LEAVE EMPTY if this is the person's current employer / they are still there)
 Include each distinct company as a separate entry. Order entries from most recent to oldest.
 
-Return an object with "biography" (the verbatim text), "education" (array), and "professional_experience" (array). If a section has no data, return an empty array.
+CONTACT INFO: Extract any phone number and email address listed for this person on their profile page:
+- phone: the phone number as a string (e.g. "872-804-1892"). Include the area code.
+- email: the email address listed for this person (if there is an "Email [Name]" link, extract the actual email address if visible, otherwise leave empty)
+
+TITLE: Extract the person's job title/role as it appears on the page (e.g. "Senior Wealth Advisor"). This is usually displayed near their name at the top of the profile page.
+
+Return an object with "biography" (the verbatim text), "education" (array), "professional_experience" (array), "phone" (string), "email" (string), and "title" (string). If a section has no data, return an empty array or empty string.
 
 --- PAGE CONTENT ---
 ${pageText.substring(0, 20000)}
@@ -461,6 +474,9 @@ ${pageText.substring(0, 20000)}
         type: 'object',
         properties: {
           biography: { type: 'string' },
+          phone: { type: 'string' },
+          email: { type: 'string' },
+          title: { type: 'string' },
           education: {
             type: 'array',
             items: {
@@ -491,11 +507,14 @@ ${pageText.substring(0, 20000)}
     });
     return {
       biography: (res?.biography || '').trim(),
+      phone: (res?.phone || '').trim(),
+      email: (res?.email || '').trim(),
+      title: (res?.title || '').trim(),
       education: Array.isArray(res?.education) ? res.education : [],
       professional_experience: Array.isArray(res?.professional_experience) ? res.professional_experience : [],
     };
   } catch {
-    return { biography: '', education: [], professional_experience: [] };
+    return { biography: '', phone: '', email: '', title: '', education: [], professional_experience: [] };
   }
 }
 
@@ -780,6 +799,9 @@ async function enrichMissingBiographies(
       if (result.biography) {
         person.biography = result.biography;
       }
+      if (result.phone && !person.phone) person.phone = result.phone;
+      if (result.email && !person.email) person.email = result.email;
+      if (result.title && !person.title) person.title = result.title;
       if (result.education?.length) person.education = result.education;
       if (result.professional_experience?.length) person.professional_experience = result.professional_experience;
     }
@@ -788,6 +810,283 @@ async function enrichMissingBiographies(
   await Promise.all(
     Array.from({ length: Math.min(CONCURRENCY, queue.length), }, () => phaseCWorker()),
   );
+}
+
+// Fetch the site's sitemap(s) and extract individual profile page URLs.
+// Many WordPress sites have a sitemap at /sitemap.xml or /sitemap_index.xml
+// that lists ALL pages including individual team member profile pages. This
+// catches people whose profile pages aren't linked from the team listing
+// (e.g. JS-rendered team pages with pagination, or people in other sections).
+async function discoverProfileUrlsFromSitemap(
+  website: string,
+): Promise<Set<string>> {
+  const result = new Set<string>();
+  let baseHost = '';
+  try { baseHost = new URL(website).host.toLowerCase(); } catch { /* ignore */ }
+  if (!baseHost) return result;
+
+  // Candidate sitemap URLs to try.
+  const sitemapCandidates = [
+    resolveUrl(website, '/sitemap.xml'),
+    resolveUrl(website, '/sitemap_index.xml'),
+    resolveUrl(website, '/wp-sitemap.xml'),
+    resolveUrl(website, '/sitemap-team.xml'),
+    resolveUrl(website, '/our-team-sitemap.xml'),
+  ];
+
+  const profilePathRegex = /\/(?:our-team|team|people|our-people|staff|leadership|professionals|personnel)\/[^/]+\/?$/i;
+
+  const fetchSitemap = async (url: string, depth = 0): Promise<void> => {
+    if (depth > 2) return; // limit recursion for sitemap indexes
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      const resp = await fetch(url, {
+        headers: browserHeaders(CONSENT_COOKIES + ';' + dynamicConsentCookies),
+        redirect: 'follow',
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      if (!resp.ok) return;
+      const xml = await resp.text();
+      if (!xml || xml.length < 50) return;
+
+      // Check if this is a sitemap index (contains <sitemap> elements)
+      if (xml.includes('<sitemapindex') || xml.includes('<sitemap xmlns')) {
+        // Extract sub-sitemap URLs and fetch them
+        const subRegex = /<loc>\s*([^<]+)\s*<\/loc>/gi;
+        let smatch: RegExpExecArray | null;
+        const subUrls: string[] = [];
+        while ((smatch = subRegex.exec(xml)) !== null) {
+          const subUrl = smatch[1].trim();
+          // Prioritize sub-sitemaps that might contain team/people URLs
+          if (/team|people|staff|our-team|person|profile/i.test(subUrl) || depth === 0) {
+            subUrls.push(subUrl);
+          }
+        }
+        // Fetch up to 5 sub-sitemaps (to stay within time limits)
+        await Promise.all(subUrls.slice(0, 5).map((su) => fetchSitemap(su, depth + 1)));
+        return;
+      }
+
+      // Regular sitemap: extract URLs matching the profile page pattern
+      const urlRegex = /<loc>\s*([^<]+)\s*<\/loc>/gi;
+      let umatch: RegExpExecArray | null;
+      while ((umatch = urlRegex.exec(xml)) !== null) {
+        const pageUrl = umatch[1].trim();
+        let linkHost = '';
+        try { linkHost = new URL(pageUrl).host.toLowerCase(); } catch { /* ignore */ }
+        if (linkHost !== baseHost) continue;
+        if (profilePathRegex.test(pageUrl)) {
+          result.add(pageUrl);
+        }
+      }
+    } catch {
+      // non-fatal
+    }
+  };
+
+  for (const sm of sitemapCandidates) {
+    if (result.size > 0) break; // stop if we already found profile URLs
+    await fetchSitemap(sm);
+  }
+
+  if (result.size > 0) {
+    console.log(`discoverProfileUrlsFromSitemap: found ${result.size} profile page URLs from sitemap`);
+  }
+  return result;
+}
+
+// Discover individual profile pages linked from the team listing that were
+// NOT represented in the Phase 1 LLM extraction (the LLM sometimes misses people
+// when the listing page is large, JS-rendered, or has tabbed sections that get
+// truncated). For each unmatched profile page, fetch it and extract the person
+// directly. This catches people like Brett Guendel whose individual profile
+// page exists at /our-team/brett-guendel/ but who weren't extracted from the
+// team listing. Bounded concurrency + cap to stay within time limits.
+async function discoverAndExtractMissingPeople(
+  base44: any,
+  people: any[],
+  pageContents: { url: string; text: string }[],
+  website: string,
+): Promise<void> {
+  const MAX = 30;
+  const CONCURRENCY = 8;
+  let baseHost = '';
+  try { baseHost = new URL(website).host.toLowerCase(); } catch { /* ignore */ }
+  if (!baseHost) return;
+
+  // Collect individual profile page URLs from [LINK: ...] markers on all
+  // fetched pages. Individual profile pages have a path like
+  // /our-team/<name-slug>/, /team/<name-slug>/, /people/<name-slug>/ etc.
+  const profileUrls = new Set<string>();
+  for (const page of pageContents) {
+    if (!page.text) continue;
+    const linkRegex = /\[LINK:\s*(https?:\/\/[^\]]+)\]/gi;
+    let lmatch: RegExpExecArray | null;
+    while ((lmatch = linkRegex.exec(page.text)) !== null) {
+      const url = lmatch[1].trim();
+      let linkHost = '';
+      try { linkHost = new URL(url).host.toLowerCase(); } catch { /* ignore */ }
+      if (!linkHost || linkHost !== baseHost) continue;
+      // Match individual profile pages: /<team-keyword>/<slug>/ (2+ segments)
+      if (/\/(?:our-team|team|people|our-people|staff|leadership|professionals|personnel)\/[^/]+\/?$/i.test(url)) {
+        profileUrls.add(url);
+      }
+    }
+  }
+
+  // Also discover profile page URLs from the site's sitemap. This catches
+  // people whose profile pages aren't linked from the team listing (e.g.
+  // JS-rendered team pages with pagination, or people in other sections).
+  const sitemapUrls = await discoverProfileUrlsFromSitemap(website);
+  for (const url of sitemapUrls) {
+    profileUrls.add(url);
+  }
+
+  if (profileUrls.size === 0) return;
+
+  // Build a set of normalized names already extracted, for matching.
+  const extractedNames = new Set(
+    people
+      .map((p) => `${p.first_name || ''} ${p.last_name || ''}`.trim().toLowerCase())
+      .filter(Boolean)
+  );
+
+  // For each profile page URL, check if it matches an extracted person by
+  // comparing the URL slug to the person's name. Unmatched URLs are candidates
+  // for direct extraction.
+  const unmatchedUrls: string[] = [];
+  for (const url of profileUrls) {
+    const slugMatch = url.match(/\/([^/]+)\/?$/);
+    if (!slugMatch) continue;
+    const slug = slugMatch[1];
+    // Skip URL fragments (e.g. "/our-team/#")
+    if (!slug || slug === '#') continue;
+    // Convert slug to a name: "brett-guendel" -> "brett guendel"
+    const slugName = slug.replace(/-/g, ' ').toLowerCase();
+    // Skip slugs that are clearly not person names (e.g. "all", "leadership")
+    if (['all', 'leadership', 'team', 'staff', 'board', 'contact', 'about'].includes(slugName)) continue;
+    let matched = false;
+    for (const name of extractedNames) {
+      if (name === slugName || name.includes(slugName) || slugName.includes(name)) {
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) unmatchedUrls.push(url);
+  }
+  if (unmatchedUrls.length === 0) return;
+
+  // Sort unmatched URLs alphabetically by slug so people are processed in a
+  // deterministic order (e.g. "brett-guendel" before "zach-..."). This ensures
+  // that when we cap at MAX, we get a reproducible subset spread across the
+  // alphabet rather than an arbitrary chunk from the sitemap's insertion order.
+  unmatchedUrls.sort((a, b) => {
+    const aSlug = (a.match(/\/([^/]+)\/?$/) || ['', ''])[1];
+    const bSlug = (b.match(/\/([^/]+)\/?$/) || ['', ''])[1];
+    return aSlug.localeCompare(bSlug);
+  });
+
+  const urls = unmatchedUrls.slice(0, MAX);
+  let cursor = 0;
+  const worker = async () => {
+    while (cursor < urls.length) {
+      const i = cursor++;
+      const url = urls[i];
+      const pageText = await fetchPage(url);
+      if (!pageText || pageText.length < 50) continue;
+      try {
+        const res = await base44.integrations.Core.InvokeLLM({
+          prompt: `You are extracting information about a single person from their individual profile/biography page.
+
+Below is the text content of their profile page. Extract the following:
+- first_name: the person's first name (given name)
+- last_name: the person's last name (family name/surname). If the name includes a professional designation like "CFP", "CFA", "CPA", do NOT include it in the last name.
+- title: their job title/role (e.g. "Senior Wealth Advisor")
+- biography: the COMPLETE biography text — copy it VERBATIM, do not summarize. Include every paragraph.
+- phone: any phone number listed for this person (as a string, e.g. "872-804-1892")
+- email: any email address listed for this person
+- photo_url: the URL of their profile photo. Images appear as [IMAGE: alt="..." src="https://..."] markers — find the one closest to the person's name.
+
+--- PAGE CONTENT ---
+${pageText.substring(0, 20000)}
+--- END PAGE CONTENT ---
+
+Return a JSON object with the fields above. Leave fields empty if not found.`,
+          response_json_schema: {
+            type: 'object',
+            properties: {
+              first_name: { type: 'string' },
+              last_name: { type: 'string' },
+              title: { type: 'string' },
+              biography: { type: 'string' },
+              phone: { type: 'string' },
+              email: { type: 'string' },
+              photo_url: { type: 'string' },
+            },
+          },
+        });
+        if (res?.first_name && res?.last_name) {
+          const fullName = `${res.first_name} ${res.last_name}`.trim().toLowerCase();
+          // Final duplicate check against ALL people (including ones added by
+          // earlier workers in this same phase).
+          if (!extractedNames.has(fullName)) {
+            people.push({
+              first_name: res.first_name,
+              last_name: res.last_name,
+              title: res.title || '',
+              biography: res.biography || '',
+              phone: res.phone || '',
+              email: res.email || '',
+              photo_url: res.photo_url || '',
+              bio_url: url,
+            });
+            extractedNames.add(fullName);
+            console.log(`discoverAndExtractMissingPeople: added ${fullName} from ${url}`);
+          }
+        }
+      } catch {
+        // continue on error
+      }
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(CONCURRENCY, urls.length) }, () => worker()),
+  );
+
+  // For remaining unmatched URLs (beyond MAX), create lightweight person
+  // entries from the URL slug so they at least appear in the results with their
+  // name. The user can enrich their bios later. This ensures people like Brett
+  // Guendel are included even if their profile page wasn't fetched in this run.
+  const processedUrls = new Set(urls);
+  for (const url of unmatchedUrls) {
+    if (processedUrls.has(url)) continue;
+    const slugMatch = url.match(/\/([^/]+)\/?$/);
+    if (!slugMatch) continue;
+    const slug = slugMatch[1];
+    if (!slug || slug === '#') continue;
+    const slugName = slug.replace(/-/g, ' ').trim();
+    if (!slugName) continue;
+    // Parse name from slug: "brett-guendel" -> first="Brett", last="Guendel"
+    const parts = slugName.split(/\s+/);
+    if (parts.length < 2) continue;
+    const first_name = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+    const last_name = parts.slice(1).join(' ').charAt(0).toUpperCase() + parts.slice(1).join(' ').slice(1);
+    const fullName = `${first_name} ${last_name}`.trim().toLowerCase();
+    if (extractedNames.has(fullName)) continue;
+    people.push({
+      first_name,
+      last_name,
+      title: '',
+      biography: '',
+      phone: '',
+      email: '',
+      photo_url: '',
+      bio_url: url,
+    });
+    extractedNames.add(fullName);
+  }
 }
 
 // Extract education + professional experience from a biography paragraph using
@@ -922,6 +1221,7 @@ function unwrapWaybackUrl(url: string): string {
 // returns 429 errors when too many requests are made in rapid succession).
 async function fetchViaWayback(url: string): Promise<string> {
   if (!url || !url.startsWith('http')) return '';
+  if (wayback429Count >= WAYBACK_429_LIMIT) return '';
   try {
     // Use a direct Wayback URL with a recent year — the Wayback Machine
     // redirects to the closest available snapshot. This avoids the
@@ -936,7 +1236,13 @@ async function fetchViaWayback(url: string): Promise<string> {
     });
     clearTimeout(timeout);
     if (!resp.ok) {
-      console.log(`fetchViaWayback: ${url} returned status ${resp.status}`);
+      if (resp.status === 429) {
+        wayback429Count++;
+        console.log(`fetchViaWayback: ${url} returned 429 (count=${wayback429Count}), skipping further Wayback fetches`);
+      } else {
+        console.log(`fetchViaWayback: ${url} returned status ${resp.status}`);
+      }
+      try { await resp.body?.cancel(); } catch { /* ignore */ }
       return '';
     }
     const contentType = resp.headers.get('content-type') || '';
@@ -1326,7 +1632,7 @@ async function rehostFirmImages(base44: any, data: any, website: string): Promis
 
 Deno.serve(async (req) => {
   const fnStartTime = Date.now();
-  const TIME_BUDGET_MS = 45000;
+  const TIME_BUDGET_MS = 120000;
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
@@ -1837,6 +2143,17 @@ IMPORTANT:
           (last.length <= 4 && SECTION_HEADER_RE.test(first));
       };
       enrichedData.people = enrichedData.people.filter((p: any) => !isSectionHeader(p));
+    }
+
+    // Phase 1.5: Discover and extract people from individual profile pages
+    // that were linked from the team listing but NOT extracted by the Phase 1
+    // LLM pass (the LLM sometimes misses people when the listing is large,
+    // JS-rendered, or has tabbed sections that get truncated). Each unmatched
+    // profile page is fetched and the person is extracted directly — this
+    // captures their full biography, phone, email, and title from their
+    // individual profile page, which the team listing often doesn't include.
+    if (Date.now() - fnStartTime < TIME_BUDGET_MS) {
+      await discoverAndExtractMissingPeople(base44, enrichedData.people || [], pageContents, website);
     }
 
     // Secondary web search fallback: if the LLM extraction found very few
