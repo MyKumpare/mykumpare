@@ -74,6 +74,7 @@ const VIEWS = {
     label: "MWBE",
     field: "mwbe",
     custom: true,
+    hasSubtotal: true,
     matchContact: getMwbeCategory,
     categories: MWBE_CATEGORIES,
   },
@@ -306,27 +307,44 @@ export default function EmployeeStatusChart({
             <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide flex-shrink-0 w-8 text-right">Count</span>
             <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide flex-shrink-0 w-10 text-right">% of Total</span>
           </div>
-          {config.categories.map((cat) => {
-            const count = counts[cat.value] || 0;
-            const isActive = activeFilter === cat.value;
+          {(() => {
+            const renderRow = (cat) => {
+              const count = counts[cat.value] || 0;
+              const isActive = activeFilter === cat.value;
+              return (
+                <div key={cat.value} className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleLabelClick(cat.value)}
+                    disabled={!onChartFilter}
+                    className={`flex items-center gap-1.5 min-w-0 flex-1 group ${onChartFilter ? "cursor-pointer" : "cursor-default"}`}
+                  >
+                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />
+                    <span className={`text-xs truncate ${isActive ? "font-semibold text-gray-900 underline" : "text-gray-600 group-hover:text-gray-900 group-hover:underline"}`}>
+                      {cat.label}
+                    </span>
+                  </button>
+                  <span className="text-xs font-semibold text-gray-800 flex-shrink-0 w-8 text-right">{count}</span>
+                  <span className="text-xs font-semibold text-gray-800 flex-shrink-0 w-10 text-right">{pct(count)}%</span>
+                </div>
+              );
+            };
+            if (!config.hasSubtotal) return config.categories.map(renderRow);
+            const mwbeCats = config.categories.filter((c) => c.group === "mwbe");
+            const nonMwbeCats = config.categories.filter((c) => c.group === "non_mwbe");
+            const mwbeSubtotal = mwbeCats.reduce((s, c) => s + (counts[c.value] || 0), 0);
             return (
-              <div key={cat.value} className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleLabelClick(cat.value)}
-                  disabled={!onChartFilter}
-                  className={`flex items-center gap-1.5 min-w-0 flex-1 group ${onChartFilter ? "cursor-pointer" : "cursor-default"}`}
-                >
-                  <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />
-                  <span className={`text-xs truncate ${isActive ? "font-semibold text-gray-900 underline" : "text-gray-600 group-hover:text-gray-900 group-hover:underline"}`}>
-                    {cat.label}
-                  </span>
-                </button>
-                <span className="text-xs font-semibold text-gray-800 flex-shrink-0 w-8 text-right">{count}</span>
-                <span className="text-xs font-semibold text-gray-800 flex-shrink-0 w-10 text-right">{pct(count)}%</span>
-              </div>
+              <>
+                {mwbeCats.map(renderRow)}
+                <div className="flex items-center gap-2 border-t border-gray-100 pt-1">
+                  <span className="text-xs font-bold text-indigo-700 flex-1">MWBE</span>
+                  <span className="text-xs font-bold text-gray-900 flex-shrink-0 w-8 text-right">{mwbeSubtotal}</span>
+                  <span className="text-xs font-bold text-gray-900 flex-shrink-0 w-10 text-right">{pct(mwbeSubtotal)}%</span>
+                </div>
+                {nonMwbeCats.map(renderRow)}
+              </>
             );
-          })}
+          })()}
           {/* Total row — click to clear filters and show all contacts */}
           <div className="flex items-center gap-2 border-t border-gray-200 pt-1.5">
             <button

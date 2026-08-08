@@ -15,10 +15,11 @@ export const ETHNIC_MINORITY_VALUES = [
 // segments never overlap. "female_nonminority" is "Female (excluding ethnic
 // minorities)" — the category the user asked to be clickable.
 export const MWBE_CATEGORIES = [
-  { label: "Female (Non-Minority)", value: "female_nonminority", color: "#EC4899" },
-  { label: "Ethnic Minority (Non-Female)", value: "minority_nonfemale", color: "#4F46E5" },
-  { label: "Female & Minority", value: "female_minority", color: "#0D9488" },
-  { label: "Undefined", value: "undefined_mwbe", color: "#9CA3AF" },
+  { label: "Female (Non-Minority)", value: "female_nonminority", color: "#EC4899", group: "mwbe" },
+  { label: "Ethnic Minority (Non-Female)", value: "minority_nonfemale", color: "#4F46E5", group: "mwbe" },
+  { label: "Female & Minority", value: "female_minority", color: "#0D9488", group: "mwbe" },
+  { label: "Male (Non-Minority)", value: "male_nonminority", color: "#6B7280", group: "non_mwbe" },
+  { label: "Undefined", value: "undefined_mwbe", color: "#9CA3AF", group: "non_mwbe" },
 ];
 
 export function isEthnicMinority(c) {
@@ -34,8 +35,10 @@ export function getMwbeCategory(c) {
   if (female && !minority) return "female_nonminority";
   if (!female && minority) return "minority_nonfemale";
   // Not Female and not an Ethnic Minority → not classified as MWBE.
-  // Grouped under "Undefined" so the chart covers every contact and the
-  // "% of Total" denominator is the full contact count.
+  // Split into "Male (Non-Minority)" (determined) vs "Undefined" (undetermined
+  // gender), so the chart covers every contact and the "% of Total" denominator
+  // is the full contact count.
+  if (c.gender === "Male") return "male_nonminority";
   return "undefined_mwbe";
 }
 
