@@ -46,7 +46,7 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
   const queryClient = useQueryClient();
   const { isGroupAccepted, acceptGroup } = useDuplicateReviews();
 
-  const { data: contacts = [] } = useQuery({
+  const { data: contacts = [], isFetching } = useQuery({
     queryKey: ["contacts"],
     queryFn: () => base44.entities.Contact.list("-created_date", 5000),
   });
@@ -456,7 +456,11 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
         busy={bulkBusy}
       />
 
-      {firmContacts.length === 0 ? (
+      {isFetching && firmContacts.length === 0 ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+        </div>
+      ) : firmContacts.length === 0 ? (
         <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
           No contacts added
         </div>
