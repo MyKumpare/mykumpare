@@ -340,12 +340,13 @@ export default function EmployeeStatusChart({
                 </div>
               );
             };
-            if (!config.hasSubtotal) return config.categories.map(renderRow);
-            const mwbeCats = config.categories.filter((c) => c.group === "mwbe");
+            if (!config.hasSubtotal) return config.categories.filter((c) => (counts[c.value] || 0) > 0).map(renderRow);
+            const mwbeCats = config.categories.filter((c) => c.group === "mwbe" && (counts[c.value] || 0) > 0);
             const nonMwbeCats = config.categories.filter(
-              (c) => c.group === "non_mwbe" && (c.value !== "undefined_mwbe" || (counts[c.value] || 0) > 0)
+              (c) => c.group === "non_mwbe" && (counts[c.value] || 0) > 0
             );
-            const mwbeSubtotal = mwbeCats.reduce((s, c) => s + (counts[c.value] || 0), 0);
+            const allMwbeCats = config.categories.filter((c) => c.group === "mwbe");
+            const mwbeSubtotal = allMwbeCats.reduce((s, c) => s + (counts[c.value] || 0), 0);
             return (
               <>
                 {mwbeCats.map(renderRow)}
