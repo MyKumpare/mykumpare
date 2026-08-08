@@ -94,11 +94,18 @@ export default function EmployeeStatusChart({
 
   // Scope contacts by the employee-status toggle so every stat adjusts dynamically.
   // Custom views (MWBE) additionally narrow to their own population.
-  const scopedContacts = useMemo(() => {
+  const baseContacts = useMemo(() => {
     let result = empFilter === "all" ? contacts : contacts.filter((c) => c.employee_status === empFilter);
     if (config.scopeFilter) result = result.filter(config.scopeFilter);
     return result;
   }, [contacts, empFilter, config]);
+
+  // When a contact-status link is active (Total/Active/Inactive clicked),
+  // narrow the chart scope so the counts AND the % denominator reflect it.
+  const scopedContacts = useMemo(() => {
+    if (!activeStatusFilter) return baseContacts;
+    return baseContacts.filter((c) => (c.contact_status || "Active") === activeStatusFilter);
+  }, [baseContacts, activeStatusFilter]);
 
   const total = scopedContacts.length;
 
@@ -125,11 +132,14 @@ export default function EmployeeStatusChart({
     return result;
   }, [scopedContacts, config]);
 
+  // Footer counts always reflect the full (un-status-filtered) set so the
+  // Total/Active/Inactive links show stable denominators to switch between.
+  const baseTotal = baseContacts.length;
   const active = useMemo(
-    () => scopedContacts.filter((c) => (c.contact_status || "Active") === "Active").length,
-    [scopedContacts]
+    () => baseContacts.filter((c) => (c.contact_status || "Active") === "Active").length,
+    [baseContacts]
   );
-  const inactive = total - active;
+  const inactive = baseTotal - active;
 
   const data = config.categories
     .map((cat) => ({ name: cat.label, value: counts[cat.value] || 0, key: cat.value, color: cat.color }))
@@ -425,7 +435,7 @@ export default function EmployeeStatusChart({
           className={`flex items-center gap-1.5 ${onStatusFilter ? "cursor-pointer hover:opacity-80" : "cursor-default"}`}
         >
           <span className={`text-xs ${activeStatusFilter === null ? "font-semibold text-gray-900" : "text-gray-500"}`}>Total Contacts</span>
-          <span className={`text-sm font-semibold ${activeStatusFilter === null ? "text-indigo-700 underline" : "text-gray-800"}`}>{total}</span>
+          <span className={`text-sm font-semibold ${activeStatusFilter === null ? "text-indigo-700 underline" : "text-gray-800"}`}>{baseTotal}</span>
         </button>
         <div className="flex items-center gap-3">
           <button
