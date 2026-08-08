@@ -663,6 +663,8 @@ async function enrichMissingBiographies(
   people: any[],
   pageContents: { url: string; text: string }[],
   website: string,
+  fnStartTime: number,
+  timeBudgetMs: number,
 ): Promise<void> {
   // Only process people who don't already have a REAL biography. The Phase 1
   // extraction sometimes puts a person's name (e.g. "Jerrod Stoller" or
@@ -695,6 +697,7 @@ async function enrichMissingBiographies(
 
   const phaseAWorker = async () => {
     while (cursor < queue.length) {
+      if (Date.now() - fnStartTime >= timeBudgetMs) return;
       const i = cursor++;
       const person = queue[i];
       // (1) LLM-provided bio_url from the listing page.
@@ -725,7 +728,7 @@ async function enrichMissingBiographies(
   // Phase B: batched web search ONLY for people the pattern probe couldn't
   // resolve (keeps the expensive LLM web-search calls to a minimum).
   let searchResults = new Map<string, string>();
-  if (unresolvedIdx.length > 0) {
+  if (unresolvedIdx.length > 0 && Date.now() - fnStartTime < timeBudgetMs) {
     const unresolvedPeople = unresolvedIdx.map((i) => queue[i]);
     searchResults = await discoverBioUrlsViaSearch(base44, unresolvedPeople, website);
   }
@@ -735,6 +738,7 @@ async function enrichMissingBiographies(
   let cCursor = 0;
   const phaseCWorker = async () => {
     while (cCursor < queue.length) {
+      if (Date.now() - fnStartTime >= timeBudgetMs) return;
       const i = cCursor++;
       const person = queue[i];
       const fullName = [person.first_name, person.last_name].filter(Boolean).join(' ').trim();
@@ -869,6 +873,8 @@ async function discoverAndExtractMissingPeople(
   people: any[],
   pageContents: { url: string; text: string }[],
   website: string,
+  fnStartTime: number,
+  timeBudgetMs: number,
 ): Promise<void> {
   const MAX = 30;
   const CONCURRENCY = 8;
@@ -902,7 +908,10 @@ async function discoverAndExtractMissingPeople(
   // Also discover profile page URLs from the site's sitemap. This catches
   // people whose profile pages aren't linked from the team listing (e.g.
   // JS-rendered team pages with pagination, or people in other sections).
-  const sitemapUrls = await discoverProfileUrlsFromSitemap(website);
+  // Skip if time budget is nearly exhausted.
+  const sitemapUrls = (Date.now() - fnStartTime < timeBudgetMs - 10000)
+    ? await discoverProfileUrlsFromSitemap(website)
+    : new Set<string>();
   for (const url of sitemapUrls) {
     profileUrls.add(url);
   }
@@ -974,6 +983,7 @@ async function discoverAndExtractMissingPeople(
   let enrichCursor = 0;
   const enrichWorker = async () => {
     while (enrichCursor < enrichSlice.length) {
+      if (Date.now() - fnStartTime >= timeBudgetMs) return;
       const i = enrichCursor++;
       const { url, personIndex } = enrichSlice[i];
       const pageText = await fetchPage(url);
@@ -1013,6 +1023,7 @@ async function discoverAndExtractMissingPeople(
   let cursor = 0;
   const worker = async () => {
     while (cursor < urls.length) {
+      if (Date.now() - fnStartTime >= timeBudgetMs) return;
       const i = cursor++;
       const url = urls[i];
       const pageText = await fetchPage(url);
@@ -1175,7 +1186,7 @@ Only include what is actually stated in the biography. Do not fabricate. Return 
 // For people whose biography was already present on the listing page (so they
 // were not in the stub-bio queue), extract education + professional experience
 // from their existing biography. Bounded concurrency + cap to stay in limits.
-async function enrichEducationExperienceFromBios(base44: any, people: any[]): Promise<void> {
+async function enrichEducationExperienceFromBios(base44: any, people: any[], fnStartTime?: number, timeBudgetMs?: number): Promise<void> {
   const MAX = 30;
   const CONCURRENCY = 10;
   const isStubBio = (p: any): boolean => {
@@ -1195,6 +1206,7 @@ async function enrichEducationExperienceFromBios(base44: any, people: any[]): Pr
   let cursor = 0;
   const worker = async () => {
     while (cursor < queue.length) {
+      if (fnStartTime && timeBudgetMs && Date.now() - fnStartTime >= timeBudgetMs) return;
       const i = cursor++;
       const person = queue[i];
       const fullName = [person.first_name, person.last_name].filter(Boolean).join(' ').trim();
@@ -1763,10 +1775,12 @@ async function rehostFirmImages(base44: any, data: any, website: string): Promis
 
 Deno.serve(async (req) => {
   const fnStartTime = Date.now();
-  // 110 seconds — safely under the 120-second proxy/CDN timeout that returns
-  // a 504 Gateway Timeout to the client. The function must return its response
-  // before the proxy cuts the connection.
-  const TIME_BUDGET_MS = 110000;
+  // 90 seconds — the proxy/CDN cuts the connection at 120 seconds. Individual
+  // LLM calls and fetches inside worker loops can take 10-30 seconds each, and
+  // the time budget check only prevents STARTING new work (it can't interrupt
+  // in-progress work). 90s leaves a 30s buffer so operations that started just
+  // before the budget expires still complete before the 120s proxy timeout.
+  const TIME_BUDGET_MS = 90000;
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
@@ -1859,9 +1873,10 @@ Deno.serve(async (req) => {
         text = await fetchViaWayback(fullUrl);
       } else {
         text = await fetchPage(fullUrl);
-        if ((!text || text.length < 100) && fullUrl.startsWith('http')) {
-          text = await fetchViaWayback(fullUrl);
-        }
+        // Only try Wayback fallback if the homepage was blocked. If the homepage
+        // was fetched successfully, an empty sub-page response is almost
+        // certainly a 404 (non-existent path), not a blocked page — trying the
+        // Wayback Machine for every 404 wastes time and triggers 429 rate limits.
       }
       if (text && text.length > 100) {
         const isPeoplePage = /\/(people|our-people|team|our-team|leadership|staff|about-us|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b/i.test(path);
@@ -1914,10 +1929,7 @@ Deno.serve(async (req) => {
             text = await fetchViaWayback(teamUrl);
           } else {
             text = await fetchPage(teamUrl);
-            if ((!text || text.length < 100) && teamUrl.startsWith('http')) {
-              console.log(`enrichFirmFromWebsite: direct fetch failed for ${teamUrl}, trying Wayback...`);
-              text = await fetchViaWayback(teamUrl);
-            }
+            // Only try Wayback if homepage was blocked (see COMMON_PATHS comment above)
           }
           if (text && text.length > 100) return { url: teamUrl, text: text.substring(0, 80000) };
           return null;
@@ -1932,7 +1944,7 @@ Deno.serve(async (req) => {
     // in the text capture <a href> links, but JavaScript-based filters (buttons,
     // data attributes, onclick handlers) are missed. Fetch the raw HTML of
     // team pages and scan for category-filter URLs to fetch as additional pages.
-    if (Date.now() - fnStartTime < TIME_BUDGET_MS) {
+    if (Date.now() - fnStartTime < TIME_BUDGET_MS - 15000) {
       const existingUrls = new Set(pageContents.map((p) => p.url));
       const teamUrls = pageContents
         .filter((p) => /\/(people|our-people|team|our-team|leadership|staff|board|trustees)\b/i.test(p.url))
@@ -2008,7 +2020,7 @@ Deno.serve(async (req) => {
     // JS-rendered sites and sites with non-standard paths (e.g.
     // /about-bcers/staff/) that aren't in COMMON_PATHS and can't be
     // discovered from the Wayback homepage skeleton HTML.
-    if (website && Date.now() - fnStartTime < TIME_BUDGET_MS) {
+    if (website && Date.now() - fnStartTime < TIME_BUDGET_MS - 15000) {
       const discoveredUrls = await discoverSubPageUrlsViaSearch(base44, firm_name, website);
       if (discoveredUrls.length > 0) {
         const existingUrls = new Set(pageContents.map((p) => p.url));
@@ -2035,7 +2047,7 @@ Deno.serve(async (req) => {
     }
 
     let waybackUsed = false;
-    if ((isHomepageCaptcha || combinedContent.length < 5000 || peoplePageCount < 2) && website && Date.now() - fnStartTime < TIME_BUDGET_MS) {
+    if ((isHomepageCaptcha || combinedContent.length < 5000 || peoplePageCount < 2) && website && Date.now() - fnStartTime < TIME_BUDGET_MS - 15000) {
       const waybackPages = await fetchPagesViaWayback(website);
       if (waybackPages.length > 0) {
         const existingUrls = new Set(pageContents.map((p) => p.url));
@@ -2132,7 +2144,7 @@ Deno.serve(async (req) => {
         // Extract education + professional experience from any bios the web
         // search returned. (Skip individual-bio-page fetching here — those
         // pages are also captcha-blocked for direct scraping.)
-        await enrichEducationExperienceFromBios(base44, fallback.people || []);
+        await enrichEducationExperienceFromBios(base44, fallback.people || [], fnStartTime, TIME_BUDGET_MS);
         await rehostFirmImages(base44, fallback, website);
         return Response.json(fallback);
       }
@@ -2148,7 +2160,7 @@ Deno.serve(async (req) => {
 
 Website content (combined from multiple pages):
 ---
-${combinedContent.substring(0, 150000)}
+${combinedContent.substring(0, 100000)}
 ---
 
 Extract the following information from this website content:
@@ -2358,7 +2370,7 @@ IMPORTANT:
     const elapsedMs1 = Date.now() - fnStartTime;
     if (elapsedMs1 < TIME_BUDGET_MS - 15000) {
       console.log(`enrichFirmFromWebsite: enriching missing biographies (${Math.round(elapsedMs1 / 1000)}s elapsed)`);
-      await enrichMissingBiographies(base44, enrichedData.people || [], pageContents, website);
+      await enrichMissingBiographies(base44, enrichedData.people || [], pageContents, website, fnStartTime, TIME_BUDGET_MS);
     } else {
       console.log(`enrichFirmFromWebsite: skipping biography enrichment — time budget exceeded (${Math.round(elapsedMs1 / 1000)}s)`);
     }
@@ -2371,7 +2383,7 @@ IMPORTANT:
     // captures their full biography, phone, email, and title from their
     // individual profile page, which the team listing often doesn't include.
     if (Date.now() - fnStartTime < TIME_BUDGET_MS - 15000) {
-      await discoverAndExtractMissingPeople(base44, enrichedData.people || [], pageContents, website);
+      await discoverAndExtractMissingPeople(base44, enrichedData.people || [], pageContents, website, fnStartTime, TIME_BUDGET_MS);
     }
 
     // Secondary web search fallback: if the LLM extraction found very few
@@ -2417,7 +2429,7 @@ IMPORTANT:
         if (!fallback.logo_url) fallback.logo_url = enrichedData.logo_url;
         if (!fallback.year_founded) fallback.year_founded = enrichedData.year_founded;
         if (!fallback.firm_types?.length) fallback.firm_types = enrichedData.firm_types;
-        await enrichEducationExperienceFromBios(base44, fallback.people || []);
+        await enrichEducationExperienceFromBios(base44, fallback.people || [], fnStartTime, TIME_BUDGET_MS);
         await rehostFirmImages(base44, fallback, website);
         for (const person of fallback.people || []) {
           delete person.bio_url;
@@ -2442,11 +2454,13 @@ IMPORTANT:
     // found or couldn't be fetched). Skip if time budget is nearly exhausted
     // so the function can still return results before the proxy timeout.
     if (Date.now() - fnStartTime < TIME_BUDGET_MS - 15000) {
-      await enrichEducationExperienceFromBios(base44, enrichedData.people || []);
+      await enrichEducationExperienceFromBios(base44, enrichedData.people || [], fnStartTime, TIME_BUDGET_MS);
     }
 
-    // Rehost images
-    await rehostFirmImages(base44, enrichedData, website);
+    // Rehost images — skip if time budget is nearly exhausted
+    if (Date.now() - fnStartTime < TIME_BUDGET_MS - 5000) {
+      await rehostFirmImages(base44, enrichedData, website);
+    }
 
     // bio_url is preserved so the frontend can store it on the Contact entity,
     // allowing the user to see and re-scrape the profile page if the initial
