@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search, ArrowLeft, Users, Sparkles, ScrollText, ShieldCheck, Ghost, Upload } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search, ArrowLeft, Users, Sparkles, ScrollText, ShieldCheck, Ghost, Upload, Eraser } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -10,6 +10,7 @@ import DuplicateContactsReview from "@/components/contacts/DuplicateContactsRevi
 import EnrichmentLogsView from "./EnrichmentLogsView";
 import OrphanRecordCleanup from "./OrphanRecordCleanup";
 import CsvContactImport from "./CsvContactImport";
+import PlaceholderCleanup from "./PlaceholderCleanup";
 
 function BenchmarkItem({ b, onClick }) {
   return (
@@ -217,6 +218,16 @@ export default function UtilitySection({ deletedCount, forceExpanded = false }) 
                 <span className="text-sm font-semibold text-gray-700">Import Contacts</span>
                 <span className="text-[11px] text-gray-400">Bulk upload from CSV</span>
               </button>
+              <button
+                onClick={() => setView("placeholder-cleanup")}
+                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
+              >
+                <div className="w-9 h-9 rounded-full bg-indigo-50 flex items-center justify-center">
+                  <Eraser className="w-5 h-5 text-indigo-600" />
+                </div>
+                <span className="text-sm font-semibold text-gray-700">Placeholder Cleanup</span>
+                <span className="text-[11px] text-gray-400">Clear inconsistent values</span>
+              </button>
               {isAdmin && (
                 <button
                   onClick={() => navigate("/UserManagement")}
@@ -348,6 +359,11 @@ export default function UtilitySection({ deletedCount, forceExpanded = false }) 
           {/* CSV contact import view */}
           {view === "import-contacts" && (
             <CsvContactImport />
+          )}
+
+          {/* Placeholder cleanup view */}
+          {view === "placeholder-cleanup" && (
+            <PlaceholderCleanup />
           )}
         </div>
       )}
