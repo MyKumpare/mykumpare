@@ -790,6 +790,13 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         variant: "destructive",
       });
     }
+    // If there are no firm-level changes to save, exit edit mode so the
+    // "Save Changes"/"Cancel" buttons disappear and the "Edit" icon
+    // reappears. This prevents the confusing state where the user sees a
+    // disabled "Save Changes" button after approving enrichment contacts.
+    if (!hasChanges) {
+      setIsEditing(false);
+    }
   };
 
   const handleClose = () => {
