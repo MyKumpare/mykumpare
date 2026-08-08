@@ -26,6 +26,7 @@ import ContactDueDiligenceTab from "./ContactDueDiligenceTab";
 import ContactNotificationsTab from "./ContactNotificationsTab";
 import ContactChatTab from "./ContactChatTab";
 import ContactProductsTab from "./ContactProductsTab";
+import ScrapeProfileButton from "./ScrapeProfileButton";
 import ContactRolePicker from "./ContactRolePicker";
 import ContactDepartmentPicker from "./ContactDepartmentPicker";
 import ContactTypePicker from "./ContactTypePicker";
@@ -69,6 +70,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [email, setEmail] = useState("");
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [biography, setBiography] = useState("");
+  const [bioUrl, setBioUrl] = useState("");
   const [designations, setDesignations] = useState([]);
   const [employeeStatus, setEmployeeStatus] = useState("Employee");
   const [contactStatus, setContactStatus] = useState("Active");
@@ -130,6 +132,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setVeteranStatus(editingContact.veteran_status || "Undetermined");
         setDisabilityStatus(editingContact.disability_status || "Undetermined");
         setBiography(editingContact.biography || "");
+        setBioUrl(editingContact.bio_url || "");
         setNotes(editingContact.notes || "");
         setFirmIds(editingContact.firm_ids || []);
         setEducation(editingContact.education || []);
@@ -159,6 +162,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setDisabilityStatus("Undetermined");
         setShowUndeterminedWarning(false);
         setBiography("");
+        setBioUrl("");
         setNotes("");
         setFirmIds(currentFirmId ? [currentFirmId] : []);
         setEducation([]);
@@ -342,6 +346,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
       veteran_status: veteranStatus,
       disability_status: disabilityStatus,
       biography: biography.trim(),
+      bio_url: bioUrl.trim(),
       notes: notes.trim(),
       education: ed,
       professional_experience: ex,
@@ -495,6 +500,43 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
       createMutation.mutate(duplicateWarning.data);
     }
     setDuplicateWarning(null);
+  };
+
+  // Handle the response from ScrapeProfileButton — update dialog state with
+  // the freshly scraped data so the user can review it before saving.
+  const handleScrapeComplete = (data) => {
+    if (!data) return;
+    const ext = data.extracted || {};
+    setBioUrl(data.profile_url || bioUrl);
+    if (ext.biography && ext.biography.length > (biography || "").length) setBiography(ext.biography);
+    if (ext.title && ext.title.length >= (title || "").length) setTitle(ext.title);
+    if (ext.email && !email) setEmail(ext.email);
+    if (ext.photo_url && !photoUrl) setPhotoUrl(ext.photo_url);
+    if (Array.isArray(ext.designations) && ext.designations.length > 0) {
+      const existing = new Set((designations || []).map((d) => d.toLowerCase()));
+      const newOnes = ext.designations.filter((d) => d && !existing.has(d.toLowerCase()));
+      if (newOnes.length > 0) setDesignations([...(designations || []), ...newOnes]);
+    }
+    if (Array.isArray(ext.education) && ext.education.length > 0) {
+      const eduKey = (e) => `${(e.institution || "").toLowerCase()}|${(e.degree || "").toLowerCase()}|${(e.graduation_year || "").toLowerCase()}`;
+      const existingKeys = new Set((education || []).map(eduKey));
+      const newEdu = ext.education
+        .filter((e) => e && (e.institution || e.degree))
+        .filter((e) => { const k = eduKey(e); if (existingKeys.has(k)) return false; existingKeys.add(k); return true; })
+        .map((e) => ({ ...e, id: crypto.randomUUID(), majors: Array.isArray(e.majors) ? e.majors : [], minors: [] }));
+      if (newEdu.length > 0) setEducation([...(education || []), ...newEdu]);
+    }
+    if (Array.isArray(ext.professional_experience) && ext.professional_experience.length > 0) {
+      const expKey = (e) => `${(e.company_name || "").toLowerCase()}|${(e.title || "").toLowerCase()}|${(e.start_year || "").toLowerCase()}`;
+      const existingKeys = new Set((professionalExperience || []).map(expKey));
+      const newExp = ext.professional_experience
+        .filter((e) => e && (e.company_name || e.title))
+        .filter((e) => { const k = expKey(e); if (existingKeys.has(k)) return false; existingKeys.add(k); return true; })
+        .map((e) => ({ ...e, id: crypto.randomUUID() }));
+      if (newExp.length > 0) setProfessionalExperience([...(professionalExperience || []), ...newExp]);
+    }
+    // Refresh the query cache so the list reflects the backend update.
+    queryClient.invalidateQueries({ queryKey: ["contacts"] });
   };
 
   const { data: allOwnerships = [] } = useQuery({
@@ -953,6 +995,18 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                   <Textarea placeholder="Brief biography..." value={biography} onChange={(e) => setBiography(e.target.value)} className="min-h-20 text-sm" />
                 )}
               </div>
+
+              {/* Scrape Profile Page — lets the user point at the contact's
+                  individual profile URL and re-scrape it for bio, education,
+                  experience, and designations. Only shown for existing contacts
+                  (needs a contact_id to update). */}
+              {editingContact && (
+                <ScrapeProfileButton
+                  contactId={editingContact.id}
+                  bioUrl={bioUrl}
+                  onScrapeComplete={handleScrapeComplete}
+                />
+              )}
 
               {/* Associated Firms */}
               <div className="space-y-1.5">

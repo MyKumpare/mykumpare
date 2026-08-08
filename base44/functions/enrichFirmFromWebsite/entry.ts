@@ -2444,11 +2444,10 @@ IMPORTANT:
     // Rehost images
     await rehostFirmImages(base44, enrichedData, website);
 
-    // bio_url is an internal helper for biography gathering — strip it before
-    // returning so it doesn't leak into the stored contact record.
-    for (const person of enrichedData.people || []) {
-      delete person.bio_url;
-    }
+    // bio_url is preserved so the frontend can store it on the Contact entity,
+    // allowing the user to see and re-scrape the profile page if the initial
+    // extraction missed bio/education/experience data.
+    // (No deletion — bio_url is intentionally kept in the returned data.)
 
     console.log(`enrichFirmFromWebsite: returning ${enrichedData.people?.length || 0} people, ${pageContents.length} pages fetched, ${combinedContent.length} chars total content`);
     return Response.json(enrichedData);

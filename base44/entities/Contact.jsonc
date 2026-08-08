@@ -169,6 +169,10 @@
       "type": "string",
       "description": "Biography of the contact"
     },
+    "bio_url": {
+      "type": "string",
+      "description": "URL of the contact's individual profile/biography page on their firm's website (stored during auto-fill enrichment so the user can re-scrape it if the initial extraction missed data)"
+    },
     "education": {
       "type": "array",
       "description": "Education history of the contact",

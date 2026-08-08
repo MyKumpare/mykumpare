@@ -316,6 +316,7 @@ export async function enrichFirmFromWeb(firmName, websiteUrl) {
     person.email = cleanStr(person.email) || '';
     person.linkedin_url = cleanStr(person.linkedin_url) || '';
     person.biography = cleanStr(person.biography) || '';
+    person.bio_url = cleanStr(person.bio_url) || '';
   }
 
   normalizeAddresses(data);
@@ -447,6 +448,7 @@ export function computeContactUpdates(existingContact, person, firmId) {
     { field: "title", label: "Title" },
     { field: "email", label: "Email" },
     { field: "linkedin_url", label: "LinkedIn" },
+    { field: "bio_url", label: "Profile Page URL" },
   ];
   for (const { field, label } of SCALAR) {
     const incoming = person[field];
@@ -467,10 +469,9 @@ export function computeContactUpdates(existingContact, person, firmId) {
   const isStubBio = (bio) => {
     const b = (bio || "").trim();
     if (!b) return true;
-    if (b.length < 60) {
-      const first = (existingContact.first_name || "").trim().toLowerCase();
-      if (first && b.toLowerCase().startsWith(first)) return true;
-    }
+    if (b.length < 150) return true;
+    const first = (existingContact.first_name || "").trim().toLowerCase();
+    if (first && b.toLowerCase().startsWith(first) && b.length < 200) return true;
     return false;
   };
   if (person.biography) {
