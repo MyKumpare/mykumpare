@@ -325,7 +325,7 @@ function htmlToText(html: string, baseUrl: string): string {
     .replace(/<script[\s\S]*?<\/script>/gi, '')
     .replace(/<style[\s\S]*?<\/style>/gi, '')
     .replace(/<svg[\s\S]*?<\/svg>/gi, '')
-    .replace(/<\/?(div|p|br|h[1-6]|li|ul|ol|span|a|td|tr|table|section|article|main)[^>]*>/gi, '\n')
+    .replace(/<\/?(div|p|br|h[1-6]|li|ul|ol|span|a|td|tr|table|section|article|main|dt|dd|dl|details|summary|button|label|figcaption|figure|blockquote)[^>]*>/gi, '\n')
     .replace(/<[^>]+>/g, '')
     .replace(/&nbsp;/g, ' ')
     .replace(/&amp;/g, '&')
@@ -674,10 +674,13 @@ async function enrichMissingBiographies(
   const isStubBio = (p: any): boolean => {
     const bio = (p.biography || '').trim();
     if (!bio) return true;
-    if (bio.length < 60) {
-      const first = (p.first_name || '').trim().toLowerCase();
-      if (first && bio.toLowerCase().startsWith(first)) return true;
-    }
+    // Treat short bios as stubs — many sites show a short tagline/quote on
+    // the team listing while the full bio is on the profile page (e.g.
+    // "I enjoy being part of a community that values results and collegiality.").
+    if (bio.length < 150) return true;
+    // Also treat name-only stubs (e.g. "Jerrod Stoller") as stubs.
+    const first = (p.first_name || '').trim().toLowerCase();
+    if (first && bio.toLowerCase().startsWith(first) && bio.length < 200) return true;
     return false;
   };
   const queue = people.filter(isStubBio).slice(0, MAX);
@@ -746,7 +749,7 @@ async function enrichMissingBiographies(
       }
       if (!bioUrl) continue;
       const result = await extractBiographyFromPage(base44, fullName, bioUrl, pageText);
-      if (result.biography) {
+      if (result.biography && result.biography.length > (person.biography || '').length) {
         person.biography = result.biography;
       }
       if (result.phone && !person.phone) person.phone = result.phone;
@@ -1178,10 +1181,13 @@ async function enrichEducationExperienceFromBios(base44: any, people: any[]): Pr
   const isStubBio = (p: any): boolean => {
     const bio = (p.biography || '').trim();
     if (!bio) return true;
-    if (bio.length < 60) {
-      const first = (p.first_name || '').trim().toLowerCase();
-      if (first && bio.toLowerCase().startsWith(first)) return true;
-    }
+    // Treat short bios as stubs — many sites show a short tagline/quote on
+    // the team listing while the full bio is on the profile page (e.g.
+    // "I enjoy being part of a community that values results and collegiality.").
+    if (bio.length < 150) return true;
+    // Also treat name-only stubs (e.g. "Jerrod Stoller") as stubs.
+    const first = (p.first_name || '').trim().toLowerCase();
+    if (first && bio.toLowerCase().startsWith(first) && bio.length < 200) return true;
     return false;
   };
   const queue = people.filter((p) => !isStubBio(p) && p.education === undefined && p.professional_experience === undefined).slice(0, MAX);

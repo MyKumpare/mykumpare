@@ -94,7 +94,7 @@ function htmlToText(html: string, baseUrl: string): string {
     .replace(/<script[\s\S]*?<\/script>/gi, '')
     .replace(/<style[\s\S]*?<\/style>/gi, '')
     .replace(/<svg[\s\S]*?<\/svg>/gi, '')
-    .replace(/<\/?(div|p|br|h[1-6]|li|ul|ol|span|a|td|tr|table|section|article|main)[^>]*>/gi, '\n')
+    .replace(/<\/?(div|p|br|h[1-6]|li|ul|ol|span|a|td|tr|table|section|article|main|dt|dd|dl|details|summary|button|label|figcaption|figure|blockquote)[^>]*>/gi, '\n')
     .replace(/<[^>]+>/g, '')
     .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"').replace(/&#39;/g, "'")
@@ -116,10 +116,12 @@ function slugifyName(name: string): string {
 function isStubBio(bio: string, firstName: string): boolean {
   const b = (bio || '').trim();
   if (!b) return true;
-  if (b.length < 60) {
-    const first = (firstName || '').trim().toLowerCase();
-    if (first && b.toLowerCase().startsWith(first)) return true;
-  }
+  // Treat short bios as stubs — many sites show a short tagline/quote on
+  // the team listing while the full bio is on the profile page.
+  if (b.length < 150) return true;
+  // Also treat name-only stubs (e.g. "Jerrod Stoller") as stubs.
+  const first = (firstName || '').trim().toLowerCase();
+  if (first && b.toLowerCase().startsWith(first) && b.length < 200) return true;
   return false;
 }
 
