@@ -333,6 +333,7 @@ export default function Home() {
             linkedin_url: person.linkedin_url || "",
             biography: person.biography || "",
             photo_url: person.photo_url || "",
+            bio_url: person.bio_url || "",
             firm_ids: [firm.id],
           };
           if (designations.length > 0) contactData.designations = designations;

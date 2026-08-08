@@ -734,6 +734,7 @@ export async function createFirmFromEnrichment(enrichedData, tenantId) {
         linkedin_url: person.linkedin_url || "",
         biography: person.biography || "",
         photo_url: person.photo_url || "",
+        bio_url: person.bio_url || "",
         firm_ids: [createdFirm.id],
         employee_status: "Employee",
       };
