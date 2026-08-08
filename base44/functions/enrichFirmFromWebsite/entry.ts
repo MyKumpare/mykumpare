@@ -436,47 +436,50 @@ async function extractBiographyFromPage(
   if (!pageText || pageText.length < 50) return '';
   try {
     const res = await base44.integrations.Core.InvokeLLM({
-      prompt: `You are extracting the biography of a specific person from their individual profile page.
+      prompt: `You are extracting information about a specific person from their individual profile page.
 
 Person name: "${personName}"
 
-Below is the text content of their profile/biography page. Locate the section describing THIS person (often near their name, under a heading like "Biography", "About", "Profile", or "Overview"). Extract the COMPLETE biography text for this person. You MUST copy the biography VERBATIM — do not summarize, do not paraphrase, do not abbreviate, and do not omit any sentences or paragraphs. Include EVERY paragraph of the biography in full. If the page lists multiple people, extract only the biography belonging to "${personName}". If no biography text is found for this person, return an empty string.
+Below is the text content of their profile/biography page.
 
-Then, from that biography, extract the person's education and prior professional experience.
+FIRST, locate the section describing THIS person (often near their name, under a heading like "Biography", "About", "Profile", or "Overview").
 
-EDUCATION: every school, college, or university mentioned, with:
-- institution: the school/university name (e.g. "University of Pennsylvania")
-- degree: the degree earned, if stated (e.g. "BS", "BA", "MBA", "PhD")
-- area_of_specialization: the field/major area, if stated (e.g. "Economics", "Finance")
-- majors: array of major subjects, if stated
-- graduation_year: the graduation year as a string, if stated (e.g. "1998")
-Only include institutions the person actually attended as a student. Do NOT include firms where they worked.
+EXTRACT THESE FIELDS:
 
-PROFESSIONAL EXPERIENCE: every employer/company mentioned in the biography, INCLUDING their current firm (the one whose site this is), with:
-- company_name: the company/firm name (e.g. the current firm name, and prior employers like "Wayne Management")
-- title: the role/title held there (e.g. "Director of Research")
-- start_year: start year as a string, if stated
-- end_year: end year as a string, if stated (LEAVE EMPTY if this is the person's current employer / they are still there)
-Include each distinct company as a separate entry. Order entries from most recent to oldest.
-
-CONTACT INFO: Extract any phone number and email address listed for this person on their profile page:
-- phone: the phone number as a string (e.g. "872-804-1892"). Include the area code.
-- email: the email address listed for this person (if there is an "Email [Name]" link, extract the actual email address if visible, otherwise leave empty)
-
-TITLE: Extract the person's job title/role as it appears on the page (e.g. "Senior Wealth Advisor"). This is usually displayed near their name at the top of the profile page.
-
-Return an object with "biography" (the verbatim text), "education" (array), "professional_experience" (array), "phone" (string), "email" (string), and "title" (string). If a section has no data, return an empty array or empty string.
+1. first_name: the person's first name (given name). If the name includes a professional designation like "CFP", "CFA", "CPA", do NOT include it in the name.
+2. last_name: the person's last name (family name/surname). Do NOT include designations.
+3. title: their job title/role as it appears on the page (e.g. "Senior Wealth Advisor"). Usually displayed near their name at the top.
+4. biography: the COMPLETE biography text for this person.
+   CRITICAL INSTRUCTIONS FOR THE BIOGRAPHY FIELD:
+   - Copy the biography VERBATIM — do not summarize, do not paraphrase, do not abbreviate, do not truncate.
+   - Include EVERY paragraph of the biography in full, from the first sentence to the last sentence.
+   - The biography often spans MULTIPLE paragraphs. You MUST include ALL of them — do not stop after the first paragraph.
+   - If the page lists multiple people, extract only the biography belonging to "${personName}".
+   - If no biography text is found, return an empty string.
+   - The biography typically includes: current role, tenure at the firm, prior employers, education, and areas of expertise. Include ALL of this text.
+5. phone: any phone number listed for this person (e.g. "872-804-1892"). Include the area code.
+6. email: any email address listed for this person.
+7. photo_url: the URL of their profile photo. Images appear as [IMAGE: alt="..." src="https://..."] markers — find the one closest to the person's name.
+8. designations: any professional designations/certifications (e.g. "CFA", "CFP", "CPA", "MBA", "PhD", "Chartered Financial Analyst"). Return as an array of strings.
+9. education: every school/college/university the person attended as a student, with institution, degree, area_of_specialization, majors (array), graduation_year. Only include institutions they attended as a student, NOT firms where they worked.
+10. professional_experience: every employer/company mentioned INCLUDING their current firm, with company_name, title, start_year, end_year (leave end_year empty if current employer). Order from most recent to oldest.
 
 --- PAGE CONTENT ---
 ${pageText.substring(0, 20000)}
---- END PAGE CONTENT ---`,
+--- END PAGE CONTENT ---
+
+Return a JSON object with all fields above. Leave fields empty or return empty arrays if not found.`,
       response_json_schema: {
         type: 'object',
         properties: {
+          first_name: { type: 'string' },
+          last_name: { type: 'string' },
           biography: { type: 'string' },
           phone: { type: 'string' },
           email: { type: 'string' },
           title: { type: 'string' },
+          photo_url: { type: 'string' },
+          designations: { type: 'array', items: { type: 'string' } },
           education: {
             type: 'array',
             items: {
@@ -506,15 +509,19 @@ ${pageText.substring(0, 20000)}
       },
     });
     return {
+      first_name: (res?.first_name || '').trim(),
+      last_name: (res?.last_name || '').trim(),
       biography: (res?.biography || '').trim(),
       phone: (res?.phone || '').trim(),
       email: (res?.email || '').trim(),
       title: (res?.title || '').trim(),
+      photo_url: (res?.photo_url || '').trim(),
+      designations: Array.isArray(res?.designations) ? res.designations : [],
       education: Array.isArray(res?.education) ? res.education : [],
       professional_experience: Array.isArray(res?.professional_experience) ? res.professional_experience : [],
     };
   } catch {
-    return { biography: '', phone: '', email: '', title: '', education: [], professional_experience: [] };
+    return { first_name: '', last_name: '', biography: '', phone: '', email: '', title: '', photo_url: '', designations: [], education: [], professional_experience: [] };
   }
 }
 
@@ -955,8 +962,11 @@ async function discoverAndExtractMissingPeople(
 
   // For each profile page URL, check if it matches an extracted person by
   // comparing the URL slug to the person's name. Unmatched URLs are candidates
-  // for direct extraction.
+  // for direct extraction. Matched URLs for people with SHORT bios are
+  // candidates for ENRICHMENT (re-fetch the full bio from their profile page).
   const unmatchedUrls: string[] = [];
+  const enrichUrls: { url: string; personIndex: number }[] = [];
+  const SHORT_BIO_THRESHOLD = 400; // chars — bios shorter than this are likely summaries
   for (const url of profileUrls) {
     const slugMatch = url.match(/\/([^/]+)\/?$/);
     if (!slugMatch) continue;
@@ -968,15 +978,28 @@ async function discoverAndExtractMissingPeople(
     // Skip slugs that are clearly not person names (e.g. "all", "leadership")
     if (['all', 'leadership', 'team', 'staff', 'board', 'contact', 'about'].includes(slugName)) continue;
     let matched = false;
-    for (const name of extractedNames) {
+    let matchedPersonIndex = -1;
+    for (let pi = 0; pi < people.length; pi++) {
+      const name = `${people[pi].first_name || ''} ${people[pi].last_name || ''}`.trim().toLowerCase();
+      if (!name) continue;
       if (name === slugName || name.includes(slugName) || slugName.includes(name)) {
         matched = true;
+        matchedPersonIndex = pi;
         break;
       }
     }
-    if (!matched) unmatchedUrls.push(url);
+    if (!matched) {
+      unmatchedUrls.push(url);
+    } else if (matchedPersonIndex >= 0) {
+      // Person was already extracted — check if their bio is short/missing.
+      // If so, enrich from their individual profile page (which has the full bio).
+      const bioLen = (people[matchedPersonIndex].biography || '').trim().length;
+      if (bioLen < SHORT_BIO_THRESHOLD) {
+        enrichUrls.push({ url, personIndex: matchedPersonIndex });
+      }
+    }
   }
-  if (unmatchedUrls.length === 0) return;
+  if (unmatchedUrls.length === 0 && enrichUrls.length === 0) return;
 
   // Sort unmatched URLs alphabetically by slug so people are processed in a
   // deterministic order (e.g. "brett-guendel" before "zach-..."). This ensures
@@ -988,6 +1011,48 @@ async function discoverAndExtractMissingPeople(
     return aSlug.localeCompare(bSlug);
   });
 
+  // Process enrichment URLs first (people already extracted with short bios).
+  // Fetch their individual profile page and update their bio, education,
+  // experience, phone, email, title, and photo with the full details.
+  const enrichSlice = enrichUrls.slice(0, MAX);
+  let enrichCursor = 0;
+  const enrichWorker = async () => {
+    while (enrichCursor < enrichSlice.length) {
+      const i = enrichCursor++;
+      const { url, personIndex } = enrichSlice[i];
+      const pageText = await fetchPage(url);
+      if (!pageText || pageText.length < 50) continue;
+      try {
+        const res = await extractBiographyFromPage(base44, `${people[personIndex].first_name} ${people[personIndex].last_name}`, url, pageText);
+        if (res && (res.biography || res.phone || res.email || res.title || (res.education && res.education.length > 0) || (res.professional_experience && res.professional_experience.length > 0))) {
+          const p = people[personIndex];
+          // Only update fields if the profile page provided richer data
+          if (res.biography && res.biography.length > (p.biography || '').length) p.biography = res.biography;
+          if (res.phone) p.phone = res.phone;
+          if (res.email) p.email = res.email;
+          if (res.title && res.title.length >= (p.title || '').length) p.title = res.title;
+          if (res.photo_url) p.photo_url = res.photo_url;
+          if (res.education && res.education.length > 0) p.education = res.education;
+          if (res.professional_experience && res.professional_experience.length > 0) p.professional_experience = res.professional_experience;
+          if (!p.bio_url) p.bio_url = url;
+          // Use designations from the extraction, or fall back to text-based detection
+          if (res.designations && res.designations.length > 0) {
+            p.designations = res.designations;
+          } else if (res.biography) {
+            const designations = extractDesignationsFromText(res.biography);
+            if (designations.length > 0) p.designations = designations;
+          }
+          console.log(`discoverAndExtractMissingPeople: enriched ${p.first_name} ${p.last_name} bio from ${url}`);
+        }
+      } catch {
+        // continue on error
+      }
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(CONCURRENCY, enrichSlice.length) }, () => enrichWorker()),
+  );
+
   const urls = unmatchedUrls.slice(0, MAX);
   let cursor = 0;
   const worker = async () => {
@@ -997,50 +1062,29 @@ async function discoverAndExtractMissingPeople(
       const pageText = await fetchPage(url);
       if (!pageText || pageText.length < 50) continue;
       try {
-        const res = await base44.integrations.Core.InvokeLLM({
-          prompt: `You are extracting information about a single person from their individual profile/biography page.
-
-Below is the text content of their profile page. Extract the following:
-- first_name: the person's first name (given name)
-- last_name: the person's last name (family name/surname). If the name includes a professional designation like "CFP", "CFA", "CPA", do NOT include it in the last name.
-- title: their job title/role (e.g. "Senior Wealth Advisor")
-- biography: the COMPLETE biography text — copy it VERBATIM, do not summarize. Include every paragraph.
-- phone: any phone number listed for this person (as a string, e.g. "872-804-1892")
-- email: any email address listed for this person
-- photo_url: the URL of their profile photo. Images appear as [IMAGE: alt="..." src="https://..."] markers — find the one closest to the person's name.
-
---- PAGE CONTENT ---
-${pageText.substring(0, 20000)}
---- END PAGE CONTENT ---
-
-Return a JSON object with the fields above. Leave fields empty if not found.`,
-          response_json_schema: {
-            type: 'object',
-            properties: {
-              first_name: { type: 'string' },
-              last_name: { type: 'string' },
-              title: { type: 'string' },
-              biography: { type: 'string' },
-              phone: { type: 'string' },
-              email: { type: 'string' },
-              photo_url: { type: 'string' },
-            },
-          },
-        });
-        if (res?.first_name && res?.last_name) {
-          const fullName = `${res.first_name} ${res.last_name}`.trim().toLowerCase();
+        // Single comprehensive LLM call extracts name, photo, bio, education,
+        // experience, designations, phone, email, and title.
+        const personName = (url.match(/\/([^/]+)\/?$/) || ['', ''])[1].replace(/-/g, ' ');
+        const res = await extractBiographyFromPage(base44, personName, url, pageText);
+        const firstName = res?.first_name || '';
+        const lastName = res?.last_name || '';
+        if (firstName && lastName) {
+          const fullName = `${firstName} ${lastName}`.trim().toLowerCase();
           // Final duplicate check against ALL people (including ones added by
           // earlier workers in this same phase).
           if (!extractedNames.has(fullName)) {
             people.push({
-              first_name: res.first_name,
-              last_name: res.last_name,
+              first_name: firstName,
+              last_name: lastName,
               title: res.title || '',
               biography: res.biography || '',
               phone: res.phone || '',
               email: res.email || '',
               photo_url: res.photo_url || '',
               bio_url: url,
+              education: res.education || [],
+              professional_experience: res.professional_experience || [],
+              designations: res.designations || (res.biography ? extractDesignationsFromText(res.biography) : []),
             });
             extractedNames.add(fullName);
             console.log(`discoverAndExtractMissingPeople: added ${fullName} from ${url}`);
