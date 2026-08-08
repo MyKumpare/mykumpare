@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-import { MWBE_CATEGORIES, getMwbeCategory, isInMwbeSet } from "./mwbe";
+import { MWBE_CATEGORIES, getMwbeCategory } from "./mwbe";
 
 const UNCLASSIFIED = "__unclassified__";
 
@@ -74,8 +74,6 @@ const VIEWS = {
     label: "MWBE",
     field: "mwbe",
     custom: true,
-    // Only contacts in the MWBE set (Female and/or Ethnic Minority) are in scope.
-    scopeFilter: isInMwbeSet,
     matchContact: getMwbeCategory,
     categories: MWBE_CATEGORIES,
   },

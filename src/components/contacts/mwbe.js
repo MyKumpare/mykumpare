@@ -33,10 +33,10 @@ export function getMwbeCategory(c) {
   if (female && minority) return "female_minority";
   if (female && !minority) return "female_nonminority";
   if (!female && minority) return "minority_nonfemale";
-  // Not Female and not a minority. If gender is undetermined, MWBE status
-  // can't be determined (could be Female → MWBE). Show as "Undefined".
-  if (!female && (c.gender === "Undetermined" || !c.gender)) return "undefined_mwbe";
-  return null;
+  // Not Female and not an Ethnic Minority → not classified as MWBE.
+  // Grouped under "Undefined" so the chart covers every contact and the
+  // "% of Total" denominator is the full contact count.
+  return "undefined_mwbe";
 }
 
 export function isInMwbeSet(c) {
