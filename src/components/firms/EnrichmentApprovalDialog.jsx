@@ -25,7 +25,7 @@ export default function EnrichmentApprovalDialog({
   React.useEffect(() => {
     setApprovedBios((prev) => {
       const next = {};
-      for (const id of bioContactIds) next[id] = !!prev[id];
+      for (const id of bioContactIds) next[id] = prev[id] !== undefined ? prev[id] : true;
       return next;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
