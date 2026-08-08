@@ -442,7 +442,9 @@ Person name: "${personName}"
 
 Below is the text content of their profile/biography page.
 
-FIRST, locate the section describing THIS person (often near their name, under a heading like "Biography", "About", "Profile", or "Overview").
+FIRST, determine if this page is a person profile/biography page. If it is NOT (e.g. it's a document, report, article, blog post, research paper, strategy overview, market commentary, or any other non-person page), return empty strings for ALL fields and empty arrays — do NOT try to extract a person's name from a document title or heading. Only proceed if this is genuinely an individual's profile/biography page.
+
+If this IS a person profile page, locate the section describing THIS person (often near their name, under a heading like "Biography", "About", "Profile", or "Overview").
 IMPORTANT: Many sites use collapsible/accordion sections for detailed information. Look for sections labeled "PROFESSIONAL EXPERIENCE", "EDUCATION", "CREDENTIALS", "EDUCATION AND CREDENTIALS", "EDUCATION, CREDENTIALS AND MEMBERSHIPS", "SERVICE AREAS", or similar. The content of these sections IS present in the page text even though they appear collapsed on the visual page — extract ALL information from them.
 
 EXTRACT THESE FIELDS:
@@ -834,6 +836,54 @@ async function enrichMissingBiographies(
   );
 }
 
+// Common document/report keywords that indicate a URL slug is NOT a person
+// name. Used to filter out non-person pages (documents, reports, articles,
+// etc.) that happen to be under /people/ or /team/ paths.
+const DOC_KEYWORDS = new Set([
+  'market', 'markets', 'review', 'outlook', 'quarter', 'report', 'strategy', 'strategies',
+  'management', 'indices', 'index', 'transition', 'trend', 'trends', 'following',
+  'sustainability', 'sustainable', 'whitepaper', 'paper', 'article', 'blog',
+  'newsletter', 'bulletin', 'commentary', 'analysis', 'overview', 'guide',
+  'handbook', 'policy', 'webinar', 'conference', 'presentation', 'committee',
+  'department', 'division', 'portfolio', 'investment', 'benchmark', 'performance',
+  'summary', 'annual', 'quarterly', 'monthly', 'weekly', 'daily',
+  'world', 'global', 'macroeconomic', 'macro', 'interest', 'rate', 'rates',
+  'environment', 'zero', 'bound', 'low', 'todays', 'today', 'update',
+  'insight', 'insights', 'research', 'study', 'survey', 'poll',
+  'fund', 'funds', 'product', 'products', 'offering', 'asset', 'class',
+  'esg', 'impact', 'responsible', 'green', 'private', 'public', 'alternative',
+  'hedge', 'commodity', 'currency', 'yield', 'duration', 'risk', 'return',
+  'fixed', 'income', 'bond', 'bonds', 'equity', 'equities',
+]);
+
+// Check if a URL slug is likely a person name (not a document, report, or
+// other non-person page). Used to filter out non-person URLs from the
+// sitemap/link discovery before creating lightweight contact entries.
+function isLikelyPersonSlug(slug: string): boolean {
+  if (!slug || slug === '#') return false;
+  const lower = slug.toLowerCase();
+
+  // Allow roman numeral / suffix endings: "john-smith-ii", "john-smith-jr"
+  const withoutSuffix = lower.replace(/-(?:ii|iii|iv|v|jr|sr|esq)$/, '');
+
+  // Reject slugs with numbers (person name slugs rarely have numbers)
+  if (/\d/.test(withoutSuffix)) return false;
+
+  const words = withoutSuffix.split(/-/).filter(Boolean);
+
+  // Reject slugs with too many words (> 4) — person names are typically 2-3 words
+  if (words.length > 4) return false;
+  // Reject single-word slugs — person names have at least 2 parts
+  if (words.length < 2) return false;
+
+  // Reject slugs that contain any document/report keyword
+  for (const word of words) {
+    if (DOC_KEYWORDS.has(word)) return false;
+  }
+
+  return true;
+}
+
 // Fetch the site's sitemap(s) and extract individual profile page URLs.
 // Many WordPress sites have a sitemap at /sitemap.xml or /sitemap_index.xml
 // that lists ALL pages including individual team member profile pages. This
@@ -900,7 +950,10 @@ async function discoverProfileUrlsFromSitemap(
         try { linkHost = new URL(pageUrl).host.toLowerCase(); } catch { /* ignore */ }
         if (linkHost !== baseHost) continue;
         if (profilePathRegex.test(pageUrl)) {
-          result.add(pageUrl);
+          const profileSlug = (pageUrl.match(/\/([^/]+)\/?$/) || ['', ''])[1];
+          if (isLikelyPersonSlug(profileSlug)) {
+            result.add(pageUrl);
+          }
         }
       }
     } catch {
@@ -953,7 +1006,10 @@ async function discoverAndExtractMissingPeople(
       if (!linkHost || linkHost !== baseHost) continue;
       // Match individual profile pages: /<team-keyword>/<slug>/ (2+ segments)
       if (/\/(?:our-team|team|people|our-people|staff|leadership|professionals|personnel)\/[^/]+\/?$/i.test(url)) {
-        profileUrls.add(url);
+        const profileSlug = (url.match(/\/([^/]+)\/?$/) || ['', ''])[1];
+        if (isLikelyPersonSlug(profileSlug)) {
+          profileUrls.add(url);
+        }
       }
     }
   }
@@ -1084,6 +1140,14 @@ async function discoverAndExtractMissingPeople(
         const firstName = res?.first_name || '';
         const lastName = res?.last_name || '';
         if (firstName && lastName) {
+          // Skip if the extracted name looks like a document/report title
+          // (the LLM sometimes extracts a "name" from a document heading)
+          const nameWords = `${firstName} ${lastName}`.toLowerCase().split(/\s+/);
+          let isDocumentName = false;
+          for (const word of nameWords) {
+            if (DOC_KEYWORDS.has(word)) { isDocumentName = true; break; }
+          }
+          if (isDocumentName) continue;
           const fullName = `${firstName} ${lastName}`.trim().toLowerCase();
           // Final duplicate check against ALL people (including ones added by
           // earlier workers in this same phase).
@@ -1125,6 +1189,7 @@ async function discoverAndExtractMissingPeople(
     if (!slugMatch) continue;
     const slug = slugMatch[1];
     if (!slug || slug === '#') continue;
+    if (!isLikelyPersonSlug(slug)) continue;
     const slugName = slug.replace(/-/g, ' ').trim();
     if (!slugName) continue;
     // Parse name from slug: "brett-guendel" -> first="Brett", last="Guendel"
