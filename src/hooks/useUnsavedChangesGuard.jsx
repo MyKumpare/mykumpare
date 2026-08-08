@@ -12,12 +12,15 @@ import { AlertTriangle } from "lucide-react";
  *
  * @param {boolean} hasChanges — whether the form has unsaved modifications
  * @param {Function} onClose — called when the close is confirmed (or no changes)
+ * @param {Function} [onSave] — optional save handler; when provided, a "Save"
+ *   button is shown that saves the changes and then closes
  * @returns {{ guardedClose: Function, guardDialog: JSX.Element }}
  *   - guardedClose: call this from your Dialog's onOpenChange(false) path
  *   - guardDialog: render this inside your form's Dialog tree
  */
-export function useUnsavedChangesGuard(hasChanges, onClose) {
+export function useUnsavedChangesGuard(hasChanges, onClose, onSave) {
   const [showConfirm, setShowConfirm] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const guardedClose = useCallback(() => {
     if (hasChanges) {
@@ -36,6 +39,23 @@ export function useUnsavedChangesGuard(hasChanges, onClose) {
     setShowConfirm(false);
   }, []);
 
+  const handleSave = useCallback(async () => {
+    if (!onSave) { setShowConfirm(false); onClose?.(); return; }
+    try {
+      setSaving(true);
+      // Trigger the save flow. The save handler is responsible for closing
+      // the dialog on success (typically via its mutation's onSuccess). We
+      // only dismiss the confirm modal here — if the save bails early
+      // (validation, duplicate warnings), the dialog stays open so the user
+      // can address the issue, exactly as if they'd clicked the form's
+      // primary Save button.
+      await onSave();
+      setShowConfirm(false);
+    } finally {
+      setSaving(false);
+    }
+  }, [onSave]);
+
   const guardDialog = (
     <Dialog open={showConfirm} onOpenChange={(v) => { if (!v) cancelDiscard(); }}>
       <DialogContent className="max-w-sm">
@@ -49,8 +69,13 @@ export function useUnsavedChangesGuard(hasChanges, onClose) {
           You have unsaved changes that will be lost. Are you sure you want to close without saving?
         </p>
         <DialogFooter>
-          <Button variant="outline" onClick={cancelDiscard}>Keep Editing</Button>
-          <Button variant="destructive" onClick={confirmDiscard}>Close Without Saving</Button>
+          <Button variant="outline" onClick={cancelDiscard} disabled={saving}>Keep Editing</Button>
+          {onSave && (
+            <Button variant="default" onClick={handleSave} disabled={saving}>
+              {saving ? "Saving..." : "Save"}
+            </Button>
+          )}
+          <Button variant="destructive" onClick={confirmDiscard} disabled={saving}>Close Without Saving</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

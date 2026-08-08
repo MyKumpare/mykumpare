@@ -676,7 +676,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
       addresses.some(a => a.address_line1 || a.city || a.state));
   })();
 
-  const { guardedClose, guardDialog } = useUnsavedChangesGuard(hasContactChanges, () => onOpenChange(false));
+  const { guardedClose, guardDialog } = useUnsavedChangesGuard(hasContactChanges, () => onOpenChange(false), handleSubmit);
 
   return (
     <>

@@ -824,7 +824,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     setFirmFieldConflicts(null);
   };
 
-  const { guardedClose, guardDialog } = useUnsavedChangesGuard(hasUnsavedChanges, handleClose);
+  const { guardedClose, guardDialog } = useUnsavedChangesGuard(hasUnsavedChanges, handleClose, handleSubmit);
 
   const handleCancelEdit = () => {
     setFirmTypes(editingFirm.firm_types?.length ? editingFirm.firm_types : editingFirm.firm_type ? [editingFirm.firm_type] : []);

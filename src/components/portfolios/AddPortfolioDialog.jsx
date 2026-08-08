@@ -511,7 +511,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
     return !!(allocatorId || portfolioName.trim() || inceptionDate || advisorType || advisorFirmId || advisorInceptionDate || subManagers.length > 0);
   })();
 
-  const { guardedClose, guardDialog } = useUnsavedChangesGuard(hasPortfolioChanges, () => onOpenChange(false));
+  const { guardedClose, guardDialog } = useUnsavedChangesGuard(hasPortfolioChanges, () => onOpenChange(false), handleSave);
 
   return (
     <>

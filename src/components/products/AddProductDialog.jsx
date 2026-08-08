@@ -321,7 +321,7 @@ export default function AddProductDialog({
     setIsEditing(false);
   };
 
-  const { guardedClose, guardDialog } = useUnsavedChangesGuard(hasUnsavedChanges, handleClose);
+  const { guardedClose, guardDialog } = useUnsavedChangesGuard(hasUnsavedChanges, handleClose, handleSubmit);
 
   const handleCancelEdit = () => {
     const snap = originalSnapshotRef.current;
