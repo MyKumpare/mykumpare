@@ -39,7 +39,8 @@ function browserHeaders(cookieHeader: string): Record<string, string> {
 const COMMON_PEOPLE_PATHS = [
   '/about-xponance/people', '/about/people', '/about/firm', '/about/our-team',
   '/team', '/our-team', '/people', '/our-people', '/leadership', '/team-members',
-  '/staff', '/about-us', '/company', '/personnel', '/professionals',
+  '/staff', '/investment-staff', '/investment-team', '/investment-team-tab', '/investment-professionals',
+  '/about-us', '/company', '/personnel', '/professionals',
 ];
 
 const NAME_SUFFIXES = new Set(['jr', 'sr', 'ii', 'iii', 'iv', 'v', 'esq', 'cfa', 'cpa', 'mba', 'phd', 'md', 'cmfc', 'apfi', 'cipm', 'chfc', 'clu', 'cfp', 'frm']);
@@ -139,7 +140,7 @@ async function discoverPeoplePage(website: string): Promise<string> {
     let linkHost = '';
     try { linkHost = new URL(url).host.toLowerCase(); } catch { /* ignore */ }
     if (linkHost !== baseHost) continue;
-    if (/\/(people|our-people|team|our-team|leadership|staff|personnel|professionals)\b/i.test(url)) {
+    if (/\/(people|our-people|team|our-team|leadership|staff|investment-staff|investment-team|investment-team-tab|investment-professionals|personnel|professionals)\b/i.test(url)) {
       candidates.push(url);
     }
   }
@@ -216,7 +217,7 @@ async function discoverBioUrlByPattern(
   if (!firstName || !lastName) return '';
   // Extract the base path from the people page URL (e.g. /about-xponance/people/).
   let basePath = peoplePageUrl;
-  const kwMatch = basePath.match(/(.*?\/(?:people|our-people|team|our-team|leadership|staff|personnel|professionals)\/)/i);
+  const kwMatch = basePath.match(/(.*?\/(?:people|our-people|team|our-team|leadership|staff|investment-staff|investment-team|investment-team-tab|investment-professionals|personnel|professionals)\/)/i);
   if (kwMatch) basePath = kwMatch[1];
   else if (!basePath.endsWith('/')) basePath += '/';
 
