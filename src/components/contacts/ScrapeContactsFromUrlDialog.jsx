@@ -49,7 +49,12 @@ export default function ScrapeContactsFromUrlDialog({ open, onOpenChange, firmId
         setSelected(allIds);
       }
     } catch (e) {
-      setError(e.message || "Failed to scrape the URL. The site may be blocking automated access.");
+      const msg = e?.message || "";
+      if (msg.includes("timeout") || msg.includes("Timeout") || msg.includes("502") || msg.includes("aborted")) {
+        setError("The scrape took too long and timed out. Try a more specific page (e.g. a single team page rather than the full site). The site may also be blocking automated access.");
+      } else {
+        setError(msg || "Failed to scrape the URL. The site may be blocking automated access.");
+      }
     } finally {
       setScraping(false);
     }

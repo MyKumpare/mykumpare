@@ -12,9 +12,9 @@ import { assertSafePublicUrl } from '../../shared/urlSafety.ts';
  * review and import.
  */
 
-const TIME_BUDGET_MS = 100_000; // 100s internal budget (proxy limit ~120s)
-const MAX_SUB_PAGES = 5;
-const MAX_BIO_DRILL = 15;
+const TIME_BUDGET_MS = 50_000; // 50s internal budget — stays well under proxy/SDK timeout
+const MAX_SUB_PAGES = 3;
+const MAX_BIO_DRILL = 8;
 const BIO_CONCURRENCY = 4;
 
 // Discover sub-pages (multiple layers) from the main page's internal links.
@@ -55,7 +55,7 @@ For each person, provide:
 The page may be organized in sections (Executive, Investment Team, Research, Operations, etc.). Go through EVERY section and extract EVERY person. If you see 40+ people, return all 40+.
 
 --- PAGE CONTENT ---
-${pageText.substring(0, 50000)}
+${pageText.substring(0, 30000)}
 --- END ---`,
       response_json_schema: {
         type: 'object',
@@ -111,7 +111,7 @@ If this IS a person profile page, extract:
 8. professional_experience: every employer/company mentioned including current firm, with company_name, title, start_year, end_year (empty if current).
 
 --- PAGE CONTENT ---
-${pageText.substring(0, 20000)}
+${pageText.substring(0, 12000)}
 --- END ---`,
       response_json_schema: {
         type: 'object',
