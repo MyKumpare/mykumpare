@@ -17,6 +17,7 @@ import EmployeeStatusChart from "./EmployeeStatusChart";
 import ContactsBulkActionsBar from "./ContactsBulkActionsBar";
 import ContactCompletenessBadge, { getMissingEssentialFields } from "./ContactCompletenessBadge";
 import { useDuplicateReviews } from "./useDuplicateReviews";
+import { isExactMatchGroup } from "./contactDuplicateCheck";
 
 export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership, onProductClick, onFirmClick }) {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -78,6 +79,18 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
       .filter((g) => g.length > 1)
       .filter((g) => !isGroupAccepted(g));
   }, [allFirmContacts, isGroupAccepted]);
+
+  // Split duplicate groups into exact matches (all fields identical — no
+  // user action needed) and review groups (name matches but data differs).
+  const { exactMatchGroups, reviewGroups } = useMemo(() => {
+    const exact = [];
+    const review = [];
+    for (const g of duplicateGroups) {
+      if (isExactMatchGroup(g)) exact.push(g);
+      else review.push(g);
+    }
+    return { exactMatchGroups: exact, reviewGroups: review };
+  }, [duplicateGroups]);
 
   // Only show the most-current (latest updated_date) record per duplicate group;
   // contacts with no first+last name are always shown.
@@ -398,19 +411,67 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
         </div>
       </div>
 
-      {duplicateGroups.length > 0 && (
+      {exactMatchGroups.length > 0 && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <Check className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+            <p className="text-sm font-medium text-emerald-800">
+              {exactMatchGroups.length} exact match{exactMatchGroups.length > 1 ? "es" : ""} detected
+            </p>
+          </div>
+          <p className="text-xs text-emerald-700">
+            These contacts have identical information — no action needed.
+          </p>
+          <div className="space-y-1.5">
+            {exactMatchGroups.map((group, gi) => (
+              <div key={gi} className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-2 space-y-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
+                    <Check className="w-3 h-3" /> Exact Match
+                  </span>
+                  <span className="text-[10px] text-emerald-600">{group.length} identical records</span>
+                </div>
+                {group.map((contact) => (
+                  <div key={contact.id} className="flex items-center justify-between gap-2 bg-white rounded-md border border-emerald-100 px-2.5 py-1.5">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        {contact.photo_url ? (
+                          <img src={contact.photo_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <User className="w-3 h-3 text-emerald-600" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-gray-800 truncate">{formatName(contact)}</p>
+                        <p className="text-[10px] text-gray-500 truncate">
+                          {contact.title || "—"}{contact.email ? ` · ${contact.email}` : ""}
+                        </p>
+                      </div>
+                    </div>
+                    <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs text-emerald-600 hover:bg-emerald-50" onClick={() => handleView(contact)}>
+                      View
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {reviewGroups.length > 0 && (
         <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 space-y-2">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
             <p className="text-sm font-medium text-amber-800">
-              {duplicateGroups.length} duplicate name{duplicateGroups.length > 1 ? "s" : ""} detected
+              {reviewGroups.length} duplicate name{reviewGroups.length > 1 ? "s" : ""} detected
             </p>
           </div>
           <p className="text-xs text-amber-700">
             The following contacts share the same first and last name. Accept to keep both, merge to combine, or delete the duplicate.
           </p>
           <div className="space-y-2 mt-1">
-            {duplicateGroups.map((group, gi) => (
+            {reviewGroups.map((group, gi) => (
               <div key={gi} className="space-y-1 rounded-lg border border-amber-200 bg-amber-50/40 p-2">
                 <div className="space-y-1">
                   {group.map((contact) => (
@@ -526,11 +587,12 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
               return (a.first_name || "").localeCompare(b.first_name || "") || (a.last_name || "").localeCompare(b.last_name || "");
             })
             .map((contact) => {
-              const isDuplicate = duplicateGroups.some((g) => g.some((c) => c.id === contact.id));
+              const isExactMatchContact = exactMatchGroups.some((g) => g.some((c) => c.id === contact.id));
+              const isDuplicate = reviewGroups.some((g) => g.some((c) => c.id === contact.id));
               return (
                 <div
                   key={contact.id}
-                  className={`flex items-center gap-3 p-3 rounded-lg border transition-colors cursor-pointer ${isDuplicate ? "bg-amber-50 border-amber-200 hover:bg-amber-100" : "bg-gray-50 border-gray-200 hover:bg-indigo-50 hover:border-indigo-200"}`}
+                  className={`flex items-center gap-3 p-3 rounded-lg border transition-colors cursor-pointer ${isExactMatchContact ? "bg-emerald-50 border-emerald-200 hover:bg-emerald-100" : isDuplicate ? "bg-amber-50 border-amber-200 hover:bg-amber-100" : "bg-gray-50 border-gray-200 hover:bg-indigo-50 hover:border-indigo-200"}`}
                   onClick={() => handleView(contact)}
                 >
                   <input
@@ -562,6 +624,11 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
                         <span className={`w-1.5 h-1.5 rounded-full ${(contact.contact_status || "Active") === "Inactive" ? "bg-red-500" : "bg-green-500"}`} />
                         {contact.contact_status || "Active"}
                       </span>
+                      {isExactMatchContact && (
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
+                          <Check className="w-3 h-3" /> Exact Match
+                        </span>
+                      )}
                       {isDuplicate && (
                         <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
                           <AlertTriangle className="w-3 h-3" /> Duplicate

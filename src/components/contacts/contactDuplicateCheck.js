@@ -222,3 +222,65 @@ export function findContactsByNormalizedName(newContact, existingContacts) {
       title: c.title || "",
     }));
 }
+
+/**
+ * Build a comparable signature from a contact's meaningful fields.
+ * Two contacts with the same signature are considered exact matches
+ * (all information is identical, not just the name).
+ */
+function contactSignature(c) {
+  const fields = {
+    salutation: c.salutation || "",
+    first_name: (c.first_name || "").toLowerCase().trim(),
+    middle_name: (c.middle_name || "").toLowerCase().trim(),
+    last_name: (c.last_name || "").toLowerCase().trim(),
+    suffix: c.suffix || "",
+    title: c.title || "",
+    designations: [...(c.designations || [])].sort(),
+    email: (c.email || "").toLowerCase().trim(),
+    linkedin_url: c.linkedin_url || "",
+    photo_url: c.photo_url || "",
+    employee_status: c.employee_status || "",
+    contact_status: c.contact_status || "Active",
+    contact_role: c.contact_role || "",
+    contact_type: c.contact_type || "",
+    contact_roles: [...(c.contact_roles || [])].sort(),
+    contact_firm_roles: [...(c.contact_firm_roles || [])].sort(),
+    gender: c.gender || "",
+    ethnicity: [...(c.ethnicity || [])].sort(),
+    veteran_status: c.veteran_status || "",
+    disability_status: c.disability_status || "",
+    biography: c.biography || "",
+    phones: (c.phones || [])
+      .map((p) => [p.country_code || "", p.area_code || "", p.number_mid || "", p.number_last || ""].join(""))
+      .sort(),
+    addresses: (c.addresses || [])
+      .map((a) => [a.country || "", a.state || "", a.city || "", a.postal_code || "", a.address_line1 || "", a.address_line2 || ""].join("|"))
+      .sort(),
+    education: (c.education || [])
+      .map((e) => [e.institution || "", e.degree || "", e.graduation_year || "", e.area_of_specialization || "", ...(e.majors || []).sort(), ...(e.minors || []).sort()].join("|"))
+      .sort(),
+    professional_experience: (c.professional_experience || [])
+      .map((e) => [e.company_name || "", e.title || "", e.start_year || "", e.end_year || ""].join("|"))
+      .sort(),
+    firm_ids: [...(c.firm_ids || [])].sort(),
+    notes: c.notes || "",
+  };
+  return JSON.stringify(fields);
+}
+
+/**
+ * Check if two contacts have identical information (all fields match).
+ */
+export function isExactMatch(a, b) {
+  return contactSignature(a) === contactSignature(b);
+}
+
+/**
+ * Check if all contacts in a group have identical information.
+ */
+export function isExactMatchGroup(group) {
+  if (!group || group.length < 2) return false;
+  const sig = contactSignature(group[0]);
+  return group.every((c) => contactSignature(c) === sig);
+}
