@@ -36,6 +36,7 @@ const COMMON_PATHS = [
   '/staff',
   '/investment-staff',
   '/investment-team',
+  '/investment-team-tab',
   '/investment-professionals',
   '/about/investment-staff',
   '/about/investment-team',
@@ -606,10 +607,10 @@ async function discoverBioUrlByPattern(
   // Find the team/people page base URL from fetched pages.
   const baseCandidates: string[] = [];
   for (const page of pageContents) {
-    if (/\/(people|our-people|team|our-team|leadership|staff|investment-staff|investment-team|investment-professionals)\b/i.test(page.url)) {
+    if (/\/(people|our-people|team|our-team|leadership|staff|investment-staff|investment-team|investment-team-tab|investment-professionals)\b/i.test(page.url)) {
       let base = page.url;
       if (!base.endsWith('/')) base = base + '/';
-      const kwMatch = base.match(/(.*?\/(?:people|our-people|team|our-team|leadership|staff|investment-staff|investment-team|investment-professionals|personnel|professionals|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\/)/i);
+      const kwMatch = base.match(/(.*?\/(?:people|our-people|team|our-team|leadership|staff|investment-staff|investment-team|investment-team-tab|investment-professionals|personnel|professionals|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\/)/i);
       if (kwMatch) {
         baseCandidates.push(kwMatch[1]);
       } else {
@@ -623,7 +624,7 @@ async function discoverBioUrlByPattern(
   if (baseCandidates.length > 0) {
     try {
       const origin = new URL(baseCandidates[0]).origin;
-      for (const kw of ['people', 'our-people', 'team', 'our-team', 'staff', 'investment-staff', 'investment-team', 'investment-professionals', 'leadership']) {
+      for (const kw of ['people', 'our-people', 'team', 'our-team', 'staff', 'investment-staff', 'investment-team', 'investment-team-tab', 'investment-professionals', 'leadership']) {
         const rootCandidate = origin + '/' + kw + '/';
         if (!baseCandidates.includes(rootCandidate)) baseCandidates.push(rootCandidate);
       }
@@ -802,7 +803,7 @@ async function discoverProfileUrlsFromSitemap(
     resolveUrl(website, '/our-team-sitemap.xml'),
   ];
 
-  const profilePathRegex = /\/(?:our-team|team|people|our-people|staff|investment-staff|investment-team|investment-professionals|leadership|professionals|personnel)\/[^/]+\/?$/i;
+  const profilePathRegex = /\/(?:our-team|team|people|our-people|staff|investment-staff|investment-team|investment-team-tab|investment-professionals|leadership|professionals|personnel)\/[^/]+\/?$/i;
 
   const fetchSitemap = async (url: string, depth = 0): Promise<void> => {
     if (depth > 2) return; // limit recursion for sitemap indexes
@@ -903,7 +904,7 @@ async function discoverAndExtractMissingPeople(
       try { linkHost = new URL(url).host.toLowerCase(); } catch { /* ignore */ }
       if (!linkHost || linkHost !== baseHost) continue;
       // Match individual profile pages: /<team-keyword>/<slug>/ (2+ segments)
-      if (/\/(?:our-team|team|people|our-people|staff|investment-staff|investment-team|investment-professionals|leadership|professionals|personnel)\/[^/]+\/?$/i.test(url)) {
+      if (/\/(?:our-team|team|people|our-people|staff|investment-staff|investment-team|investment-team-tab|investment-professionals|leadership|professionals|personnel)\/[^/]+\/?$/i.test(url)) {
         const profileSlug = (url.match(/\/([^/]+)\/?$/) || ['', ''])[1];
         if (isLikelyPersonSlug(profileSlug)) {
           profileUrls.add(url);
@@ -1446,7 +1447,7 @@ async function fetchPagesViaWayback(
         let linkHost = '';
         try { linkHost = new URL(originalUrl).host.toLowerCase(); } catch { /* ignore */ }
         if (!linkHost || linkHost !== baseHost) continue;
-        if (/\/(people|our-people|team|our-team|leadership|staff|investment-staff|investment-team|investment-professionals|personnel|professionals|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b/i.test(originalUrl)) {
+        if (/\/(people|our-people|team|our-team|leadership|staff|investment-staff|investment-team|investment-team-tab|investment-professionals|personnel|professionals|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b/i.test(originalUrl)) {
           if (originalUrl !== website) found.add(originalUrl);
         }
       }
@@ -1466,7 +1467,7 @@ async function fetchPagesViaWayback(
       [...pass1Urls].slice(0, 12).map(async (originalUrl) => {
         const text = await fetchViaWayback(originalUrl);
         if (!text || text.length < 100) return null;
-        const isPeoplePage = /\/(people|our-people|team|our-team|leadership|investment-staff|investment-team|investment-professionals|board|trustees|governance|administration|administrators|executive|executives|consultants|directors|about-us|about)\b/i.test(originalUrl);
+        const isPeoplePage = /\/(people|our-people|team|our-team|leadership|investment-staff|investment-team|investment-team-tab|investment-professionals|board|trustees|governance|administration|administrators|executive|executives|consultants|directors|about-us|about)\b/i.test(originalUrl);
         const limit = isPeoplePage ? 80000 : 12000;
         return { url: originalUrl, text: text.substring(0, limit) };
       }),
@@ -1886,7 +1887,7 @@ Deno.serve(async (req) => {
         // Wayback Machine for every 404 wastes time and triggers 429 rate limits.
       }
       if (text && text.length > 100) {
-        const isPeoplePage = /\/(people|our-people|team|our-team|leadership|staff|investment-staff|investment-team|investment-professionals|about-us|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b/i.test(path);
+        const isPeoplePage = /\/(people|our-people|team|our-team|leadership|staff|investment-staff|investment-team|investment-team-tab|investment-professionals|about-us|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b/i.test(path);
         const limit = isPeoplePage ? 80000 : 12000;
         return { url: fullUrl, text: text.substring(0, limit) };
       }
@@ -1911,7 +1912,7 @@ Deno.serve(async (req) => {
           let linkHost = '';
           try { linkHost = new URL(url).host.toLowerCase(); } catch { /* ignore */ }
           if (!linkHost || linkHost !== baseHost) continue;
-          if (/\/(people|our-people|team|our-team|leadership|staff|investment-staff|investment-team|investment-professionals|personnel|professionals|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b/i.test(url)) {
+          if (/\/(people|our-people|team|our-team|leadership|staff|investment-staff|investment-team|investment-team-tab|investment-professionals|personnel|professionals|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b/i.test(url)) {
             if (url !== website) discovered.add(url);
           }
         }
@@ -1920,7 +1921,7 @@ Deno.serve(async (req) => {
       // look like team pages from any internal links (catches /about-xponance/people/
       // even when the full URL doesn't match the keyword regex).
       for (const text of allText) {
-        const pathRegex = /\[LINK:\s*https?:\/\/[^^\]]*?\/[^[\]]*?(people|our-people|team|our-team|leadership|investment-staff|investment-team|investment-professionals|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b[^\]]*\]/gi;
+        const pathRegex = /\[LINK:\s*https?:\/\/[^^\]]*?\/[^[\]]*?(people|our-people|team|our-team|leadership|investment-staff|investment-team|investment-team-tab|investment-professionals|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b[^\]]*\]/gi;
         let pmatch: RegExpExecArray | null;
         while ((pmatch = pathRegex.exec(text)) !== null) {
           const url = pmatch[0].replace(/\[LINK:\s*/, '').replace(/\]$/, '').trim();
@@ -1995,8 +1996,8 @@ Deno.serve(async (req) => {
     // Sort so people/team pages come first (most important for contact extraction),
     // keeping homepage at the front.
     subPages.sort((a, b) => {
-      const aPeople = /\/(people|our-people|team|our-team|leadership|staff|investment-staff|investment-team|investment-professionals|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b/i.test(a.url) ? 0 : 1;
-      const bPeople = /\/(people|our-people|team|our-team|leadership|staff|investment-staff|investment-team|investment-professionals|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b/i.test(b.url) ? 0 : 1;
+      const aPeople = /\/(people|our-people|team|our-team|leadership|staff|investment-staff|investment-team|investment-team-tab|investment-professionals|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b/i.test(a.url) ? 0 : 1;
+      const bPeople = /\/(people|our-people|team|our-team|leadership|staff|investment-staff|investment-team|investment-team-tab|investment-professionals|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b/i.test(b.url) ? 0 : 1;
       return aPeople - bPeople;
     });
     for (const page of subPages) {
@@ -2019,7 +2020,7 @@ Deno.serve(async (req) => {
     // not already fetched) rather than replacing them, so we don't lose any
     // content the direct fetch successfully retrieved.
     const peoplePageCount = subPages.filter((p) =>
-      /\/(people|our-people|team|our-team|leadership|staff|investment-staff|investment-team|investment-professionals|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b/i.test(p.url)
+      /\/(people|our-people|team|our-team|leadership|staff|investment-staff|investment-team|investment-team-tab|investment-professionals|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b/i.test(p.url)
     ).length;
 
     // LLM-powered sub-page discovery: use the LLM web search to find
@@ -2039,7 +2040,7 @@ Deno.serve(async (req) => {
               text = await fetchViaWayback(url);
             }
             if (text && text.length > 100) {
-              const isPeoplePage = /\/(people|our-people|team|our-team|leadership|staff|investment-staff|investment-team|investment-professionals|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b/i.test(url);
+              const isPeoplePage = /\/(people|our-people|team|our-team|leadership|staff|investment-staff|investment-team|investment-team-tab|investment-professionals|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b/i.test(url);
               const limit = isPeoplePage ? 80000 : 12000;
               return { url, text: text.substring(0, limit) };
             }
@@ -2108,8 +2109,8 @@ Deno.serve(async (req) => {
 
       // Sort: people/team pages first
       rest.sort((a, b) => {
-        const aPeople = /\/(people|our-people|team|our-team|leadership|staff|investment-staff|investment-team|investment-professionals|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b/i.test(a.url) ? 0 : 1;
-        const bPeople = /\/(people|our-people|team|our-team|leadership|staff|investment-staff|investment-team|investment-professionals|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b/i.test(b.url) ? 0 : 1;
+        const aPeople = /\/(people|our-people|team|our-team|leadership|staff|investment-staff|investment-team|investment-team-tab|investment-professionals|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b/i.test(a.url) ? 0 : 1;
+        const bPeople = /\/(people|our-people|team|our-team|leadership|staff|investment-staff|investment-team|investment-team-tab|investment-professionals|board|trustees|governance|administration|administrators|executive|executives|consultants|directors)\b/i.test(b.url) ? 0 : 1;
         return aPeople - bPeople;
       });
       pageContents.length = 0;
