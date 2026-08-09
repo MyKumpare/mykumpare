@@ -103,6 +103,7 @@ export default function ScrapeContactsFromUrlDialog({ open, onOpenChange, firmId
           bio_url: c.bio_url || "",
           biography: c.biography || "",
           email: c.email || "",
+          linkedin_url: c.linkedin_url || "",
           phones: c.phones || [],
           designations: c.designations || [],
           education: c.education || [],
@@ -204,7 +205,7 @@ export default function ScrapeContactsFromUrlDialog({ open, onOpenChange, firmId
               {(results.contacts || []).map((contact, idx) => {
                 const isExpanded = expanded.has(idx);
                 const isSelected = selected.has(idx);
-                const hasDetails = contact.drilled || contact.biography || contact.email || (contact.education && contact.education.length > 0) || (contact.professional_experience && contact.professional_experience.length > 0);
+                const hasDetails = contact.drilled || contact.biography || contact.email || contact.linkedin_url || (contact.education && contact.education.length > 0) || (contact.professional_experience && contact.professional_experience.length > 0);
                 return (
                   <div key={idx} className={`rounded-lg border ${isSelected ? "border-indigo-300 bg-indigo-50/30" : "border-gray-200 bg-white"}`}>
                     <div className="flex items-start gap-2 p-2.5">
@@ -253,6 +254,14 @@ export default function ScrapeContactsFromUrlDialog({ open, onOpenChange, firmId
                           <div className="mt-2 ml-10 space-y-1.5 text-xs">
                             {contact.email && (
                               <p className="text-gray-600"><span className="font-medium">Email:</span> {contact.email}</p>
+                            )}
+                            {contact.linkedin_url && (
+                              <p className="text-gray-600">
+                                <span className="font-medium">LinkedIn:</span>{" "}
+                                <a href={contact.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline truncate inline-block max-w-[300px] align-bottom">
+                                  {contact.linkedin_url}
+                                </a>
+                              </p>
                             )}
                             {contact.phones?.length > 0 && (
                               <p className="text-gray-600">

@@ -98,21 +98,28 @@ async function extractContactDetails(base44: any, personName: string, bioUrl: st
 
 Person name: "${personName}"
 
-FIRST, determine if this page is a person profile/biography page. If it is NOT (e.g. it's a document, report, article, or blog post), return empty for ALL fields.
+FIRST, determine if this page is a person profile/biography page. If it is NOT (e.g. it's a document, report, article, blog post, research paper, strategy overview, or market commentary), return empty for ALL fields and empty arrays — do NOT try to extract a person from a document title or heading.
 
-If this IS a person profile page, extract:
-1. biography: the COMPLETE biography text. Copy VERBATIM — do not summarize.
-2. title: their job title/role.
+If this IS a person profile page, locate the section describing THIS person (often near their name, under a heading like "Biography", "About", "Profile", or "Overview").
+IMPORTANT: Many sites use collapsible/accordion sections for detailed information. Look for sections labeled "PROFESSIONAL EXPERIENCE", "EDUCATION", "CREDENTIALS", "EDUCATION AND CREDENTIALS", "EDUCATION, CREDENTIALS AND MEMBERSHIPS", "SERVICE AREAS", or similar. The content of these sections IS present in the page text even though they appear collapsed on the visual page — extract ALL information from them.
+
+EXTRACT THESE FIELDS:
+
+1. biography: the COMPLETE biography text for this person. Copy VERBATIM — do not summarize, paraphrase, or truncate. Include EVERY paragraph.
+2. title: their job title/role as it appears on the page.
 3. email: any email address listed for this person.
-4. phone: any phone number (include area code).
-5. photo_url: the URL of their profile photo (from [IMAGE: ...] marker closest to their name).
-6. designations: professional designations/certifications (e.g. CFA, CFP, CPA, MBA, PhD) as an array of strings.
-7. education: every school/college/university attended as a student, with institution, degree, area_of_specialization, majors (array), graduation_year.
-8. professional_experience: every employer/company mentioned including current firm, with company_name, title, start_year, end_year (empty if current).
+4. phone: any phone number listed for this person (include area code).
+5. photo_url: the URL of their profile photo. Images appear as [IMAGE: alt="..." src="https://..."] markers — find the one closest to the person's name.
+6. linkedin_url: the person's LinkedIn profile URL. LinkedIn links appear as [LINK: https://www.linkedin.com/in/...] or [LINK: https://linkedin.com/in/...] markers in the page text. Extract the full URL. If none found, leave empty.
+7. designations: any professional designations/certifications (e.g. "CFA", "CFP", "CPA", "MBA", "PhD", "Chartered Financial Analyst"). Return as an array of strings.
+8. education: every school/college/university the person attended as a student, with institution, degree, area_of_specialization, majors (array), graduation_year. Only include institutions they attended as a student, NOT firms where they worked.
+9. professional_experience: every employer/company mentioned INCLUDING their current firm, with company_name, title, start_year, end_year (leave end_year empty if current employer). Order from most recent to oldest.
 
 --- PAGE CONTENT ---
 ${pageText.substring(0, 12000)}
---- END ---`,
+--- END PAGE CONTENT ---
+
+Return a JSON object with all fields above. Leave fields empty or return empty arrays if not found.`,
       response_json_schema: {
         type: 'object',
         properties: {
@@ -121,6 +128,7 @@ ${pageText.substring(0, 12000)}
           email: { type: 'string' },
           phone: { type: 'string' },
           photo_url: { type: 'string' },
+          linkedin_url: { type: 'string' },
           designations: { type: 'array', items: { type: 'string' } },
           education: {
             type: 'array',
@@ -156,6 +164,7 @@ ${pageText.substring(0, 12000)}
       email: cleanStr(res?.email),
       phone: cleanStr(res?.phone),
       photo_url: cleanStr(res?.photo_url),
+      linkedin_url: cleanStr(res?.linkedin_url),
       designations: (Array.isArray(res?.designations) ? res.designations : []).map(cleanStr).filter(Boolean),
       education: (Array.isArray(res?.education) ? res.education : []).filter((e: any) => e && (e.institution || e.degree)),
       professional_experience: (Array.isArray(res?.professional_experience) ? res.professional_experience : []).filter((e: any) => e && (e.company_name || e.title)),
@@ -230,6 +239,7 @@ Deno.serve(async (req) => {
       bio_url: p.bio_url || '',
       biography: '',
       email: '',
+      linkedin_url: '',
       phones: [] as any[],
       designations: [] as string[],
       education: [] as any[],
@@ -257,6 +267,7 @@ Deno.serve(async (req) => {
         if (details.biography) c.biography = details.biography;
         if (details.title) c.title = details.title;
         if (details.email) c.email = details.email;
+        if (details.linkedin_url) c.linkedin_url = details.linkedin_url;
         if (details.photo_url && !c.photo_url) c.photo_url = details.photo_url;
         if (details.designations.length > 0) c.designations = details.designations;
         if (details.phone) {
