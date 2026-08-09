@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
-import { Loader2, Search, Download, Link2, ChevronDown, ChevronRight, User, ExternalLink } from "lucide-react";
+import { Loader2, Search, Download, Link2, ChevronDown, ChevronRight, User, ExternalLink, CheckCircle2, ArrowLeft, AlertCircle } from "lucide-react";
 
 export default function ScrapeContactsFromUrlDialog({ open, onOpenChange, firmId, firmName }) {
   const [url, setUrl] = useState("");
@@ -19,6 +19,7 @@ export default function ScrapeContactsFromUrlDialog({ open, onOpenChange, firmId
   const [error, setError] = useState("");
   const [selected, setSelected] = useState(new Set());
   const [expanded, setExpanded] = useState(new Set());
+  const [step, setStep] = useState("review"); // "review" | "confirm"
 
   const queryClient = useQueryClient();
 
@@ -28,6 +29,7 @@ export default function ScrapeContactsFromUrlDialog({ open, onOpenChange, firmId
     setError("");
     setSelected(new Set());
     setExpanded(new Set());
+    setStep("review");
   };
 
   const handleScrape = async () => {
@@ -86,6 +88,14 @@ export default function ScrapeContactsFromUrlDialog({ open, onOpenChange, firmId
   };
 
   const handleImport = async () => {
+    const contacts = results?.contacts || [];
+    const toImport = contacts.filter((_, i) => selected.has(i));
+    if (toImport.length === 0) return;
+
+    setStep("confirm");
+  };
+
+  const handleConfirmSave = async () => {
     const contacts = results?.contacts || [];
     const toImport = contacts.filter((_, i) => selected.has(i));
     if (toImport.length === 0) return;
@@ -184,8 +194,8 @@ export default function ScrapeContactsFromUrlDialog({ open, onOpenChange, firmId
             </div>
           )}
 
-          {/* Results */}
-          {results && !scraping && (
+          {/* Results — Review step */}
+          {results && !scraping && step === "review" && (
             <div className="flex-1 overflow-y-auto space-y-2">
               <div className="flex items-center justify-between sticky top-0 bg-background py-1 z-10">
                 <div className="text-sm text-gray-600">
@@ -307,23 +317,134 @@ export default function ScrapeContactsFromUrlDialog({ open, onOpenChange, firmId
               })}
             </div>
           )}
+
+          {/* Confirmation step */}
+          {results && !scraping && step === "confirm" && (() => {
+            const contacts = results.contacts || [];
+            const toImport = contacts.filter((_, i) => selected.has(i));
+            const withEmail = toImport.filter((c) => c.email).length;
+            const withPhone = toImport.filter((c) => c.phones?.length > 0).length;
+            const withLinkedIn = toImport.filter((c) => c.linkedin_url).length;
+            const withBio = toImport.filter((c) => c.biography).length;
+            const withEducation = toImport.filter((c) => c.education?.length > 0).length;
+            const withExperience = toImport.filter((c) => c.professional_experience?.length > 0).length;
+            const withDesignations = toImport.filter((c) => c.designations?.length > 0).length;
+            const withPhoto = toImport.filter((c) => c.photo_url).length;
+            return (
+              <div className="flex-1 overflow-y-auto space-y-4">
+                <div className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5 text-indigo-600 flex-shrink-0" />
+                    <p className="text-sm font-medium text-indigo-900">
+                      Please review the summary below before saving.
+                    </p>
+                  </div>
+                  <p className="text-sm text-indigo-700">
+                    You are about to add <span className="font-semibold">{toImport.length}</span> new contact{toImport.length !== 1 ? "s" : ""}
+                    {firmName ? <> to <span className="font-semibold">{firmName}</span></> : ""}.
+                    This action cannot be undone.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-lg border border-gray-200 bg-white p-3">
+                    <p className="text-xs text-gray-500 mb-1">Contacts to add</p>
+                    <p className="text-2xl font-semibold text-gray-900">{toImport.length}</p>
+                  </div>
+                  <div className="rounded-lg border border-gray-200 bg-white p-3">
+                    <p className="text-xs text-gray-500 mb-1">Source URL</p>
+                    <p className="text-xs font-medium text-gray-900 truncate" title={results.url}>{results.url}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Data coverage</p>
+                  <div className="space-y-1.5">
+                    {[
+                      { label: "Email", count: withEmail, total: toImport.length },
+                      { label: "Phone", count: withPhone, total: toImport.length },
+                      { label: "LinkedIn URL", count: withLinkedIn, total: toImport.length },
+                      { label: "Biography", count: withBio, total: toImport.length },
+                      { label: "Designations", count: withDesignations, total: toImport.length },
+                      { label: "Education", count: withEducation, total: toImport.length },
+                      { label: "Experience", count: withExperience, total: toImport.length },
+                      { label: "Photo", count: withPhoto, total: toImport.length },
+                    ].map((row) => (
+                      <div key={row.label} className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">{row.label}</span>
+                        <span className={`font-medium ${row.count === row.total ? "text-green-600" : row.count > 0 ? "text-gray-900" : "text-gray-400"}`}>
+                          {row.count} / {row.total}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Contacts</p>
+                  <div className="space-y-1.5">
+                    {toImport.map((c, i) => (
+                      <div key={i} className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2">
+                        <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                          {c.photo_url ? (
+                            <img src={c.photo_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <User className="w-3.5 h-3.5 text-gray-400" />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-gray-900 truncate">{c.first_name} {c.last_name}</p>
+                          <p className="text-xs text-gray-500 truncate">{c.title || "—"}</p>
+                        </div>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          {c.email && <span className="text-xs text-green-600" title="Has email">✓</span>}
+                          {c.linkedin_url && <span className="text-xs text-blue-600" title="Has LinkedIn">in</span>}
+                          {c.biography && <span className="text-xs text-gray-400" title="Has bio">bio</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         <DialogFooter className="flex items-center justify-between">
-          <div className="text-sm text-gray-500">
-            {selected.size > 0 && `${selected.size} selected for import`}
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleClose} disabled={scraping || importing}>
-              Cancel
-            </Button>
-            {results && (
-              <Button onClick={handleImport} disabled={importing || selected.size === 0} className="gap-2">
-                {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                {importing ? "Importing..." : `Import ${selected.size > 0 ? selected.size : ""} Contact${selected.size !== 1 ? "s" : ""}`}
-              </Button>
-            )}
-          </div>
+          {step === "review" ? (
+            <>
+              <div className="text-sm text-gray-500">
+                {selected.size > 0 && `${selected.size} selected for import`}
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={handleClose} disabled={scraping || importing}>
+                  Cancel
+                </Button>
+                {results && (
+                  <Button onClick={handleImport} disabled={importing || selected.size === 0} className="gap-2">
+                    <CheckCircle2 className="w-4 h-4" />
+                    Review & Confirm ({selected.size > 0 ? selected.size : 0})
+                  </Button>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="text-sm text-gray-500">
+                {importing ? "Saving contacts..." : "Ready to save"}
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setStep("review")} disabled={importing} className="gap-2">
+                  <ArrowLeft className="w-4 h-4" />
+                  Back
+                </Button>
+                <Button onClick={handleConfirmSave} disabled={importing || selected.size === 0} className="gap-2">
+                  {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                  {importing ? "Saving..." : `Confirm & Save ${selected.size > 0 ? selected.size : ""} Contact${selected.size !== 1 ? "s" : ""}`}
+                </Button>
+              </div>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
