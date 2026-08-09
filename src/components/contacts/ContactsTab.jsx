@@ -2,13 +2,14 @@ import React, { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, User, AlertTriangle, Trash2, Check, ArrowRightLeft, Loader2, Eye, EyeOff, Network as NetworkIcon, List as ListIcon } from "lucide-react";
+import { Plus, User, AlertTriangle, Trash2, Check, ArrowRightLeft, Loader2, Eye, EyeOff, Network as NetworkIcon, List as ListIcon, Link2 } from "lucide-react";
 import TeamHierarchyView from "../firms/TeamHierarchyView";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/use-toast";
 import AddContactDialog from "./AddContactDialog";
+import ScrapeContactsFromUrlDialog from "./ScrapeContactsFromUrlDialog";
 import DeleteContactConfirmDialog from "./DeleteContactConfirmDialog";
 import ContactsTabFilters, { filterContacts } from "./ContactsTabFilters";
 import MergeDuplicateContactsDialog from "./MergeDuplicateContactsDialog";
@@ -31,6 +32,7 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [bulkBusy, setBulkBusy] = useState(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [scrapeOpen, setScrapeOpen] = useState(false);
 
   const handleToggleFilter = (fieldKey, value) => {
     setFilterSelected((prev) => {
@@ -355,16 +357,28 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
             </div>
           )}
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs ml-auto"
-          onClick={handleAdd}
-        >
-          <Plus className="w-3.5 h-3.5" />
-          Add Contact
-        </Button>
+        <div className="flex items-center gap-1 ml-auto">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs"
+            onClick={() => setScrapeOpen(true)}
+          >
+            <Link2 className="w-3.5 h-3.5" />
+            Scrape from URL
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs"
+            onClick={handleAdd}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add Contact
+          </Button>
+        </div>
       </div>
 
       {duplicateGroups.length > 0 && (
@@ -629,6 +643,13 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
           </DialogContent>
         </Dialog>
       )}
+
+      <ScrapeContactsFromUrlDialog
+        open={scrapeOpen}
+        onOpenChange={setScrapeOpen}
+        firmId={firmId}
+        firmName={firmName}
+      />
     </div>
   );
 }
