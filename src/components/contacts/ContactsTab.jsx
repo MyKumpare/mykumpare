@@ -15,6 +15,7 @@ import ContactsTabFilters, { filterContacts } from "./ContactsTabFilters";
 import MergeDuplicateContactsDialog from "./MergeDuplicateContactsDialog";
 import EmployeeStatusChart from "./EmployeeStatusChart";
 import ContactsBulkActionsBar from "./ContactsBulkActionsBar";
+import ContactCompletenessBadge, { getMissingEssentialFields } from "./ContactCompletenessBadge";
 import { useDuplicateReviews } from "./useDuplicateReviews";
 
 export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership, onProductClick, onFirmClick }) {
@@ -117,6 +118,13 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
     }
     return { total: firmContacts.length, employees, nonEmployees, unclassified, active, inactive };
   }, [firmContacts]);
+
+  // Count contacts missing essential details (email, title) — surfaces
+  // incomplete records after scraping or manual entry.
+  const incompleteCount = useMemo(
+    () => firmContacts.filter((c) => getMissingEssentialFields(c).length > 0).length,
+    [firmContacts]
+  );
 
   // Clicking a chart legend label toggles a filter on the corresponding field
   // (employee_status, gender, ethnicity, veteran_status, or disability_status depending on the active chart view).
@@ -354,6 +362,15 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
                 <User className="w-3 h-3" />
                 {contactCounts.total} total
               </span>
+              {incompleteCount > 0 && (
+                <span
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-amber-100 text-amber-700 font-medium"
+                  title="Contacts missing email or title"
+                >
+                  <AlertTriangle className="w-3 h-3" />
+                  {incompleteCount} incomplete
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -550,6 +567,7 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
                           <AlertTriangle className="w-3 h-3" /> Duplicate
                         </span>
                       )}
+                      <ContactCompletenessBadge contact={contact} />
                     </div>
                     {contact.title && (
                       <div className="text-xs text-gray-500">{contact.title}</div>
