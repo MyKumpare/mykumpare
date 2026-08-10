@@ -9,9 +9,10 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
-  ChevronLeft, ChevronRight, CalendarDays, ArrowLeft,
+  ChevronLeft, ChevronRight, CalendarDays, ArrowLeft, Filter,
 } from "lucide-react";
 import CalendarDayPanel, { TYPE_CONFIG } from "@/components/activity/CalendarDayPanel";
+import CalendarFilterSidebar from "@/components/activity/CalendarFilterSidebar";
 import OutlookSyncButton from "@/components/activity/OutlookSyncButton";
 import { lazyDialog } from "@/components/common/lazyDialog";
 
@@ -35,6 +36,9 @@ export default function ActivityCalendar() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [typeFilter, setTypeFilter] = useState("all");
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedFirmTypes, setSelectedFirmTypes] = useState(new Set());
+  const [selectedTaskStatuses, setSelectedTaskStatuses] = useState(new Set());
   const [viewingActivity, setViewingActivity] = useState(null);
   const [viewingTask, setViewingTask] = useState(null);
 
@@ -65,19 +69,31 @@ export default function ActivityCalendar() {
     return map;
   }, [activities, tasks]);
 
-  // Apply type filter
+  // Apply type filter + sidebar filters
   const filteredItemsByDate = useMemo(() => {
-    if (typeFilter === "all") return itemsByDate;
+    const hasFirmTypeFilter = selectedFirmTypes.size > 0;
+    const hasStatusFilter = selectedTaskStatuses.size > 0;
+    if (typeFilter === "all" && !hasFirmTypeFilter && !hasStatusFilter) return itemsByDate;
     const filtered = new Map();
     itemsByDate.forEach((items, date) => {
       const kept = items.filter((item) => {
-        if (typeFilter === "Task") return item._kind === "task";
-        return item._kind === "activity" && item.activity_type === typeFilter;
+        if (typeFilter === "Task") {
+          if (item._kind !== "task") return false;
+        } else if (typeFilter !== "all") {
+          if (item._kind !== "activity" || item.activity_type !== typeFilter) return false;
+        }
+        if (hasFirmTypeFilter && item._kind === "activity") {
+          if (!selectedFirmTypes.has(item.firm_type)) return false;
+        }
+        if (hasStatusFilter && item._kind === "task") {
+          if (!selectedTaskStatuses.has(item.status)) return false;
+        }
+        return true;
       });
       if (kept.length > 0) filtered.set(date, kept);
     });
     return filtered;
-  }, [itemsByDate, typeFilter]);
+  }, [itemsByDate, typeFilter, selectedFirmTypes, selectedTaskStatuses]);
 
   // Build the 6-week calendar grid
   const days = useMemo(() => {
@@ -125,6 +141,31 @@ export default function ActivityCalendar() {
   const handleDayClick = (day) => {
     setSelectedDate(day);
   };
+
+  const handleToggleFirmType = (type) => {
+    setSelectedFirmTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
+      return next;
+    });
+  };
+
+  const handleToggleTaskStatus = (status) => {
+    setSelectedTaskStatuses((prev) => {
+      const next = new Set(prev);
+      if (next.has(status)) next.delete(status);
+      else next.add(status);
+      return next;
+    });
+  };
+
+  const handleClearAllFilters = () => {
+    setSelectedFirmTypes(new Set());
+    setSelectedTaskStatuses(new Set());
+  };
+
+  const hasActiveFilters = selectedFirmTypes.size > 0 || selectedTaskStatuses.size > 0;
 
   const handleNavigateToContact = (contact) => {
     navigate("/");
@@ -174,10 +215,27 @@ export default function ActivityCalendar() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
+      <div className={`mx-auto px-4 sm:px-6 py-4 ${showFilters ? "max-w-7xl" : "max-w-6xl"}`}>
         {/* Filter pills + month summary */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-1.5 items-center">
+            <button
+              onClick={() => setShowFilters((v) => !v)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors flex items-center gap-1.5 ${
+                showFilters || hasActiveFilters
+                  ? "bg-indigo-600 text-white border-indigo-600"
+                  : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              <Filter className="w-3.5 h-3.5" />
+              Filters
+              {hasActiveFilters && (
+                <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-white/20 text-[10px] font-semibold">
+                  {selectedFirmTypes.size + selectedTaskStatuses.size}
+                </span>
+              )}
+            </button>
+            <span className="w-px h-5 bg-gray-200" />
             {FILTERS.map((f) => {
               const cfg = f.key === "all" ? null : TYPE_CONFIG[f.key];
               const active = typeFilter === f.key;
@@ -205,7 +263,19 @@ export default function ActivityCalendar() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className={`grid grid-cols-1 gap-4 ${showFilters ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
+          {showFilters && (
+            <div className="lg:col-span-1">
+              <CalendarFilterSidebar
+                selectedFirmTypes={selectedFirmTypes}
+                selectedTaskStatuses={selectedTaskStatuses}
+                onToggleFirmType={handleToggleFirmType}
+                onToggleTaskStatus={handleToggleTaskStatus}
+                onClearAll={handleClearAllFilters}
+                hasActiveFilters={hasActiveFilters}
+              />
+            </div>
+          )}
           {/* Calendar grid */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
