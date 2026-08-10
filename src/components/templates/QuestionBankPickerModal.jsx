@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Search, Check, Plus, AlertTriangle, X, Library } from "lucide-react";
+import { Search, Check, Plus, AlertTriangle, X, Library, Tag } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { findQuestionDuplicate } from "./questionBankSimilarity";
 import { toast } from "@/components/ui/use-toast";
@@ -38,6 +38,46 @@ export default function QuestionBankPickerModal({ open, onClose, stages = [], on
   const [newCategories, setNewCategories] = useState([]);
   const [categoryInput, setCategoryInput] = useState("");
   const [dupMatch, setDupMatch] = useState(null);
+
+  // Inline tag editing for existing questions
+  const [editingId, setEditingId] = useState(null);
+  const [editCategories, setEditCategories] = useState([]);
+  const [editCategoryInput, setEditCategoryInput] = useState("");
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.QuestionBank.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["question_bank"] });
+    },
+  });
+
+  const startEditTags = (q) => {
+    setEditingId(q.id);
+    setEditCategories([...(q.categories || [])]);
+    setEditCategoryInput("");
+  };
+
+  const addEditCategoryTag = (raw) => {
+    const c = (raw || "").trim();
+    if (!c) return;
+    if (!editCategories.includes(c)) setEditCategories([...editCategories, c]);
+    setEditCategoryInput("");
+  };
+
+  const saveEditTags = (q) => {
+    updateMutation.mutate(
+      { id: q.id, data: { categories: editCategories } },
+      {
+        onSuccess: () => {
+          toast({ title: "Tags updated", description: `Categories saved for this question.` });
+          setEditingId(null);
+        },
+        onError: (err) => {
+          toast({ title: "Failed to update tags", description: err?.message || "Please try again.", variant: "destructive" });
+        },
+      }
+    );
+  };
 
   const { data: questions = [] } = useQuery({
     queryKey: ["question_bank"],
@@ -171,27 +211,76 @@ export default function QuestionBankPickerModal({ open, onClose, stages = [], on
             ) : (
               filtered.map((q) => {
                 const isSel = selected.includes(q.id);
+                const isEditing = editingId === q.id;
                 return (
-                  <button
+                  <div
                     key={q.id}
-                    type="button"
-                    onClick={() => toggleSelect(q.id)}
-                    className={`flex items-start gap-2 w-full text-left px-3 py-2 border-b last:border-b-0 ${isSel ? "bg-cyan-50" : "hover:bg-gray-50"}`}
+                    className={`border-b last:border-b-0 ${isSel ? "bg-cyan-50" : "hover:bg-gray-50"}`}
                   >
-                    <div className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center shrink-0 ${isSel ? "bg-cyan-600 border-cyan-600" : "border-gray-300"}`}>
-                      {isSel && <Check className="w-3 h-3 text-white" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-gray-800">{q.question_text}</p>
-                      {(q.categories || []).length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {(q.categories || []).map((c) => (
-                            <span key={c} className="text-[9px] px-1 py-0.5 rounded bg-gray-100 text-gray-500">{c}</span>
-                          ))}
+                    <div className="flex items-start gap-2 w-full text-left px-3 py-2">
+                      <button
+                        type="button"
+                        onClick={() => toggleSelect(q.id)}
+                        className="flex items-start gap-2 w-full text-left"
+                      >
+                        <div className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center shrink-0 ${isSel ? "bg-cyan-600 border-cyan-600" : "border-gray-300"}`}>
+                          {isSel && <Check className="w-3 h-3 text-white" />}
                         </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-gray-800">{q.question_text}</p>
+                          {!isEditing && (q.categories || []).length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {(q.categories || []).map((c) => (
+                                <span key={c} className="text-[9px] px-1 py-0.5 rounded bg-gray-100 text-gray-500">{c}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                      {!isEditing && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); startEditTags(q); }}
+                          className="shrink-0 mt-0.5 p-1 rounded text-gray-400 hover:text-cyan-600 hover:bg-cyan-50"
+                          title="Edit tags"
+                        >
+                          <Tag className="w-3 h-3" />
+                        </button>
                       )}
                     </div>
-                  </button>
+                    {isEditing && (
+                      <div className="px-3 pb-2.5 space-y-1.5">
+                        <div className="flex flex-wrap gap-1">
+                          {editCategories.map((c) => (
+                            <Badge key={c} variant="secondary" className="gap-1 text-[10px]">
+                              {c}
+                              <button type="button" onClick={() => setEditCategories(editCategories.filter((x) => x !== c))}>
+                                <X className="w-2.5 h-2.5" />
+                              </button>
+                            </Badge>
+                          ))}
+                          {editCategories.length === 0 && (
+                            <span className="text-[10px] text-gray-400">No tags yet — add one below.</span>
+                          )}
+                        </div>
+                        <div className="flex gap-1.5">
+                          <Input
+                            value={editCategoryInput}
+                            onChange={(e) => setEditCategoryInput(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addEditCategoryTag(editCategoryInput); } }}
+                            placeholder="Add tag (press Enter)..."
+                            className="h-7 text-xs flex-1"
+                          />
+                          <Button type="button" size="sm" className="h-7 text-xs" disabled={updateMutation.isPending} onClick={() => saveEditTags(q)}>
+                            Save
+                          </Button>
+                          <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => setEditingId(null)}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 );
               })
             )}
