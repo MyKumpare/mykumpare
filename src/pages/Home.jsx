@@ -574,7 +574,6 @@ export default function Home() {
     { label: "Templates", icon: FileText, ref: null, color: "text-cyan-600", activeBg: "bg-cyan-50", onClick: () => setTemplatesPickerOpen(true) },
     { label: "Map Search", icon: MapPin, ref: null, color: "text-rose-600", activeBg: "bg-rose-50", onClick: () => setMapSearchOpen(true) },
     { label: "Ext Portal", icon: ExternalLink, ref: null, color: "text-teal-600", activeBg: "bg-teal-50", onClick: () => setExternalPortalOpen(true) },
-    { label: "Q Review", icon: ClipboardList, ref: null, color: "text-violet-600", activeBg: "bg-violet-50", onClick: () => navigate("/QuestionnaireReview") },
     { label: "Utilities", icon: Wrench, ref: utilityRef, color: "text-gray-600", activeBg: "bg-gray-100", onClick: () => setUtilityModalOpen(true) },
   ];
 

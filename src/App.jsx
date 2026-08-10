@@ -16,7 +16,6 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import OnboardingGuard from '@/components/onboarding/OnboardingGuard';
 import ExternalPartyRegister from './pages/ExternalPartyRegister';
 import ExternalParty from './pages/ExternalParty';
-import QuestionnaireReview from './pages/QuestionnaireReview';
 import ActivityCalendar from './pages/ActivityCalendar';
 
 
@@ -85,7 +84,6 @@ const AuthenticatedApp = () => {
       <Route path="/Analytics" element={<LayoutWrapper currentPageName="Analytics"><Analytics /></LayoutWrapper>} />
       <Route path="/UserManagement" element={<LayoutWrapper currentPageName="UserManagement"><UserManagement /></LayoutWrapper>} />
       <Route path="/ExternalPortal" element={<LayoutWrapper currentPageName="ExternalPortal"><ExternalParty /></LayoutWrapper>} />
-      <Route path="/QuestionnaireReview" element={<LayoutWrapper currentPageName="QuestionnaireReview"><QuestionnaireReview /></LayoutWrapper>} />
       <Route path="/ActivityCalendar" element={<LayoutWrapper currentPageName="ActivityCalendar"><ActivityCalendar /></LayoutWrapper>} />
       <Route path="/register" element={<ExternalPartyRegister />} />
       <Route path="*" element={<PageNotFound />} />
