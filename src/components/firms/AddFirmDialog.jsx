@@ -1200,18 +1200,21 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               )}
 
               <div className="space-y-3">
-                {addresses.map((addr, i) => (
-                  <AddressForm
-                    key={addr.id}
-                    address={addr}
-                    onChange={(updated) => handleAddressChange(i, updated)}
-                    onDelete={() => handleDeleteAddress(i)}
-                    onSetHeadquarters={() => handleSetHeadquarters(i)}
-                    isHeadquarters={addr.is_headquarters}
-                    isEditing={activelyEditing}
-                    isOnly={addresses.length === 1}
-                  />
-                ))}
+                {addresses
+                  .map((addr, i) => ({ addr, i }))
+                  .sort((a, b) => (b.addr.is_headquarters ? 1 : 0) - (a.addr.is_headquarters ? 1 : 0))
+                  .map(({ addr, i }) => (
+                    <AddressForm
+                      key={addr.id}
+                      address={addr}
+                      onChange={(updated) => handleAddressChange(i, updated)}
+                      onDelete={() => handleDeleteAddress(i)}
+                      onSetHeadquarters={() => handleSetHeadquarters(i)}
+                      isHeadquarters={addr.is_headquarters}
+                      isEditing={activelyEditing}
+                      isOnly={addresses.length === 1}
+                    />
+                  ))}
               </div>
             </TabsContent>
 
@@ -1243,24 +1246,31 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
               {activelyEditing ? (
                 <div className="space-y-3">
-                  {phones.map((ph, i) => (
-                    <PhoneForm
-                      key={ph.id}
-                      phone={ph}
-                      onChange={(updated) => handlePhoneChange(i, updated)}
-                      onDelete={() => handleDeletePhone(i)}
-                      onSetDefault={() => handleSetDefaultPhone(i)}
-                      isDefault={ph.is_default}
-                      isEditing={activelyEditing}
-                      isOnly={phones.length === 1}
-                      addresses={addresses}
-                    />
-                  ))}
+                  {phones
+                    .map((ph, i) => ({ ph, i }))
+                    .sort((a, b) => (b.ph.is_default ? 1 : 0) - (a.ph.is_default ? 1 : 0))
+                    .map(({ ph, i }) => (
+                      <PhoneForm
+                        key={ph.id}
+                        phone={ph}
+                        onChange={(updated) => handlePhoneChange(i, updated)}
+                        onDelete={() => handleDeletePhone(i)}
+                        onSetDefault={() => handleSetDefaultPhone(i)}
+                        isDefault={ph.is_default}
+                        isEditing={activelyEditing}
+                        isOnly={phones.length === 1}
+                        addresses={addresses}
+                      />
+                    ))}
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {addresses.map((addr) => {
-                    const addressPhones = phones.filter(p => p.address_id === addr.id);
+                  {[...addresses]
+                    .sort((a, b) => (b.is_headquarters ? 1 : 0) - (a.is_headquarters ? 1 : 0))
+                    .map((addr) => {
+                    const addressPhones = phones
+                      .filter(p => p.address_id === addr.id)
+                      .sort((a, b) => (b.is_default ? 1 : 0) - (a.is_default ? 1 : 0));
                     if (addressPhones.length === 0) return null;
                     return (
                       <div key={addr.id} className="space-y-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
