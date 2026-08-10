@@ -12,6 +12,7 @@ import {
   ChevronLeft, ChevronRight, CalendarDays, ArrowLeft,
 } from "lucide-react";
 import CalendarDayPanel, { TYPE_CONFIG } from "@/components/activity/CalendarDayPanel";
+import OutlookSyncButton from "@/components/activity/OutlookSyncButton";
 import { lazyDialog } from "@/components/common/lazyDialog";
 
 const ActivityDetailModal = lazyDialog(() => import("@/components/activity/ActivityDetailModal"));
@@ -196,8 +197,11 @@ export default function ActivityCalendar() {
               );
             })}
           </div>
-          <div className="text-sm text-gray-500">
-            {totalMonth} {totalMonth === 1 ? "item" : "items"} this month
+          <div className="flex items-center gap-3">
+            <div className="text-sm text-gray-500">
+              {totalMonth} {totalMonth === 1 ? "item" : "items"} this month
+            </div>
+            <OutlookSyncButton />
           </div>
         </div>
 
