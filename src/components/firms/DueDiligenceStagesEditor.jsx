@@ -59,7 +59,7 @@ const findDuplicate = (name, existing, excludeId) => {
  *   stages: [{ id, name }]
  *   onChange: (newStages) => void
  */
-export default function DueDiligenceStagesEditor({ stages, onChange }) {
+export default function DueDiligenceStagesEditor({ stages, onChange, headerTitle = "Due Diligence Stages" }) {
   const [newStageName, setNewStageName] = useState("");
   const [error, setError] = useState("");
   const [expandedStages, setExpandedStages] = useState({});
@@ -125,7 +125,7 @@ export default function DueDiligenceStagesEditor({ stages, onChange }) {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <Label className="text-xs font-medium text-gray-700">Due Diligence Stages</Label>
+        <Label className="text-xs font-medium text-gray-700">{headerTitle}</Label>
         {stages.length > 0 && (
           <Button
             type="button"

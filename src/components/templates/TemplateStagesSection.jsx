@@ -20,6 +20,8 @@ export default function TemplateStagesSection({ stages, onChange, sectionLabel =
     setCountInput(stages.length > 0 ? String(stages.length) : "");
   }, [stages.length]);
 
+  const totalQuestions = stages.reduce((sum, s) => sum + (s.sub_stages?.length || 0), 0);
+
   const applyCount = (raw) => {
     const n = Math.max(0, Math.min(50, parseInt(raw, 10) || 0));
     setCountInput(raw === "" ? "" : String(n));
@@ -49,11 +51,19 @@ export default function TemplateStagesSection({ stages, onChange, sectionLabel =
             className="h-8 text-sm w-48"
           />
           <span className="text-xs text-gray-500">{stages.length} {sectionLabel.toLowerCase()}{stages.length === 1 ? "" : "s"} created</span>
+          <div className="flex items-center gap-2 ml-4">
+            <Label className="text-xs font-medium text-gray-700">Number of Questions</Label>
+            <span className="text-xs text-gray-500">{totalQuestions} question{totalQuestions === 1 ? "" : "s"}</span>
+          </div>
         </div>
       </div>
 
       {stages.length > 0 && (
-        <DueDiligenceStagesEditor stages={stages} onChange={onChange} />
+        <DueDiligenceStagesEditor
+          stages={stages}
+          onChange={onChange}
+          headerTitle={sectionLabel === "Section" ? "Questionnaire" : "Due Diligence Stages"}
+        />
       )}
     </div>
   );
