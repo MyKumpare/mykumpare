@@ -11,6 +11,7 @@ import {
 import QuestionnaireDialog from "./QuestionnaireDialog";
 import QuestionnaireReviewTab from "./QuestionnaireReviewTab";
 import QuestionnaireStatusTracker from "./QuestionnaireStatusTracker";
+import QuestionnaireListProgressTracker from "./QuestionnaireListProgressTracker";
 import { format, parseISO } from "date-fns";
 import { Plus, Search, ClipboardList, ClipboardCheck, Building2, User, Clock } from "lucide-react";
 
@@ -149,6 +150,11 @@ export default function QuestionnairePickerModal({
                   className="pl-9 h-9"
                 />
               </div>
+
+              {/* Aggregate progress tracker */}
+              {!isLoading && questionnaires.length > 0 && (
+                <QuestionnaireListProgressTracker questionnaires={filtered} />
+              )}
 
               {/* List */}
               {isLoading ? (
