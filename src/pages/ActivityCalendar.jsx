@@ -14,6 +14,7 @@ import {
 import CalendarDayPanel, { TYPE_CONFIG } from "@/components/activity/CalendarDayPanel";
 import CalendarFilterSidebar from "@/components/activity/CalendarFilterSidebar";
 import OutlookSyncButton from "@/components/activity/OutlookSyncButton";
+import ExportToGoogleSheetButton from "@/components/activity/ExportToGoogleSheetButton";
 import { lazyDialog } from "@/components/common/lazyDialog";
 
 const ActivityDetailModal = lazyDialog(() => import("@/components/activity/ActivityDetailModal"));
@@ -259,6 +260,7 @@ export default function ActivityCalendar() {
             <div className="text-sm text-gray-500">
               {totalMonth} {totalMonth === 1 ? "item" : "items"} this month
             </div>
+            <ExportToGoogleSheetButton />
             <OutlookSyncButton />
           </div>
         </div>
