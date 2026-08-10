@@ -12,7 +12,9 @@ import {
 import DatePicker from "@/components/ui/date-picker";
 import SearchableSelect from "@/components/common/SearchableSelect";
 import QuestionnaireSubSectionItem from "./QuestionnaireSubSectionItem";
+import PushResponsesDialog from "./PushResponsesDialog";
 import AddTemplateDialog from "@/components/templates/AddTemplateDialog";
+import { ArrowRightToLine } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 import { format, parseISO } from "date-fns";
@@ -92,6 +94,7 @@ export default function QuestionnaireDialog({
   const [submitting, setSubmitting] = useState(false);
   const [completingReview, setCompletingReview] = useState(false);
   const [showCreateTemplate, setShowCreateTemplate] = useState(false);
+  const [showPushResponses, setShowPushResponses] = useState(false);
 
   // Initialize state when dialog opens
   useEffect(() => {
@@ -633,9 +636,14 @@ export default function QuestionnaireDialog({
                     <p className="text-xs text-purple-600">Submitted on {fmtDate(questionnaire.submitted_date)}. Review to complete the process.</p>
                   </div>
                 </div>
-                <Button type="button" size="sm" onClick={handleStartReview}>
-                  <Eye className="w-3.5 h-3.5" /> Start Review
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button type="button" size="sm" variant="outline" onClick={() => setShowPushResponses(true)}>
+                    <ArrowRightToLine className="w-3.5 h-3.5" /> Push Responses
+                  </Button>
+                  <Button type="button" size="sm" onClick={handleStartReview}>
+                    <Eye className="w-3.5 h-3.5" /> Start Review
+                  </Button>
+                </div>
               </div>
             )}
 
@@ -648,10 +656,15 @@ export default function QuestionnaireDialog({
                     <p className="text-xs text-indigo-600">Review the answers below and complete the process.</p>
                   </div>
                 </div>
-                <Button type="button" size="sm" onClick={handleCompleteReview} disabled={completingReview}>
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  {completingReview ? "Completing..." : "Complete Review"}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button type="button" size="sm" variant="outline" onClick={() => setShowPushResponses(true)}>
+                    <ArrowRightToLine className="w-3.5 h-3.5" /> Push Responses
+                  </Button>
+                  <Button type="button" size="sm" onClick={handleCompleteReview} disabled={completingReview}>
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    {completingReview ? "Completing..." : "Complete Review"}
+                  </Button>
+                </div>
               </div>
             )}
 
@@ -727,6 +740,16 @@ export default function QuestionnaireDialog({
             )}
           </div>
         )}
+
+        {/* Push responses to Firm/Product/Contact records */}
+        <PushResponsesDialog
+          open={showPushResponses}
+          onOpenChange={setShowPushResponses}
+          questionnaire={questionnaire}
+          firms={firms}
+          products={products}
+          contacts={contacts}
+        />
       </DialogContent>
     </Dialog>
   );

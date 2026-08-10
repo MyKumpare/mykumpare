@@ -1,0 +1,171 @@
+{
+  "name": "ResponseMapping",
+  "type": "object",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "ID of the firm (tenant) that owns this mapping. Set on creation to the creator's linked_firm_id; drives tenant isolation via RLS."
+    },
+    "questionnaire_id": {
+      "type": "string",
+      "description": "ID of the questionnaire whose responses are being pushed"
+    },
+    "questionnaire_name": {
+      "type": "string",
+      "description": "Questionnaire name (denormalized for display)"
+    },
+    "target_entity_type": {
+      "type": "string",
+      "enum": [
+        "Firm",
+        "Product",
+        "Contact"
+      ],
+      "description": "Type of target record the responses are pushed to"
+    },
+    "target_record_id": {
+      "type": "string",
+      "description": "ID of the target firm/product/contact record"
+    },
+    "target_record_name": {
+      "type": "string",
+      "description": "Name of the target record (denormalized for display)"
+    },
+    "mappings": {
+      "type": "array",
+      "description": "Saved question-to-field mappings. Each entry records the last pushed value so the user can see which responses changed since the last push and refresh them.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "sub_section_id": {
+            "type": "string",
+            "description": "ID of the questionnaire sub-section (question)"
+          },
+          "sub_section_name": {
+            "type": "string",
+            "description": "Sub-section name (denormalized)"
+          },
+          "field_name": {
+            "type": "string",
+            "description": "Target entity field name the response is mapped to"
+          },
+          "last_pushed_value": {
+            "type": "string",
+            "description": "The response value (plain text) that was last pushed to the target field"
+          },
+          "last_pushed_date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when this mapping was last pushed"
+          }
+        }
+      }
+    },
+    "last_refreshed_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of the last bulk refresh of all mappings"
+    }
+  },
+  "required": [
+    "questionnaire_id",
+    "target_entity_type",
+    "target_record_id"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_edit": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_delete": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
