@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import QuestionnaireDialog from "./QuestionnaireDialog";
 import QuestionnaireReviewTab from "./QuestionnaireReviewTab";
+import QuestionnaireStatusTracker from "./QuestionnaireStatusTracker";
 import { format, parseISO } from "date-fns";
 import { Plus, Search, ClipboardList, ClipboardCheck, Building2, User, Clock } from "lucide-react";
 
@@ -193,6 +194,11 @@ export default function QuestionnairePickerModal({
                               <Clock className="w-2.5 h-2.5" /> Due: {fmtDate(item.due_date)}
                             </span>
                           )}
+                        </div>
+
+                        {/* Status tracker */}
+                        <div className="mb-2">
+                          <QuestionnaireStatusTracker status={item.status} />
                         </div>
 
                         {/* Progress */}
