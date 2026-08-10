@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Phone, Trash2, Star, MapPin } from "lucide-react";
+import { Phone, Trash2, Star, MapPin, GripVertical } from "lucide-react";
 import { COUNTRY_CODES, getAreaCodesForCountry } from "./phoneData";
 import { getAreaCodesForCity } from "./geoData";
 import PhoneTypePicker from "./PhoneTypePicker";
@@ -27,7 +27,7 @@ function getCountryCodeFromCountryName(countryName) {
   return match ? match.code : "1"; // Default to US if not found
 }
 
-export default function PhoneForm({ phone, onChange, onDelete, onSetDefault, isDefault, isEditing, isOnly, addresses = [] }) {
+export default function PhoneForm({ phone, onChange, onDelete, onSetDefault, isDefault, isEditing, isOnly, addresses = [], dragHandleProps }) {
   const midRef = useRef(null);
   const lastRef = useRef(null);
 
@@ -108,6 +108,11 @@ export default function PhoneForm({ phone, onChange, onDelete, onSetDefault, isD
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
+          {dragHandleProps && (
+            <span {...dragHandleProps} className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-indigo-500 transition-colors flex items-center" title="Drag to reorder">
+              <GripVertical className="w-4 h-4" />
+            </span>
+          )}
           <Phone className={`w-4 h-4 ${isDefault ? "text-indigo-500" : "text-gray-400"}`} />
           <span className="text-sm font-medium text-gray-700">
             {phone.phone_type || "Phone"}

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { MapPin, Trash2, Star, ExternalLink, Loader2, LocateFixed } from "lucide-react";
+import { MapPin, Trash2, Star, ExternalLink, Loader2, LocateFixed, GripVertical } from "lucide-react";
 import { COUNTRIES, getStatesForCountry } from "../firms/geoData";
 import { useZipCodeLookup } from "../firms/useZipCodeLookup";
 import { base44 } from "@/api/base44Client";
@@ -35,7 +35,7 @@ function buildAddressString(address) {
   return parts.join(", ");
 }
 
-export default function ContactAddressForm({ address, onChange, onDelete, onSetPrimary, isPrimary, isEditing, isOnly }) {
+export default function ContactAddressForm({ address, onChange, onDelete, onSetPrimary, isPrimary, isEditing, isOnly, dragHandleProps }) {
   const [manualCity, setManualCity] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
   const [geoError, setGeoError] = useState(null);
@@ -125,6 +125,11 @@ export default function ContactAddressForm({ address, onChange, onDelete, onSetP
     <div className={`rounded-xl border p-4 space-y-3 ${isPrimary ? "border-indigo-300 bg-indigo-50/40" : "border-gray-200 bg-gray-50/40"}`}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
+          {dragHandleProps && (
+            <span {...dragHandleProps} className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-indigo-500 transition-colors flex items-center" title="Drag to reorder">
+              <GripVertical className="w-4 h-4" />
+            </span>
+          )}
           {mapsUrl ? (
             <a href={mapsUrl} target="_blank" rel="noopener noreferrer"
               className={`flex items-center gap-2 group hover:text-indigo-600 transition-colors ${isPrimary ? "text-indigo-500" : "text-gray-500"}`}>

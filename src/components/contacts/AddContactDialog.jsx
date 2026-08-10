@@ -38,6 +38,7 @@ import SubRecordDuplicateDialog from "./SubRecordDuplicateDialog";
 import { findEducationDuplicates, findExperienceDuplicates, findPhoneDuplicates } from "./subRecordDuplicateCheck";
 import InviteToPortalDialog from "../external/InviteToPortalDialog";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
 const SALUTATIONS = ["Mr.", "Ms.", "Mrs.", "Dr.", "Prof.", "Hon."];
 const SUFFIXES = ["Jr.", "Sr.", "II", "III", "IV", "Esq.", "CFA", "CPA", "MBA", "PhD", "MD"];
@@ -138,8 +139,12 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setFirmIds(editingContact.firm_ids || []);
         setEducation(editingContact.education || []);
         setProfessionalExperience(editingContact.professional_experience || []);
-        setPhones(editingContact.phones?.length > 0 ? editingContact.phones : [newPhone()]);
-        setAddresses(editingContact.addresses?.length > 0 ? editingContact.addresses : [newAddress()]);
+        setPhones(editingContact.phones?.length > 0
+          ? [...editingContact.phones].sort((a, b) => (b.is_default ? 1 : 0) - (a.is_default ? 1 : 0))
+          : [newPhone()]);
+        setAddresses(editingContact.addresses?.length > 0
+          ? [...editingContact.addresses].sort((a, b) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0))
+          : [newAddress()]);
       } else {
         setPhotoUrl(initialPhotoUrl || "");
         setSalutation("");
@@ -609,6 +614,24 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
   const deleteAddress = (idx) => setAddresses(addresses.filter((_, i) => i !== idx));
   const setPrimaryAddress = (idx) => setAddresses(addresses.map((ad, i) => ({ ...ad, is_primary: i === idx })));
   const addAddress = () => setAddresses([...addresses, newAddress()]);
+
+  const onDragEndPhones = (result) => {
+    if (!result.destination || result.destination.index === result.source.index) return;
+    const reordered = [...phones];
+    const [moved] = reordered.splice(result.source.index, 1);
+    reordered.splice(result.destination.index, 0, moved);
+    if (viewMode) setViewMode(false);
+    setPhones(reordered);
+  };
+
+  const onDragEndAddresses = (result) => {
+    if (!result.destination || result.destination.index === result.source.index) return;
+    const reordered = [...addresses];
+    const [moved] = reordered.splice(result.source.index, 1);
+    reordered.splice(result.destination.index, 0, moved);
+    if (viewMode) setViewMode(false);
+    setAddresses(reordered);
+  };
 
   const formatMiddleName = (name) => {
     if (!name) return "";
@@ -1112,21 +1135,37 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                   </div>
                 );
               })()}
-              {phones
-                .map((ph, idx) => ({ ph, idx }))
-                .sort((a, b) => (b.ph.is_default ? 1 : 0) - (a.ph.is_default ? 1 : 0))
-                .map(({ ph, idx }) => (
-                  <ContactPhoneForm
-                    key={ph.id}
-                    phone={ph}
-                    onChange={(p) => updatePhone(idx, p)}
-                    onDelete={() => deletePhone(idx)}
-                    onSetDefault={() => setDefaultPhone(idx)}
-                    isDefault={!!ph.is_default}
-                    isEditing={!viewMode}
-                    isOnly={phones.length === 1}
-                  />
-                ))}
+              <DragDropContext onDragEnd={onDragEndPhones}>
+                <Droppable droppableId="contact-phones">
+                  {(provided) => (
+                    <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-3">
+                      {phones.map((ph, idx) => (
+                        <Draggable key={ph.id} draggableId={ph.id} index={idx} isDragDisabled={viewMode}>
+                          {(prov, snap) => (
+                            <div
+                              ref={prov.innerRef}
+                              {...prov.draggableProps}
+                              className={snap.isDragging ? "ring-2 ring-indigo-400 shadow-lg rounded-xl z-50" : ""}
+                            >
+                              <ContactPhoneForm
+                                phone={ph}
+                                onChange={(p) => updatePhone(idx, p)}
+                                onDelete={() => deletePhone(idx)}
+                                onSetDefault={() => setDefaultPhone(idx)}
+                                isDefault={!!ph.is_default}
+                                isEditing={!viewMode}
+                                isOnly={phones.length === 1}
+                                dragHandleProps={viewMode ? null : prov.dragHandleProps}
+                              />
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </DragDropContext>
               <Button type="button" variant="outline" size="sm" className="w-full h-8 text-xs gap-1 text-indigo-600 border-indigo-200 hover:bg-indigo-50" onClick={() => { if (viewMode) setViewMode(false); addPhone(); }}>
                 <Plus className="w-3.5 h-3.5" /> Add Phone
               </Button>
@@ -1169,21 +1208,37 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                   </div>
                 );
               })()}
-              {addresses
-                .map((addr, idx) => ({ addr, idx }))
-                .sort((a, b) => (b.addr.is_primary ? 1 : 0) - (a.addr.is_primary ? 1 : 0))
-                .map(({ addr, idx }) => (
-                  <ContactAddressForm
-                    key={addr.id}
-                    address={addr}
-                    onChange={(a) => updateAddress(idx, a)}
-                    onDelete={() => deleteAddress(idx)}
-                    onSetPrimary={() => setPrimaryAddress(idx)}
-                    isPrimary={!!addr.is_primary}
-                    isEditing={!viewMode}
-                    isOnly={addresses.length === 1}
-                  />
-                ))}
+              <DragDropContext onDragEnd={onDragEndAddresses}>
+                <Droppable droppableId="contact-addresses">
+                  {(provided) => (
+                    <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-3">
+                      {addresses.map((addr, idx) => (
+                        <Draggable key={addr.id} draggableId={addr.id} index={idx} isDragDisabled={viewMode}>
+                          {(prov, snap) => (
+                            <div
+                              ref={prov.innerRef}
+                              {...prov.draggableProps}
+                              className={snap.isDragging ? "ring-2 ring-indigo-400 shadow-lg rounded-xl z-50" : ""}
+                            >
+                              <ContactAddressForm
+                                address={addr}
+                                onChange={(a) => updateAddress(idx, a)}
+                                onDelete={() => deleteAddress(idx)}
+                                onSetPrimary={() => setPrimaryAddress(idx)}
+                                isPrimary={!!addr.is_primary}
+                                isEditing={!viewMode}
+                                isOnly={addresses.length === 1}
+                                dragHandleProps={viewMode ? null : prov.dragHandleProps}
+                              />
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </DragDropContext>
               <Button type="button" variant="outline" size="sm" className="w-full h-8 text-xs gap-1 text-indigo-600 border-indigo-200 hover:bg-indigo-50" onClick={() => { if (viewMode) setViewMode(false); addAddress(); }}>
                 <Plus className="w-3.5 h-3.5" /> Add Address
               </Button>

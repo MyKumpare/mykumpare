@@ -39,6 +39,7 @@ import LiveFieldConflictWarning from "./LiveFieldConflictWarning";
 import { isFirmNameSimilarToLinkedin } from "./firmNameSimilarity";
 import LinkedinFirmMismatchDialog from "./LinkedinFirmMismatchDialog";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
 function getCountryCodeFromCountryName(countryName) {
   if (!countryName) return "";
@@ -214,8 +215,12 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         setLinkedinUrl(editingFirm.linkedin_url || "");
         setYearFounded(editingFirm.year_founded ? String(editingFirm.year_founded) : "");
         setDescription(editingFirm.description || "");
-        setAddresses(editingFirm.addresses?.length ? editingFirm.addresses : []);
-        setPhones(editingFirm.phones?.length ? editingFirm.phones : []);
+        setAddresses(editingFirm.addresses?.length
+          ? [...editingFirm.addresses].sort((a, b) => (b.is_headquarters ? 1 : 0) - (a.is_headquarters ? 1 : 0))
+          : []);
+        setPhones(editingFirm.phones?.length
+          ? [...editingFirm.phones].sort((a, b) => (b.is_default ? 1 : 0) - (a.is_default ? 1 : 0))
+          : []);
         setPendingContacts([]);
         setIsEditing(false);
       } else {
@@ -341,6 +346,23 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
   const handleSetDefaultPhone = (index) => {
     setPhones(phones.map((p, i) => ({ ...p, is_default: i === index })));
+  };
+
+  const onDragEndAddresses = (result) => {
+    if (!result.destination || result.destination.index === result.source.index) return;
+    const reordered = [...addresses];
+    const [moved] = reordered.splice(result.source.index, 1);
+    reordered.splice(result.destination.index, 0, moved);
+    if (!activelyEditing) setIsEditing(true);
+    setAddresses(reordered);
+  };
+
+  const onDragEndPhones = (result) => {
+    if (!result.destination || result.destination.index === result.source.index) return;
+    const reordered = [...phones];
+    const [moved] = reordered.splice(result.source.index, 1);
+    reordered.splice(result.destination.index, 0, moved);
+    setPhones(reordered);
   };
 
   const existingTypes = editingFirm?.firm_types?.length
@@ -835,8 +857,8 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     setLinkedinUrl(editingFirm.linkedin_url || "");
     setYearFounded(editingFirm.year_founded ? String(editingFirm.year_founded) : "");
     setDescription(editingFirm.description || "");
-    setAddresses(editingFirm.addresses || []);
-    setPhones(editingFirm.phones || []);
+    setAddresses([...(editingFirm.addresses || [])].sort((a, b) => (b.is_headquarters ? 1 : 0) - (a.is_headquarters ? 1 : 0)));
+    setPhones([...(editingFirm.phones || [])].sort((a, b) => (b.is_default ? 1 : 0) - (a.is_default ? 1 : 0)));
     setIsEditing(false);
   };
 
@@ -1199,23 +1221,37 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                 </div>
               )}
 
-              <div className="space-y-3">
-                {addresses
-                  .map((addr, i) => ({ addr, i }))
-                  .sort((a, b) => (b.addr.is_headquarters ? 1 : 0) - (a.addr.is_headquarters ? 1 : 0))
-                  .map(({ addr, i }) => (
-                    <AddressForm
-                      key={addr.id}
-                      address={addr}
-                      onChange={(updated) => handleAddressChange(i, updated)}
-                      onDelete={() => handleDeleteAddress(i)}
-                      onSetHeadquarters={() => handleSetHeadquarters(i)}
-                      isHeadquarters={addr.is_headquarters}
-                      isEditing={activelyEditing}
-                      isOnly={addresses.length === 1}
-                    />
-                  ))}
-              </div>
+              <DragDropContext onDragEnd={onDragEndAddresses}>
+                <Droppable droppableId="firm-addresses">
+                  {(provided) => (
+                    <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-3">
+                      {addresses.map((addr, i) => (
+                        <Draggable key={addr.id} draggableId={addr.id} index={i} isDragDisabled={!activelyEditing}>
+                          {(prov, snap) => (
+                            <div
+                              ref={prov.innerRef}
+                              {...prov.draggableProps}
+                              className={snap.isDragging ? "ring-2 ring-indigo-400 shadow-lg rounded-xl z-50" : ""}
+                            >
+                              <AddressForm
+                                address={addr}
+                                onChange={(updated) => handleAddressChange(i, updated)}
+                                onDelete={() => handleDeleteAddress(i)}
+                                onSetHeadquarters={() => handleSetHeadquarters(i)}
+                                isHeadquarters={addr.is_headquarters}
+                                isEditing={activelyEditing}
+                                isOnly={addresses.length === 1}
+                                dragHandleProps={activelyEditing ? prov.dragHandleProps : null}
+                              />
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </DragDropContext>
             </TabsContent>
 
             <TabsContent value="phones" className="space-y-3">
@@ -1245,24 +1281,38 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               ) : null}
 
               {activelyEditing ? (
-                <div className="space-y-3">
-                  {phones
-                    .map((ph, i) => ({ ph, i }))
-                    .sort((a, b) => (b.ph.is_default ? 1 : 0) - (a.ph.is_default ? 1 : 0))
-                    .map(({ ph, i }) => (
-                      <PhoneForm
-                        key={ph.id}
-                        phone={ph}
-                        onChange={(updated) => handlePhoneChange(i, updated)}
-                        onDelete={() => handleDeletePhone(i)}
-                        onSetDefault={() => handleSetDefaultPhone(i)}
-                        isDefault={ph.is_default}
-                        isEditing={activelyEditing}
-                        isOnly={phones.length === 1}
-                        addresses={addresses}
-                      />
-                    ))}
-                </div>
+                <DragDropContext onDragEnd={onDragEndPhones}>
+                  <Droppable droppableId="firm-phones">
+                    {(provided) => (
+                      <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-3">
+                        {phones.map((ph, i) => (
+                          <Draggable key={ph.id} draggableId={ph.id} index={i} isDragDisabled={!activelyEditing}>
+                            {(prov, snap) => (
+                              <div
+                                ref={prov.innerRef}
+                                {...prov.draggableProps}
+                                className={snap.isDragging ? "ring-2 ring-indigo-400 shadow-lg rounded-xl z-50" : ""}
+                              >
+                                <PhoneForm
+                                  phone={ph}
+                                  onChange={(updated) => handlePhoneChange(i, updated)}
+                                  onDelete={() => handleDeletePhone(i)}
+                                  onSetDefault={() => handleSetDefaultPhone(i)}
+                                  isDefault={ph.is_default}
+                                  isEditing={activelyEditing}
+                                  isOnly={phones.length === 1}
+                                  addresses={addresses}
+                                  dragHandleProps={activelyEditing ? prov.dragHandleProps : null}
+                                />
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </DragDropContext>
               ) : (
                 <div className="space-y-4">
                   {[...addresses]

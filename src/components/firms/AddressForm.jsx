@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { MapPin, Trash2, Star, ExternalLink, Loader2, LocateFixed } from "lucide-react";
+import { MapPin, Trash2, Star, ExternalLink, Loader2, LocateFixed, GripVertical } from "lucide-react";
 import { COUNTRIES, getStatesForCountry } from "./geoData";
 import { useZipCodeLookup } from "./useZipCodeLookup";
 import { base44 } from "@/api/base44Client";
@@ -36,7 +36,7 @@ function buildAddressString(address) {
   return parts.join(", ");
 }
 
-export default function AddressForm({ address, onChange, onDelete, onSetHeadquarters, isHeadquarters, isEditing, isOnly }) {
+export default function AddressForm({ address, onChange, onDelete, onSetHeadquarters, isHeadquarters, isEditing, isOnly, dragHandleProps }) {
   const [manualCity, setManualCity] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
   const [geoError, setGeoError] = useState(null);
@@ -142,6 +142,11 @@ export default function AddressForm({ address, onChange, onDelete, onSetHeadquar
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
+          {dragHandleProps && (
+            <span {...dragHandleProps} className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-indigo-500 transition-colors flex items-center" title="Drag to reorder">
+              <GripVertical className="w-4 h-4" />
+            </span>
+          )}
           {(() => {
             const mapsUrl = buildMapsUrl(address);
             return mapsUrl ? (
