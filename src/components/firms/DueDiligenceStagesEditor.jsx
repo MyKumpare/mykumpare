@@ -1,10 +1,11 @@
 import React, { useState } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { AlertCircle, ChevronDown, ChevronRight, GripVertical, Plus, Trash2 } from "lucide-react";
+import { AlertCircle, ChevronDown, ChevronRight, GripVertical, Plus, Trash2, BookmarkPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import SubStagesEditor from "./SubStagesEditor";
+import PushToQuestionBankDialog from "@/components/templates/PushToQuestionBankDialog";
 
 let _stageIdCounter = 0;
 const nextStageId = () => `stage_${Date.now()}_${++_stageIdCounter}`;
@@ -62,6 +63,7 @@ export default function DueDiligenceStagesEditor({ stages, onChange }) {
   const [newStageName, setNewStageName] = useState("");
   const [error, setError] = useState("");
   const [expandedStages, setExpandedStages] = useState({});
+  const [pushStage, setPushStage] = useState(null);
   const toggleExpand = (id) => setExpandedStages((prev) => ({ ...prev, [id]: !prev[id] }));
   const allExpanded = stages.length > 0 && stages.every((s) => expandedStages[s.id]);
   const toggleAll = () => {
@@ -181,6 +183,16 @@ export default function DueDiligenceStagesEditor({ stages, onChange }) {
                           type="button"
                           variant="ghost"
                           size="icon"
+                          className="h-7 w-7 text-gray-400 hover:text-cyan-600 shrink-0"
+                          title="Push to Question Bank"
+                          onClick={() => setPushStage(stage.name)}
+                        >
+                          <BookmarkPlus className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
                           className="h-7 w-7 text-gray-400 hover:text-red-600 shrink-0"
                           onClick={() => removeStage(stage.id)}
                         >
@@ -233,6 +245,14 @@ export default function DueDiligenceStagesEditor({ stages, onChange }) {
         <p className="text-xs text-red-600 flex items-center gap-1">
           <AlertCircle className="w-3 h-3" /> {error}
         </p>
+      )}
+
+      {pushStage && (
+        <PushToQuestionBankDialog
+          open={!!pushStage}
+          onOpenChange={(o) => { if (!o) setPushStage(null); }}
+          initialText={pushStage}
+        />
       )}
     </div>
   );

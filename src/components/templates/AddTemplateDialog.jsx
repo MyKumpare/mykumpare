@@ -5,14 +5,19 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Library } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import DatePicker from "@/components/ui/date-picker";
 import TemplateTypePicker from "./TemplateTypePicker";
 import TemplateStagesSection from "./TemplateStagesSection";
 import DocumentationChecklistSection from "./DocumentationChecklistSection";
 import QuestionnaireUploadSection from "./QuestionnaireUploadSection";
+import QuestionBankPickerModal from "./QuestionBankPickerModal";
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "@/components/ui/use-toast";
+
+let _qbId = 0;
+const nextQbId = () => `tstage_${Date.now()}_${++_qbId}`;
 
 /**
  * Dialog for creating a new Template.
@@ -26,6 +31,7 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
   const [createDate, setCreateDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [stages, setStages] = useState([]);
   const [docChecklist, setDocChecklist] = useState([]);
+  const [questionBankOpen, setQuestionBankOpen] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -143,6 +149,17 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
                 onExtracted={(extracted) => setStages(extracted)}
                 sectionLabel={templateType === "Manager Questionnaire" ? "Section" : "Stage"}
               />
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs text-cyan-700 border-cyan-300 hover:bg-cyan-50"
+                  onClick={() => setQuestionBankOpen(true)}
+                >
+                  <Library className="w-3.5 h-3.5" /> Question Bank
+                </Button>
+              </div>
               <TemplateStagesSection
                 stages={stages}
                 onChange={setStages}
@@ -163,6 +180,24 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
           </DialogFooter>
         </form>
       </DialogContent>
+
+      <QuestionBankPickerModal
+        open={questionBankOpen}
+        onClose={() => setQuestionBankOpen(false)}
+        stages={stages}
+        sectionLabel={templateType === "Manager Questionnaire" ? "Section" : "Stage"}
+        onInsert={(chosen, insMode, targetStageId) => {
+          if (insMode === "sections") {
+            const newStages = chosen.map((q) => ({ id: nextQbId(), name: q.question_text, sub_stages: [] }));
+            setStages([...stages, ...newStages]);
+          } else if (insMode === "questions" && targetStageId) {
+            setStages(stages.map((s) => s.id === targetStageId ? {
+              ...s,
+              sub_stages: [...(s.sub_stages || []), ...chosen.map((q) => ({ id: nextQbId(), name: q.question_text }))]
+            } : s));
+          }
+        }}
+      />
     </Dialog>
   );
 }

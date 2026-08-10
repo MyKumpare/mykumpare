@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { AlertTriangle, GripVertical, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, GripVertical, Plus, Trash2, BookmarkPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import PushToQuestionBankDialog from "@/components/templates/PushToQuestionBankDialog";
 
 let _subId = 0;
 const nextSubId = () => `subst_${Date.now()}_${++_subId}`;
@@ -64,6 +65,7 @@ const findDuplicate = (name, existing, excludeId) => {
 export default function SubStagesEditor({ subStages = [], onChange, droppableId = "substages" }) {
   const [newName, setNewName] = useState("");
   const [pendingDup, setPendingDup] = useState(null); // { name, duplicate }
+  const [pushSub, setPushSub] = useState(null);
 
   const addSubStage = (name) => {
     const trimmed = (name || "").trim();
@@ -153,6 +155,16 @@ export default function SubStagesEditor({ subStages = [], onChange, droppableId 
                         type="button"
                         variant="ghost"
                         size="icon"
+                        className="h-6 w-6 text-gray-400 hover:text-cyan-600 shrink-0"
+                        title="Push to Question Bank"
+                        onClick={() => setPushSub(ss.name)}
+                      >
+                        <BookmarkPlus className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
                         className="h-6 w-6 text-gray-400 hover:text-red-600 shrink-0"
                         onClick={() => removeSubStage(ss.id)}
                       >
@@ -219,6 +231,14 @@ export default function SubStagesEditor({ subStages = [], onChange, droppableId 
             Reject
           </Button>
         </div>
+      )}
+
+      {pushSub && (
+        <PushToQuestionBankDialog
+          open={!!pushSub}
+          onOpenChange={(o) => { if (!o) setPushSub(null); }}
+          initialText={pushSub}
+        />
       )}
     </div>
   );
