@@ -6,7 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { useViewMode } from "@/hooks/useViewMode";
 import {
-  ClipboardList, Plus, ChevronDown, ChevronRight, ExternalLink, Clock, Building2, User,
+  ClipboardList, ClipboardCheck, Plus, ChevronDown, ChevronRight, ExternalLink, Clock, Building2, User,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
@@ -72,8 +72,8 @@ export default function QuestionnaireSection({ forceExpanded, onOpen, onAdd }) {
             ? <ChevronDown className="w-4 h-4 text-violet-400" />
             : <ChevronRight className="w-4 h-4 text-violet-400" />
           }
-          <ClipboardList className="w-4 h-4 text-violet-500" />
-          <span className="text-sm font-semibold text-gray-700">Questionnaires</span>
+          <ClipboardCheck className="w-4 h-4 text-violet-500" />
+          <span className="text-sm font-semibold text-gray-700">Forms</span>
           <span className="text-[11px] text-gray-400">({questionnaires.length})</span>
           {activeCount > 0 && (
             <span className="text-[10px] font-medium text-violet-600 bg-violet-100 px-1.5 py-0.5 rounded-full">

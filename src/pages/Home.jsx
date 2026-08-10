@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, FileText, Files, ShieldCheck, X, LayoutDashboard, FlaskConical, MapPin, Camera, LayoutGrid, PieChart, Bot, ExternalLink, ChevronDown, CalendarDays } from "lucide-react";
+import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, ClipboardCheck, FileText, Files, ShieldCheck, X, LayoutDashboard, FlaskConical, MapPin, Camera, LayoutGrid, PieChart, Bot, ExternalLink, ChevronDown, CalendarDays } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
@@ -137,6 +137,7 @@ export default function Home() {
   const contactsRef = useRef(null);
   const analyticsRef = useRef(null);
   const reportsRef = useRef(null);
+  const formsRef = useRef(null);
   const utilityRef = useRef(null);
 
   const scrollTo = (ref) => {
@@ -569,6 +570,7 @@ export default function Home() {
     { label: "Analytics", icon: LineChart, ref: analyticsRef, color: "text-cyan-600", activeBg: "bg-cyan-50", onClick: () => setAnalyticsLaunchOpen(true) },
     { label: "Reports", icon: FileText, ref: reportsRef, color: "text-blue-600", activeBg: "bg-blue-50", onClick: () => setReportsPickerOpen(true) },
     { label: "Documents", icon: Files, ref: null, color: "text-teal-600", activeBg: "bg-teal-50", onClick: () => setDocumentsPickerOpen(true) },
+    { label: "Forms", icon: ClipboardCheck, ref: formsRef, color: "text-violet-600", activeBg: "bg-violet-50", onClick: () => setQuestionnairePickerOpen(true) },
     { label: "Templates", icon: FileText, ref: null, color: "text-cyan-600", activeBg: "bg-cyan-50", onClick: () => setTemplatesPickerOpen(true) },
     { label: "Map Search", icon: MapPin, ref: null, color: "text-rose-600", activeBg: "bg-rose-50", onClick: () => setMapSearchOpen(true) },
     { label: "Ext Portal", icon: ExternalLink, ref: null, color: "text-teal-600", activeBg: "bg-teal-50", onClick: () => setExternalPortalOpen(true) },
@@ -811,13 +813,6 @@ export default function Home() {
           forceExpanded={allExpanded}
         />
 
-        {/* Questionnaires section */}
-        <QuestionnaireSection
-          forceExpanded={allExpanded}
-          onOpen={() => setQuestionnairePickerOpen(true)}
-          onAdd={() => setQuestionnaireAddOpen(true)}
-        />
-
         {/* Firms section */}
         <div ref={firmsRef} />
         {isLoading ? (
@@ -959,6 +954,14 @@ export default function Home() {
           openLabel="Open Documents"
           description="Open the documents dashboard to browse and manage firm documents."
           forceExpanded={allExpanded}
+        />
+
+        {/* Forms section — houses questionnaires and other forms */}
+        <div ref={formsRef} />
+        <QuestionnaireSection
+          forceExpanded={allExpanded}
+          onOpen={() => setQuestionnairePickerOpen(true)}
+          onAdd={() => setQuestionnaireAddOpen(true)}
         />
 
         {/* Templates section */}
