@@ -10,6 +10,7 @@ import DatePicker from "@/components/ui/date-picker";
 import TemplateTypePicker from "./TemplateTypePicker";
 import TemplateStagesSection from "./TemplateStagesSection";
 import DocumentationChecklistSection from "./DocumentationChecklistSection";
+import QuestionnaireUploadSection from "./QuestionnaireUploadSection";
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 
@@ -138,6 +139,10 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
           </div>
           {(templateType === "Manager Due Diligence" || templateType === "Manager Questionnaire") && (
             <>
+              <QuestionnaireUploadSection
+                onExtracted={(extracted) => setStages(extracted)}
+                sectionLabel={templateType === "Manager Questionnaire" ? "Section" : "Stage"}
+              />
               <TemplateStagesSection
                 stages={stages}
                 onChange={setStages}

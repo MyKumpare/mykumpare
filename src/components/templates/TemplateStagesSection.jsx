@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import DueDiligenceStagesEditor from "@/components/firms/DueDiligenceStagesEditor";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +14,11 @@ const nextId = () => `tstage_${Date.now()}_${++_tid}`;
  */
 export default function TemplateStagesSection({ stages, onChange, sectionLabel = "Stage" }) {
   const [countInput, setCountInput] = useState(stages.length > 0 ? String(stages.length) : "");
+
+  // Sync count input when stages are changed externally (e.g. from file upload extraction)
+  useEffect(() => {
+    setCountInput(stages.length > 0 ? String(stages.length) : "");
+  }, [stages.length]);
 
   const applyCount = (raw) => {
     const n = Math.max(0, Math.min(50, parseInt(raw, 10) || 0));

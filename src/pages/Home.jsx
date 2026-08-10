@@ -970,7 +970,7 @@ export default function Home() {
           iconColor="text-cyan-500"
           entityName="Template"
           onOpen={() => setTemplatesPickerOpen(true)}
-          onAdd={() => setAddDocOpen(true)}
+          onAdd={() => setTemplatesPickerOpen(true)}
           addLabel="Add Template"
           addColor="text-cyan-600"
           addHoverColor="hover:text-cyan-700"
