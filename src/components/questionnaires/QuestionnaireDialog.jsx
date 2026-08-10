@@ -12,12 +12,13 @@ import {
 import DatePicker from "@/components/ui/date-picker";
 import SearchableSelect from "@/components/common/SearchableSelect";
 import QuestionnaireSubSectionItem from "./QuestionnaireSubSectionItem";
+import AddTemplateDialog from "@/components/templates/AddTemplateDialog";
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 import { format, parseISO } from "date-fns";
 import {
   Send, ClipboardList, CheckCircle2, FileText, ChevronDown, ChevronRight,
-  User, Calendar, Building2, Clock, AlertCircle, Eye, Mail, Package,
+  User, Calendar, Building2, Clock, AlertCircle, Eye, Mail, Package, Plus,
 } from "lucide-react";
 
 const todayISO = () => format(new Date(), "yyyy-MM-dd");
@@ -90,6 +91,7 @@ export default function QuestionnaireDialog({
   const [sending, setSending] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [completingReview, setCompletingReview] = useState(false);
+  const [showCreateTemplate, setShowCreateTemplate] = useState(false);
 
   // Initialize state when dialog opens
   useEffect(() => {
@@ -415,6 +417,7 @@ export default function QuestionnaireDialog({
   // ─── Render: Create Mode ───
   if (isCreateMode && !questionnaire) {
     return (
+      <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -435,8 +438,15 @@ export default function QuestionnaireDialog({
                 }}
                 options={templateOptions}
                 placeholder="Select a questionnaire template..."
-                emptyText="No questionnaire templates found. Create a template with type 'Manager Questionnaire' first."
+                emptyText="No questionnaire templates found."
               />
+              <button
+                type="button"
+                onClick={() => setShowCreateTemplate(true)}
+                className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1 mt-1"
+              >
+                <Plus className="w-3 h-3" /> Create a new template
+              </button>
             </div>
 
             {/* Questionnaire Name */}
@@ -521,6 +531,18 @@ export default function QuestionnaireDialog({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <AddTemplateDialog
+        open={showCreateTemplate}
+        onOpenChange={setShowCreateTemplate}
+        defaultTemplateType="Manager Questionnaire"
+        onCreated={(created) => {
+          queryClient.invalidateQueries({ queryKey: ["questionnaire-templates"] });
+          if (created?.template_type === "Manager Questionnaire") {
+            setForm((prev) => ({ ...prev, templateId: created.id, name: prev.name || created.name || "" }));
+          }
+        }}
+      />
+      </>
     );
   }
 

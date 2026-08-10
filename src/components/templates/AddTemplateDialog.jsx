@@ -17,11 +17,11 @@ import { toast } from "@/components/ui/use-toast";
  * Dialog for creating a new Template.
  * Fields: Template Name, Template Type (with add-new + duplicate validation).
  */
-export default function AddTemplateDialog({ open, onOpenChange, onCreated, editTemplate }) {
+export default function AddTemplateDialog({ open, onOpenChange, onCreated, editTemplate, defaultTemplateType }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [name, setName] = useState("");
-  const [templateType, setTemplateType] = useState("");
+  const [templateType, setTemplateType] = useState(defaultTemplateType || "");
   const [createDate, setCreateDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [stages, setStages] = useState([]);
   const [docChecklist, setDocChecklist] = useState([]);
@@ -36,7 +36,7 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
         setDocChecklist(Array.isArray(editTemplate.documentation_checklist) ? editTemplate.documentation_checklist.map((it) => ({ ...it })) : []);
       } else {
         setName("");
-        setTemplateType("");
+        setTemplateType(defaultTemplateType || "");
         setCreateDate(format(new Date(), "yyyy-MM-dd"));
         setStages([]);
         setDocChecklist([]);
