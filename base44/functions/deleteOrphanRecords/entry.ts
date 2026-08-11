@@ -32,6 +32,14 @@ export default async function(req) {
 
     const svc = base44.asServiceRole;
     const now = new Date().toISOString();
+
+    // Pre-load deleted firms and contacts once for all items (avoids re-fetching
+    // for each item and ensures consistent deleted-id sets across all cases).
+    const allFirms = await svc.entities.Firm.list('-deleted_at', 5000);
+    const deletedFirmIds = new Set(allFirms.filter((f) => f.deleted_at).map((f) => f.id));
+    const allContacts = await svc.entities.Contact.list('-deleted_at', 5000);
+    const deletedContactIds = new Set(allContacts.filter((c) => c.deleted_at).map((c) => c.id));
+
     const results: Array<{ entity_type: string; record_id: string; action: string; status: string; error?: string }> = [];
 
     for (const item of items) {
@@ -58,11 +66,16 @@ export default async function(req) {
               // Remove deleted firm ids from firm_ids
               const c = await svc.entities.Contact.get(record_id);
               if (c && Array.isArray(c.firm_ids)) {
-                const allFirms = await svc.entities.Firm.list('-deleted_at', 5000);
-                const deletedFirmIds = new Set(allFirms.filter((f) => f.deleted_at).map((f) => f.id));
                 const cleaned = c.firm_ids.filter((id) => !deletedFirmIds.has(id));
                 if (cleaned.length !== c.firm_ids.length) {
-                  await svc.entities.Contact.update(record_id, { firm_ids: cleaned });
+                  const update: any = { firm_ids: cleaned };
+                  // Fix invalid contact_type if it's not an array — legacy records
+                  // may have a string value, which causes the update to fail schema
+                  // validation even though we're only changing firm_ids.
+                  if (!Array.isArray(c.contact_type)) {
+                    update.contact_type = c.contact_type ? [c.contact_type] : [];
+                  }
+                  await svc.entities.Contact.update(record_id, update);
                 }
               }
             } else if (action === 'delete') {
@@ -73,10 +86,17 @@ export default async function(req) {
           case 'Product':
             if (action === 'clean') {
               const p = await svc.entities.Product.get(record_id);
-              if (p && Array.isArray(p.investment_team)) {
-                const allContacts = await svc.entities.Contact.list('-deleted_at', 5000);
-                const deletedIds = new Set(allContacts.filter((c) => c.deleted_at).map((c) => c.id));
-                const cleaned = p.investment_team.filter((m) => !m.contact_id || !deletedIds.has(m.contact_id));
+              if (!p) break;
+              // If the product's firm is deleted, soft-delete the product —
+              // firm_id is required and can't be emptied, so the product is
+              // effectively orphaned.
+              if (p.firm_id && deletedFirmIds.has(p.firm_id)) {
+                await svc.entities.Product.update(record_id, { deleted_at: now });
+                break;
+              }
+              // Otherwise, clean investment_team of deleted contacts
+              if (Array.isArray(p.investment_team)) {
+                const cleaned = p.investment_team.filter((m) => !m.contact_id || !deletedContactIds.has(m.contact_id));
                 if (cleaned.length !== p.investment_team.length) {
                   await svc.entities.Product.update(record_id, { investment_team: cleaned });
                 }
@@ -90,26 +110,24 @@ export default async function(req) {
             if (action === 'clean') {
               const dd = await svc.entities.DueDiligence.get(record_id);
               if (!dd) break;
-              const allContacts = await svc.entities.Contact.list('-deleted_at', 5000);
-              const deletedIds = new Set(allContacts.filter((c) => c.deleted_at).map((c) => c.id));
               const update: any = {};
-              if (dd.primary_analyst_contact_id && deletedIds.has(dd.primary_analyst_contact_id)) {
+              if (dd.primary_analyst_contact_id && deletedContactIds.has(dd.primary_analyst_contact_id)) {
                 update.primary_analyst_contact_id = '';
                 update.primary_analyst_name = '';
               }
-              if (dd.secondary_analyst_contact_id && deletedIds.has(dd.secondary_analyst_contact_id)) {
+              if (dd.secondary_analyst_contact_id && deletedContactIds.has(dd.secondary_analyst_contact_id)) {
                 update.secondary_analyst_contact_id = '';
                 update.secondary_analyst_name = '';
               }
               if (Array.isArray(dd.assigned_contact_ids)) {
-                const filtered = dd.assigned_contact_ids.filter((id) => !deletedIds.has(id));
+                const filtered = dd.assigned_contact_ids.filter((id) => !deletedContactIds.has(id));
                 if (filtered.length !== dd.assigned_contact_ids.length) update.assigned_contact_ids = filtered;
               }
               if (Array.isArray(dd.stages)) {
                 const stages = dd.stages.map((stage) => {
                   let stageChanged = false;
                   const su: any = {};
-                  if (stage.supervisor_contact_id && deletedIds.has(stage.supervisor_contact_id)) {
+                  if (stage.supervisor_contact_id && deletedContactIds.has(stage.supervisor_contact_id)) {
                     su.supervisor_contact_id = '';
                     su.supervisor_name = '';
                     stageChanged = true;
@@ -119,14 +137,14 @@ export default async function(req) {
                     subStages = subStages.map((ss) => {
                       let ssChanged = false;
                       const ssu: any = {};
-                      if (ss.performed_by_contact_id && deletedIds.has(ss.performed_by_contact_id)) {
+                      if (ss.performed_by_contact_id && deletedContactIds.has(ss.performed_by_contact_id)) {
                         ssu.performed_by_contact_id = '';
                         ssu.performed_by_name = '';
                         ssChanged = true;
                       }
                       let assignments = ss.assignments;
                       if (Array.isArray(assignments)) {
-                        const filtered = assignments.filter((a) => !a.contact_id || !deletedIds.has(a.contact_id));
+                        const filtered = assignments.filter((a) => !a.contact_id || !deletedContactIds.has(a.contact_id));
                         if (filtered.length !== assignments.length) { assignments = filtered; ssChanged = true; }
                       }
                       if (!ssChanged) return ss;
@@ -149,14 +167,12 @@ export default async function(req) {
             if (action === 'clean') {
               const q = await svc.entities.Questionnaire.get(record_id);
               if (!q) break;
-              const allContacts = await svc.entities.Contact.list('-deleted_at', 5000);
-              const deletedIds = new Set(allContacts.filter((c) => c.deleted_at).map((c) => c.id));
               const update: any = {};
-              if (q.assignee_contact_id && deletedIds.has(q.assignee_contact_id)) {
+              if (q.assignee_contact_id && deletedContactIds.has(q.assignee_contact_id)) {
                 update.assignee_contact_id = '';
                 update.assignee_contact_name = '';
               }
-              if (q.requester_contact_id && deletedIds.has(q.requester_contact_id)) {
+              if (q.requester_contact_id && deletedContactIds.has(q.requester_contact_id)) {
                 update.requester_contact_id = '';
                 update.requester_name = '';
               }
@@ -170,9 +186,7 @@ export default async function(req) {
             if (action === 'clean') {
               const oc = await svc.entities.OrgChart.get(record_id);
               if (!oc || !Array.isArray(oc.nodes)) break;
-              const allContacts = await svc.entities.Contact.list('-deleted_at', 5000);
-              const deletedIds = new Set(allContacts.filter((c) => c.deleted_at).map((c) => c.id));
-              const removedIds = new Set(oc.nodes.filter((n) => n.contact_id && deletedIds.has(n.contact_id)).map((n) => n.id));
+              const removedIds = new Set(oc.nodes.filter((n) => n.contact_id && deletedContactIds.has(n.contact_id)).map((n) => n.id));
               if (removedIds.size === 0) break;
               const remaining = oc.nodes.filter((n) => !removedIds.has(n.id));
               const cleanedNodes = remaining.map((n) => ({
