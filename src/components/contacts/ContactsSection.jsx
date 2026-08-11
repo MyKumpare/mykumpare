@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, ChevronDown, ChevronRight, User, Camera, Download } from "lucide-react";
+import { Plus, ChevronDown, ChevronRight, ChevronsDown, ChevronsUp, User, Camera, Download } from "lucide-react";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
 import ContactsSectionFilters, { filterSectionContacts } from "@/components/contacts/ContactsSectionFilters";
 import { useViewMode } from "@/hooks/useViewMode";
@@ -75,6 +75,27 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
 
   const toggleFirm = (firmId) =>
     setExpandedFirms((prev) => ({ ...prev, [firmId]: !prev[firmId] }));
+
+  const allGroupKeys = [...FIRM_TYPES, "__unassigned__"];
+  const allFirmIds = firms.map((f) => f.id);
+
+  const handleExpandAll = () => {
+    const groups = {};
+    allGroupKeys.forEach((k) => { groups[k] = true; });
+    const firmsExpanded = {};
+    allFirmIds.forEach((id) => { firmsExpanded[id] = true; });
+    setExpandedGroups(groups);
+    setExpandedFirms(firmsExpanded);
+  };
+
+  const handleCollapseAll = () => {
+    const groups = {};
+    allGroupKeys.forEach((k) => { groups[k] = false; });
+    const firmsExpanded = {};
+    allFirmIds.forEach((id) => { firmsExpanded[id] = false; });
+    setExpandedGroups(groups);
+    setExpandedFirms(firmsExpanded);
+  };
 
   // Build firmId -> firm map
   const firmMap = Object.fromEntries(firms.map((f) => [f.id, f]));
@@ -239,6 +260,28 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
             onToggle={handleToggleFilter}
             onClear={handleClearFilters}
           />
+          {viewMode === "list" && (
+            <div className="flex items-center justify-end gap-1 mb-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 gap-1 text-xs"
+                onClick={handleExpandAll}
+              >
+                <ChevronsDown className="w-3.5 h-3.5" />
+                Expand All
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 gap-1 text-xs"
+                onClick={handleCollapseAll}
+              >
+                <ChevronsUp className="w-3.5 h-3.5" />
+                Collapse All
+              </Button>
+            </div>
+          )}
           {viewMode === "list" && FIRM_TYPES.map((groupType) => {
             const firmGroups = grouped[groupType];
             if (!firmGroups) return null;
