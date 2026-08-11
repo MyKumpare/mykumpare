@@ -20,6 +20,9 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
 
   const toggleType = (type) => setCollapsedTypes(prev => ({ ...prev, [type]: !prev[type] }));
 
+  const collapseAll = () => setCollapsedTypes(Object.fromEntries(types.map(t => [t, true])));
+  const expandAll = () => setCollapsedTypes({});
+
   const q = search.toLowerCase();
 
   const activeFirms = useMemo(() =>
@@ -120,6 +123,24 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
                 Clear
               </button>
             )}
+          </div>
+          {/* Expand / Collapse all */}
+          <div className="flex items-center justify-end gap-3 mt-1.5">
+            <button
+              type="button"
+              onClick={expandAll}
+              className="text-[11px] text-gray-500 hover:text-indigo-600 font-medium"
+            >
+              Expand All
+            </button>
+            <span className="text-gray-300 text-[11px]">|</span>
+            <button
+              type="button"
+              onClick={collapseAll}
+              className="text-[11px] text-gray-500 hover:text-indigo-600 font-medium"
+            >
+              Collapse All
+            </button>
           </div>
         </div>
 
