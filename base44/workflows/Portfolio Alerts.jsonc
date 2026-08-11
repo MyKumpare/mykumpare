@@ -1,0 +1,42 @@
+{
+  "name": "Portfolio Alerts",
+  "description": "Sends automated email alerts when a portfolio's funding status changes to 'Terminated' or when an allocation limit is reached.",
+  "trigger": {
+    "config": {
+      "trigger_type": "entity",
+      "entity_name": "Portfolio",
+      "events": [
+        "update"
+      ]
+    },
+    "condition": "${ ((.trigger.changed_fields | index(\"funding_status\")) != null and .trigger.data.funding_status == \"Terminated\") or ((.trigger.changed_fields | index(\"allocation_history\")) != null) }"
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "portfolio_alerts",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "check_alerts": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "checkPortfolioAlerts",
+            "args": {
+              "portfolio_id": "${ .trigger.entity_id }",
+              "changed_fields": "${ .trigger.changed_fields }",
+              "old_funding_status": "${ .trigger.old_data.funding_status }"
+            }
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Check portfolio alert conditions",
+            "description": "Sends email alerts for funding status or allocation limit changes"
+          }
+        }
+      }
+    ]
+  }
+}

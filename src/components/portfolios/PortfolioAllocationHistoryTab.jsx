@@ -412,6 +412,7 @@ export default function PortfolioAllocationHistoryTab({ portfolio }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
 
   // Query products to resolve sub-manager firm_ids for document creation
   const { data: products = [] } = useQuery({
@@ -558,6 +559,29 @@ export default function PortfolioAllocationHistoryTab({ portfolio }) {
     saveAlloc(allocData.filter((a) => a.id !== id));
   };
 
+  const handleBulkDelete = () => {
+    if (selectedIds.size === 0) return;
+    saveAlloc(allocData.filter((a) => !selectedIds.has(a.id)));
+    setSelectedIds(new Set());
+  };
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredAlloc.length && filteredAlloc.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredAlloc.map((a) => a.id)));
+    }
+  };
+
   const handleSaveRecord = async (recordData) => {
     const firmInfo = getFirmForDocument();
     let firmDocumentId = editingRecord?.document?.firm_document_id || undefined;
@@ -618,6 +642,7 @@ export default function PortfolioAllocationHistoryTab({ portfolio }) {
     const opt = levelOptions[idx];
     setSelectedLevel(opt.value);
     setSelectedRefId(opt.refId || "");
+    setSelectedIds(new Set());
   };
 
   const selectedLevelIdx = levelOptions.findIndex(
@@ -696,6 +721,37 @@ export default function PortfolioAllocationHistoryTab({ portfolio }) {
         </div>
       )}
 
+      {/* Bulk action bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center justify-between rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2">
+          <span className="text-xs font-medium text-indigo-700">
+            {selectedIds.size} record{selectedIds.size !== 1 ? "s" : ""} selected
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-7 text-xs"
+              onClick={() => setSelectedIds(new Set())}
+            >
+              Clear
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="destructive"
+              className="h-7 text-xs gap-1.5"
+              onClick={handleBulkDelete}
+              disabled={saving}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Delete Selected
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Records table */}
       {filteredAlloc.length === 0 ? (
         <div className="text-sm text-gray-400 italic py-6 text-center border border-dashed border-gray-200 rounded-xl flex items-center justify-center gap-2">
@@ -708,6 +764,14 @@ export default function PortfolioAllocationHistoryTab({ portfolio }) {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 sticky top-0 z-10">
                 <tr>
+                  <th className="text-center px-2 py-2 w-8">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.size === filteredAlloc.length && filteredAlloc.length > 0}
+                      onChange={toggleSelectAll}
+                      className="w-3.5 h-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                    />
+                  </th>
                   <th className="text-left px-3 py-2 font-medium text-gray-600 text-xs">
                     Date
                   </th>
@@ -730,9 +794,20 @@ export default function PortfolioAllocationHistoryTab({ portfolio }) {
                 {filteredAlloc.map((rec) => (
                   <tr
                     key={rec.id}
-                    className="border-t border-gray-100 hover:bg-gray-50 cursor-pointer"
+                    className={cn(
+                      "border-t border-gray-100 hover:bg-gray-50 cursor-pointer",
+                      selectedIds.has(rec.id) && "bg-indigo-50/50"
+                    )}
                     onClick={() => handleEditRecord(rec)}
                   >
+                    <td className="px-2 py-2 text-center" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(rec.id)}
+                        onChange={() => toggleSelect(rec.id)}
+                        className="w-3.5 h-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      />
+                    </td>
                     <td className="px-3 py-2 text-gray-800 whitespace-nowrap">
                       {rec.activity_date
                         ? format(parseISO(rec.activity_date), "MM/dd/yyyy")
