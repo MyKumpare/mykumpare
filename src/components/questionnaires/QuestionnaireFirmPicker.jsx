@@ -5,10 +5,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { ChevronDown, Search, Check, Plus, Building2, Loader2 } from "lucide-react";
+import { ChevronDown, Search, Check, Plus, Building2, Loader2, AlertTriangle } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/components/ui/use-toast";
+import { findFirmNameDuplicates } from "@/components/firms/firmNameDuplicateCheck";
 
 const FIRM_TYPE_OPTIONS = [
   "Manager of Managers",
@@ -37,6 +38,7 @@ export default function QuestionnaireFirmPicker({
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [adding, setAdding] = useState(false);
+  const [duplicateMatches, setDuplicateMatches] = useState(null); // { newName, matches }
 
   const sortedFirms = useMemo(
     () => [...firms].filter((f) => !f.deleted_at).sort((a, b) => (a.name || "").localeCompare(b.name || "")),
@@ -58,11 +60,22 @@ export default function QuestionnaireFirmPicker({
     ? firms.find((f) => f.id === value)?.name || placeholder
     : placeholder;
 
-  const canAddNew = search.trim().length > 0 && filtered.length === 0 && !adding;
+  const canAddNew = search.trim().length > 0 && filtered.length === 0 && !adding && !duplicateMatches;
 
-  const handleAddNew = async () => {
+  const startAddNew = () => {
     const name = search.trim();
     if (!name) return;
+    // Check against ALL firms (not just the filtered list) so duplicates
+    // across the entire system are caught and surfaced for user review.
+    const matches = findFirmNameDuplicates(name, firms);
+    if (matches.length > 0) {
+      setDuplicateMatches({ newName: name, matches });
+      return;
+    }
+    confirmAddNew(name);
+  };
+
+  const confirmAddNew = async (name) => {
     setAdding(true);
     try {
       const created = await base44.entities.Firm.create({
@@ -74,6 +87,7 @@ export default function QuestionnaireFirmPicker({
       onChange(created.id, created);
       setOpen(false);
       setSearch("");
+      setDuplicateMatches(null);
     } catch (err) {
       toast({ title: "Failed to create firm", description: err?.message || "Please try again.", variant: "destructive" });
     } finally {
@@ -81,8 +95,16 @@ export default function QuestionnaireFirmPicker({
     }
   };
 
+  const acceptDuplicate = () => {
+    if (duplicateMatches) confirmAddNew(duplicateMatches.newName);
+  };
+
+  const rejectDuplicate = () => {
+    setDuplicateMatches(null);
+  };
+
   return (
-    <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) setSearch(""); }}>
+    <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setSearch(""); setDuplicateMatches(null); } }}>
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -118,40 +140,73 @@ export default function QuestionnaireFirmPicker({
               autoFocus
               placeholder="Search firms..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); setDuplicateMatches(null); }}
               className="pl-8 h-8"
             />
           </div>
         </div>
-        {/* List */}
-        <div className="max-h-[200px] overflow-y-auto">
-          {filtered.length === 0 ? (
-            <div className="px-3 py-4 text-center text-xs text-gray-400">
-              {search.trim() ? "No firms match your search." : "No firms found."}
+        {/* Duplicate review prompt */}
+        {duplicateMatches && (
+          <div className="p-3 border-b bg-amber-50 space-y-2">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="text-xs text-amber-800">
+                <p className="font-medium mb-1">Possible duplicate firm</p>
+                <p>“{duplicateMatches.newName}” may already exist:</p>
+              </div>
             </div>
-          ) : (
-            filtered.map((f) => (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => { onChange(f.id, f); setOpen(false); setSearch(""); }}
-                className="flex items-center justify-between w-full px-3 py-1.5 text-sm hover:bg-gray-50 text-left"
-              >
-                <span className="truncate">{f.name}</span>
-                {value === f.id && <Check className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0 ml-2" />}
-              </button>
-            ))
-          )}
-        </div>
+            <div className="max-h-[120px] overflow-y-auto space-y-1">
+              {duplicateMatches.matches.map((m) => (
+                <div key={m.firm.id} className="rounded border border-amber-200 bg-white px-2 py-1.5 text-xs">
+                  <div className="font-medium text-gray-800">{m.name}</div>
+                  <ul className="mt-0.5 list-disc list-inside text-gray-500">
+                    {m.reasons.map((r, i) => <li key={i}>{r}</li>)}
+                  </ul>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" size="sm" variant="outline" onClick={rejectDuplicate} className="flex-1">
+                Reject
+              </Button>
+              <Button type="button" size="sm" onClick={acceptDuplicate} className="flex-1">
+                Accept & Add
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* List */}
+        {!duplicateMatches && (
+          <div className="max-h-[200px] overflow-y-auto">
+            {filtered.length === 0 ? (
+              <div className="px-3 py-4 text-center text-xs text-gray-400">
+                {search.trim() ? "No firms match your search." : "No firms found."}
+              </div>
+            ) : (
+              filtered.map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => { onChange(f.id, f); setOpen(false); setSearch(""); }}
+                  className="flex items-center justify-between w-full px-3 py-1.5 text-sm hover:bg-gray-50 text-left"
+                >
+                  <span className="truncate">{f.name}</span>
+                  {value === f.id && <Check className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0 ml-2" />}
+                </button>
+              ))
+            )}
+          </div>
+        )}
         {/* Add new */}
-        {canAddNew && (
+        {canAddNew && !duplicateMatches && (
           <div className="border-t p-2">
             <Button
               type="button"
               size="sm"
               variant="outline"
               className="w-full justify-start text-indigo-600"
-              onClick={handleAddNew}
+              onClick={startAddNew}
               disabled={adding}
             >
               {adding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
