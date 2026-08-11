@@ -15,6 +15,7 @@ const getFirmTypes = (f) =>
 
 export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onAddFirm }) {
   const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
   const [collapsedTypes, setCollapsedTypes] = useState({});
 
   const toggleType = (type) => setCollapsedTypes(prev => ({ ...prev, [type]: !prev[type] }));
@@ -25,12 +26,14 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
     firms.filter(f => !f.deleted_at), [firms]);
 
   const filtered = useMemo(() =>
-    activeFirms.filter(f =>
-      !q ||
-      (f.name || "").toLowerCase().includes(q) ||
-      (f.firm_type || "").toLowerCase().includes(q) ||
-      (f.firm_types || []).some(t => t.toLowerCase().includes(q))
-    ), [activeFirms, q]);
+    activeFirms.filter(f => {
+      const matchesSearch = !q ||
+        (f.name || "").toLowerCase().includes(q) ||
+        (f.firm_type || "").toLowerCase().includes(q) ||
+        (f.firm_types || []).some(t => t.toLowerCase().includes(q));
+      const matchesType = !typeFilter || getFirmTypes(f).includes(typeFilter);
+      return matchesSearch && matchesType;
+    }), [activeFirms, q, typeFilter]);
 
   // Group by firm type → sorted alphabetically within each group
   // A firm can appear under multiple types
@@ -92,6 +95,29 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
             {search && (
               <button type="button" onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2">
                 <X className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" />
+              </button>
+            )}
+          </div>
+          {/* Firm type filter */}
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-xs text-gray-400 font-medium whitespace-nowrap">Filter by type:</span>
+            <select
+              value={typeFilter}
+              onChange={e => setTypeFilter(e.target.value)}
+              className="flex-1 h-8 text-xs rounded-lg border border-gray-200 bg-gray-50 px-2 outline-none focus:border-indigo-400 cursor-pointer"
+            >
+              <option value="">All Types</option>
+              {FIRM_TYPES.map(type => (
+                <option key={type} value={type}>{type}</option>
+              ))}
+            </select>
+            {typeFilter && (
+              <button
+                type="button"
+                onClick={() => setTypeFilter("")}
+                className="text-xs text-indigo-600 hover:text-indigo-800 font-medium whitespace-nowrap"
+              >
+                Clear
               </button>
             )}
           </div>
