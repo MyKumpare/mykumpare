@@ -9,6 +9,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import QuestionnaireDialog from "./QuestionnaireDialog";
+import FormTypeMenuDialog from "./FormTypeMenuDialog";
 import QuestionnaireReviewTab from "./QuestionnaireReviewTab";
 import QuestionnaireStatusTracker from "./QuestionnaireStatusTracker";
 import QuestionnaireListProgressTracker from "./QuestionnaireListProgressTracker";
@@ -53,6 +54,7 @@ export default function QuestionnairePickerModal({
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState(null); // questionnaire being edited/answered
   const [showCreate, setShowCreate] = useState(false);
+  const [showFormTypeMenu, setShowFormTypeMenu] = useState(false);
   const [view, setView] = useState("browse"); // "browse" | "review"
 
   const { data: questionnaires = [], isLoading } = useQuery({
@@ -97,7 +99,7 @@ export default function QuestionnairePickerModal({
 
   return (
     <>
-      <Dialog open={open && !selected && !showCreate} onOpenChange={(o) => !o && handleClose()}>
+      <Dialog open={open && !selected && !showCreate && !showFormTypeMenu} onOpenChange={(o) => !o && handleClose()}>
         <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between gap-2">
@@ -127,7 +129,7 @@ export default function QuestionnairePickerModal({
                   </button>
                 </div>
                 {view === "browse" && (
-                  <Button size="sm" className="gap-1" onClick={() => setShowCreate(true)}>
+                  <Button size="sm" className="gap-1" onClick={() => setShowFormTypeMenu(true)}>
                     <Plus className="w-3.5 h-3.5" /> Add
                   </Button>
                 )}
@@ -257,6 +259,18 @@ export default function QuestionnairePickerModal({
           onProductClick={onProductClick}
         />
       )}
+
+      {/* Form type menu — pick which form to create, or add a new form type */}
+      <FormTypeMenuDialog
+        open={showFormTypeMenu}
+        onOpenChange={setShowFormTypeMenu}
+        user={user}
+        onSelectType={(formType) => {
+          // Currently all form types open the Questionnaire dialog.
+          // The selected form type name is available for future routing.
+          setShowCreate(true);
+        }}
+      />
     </>
   );
 }
