@@ -35,8 +35,8 @@ import UtilitySection from "../components/utility/UtilitySection";
 import UtilityFullScreenModal from "../components/utility/UtilityFullScreenModal";
 import ReportsSection from "../components/reports/ReportsSection";
 import PickerSection from "../components/common/PickerSection";
+import DueDiligenceNavSection from "../components/firms/DueDiligenceNavSection";
 import AnalyticsSection from "../components/analytics/AnalyticsSection";
-import QuestionnaireSection from "../components/questionnaires/QuestionnaireSection";
 
 const ReportsPickerModal = lazyDialog(() => import("../components/reports/ReportsPickerModal"));
 const DocumentsDashboardModal = lazyDialog(() => import("../components/firms/DocumentsDashboardModal"));
@@ -795,62 +795,18 @@ export default function Home() {
           forceExpanded={allExpanded}
         />
 
-        {/* Due Diligence section */}
-        <PickerSection
-          label="Due Diligence"
-          icon={ShieldCheck}
-          iconColor="text-indigo-500"
-          entityName="DueDiligence"
-          onOpen={() => setDueDiligencePickerOpen(true)}
-          onAdd={() => setDdAddOpen(true)}
-          addLabel="Add Due Diligence"
-          addColor="text-indigo-600"
-          addHoverColor="hover:text-indigo-700"
-          addHoverBg="hover:bg-indigo-50"
-          openLabel="Open Due Diligence"
-          description="Open the due diligence picker to view and manage records."
-          forceExpanded={allExpanded}
-        />
-
-        {/* Documents section */}
-        <PickerSection
-          label="Documents"
-          icon={Files}
-          iconColor="text-teal-500"
-          count={documents.filter(d => !d.deleted_at).length}
-          onOpen={() => setDocumentsPickerOpen(true)}
-          onAdd={() => setAddDocOpen(true)}
-          addLabel="Add Document"
-          addColor="text-teal-600"
-          addHoverColor="hover:text-teal-700"
-          addHoverBg="hover:bg-teal-50"
-          openLabel="Open Documents"
-          description="Open the documents dashboard to browse and manage firm documents."
-          forceExpanded={allExpanded}
-        />
-
-        {/* Forms section — houses questionnaires and other forms */}
+        {/* Due Diligence section — with Documents, Forms, Templates nested as sub-items */}
         <div ref={formsRef} />
-        <QuestionnaireSection
-          forceExpanded={allExpanded}
-          onOpen={() => setQuestionnairePickerOpen(true)}
-          onAdd={() => setQuestionnaireAddOpen(true)}
-        />
-
-        {/* Templates section */}
-        <PickerSection
-          label="Templates"
-          icon={FileText}
-          iconColor="text-cyan-500"
-          entityName="Template"
-          onOpen={() => setTemplatesPickerOpen(true)}
-          onAdd={() => setTemplatesPickerOpen(true)}
-          addLabel="Add Template"
-          addColor="text-cyan-600"
-          addHoverColor="hover:text-cyan-700"
-          addHoverBg="hover:bg-cyan-50"
-          openLabel="Open Templates"
-          description="Open the templates picker to browse and manage templates."
+        <DueDiligenceNavSection
+          documentsCount={documents.filter(d => !d.deleted_at).length}
+          onOpenDueDiligence={() => setDueDiligencePickerOpen(true)}
+          onAddDueDiligence={() => setDdAddOpen(true)}
+          onOpenDocuments={() => setDocumentsPickerOpen(true)}
+          onAddDocuments={() => setAddDocOpen(true)}
+          onOpenForms={() => setQuestionnairePickerOpen(true)}
+          onAddForms={() => setQuestionnaireAddOpen(true)}
+          onOpenTemplates={() => setTemplatesPickerOpen(true)}
+          onAddTemplates={() => setTemplatesPickerOpen(true)}
           forceExpanded={allExpanded}
         />
 
