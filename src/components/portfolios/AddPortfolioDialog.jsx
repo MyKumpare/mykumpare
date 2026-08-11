@@ -14,6 +14,8 @@ import { CalendarIcon, Plus, X, ChevronDown, Check, Pencil, LayoutList, AlertTri
 import { cn } from "@/lib/utils";
 import AddFirmDialog from "@/components/firms/AddFirmDialog";
 import AddIMProductValidatedDialog from "@/components/products/AddIMProductValidatedDialog";
+import BenchmarkPicker from "./BenchmarkPicker";
+import SecondaryBenchmarksPicker from "./SecondaryBenchmarksPicker";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 
 // ── Searchable dropdown ────────────────────────────────────────────────────────
@@ -277,6 +279,9 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
   const [advisorInceptionDate, setAdvisorInceptionDate] = useState(null);
   const [advisorInitialAllocationAmount, setAdvisorInitialAllocationAmount] = useState("");
   const [subManagers, setSubManagers] = useState([]);
+  const [primaryBenchmarkId, setPrimaryBenchmarkId] = useState("");
+  const [primaryBenchmarkName, setPrimaryBenchmarkName] = useState("");
+  const [secondaryBenchmarks, setSecondaryBenchmarks] = useState([]);
 
   // View mode: when opening an existing portfolio, start in view mode
   const [isEditing, setIsEditing] = useState(false);
@@ -314,6 +319,9 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
         setAdvisorInceptionDate(editingPortfolio.advisor_inception_date ? parseISO(editingPortfolio.advisor_inception_date) : null);
         setAdvisorInitialAllocationAmount(editingPortfolio.advisor_initial_allocation_amount != null ? String(editingPortfolio.advisor_initial_allocation_amount) : "");
         setSubManagers(editingPortfolio.sub_managers || []);
+        setPrimaryBenchmarkId(editingPortfolio.primary_benchmark_id || "");
+        setPrimaryBenchmarkName(editingPortfolio.primary_benchmark_name || "");
+        setSecondaryBenchmarks(editingPortfolio.secondary_benchmarks || []);
       } else {
         setAllocatorId(preselectedAllocatorId || "");
         setPortfolioName("");
@@ -324,6 +332,9 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
         setAdvisorInceptionDate(null);
         setAdvisorInitialAllocationAmount("");
         setSubManagers([]);
+        setPrimaryBenchmarkId("");
+        setPrimaryBenchmarkName("");
+        setSecondaryBenchmarks([]);
       }
     }
   }, [open, preselectedAllocatorId, editingPortfolio]);
@@ -472,6 +483,9 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
       advisor_inception_date: advisorType && advisorInceptionDate ? format(advisorInceptionDate, "yyyy-MM-dd") : undefined,
       advisor_initial_allocation_amount: advisorType && advisorInitialAllocationAmount ? parseFloat(advisorInitialAllocationAmount) : undefined,
       sub_managers: advisorType === "Manager of Managers" ? subManagers : undefined,
+      primary_benchmark_id: primaryBenchmarkId || undefined,
+      primary_benchmark_name: primaryBenchmarkName || undefined,
+      secondary_benchmarks: secondaryBenchmarks.length > 0 ? secondaryBenchmarks : undefined,
     };
     if (editingPortfolio) {
       updateMutation.mutate({ id: editingPortfolio.id, data: payload });
@@ -544,9 +558,11 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
         advisorFirmId !== (editingPortfolio.advisor_firm_id || "") ||
         fmt(advisorInceptionDate) !== (editingPortfolio.advisor_inception_date || "") ||
         (advisorInitialAllocationAmount || "") !== (editingPortfolio.advisor_initial_allocation_amount != null ? String(editingPortfolio.advisor_initial_allocation_amount) : "") ||
-        JSON.stringify(subManagers) !== JSON.stringify(editingPortfolio.sub_managers || []);
+        JSON.stringify(subManagers) !== JSON.stringify(editingPortfolio.sub_managers || []) ||
+        primaryBenchmarkId !== (editingPortfolio.primary_benchmark_id || "") ||
+        JSON.stringify(secondaryBenchmarks) !== JSON.stringify(editingPortfolio.secondary_benchmarks || []);
     }
-    return !!(allocatorId || portfolioName.trim() || inceptionDate || initialAllocationAmount || advisorType || advisorFirmId || advisorInceptionDate || advisorInitialAllocationAmount || subManagers.length > 0);
+    return !!(allocatorId || portfolioName.trim() || inceptionDate || initialAllocationAmount || advisorType || advisorFirmId || advisorInceptionDate || advisorInitialAllocationAmount || subManagers.length > 0 || primaryBenchmarkId || secondaryBenchmarks.length > 0);
   })();
 
   const { guardedClose, guardDialog } = useUnsavedChangesGuard(hasPortfolioChanges, () => onOpenChange(false), handleSave);
@@ -713,6 +729,24 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                   </div>
                 </div>
               )}
+              {primaryBenchmarkName && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">Primary Benchmark</p>
+                  <p className="text-sm text-gray-900 px-3 py-2 rounded-md border bg-gray-50">{primaryBenchmarkName}</p>
+                </div>
+              )}
+              {secondaryBenchmarks.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">Secondary Benchmarks</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {secondaryBenchmarks.map((b) => (
+                      <span key={b.benchmark_id} className="inline-flex px-2 py-1 rounded-md bg-gray-100 border border-gray-200 text-xs font-medium text-gray-700">
+                        {b.benchmark_name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             /* Edit / Add mode */
@@ -857,6 +891,27 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                   />
                 </div>
               )}
+
+              {/* Primary Benchmark */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-gray-700">Primary Benchmark</Label>
+                <BenchmarkPicker
+                  value={primaryBenchmarkId}
+                  onChange={(id, name) => { setPrimaryBenchmarkId(id); setPrimaryBenchmarkName(name); }}
+                  excludeIds={secondaryBenchmarks.map((b) => b.benchmark_id)}
+                  placeholder="Select primary benchmark..."
+                />
+              </div>
+
+              {/* Secondary Benchmarks */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-gray-700">Secondary Benchmarks</Label>
+                <SecondaryBenchmarksPicker
+                  value={secondaryBenchmarks}
+                  onChange={setSecondaryBenchmarks}
+                  excludeIds={primaryBenchmarkId ? [primaryBenchmarkId] : []}
+                />
+              </div>
             </div>
           )}
 

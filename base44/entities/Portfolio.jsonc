@@ -75,6 +75,31 @@
         }
       }
     },
+    "primary_benchmark_id": {
+      "type": "string",
+      "description": "ID of the primary benchmark for this portfolio"
+    },
+    "primary_benchmark_name": {
+      "type": "string",
+      "description": "Name of the primary benchmark (denormalized for display)"
+    },
+    "secondary_benchmarks": {
+      "type": "array",
+      "description": "Secondary benchmarks associated with this portfolio",
+      "items": {
+        "type": "object",
+        "properties": {
+          "benchmark_id": {
+            "type": "string",
+            "description": "ID of the benchmark"
+          },
+          "benchmark_name": {
+            "type": "string",
+            "description": "Name of the benchmark (denormalized for display)"
+          }
+        }
+      }
+    },
     "deleted_at": {
       "type": "string",
       "format": "date-time",

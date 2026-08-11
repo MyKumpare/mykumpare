@@ -143,6 +143,14 @@ export default function FirmPortfoliosTab({
                   {p.advisor_inception_date ? ` (since ${format(parseISO(p.advisor_inception_date), "MMM d, yyyy")})` : ""}
                 </p>
               )}
+              {(p.primary_benchmark_name || (p.secondary_benchmarks && p.secondary_benchmarks.length > 0)) && (
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {p.primary_benchmark_name && <>Benchmark: {p.primary_benchmark_name}</>}
+                  {p.secondary_benchmarks && p.secondary_benchmarks.length > 0 && (
+                    <> {p.primary_benchmark_name ? "+" : ""}{p.secondary_benchmarks.length} secondary</>
+                  )}
+                </p>
+              )}
             </div>
           </div>
         ))}
