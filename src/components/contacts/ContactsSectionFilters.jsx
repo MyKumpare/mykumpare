@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { Search, SlidersHorizontal, MapPin, Package, Tag, Users, Shield, Building2, Briefcase, ChevronDown, ChevronRight, GripVertical } from "lucide-react";
+import { Search, SlidersHorizontal, MapPin, Package, Tag, Users, Shield, Building2, Briefcase, ChevronDown, ChevronRight, GripVertical, GraduationCap, Phone, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -8,12 +8,28 @@ import { Button } from "@/components/ui/button";
 // Each category maps to Contact entity fields (or derived data for address/products/firm).
 const FIELD_GROUPS = [
   {
+    label: "Info",
+    icon: User,
+    fields: [
+      { key: "salutation", label: "Salutation" },
+      { key: "suffix", label: "Suffix" },
+    ],
+  },
+  {
     label: "Address",
     icon: MapPin,
     fields: [
       { key: "addr_city", label: "City" },
       { key: "addr_state", label: "State" },
       { key: "addr_country", label: "Country" },
+      { key: "addr_postal_code", label: "Postal Code" },
+    ],
+  },
+  {
+    label: "Phones",
+    icon: Phone,
+    fields: [
+      { key: "phone_type", label: "Phone Type" },
     ],
   },
   {
@@ -31,11 +47,34 @@ const FIELD_GROUPS = [
     ],
   },
   {
+    label: "Education",
+    icon: GraduationCap,
+    fields: [
+      { key: "edu_institution", label: "Institution" },
+      { key: "edu_degree", label: "Degree" },
+      { key: "edu_specialization", label: "Area of Specialization" },
+      { key: "edu_majors", label: "Major(s)", isArray: true },
+      { key: "edu_minors", label: "Minor(s)", isArray: true },
+      { key: "designations", label: "Professional Designations", isArray: true },
+    ],
+  },
+  {
+    label: "Experience",
+    icon: Briefcase,
+    fields: [
+      { key: "exp_company", label: "Company" },
+      { key: "exp_title", label: "Title" },
+    ],
+  },
+  {
     label: "Classification",
     icon: Tag,
     fields: [
+      { key: "contact_status", label: "Contact Status" },
       { key: "contact_type", label: "Contact Type" },
-      { key: "contact_role", label: "Role" },
+      { key: "contact_role", label: "Priority" },
+      { key: "contact_roles", label: "Contact Role", isArray: true },
+      { key: "contact_firm_roles", label: "Contact Department", isArray: true },
       { key: "employee_status", label: "Employee Status" },
     ],
   },
@@ -111,7 +150,7 @@ function buildContactPortfolioMap(portfolios, contacts) {
 
 function getAddrValues(c, fieldKey) {
   const addrs = c.addresses || [];
-  const propMap = { addr_city: "city", addr_state: "state", addr_country: "country" };
+  const propMap = { addr_city: "city", addr_state: "state", addr_country: "country", addr_postal_code: "postal_code" };
   const prop = propMap[fieldKey];
   if (!prop) return [];
   const vals = addrs.map((a) => a[prop]).filter(Boolean);
@@ -132,6 +171,33 @@ function getFieldValue(c, f, firmMap, contactProductMap, contactPortfolioMap) {
     const firmIds = c.firm_ids || [];
     return firmIds.map((fid) => firmMap[fid]?.name).filter(Boolean);
   }
+  if (f.key === "phone_type") {
+    const phones = c.phones || [];
+    return [...new Set(phones.map((p) => p.phone_type).filter(Boolean))];
+  }
+  if (f.key.startsWith("edu_")) {
+    const edu = c.education || [];
+    const propMap = {
+      edu_institution: "institution",
+      edu_degree: "degree",
+      edu_specialization: "area_of_specialization",
+      edu_majors: "majors",
+      edu_minors: "minors",
+    };
+    const prop = propMap[f.key];
+    if (!prop) return [];
+    if (f.isArray) {
+      return [...new Set(edu.flatMap((e) => e[prop] || []))];
+    }
+    return [...new Set(edu.map((e) => e[prop]).filter(Boolean))];
+  }
+  if (f.key.startsWith("exp_")) {
+    const exp = c.professional_experience || [];
+    const propMap = { exp_company: "company_name", exp_title: "title" };
+    const prop = propMap[f.key];
+    if (!prop) return [];
+    return [...new Set(exp.map((e) => e[prop]).filter(Boolean))];
+  }
   const v = c[f.key];
   return f.isArray ? (Array.isArray(v) ? v : []) : v ? [v] : [];
 }
@@ -144,8 +210,15 @@ export function filterSectionContacts(contacts, text, selected, firmMap, contact
       const name = [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix]
         .filter(Boolean).join(" ").toLowerCase();
       const firmNames = (c.firm_ids || []).map(fid => firmMap[fid]?.name || "").filter(Boolean).join(" ");
+      const designations = (c.designations || []).join(" ");
+      const eduText = (c.education || []).map(e =>
+        [e.institution, e.degree, e.area_of_specialization, ...(e.majors || []), ...(e.minors || [])].filter(Boolean).join(" ")
+      ).join(" ");
+      const expText = (c.professional_experience || []).map(e =>
+        [e.company_name, e.title].filter(Boolean).join(" ")
+      ).join(" ");
       const haystack = [name, c.title || "", c.email || "", c.contact_type || "",
-        (c.designations || []).join(" "), firmNames].join(" ").toLowerCase();
+        designations, firmNames, eduText, expText].join(" ").toLowerCase();
       if (!haystack.includes(q)) return false;
     }
     for (const group of FIELD_GROUPS) {
