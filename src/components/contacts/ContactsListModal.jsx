@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { User, Download } from "lucide-react";
+import { User, Download, ChevronsDown, ChevronsUp, ChevronRight, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AddContactDialog from "./AddContactDialog";
 import ContactsSectionFilters, { filterSectionContacts } from "./ContactsSectionFilters";
@@ -10,6 +10,7 @@ export default function ContactsListModal({ open, onOpenChange, contacts = [], f
   const [search, setSearch] = useState("");
   const [filterSelected, setFilterSelected] = useState({});
   const [viewingContact, setViewingContact] = useState(null);
+  const [collapsedGroups, setCollapsedGroups] = useState(() => new Set());
 
   const getFirmName = (id) => firms.find((f) => f.id === id)?.name || "";
 
@@ -34,6 +35,15 @@ export default function ContactsListModal({ open, onOpenChange, contacts = [], f
     setFilterSelected({});
     setSearch("");
   };
+
+  const handleExpandAll = () => setCollapsedGroups(new Set());
+  const handleCollapseAll = () => setCollapsedGroups(new Set(grouped.map((g) => g.name)));
+  const toggleGroup = (name) =>
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name); else next.add(name);
+      return next;
+    });
 
   const SALUTATIONS = ["mr.", "mrs.", "ms.", "dr.", "prof.", "hon.", "mr", "mrs", "ms", "dr", "prof", "hon"];
   const stripSalutation = (name) => {
@@ -92,22 +102,48 @@ export default function ContactsListModal({ open, onOpenChange, contacts = [], f
           onClear={handleClearFilters}
         />
 
+        <div className="flex items-center justify-end gap-3 px-1 pb-1">
+          <button
+            onClick={handleExpandAll}
+            className="inline-flex items-center gap-1 text-xs text-gray-600 hover:text-gray-800 font-medium"
+          >
+            <ChevronsDown className="w-3.5 h-3.5" />
+            Expand All
+          </button>
+          <button
+            onClick={handleCollapseAll}
+            className="inline-flex items-center gap-1 text-xs text-gray-600 hover:text-gray-800 font-medium"
+          >
+            <ChevronsUp className="w-3.5 h-3.5" />
+            Collapse All
+          </button>
+        </div>
+
         <div className="overflow-y-auto flex-1 space-y-2 mt-1">
           {grouped.length === 0 ? (
             <div className="text-sm text-gray-400 italic text-center py-8">
               {search ? "No contacts found" : "No contacts yet"}
             </div>
           ) : (
-            grouped.map((group) => (
+            grouped.map((group) => {
+              const isCollapsed = collapsedGroups.has(group.name);
+              return (
               <div key={group.name} className="space-y-1.5">
-                <div className="sticky top-0 z-10 bg-white/95 backdrop-blur px-1 pt-2 pb-1 text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1">
+                <div
+                  className="sticky top-0 z-10 bg-white/95 backdrop-blur px-1 pt-2 pb-1 text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1 cursor-pointer hover:text-gray-700"
+                  onClick={() => toggleGroup(group.name)}
+                >
+                  {isCollapsed
+                    ? <ChevronRight className="w-3.5 h-3.5" />
+                    : <ChevronDown className="w-3.5 h-3.5" />}
                   <span>{group.name}</span>
+                  <span className="text-gray-400 normal-case font-normal">({group.items.length})</span>
                   {(() => {
                     const firmId = (group.items[0]?.firm_ids || [])[0];
                     const firmObj = firmId ? firms.find(f => f.id === firmId) : null;
                     return firmObj && onFirmClick ? (
                       <button
-                        onClick={() => { onFirmClick(firmObj); onOpenChange(false); }}
+                        onClick={(e) => { e.stopPropagation(); onFirmClick(firmObj); onOpenChange(false); }}
                         className="text-[10px] text-indigo-600 hover:text-indigo-700 hover:underline font-medium normal-case"
                       >
                         View →
@@ -115,7 +151,7 @@ export default function ContactsListModal({ open, onOpenChange, contacts = [], f
                     ) : null;
                   })()}
                 </div>
-                {group.items.map((c) => (
+                {!isCollapsed && group.items.map((c) => (
                   <div key={c.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100 hover:bg-indigo-50 hover:border-indigo-100 transition-colors cursor-pointer" onClick={() => setViewingContact(c)}>
                     <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 mt-0.5 overflow-hidden">
                       {c.photo_url
@@ -149,7 +185,8 @@ export default function ContactsListModal({ open, onOpenChange, contacts = [], f
                   </div>
                 ))}
               </div>
-            ))
+              );
+            })
           )}
         </div>
       </DialogContent>
