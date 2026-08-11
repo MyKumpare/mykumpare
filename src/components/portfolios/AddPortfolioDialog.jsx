@@ -131,7 +131,8 @@ function ProductMultiSelect({ options, value = [], onChange, onAddNew, momIncept
     if (exists) {
       onChange(value.filter((v) => v.product_id !== opt.value));
     } else {
-      onChange([...value, { product_id: opt.value, product_name: opt.label, firm_name: opt.firm_name, inception_date: "" }]);
+      const defaultDate = portfolioInceptionDate ? format(portfolioInceptionDate, "yyyy-MM-dd") : "";
+      onChange([...value, { product_id: opt.value, product_name: opt.label, firm_name: opt.firm_name, inception_date: defaultDate }]);
     }
   };
 
@@ -304,6 +305,17 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
       }
     }
   }, [open, preselectedAllocatorId, editingPortfolio]);
+
+  // Default advisor and sub-manager inception dates to the portfolio inception date
+  useEffect(() => {
+    if (!inceptionDate) return;
+    if (!advisorInceptionDate) setAdvisorInceptionDate(inceptionDate);
+    setSubManagers((prev) => {
+      if (!prev.some((s) => !s.inception_date)) return prev;
+      const dateStr = format(inceptionDate, "yyyy-MM-dd");
+      return prev.map((s) => (!s.inception_date ? { ...s, inception_date: dateStr } : s));
+    });
+  }, [inceptionDate]);
 
   const [pendingAdvisorType, setPendingAdvisorType] = useState(null);
   const [showAdvisorTypeWarning, setShowAdvisorTypeWarning] = useState(false);
