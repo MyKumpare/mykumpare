@@ -4,6 +4,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine,
 } from "recharts";
 import { TrendingUp, Activity } from "lucide-react";
+import PortfolioAllocationHeatmap from "./PortfolioAllocationHeatmap";
 
 const SERIES_COLORS = [
   "#4f46e5", // indigo-600 (portfolio)
@@ -213,6 +214,9 @@ export default function PortfolioDashboardTab({ portfolio }) {
           Click a legend entry to toggle visibility. Portfolio Total shown in thicker line.
         </p>
       </div>
+
+      {/* Allocation shift heatmap */}
+      <PortfolioAllocationHeatmap portfolio={portfolio} />
 
       {/* Series breakdown table */}
       <div className="rounded-lg border bg-white overflow-hidden">
