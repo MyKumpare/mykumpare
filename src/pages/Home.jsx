@@ -560,6 +560,9 @@ export default function Home() {
     { label: "Due Diligence", icon: ShieldCheck, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => setDueDiligencePickerOpen(true), submenu: [
       { label: "DD Board", icon: LayoutGrid, onClick: () => navigate("/DueDiligenceKanban") },
       { label: "DD Stats", icon: PieChart, onClick: () => navigate("/DueDiligenceDashboard") },
+      { label: "Documents", icon: Files, onClick: () => setDocumentsPickerOpen(true) },
+      { label: "Forms", icon: ClipboardCheck, onClick: () => setQuestionnairePickerOpen(true) },
+      { label: "Templates", icon: FileText, onClick: () => setTemplatesPickerOpen(true) },
     ] },
     { label: "Firms", icon: Building, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => setFirmPickerOpen(true) },
     { label: "Products", icon: Package, ref: null, color: "text-violet-600", activeBg: "bg-violet-50", onClick: () => setProductPickerOpen(true) },
@@ -569,9 +572,6 @@ export default function Home() {
     { label: "Tasks", icon: LayoutList, ref: null, color: "text-orange-600", activeBg: "bg-orange-50", onClick: () => setTaskPickerOpen(true) },
     { label: "Analytics", icon: LineChart, ref: analyticsRef, color: "text-cyan-600", activeBg: "bg-cyan-50", onClick: () => setAnalyticsLaunchOpen(true) },
     { label: "Reports", icon: FileText, ref: reportsRef, color: "text-blue-600", activeBg: "bg-blue-50", onClick: () => setReportsPickerOpen(true) },
-    { label: "Documents", icon: Files, ref: null, color: "text-teal-600", activeBg: "bg-teal-50", onClick: () => setDocumentsPickerOpen(true) },
-    { label: "Forms", icon: ClipboardCheck, ref: formsRef, color: "text-violet-600", activeBg: "bg-violet-50", onClick: () => setQuestionnairePickerOpen(true) },
-    { label: "Templates", icon: FileText, ref: null, color: "text-cyan-600", activeBg: "bg-cyan-50", onClick: () => setTemplatesPickerOpen(true) },
     { label: "Map Search", icon: MapPin, ref: null, color: "text-rose-600", activeBg: "bg-rose-50", onClick: () => setMapSearchOpen(true) },
     { label: "Ext Portal", icon: ExternalLink, ref: null, color: "text-teal-600", activeBg: "bg-teal-50", onClick: () => setExternalPortalOpen(true) },
     { label: "Utilities", icon: Wrench, ref: utilityRef, color: "text-gray-600", activeBg: "bg-gray-100", onClick: () => setUtilityModalOpen(true) },
@@ -812,6 +812,48 @@ export default function Home() {
           forceExpanded={allExpanded}
         />
 
+        {/* Documents section */}
+        <PickerSection
+          label="Documents"
+          icon={Files}
+          iconColor="text-teal-500"
+          count={documents.filter(d => !d.deleted_at).length}
+          onOpen={() => setDocumentsPickerOpen(true)}
+          onAdd={() => setAddDocOpen(true)}
+          addLabel="Add Document"
+          addColor="text-teal-600"
+          addHoverColor="hover:text-teal-700"
+          addHoverBg="hover:bg-teal-50"
+          openLabel="Open Documents"
+          description="Open the documents dashboard to browse and manage firm documents."
+          forceExpanded={allExpanded}
+        />
+
+        {/* Forms section — houses questionnaires and other forms */}
+        <div ref={formsRef} />
+        <QuestionnaireSection
+          forceExpanded={allExpanded}
+          onOpen={() => setQuestionnairePickerOpen(true)}
+          onAdd={() => setQuestionnaireAddOpen(true)}
+        />
+
+        {/* Templates section */}
+        <PickerSection
+          label="Templates"
+          icon={FileText}
+          iconColor="text-cyan-500"
+          entityName="Template"
+          onOpen={() => setTemplatesPickerOpen(true)}
+          onAdd={() => setTemplatesPickerOpen(true)}
+          addLabel="Add Template"
+          addColor="text-cyan-600"
+          addHoverColor="hover:text-cyan-700"
+          addHoverBg="hover:bg-cyan-50"
+          openLabel="Open Templates"
+          description="Open the templates picker to browse and manage templates."
+          forceExpanded={allExpanded}
+        />
+
         {/* Firms section */}
         <div ref={firmsRef} />
         {isLoading ? (
@@ -937,48 +979,6 @@ export default function Home() {
         {/* Reports section */}
         <div ref={reportsRef} />
         <ReportsSection forceExpanded={allExpanded} />
-
-        {/* Documents section */}
-        <PickerSection
-          label="Documents"
-          icon={Files}
-          iconColor="text-teal-500"
-          count={documents.filter(d => !d.deleted_at).length}
-          onOpen={() => setDocumentsPickerOpen(true)}
-          onAdd={() => setAddDocOpen(true)}
-          addLabel="Add Document"
-          addColor="text-teal-600"
-          addHoverColor="hover:text-teal-700"
-          addHoverBg="hover:bg-teal-50"
-          openLabel="Open Documents"
-          description="Open the documents dashboard to browse and manage firm documents."
-          forceExpanded={allExpanded}
-        />
-
-        {/* Forms section — houses questionnaires and other forms */}
-        <div ref={formsRef} />
-        <QuestionnaireSection
-          forceExpanded={allExpanded}
-          onOpen={() => setQuestionnairePickerOpen(true)}
-          onAdd={() => setQuestionnaireAddOpen(true)}
-        />
-
-        {/* Templates section */}
-        <PickerSection
-          label="Templates"
-          icon={FileText}
-          iconColor="text-cyan-500"
-          entityName="Template"
-          onOpen={() => setTemplatesPickerOpen(true)}
-          onAdd={() => setTemplatesPickerOpen(true)}
-          addLabel="Add Template"
-          addColor="text-cyan-600"
-          addHoverColor="hover:text-cyan-700"
-          addHoverBg="hover:bg-cyan-50"
-          openLabel="Open Templates"
-          description="Open the templates picker to browse and manage templates."
-          forceExpanded={allExpanded}
-        />
 
         {/* Utility section */}
         <div ref={utilityRef} />
