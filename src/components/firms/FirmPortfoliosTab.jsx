@@ -134,6 +134,7 @@ export default function FirmPortfoliosTab({
               <p className="text-xs text-gray-500 mt-0.5">
                 {advisorMode && p.allocator_name ? `${p.allocator_name} · ` : ""}
                 Inception: {p.inception_date ? format(parseISO(p.inception_date), "MMM d, yyyy") : "—"}
+                {p.initial_allocation_amount != null && p.initial_allocation_amount !== "" ? ` · $${p.initial_allocation_amount}` : ""}
               </p>
               {p.advisor_type && (
                 <p className="text-xs text-gray-400 mt-0.5">
