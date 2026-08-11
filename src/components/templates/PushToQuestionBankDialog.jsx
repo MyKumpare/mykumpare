@@ -4,12 +4,12 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { AlertTriangle, X, Plus } from "lucide-react";
+import { AlertTriangle, Plus } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { findQuestionDuplicate } from "./questionBankSimilarity";
 import { toast } from "@/components/ui/use-toast";
+import CategoryCombobox from "./CategoryCombobox";
 
 /**
  * Dialog for pushing a question (e.g. a stage/sub-stage name) into the
@@ -27,14 +27,12 @@ export default function PushToQuestionBankDialog({ open, onOpenChange, initialTe
   const { user } = useAuth();
   const [text, setText] = useState("");
   const [categories, setCategories] = useState([]);
-  const [categoryInput, setCategoryInput] = useState("");
   const [duplicate, setDuplicate] = useState(null);
 
   useEffect(() => {
     if (open) {
       setText(initialText || "");
       setCategories(Array.isArray(initialCategories) ? [...initialCategories] : []);
-      setCategoryInput("");
       setDuplicate(null);
     }
   }, [open, initialText, initialCategories]);
@@ -57,15 +55,6 @@ export default function PushToQuestionBankDialog({ open, onOpenChange, initialTe
       queryClient.invalidateQueries({ queryKey: ["question_bank"] });
     },
   });
-
-  const addCategory = (raw) => {
-    const c = (raw || "").trim();
-    if (!c) return;
-    if (!categories.includes(c)) setCategories([...categories, c]);
-    setCategoryInput("");
-  };
-
-  const removeCategory = (c) => setCategories(categories.filter((x) => x !== c));
 
   const handleSubmit = (force = false) => {
     const trimmed = text.trim();
@@ -110,40 +99,11 @@ export default function PushToQuestionBankDialog({ open, onOpenChange, initialTe
           </div>
           <div className="space-y-1.5">
             <Label>Categories</Label>
-            <div className="flex flex-wrap gap-1 mb-1.5">
-              {categories.map((c) => (
-                <Badge key={c} variant="secondary" className="gap-1">
-                  {c}
-                  <button type="button" onClick={() => removeCategory(c)} className="hover:text-red-600">
-                    <X className="w-3 h-3" />
-                  </button>
-                </Badge>
-              ))}
-            </div>
-            <Input
-              value={categoryInput}
-              onChange={(e) => setCategoryInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") { e.preventDefault(); addCategory(categoryInput); }
-              }}
-              placeholder="Type a category and press Enter..."
-              className="h-8 text-sm"
+            <CategoryCombobox
+              options={allCategories}
+              selected={categories}
+              onChange={setCategories}
             />
-            {allCategories.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-1.5">
-                {allCategories.slice(0, 12).map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => addCategory(c)}
-                    disabled={categories.includes(c)}
-                    className="text-[10px] px-1.5 py-0.5 rounded border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40"
-                  >
-                    + {c}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
 
           {duplicate && (
