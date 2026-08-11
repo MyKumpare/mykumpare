@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -53,6 +53,16 @@ export default function QuestionnaireContactPicker({
   const [typeFilter, setTypeFilter] = useState("all");
   const [adding, setAdding] = useState(false);
   const [duplicateMatches, setDuplicateMatches] = useState(null); // { newContact, matches }
+  const prevFirmIdRef = useRef(firmId);
+
+  // Auto-open the picker when a firm is selected, so the contact list is
+  // immediately visible without requiring an extra click.
+  useEffect(() => {
+    if (firmId && !prevFirmIdRef.current && !disabled) {
+      setOpen(true);
+    }
+    prevFirmIdRef.current = firmId;
+  }, [firmId, disabled]);
 
   // Contacts belonging to the selected firm
   const firmContacts = useMemo(
@@ -86,7 +96,9 @@ export default function QuestionnaireContactPicker({
       toast({ title: "Enter a full name", description: "Type both a first and last name to add a new contact.", variant: "destructive" });
       return;
     }
-    const matches = findContactDuplicates(parsed, firmContacts);
+    // Check against ALL contacts (not just this firm's) so duplicates at
+    // other firms are caught and surfaced for user review.
+    const matches = findContactDuplicates(parsed, contacts);
     if (matches.length > 0) {
       setDuplicateMatches({ newContact: parsed, matches });
       return;
