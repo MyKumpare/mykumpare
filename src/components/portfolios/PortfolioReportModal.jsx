@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,7 +9,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { format, parseISO, parse } from "date-fns";
-import { Download, Search, FileText, TrendingUp, DollarSign } from "lucide-react";
+import { Download, Search, FileText, TrendingUp, DollarSign, Loader2 } from "lucide-react";
+import PortfolioPdfSummary from "./PortfolioPdfSummary";
 
 function buildLevelOptions(portfolio) {
   const opts = [{ value: "all", label: "All Levels", refId: "" }];
@@ -55,8 +56,53 @@ export default function PortfolioReportModal({ portfolio, open, onOpenChange }) 
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [search, setSearch] = useState("");
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const pdfSummaryRef = useRef(null);
 
   const levelOptions = useMemo(() => buildLevelOptions(portfolio), [portfolio]);
+
+  const generatePdf = async () => {
+    if (!pdfSummaryRef.current) return;
+    setGeneratingPdf(true);
+    try {
+      const html2canvas = (await import("html2canvas")).default;
+      const jsPDF = (await import("jspdf")).default;
+
+      const canvas = await html2canvas(pdfSummaryRef.current, {
+        scale: 2,
+        backgroundColor: "#ffffff",
+        useCORS: true,
+        logging: false,
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "letter");
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 10;
+      const usableWidth = pageWidth - margin * 2;
+      const imgHeight = (canvas.height * usableWidth) / canvas.width;
+
+      let heightLeft = imgHeight;
+      let position = margin;
+
+      pdf.addImage(imgData, "PNG", margin, position, usableWidth, imgHeight);
+      heightLeft -= (pageHeight - margin * 2);
+
+      while (heightLeft > 0) {
+        position = margin - (imgHeight - heightLeft);
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", margin, position, usableWidth, imgHeight);
+        heightLeft -= (pageHeight - margin * 2);
+      }
+
+      pdf.save(`portfolio_summary_${portfolio.portfolio_name || "portfolio"}.pdf`);
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
 
   const results = useMemo(() => {
     let items = [];
@@ -372,7 +418,24 @@ export default function PortfolioReportModal({ portfolio, open, onOpenChange }) 
             <Download className="w-3.5 h-3.5" />
             Export CSV
           </Button>
+          <Button
+            onClick={generatePdf}
+            disabled={generatingPdf}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
+          >
+            {generatingPdf ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <FileText className="w-3.5 h-3.5" />
+            )}
+            {generatingPdf ? "Generating..." : "Generate PDF"}
+          </Button>
         </DialogFooter>
+
+        {/* Hidden PDF summary — rendered offscreen for html2canvas capture */}
+        <div style={{ position: "fixed", left: "-9999px", top: 0, zIndex: -1 }}>
+          <PortfolioPdfSummary ref={pdfSummaryRef} portfolio={portfolio} />
+        </div>
       </DialogContent>
     </Dialog>
   );
