@@ -41,7 +41,7 @@ const simplifyContact = (c) => ({
   name: [c.first_name, c.last_name].filter(Boolean).join(" "),
   title: c.title || "",
   email: c.email || "",
-  contact_type: c.contact_type || "",
+  contact_type: Array.isArray(c.contact_type) ? c.contact_type.join(", ") : (c.contact_type || ""),
   contact_status: c.contact_status || "",
 });
 
@@ -232,7 +232,10 @@ export const buildToolContext = async (userQuery) => {
     const tasksByStatus = computeDistribution(activeTasks, (t) => [t.status || "Unknown"]);
     const activitiesByType = computeDistribution(activities, (a) => [a.activity_type || "Unknown"]);
     const productsByAssetClass = computeDistribution(activeProducts, (p) => [p.asset_class || "Unknown"]);
-    const contactsByType = computeDistribution(activeContacts, (c) => [c.contact_type || "Unknown"]);
+    const contactsByType = computeDistribution(activeContacts, (c) => {
+      if (Array.isArray(c.contact_type)) return c.contact_type.length > 0 ? c.contact_type : ["Unknown"];
+      return [c.contact_type || "Unknown"];
+    });
 
     // Build JSON data payload
     const jsonData = {

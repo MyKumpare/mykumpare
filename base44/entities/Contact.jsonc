@@ -96,15 +96,11 @@
       "description": "Whether this is a primary or secondary contact"
     },
     "contact_type": {
-      "type": "string",
-      "enum": [
-        "Allocator",
-        "Investment Consultant",
-        "Investment Manager",
-        "Securities Broker",
-        "Trade Organization Representative"
-      ],
-      "description": "Classification type of the contact"
+      "type": "array",
+      "description": "Classification type(s) of the contact (multi-select, defaults from associated firm type)",
+      "items": {
+        "type": "string"
+      }
     },
     "contact_roles": {
       "type": "array",

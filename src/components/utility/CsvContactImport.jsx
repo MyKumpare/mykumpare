@@ -19,7 +19,7 @@ const IMPORTABLE_FIELDS = [
   { key: "linkedin_url", label: "LinkedIn URL" },
   { key: "employee_status", label: "Employee Status", enum: ["Employee", "Non-Employee"] },
   { key: "contact_status", label: "Contact Status", enum: ["Active", "Inactive"] },
-  { key: "contact_type", label: "Contact Type", enum: ["Allocator", "Investment Consultant", "Investment Manager", "Securities Broker", "Trade Organization Representative"] },
+  { key: "contact_type", label: "Contact Type (semicolon-separated)", isArray: true },
   { key: "biography", label: "Biography" },
   { key: "notes", label: "Notes" },
   { key: "firm_name", label: "Firm Name (lookup)", virtual: true },
@@ -216,11 +216,17 @@ export default function CsvContactImport() {
       if (raw.biography) contact.biography = raw.biography;
       if (raw.notes) contact.notes = raw.notes;
 
-      for (const key of ["salutation", "suffix", "employee_status", "contact_status", "contact_type"]) {
+      for (const key of ["salutation", "suffix", "employee_status", "contact_status"]) {
         if (raw[key]) {
           const v = validateEnum(raw[key], FIELD_BY_KEY[key].enum);
           if (v) contact[key] = v;
         }
+      }
+
+      // contact_type is now a multi-select array — split by semicolon
+      if (raw.contact_type) {
+        const types = raw.contact_type.split(/[;|]/).map(t => t.trim()).filter(Boolean);
+        if (types.length > 0) contact.contact_type = types;
       }
 
       let firmName = "";

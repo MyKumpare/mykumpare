@@ -77,7 +77,7 @@ export function exportContactsToCSV(contacts, firms = [], filename) {
       c.linkedin_url || "",
       c.employee_status || "",
       c.contact_status || "",
-      c.contact_type || "",
+      (Array.isArray(c.contact_type) ? c.contact_type.join("; ") : c.contact_type || ""),
       (c.contact_roles || []).join("; "),
       firmNames,
       c.biography || "",

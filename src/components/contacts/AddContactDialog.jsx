@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -30,7 +30,7 @@ import ContactProductsTab from "./ContactProductsTab";
 import ScrapeProfileButton from "./ScrapeProfileButton";
 import ContactRolePicker from "./ContactRolePicker";
 import ContactDepartmentPicker from "./ContactDepartmentPicker";
-import ContactTypePicker from "./ContactTypePicker";
+import ContactTypePicker, { defaultContactTypesFromFirm } from "./ContactTypePicker";
 import { findContactDuplicates, findContactsByNormalizedName } from "./contactDuplicateCheck";
 import SimilarAddressDialog from "../SimilarAddressDialog";
 import { findAddressIssues } from "../addressDuplicateCheck";
@@ -77,7 +77,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [employeeStatus, setEmployeeStatus] = useState("Employee");
   const [contactStatus, setContactStatus] = useState("Active");
   const [contactRole, setContactRole] = useState("");
-  const [contactType, setContactType] = useState("");
+  const [contactType, setContactType] = useState([]);
   const [contactRoles, setContactRoles] = useState([]);
   const [contactFirmRoles, setContactFirmRoles] = useState([]);
   const [gender, setGender] = useState("Undetermined");
@@ -126,7 +126,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setEmployeeStatus(editingContact.employee_status || "");
         setContactStatus(editingContact.contact_status || "Active");
         setContactRole(editingContact.contact_role || "");
-        setContactType(editingContact.contact_type || "");
+        setContactType(Array.isArray(editingContact.contact_type) ? editingContact.contact_type : (editingContact.contact_type ? [editingContact.contact_type] : []));
         setContactRoles(editingContact.contact_roles || []);
         setContactFirmRoles(editingContact.contact_firm_roles || []);
         setGender(editingContact.gender || "Undetermined");
@@ -159,7 +159,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setEmployeeStatus("Employee");
         setContactStatus("Active");
         setContactRole("");
-        setContactType("");
+        setContactType([]);
         setContactRoles([]);
         setContactFirmRoles([]);
         setGender("Undetermined");
@@ -180,8 +180,23 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
       setShowFirmPicker(false);
       setShowQuickAddFirm(false);
       setViewMode(initialViewMode);
-    }
-  }, [open, editingContact, currentFirmId, initialViewMode, initialPhotoUrl]);
+      }
+      }, [open, editingContact, currentFirmId, initialViewMode, initialPhotoUrl]);
+
+      // Default contact type from the initial firm (for new contacts with a pre-selected firm).
+      // Runs once per dialog open, after firms have loaded.
+      const initialTypeDefaultApplied = useRef(false);
+      useEffect(() => {
+      if (open && !editingContact && currentFirmId && firms.length > 0 && !initialTypeDefaultApplied.current) {
+      const firm = firms.find((f) => f.id === currentFirmId);
+      if (firm) {
+        const defaults = defaultContactTypesFromFirm(firm);
+        if (defaults.length > 0) setContactType(defaults);
+      }
+      initialTypeDefaultApplied.current = true;
+      }
+      if (!open) initialTypeDefaultApplied.current = false;
+      }, [open, editingContact, currentFirmId, firms]);
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Contact.create(data),
@@ -589,7 +604,19 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
   const filteredFirms = sortedFirms.filter(
     (f) => !firmIds.includes(f.id) && f.name.toLowerCase().includes(firmSearch.toLowerCase())
   );
-  const addFirm = (id) => { setFirmIds([...firmIds, id]); setFirmSearch(""); setShowFirmPicker(false); };
+  const addFirm = (id) => {
+    setFirmIds([...firmIds, id]);
+    setFirmSearch("");
+    setShowFirmPicker(false);
+    // Default contact type based on the newly added firm's type
+    const firm = firms.find((f) => f.id === id);
+    if (firm) {
+      const defaults = defaultContactTypesFromFirm(firm);
+      if (defaults.length > 0) {
+        setContactType((prev) => [...new Set([...prev, ...defaults])]);
+      }
+    }
+  };
   const removeFirm = (id) => {
     if (editingContact) {
       setFirmRemoveWarning(id);
@@ -678,7 +705,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
         employeeStatus !== (e.employee_status || "") ||
         contactStatus !== (e.contact_status || "Active") ||
         contactRole !== (e.contact_role || "") ||
-        contactType !== (e.contact_type || "") ||
+        JSON.stringify(contactType) !== JSON.stringify(Array.isArray(e.contact_type) ? e.contact_type : (e.contact_type ? [e.contact_type] : [])) ||
         gender !== (e.gender || "Undetermined") ||
         veteranStatus !== (e.veteran_status || "Undetermined") ||
         disabilityStatus !== (e.disability_status || "Undetermined") ||
@@ -1371,15 +1398,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
               {/* Contact Type */}
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-gray-700">Contact Type</Label>
-                {viewMode ? (
-                  <div className="text-sm px-1">
-                    {contactType ? (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">{contactType}</span>
-                    ) : <span className="text-gray-400 italic">—</span>}
-                  </div>
-                ) : (
-                  <ContactTypePicker value={contactType} onChange={setContactType} />
-                )}
+                <ContactTypePicker value={contactType} onChange={setContactType} viewMode={viewMode} />
               </div>
 
               {/* Contact Department (firm-specific, for IM / MoM / Allocator / IC firms) */}

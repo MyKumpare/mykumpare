@@ -11,7 +11,7 @@ export const FIELD_GROUPS = [
   {
     label: "Classification",
     fields: [
-      { key: "contact_type", label: "Contact Type" },
+      { key: "contact_type", label: "Contact Type", isArray: true },
       { key: "contact_role", label: "Role" },
       { key: "employee_status", label: "Employee Status" },
     ],
@@ -47,7 +47,7 @@ export function filterContacts(contacts, text, selected) {
   return contacts.filter((c) => {
     if (q) {
       const name = [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ").toLowerCase();
-      const haystack = [name, c.title || "", c.email || "", c.contact_type || "", (c.designations || []).join(" ")].join(" ").toLowerCase();
+      const haystack = [name, c.title || "", c.email || "", (Array.isArray(c.contact_type) ? c.contact_type.join(" ") : c.contact_type || ""), (c.designations || []).join(" ")].join(" ").toLowerCase();
       if (!haystack.includes(q)) return false;
     }
     for (const group of FIELD_GROUPS) {

@@ -22,7 +22,7 @@ export const DATA_SOURCES = {
       { key: "email", label: "Email", type: "text" },
       { key: "phones", label: "Phone Numbers", type: "object" },
       { key: "addresses", label: "Addresses", type: "object" },
-      { key: "contact_type", label: "Contact Type", type: "text" },
+      { key: "contact_type", label: "Contact Type", type: "array" },
       { key: "contact_roles", label: "Roles", type: "array" },
       { key: "contact_status", label: "Status", type: "text" },
       { key: "employee_status", label: "Employee Status", type: "text" },

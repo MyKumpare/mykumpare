@@ -243,7 +243,7 @@ function contactSignature(c) {
     employee_status: c.employee_status || "",
     contact_status: c.contact_status || "Active",
     contact_role: c.contact_role || "",
-    contact_type: c.contact_type || "",
+    contact_type: Array.isArray(c.contact_type) ? [...c.contact_type].sort() : (c.contact_type || ""),
     contact_roles: [...(c.contact_roles || [])].sort(),
     contact_firm_roles: [...(c.contact_firm_roles || [])].sort(),
     gender: c.gender || "",

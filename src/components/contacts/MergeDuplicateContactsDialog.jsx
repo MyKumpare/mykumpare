@@ -11,7 +11,8 @@ import { findContactDuplicates } from "@/components/contacts/contactDuplicateChe
 function completenessScore(c) {
   let n = 0;
   ["salutation", "first_name", "last_name", "title", "email", "linkedin_url", "biography", "photo_url",
-   "employee_status", "contact_type", "contact_status"].forEach((k) => { if (c[k]) n++; });
+   "employee_status", "contact_status"].forEach((k) => { if (c[k]) n++; });
+  if (Array.isArray(c.contact_type) ? c.contact_type.length > 0 : c.contact_type) n++;
   ["firm_ids", "designations", "contact_roles", "phones", "addresses", "education", "professional_experience"].forEach((k) => { if (c[k]?.length) n += c[k].length; });
   return n;
 }

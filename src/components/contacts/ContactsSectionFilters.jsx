@@ -71,7 +71,7 @@ const FIELD_GROUPS = [
     icon: Tag,
     fields: [
       { key: "contact_status", label: "Contact Status" },
-      { key: "contact_type", label: "Contact Type" },
+      { key: "contact_type", label: "Contact Type", isArray: true },
       { key: "contact_role", label: "Priority" },
       { key: "contact_roles", label: "Contact Role", isArray: true },
       { key: "contact_firm_roles", label: "Contact Department", isArray: true },
@@ -217,7 +217,7 @@ export function filterSectionContacts(contacts, text, selected, firmMap, contact
       const expText = (c.professional_experience || []).map(e =>
         [e.company_name, e.title].filter(Boolean).join(" ")
       ).join(" ");
-      const haystack = [name, c.title || "", c.email || "", c.contact_type || "",
+      const haystack = [name, c.title || "", c.email || "", (Array.isArray(c.contact_type) ? c.contact_type.join(" ") : c.contact_type || ""),
         designations, firmNames, eduText, expText].join(" ").toLowerCase();
       if (!haystack.includes(q)) return false;
     }

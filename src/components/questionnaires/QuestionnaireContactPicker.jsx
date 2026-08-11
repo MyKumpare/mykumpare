@@ -78,7 +78,7 @@ export default function QuestionnaireContactPicker({
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
     return sorted.filter((c) => {
-      if (typeFilter !== "all" && c.contact_type !== typeFilter) return false;
+      if (typeFilter !== "all" && !(Array.isArray(c.contact_type) ? c.contact_type.includes(typeFilter) : c.contact_type === typeFilter)) return false;
       if (!q) return true;
       return contactLabel(c).toLowerCase().includes(q) || (c.email || "").toLowerCase().includes(q);
     });
