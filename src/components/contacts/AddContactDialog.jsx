@@ -288,7 +288,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
     setLinkedinPhotoLoading(false);
   };
 
-  const isValid = firstName.trim() && lastName.trim();
+  const isValid = firstName.trim() && lastName.trim() && firmIds.length > 0;
 
   const hasUndetermined = gender === "Undetermined" || ethnicity.length === 0 || veteranStatus === "Undetermined" || disabilityStatus === "Undetermined";
 
@@ -1064,7 +1064,13 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
 
               {/* Associated Firms */}
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-gray-700">Associated Firms</Label>
+                <Label className="text-sm font-medium text-gray-700">Associated Firms *</Label>
+                {!viewMode && firmIds.length === 0 && (
+                  <p className="text-xs text-red-600 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" />
+                    At least one firm is required to save a contact.
+                  </p>
+                )}
                 <div className="flex flex-wrap gap-1.5 mb-1">
                   {firmIds.map((id) => (
                     <Badge key={id} variant="secondary" className="gap-1 pl-2 pr-1 py-0.5 text-xs">

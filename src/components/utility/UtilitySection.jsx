@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search, ArrowLeft, Users, Sparkles, ScrollText, ShieldCheck, Ghost, Upload, Eraser, Tag } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search, ArrowLeft, Users, Sparkles, ScrollText, ShieldCheck, Ghost, Upload, Eraser, Tag, UserX } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -9,6 +9,7 @@ import AddBenchmarkDialog from "./AddBenchmarkDialog";
 import DuplicateContactsReview from "@/components/contacts/DuplicateContactsReview";
 import EnrichmentLogsView from "./EnrichmentLogsView";
 import OrphanRecordCleanup from "./OrphanRecordCleanup";
+import OrphanedContactsCleanup from "./OrphanedContactsCleanup";
 import CsvContactImport from "./CsvContactImport";
 import PlaceholderCleanup from "./PlaceholderCleanup";
 import FirmTypeValidation from "./FirmTypeValidation";
@@ -239,6 +240,16 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
                 <span className="text-sm font-semibold text-gray-700">Firm Type Check</span>
                 <span className="text-[11px] text-gray-400">Find multi-type firms</span>
               </button>
+              <button
+                onClick={() => setView("orphaned-contacts")}
+                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
+              >
+                <div className="w-9 h-9 rounded-full bg-orange-50 flex items-center justify-center">
+                  <UserX className="w-5 h-5 text-orange-600" />
+                </div>
+                <span className="text-sm font-semibold text-gray-700">Orphaned Contacts</span>
+                <span className="text-[11px] text-gray-400">Find & fix firmless contacts</span>
+              </button>
               {isAdmin && (
                 <button
                   onClick={() => navigate("/UserManagement")}
@@ -380,6 +391,11 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
           {/* Firm type validation view */}
           {view === "firm-type-validation" && (
             <FirmTypeValidation onFirmClick={onFirmClick} />
+          )}
+
+          {/* Orphaned contacts cleanup view */}
+          {view === "orphaned-contacts" && (
+            <OrphanedContactsCleanup onFirmClick={onFirmClick} />
           )}
         </div>
       )}
