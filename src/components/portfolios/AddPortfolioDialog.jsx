@@ -10,13 +10,18 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format, parseISO } from "date-fns";
-import { CalendarIcon, Plus, X, ChevronDown, Check, Pencil, LayoutList, AlertTriangle } from "lucide-react";
+import { CalendarIcon, Plus, X, ChevronDown, Check, Pencil, LayoutList, AlertTriangle, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AddFirmDialog from "@/components/firms/AddFirmDialog";
 import AddIMProductValidatedDialog from "@/components/products/AddIMProductValidatedDialog";
 import BenchmarkPicker from "./BenchmarkPicker";
 import SecondaryBenchmarksPicker from "./SecondaryBenchmarksPicker";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import PortfolioGuidelinesTab from "./PortfolioGuidelinesTab";
+import PortfolioHistoricalAumTab from "./PortfolioHistoricalAumTab";
+import PortfolioAllocationHistoryTab from "./PortfolioAllocationHistoryTab";
+import PortfolioReportModal from "./PortfolioReportModal";
 
 // ── Searchable dropdown ────────────────────────────────────────────────────────
 function SearchableSelect({ options, value, onChange, placeholder, onAddNew, addNewLabel }) {
@@ -283,6 +288,15 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
   const [primaryBenchmarkName, setPrimaryBenchmarkName] = useState("");
   const [secondaryBenchmarks, setSecondaryBenchmarks] = useState([]);
 
+  // Guidelines state
+  const [guidelinesInvestments, setGuidelinesInvestments] = useState("");
+  const [guidelinesProgram, setGuidelinesProgram] = useState("");
+  const [guidelinesCompliance, setGuidelinesCompliance] = useState("");
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState("details");
+  const [reportOpen, setReportOpen] = useState(false);
+
   // View mode: when opening an existing portfolio, start in view mode
   const [isEditing, setIsEditing] = useState(false);
 
@@ -322,6 +336,10 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
         setPrimaryBenchmarkId(editingPortfolio.primary_benchmark_id || "");
         setPrimaryBenchmarkName(editingPortfolio.primary_benchmark_name || "");
         setSecondaryBenchmarks(editingPortfolio.secondary_benchmarks || []);
+        setGuidelinesInvestments(editingPortfolio.guidelines_investments || "");
+        setGuidelinesProgram(editingPortfolio.guidelines_program || "");
+        setGuidelinesCompliance(editingPortfolio.guidelines_compliance || "");
+        setActiveTab("details");
       } else {
         setAllocatorId(preselectedAllocatorId || "");
         setPortfolioName("");
@@ -335,6 +353,10 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
         setPrimaryBenchmarkId("");
         setPrimaryBenchmarkName("");
         setSecondaryBenchmarks([]);
+        setGuidelinesInvestments("");
+        setGuidelinesProgram("");
+        setGuidelinesCompliance("");
+        setActiveTab("details");
       }
     }
   }, [open, preselectedAllocatorId, editingPortfolio]);
@@ -486,6 +508,9 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
       primary_benchmark_id: primaryBenchmarkId || undefined,
       primary_benchmark_name: primaryBenchmarkName || undefined,
       secondary_benchmarks: secondaryBenchmarks.length > 0 ? secondaryBenchmarks : undefined,
+      guidelines_investments: guidelinesInvestments || undefined,
+      guidelines_program: guidelinesProgram || undefined,
+      guidelines_compliance: guidelinesCompliance || undefined,
     };
     if (editingPortfolio) {
       updateMutation.mutate({ id: editingPortfolio.id, data: payload });
@@ -560,9 +585,12 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
         (advisorInitialAllocationAmount || "") !== (editingPortfolio.advisor_initial_allocation_amount != null ? String(editingPortfolio.advisor_initial_allocation_amount) : "") ||
         JSON.stringify(subManagers) !== JSON.stringify(editingPortfolio.sub_managers || []) ||
         primaryBenchmarkId !== (editingPortfolio.primary_benchmark_id || "") ||
-        JSON.stringify(secondaryBenchmarks) !== JSON.stringify(editingPortfolio.secondary_benchmarks || []);
+        JSON.stringify(secondaryBenchmarks) !== JSON.stringify(editingPortfolio.secondary_benchmarks || []) ||
+        guidelinesInvestments !== (editingPortfolio.guidelines_investments || "") ||
+        guidelinesProgram !== (editingPortfolio.guidelines_program || "") ||
+        guidelinesCompliance !== (editingPortfolio.guidelines_compliance || "");
     }
-    return !!(allocatorId || portfolioName.trim() || inceptionDate || initialAllocationAmount || advisorType || advisorFirmId || advisorInceptionDate || advisorInitialAllocationAmount || subManagers.length > 0 || primaryBenchmarkId || secondaryBenchmarks.length > 0);
+    return !!(allocatorId || portfolioName.trim() || inceptionDate || initialAllocationAmount || advisorType || advisorFirmId || advisorInceptionDate || advisorInitialAllocationAmount || subManagers.length > 0 || primaryBenchmarkId || secondaryBenchmarks.length > 0 || guidelinesInvestments || guidelinesProgram || guidelinesCompliance);
   })();
 
   const { guardedClose, guardDialog } = useUnsavedChangesGuard(hasPortfolioChanges, () => onOpenChange(false), handleSave);
@@ -609,7 +637,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
         </Dialog>
       )}
       <Dialog open={open} onOpenChange={(v) => { if (!v) guardedClose(); }}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between pr-6">
               {editingPortfolio && !isEditing ? (
@@ -628,19 +656,38 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                 </DialogTitle>
               )}
               {editingPortfolio && !isEditing && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1.5"
-                  onClick={() => setIsEditing(true)}
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                  Edit
-                </Button>
+                <div className="flex gap-1.5">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1.5"
+                    onClick={() => setReportOpen(true)}
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    Report
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1.5"
+                    onClick={() => setIsEditing(true)}
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                    Edit
+                  </Button>
+                </div>
               )}
             </div>
           </DialogHeader>
 
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className={cn("grid w-full mb-1", editingPortfolio ? "grid-cols-4" : "grid-cols-2")}>
+              <TabsTrigger value="details" className="text-xs">Details</TabsTrigger>
+              <TabsTrigger value="guidelines" className="text-xs">Guidelines</TabsTrigger>
+              {editingPortfolio && <TabsTrigger value="historical-aum" className="text-xs">Historical AUM</TabsTrigger>}
+              {editingPortfolio && <TabsTrigger value="allocation-history" className="text-xs">Allocation History</TabsTrigger>}
+            </TabsList>
+            <TabsContent value="details">
           {/* View mode */}
           {editingPortfolio && !isEditing ? (
             <div className="space-y-3 py-2">
@@ -914,6 +961,29 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
               </div>
             </div>
           )}
+            </TabsContent>
+            <TabsContent value="guidelines">
+              <PortfolioGuidelinesTab
+                investments={guidelinesInvestments}
+                program={guidelinesProgram}
+                compliance={guidelinesCompliance}
+                isEditing={!editingPortfolio || isEditing}
+                onInvestmentsChange={setGuidelinesInvestments}
+                onProgramChange={setGuidelinesProgram}
+                onComplianceChange={setGuidelinesCompliance}
+              />
+            </TabsContent>
+            {editingPortfolio && (
+              <>
+                <TabsContent value="historical-aum">
+                  <PortfolioHistoricalAumTab portfolio={editingPortfolio} />
+                </TabsContent>
+                <TabsContent value="allocation-history">
+                  <PortfolioAllocationHistoryTab portfolio={editingPortfolio} />
+                </TabsContent>
+              </>
+            )}
+          </Tabs>
 
           <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-between gap-2 pt-2 border-t">
             <div>
@@ -984,6 +1054,14 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
         }}
       />
       {guardDialog}
+
+      {editingPortfolio && (
+        <PortfolioReportModal
+          portfolio={editingPortfolio}
+          open={reportOpen}
+          onOpenChange={setReportOpen}
+        />
+      )}
     </>
   );
 }

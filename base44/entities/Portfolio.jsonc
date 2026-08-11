@@ -100,6 +100,129 @@
         }
       }
     },
+    "guidelines_investments": {
+      "type": "string",
+      "description": "Investment guidelines (rich text HTML)"
+    },
+    "guidelines_program": {
+      "type": "string",
+      "description": "Program guidelines (rich text HTML)"
+    },
+    "guidelines_compliance": {
+      "type": "string",
+      "description": "Compliance guidelines (rich text HTML)"
+    },
+    "historical_aum": {
+      "type": "array",
+      "description": "Historical AUM data points (month-by-month). Each entry tracks date, value, and the level it applies to (portfolio total, advisor, or individual sub-manager).",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "Date of the AUM data point (YYYY-MM-DD, typically month-end)"
+          },
+          "value": {
+            "type": "number",
+            "description": "AUM value on this date"
+          },
+          "level": {
+            "type": "string",
+            "enum": [
+              "portfolio",
+              "advisor",
+              "sub_manager"
+            ],
+            "description": "Which entity this AUM data point applies to"
+          },
+          "reference_id": {
+            "type": "string",
+            "description": "ID of the referenced entity (advisor firm ID for 'advisor' level, product ID for 'sub_manager' level, empty for 'portfolio' level)"
+          },
+          "reference_name": {
+            "type": "string",
+            "description": "Display name of the referenced entity (denormalized)"
+          }
+        }
+      }
+    },
+    "allocation_history": {
+      "type": "array",
+      "description": "Allocation history records tracking funding activities (initial allocations, capital additions, redemptions). Each record can have a supporting document saved to the related firm's document tab.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "activity_date": {
+            "type": "string",
+            "format": "date",
+            "description": "Date of the funding activity (YYYY-MM-DD)"
+          },
+          "activity_type": {
+            "type": "string",
+            "enum": [
+              "Initial Allocation",
+              "Capital Addition",
+              "Redemption"
+            ],
+            "description": "Type of funding activity"
+          },
+          "amount": {
+            "type": "number",
+            "description": "Amount of the funding activity"
+          },
+          "notes": {
+            "type": "string",
+            "description": "Rich text notes (HTML) about this allocation activity"
+          },
+          "level": {
+            "type": "string",
+            "enum": [
+              "portfolio",
+              "advisor",
+              "sub_manager"
+            ],
+            "description": "Which entity this allocation applies to"
+          },
+          "reference_id": {
+            "type": "string",
+            "description": "ID of the referenced entity (advisor firm ID for 'advisor' level, product ID for 'sub_manager' level, empty for 'portfolio' level)"
+          },
+          "reference_name": {
+            "type": "string",
+            "description": "Display name of the referenced entity (denormalized)"
+          },
+          "document": {
+            "type": "object",
+            "description": "Supporting document attached to this allocation record. Also saved as a FirmDocument record in the related firm's document tab.",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Display name of the document"
+              },
+              "file_url": {
+                "type": "string",
+                "description": "URL of the uploaded document file"
+              },
+              "file_type": {
+                "type": "string",
+                "description": "MIME type or extension of the file"
+              },
+              "firm_document_id": {
+                "type": "string",
+                "description": "ID of the corresponding FirmDocument record created for this document"
+              }
+            }
+          }
+        }
+      }
+    },
     "deleted_at": {
       "type": "string",
       "format": "date-time",
