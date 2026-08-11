@@ -59,6 +59,39 @@ function stripHtml(html) {
   return (tmp.textContent || tmp.innerText || "").trim();
 }
 
+/** Net total (initial + additions - redemptions) for a given level + optional reference_id. */
+function calculateLevelTotal(allocationHistory, level, referenceId) {
+  return (allocationHistory || [])
+    .filter((e) => e.level === level && (!referenceId || e.reference_id === referenceId))
+    .reduce((sum, e) => {
+      if (e.activity_type === "Redemption") return sum - (e.amount || 0);
+      return sum + (e.amount || 0);
+    }, 0);
+}
+
+function levelHasInitial(allocationHistory, level, referenceId) {
+  return (allocationHistory || []).some(
+    (e) =>
+      e.level === level &&
+      (!referenceId || e.reference_id === referenceId) &&
+      e.activity_type === "Initial Allocation"
+  );
+}
+
+function levelHasAdditionOrRedemption(allocationHistory, level, referenceId) {
+  return (allocationHistory || []).some(
+    (e) =>
+      e.level === level &&
+      (!referenceId || e.reference_id === referenceId) &&
+      (e.activity_type === "Capital Addition" || e.activity_type === "Redemption")
+  );
+}
+
+function fmtCurrency(n) {
+  if (n == null || isNaN(n)) return "—";
+  return `$${Number(n).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+}
+
 // Allocation record edit dialog
 function AllocationRecordDialog({
   open,
@@ -66,6 +99,11 @@ function AllocationRecordDialog({
   onSave,
   editingRecord,
   levelLabel,
+  levelType,
+  parentTotal,
+  levelTotal,
+  canAllocate,
+  availableActivityTypes,
 }) {
   const [activityDate, setActivityDate] = useState(null);
   const [activityType, setActivityType] = useState("Initial Allocation");
@@ -81,7 +119,11 @@ function AllocationRecordDialog({
       setActivityDate(
         editingRecord?.activity_date ? parseISO(editingRecord.activity_date) : null
       );
-      setActivityType(editingRecord?.activity_type || "Initial Allocation");
+      setActivityType(
+        editingRecord?.activity_type ||
+          availableActivityTypes[0] ||
+          "Capital Addition"
+      );
       setAmount(
         editingRecord?.amount != null ? String(editingRecord.amount) : ""
       );
@@ -89,6 +131,7 @@ function AllocationRecordDialog({
       setExistingDoc(editingRecord?.document || null);
       setDocFile(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editingRecord]);
 
   const handleFileChange = (e) => {
@@ -106,6 +149,32 @@ function AllocationRecordDialog({
         variant: "destructive",
       });
       return;
+    }
+
+    // Validation: parent level must be populated before allocating downstream
+    if (levelType !== "portfolio" && !canAllocate) {
+      toast({
+        title:
+          levelType === "advisor"
+            ? "Portfolio must have an initial allocation first"
+            : "Advisor must have an initial allocation first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validation: amount cannot exceed remaining available (advisor / sub_manager levels)
+    if (parentTotal != null) {
+      const editingAmt = editingRecord?.amount || 0;
+      const remaining =
+        parentTotal - levelTotal + editingAmt;
+      if (parseFloat(amount) > remaining) {
+        toast({
+          title: `Amount exceeds available to allocate (${fmtCurrency(remaining)})`,
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     let documentData = existingDoc || undefined;
@@ -150,6 +219,60 @@ function AllocationRecordDialog({
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
+          {/* Allocation availability info (advisor / sub_manager levels only) */}
+          {parentTotal != null && (
+            <div className="rounded-lg border bg-gray-50 p-3 space-y-1.5">
+              {levelType === "advisor" && (
+                <div className="text-xs font-medium text-gray-700 mb-1">
+                  Allocation from Portfolio
+                </div>
+              )}
+              {levelType === "sub_manager" && (
+                <div className="text-xs font-medium text-gray-700 mb-1">
+                  Allocation from Advisor
+                </div>
+              )}
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">Total Available</span>
+                <span className="font-medium text-gray-800">
+                  {fmtCurrency(parentTotal)}
+                </span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">Already Allocated</span>
+                <span className="font-medium text-gray-800">
+                  {fmtCurrency(levelTotal - (editingRecord?.amount || 0))}
+                </span>
+              </div>
+              <div className="flex justify-between text-xs pt-1 border-t border-gray-200">
+                <span className="text-gray-600 font-medium">Remaining</span>
+                <span
+                  className={cn(
+                    "font-bold",
+                    parentTotal - levelTotal + (editingRecord?.amount || 0) <= 0
+                      ? "text-red-600"
+                      : "text-emerald-600"
+                  )}
+                >
+                  {fmtCurrency(
+                    parentTotal - levelTotal + (editingRecord?.amount || 0)
+                  )}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Warning: parent level not populated */}
+          {levelType !== "portfolio" && !canAllocate && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-2.5 flex items-start gap-2">
+              <span className="text-xs text-amber-700">
+                {levelType === "advisor"
+                  ? "Portfolio must have an initial allocation before allocating to the advisor."
+                  : "Advisor must have an initial allocation before allocating to sub-managers."}
+              </span>
+            </div>
+          )}
+
           <div>
             <Label className="text-xs font-medium text-gray-700">
               Activity Date <span className="text-red-400">*</span>
@@ -191,7 +314,7 @@ function AllocationRecordDialog({
               onChange={(e) => setActivityType(e.target.value)}
               className="w-full h-9 text-sm rounded-md border border-input bg-transparent px-3 mt-1 focus:outline-none focus:ring-1 focus:ring-ring"
             >
-              {ACTIVITY_TYPES.map((t) => (
+              {availableActivityTypes.map((t) => (
                 <option key={t} value={t}>
                   {t}
                 </option>
@@ -269,7 +392,7 @@ function AllocationRecordDialog({
           </Button>
           <Button
             onClick={handleSave}
-            disabled={uploading}
+            disabled={uploading || (levelType !== "portfolio" && !canAllocate)}
             className="bg-indigo-600 hover:bg-indigo-700 text-white"
           >
             {uploading ? "Uploading..." : "Save Record"}
@@ -297,6 +420,71 @@ export default function PortfolioAllocationHistoryTab({ portfolio }) {
   });
 
   const levelOptions = useMemo(() => buildLevelOptions(portfolio), [portfolio]);
+
+  // Calculate totals at each level
+  const portfolioTotal = useMemo(
+    () => calculateLevelTotal(allocData, "portfolio"),
+    [allocData]
+  );
+  const advisorTotal = useMemo(
+    () => calculateLevelTotal(allocData, "advisor"),
+    [allocData]
+  );
+  const subManagerTotal = useMemo(
+    () => calculateLevelTotal(allocData, "sub_manager"),
+    [allocData]
+  );
+
+  const isPortfolioPopulated = useMemo(
+    () => levelHasInitial(allocData, "portfolio"),
+    [allocData]
+  );
+  const isAdvisorPopulated = useMemo(
+    () => levelHasInitial(allocData, "advisor"),
+    [allocData]
+  );
+
+  // Available amount + canAllocate for the currently selected level
+  const allocationInfo = useMemo(() => {
+    if (selectedLevel === "portfolio") {
+      return { parentTotal: null, levelTotal: portfolioTotal, canAllocate: true };
+    }
+    if (selectedLevel === "advisor") {
+      return {
+        parentTotal: portfolioTotal,
+        levelTotal: advisorTotal,
+        canAllocate: isPortfolioPopulated,
+      };
+    }
+    // sub_manager
+    return {
+      parentTotal: advisorTotal,
+      levelTotal: subManagerTotal,
+      canAllocate: isAdvisorPopulated,
+    };
+  }, [
+    selectedLevel,
+    portfolioTotal,
+    advisorTotal,
+    subManagerTotal,
+    isPortfolioPopulated,
+    isAdvisorPopulated,
+  ]);
+
+  // Filter activity types: hide "Initial Allocation" if one already exists
+  // or if any Capital Addition / Redemption exists at this level
+  const availableActivityTypes = useMemo(() => {
+    const hasInitial = levelHasInitial(allocData, selectedLevel, selectedRefId);
+    const hasAddOrRed = levelHasAdditionOrRedemption(
+      allocData,
+      selectedLevel,
+      selectedRefId
+    );
+    return ACTIVITY_TYPES.filter((t) => {
+      if (t === "Initial Allocation" && (hasInitial || hasAddOrRed)) return false;
+      return true;
+    });
+  }, [allocData, selectedLevel, selectedRefId]);
 
   const currentLevelLabel = useMemo(
     () =>
@@ -468,6 +656,46 @@ export default function PortfolioAllocationHistoryTab({ portfolio }) {
         </Button>
       </div>
 
+      {/* Allocation availability banner for advisor / sub_manager levels */}
+      {selectedLevel !== "portfolio" && (
+        <div
+          className={cn(
+            "rounded-lg border p-2.5 flex items-center justify-between text-xs",
+            allocationInfo.canAllocate
+              ? "border-indigo-100 bg-indigo-50"
+              : "border-amber-200 bg-amber-50"
+          )}
+        >
+          <span className="text-gray-600">
+            {selectedLevel === "advisor"
+              ? "Available to allocate from portfolio:"
+              : "Available to allocate from advisor:"}
+          </span>
+          <span className="flex items-center gap-3">
+            {!allocationInfo.canAllocate && (
+              <span className="text-amber-700 font-medium">
+                {selectedLevel === "advisor"
+                  ? "Portfolio needs an initial allocation first"
+                  : "Advisor needs an initial allocation first"}
+              </span>
+            )}
+            {allocationInfo.canAllocate && (
+              <>
+                <span className="text-gray-500">
+                  Allocated: {fmtCurrency(allocationInfo.levelTotal)}
+                </span>
+                <span className="font-bold text-indigo-700">
+                  Remaining:{" "}
+                  {fmtCurrency(
+                    allocationInfo.parentTotal - allocationInfo.levelTotal
+                  )}
+                </span>
+              </>
+            )}
+          </span>
+        </div>
+      )}
+
       {/* Records table */}
       {filteredAlloc.length === 0 ? (
         <div className="text-sm text-gray-400 italic py-6 text-center border border-dashed border-gray-200 rounded-xl flex items-center justify-center gap-2">
@@ -595,6 +823,11 @@ export default function PortfolioAllocationHistoryTab({ portfolio }) {
         onSave={handleSaveRecord}
         editingRecord={editingRecord}
         levelLabel={currentLevelLabel}
+        levelType={selectedLevel}
+        parentTotal={allocationInfo.parentTotal}
+        levelTotal={allocationInfo.levelTotal}
+        canAllocate={allocationInfo.canAllocate}
+        availableActivityTypes={availableActivityTypes}
       />
     </div>
   );
