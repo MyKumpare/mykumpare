@@ -5,6 +5,7 @@ import { X, ShieldCheck, Plus, Search, Pencil, ClipboardCheck, LayoutGrid, List 
 import AddDueDiligenceDialog from "../firms/AddDueDiligenceDialog";
 import DueDiligenceKanbanBoard from "./DueDiligenceKanbanBoard";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
+import { useViewMode } from "@/hooks/useViewMode";
 
 const STATUS_STYLES = {
   "Pipeline": "bg-blue-50 text-blue-700 border-blue-200",
@@ -25,7 +26,7 @@ export default function DueDiligencePickerModal({ open, onClose, onFirmClick, on
   const [search, setSearch] = useState("");
   const [showDialog, setShowDialog] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [viewMode, setViewMode] = useState("list"); // 'list' | 'card' | 'kanban'
+  const [viewMode, setViewMode] = useViewMode("dueDiligence"); // 'list' | 'card' | 'kanban' (persisted, shared with nav section)
   const [kanbanField, setKanbanField] = useState("status"); // 'status' | 'process_status'
 
   const { data: records = [], isLoading } = useQuery({

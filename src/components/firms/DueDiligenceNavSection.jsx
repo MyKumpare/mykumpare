@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { useViewMode } from "@/hooks/useViewMode";
+import ViewModeToggle from "@/components/common/ViewModeToggle";
 import {
   ShieldCheck, Files, ClipboardCheck, FileText, Plus, ChevronRight, ChevronDown, ExternalLink,
 } from "lucide-react";
@@ -25,6 +26,7 @@ export default function DueDiligenceNavSection({
   forceExpanded,
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [viewMode, setViewMode] = useViewMode("dueDiligence");
 
   // Counts
   const { data: ddRecords = [] } = useQuery({
@@ -108,6 +110,7 @@ export default function DueDiligenceNavSection({
           </button>
         </div>
         <div className="flex items-center gap-2">
+          <ViewModeToggle value={viewMode} onChange={setViewMode} />
           {onAddDueDiligence && (
             <Button
               variant="ghost"
