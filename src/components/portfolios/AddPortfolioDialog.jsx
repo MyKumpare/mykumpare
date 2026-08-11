@@ -12,10 +12,15 @@ import { Calendar } from "@/components/ui/calendar";
 import { format, parseISO } from "date-fns";
 import { CalendarIcon, Plus, X, ChevronDown, Check, Pencil, LayoutList, AlertTriangle, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import AddFirmDialog from "@/components/firms/AddFirmDialog";
 import AddIMProductValidatedDialog from "@/components/products/AddIMProductValidatedDialog";
 import BenchmarkPicker from "./BenchmarkPicker";
 import SecondaryBenchmarksPicker from "./SecondaryBenchmarksPicker";
+import CapitalFlowFields from "./CapitalFlowFields";
+import { calculateCapitalFlow } from "./capitalFlowCalculator";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import PortfolioGuidelinesTab from "./PortfolioGuidelinesTab";
@@ -124,7 +129,7 @@ function DatePicker({ value, onChange, minDate, placeholder = "Select date...", 
 }
 
 // ── Multi-select product picker ────────────────────────────────────────────────
-function ProductMultiSelect({ options, value = [], onChange, onAddNew, momInceptionDate, portfolioInceptionDate }) {
+function ProductMultiSelect({ options, value = [], onChange, onAddNew, momInceptionDate, portfolioInceptionDate, allocationHistory }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -139,7 +144,7 @@ function ProductMultiSelect({ options, value = [], onChange, onAddNew, momIncept
       onChange(value.filter((v) => v.product_id !== opt.value));
     } else {
       const defaultDate = portfolioInceptionDate ? format(portfolioInceptionDate, "yyyy-MM-dd") : "";
-      onChange([...value, { product_id: opt.value, product_name: opt.label, firm_name: opt.firm_name, inception_date: defaultDate, initial_allocation_amount: "" }]);
+      onChange([...value, { product_id: opt.value, product_name: opt.label, firm_name: opt.firm_name, inception_date: defaultDate, initial_allocation_amount: "", termination_date: "", funding_status: "Active" }]);
     }
   };
 
@@ -149,6 +154,14 @@ function ProductMultiSelect({ options, value = [], onChange, onAddNew, momIncept
 
   const updateAllocationAmount = (productId, amount) => {
     onChange(value.map((v) => v.product_id === productId ? { ...v, initial_allocation_amount: amount } : v));
+  };
+
+  const updateTerminationDate = (productId, date) => {
+    onChange(value.map((v) => v.product_id === productId ? { ...v, termination_date: date ? format(date, "yyyy-MM-dd") : "" } : v));
+  };
+
+  const updateFundingStatus = (productId, status) => {
+    onChange(value.map((v) => v.product_id === productId ? { ...v, funding_status: status } : v));
   };
 
   return (
@@ -261,6 +274,38 @@ function ProductMultiSelect({ options, value = [], onChange, onAddNew, momIncept
                     className="h-9 text-sm mt-1"
                   />
                 </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs font-medium text-gray-600">Termination Date</Label>
+                    <div className="mt-1">
+                      <DatePicker
+                        value={v.termination_date ? parseISO(v.termination_date) : null}
+                        onChange={(d) => updateTerminationDate(v.product_id, d)}
+                        minDate={subDate || effectiveMin}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs font-medium text-gray-600">Funding Status</Label>
+                    <Select
+                      value={v.funding_status || "Active"}
+                      onValueChange={(s) => updateFundingStatus(v.product_id, s)}
+                    >
+                      <SelectTrigger className="h-9 text-sm mt-1"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Active">Active</SelectItem>
+                        <SelectItem value="Terminated">Terminated</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                {allocationHistory && (
+                  <CapitalFlowFields
+                    totalAdditions={calculateCapitalFlow(allocationHistory, "sub_manager", v.product_id).totalAdditions}
+                    totalRedemptions={calculateCapitalFlow(allocationHistory, "sub_manager", v.product_id).totalRedemptions}
+                    initialAllocation={v.initial_allocation_amount}
+                  />
+                )}
               </div>
             );
           })}
@@ -278,10 +323,14 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
   const [allocatorId, setAllocatorId] = useState("");
   const [portfolioName, setPortfolioName] = useState("");
   const [inceptionDate, setInceptionDate] = useState(null);
+  const [terminationDate, setTerminationDate] = useState(null);
+  const [fundingStatus, setFundingStatus] = useState("Active");
   const [initialAllocationAmount, setInitialAllocationAmount] = useState("");
   const [advisorType, setAdvisorType] = useState("");
   const [advisorFirmId, setAdvisorFirmId] = useState("");
   const [advisorInceptionDate, setAdvisorInceptionDate] = useState(null);
+  const [advisorTerminationDate, setAdvisorTerminationDate] = useState(null);
+  const [advisorFundingStatus, setAdvisorFundingStatus] = useState("Active");
   const [advisorInitialAllocationAmount, setAdvisorInitialAllocationAmount] = useState("");
   const [subManagers, setSubManagers] = useState([]);
   const [primaryBenchmarkId, setPrimaryBenchmarkId] = useState("");
@@ -327,10 +376,14 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
         setAllocatorId(editingPortfolio.firm_id || "");
         setPortfolioName(editingPortfolio.portfolio_name || "");
         setInceptionDate(editingPortfolio.inception_date ? parseISO(editingPortfolio.inception_date) : null);
+        setTerminationDate(editingPortfolio.termination_date ? parseISO(editingPortfolio.termination_date) : null);
+        setFundingStatus(editingPortfolio.funding_status || "Active");
         setInitialAllocationAmount(editingPortfolio.initial_allocation_amount != null ? String(editingPortfolio.initial_allocation_amount) : "");
         setAdvisorType(editingPortfolio.advisor_type || "");
         setAdvisorFirmId(editingPortfolio.advisor_firm_id || "");
         setAdvisorInceptionDate(editingPortfolio.advisor_inception_date ? parseISO(editingPortfolio.advisor_inception_date) : null);
+        setAdvisorTerminationDate(editingPortfolio.advisor_termination_date ? parseISO(editingPortfolio.advisor_termination_date) : null);
+        setAdvisorFundingStatus(editingPortfolio.advisor_funding_status || "Active");
         setAdvisorInitialAllocationAmount(editingPortfolio.advisor_initial_allocation_amount != null ? String(editingPortfolio.advisor_initial_allocation_amount) : "");
         setSubManagers(editingPortfolio.sub_managers || []);
         setPrimaryBenchmarkId(editingPortfolio.primary_benchmark_id || "");
@@ -344,10 +397,14 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
         setAllocatorId(preselectedAllocatorId || "");
         setPortfolioName("");
         setInceptionDate(null);
+        setTerminationDate(null);
+        setFundingStatus("Active");
         setInitialAllocationAmount("");
         setAdvisorType(preselectedAdvisorType || "");
         setAdvisorFirmId(preselectedAdvisorFirmId || "");
         setAdvisorInceptionDate(null);
+        setAdvisorTerminationDate(null);
+        setAdvisorFundingStatus("Active");
         setAdvisorInitialAllocationAmount("");
         setSubManagers([]);
         setPrimaryBenchmarkId("");
@@ -372,6 +429,17 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
     });
   }, [inceptionDate]);
 
+  // Calculated capital flow fields from allocation history
+  const portfolioFlow = useMemo(() => {
+    if (!editingPortfolio) return { totalAdditions: 0, totalRedemptions: 0 };
+    return calculateCapitalFlow(editingPortfolio.allocation_history, "portfolio");
+  }, [editingPortfolio]);
+
+  const advisorFlow = useMemo(() => {
+    if (!editingPortfolio || !advisorFirmId) return { totalAdditions: 0, totalRedemptions: 0 };
+    return calculateCapitalFlow(editingPortfolio.allocation_history, "advisor", advisorFirmId);
+  }, [editingPortfolio, advisorFirmId]);
+
   const [pendingAdvisorType, setPendingAdvisorType] = useState(null);
   const [showAdvisorTypeWarning, setShowAdvisorTypeWarning] = useState(false);
   const [showAllocatorChangeWarning, setShowAllocatorChangeWarning] = useState(false);
@@ -388,6 +456,8 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
       setAdvisorType(next);
       setAdvisorFirmId("");
       setAdvisorInceptionDate(null);
+      setAdvisorTerminationDate(null);
+      setAdvisorFundingStatus("Active");
       setSubManagers([]);
     }
   };
@@ -396,6 +466,8 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
     setAdvisorType(pendingAdvisorType);
     setAdvisorFirmId("");
     setAdvisorInceptionDate(null);
+    setAdvisorTerminationDate(null);
+    setAdvisorFundingStatus("Active");
     setSubManagers([]);
     setPendingAdvisorType(null);
     setShowAdvisorTypeWarning(false);
@@ -498,11 +570,15 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
       allocator_name: allocatorFirm?.name || "",
       portfolio_name: portfolioName.trim(),
       inception_date: inceptionDate ? format(inceptionDate, "yyyy-MM-dd") : "",
+      termination_date: terminationDate ? format(terminationDate, "yyyy-MM-dd") : undefined,
+      funding_status: fundingStatus || "Active",
       initial_allocation_amount: initialAllocationAmount ? parseFloat(initialAllocationAmount) : undefined,
       advisor_type: advisorType || undefined,
       advisor_firm_id: advisorFirmId || undefined,
       advisor_firm_name: advisorFirm?.name || undefined,
       advisor_inception_date: advisorType && advisorInceptionDate ? format(advisorInceptionDate, "yyyy-MM-dd") : undefined,
+      advisor_termination_date: advisorType && advisorTerminationDate ? format(advisorTerminationDate, "yyyy-MM-dd") : undefined,
+      advisor_funding_status: advisorType ? (advisorFundingStatus || "Active") : undefined,
       advisor_initial_allocation_amount: advisorType && advisorInitialAllocationAmount ? parseFloat(advisorInitialAllocationAmount) : undefined,
       sub_managers: advisorType === "Manager of Managers" ? subManagers : undefined,
       primary_benchmark_id: primaryBenchmarkId || undefined,
@@ -578,10 +654,14 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
       return allocatorId !== (editingPortfolio.firm_id || "") ||
         portfolioName.trim() !== (editingPortfolio.portfolio_name || "") ||
         fmt(inceptionDate) !== (editingPortfolio.inception_date || "") ||
+        fmt(terminationDate) !== (editingPortfolio.termination_date || "") ||
+        (fundingStatus || "Active") !== (editingPortfolio.funding_status || "Active") ||
         (initialAllocationAmount || "") !== (editingPortfolio.initial_allocation_amount != null ? String(editingPortfolio.initial_allocation_amount) : "") ||
         advisorType !== (editingPortfolio.advisor_type || "") ||
         advisorFirmId !== (editingPortfolio.advisor_firm_id || "") ||
         fmt(advisorInceptionDate) !== (editingPortfolio.advisor_inception_date || "") ||
+        fmt(advisorTerminationDate) !== (editingPortfolio.advisor_termination_date || "") ||
+        (advisorFundingStatus || "Active") !== (editingPortfolio.advisor_funding_status || "Active") ||
         (advisorInitialAllocationAmount || "") !== (editingPortfolio.advisor_initial_allocation_amount != null ? String(editingPortfolio.advisor_initial_allocation_amount) : "") ||
         JSON.stringify(subManagers) !== JSON.stringify(editingPortfolio.sub_managers || []) ||
         primaryBenchmarkId !== (editingPortfolio.primary_benchmark_id || "") ||
@@ -711,12 +791,29 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                     {inceptionDate ? format(inceptionDate, "MM/dd/yyyy") : <span className="text-gray-400">—</span>}
                   </p>
                 </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">Termination Date</p>
+                  <p className="text-sm text-gray-900 px-3 py-2 rounded-md border bg-gray-50">
+                    {terminationDate ? format(terminationDate, "MM/dd/yyyy") : <span className="text-gray-400">—</span>}
+                  </p>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-1">Funding Status</p>
+                <p className="text-sm text-gray-900 px-3 py-2 rounded-md border bg-gray-50">{fundingStatus || "Active"}</p>
               </div>
               {initialAllocationAmount && (
                 <div>
                   <p className="text-xs font-medium text-gray-500 mb-1">Initial Allocation Amount</p>
                   <p className="text-sm text-gray-900 px-3 py-2 rounded-md border bg-gray-50">{initialAllocationAmount}</p>
                 </div>
+              )}
+              {editingPortfolio && (
+                <CapitalFlowFields
+                  totalAdditions={portfolioFlow.totalAdditions}
+                  totalRedemptions={portfolioFlow.totalRedemptions}
+                  initialAllocation={initialAllocationAmount}
+                />
               )}
               {advisorType && (
                 <div className="grid grid-cols-2 gap-3">
@@ -739,10 +836,26 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                   </div>
                 </div>
               )}
-              {advisorType && advisorInceptionDate && (
+              {advisorType && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 mb-1">{advisorType === "Manager of Managers" ? "MoM" : "Investment Manager"} Inception Date</p>
+                    <p className="text-sm text-gray-900 px-3 py-2 rounded-md border bg-gray-50">
+                      {advisorInceptionDate ? format(advisorInceptionDate, "MM/dd/yyyy") : <span className="text-gray-400">—</span>}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 mb-1">{advisorType === "Manager of Managers" ? "MoM" : "Investment Manager"} Termination Date</p>
+                    <p className="text-sm text-gray-900 px-3 py-2 rounded-md border bg-gray-50">
+                      {advisorTerminationDate ? format(advisorTerminationDate, "MM/dd/yyyy") : <span className="text-gray-400">—</span>}
+                    </p>
+                  </div>
+                </div>
+              )}
+              {advisorType && (
                 <div>
-                  <p className="text-xs font-medium text-gray-500 mb-1">{advisorType === "Manager of Managers" ? "MoM" : "Investment Manager"} Inception Date</p>
-                  <p className="text-sm text-gray-900 px-3 py-2 rounded-md border bg-gray-50">{format(advisorInceptionDate, "MM/dd/yyyy")}</p>
+                  <p className="text-xs font-medium text-gray-500 mb-1">{advisorType === "Manager of Managers" ? "MoM" : "Investment Manager"} Funding Status</p>
+                  <p className="text-sm text-gray-900 px-3 py-2 rounded-md border bg-gray-50">{advisorFundingStatus || "Active"}</p>
                 </div>
               )}
               {advisorType && advisorInitialAllocationAmount && (
@@ -750,6 +863,13 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                   <p className="text-xs font-medium text-gray-500 mb-1">{advisorType === "Manager of Managers" ? "MoM" : "Investment Manager"} Initial Allocation Amount</p>
                   <p className="text-sm text-gray-900 px-3 py-2 rounded-md border bg-gray-50">{advisorInitialAllocationAmount}</p>
                 </div>
+              )}
+              {advisorType && editingPortfolio && (
+                <CapitalFlowFields
+                  totalAdditions={advisorFlow.totalAdditions}
+                  totalRedemptions={advisorFlow.totalRedemptions}
+                  initialAllocation={advisorInitialAllocationAmount}
+                />
               )}
               {subManagers.length > 0 && (
                 <div>
@@ -769,6 +889,8 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                           <span className="font-medium text-indigo-600 hover:text-indigo-700">{sm.product_name}</span>
                           {sm.firm_name && <span className="text-gray-400 ml-1">· {sm.firm_name}</span>}
                           {sm.inception_date && <span className="text-gray-400 ml-1">· {format(parseISO(sm.inception_date), "MM/dd/yyyy")}</span>}
+                          {sm.termination_date && <span className="text-gray-400 ml-1">· Term: {format(parseISO(sm.termination_date), "MM/dd/yyyy")}</span>}
+                          {sm.funding_status && <span className="text-gray-400 ml-1">· {sm.funding_status}</span>}
                           {sm.initial_allocation_amount != null && sm.initial_allocation_amount !== "" && <span className="text-gray-400 ml-1">· ${sm.initial_allocation_amount}</span>}
                         </button>
                       );
@@ -826,12 +948,34 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                 />
               </div>
 
-              {/* Inception Date */}
+              {/* Inception Date + Termination Date */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-gray-700">
+                    Inception Date <span className="text-red-400">*</span>
+                  </Label>
+                  <DatePicker value={inceptionDate} onChange={setInceptionDate} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-gray-700">Termination Date</Label>
+                  <DatePicker
+                    value={terminationDate}
+                    onChange={setTerminationDate}
+                    minDate={inceptionDate || undefined}
+                  />
+                </div>
+              </div>
+
+              {/* Funding Status */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-gray-700">
-                  Inception Date <span className="text-red-400">*</span>
-                </Label>
-                <DatePicker value={inceptionDate} onChange={setInceptionDate} />
+                <Label className="text-xs font-medium text-gray-700">Funding Status</Label>
+                <Select value={fundingStatus || "Active"} onValueChange={setFundingStatus}>
+                  <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Terminated">Terminated</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Initial Allocation Amount */}
@@ -849,6 +993,15 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                   className="h-9 text-sm"
                 />
               </div>
+
+              {/* Calculated Capital Flow Fields (only when editing existing portfolio) */}
+              {editingPortfolio && (
+                <CapitalFlowFields
+                  totalAdditions={portfolioFlow.totalAdditions}
+                  totalRedemptions={portfolioFlow.totalRedemptions}
+                  initialAllocation={initialAllocationAmount}
+                />
+              )}
 
               {/* Advisor Type */}
               <div className="space-y-1.5">
@@ -889,26 +1042,54 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                 </div>
               )}
 
-              {/* Advisor Inception Date (conditional) */}
+              {/* Advisor Inception Date + Termination Date (conditional) */}
+              {advisorType && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-gray-700">
+                      {advisorType === "Manager of Managers" ? "MoM" : "Investment Manager"} Inception Date <span className="text-red-400">*</span>
+                    </Label>
+                    <DatePicker
+                      value={advisorInceptionDate}
+                      onChange={setAdvisorInceptionDate}
+                      minDate={inceptionDate || undefined}
+                      error={advisorInceptionDate && inceptionDate && advisorInceptionDate < inceptionDate
+                        ? "Cannot be before portfolio inception date"
+                        : undefined}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-gray-700">
+                      {advisorType === "Manager of Managers" ? "MoM" : "Investment Manager"} Termination Date
+                    </Label>
+                    <DatePicker
+                      value={advisorTerminationDate}
+                      onChange={setAdvisorTerminationDate}
+                      minDate={advisorInceptionDate || inceptionDate || undefined}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Advisor Funding Status (conditional) */}
               {advisorType && (
                 <div className="space-y-1.5">
                   <Label className="text-xs font-medium text-gray-700">
-                    {advisorType === "Manager of Managers" ? "MoM" : "Investment Manager"} Inception Date <span className="text-red-400">*</span>
+                    {advisorType === "Manager of Managers" ? "MoM" : "Investment Manager"} Funding Status
                   </Label>
-                  <DatePicker
-                    value={advisorInceptionDate}
-                    onChange={setAdvisorInceptionDate}
-                    minDate={inceptionDate || undefined}
-                    error={advisorInceptionDate && inceptionDate && advisorInceptionDate < inceptionDate
-                      ? "Cannot be before portfolio inception date"
-                      : undefined}
-                  />
-                  </div>
-                  )}
+                  <Select value={advisorFundingStatus || "Active"} onValueChange={setAdvisorFundingStatus}>
+                    <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Active">Active</SelectItem>
+                      <SelectItem value="Terminated">Terminated</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
-                  {/* Advisor Initial Allocation Amount (conditional) */}
-                  {advisorType && (
-                  <div className="space-y-1.5">
+              {/* Advisor Initial Allocation Amount (conditional) */}
+              {advisorType && (
+                <div className="space-y-1.5">
                   <Label className="text-xs font-medium text-gray-700">
                     {advisorType === "Manager of Managers" ? "MoM" : "Investment Manager"} Initial Allocation Amount
                   </Label>
@@ -921,8 +1102,17 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                     onChange={(e) => setAdvisorInitialAllocationAmount(e.target.value)}
                     className="h-9 text-sm"
                   />
-                  </div>
-                  )}
+                </div>
+              )}
+
+              {/* Advisor Calculated Capital Flow Fields (conditional) */}
+              {advisorType && editingPortfolio && (
+                <CapitalFlowFields
+                  totalAdditions={advisorFlow.totalAdditions}
+                  totalRedemptions={advisorFlow.totalRedemptions}
+                  initialAllocation={advisorInitialAllocationAmount}
+                />
+              )}
 
                   {/* Sub-managers (only for MoM) */}
               {advisorType === "Manager of Managers" && (
@@ -935,6 +1125,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                     onAddNew={() => setAddProductOpen(true)}
                     momInceptionDate={advisorInceptionDate}
                     portfolioInceptionDate={inceptionDate}
+                    allocationHistory={editingPortfolio?.allocation_history}
                   />
                 </div>
               )}
@@ -1049,7 +1240,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
           setSubManagers((prev) =>
             prev.some((s) => s.product_id === product.id)
               ? prev
-              : [...prev, { product_id: product.id, product_name: product.name, firm_name: product.firm_name || "", inception_date: inceptionDate ? format(inceptionDate, "yyyy-MM-dd") : "", initial_allocation_amount: "" }]
+              : [...prev, { product_id: product.id, product_name: product.name, firm_name: product.firm_name || "", inception_date: inceptionDate ? format(inceptionDate, "yyyy-MM-dd") : "", initial_allocation_amount: "", termination_date: "", funding_status: "Active" }]
           );
         }}
       />

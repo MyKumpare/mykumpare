@@ -19,6 +19,20 @@
       "format": "date",
       "description": "Inception date of the portfolio"
     },
+    "termination_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Termination date of the portfolio (YYYY-MM-DD). Empty/null means the portfolio is still active."
+    },
+    "funding_status": {
+      "type": "string",
+      "enum": [
+        "Active",
+        "Terminated"
+      ],
+      "default": "Active",
+      "description": "Funding status of the portfolio"
+    },
     "initial_allocation_amount": {
       "type": "number",
       "description": "Initial allocation amount for the portfolio"
@@ -44,6 +58,20 @@
       "format": "date",
       "description": "Inception date of the advisor (MoM or IM) for this portfolio"
     },
+    "advisor_termination_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Termination date of the advisor (MoM or IM) for this portfolio (YYYY-MM-DD)"
+    },
+    "advisor_funding_status": {
+      "type": "string",
+      "enum": [
+        "Active",
+        "Terminated"
+      ],
+      "default": "Active",
+      "description": "Funding status of the advisor (MoM or IM) for this portfolio"
+    },
     "advisor_initial_allocation_amount": {
       "type": "number",
       "description": "Initial allocation amount for the advisor (MoM or IM) for this portfolio"
@@ -67,6 +95,20 @@
             "type": "string",
             "format": "date",
             "description": "Inception date of this sub-manager in the portfolio"
+          },
+          "termination_date": {
+            "type": "string",
+            "format": "date",
+            "description": "Termination date of this sub-manager in the portfolio (YYYY-MM-DD)"
+          },
+          "funding_status": {
+            "type": "string",
+            "enum": [
+              "Active",
+              "Terminated"
+            ],
+            "default": "Active",
+            "description": "Funding status of this sub-manager"
           },
           "initial_allocation_amount": {
             "type": "number",
