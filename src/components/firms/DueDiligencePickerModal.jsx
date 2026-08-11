@@ -4,6 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { X, ShieldCheck, Plus, Search, Pencil, ClipboardCheck, LayoutGrid, List } from "lucide-react";
 import AddDueDiligenceDialog from "../firms/AddDueDiligenceDialog";
 import DueDiligenceKanbanBoard from "./DueDiligenceKanbanBoard";
+import ViewModeToggle from "@/components/common/ViewModeToggle";
 
 const STATUS_STYLES = {
   "Pipeline": "bg-blue-50 text-blue-700 border-blue-200",
@@ -24,7 +25,7 @@ export default function DueDiligencePickerModal({ open, onClose, onFirmClick, on
   const [search, setSearch] = useState("");
   const [showDialog, setShowDialog] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [viewMode, setViewMode] = useState("list"); // 'list' | 'kanban'
+  const [viewMode, setViewMode] = useState("list"); // 'list' | 'card' | 'kanban'
   const [kanbanField, setKanbanField] = useState("status"); // 'status' | 'process_status'
 
   const { data: records = [], isLoading } = useQuery({
@@ -116,7 +117,7 @@ export default function DueDiligencePickerModal({ open, onClose, onFirmClick, on
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 px-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className={`relative bg-white rounded-2xl shadow-2xl w-full ${viewMode === "kanban" ? "max-w-5xl" : "max-w-lg"} max-h-[78vh] overflow-hidden flex flex-col`}>
+      <div className={`relative bg-white rounded-2xl shadow-2xl w-full ${viewMode === "kanban" ? "max-w-5xl" : viewMode === "card" ? "max-w-4xl" : "max-w-lg"} max-h-[78vh] overflow-hidden flex flex-col`}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
@@ -126,25 +127,7 @@ export default function DueDiligencePickerModal({ open, onClose, onFirmClick, on
             <span className="text-xs text-gray-400 font-normal">({filtered.length})</span>
           </h2>
           <div className="flex items-center gap-2">
-            {/* View mode toggle */}
-            <div className="flex items-center rounded-lg border border-gray-200 bg-gray-50 p-0.5">
-              <button
-                type="button"
-                onClick={() => setViewMode("list")}
-                title="List view"
-                className={`p-1 rounded-md ${viewMode === "list" ? "bg-white shadow-sm text-indigo-600" : "text-gray-400 hover:text-gray-600"}`}
-              >
-                <List className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode("kanban")}
-                title="Kanban view"
-                className={`p-1 rounded-md ${viewMode === "kanban" ? "bg-white shadow-sm text-indigo-600" : "text-gray-400 hover:text-gray-600"}`}
-              >
-                <LayoutGrid className="w-3.5 h-3.5" />
-              </button>
-            </div>
+            <ViewModeToggle value={viewMode} onChange={setViewMode} />
             <button type="button" onClick={onClose}>
               <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
             </button>
@@ -213,6 +196,96 @@ export default function DueDiligencePickerModal({ open, onClose, onFirmClick, on
                   onFirmClick={openLinkedFirm}
                   onContactClick={openLinkedContact}
                 />
+              </div>
+            )}
+          </div>
+        ) : viewMode === "card" ? (
+          <div className="flex-1 overflow-y-auto p-3">
+            {isLoading ? (
+              <p className="text-sm text-gray-400 italic text-center py-8">Loading...</p>
+            ) : filtered.length === 0 ? (
+              <p className="text-sm text-gray-400 italic text-center py-8">
+                {search ? "No due diligence records match your search." : "No due diligence records yet."}
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {filtered.map(rec => (
+                  <div
+                    key={rec.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => { setEditing(rec); setShowDialog(true); }}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setEditing(rec); setShowDialog(true); } }}
+                    className="p-3 rounded-xl border border-gray-200 bg-white hover:border-indigo-200 hover:bg-indigo-50/30 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <ClipboardCheck className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+                      {rec.product_id && onProductClick ? (
+                        <button
+                          type="button"
+                          disabled={linkedLoading === "product-" + rec.product_id}
+                          onClick={(e) => { e.stopPropagation(); openLinkedProduct(rec.product_id); }}
+                          className="text-sm font-medium text-indigo-600 hover:text-indigo-700 hover:underline truncate text-left disabled:opacity-60"
+                        >
+                          {linkedLoading === "product-" + rec.product_id ? "Loading…" : (rec.product_name || "—")}
+                        </button>
+                      ) : (
+                        <span className="text-sm font-medium text-gray-800 truncate">{rec.product_name || "—"}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-wrap mb-2">
+                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${STATUS_STYLES[rec.status] || STATUS_STYLES["Pipeline"]}`}>
+                        {rec.status}
+                      </span>
+                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${PROCESS_STYLES[rec.process_status] || PROCESS_STYLES["Not Started"]}`}>
+                        {rec.process_status || "Not Started"}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-500 space-y-0.5">
+                      {rec.firm_id && onFirmClick ? (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); openLinkedFirm(rec.firm_id); }}
+                          className="text-indigo-600 hover:text-indigo-700 hover:underline font-medium block truncate text-left"
+                        >
+                          {rec.firm_name || "—"}
+                        </button>
+                      ) : (
+                        <span className="text-gray-700 block truncate">{rec.firm_name || "—"}</span>
+                      )}
+                      <div className="truncate">
+                        Primary: {
+                          rec.primary_analyst_contact_id && onContactClick ? (
+                            <button
+                              type="button"
+                              disabled={linkedLoading === "contact-" + rec.primary_analyst_contact_id}
+                              onClick={(e) => { e.stopPropagation(); openLinkedContact(rec.primary_analyst_contact_id); }}
+                              className="text-indigo-600 hover:text-indigo-700 hover:underline font-medium disabled:opacity-60"
+                            >
+                              {linkedLoading === "contact-" + rec.primary_analyst_contact_id ? "Loading…" : (rec.primary_analyst_name || "—")}
+                            </button>
+                          ) : <span className="text-gray-700 font-medium">{rec.primary_analyst_name || "—"}</span>
+                        }
+                      </div>
+                      {rec.secondary_analyst_name && (
+                        <div className="truncate">
+                          Secondary: {
+                            rec.secondary_analyst_contact_id && onContactClick ? (
+                              <button
+                                type="button"
+                                disabled={linkedLoading === "contact-" + rec.secondary_analyst_contact_id}
+                                onClick={(e) => { e.stopPropagation(); openLinkedContact(rec.secondary_analyst_contact_id); }}
+                                className="text-indigo-600 hover:text-indigo-700 hover:underline font-medium disabled:opacity-60"
+                              >
+                                {linkedLoading === "contact-" + rec.secondary_analyst_contact_id ? "Loading…" : rec.secondary_analyst_name}
+                              </button>
+                            ) : <span className="text-gray-700 font-medium">{rec.secondary_analyst_name}</span>
+                          }
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
