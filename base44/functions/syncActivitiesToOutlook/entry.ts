@@ -37,6 +37,13 @@ export default async function(req) {
       500
     );
 
+    // Fetch upcoming due diligence meetings (from today forward, not yet synced)
+    const dueDiligences = await base44.asServiceRole.entities.DueDiligence.filter(
+      { start_date: { $gte: today } },
+      'start_date',
+      500
+    );
+
     let synced = 0;
     let skipped = 0;
     const errors = [];
@@ -133,6 +140,38 @@ export default async function(req) {
       }
     }
 
+    // Sync due diligence meetings
+    if (!scopeError) {
+      for (const dd of dueDiligences) {
+        if (dd.outlook_event_id) { skipped++; continue; }
+
+        const dateStr = dd.start_date?.substring(0, 10);
+        if (!dateStr) { skipped++; continue; }
+
+        const subjectParts = ['[Due Diligence]'];
+        if (dd.firm_name) subjectParts.push(dd.firm_name);
+        if (dd.product_name) subjectParts.push(`— ${dd.product_name}`);
+        const subject = subjectParts.join(' ');
+
+        const bodyParts = ['Synced from MyKumpare Due Diligence'];
+        if (dd.firm_name) bodyParts.push(`Firm: ${dd.firm_name}`);
+        if (dd.product_name) bodyParts.push(`Product: ${dd.product_name}`);
+        if (dd.status) bodyParts.push(`Status: ${dd.status}`);
+        if (dd.process_status) bodyParts.push(`Process Status: ${dd.process_status}`);
+        if (dd.template_name) bodyParts.push(`Template: ${dd.template_name}`);
+        if (dd.primary_analyst_name) bodyParts.push(`Primary Analyst: ${dd.primary_analyst_name}`);
+
+        try {
+          const eventId = await createOutlookEvent(subject, dateStr, bodyParts.join('\n'));
+          await base44.asServiceRole.entities.DueDiligence.update(dd.id, { outlook_event_id: eventId });
+          synced++;
+        } catch (e) {
+          errors.push({ type: 'due_diligence', id: dd.id, subject, error: e.message });
+          if (scopeError) break;
+        }
+      }
+    }
+
     if (scopeError) {
       return Response.json({
         error: 'Outlook Calendar permission is missing. Please authorize the Calendars.ReadWrite permission.',
@@ -145,7 +184,7 @@ export default async function(req) {
     return Response.json({
       synced,
       skipped,
-      total: activities.length + tasks.length,
+      total: activities.length + tasks.length + dueDiligences.length,
       errorCount: errors.length,
       errors: errors.slice(0, 5)
     });

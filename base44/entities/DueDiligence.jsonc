@@ -444,6 +444,10 @@
           }
         }
       }
+    },
+    "outlook_event_id": {
+      "type": "string",
+      "description": "ID of the corresponding Outlook Calendar event (set when the due diligence start date is synced to Outlook Calendar)"
     }
   },
   "required": [
