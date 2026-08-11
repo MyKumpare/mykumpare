@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/dialog";
 import DatePicker from "@/components/ui/date-picker";
 import SearchableSelect from "@/components/common/SearchableSelect";
+import QuestionnaireFirmPicker from "./QuestionnaireFirmPicker";
+import QuestionnaireContactPicker from "./QuestionnaireContactPicker";
 import QuestionnaireSubSectionItem from "./QuestionnaireSubSectionItem";
 import PushResponsesDialog from "./PushResponsesDialog";
 import AddTemplateDialog from "@/components/templates/AddTemplateDialog";
@@ -140,25 +142,15 @@ export default function QuestionnaireDialog({
     () => templates.map((t) => ({ value: t.id, label: t.name })),
     [templates]
   );
-  const firmOptions = useMemo(
-    () => firms.filter((f) => !f.deleted_at).map((f) => ({ value: f.id, label: f.name })),
-    [firms]
-  );
-  const contactOptions = useMemo(
-    () => firmContacts.map((c) => ({
-      value: c.id,
-      label: `${c.first_name || ""} ${c.last_name || ""}`.trim() || c.email || "Unknown",
-    })),
-    [firmContacts]
-  );
+  // firmOptions/contactOptions now handled inside the pickers
   const productOptions = useMemo(
     () => firmProducts.map((p) => ({ value: p.id, label: p.name })),
     [firmProducts]
   );
 
   // Handle firm selection
-  const handleFirmChange = (firmId) => {
-    const firm = firms.find((f) => f.id === firmId);
+  const handleFirmChange = (firmId, firmObj) => {
+    const firm = firmObj || firms.find((f) => f.id === firmId);
     setForm((prev) => ({
       ...prev,
       firmId,
@@ -170,8 +162,8 @@ export default function QuestionnaireDialog({
     }));
   };
 
-  const handleContactChange = (contactId) => {
-    const contact = firmContacts.find((c) => c.id === contactId);
+  const handleContactChange = (contactId, contactObj) => {
+    const contact = contactObj || firmContacts.find((c) => c.id === contactId);
     const name = contact ? `${contact.first_name || ""} ${contact.last_name || ""}`.trim() : "";
     setForm((prev) => ({ ...prev, assigneeContactId: contactId, assigneeContactName: name }));
   };
@@ -489,22 +481,24 @@ export default function QuestionnaireDialog({
             {/* Firm */}
             <div className="space-y-1.5">
               <Label>Firm *</Label>
-              <SearchableSelect
+              <QuestionnaireFirmPicker
                 value={form.firmId}
                 onChange={handleFirmChange}
-                options={firmOptions}
+                firms={firms}
+                user={user}
                 placeholder="Select a firm..."
-                emptyText="No firms found."
               />
             </div>
 
             {/* Assignee */}
             <div className="space-y-1.5">
               <Label>Assign To (Contact) *</Label>
-              <SearchableSelect
+              <QuestionnaireContactPicker
                 value={form.assigneeContactId}
                 onChange={handleContactChange}
-                options={contactOptions}
+                contacts={contacts}
+                firmId={form.firmId}
+                user={user}
                 placeholder="Select a contact from this firm..."
                 emptyText={form.firmId ? "No contacts found for this firm." : "Select a firm first."}
                 disabled={!form.firmId}
