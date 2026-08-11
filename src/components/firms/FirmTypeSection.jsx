@@ -13,16 +13,17 @@ const TYPE_COLORS = {
   "Trade Organizations": "bg-cyan-100 text-cyan-700",
 };
 
-export default function FirmTypeSection({ type, firms, onEdit, onDelete, onAddToType, onAddProduct, onEditProduct, onAddPortfolio, forceExpand, products = [] }) {
-  const [expanded, setExpanded] = useState(false);
-  const isExpanded = forceExpand || expanded;
+export default function FirmTypeSection({ type, firms, onEdit, onDelete, onAddToType, onAddProduct, onEditProduct, onAddPortfolio, forceExpand, isExpanded: isExpandedProp, onToggle, products = [] }) {
+  const [internalExpanded, setInternalExpanded] = useState(false);
+  const isExpanded = isExpandedProp !== undefined ? isExpandedProp : (forceExpand || internalExpanded);
+  const handleToggle = onToggle || (() => setInternalExpanded((v) => !v));
   const colorClass = TYPE_COLORS[type] || "bg-gray-100 text-gray-700";
 
   return (
     <div className="mb-6">
       <div className="flex items-center gap-2 mb-3">
         <button
-          onClick={() => setExpanded(!isExpanded)}
+          onClick={handleToggle}
           className="flex-1 flex items-center gap-3 group cursor-pointer"
         >
           <div className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider ${colorClass}`}>

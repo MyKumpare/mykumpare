@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Plus, ChevronDown, ChevronRight, Package } from "lucide-react";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
 import SectionSearch from "@/components/common/SectionSearch";
+import SectionTypeFilter from "@/components/common/SectionTypeFilter";
+import SectionExpandCollapse from "@/components/common/SectionExpandCollapse";
 import ProductStatusBadge from "@/components/products/ProductStatusBadge";
 import { useViewMode } from "@/hooks/useViewMode";
 
@@ -19,6 +21,7 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
   const [expandedFirms, setExpandedFirms] = useState({});
   const [viewMode, setViewMode] = useViewMode("products");
   const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
 
   useEffect(() => {
     if (forceExpanded !== undefined) setExpanded(forceExpanded);
@@ -57,7 +60,7 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
     const firmGroups = groupFirms
       .map((firm) => ({
         firm,
-        products: products
+        products: filteredProducts
           .filter((p) => p.firm_id === firm.id)
           .sort((a, b) => a.name.localeCompare(b.name)),
       }))
@@ -65,9 +68,30 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
 
     if (firmGroups.length > 0) acc[groupType] = firmGroups;
     return acc;
-  }, {});
+  }, [filteredProducts]);
 
   const totalProducts = products.length;
+
+  const handleExpandAll = () => {
+    const groups = {};
+    const firmsOpen = {};
+    PRODUCT_GROUP_TYPES.forEach((t) => { groups[t] = true; });
+    firms.forEach((f) => {
+      const types = f.firm_types?.length ? f.firm_types : f.firm_type ? [f.firm_type] : [];
+      if (types.some((t) => PRODUCT_GROUP_TYPES.includes(t))) firmsOpen[f.id] = true;
+    });
+    setExpandedGroups(groups);
+    setExpandedFirms(firmsOpen);
+  };
+
+  const handleCollapseAll = () => {
+    const groups = {};
+    const firmsOpen = {};
+    PRODUCT_GROUP_TYPES.forEach((t) => { groups[t] = false; });
+    firms.forEach((f) => { firmsOpen[f.id] = false; });
+    setExpandedGroups(groups);
+    setExpandedFirms(firmsOpen);
+  };
 
   const productColor = (gt) => GROUP_COLORS[gt] || "bg-gray-100 text-gray-700";
 
@@ -128,8 +152,19 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
 
       {expanded && (
         <div className="pl-2 border-l-2 border-gray-100 space-y-4">
-          <SectionSearch value={search} onChange={setSearch} placeholder="Search products..." />
-          {viewMode === "list" && PRODUCT_GROUP_TYPES.map((groupType) => {
+          <SectionSearch value={search} onChange={setSearch} placeholder="Search by product, firm, or type..." />
+          <div className="flex items-center justify-between mb-2">
+            <SectionTypeFilter
+              label="Filter by type"
+              value={typeFilter}
+              onChange={setTypeFilter}
+              options={PRODUCT_GROUP_TYPES}
+            />
+            {viewMode === "list" && (
+              <SectionExpandCollapse onExpandAll={handleExpandAll} onCollapseAll={handleCollapseAll} />
+            )}
+          </div>
+          {viewMode === "list" && PRODUCT_GROUP_TYPES.filter((gt) => typeFilter === "all" || gt === typeFilter).map((groupType) => {
             const firmGroups = grouped[groupType];
             if (!firmGroups) return null;
             const isGroupExpanded = expandedGroups[groupType] !== false; // default open
@@ -228,7 +263,7 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
 
           {viewMode === "kanban" && (
             <div className="flex gap-3 overflow-x-auto pb-2">
-              {PRODUCT_GROUP_TYPES.filter((gt) => grouped[gt]).map((gt) => {
+              {PRODUCT_GROUP_TYPES.filter((gt) => grouped[gt] && (typeFilter === "all" || gt === typeFilter)).map((gt) => {
                 const firmGroups = grouped[gt];
                 const allProducts = firmGroups.flatMap((g) => g.products);
                 return (

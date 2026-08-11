@@ -4,7 +4,11 @@ import { Plus, LayoutList, ChevronDown, ChevronRight, BarChart3 } from "lucide-r
 import { format, parseISO } from "date-fns";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
 import SectionSearch from "@/components/common/SectionSearch";
+import SectionTypeFilter from "@/components/common/SectionTypeFilter";
+import SectionExpandCollapse from "@/components/common/SectionExpandCollapse";
 import { useViewMode } from "@/hooks/useViewMode";
+
+const ADVISOR_TYPES = ["Manager of Managers", "Investment Manager"];
 
 export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddPortfolio, forceExpanded }) {
   const [expanded, setExpanded] = useState(false);
@@ -12,6 +16,7 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
   const [expandedAdvisorTypes, setExpandedAdvisorTypes] = useState({});
   const [viewMode, setViewMode] = useViewMode("portfolios");
   const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
 
   useEffect(() => {
     if (forceExpanded !== undefined) setExpanded(forceExpanded);
@@ -19,23 +24,29 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
 
   const searchLower = search.toLowerCase().trim();
   const filteredPortfolios = useMemo(() => {
-    if (!searchLower) return portfolios;
-    return portfolios.filter((p) => {
-      const name = (p.portfolio_name || "").toLowerCase();
-      const advisor = (p.advisor_firm_name || "").toLowerCase();
-      const allocator = (p.allocator_name || "").toLowerCase();
-      return name.includes(searchLower) || advisor.includes(searchLower) || allocator.includes(searchLower);
-    });
-  }, [portfolios, searchLower]);
+    let result = portfolios;
+    if (searchLower) {
+      result = result.filter((p) => {
+        const name = (p.portfolio_name || "").toLowerCase();
+        const advisor = (p.advisor_firm_name || "").toLowerCase();
+        const allocator = (p.allocator_name || "").toLowerCase();
+        return name.includes(searchLower) || advisor.includes(searchLower) || allocator.includes(searchLower);
+      });
+    }
+    if (typeFilter !== "all") {
+      result = result.filter((p) => (p.advisor_type || "No Advisor") === typeFilter);
+    }
+    return result;
+  }, [portfolios, searchLower, typeFilter]);
 
   // Group portfolios by advisor type → allocator → portfolio name
   const grouped = useMemo(() => {
     const groups = {};
-    
+
     filteredPortfolios.forEach((p) => {
       const advisorType = p.advisor_type || "No Advisor";
       const allocator = p.allocator_name || "Unknown";
-      
+
       if (!groups[advisorType]) groups[advisorType] = {};
       if (!groups[advisorType][allocator]) groups[advisorType][allocator] = [];
       groups[advisorType][allocator].push(p);
@@ -57,7 +68,7 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
       });
 
     return sorted;
-  }, [portfolios]);
+  }, [filteredPortfolios]);
 
   const toggleGroup = (key) => {
     setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -65,6 +76,28 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
 
   const toggleAdvisorType = (advisorType) => {
     setExpandedAdvisorTypes((prev) => ({ ...prev, [advisorType]: !prev[advisorType] }));
+  };
+
+  const handleExpandAll = () => {
+    const advisorOpen = {};
+    const groupOpen = {};
+    Object.keys(grouped).forEach((at) => {
+      advisorOpen[at] = true;
+      Object.keys(grouped[at]).forEach((alloc) => { groupOpen[`${at}/${alloc}`] = true; });
+    });
+    setExpandedAdvisorTypes(advisorOpen);
+    setExpandedGroups(groupOpen);
+  };
+
+  const handleCollapseAll = () => {
+    const advisorOpen = {};
+    const groupOpen = {};
+    Object.keys(grouped).forEach((at) => {
+      advisorOpen[at] = false;
+      Object.keys(grouped[at]).forEach((alloc) => { groupOpen[`${at}/${alloc}`] = false; });
+    });
+    setExpandedAdvisorTypes(advisorOpen);
+    setExpandedGroups(groupOpen);
   };
 
   function PortfolioMiniCard({ portfolio }) {
@@ -125,7 +158,19 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
       {/* Portfolio groups */}
       {expanded && (
         <div className="space-y-3">
-          <SectionSearch value={search} onChange={setSearch} placeholder="Search portfolios..." />
+          <SectionSearch value={search} onChange={setSearch} placeholder="Search by portfolio, firm, or type..." />
+          <div className="flex items-center justify-between mb-2">
+            <SectionTypeFilter
+              label="Filter by type"
+              value={typeFilter}
+              onChange={setTypeFilter}
+              options={ADVISOR_TYPES}
+              allLabel="All Advisor Types"
+            />
+            {viewMode === "list" && (
+              <SectionExpandCollapse onExpandAll={handleExpandAll} onCollapseAll={handleCollapseAll} />
+            )}
+          </div>
           {viewMode === "card" && filteredPortfolios.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 py-1">
               {filteredPortfolios.map((portfolio) => (

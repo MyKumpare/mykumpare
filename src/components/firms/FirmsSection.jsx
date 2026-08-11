@@ -5,6 +5,8 @@ import FirmTypeSection from "./FirmTypeSection";
 import FirmCard from "./FirmCard";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
 import SectionSearch from "@/components/common/SectionSearch";
+import SectionTypeFilter from "@/components/common/SectionTypeFilter";
+import SectionExpandCollapse from "@/components/common/SectionExpandCollapse";
 import { useViewMode } from "@/hooks/useViewMode";
 
 const FIRM_TYPES = [
@@ -33,26 +35,60 @@ export default function FirmsSection({
   const [expanded, setExpanded] = useState(false);
   const [viewMode, setViewMode] = useViewMode("firms");
   const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [expandedTypes, setExpandedTypes] = useState({});
+
+  const searchLower = search.toLowerCase().trim();
 
   useEffect(() => {
     if (forceExpanded !== undefined) setExpanded(forceExpanded);
   }, [forceExpanded]);
 
-  const searchLower = search.toLowerCase().trim();
+  // Auto-expand all type sections when searching
+  useEffect(() => {
+    if (searchLower) {
+      const allOpen = {};
+      FIRM_TYPES.forEach((t) => { allOpen[t] = true; });
+      setExpandedTypes(allOpen);
+    }
+  }, [searchLower]);
   const filteredGrouped = React.useMemo(() => {
-    if (!searchLower) return groupedFirms;
-    const result = {};
-    for (const [type, firms] of Object.entries(groupedFirms)) {
-      const filtered = firms.filter((f) => f.name?.toLowerCase().includes(searchLower));
-      if (filtered.length) result[type] = filtered;
+    let result = groupedFirms;
+    if (searchLower) {
+      const searched = {};
+      for (const [type, firms] of Object.entries(groupedFirms)) {
+        const filtered = firms.filter((f) => f.name?.toLowerCase().includes(searchLower));
+        if (filtered.length) searched[type] = filtered;
+      }
+      result = searched;
+    }
+    if (typeFilter !== "all") {
+      const typed = {};
+      if (result[typeFilter]) typed[typeFilter] = result[typeFilter];
+      result = typed;
     }
     return result;
-  }, [groupedFirms, searchLower]);
+  }, [groupedFirms, searchLower, typeFilter]);
 
   const allFirms = React.useMemo(
     () => FIRM_TYPES.flatMap((t) => filteredGrouped[t] || []).sort((a, b) => a.name.localeCompare(b.name)),
     [filteredGrouped]
   );
+
+  const handleExpandAll = () => {
+    const allOpen = {};
+    FIRM_TYPES.forEach((t) => { allOpen[t] = true; });
+    setExpandedTypes(allOpen);
+  };
+
+  const handleCollapseAll = () => {
+    const allClosed = {};
+    FIRM_TYPES.forEach((t) => { allClosed[t] = false; });
+    setExpandedTypes(allClosed);
+  };
+
+  const toggleType = (type) =>
+    setExpandedTypes((prev) => ({ ...prev, [type]: !prev[type] }));
 
   return (
     <div className="mb-6">
@@ -90,7 +126,18 @@ export default function FirmsSection({
       {/* Firm type sub-sections */}
       {expanded && (
         <div className="pl-2 border-l-2 border-gray-100">
-          <SectionSearch value={search} onChange={setSearch} placeholder="Search firms..." />
+          <SectionSearch value={search} onChange={setSearch} placeholder="Search by firm name or type..." />
+          <div className="flex items-center justify-between mb-2">
+            <SectionTypeFilter
+              label="Filter by type"
+              value={typeFilter}
+              onChange={setTypeFilter}
+              options={FIRM_TYPES}
+            />
+            {viewMode === "list" && (
+              <SectionExpandCollapse onExpandAll={handleExpandAll} onCollapseAll={handleCollapseAll} />
+            )}
+          </div>
           {viewMode === "list" && FIRM_TYPES.map((type) =>
             filteredGrouped[type] ? (
               <FirmTypeSection
@@ -104,6 +151,8 @@ export default function FirmsSection({
                 onEditProduct={onEditProduct}
                 onAddPortfolio={onAddPortfolio}
                 forceExpand={!!searchQuery}
+                isExpanded={expandedTypes[type]}
+                onToggle={() => toggleType(type)}
                 products={products}
               />
             ) : null
