@@ -858,13 +858,18 @@ export default function MapSearchModal({
                 variant={directionsActive ? "default" : "outline"}
                 size="sm"
                 onClick={() => setDirectionsActive((v) => !v)}
-                className="h-8"
+                className="h-8 pr-2"
               >
                 <RouteIcon className="w-4 h-4" />
                 Directions
                 {stops.length > 0 && (
                   <span className="ml-1 bg-white text-blue-600 rounded-full px-1.5 text-xs font-bold">
                     {stops.length}
+                  </span>
+                )}
+                {directionsActive && (
+                  <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-white/20">
+                    <X className="w-3 h-3" />
                   </span>
                 )}
               </Button>
