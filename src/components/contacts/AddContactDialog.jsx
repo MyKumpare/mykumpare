@@ -773,7 +773,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                         {onFirmClick ? (
                           <button
                             type="button"
-                            className="hover:underline"
+                            className="underline hover:text-indigo-800"
                             onClick={() => onFirmClick(firms.find(f => f.id === id))}
                           >
                             {getFirmName(id)}
@@ -1042,7 +1042,17 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                   {firmIds.map((id) => (
                     <Badge key={id} variant="secondary" className="gap-1 pl-2 pr-1 py-0.5 text-xs">
                       <Building2 className="w-3 h-3" />
-                      {getFirmName(id)}
+                      {onFirmClick ? (
+                        <button
+                          type="button"
+                          className="underline hover:text-indigo-800 text-left"
+                          onClick={() => onFirmClick(firms.find(f => f.id === id))}
+                        >
+                          {getFirmName(id)}
+                        </button>
+                      ) : (
+                        <span>{getFirmName(id)}</span>
+                      )}
                       {!viewMode && (
                         <button type="button" onClick={() => removeFirm(id)} className="ml-0.5 hover:text-red-500 transition-colors">
                           <X className="w-3 h-3" />
