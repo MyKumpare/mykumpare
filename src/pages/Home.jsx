@@ -148,7 +148,7 @@ export default function Home() {
 
   const { data: firms = [], isLoading } = useQuery({
     queryKey: ["firms"],
-    queryFn: () => base44.entities.Firm.list("-created_date"),
+    queryFn: () => base44.entities.Firm.list("-created_date", 5000),
     select: (data) => data.filter((f) => !f.deleted_at),
   });
 
