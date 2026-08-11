@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Pencil, Building2, Plus, Upload, X, Globe, AlertTriangle, Linkedin, Loader2 } from "lucide-react";
@@ -529,10 +528,9 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     if (selected.email && !email) { setEmail(selected.email); applied.push("Email"); }
     if (selected.linkedin_url && !linkedinUrl) { setLinkedinUrl(selected.linkedin_url); applied.push("LinkedIn"); }
     if (selected.year_founded && !yearFounded) { setYearFounded(String(selected.year_founded)); applied.push("Year Founded"); }
-    if (selected.firm_types?.length) {
-      const merged = [...new Set([...firmTypes, ...selected.firm_types])];
-      const added = merged.length - firmTypes.length;
-      if (added > 0) { setFirmTypes(merged); applied.push("Firm Types"); }
+    if (selected.firm_types?.length && firmTypes.length === 0) {
+      setFirmTypes([selected.firm_types[0]]);
+      applied.push("Firm Type");
     }
     let finalAddrs = addresses;
     if (selected.addresses?.length) {
@@ -978,19 +976,23 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                   <div className="rounded-md border bg-white p-2 space-y-1.5">
                     {FIRM_TYPES.map((type) => (
                       <label key={type} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 px-1 py-0.5 rounded">
-                        <Checkbox
+                        <input
+                          type="radio"
+                          name="firmType"
                           checked={firmTypes.includes(type)}
-                          onCheckedChange={(checked) => {
-                            setFirmTypes(checked
-                              ? [...firmTypes, type]
-                              : firmTypes.filter((t) => t !== type)
-                            );
-                          }}
+                          onChange={() => setFirmTypes([type])}
                           disabled={preselectedType === type && !editingFirm}
+                          className="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500 cursor-pointer"
                         />
                         <span className="text-sm text-gray-700">{type}</span>
                       </label>
                     ))}
+                    {firmTypes.length > 1 && (
+                      <p className="text-xs text-amber-600 flex items-center gap-1 px-1 pt-1">
+                        <AlertTriangle className="w-3 h-3" />
+                        A firm can only have one type. Only the first selected type will be saved.
+                      </p>
+                    )}
                   </div>
                 )}
               </div>

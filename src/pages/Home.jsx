@@ -982,7 +982,7 @@ export default function Home() {
 
         {/* Utility section */}
         <div ref={utilityRef} />
-        <UtilitySection deletedCount={deletedCount} forceExpanded={allExpanded || utilityForceExpanded} />
+        <UtilitySection deletedCount={deletedCount} forceExpanded={allExpanded || utilityForceExpanded} onFirmClick={handleEdit} />
 
         <div className="h-4" />
       </div>
@@ -1401,6 +1401,7 @@ export default function Home() {
         open={utilityModalOpen}
         onClose={() => setUtilityModalOpen(false)}
         deletedCount={deletedCount}
+        onFirmClick={handleEdit}
       />
 
       {/* AI Assistant */}

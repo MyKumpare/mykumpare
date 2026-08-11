@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search, ArrowLeft, Users, Sparkles, ScrollText, ShieldCheck, Ghost, Upload, Eraser } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search, ArrowLeft, Users, Sparkles, ScrollText, ShieldCheck, Ghost, Upload, Eraser, Tag } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -11,6 +11,7 @@ import EnrichmentLogsView from "./EnrichmentLogsView";
 import OrphanRecordCleanup from "./OrphanRecordCleanup";
 import CsvContactImport from "./CsvContactImport";
 import PlaceholderCleanup from "./PlaceholderCleanup";
+import FirmTypeValidation from "./FirmTypeValidation";
 
 function BenchmarkItem({ b, onClick }) {
   return (
@@ -51,7 +52,7 @@ function CollapsibleGroup({ label, labelClass = "text-xs font-semibold text-indi
   );
 }
 
-export default function UtilitySection({ deletedCount, forceExpanded = false }) {
+export default function UtilitySection({ deletedCount, forceExpanded = false, onFirmClick }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
@@ -228,6 +229,16 @@ export default function UtilitySection({ deletedCount, forceExpanded = false }) 
                 <span className="text-sm font-semibold text-gray-700">Placeholder Cleanup</span>
                 <span className="text-[11px] text-gray-400">Clear inconsistent values</span>
               </button>
+              <button
+                onClick={() => setView("firm-type-validation")}
+                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
+              >
+                <div className="w-9 h-9 rounded-full bg-purple-50 flex items-center justify-center">
+                  <Tag className="w-5 h-5 text-purple-600" />
+                </div>
+                <span className="text-sm font-semibold text-gray-700">Firm Type Check</span>
+                <span className="text-[11px] text-gray-400">Find multi-type firms</span>
+              </button>
               {isAdmin && (
                 <button
                   onClick={() => navigate("/UserManagement")}
@@ -364,6 +375,11 @@ export default function UtilitySection({ deletedCount, forceExpanded = false }) 
           {/* Placeholder cleanup view */}
           {view === "placeholder-cleanup" && (
             <PlaceholderCleanup />
+          )}
+
+          {/* Firm type validation view */}
+          {view === "firm-type-validation" && (
+            <FirmTypeValidation onFirmClick={onFirmClick} />
           )}
         </div>
       )}
