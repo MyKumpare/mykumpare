@@ -556,7 +556,6 @@ export default function Home() {
   const mobileNavItems = [
     { label: "Dashboard", icon: LayoutDashboard, ref: null, color: "text-indigo-300", activeBg: "bg-indigo-50", onClick: () => navigate("/Overview") },
     { label: "AI Agents", icon: Bot, ref: null, color: "text-violet-300", activeBg: "bg-violet-50", onClick: () => navigate("/AiAgents") },
-    { label: "Portfolios", icon: BarChart3, ref: null, color: "text-emerald-600", activeBg: "bg-emerald-50", onClick: () => setPortfolioPickerOpen(true) },
     { label: "Due Diligence", icon: ShieldCheck, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => setDueDiligencePickerOpen(true), submenu: [
       { label: "DD Board", icon: LayoutGrid, onClick: () => navigate("/DueDiligenceKanban") },
       { label: "DD Stats", icon: PieChart, onClick: () => navigate("/DueDiligenceDashboard") },
@@ -564,6 +563,7 @@ export default function Home() {
       { label: "Forms", icon: ClipboardCheck, onClick: () => setQuestionnairePickerOpen(true) },
       { label: "Templates", icon: FileText, onClick: () => setTemplatesPickerOpen(true) },
     ] },
+    { label: "Portfolios", icon: BarChart3, ref: null, color: "text-emerald-600", activeBg: "bg-emerald-50", onClick: () => setPortfolioPickerOpen(true) },
     { label: "Firms", icon: Building, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => setFirmPickerOpen(true) },
     { label: "Products", icon: Package, ref: null, color: "text-violet-600", activeBg: "bg-violet-50", onClick: () => setProductPickerOpen(true) },
     { label: "Contacts", icon: User, ref: null, color: "text-pink-600", activeBg: "bg-pink-50", onClick: () => setContactPickerOpen(true) },
@@ -786,15 +786,6 @@ export default function Home() {
             </button>
           </div>
         )}
-        {/* Portfolios section */}
-        <div ref={portfoliosRef} />
-        <PortfoliosSection
-          portfolios={portfolios.filter(p => !p.deleted_at)}
-          onPortfolioClick={(portfolio) => { setEditingPortfolio(portfolio); setPreselectedAllocatorId(null); setPortfolioDialogOpen(true); }}
-          onAddPortfolio={() => { setEditingPortfolio(null); setPreselectedAllocatorId(null); setPortfolioDialogOpen(true); }}
-          forceExpanded={allExpanded}
-        />
-
         {/* Due Diligence section — with Documents, Forms, Templates nested as sub-items */}
         <div ref={formsRef} />
         <DueDiligenceNavSection
@@ -807,6 +798,15 @@ export default function Home() {
           onAddForms={() => setQuestionnaireAddOpen(true)}
           onOpenTemplates={() => setTemplatesPickerOpen(true)}
           onAddTemplates={() => setTemplatesPickerOpen(true)}
+          forceExpanded={allExpanded}
+        />
+
+        {/* Portfolios section */}
+        <div ref={portfoliosRef} />
+        <PortfoliosSection
+          portfolios={portfolios.filter(p => !p.deleted_at)}
+          onPortfolioClick={(portfolio) => { setEditingPortfolio(portfolio); setPreselectedAllocatorId(null); setPortfolioDialogOpen(true); }}
+          onAddPortfolio={() => { setEditingPortfolio(null); setPreselectedAllocatorId(null); setPortfolioDialogOpen(true); }}
           forceExpanded={allExpanded}
         />
 
