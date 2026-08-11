@@ -332,6 +332,7 @@ export default function MapSearchModal({
   const [error, setError] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
   const [searchMode, setSearchMode] = useState(null);
+  const [resultTypeFilter, setResultTypeFilter] = useState("all");
 
   // View + Directions state
   const [viewMode, setViewMode] = useState("split");
@@ -823,6 +824,7 @@ export default function MapSearchModal({
     setHoveredId(null);
     setError(null);
     setHasSearched(false);
+    setResultTypeFilter("all");
     setViewMode("split");
     setDirectionsActive(false);
     setStops([]);
@@ -832,9 +834,10 @@ export default function MapSearchModal({
     onClose();
   }, [onClose]);
 
-  const mapPoints = results.filter((r) => r.lat != null && r.lon != null);
-  const firmResults = results.filter((r) => r.type === "firm");
-  const contactResults = results.filter((r) => r.type === "contact");
+  const filteredResults = resultTypeFilter === "all" ? results : results.filter((r) => r.type === resultTypeFilter);
+  const mapPoints = filteredResults.filter((r) => r.lat != null && r.lon != null);
+  const firmResults = filteredResults.filter((r) => r.type === "firm");
+  const contactResults = filteredResults.filter((r) => r.type === "contact");
   const routeLineCoords = route ? route.coordinates.map((c) => [c.lat, c.lon]) : null;
 
   const showMap = viewMode === "map" || viewMode === "split";
@@ -1213,13 +1216,34 @@ export default function MapSearchModal({
                   {loading
                     ? "Searching..."
                     : hasSearched
-                    ? `${results.length} result${results.length !== 1 ? "s" : ""}`
+                    ? `${filteredResults.length} result${filteredResults.length !== 1 ? "s" : ""}`
                     : "Enter search criteria"}
                 </span>
                 {results.length > 0 && !directionsActive && (
-                  <span className="text-xs text-gray-400">
-                    {searchMode === "firm" ? "Name search" : "Location search"}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-0.5 bg-gray-100 rounded-lg p-0.5">
+                      {[
+                        { value: "all", label: "All" },
+                        { value: "firm", label: "Firms" },
+                        { value: "contact", label: "Contacts" },
+                      ].map(({ value, label }) => (
+                        <button
+                          key={value}
+                          onClick={() => setResultTypeFilter(value)}
+                          className={`px-2 py-0.5 rounded-md text-xs font-medium transition-colors ${
+                            resultTypeFilter === value
+                              ? "bg-white text-gray-900 shadow-sm"
+                              : "text-gray-500 hover:text-gray-700"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    <span className="text-xs text-gray-400">
+                      {searchMode === "firm" ? "Name search" : "Location search"}
+                    </span>
+                  </div>
                 )}
                 {directionsActive && stops.length > 0 && (
                   <span className="text-xs text-blue-600 font-medium">
@@ -1237,9 +1261,11 @@ export default function MapSearchModal({
                 {!loading && error && (
                   <div className="text-sm text-red-500 text-center py-8 px-4">{error}</div>
                 )}
-                {!loading && !error && hasSearched && results.length === 0 && (
+                {!loading && !error && hasSearched && filteredResults.length === 0 && (
                   <div className="text-sm text-gray-400 text-center py-8 px-4">
-                    No results found. Try a different location or firm name.
+                    {results.length === 0
+                      ? "No results found. Try a different location or firm name."
+                      : `No ${resultTypeFilter === "firm" ? "firms" : "contacts"} in these results. Try a different filter.`}
                   </div>
                 )}
                 {!loading && !error && !hasSearched && (
@@ -1251,7 +1277,7 @@ export default function MapSearchModal({
                 )}
                 {!loading &&
                   !error &&
-                  results.slice(0, 150).map((r) => (
+                  filteredResults.slice(0, 150).map((r) => (
                     <ResultItem
                       key={r.id}
                       result={r}
@@ -1264,9 +1290,9 @@ export default function MapSearchModal({
                       stopNumber={directionsActive && selectedStopIds.has(r.id) ? stops.findIndex((s) => s.id === r.id) + 1 : null}
                     />
                   ))}
-                {!loading && !error && results.length > 150 && (
+                {!loading && !error && filteredResults.length > 150 && (
                   <div className="text-xs text-gray-400 text-center py-2">
-                    Showing 150 of {results.length} results. Refine your search to see more.
+                    Showing 150 of {filteredResults.length} results. Refine your search to see more.
                   </div>
                 )}
               </div>
