@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, ChevronDown, ChevronRight, ChevronsDown, ChevronsUp, User, Camera, Download } from "lucide-react";
+import { Plus, ChevronDown, ChevronRight, User, Camera, Download } from "lucide-react";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
+import SectionTypeFilter from "@/components/common/SectionTypeFilter";
+import SectionExpandCollapse from "@/components/common/SectionExpandCollapse";
 import ContactsSectionFilters, { filterSectionContacts } from "@/components/contacts/ContactsSectionFilters";
 import { useViewMode } from "@/hooks/useViewMode";
 import { exportContactsToCSV } from "./exportContactsCsv";
@@ -54,6 +56,7 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
   const [viewMode, setViewMode] = useViewMode("contacts");
   const [filterText, setFilterText] = useState("");
   const [filterSelected, setFilterSelected] = useState({});
+  const [typeFilter, setTypeFilter] = useState("all");
 
   const handleToggleFilter = (fieldKey, value) => {
     setFilterSelected((prev) => {
@@ -142,8 +145,10 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
     return filterSectionContacts(contacts, filterText, filterSelected, firmMap, contactProductMap, contactPortfolioMap);
   }, [contacts, filterText, filterSelected, firmMap, contactProductMap, contactPortfolioMap, hasFilters]);
 
+  const visibleFirmTypes = FIRM_TYPES.filter((t) => typeFilter === "all" || t === typeFilter);
+
   // Group contacts: by firm type → by firm → sorted by last name
-  const grouped = FIRM_TYPES.reduce((acc, groupType) => {
+  const grouped = visibleFirmTypes.reduce((acc, groupType) => {
     // Firms of this type, sorted by name
     const groupFirms = firms
       .filter((f) => {
@@ -165,10 +170,10 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
     return acc;
   }, {});
 
-  // Contacts not associated with any firm
-  const unassignedContacts = filteredContacts
+  // Contacts not associated with any firm (only shown when no type filter is active)
+  const unassignedContacts = typeFilter === "all" ? filteredContacts
     .filter((c) => !c.firm_ids?.length)
-    .sort((a, b) => (a.last_name || "").localeCompare(b.last_name || ""));
+    .sort((a, b) => (a.last_name || "").localeCompare(b.last_name || "")) : [];
 
   const totalContacts = filteredContacts.length;
   const totalAllContacts = contacts.length;
@@ -261,28 +266,17 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
             onClear={handleClearFilters}
           />
           {viewMode === "list" && (
-            <div className="flex items-center justify-end gap-1 mb-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 px-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 gap-1 text-xs"
-                onClick={handleExpandAll}
-              >
-                <ChevronsDown className="w-3.5 h-3.5" />
-                Expand All
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 px-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 gap-1 text-xs"
-                onClick={handleCollapseAll}
-              >
-                <ChevronsUp className="w-3.5 h-3.5" />
-                Collapse All
-              </Button>
+            <div className="flex items-center justify-between mb-2">
+              <SectionTypeFilter
+                label="Filter by type"
+                value={typeFilter}
+                onChange={setTypeFilter}
+                options={FIRM_TYPES}
+              />
+              <SectionExpandCollapse onExpandAll={handleExpandAll} onCollapseAll={handleCollapseAll} />
             </div>
           )}
-          {viewMode === "list" && FIRM_TYPES.map((groupType) => {
+          {viewMode === "list" && visibleFirmTypes.map((groupType) => {
             const firmGroups = grouped[groupType];
             if (!firmGroups) return null;
             const isGroupExpanded = expandedGroups[groupType] !== false; // default open
