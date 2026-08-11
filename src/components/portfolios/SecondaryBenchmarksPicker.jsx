@@ -120,12 +120,9 @@ export default function SecondaryBenchmarksPicker({ value = [], onChange, exclud
 
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
-            <Button variant="outline" className="w-full justify-between h-9 text-sm font-normal" type="button">
-              <span className="text-gray-400 flex items-center gap-1.5">
-                <Plus className="w-3.5 h-3.5" />
-                Add secondary benchmark...
-              </span>
-              <ChevronDown className="w-4 h-4 opacity-50 shrink-0" />
+            <Button variant="outline" size="sm" className="h-7 text-xs text-gray-500" type="button">
+              <Plus className="w-3 h-3" />
+              Add
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[340px] p-0" align="start">

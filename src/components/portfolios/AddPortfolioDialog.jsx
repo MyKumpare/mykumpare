@@ -784,7 +784,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
               )}
               {secondaryBenchmarks.length > 0 && (
                 <div>
-                  <p className="text-xs font-medium text-gray-500 mb-1">Secondary Benchmarks</p>
+                  <p className="text-xs font-medium text-gray-500 mb-1">Secondary Benchmark</p>
                   <div className="flex flex-wrap gap-1.5">
                     {secondaryBenchmarks.map((b) => (
                       <span key={b.benchmark_id} className="inline-flex px-2 py-1 rounded-md bg-gray-100 border border-gray-200 text-xs font-medium text-gray-700">
@@ -952,7 +952,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
 
               {/* Secondary Benchmarks */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-gray-700">Secondary Benchmarks</Label>
+                <Label className="text-xs font-medium text-gray-700">Secondary Benchmark</Label>
                 <SecondaryBenchmarksPicker
                   value={secondaryBenchmarks}
                   onChange={setSecondaryBenchmarks}
