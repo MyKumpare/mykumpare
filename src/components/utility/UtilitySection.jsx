@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search, ArrowLeft, Users, Sparkles, ScrollText, ShieldCheck, Ghost, Upload, Eraser, Tag, UserX } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search, ArrowLeft, Users, Sparkles, ScrollText, ShieldCheck, Ghost, Upload, Eraser, Tag, UserX, Trash2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -13,6 +13,7 @@ import OrphanedContactsCleanup from "./OrphanedContactsCleanup";
 import CsvContactImport from "./CsvContactImport";
 import PlaceholderCleanup from "./PlaceholderCleanup";
 import FirmTypeValidation from "./FirmTypeValidation";
+import DeletedRecordsModal from "@/components/deleted/DeletedRecordsModal";
 
 function BenchmarkItem({ b, onClick }) {
   return (
@@ -57,6 +58,7 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
   const navigate = useNavigate();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  const canManageDeleted = isAdmin || user?.data?.can_manage_deleted === true || user?.can_manage_deleted === true;
   const [expanded, setExpanded] = useState(false);
   // 'menu' = selection screen, 'benchmark' = benchmark list + search, 'cleanup' = contact cleanup, 'orphans' = orphan record cleanup
   const [view, setView] = useState("menu");
@@ -64,6 +66,7 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
   const [selectedBenchmark, setSelectedBenchmark] = useState(null);
   const [benchmarkQuery, setBenchmarkQuery] = useState("");
   const [cleanupStarted, setCleanupStarted] = useState(false);
+  const [deletedRecordsOpen, setDeletedRecordsOpen] = useState(false);
 
   // Expand + reset to selection menu when the parent requests it (e.g. clicking the Utilities header icon),
   // while still letting the user collapse it manually afterwards.
@@ -250,6 +253,18 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
                 <span className="text-sm font-semibold text-gray-700">Orphaned Contacts</span>
                 <span className="text-[11px] text-gray-400">Find & fix firmless contacts</span>
               </button>
+              {canManageDeleted && (
+                <button
+                  onClick={() => setDeletedRecordsOpen(true)}
+                  className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
+                >
+                  <div className="w-9 h-9 rounded-full bg-gray-50 flex items-center justify-center">
+                    <Trash2 className="w-4.5 h-4.5 text-gray-600" />
+                  </div>
+                  <span className="text-sm font-semibold text-gray-700">Deleted Records</span>
+                  <span className="text-[11px] text-gray-400">Restore or permanently delete</span>
+                </button>
+              )}
               {isAdmin && (
                 <button
                   onClick={() => navigate("/UserManagement")}
@@ -405,6 +420,11 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
         onOpenChange={(v) => { setBenchmarkDialogOpen(v); if (!v) setSelectedBenchmark(null); }}
         benchmarks={benchmarks}
         editingBenchmark={selectedBenchmark}
+      />
+
+      <DeletedRecordsModal
+        open={deletedRecordsOpen}
+        onOpenChange={setDeletedRecordsOpen}
       />
     </div>
   );

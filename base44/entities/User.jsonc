@@ -52,6 +52,11 @@
       "description": "Grants delete permission on firm records for users whose firm_role is 'user'. Admins and co-admins always have delete access regardless of this flag.",
       "default": false
     },
+    "can_manage_deleted": {
+      "type": "boolean",
+      "description": "Grants access to the Deleted Records utility, where the user can view soft-deleted firms/products/contacts/portfolios and restore or permanently delete them. Administrators always have access regardless of this flag.",
+      "default": false
+    },
     "onboarded": {
       "type": "boolean",
       "description": "True once the user has completed the firm onboarding/join step (linked to a firm and contact record).",

@@ -170,6 +170,11 @@ export default function Home() {
     select: (data) => data.filter((p) => !p.deleted_at),
   });
 
+  // Note: soft-deleted records (deleted_at set) are intentionally excluded from the
+  // main lists above so they don't appear in normal use. They remain recoverable
+  // via the "Deleted Records" utility (UtilitySection), which is gated by the
+  // can_manage_deleted permission (admins always have access).
+
   const { data: deletedFirms = [] } = useQuery({
     queryKey: ["deletedFirms"],
     queryFn: () => base44.entities.Firm.filter({ deleted_at: { $exists: true } }),
