@@ -33,6 +33,10 @@ const QUERY_KEYS = Object.fromEntries(
   ENTITY_TYPES.map((t) => [t.key, ["deletedRecords", t.entity]])
 );
 
+// Entities where permanent (hard) delete is disabled to prevent catastrophic
+// data loss. Users can still restore these records, but cannot destroy them.
+const NO_HARD_DELETE = new Set(["firms", "portfolios", "contacts"]);
+
 const getDisplayName = (record) => {
   if (record.name) return record.name;
   if (record.portfolio_name) return record.portfolio_name;
@@ -104,6 +108,10 @@ export default function DeletedRecordsModal({ open, onOpenChange }) {
   const handlePermanentlyDelete = async (record) => {
     const entity = ENTITY_TYPES.find((e) => e.key === activeTab)?.entity;
     if (!entity) return;
+    if (NO_HARD_DELETE.has(activeTab)) {
+      toast({ title: "Permanent delete disabled", description: "This record type can only be restored, not permanently deleted.", variant: "destructive" });
+      return;
+    }
     if (!window.confirm(`Permanently delete "${getDisplayName(record)}"? This action cannot be undone.`)) return;
     setBusyId(record.id);
     try {
@@ -170,6 +178,10 @@ export default function DeletedRecordsModal({ open, onOpenChange }) {
   const handleBulkDelete = async () => {
     const entity = ENTITY_TYPES.find((e) => e.key === activeTab)?.entity;
     if (!entity || selectedIds.size === 0) return;
+    if (NO_HARD_DELETE.has(activeTab)) {
+      toast({ title: "Permanent delete disabled", description: "This record type can only be restored, not permanently deleted.", variant: "destructive" });
+      return;
+    }
     if (!window.confirm(`Permanently delete ${selectedIds.size} record${selectedIds.size !== 1 ? "s" : ""}? This action cannot be undone.`)) return;
     setBusyBulk(true);
     const ids = Array.from(selectedIds);
@@ -249,16 +261,18 @@ export default function DeletedRecordsModal({ open, onOpenChange }) {
                             {busyBulk ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
                             Restore Selected
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50"
-                            disabled={busyBulk}
-                            onClick={handleBulkDelete}
-                          >
-                            {busyBulk ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                            Delete Selected
-                          </Button>
+                          {!NO_HARD_DELETE.has(activeTab) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50"
+                              disabled={busyBulk}
+                              onClick={handleBulkDelete}
+                            >
+                              {busyBulk ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                              Delete Selected
+                            </Button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -304,16 +318,18 @@ export default function DeletedRecordsModal({ open, onOpenChange }) {
                                 <RotateCcw className="w-3.5 h-3.5" />
                                 Restore
                               </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-8 gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                disabled={busyId === record.id || busyBulk}
-                                onClick={() => handlePermanentlyDelete(record)}
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                                Delete
-                              </Button>
+                              {!NO_HARD_DELETE.has(activeTab) && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  disabled={busyId === record.id || busyBulk}
+                                  onClick={() => handlePermanentlyDelete(record)}
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                  Delete
+                                </Button>
+                              )}
                             </div>
                           </div>
                         );
