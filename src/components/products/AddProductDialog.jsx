@@ -368,7 +368,7 @@ export default function AddProductDialog({
     )}
     <Dialog open={open} onOpenChange={(v) => { if (!v) guardedClose(); }}>
       <DialogContent
-        className="sm:max-w-lg max-h-[90vh] flex flex-col"
+        className="sm:max-w-3xl max-h-[90vh] flex flex-col"
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
