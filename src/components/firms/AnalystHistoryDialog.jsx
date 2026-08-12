@@ -3,8 +3,11 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { base44 } from "@/api/base44Client";
 import { formatCoverageDate } from "@/lib/analystHistoryClient";
-import { User, Clock, Calendar } from "lucide-react";
+import { User, Clock, Calendar, Pencil, Check, X } from "lucide-react";
 
 /**
  * Displays the analyst coverage history for a single Due Diligence record.
@@ -13,6 +16,10 @@ import { User, Clock, Calendar } from "lucide-react";
  */
 export default function AnalystHistoryDialog({ open, onOpenChange, record }) {
   const [roleFilter, setRoleFilter] = useState("all");
+  const [editingId, setEditingId] = useState(null);
+  const [editStart, setEditStart] = useState("");
+  const [editEnd, setEditEnd] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const history = useMemo(() => {
     if (!record?.analyst_history) return [];
@@ -23,6 +30,36 @@ export default function AnalystHistoryDialog({ open, onOpenChange, record }) {
 
   const productName = record?.product_name || "—";
   const firmName = record?.firm_name || "—";
+
+  const startEdit = (entry) => {
+    setEditingId(entry.id);
+    setEditStart(entry.start_date || "");
+    setEditEnd(entry.end_date || "");
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditStart("");
+    setEditEnd("");
+  };
+
+  const saveEdit = async (entry) => {
+    setSaving(true);
+    try {
+      const updatedHistory = (record.analyst_history || []).map((h) =>
+        h.id === entry.id
+          ? { ...h, start_date: editStart || null, end_date: editEnd || null }
+          : h
+      );
+      await base44.entities.DueDiligence.update(record.id, { analyst_history: updatedHistory });
+      if (record.onHistoryUpdated) record.onHistoryUpdated(updatedHistory);
+      // Update local record ref so the dialog reflects changes immediately
+      record.analyst_history = updatedHistory;
+      setEditingId(null);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -112,19 +149,69 @@ export default function AnalystHistoryDialog({ open, onOpenChange, record }) {
                           Inactive
                         </Badge>
                       )}
-                    </div>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        {formatCoverageDate(entry.start_date)}
-                        {!entry.end_date
-                          ? " – Present"
-                          : ` – ${formatCoverageDate(entry.end_date)}`}
-                      </span>
-                      {duration && (
-                        <span className="text-gray-400">{duration}</span>
+                      {editingId !== entry.id && (
+                        <button
+                          type="button"
+                          onClick={() => startEdit(entry)}
+                          className="ml-auto text-gray-400 hover:text-indigo-600 transition-colors"
+                          title="Edit dates"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
                       )}
                     </div>
+                    {editingId === entry.id ? (
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        <Input
+                          type="date"
+                          value={editStart}
+                          onChange={(e) => setEditStart(e.target.value)}
+                          className="h-7 w-[140px] text-xs"
+                        />
+                        <span className="text-xs text-gray-400">–</span>
+                        <Input
+                          type="date"
+                          value={editEnd}
+                          onChange={(e) => setEditEnd(e.target.value)}
+                          placeholder="Present"
+                          className="h-7 w-[140px] text-xs"
+                        />
+                        <Button
+                          type="button"
+                          size="icon"
+                          className="h-7 w-7"
+                          disabled={saving}
+                          onClick={() => saveEdit(entry)}
+                          title="Save"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7"
+                          disabled={saving}
+                          onClick={cancelEdit}
+                          title="Cancel"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {formatCoverageDate(entry.start_date)}
+                          {!entry.end_date
+                            ? " – Present"
+                            : ` – ${formatCoverageDate(entry.end_date)}`}
+                        </span>
+                        {duration && (
+                          <span className="text-gray-400">{duration}</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               );
