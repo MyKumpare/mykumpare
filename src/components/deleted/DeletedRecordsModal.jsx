@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trash2, RotateCcw, Search, Loader2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { base44 } from "@/api/base44Client";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueries, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/components/ui/use-toast";
 
 const ENTITY_TYPES = [
@@ -14,22 +14,47 @@ const ENTITY_TYPES = [
   { key: "products", label: "Products", entity: "Product" },
   { key: "contacts", label: "Contacts", entity: "Contact" },
   { key: "portfolios", label: "Portfolios", entity: "Portfolio" },
+  { key: "duediligence", label: "Due Diligence", entity: "DueDiligence" },
+  { key: "questionnaires", label: "Questionnaires", entity: "Questionnaire" },
+  { key: "templates", label: "Templates", entity: "Template" },
+  { key: "benchmarks", label: "Benchmarks", entity: "Benchmark" },
+  { key: "firmdocuments", label: "Documents", entity: "FirmDocument" },
+  { key: "analyses", label: "Analyses", entity: "Analysis" },
+  { key: "customreports", label: "Custom Reports", entity: "CustomReport" },
+  { key: "activities", label: "Activities", entity: "ContactActivity" },
+  { key: "tasks", label: "Follow-up Tasks", entity: "FollowUpTask" },
+  { key: "ownership", label: "Ownership", entity: "Ownership" },
+  { key: "orgcharts", label: "Org Charts", entity: "OrgChart" },
+  { key: "returnseries", label: "Return Series", entity: "ReturnSeries" },
+  { key: "responsemappings", label: "Response Mappings", entity: "ResponseMapping" },
 ];
 
-const QUERY_KEYS = {
-  firms: ["deletedFirms"],
-  products: ["deletedProducts"],
-  contacts: ["deletedContacts"],
-  portfolios: ["deletedPortfolios"],
-};
+const QUERY_KEYS = Object.fromEntries(
+  ENTITY_TYPES.map((t) => [t.key, ["deletedRecords", t.entity]])
+);
 
 const getDisplayName = (record) => {
   if (record.name) return record.name;
   if (record.portfolio_name) return record.portfolio_name;
+  if (record.file_name) return record.file_name;
   if (record.first_name || record.last_name) {
     return `${record.first_name || ""} ${record.last_name || ""}`.trim();
   }
-  return "Unknown";
+  if (record.composite_name) return record.composite_name;
+  if (record.representative_portfolio_name) return record.representative_portfolio_name;
+  if (record.paper_portfolio_name) return record.paper_portfolio_name;
+  if (record.back_test_name) return record.back_test_name;
+  if (record.questionnaire_name) return record.questionnaire_name;
+  if (record.target_record_name) return record.target_record_name;
+  if (record.task_description) {
+    const text = record.task_description.replace(/<[^>]+>/g, "").trim();
+    return text ? text.slice(0, 80) : "Untitled";
+  }
+  if (record.activity_type) {
+    return `${record.activity_type}${record.activity_date ? " — " + record.activity_date : ""}`;
+  }
+  if (record.effective_date) return `Ownership (${record.effective_date})`;
+  return "Untitled";
 };
 
 export default function DeletedRecordsModal({ open, onOpenChange }) {
@@ -40,49 +65,25 @@ export default function DeletedRecordsModal({ open, onOpenChange }) {
   const [busyBulk, setBusyBulk] = useState(false);
   const queryClient = useQueryClient();
 
-  // Fetch soft-deleted records for each entity type (only when the modal is open)
-  const { data: deletedFirms = [], isLoading: firmsLoading } = useQuery({
-    queryKey: ["deletedFirms"],
-    queryFn: () => base44.entities.Firm.filter({ deleted_at: { $exists: true } }),
-    enabled: open,
-  });
-  const { data: deletedProducts = [], isLoading: productsLoading } = useQuery({
-    queryKey: ["deletedProducts"],
-    queryFn: () => base44.entities.Product.filter({ deleted_at: { $exists: true } }),
-    enabled: open,
-  });
-  const { data: deletedContacts = [], isLoading: contactsLoading } = useQuery({
-    queryKey: ["deletedContacts"],
-    queryFn: () => base44.entities.Contact.filter({ deleted_at: { $exists: true } }),
-    enabled: open,
-  });
-  const { data: deletedPortfolios = [], isLoading: portfoliosLoading } = useQuery({
-    queryKey: ["deletedPortfolios"],
-    queryFn: () => base44.entities.Portfolio.filter({ deleted_at: { $exists: true } }),
-    enabled: open,
+  // Fetch soft-deleted records for every entity type (only when the modal is open)
+  const queries = useQueries({
+    queries: ENTITY_TYPES.map((type) => ({
+      queryKey: QUERY_KEYS[type.key],
+      queryFn: () => base44.entities[type.entity].filter({ deleted_at: { $exists: true } }),
+      enabled: open,
+    })),
   });
 
-  const deletedRecords = {
-    firms: deletedFirms,
-    products: deletedProducts,
-    contacts: deletedContacts,
-    portfolios: deletedPortfolios,
-  };
-
-  const loadingMap = {
-    firms: firmsLoading,
-    products: productsLoading,
-    contacts: contactsLoading,
-    portfolios: portfoliosLoading,
-  };
+  const deletedRecords = {};
+  const loadingMap = {};
+  ENTITY_TYPES.forEach((type, i) => {
+    deletedRecords[type.key] = queries[i].data ?? [];
+    loadingMap[type.key] = queries[i].isLoading;
+  });
 
   const invalidateAll = () => {
-    Object.values(QUERY_KEYS).forEach((keyArr) => queryClient.invalidateQueries({ queryKey: keyArr }));
-    // Also refresh the active lists so restored records reappear / permanent deletes clear out
-    queryClient.invalidateQueries({ queryKey: ["firms"] });
-    queryClient.invalidateQueries({ queryKey: ["products"] });
-    queryClient.invalidateQueries({ queryKey: ["contacts"] });
-    queryClient.invalidateQueries({ queryKey: ["portfolios"] });
+    // Refresh all queries (deleted-records + active lists) so changes propagate everywhere.
+    queryClient.invalidateQueries();
   };
 
   const handleRestore = async (record) => {
@@ -202,9 +203,9 @@ export default function DeletedRecordsModal({ open, onOpenChange }) {
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setSelectedIds(new Set()); setSearchQuery(""); }} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="flex flex-wrap gap-1 h-auto w-full bg-muted p-1 rounded-lg">
             {ENTITY_TYPES.map((type) => (
-              <TabsTrigger key={type.key} value={type.key}>
+              <TabsTrigger key={type.key} value={type.key} className="px-3 py-1.5 text-xs whitespace-nowrap">
                 {type.label}
                 {deletedRecords[type.key]?.length ? ` (${deletedRecords[type.key].length})` : ""}
               </TabsTrigger>

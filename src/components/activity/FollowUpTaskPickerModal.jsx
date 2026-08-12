@@ -57,7 +57,7 @@ export default function FollowUpTaskPickerModal({ open, onClose, onAddTask, onTa
 
   const { data: tasks = [], isLoading } = useQuery({
     queryKey: ["all_follow_up_tasks_picker"],
-    queryFn: () => base44.entities.FollowUpTask.list("-due_date"),
+    queryFn: () => base44.entities.FollowUpTask.filter({ deleted_at: { $exists: false } }, "-due_date"),
     enabled: open,
   });
 

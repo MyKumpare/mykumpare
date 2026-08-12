@@ -38,7 +38,7 @@ export default function SecondaryBenchmarksPicker({ value = [], onChange, exclud
 
   const { data: benchmarks = [] } = useQuery({
     queryKey: ["benchmarks"],
-    queryFn: () => base44.entities.Benchmark.list("-created_date", 500),
+    queryFn: () => base44.entities.Benchmark.filter({ deleted_at: { $exists: false } }, "-created_date", 500),
   });
 
   const selectedIds = useMemo(() => new Set(value.map((v) => v.benchmark_id)), [value]);

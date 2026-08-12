@@ -43,7 +43,7 @@ export default function DocumentationChecklistTab({ items = [], firmId, productI
   // Fetch firm documents for selection
   const { data: firmDocs = [] } = useQuery({
     queryKey: ["firm-documents", firmId],
-    queryFn: () => base44.entities.FirmDocument.filter({ firm_id: firmId }, "-created_date", 500),
+    queryFn: () => base44.entities.FirmDocument.filter({ deleted_at: { $exists: false }, firm_id: firmId }, "-created_date", 500),
     enabled: !!firmId,
   });
 

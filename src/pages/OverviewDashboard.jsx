@@ -49,22 +49,22 @@ export default function OverviewDashboard() {
 
   const { data: tasks = [], isLoading: tasksLoading } = useQuery({
     queryKey: ["follow_up_tasks_search"],
-    queryFn: () => base44.entities.FollowUpTask.list("-due_date"),
+    queryFn: () => base44.entities.FollowUpTask.filter({ deleted_at: { $exists: false } }, "-due_date"),
   });
 
   const { data: dueDiligences = [], isLoading: ddLoading } = useQuery({
     queryKey: ["due-diligence-search"],
-    queryFn: () => base44.entities.DueDiligence.list("-created_date", 5000),
+    queryFn: () => base44.entities.DueDiligence.filter({ deleted_at: { $exists: false } }, "-created_date", 5000),
   });
 
   const { data: activities = [], isLoading: activitiesLoading } = useQuery({
     queryKey: ["overview_activities"],
-    queryFn: () => base44.entities.ContactActivity.list("-activity_date", 5000),
+    queryFn: () => base44.entities.ContactActivity.filter({ deleted_at: { $exists: false } }, "-activity_date", 5000),
   });
 
   const { data: questionnaires = [], isLoading: questionnairesLoading } = useQuery({
     queryKey: ["overview_questionnaires"],
-    queryFn: () => base44.entities.Questionnaire.list("-created_date", 5000),
+    queryFn: () => base44.entities.Questionnaire.filter({ deleted_at: { $exists: false } }, "-created_date", 5000),
   });
 
   const scopedFirms = useMemo(() => {

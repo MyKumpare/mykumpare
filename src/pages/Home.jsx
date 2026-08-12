@@ -197,41 +197,41 @@ export default function Home() {
 
   const { data: analyses = [] } = useQuery({
     queryKey: ["analyses"],
-    queryFn: () => base44.entities.Analysis.list("-created_date"),
+    queryFn: () => base44.entities.Analysis.filter({ deleted_at: { $exists: false } }, "-created_date"),
   });
 
   const { data: benchmarks = [] } = useQuery({
     queryKey: ["benchmarks"],
-    queryFn: () => base44.entities.Benchmark.list("-created_date"),
+    queryFn: () => base44.entities.Benchmark.filter({ deleted_at: { $exists: false } }, "-created_date"),
   });
 
   const { data: activities = [] } = useQuery({
     queryKey: ["contact_activities_search"],
-    queryFn: () => base44.entities.ContactActivity.list("-activity_date"),
+    queryFn: () => base44.entities.ContactActivity.filter({ deleted_at: { $exists: false } }, "-activity_date"),
     enabled: searchFocused,
   });
 
   const { data: followUpTasks = [] } = useQuery({
     queryKey: ["follow_up_tasks_search"],
-    queryFn: () => base44.entities.FollowUpTask.list("-due_date"),
+    queryFn: () => base44.entities.FollowUpTask.filter({ deleted_at: { $exists: false } }, "-due_date"),
     enabled: searchFocused,
   });
 
   const { data: documents = [] } = useQuery({
     queryKey: ["firm_documents_search"],
-    queryFn: () => base44.entities.FirmDocument.list("-entry_date", 1000),
+    queryFn: () => base44.entities.FirmDocument.filter({ deleted_at: { $exists: false } }, "-entry_date", 1000),
     enabled: searchFocused,
   });
 
   const { data: dueDiligences = [] } = useQuery({
     queryKey: ["due-diligence-search"],
-    queryFn: () => base44.entities.DueDiligence.list("-created_date", 5000),
+    queryFn: () => base44.entities.DueDiligence.filter({ deleted_at: { $exists: false } }, "-created_date", 5000),
     enabled: searchFocused,
   });
 
   const { data: customReports = [] } = useQuery({
     queryKey: ["custom_reports_search"],
-    queryFn: () => base44.entities.CustomReport.list("-created_date"),
+    queryFn: () => base44.entities.CustomReport.filter({ deleted_at: { $exists: false } }, "-created_date"),
     enabled: searchFocused,
   });
 

@@ -273,13 +273,13 @@ export default function ProductAnalyticsTab({ productId, editingProduct }) {
   // ── Data fetching ──
   const { data: seriesList = [], isLoading: loadingSeries } = useQuery({
     queryKey: ["return-series", productId],
-    queryFn: () => base44.entities.ReturnSeries.filter({ product_id: productId }),
+    queryFn: () => base44.entities.ReturnSeries.filter({ deleted_at: { $exists: false }, product_id: productId }),
     enabled: !!productId,
   });
 
   const { data: allBenchmarks = [], isLoading: loadingBm } = useQuery({
     queryKey: ["benchmarks-all"],
-    queryFn: () => base44.entities.Benchmark.list(),
+    queryFn: () => base44.entities.Benchmark.filter({ deleted_at: { $exists: false } }),
     enabled: benchmarkDefs.length > 0,
   });
 

@@ -245,7 +245,7 @@ export default function ProductReturnsTab({ productId, productName, isEditing })
 
   const { data: returnSeries = [] } = useQuery({
     queryKey: ["returnSeries", productId],
-    queryFn: () => base44.entities.ReturnSeries.filter({ product_id: productId }),
+    queryFn: () => base44.entities.ReturnSeries.filter({ deleted_at: { $exists: false }, product_id: productId }),
     enabled: !!productId,
   });
 
@@ -267,7 +267,7 @@ export default function ProductReturnsTab({ productId, productName, isEditing })
       setShowUploadDialog(false);
       // Refresh viewing series if it was updated
       if (viewingReturnSeries) {
-        base44.entities.ReturnSeries.list().then(series => {
+        base44.entities.ReturnSeries.filter({ deleted_at: { $exists: false } }).then(series => {
           const updated = series.find(s => s.id === viewingReturnSeries.id);
           if (updated) setViewingReturnSeries(updated);
         });
@@ -276,7 +276,7 @@ export default function ProductReturnsTab({ productId, productName, isEditing })
   });
 
   const deleteReturnSeriesMutation = useMutation({
-    mutationFn: (id) => base44.entities.ReturnSeries.delete(id),
+    mutationFn: (id) => base44.entities.ReturnSeries.update(id, { deleted_at: new Date().toISOString() }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["returnSeries", productId] }),
   });
 
@@ -338,7 +338,7 @@ export default function ProductReturnsTab({ productId, productName, isEditing })
       queryClient.invalidateQueries({ queryKey: ["returnSeries", productId] });
       
       // Refresh the return series data and get the newly created record
-      const updated = await base44.entities.ReturnSeries.filter({ product_id: productId });
+      const updated = await base44.entities.ReturnSeries.filter({ deleted_at: { $exists: false }, product_id: productId });
       const newSeries = updated[updated.length - 1];
       if (newSeries) {
         setEditingReturnSeries(newSeries);
@@ -869,7 +869,7 @@ export default function ProductReturnsTab({ productId, productName, isEditing })
             {
               onSuccess: async () => {
                 await queryClient.invalidateQueries({ queryKey: ["returnSeries", productId] });
-                const refreshed = await base44.entities.ReturnSeries.filter({ product_id: productId });
+                const refreshed = await base44.entities.ReturnSeries.filter({ deleted_at: { $exists: false }, product_id: productId });
                 const latest = refreshed.find(s => s.id === updatedSeries.id);
                 if (latest) setViewingReturnSeries(latest);
                 else setViewingReturnSeries(updatedSeries);

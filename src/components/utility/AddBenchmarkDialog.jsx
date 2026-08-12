@@ -156,7 +156,7 @@ export default function AddBenchmarkDialog({
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Benchmark.delete(id),
+    mutationFn: (id) => base44.entities.Benchmark.update(id, { deleted_at: new Date().toISOString() }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["benchmarks"] });
       onOpenChange(false);

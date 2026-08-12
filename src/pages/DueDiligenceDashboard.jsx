@@ -41,7 +41,7 @@ function StatCard({ icon: Icon, label, value, sublabel, color }) {
 export default function DueDiligenceDashboard() {
   const { data: records = [], isLoading } = useQuery({
     queryKey: ["due-diligence-all"],
-    queryFn: () => base44.entities.DueDiligence.list("-created_date", 500),
+    queryFn: () => base44.entities.DueDiligence.filter({ deleted_at: { $exists: false } }, "-created_date", 500),
   });
 
   const stats = useMemo(() => {

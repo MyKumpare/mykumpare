@@ -390,7 +390,7 @@ function ActivityItem({ activity, contactId, contactName, linkedTasks, allActivi
   const [expanded, setExpanded] = useState(false);
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.ContactActivity.delete(id),
+    mutationFn: (id) => base44.entities.ContactActivity.update(id, { deleted_at: new Date().toISOString() }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["contact_activities", contactId] }),
   });
 
@@ -555,13 +555,13 @@ export default function ContactActivitiesTab({ contactId, contactName, contactFi
 
   const { data: activities = [], isLoading } = useQuery({
     queryKey: ["contact_activities", contactId],
-    queryFn: () => base44.entities.ContactActivity.filter({ contact_id: contactId }, "-activity_date"),
+    queryFn: () => base44.entities.ContactActivity.filter({ deleted_at: { $exists: false }, contact_id: contactId }, "-activity_date"),
     enabled: !!contactId,
   });
 
   const { data: allTasks = [] } = useQuery({
     queryKey: ["follow_up_tasks", contactId],
-    queryFn: () => base44.entities.FollowUpTask.filter({ originator_contact_id: contactId }, "-due_date"),
+    queryFn: () => base44.entities.FollowUpTask.filter({ deleted_at: { $exists: false }, originator_contact_id: contactId }, "-due_date"),
     enabled: !!contactId,
   });
 

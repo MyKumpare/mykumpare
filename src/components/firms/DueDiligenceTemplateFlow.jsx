@@ -89,7 +89,7 @@ export default function DueDiligenceTemplateFlow({
 
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ["templates"],
-    queryFn: () => base44.entities.Template.list("-created_date", 5000),
+    queryFn: () => base44.entities.Template.filter({ deleted_at: { $exists: false } }, "-created_date", 5000),
   });
 
   const ddTemplates = useMemo(

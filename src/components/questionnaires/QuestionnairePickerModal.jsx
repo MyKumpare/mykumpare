@@ -59,7 +59,7 @@ export default function QuestionnairePickerModal({
 
   const { data: questionnaires = [], isLoading } = useQuery({
     queryKey: ["questionnaires"],
-    queryFn: () => base44.entities.Questionnaire.list("-created_date", 5000),
+    queryFn: () => base44.entities.Questionnaire.filter({ deleted_at: { $exists: false } }, "-created_date", 5000),
     enabled: open,
   });
 

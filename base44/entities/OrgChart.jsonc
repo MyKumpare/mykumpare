@@ -36,6 +36,11 @@
           }
         }
       }
+    },
+    "deleted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when this record was soft-deleted"
     }
   },
   "required": [

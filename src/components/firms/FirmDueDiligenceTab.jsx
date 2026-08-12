@@ -29,7 +29,7 @@ export default function FirmDueDiligenceTab({ firmId, firmName, contacts = [], o
 
   const { data: records = [], isLoading } = useQuery({
     queryKey: ["due-diligence", firmId],
-    queryFn: () => base44.entities.DueDiligence.filter({ firm_id: firmId }, "-created_date", 200),
+    queryFn: () => base44.entities.DueDiligence.filter({ deleted_at: { $exists: false }, firm_id: firmId }, "-created_date", 200),
     enabled: !!firmId,
   });
 
@@ -87,7 +87,7 @@ export default function FirmDueDiligenceTab({ firmId, firmName, contacts = [], o
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
       await deleteDdNotifications(id);
-      await base44.entities.DueDiligence.delete(id);
+      await base44.entities.DueDiligence.update(id, { deleted_at: new Date().toISOString() });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["due-diligence", firmId] });

@@ -584,12 +584,12 @@ export default function ActivityDetailModal({ open, activity, onClose, onOpenCon
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
       // First, delete all associated follow-up tasks
-      const tasks = await base44.entities.FollowUpTask.filter({ activity_id: id });
+      const tasks = await base44.entities.FollowUpTask.filter({ deleted_at: { $exists: false }, activity_id: id });
       if (tasks && tasks.length > 0) {
-        await Promise.all(tasks.map(task => base44.entities.FollowUpTask.delete(task.id)));
+        await Promise.all(tasks.map(task => base44.entities.FollowUpTask.update(task.id, { deleted_at: new Date().toISOString() })));
       }
       // Then delete the activity
-      await base44.entities.ContactActivity.delete(id);
+      await base44.entities.ContactActivity.update(id, { deleted_at: new Date().toISOString() });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contact_activities"] });
@@ -642,7 +642,7 @@ export default function ActivityDetailModal({ open, activity, onClose, onOpenCon
 
   const { data: linkedTasks = [] } = useQuery({
     queryKey: ["tasks_for_activity", activity?.id],
-    queryFn: () => base44.entities.FollowUpTask.filter({ activity_id: activity.id }),
+    queryFn: () => base44.entities.FollowUpTask.filter({ deleted_at: { $exists: false }, activity_id: activity.id }),
     enabled: open && !!activity?.id,
   });
 

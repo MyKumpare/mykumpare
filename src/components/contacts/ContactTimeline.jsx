@@ -125,13 +125,13 @@ function TimelineEntry({ item }) {
 export default function ContactTimeline({ contactId, contactNotes }) {
   const { data: activities = [], isLoading: loadingActivities } = useQuery({
     queryKey: ["contact_activities", contactId],
-    queryFn: () => base44.entities.ContactActivity.filter({ contact_id: contactId }, "-activity_date"),
+    queryFn: () => base44.entities.ContactActivity.filter({ deleted_at: { $exists: false }, contact_id: contactId }, "-activity_date"),
     enabled: !!contactId,
   });
 
   const { data: tasks = [], isLoading: loadingTasks } = useQuery({
     queryKey: ["follow_up_tasks", contactId],
-    queryFn: () => base44.entities.FollowUpTask.filter({ originator_contact_id: contactId }, "-due_date"),
+    queryFn: () => base44.entities.FollowUpTask.filter({ deleted_at: { $exists: false }, originator_contact_id: contactId }, "-due_date"),
     enabled: !!contactId,
   });
 

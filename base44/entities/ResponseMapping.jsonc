@@ -65,6 +65,11 @@
       "type": "string",
       "format": "date-time",
       "description": "Timestamp of the last bulk refresh of all mappings"
+    },
+    "deleted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when this record was soft-deleted"
     }
   },
   "required": [

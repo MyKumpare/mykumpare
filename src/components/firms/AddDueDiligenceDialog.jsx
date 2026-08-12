@@ -435,7 +435,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
   // All DD records — used to check if the selected product already has DD.
   const { data: allDueDiligences = [] } = useQuery({
     queryKey: ["due-diligence-search"],
-    queryFn: () => base44.entities.DueDiligence.list("-created_date", 5000),
+    queryFn: () => base44.entities.DueDiligence.filter({ deleted_at: { $exists: false } }, "-created_date", 5000),
   });
 
   // Firm options for the picker (firm-selection mode only).

@@ -31,19 +31,19 @@ export default function DueDiligenceNavSection({
   // Counts
   const { data: ddRecords = [] } = useQuery({
     queryKey: ["picker_count", "DueDiligence"],
-    queryFn: () => base44.entities.DueDiligence.list("-created_date", 5000),
+    queryFn: () => base44.entities.DueDiligence.filter({ deleted_at: { $exists: false } }, "-created_date", 5000),
   });
   const ddCount = ddRecords.filter((x) => !x.deleted_at).length;
 
   const { data: questionnaires = [] } = useQuery({
     queryKey: ["questionnaires"],
-    queryFn: () => base44.entities.Questionnaire.list("-created_date", 500),
+    queryFn: () => base44.entities.Questionnaire.filter({ deleted_at: { $exists: false } }, "-created_date", 500),
   });
   const formsCount = questionnaires.length;
 
   const { data: templates = [] } = useQuery({
     queryKey: ["picker_count", "Template"],
-    queryFn: () => base44.entities.Template.list("-created_date", 5000),
+    queryFn: () => base44.entities.Template.filter({ deleted_at: { $exists: false } }, "-created_date", 5000),
   });
   const templatesCount = templates.filter((x) => !x.deleted_at).length;
 

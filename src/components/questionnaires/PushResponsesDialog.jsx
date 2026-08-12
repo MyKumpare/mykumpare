@@ -117,7 +117,7 @@ export default function PushResponsesDialog({ open, onOpenChange, questionnaire,
   // Fetch existing ResponseMapping for this questionnaire + target
   const { data: existingMappings = [] } = useQuery({
     queryKey: ["response-mappings", questionnaire?.id],
-    queryFn: () => base44.entities.ResponseMapping.filter({ questionnaire_id: questionnaire.id }, "-created_date", 100),
+    queryFn: () => base44.entities.ResponseMapping.filter({ deleted_at: { $exists: false }, questionnaire_id: questionnaire.id }, "-created_date", 100),
     enabled: open && !!questionnaire?.id,
   });
 

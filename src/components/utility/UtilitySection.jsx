@@ -80,7 +80,7 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
 
   const { data: benchmarks = [] } = useQuery({
     queryKey: ["benchmarks"],
-    queryFn: () => base44.entities.Benchmark.list("-created_date"),
+    queryFn: () => base44.entities.Benchmark.filter({ deleted_at: { $exists: false } }, "-created_date"),
   });
 
   const filteredBenchmarks = useMemo(() => {

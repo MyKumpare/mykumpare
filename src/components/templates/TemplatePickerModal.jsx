@@ -37,7 +37,7 @@ export default function TemplatePickerModal({ open, onClose }) {
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Template.delete(id),
+    mutationFn: (id) => base44.entities.Template.update(id, { deleted_at: new Date().toISOString() }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["templates"] });
       toast({ title: "Template deleted" });
@@ -70,7 +70,7 @@ export default function TemplatePickerModal({ open, onClose }) {
 
   const { data: templates = [] } = useQuery({
     queryKey: ["templates"],
-    queryFn: () => base44.entities.Template.list("-created_date", 5000),
+    queryFn: () => base44.entities.Template.filter({ deleted_at: { $exists: false } }, "-created_date", 5000),
     enabled: open,
   });
 

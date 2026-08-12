@@ -587,7 +587,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
 
   const { data: allOwnerships = [] } = useQuery({
     queryKey: ["ownership"],
-    queryFn: () => base44.entities.Ownership.list("-effective_date"),
+    queryFn: () => base44.entities.Ownership.filter({ deleted_at: { $exists: false } }, "-effective_date"),
     enabled: !!editingContact,
   });
 

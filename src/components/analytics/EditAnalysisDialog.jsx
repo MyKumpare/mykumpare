@@ -363,11 +363,11 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
 
   const { data: benchmarks = [] } = useQuery({
     queryKey: ["benchmarks-all"],
-    queryFn: () => base44.entities.Benchmark.list(),
+    queryFn: () => base44.entities.Benchmark.filter({ deleted_at: { $exists: false } }),
   });
   const { data: allSeries = [] } = useQuery({
     queryKey: ["return-series-all"],
-    queryFn: () => base44.entities.ReturnSeries.list(),
+    queryFn: () => base44.entities.ReturnSeries.filter({ deleted_at: { $exists: false } }),
     enabled: open,
   });
   const { data: products = [] } = useQuery({
@@ -435,7 +435,7 @@ export default function EditAnalysisDialog({ open, onOpenChange, analysis }) {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: () => base44.entities.Analysis.delete(analysis?.id),
+    mutationFn: () => base44.entities.Analysis.update(analysis?.id, { deleted_at: new Date().toISOString() }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["analyses"] });
       onOpenChange(false);

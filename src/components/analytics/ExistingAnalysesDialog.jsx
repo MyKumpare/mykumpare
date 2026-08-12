@@ -21,7 +21,7 @@ export default function ExistingAnalysesDialog({ open, onOpenChange, onSelect })
 
   const { data: analyses = [], isLoading } = useQuery({
     queryKey: ["analyses"],
-    queryFn: () => base44.entities.Analysis.list("-created_date"),
+    queryFn: () => base44.entities.Analysis.filter({ deleted_at: { $exists: false } }, "-created_date"),
     enabled: open,
   });
 

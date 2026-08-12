@@ -119,7 +119,7 @@ export default function ContactNotificationsTab({ contactId, contactName, onCont
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
       await deleteDdNotifications(id);
-      await base44.entities.DueDiligence.delete(id);
+      await base44.entities.DueDiligence.update(id, { deleted_at: new Date().toISOString() });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dd-notifications", contactId] });

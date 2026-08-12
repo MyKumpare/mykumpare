@@ -97,6 +97,11 @@
     "outlook_event_id": {
       "type": "string",
       "description": "ID of the corresponding Outlook Calendar event (set when synced to Outlook Calendar)"
+    },
+    "deleted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when this record was soft-deleted"
     }
   },
   "required": [

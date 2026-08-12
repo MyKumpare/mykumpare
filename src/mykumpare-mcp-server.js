@@ -458,7 +458,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       // Benchmarks
       case 'list_benchmarks': {
-        const benchmarks = await base44.entities.Benchmark.list();
+        const benchmarks = await base44.entities.Benchmark.filter({ deleted_at: { $exists: false } });
         let filtered = benchmarks;
         if (args.assetClass) {
           filtered = filtered.filter(b => b.asset_class === args.assetClass);
@@ -468,7 +468,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       // Activities
       case 'list_activities': {
-        const activities = await base44.entities.ContactActivity.list();
+        const activities = await base44.entities.ContactActivity.filter({ deleted_at: { $exists: false } });
         let filtered = activities;
         if (args.contactId) {
           filtered = filtered.filter(a => a.contact_id === args.contactId);
@@ -504,7 +504,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       // Tasks
       case 'list_tasks': {
-        const tasks = await base44.entities.FollowUpTask.list();
+        const tasks = await base44.entities.FollowUpTask.filter({ deleted_at: { $exists: false } });
         let filtered = tasks;
         if (args.assignedToContactId) {
           filtered = filtered.filter(t => 
@@ -603,7 +603,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       // Analytics
       case 'list_analyses': {
-        const analyses = await base44.entities.Analysis.list();
+        const analyses = await base44.entities.Analysis.filter({ deleted_at: { $exists: false } });
         let filtered = analyses;
         if (args.visibility) {
           filtered = filtered.filter(a => a.visibility === args.visibility);
