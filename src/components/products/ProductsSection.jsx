@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, ChevronDown, ChevronRight, Package } from "lucide-react";
+import { Plus, ChevronDown, ChevronRight, Package, BarChart3 } from "lucide-react";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
 import SectionSearch from "@/components/common/SectionSearch";
 import SectionTypeFilter from "@/components/common/SectionTypeFilter";
 import SectionExpandCollapse from "@/components/common/SectionExpandCollapse";
 import ProductStatusBadge from "@/components/products/ProductStatusBadge";
+import AumHistoryDialog from "@/components/firms/AumHistoryDialog";
 import { useViewMode } from "@/hooks/useViewMode";
 
 const PRODUCT_GROUP_TYPES = ["Manager of Managers", "Investment Manager"];
@@ -22,6 +23,7 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
   const [viewMode, setViewMode] = useViewMode("products");
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [aumProduct, setAumProduct] = useState(null);
 
   useEffect(() => {
     if (forceExpanded !== undefined) setExpanded(forceExpanded);
@@ -98,22 +100,31 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
   function ProductMiniCard({ product }) {
     const firm = firmMap[product.firm_id];
     return (
-      <button
-        onClick={() => onProductClick(product)}
-        className="text-left p-3 rounded-xl border border-gray-100 bg-white hover:bg-violet-50 hover:border-violet-200 transition-colors w-full"
-      >
-        <div className="flex items-center gap-2 mb-1">
-          <div className="w-7 h-7 rounded-lg bg-violet-50 flex items-center justify-center flex-shrink-0">
-            <Package className="w-3.5 h-3.5 text-violet-500" />
+      <div className="relative p-3 rounded-xl border border-gray-100 bg-white hover:bg-violet-50 hover:border-violet-200 transition-colors w-full">
+        <button
+          onClick={() => onProductClick(product)}
+          className="text-left w-full"
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-7 h-7 rounded-lg bg-violet-50 flex items-center justify-center flex-shrink-0">
+              <Package className="w-3.5 h-3.5 text-violet-500" />
+            </div>
+            <span className="text-sm font-medium text-gray-800 truncate">{product.name}</span>
+            <ProductStatusBadge status={product.product_status} className="ml-auto" />
           </div>
-          <span className="text-sm font-medium text-gray-800 truncate">{product.name}</span>
-          <ProductStatusBadge status={product.product_status} className="ml-auto" />
-        </div>
-        {firm && <p className="text-xs text-gray-400 truncate pl-9">{firm.name}</p>}
-        {product.asset_class && (
-          <p className="text-xs text-gray-400 pl-9">{product.asset_class}</p>
-        )}
-      </button>
+          {firm && <p className="text-xs text-gray-400 truncate pl-9">{firm.name}</p>}
+          {product.asset_class && (
+            <p className="text-xs text-gray-400 pl-9">{product.asset_class}</p>
+          )}
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); setAumProduct(product); }}
+          className="absolute top-2 right-2 flex items-center gap-1 px-1.5 h-7 rounded-md bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors flex-shrink-0"
+          title="AUM History"
+        >
+          <BarChart3 className="w-3.5 h-3.5" />
+        </button>
+      </div>
     );
   }
 
@@ -222,22 +233,33 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
                           {isFirmExpanded && (
                             <div className="space-y-1">
                               {firmProducts.map((product) => (
-                                <button
+                                <div
                                   key={product.id}
-                                  onClick={() => onProductClick(product)}
                                   className="w-full text-left px-3 py-2 rounded-lg border border-gray-100 bg-white hover:bg-violet-50 hover:border-violet-200 transition-colors flex items-center gap-2 group"
                                 >
-                                  <Package className="w-3.5 h-3.5 text-gray-300 group-hover:text-violet-400 flex-shrink-0" />
-                                  <span className="text-sm text-gray-800 group-hover:text-violet-700 font-medium truncate">
-                                    {product.name}
-                                  </span>
+                                  <button
+                                    onClick={() => onProductClick(product)}
+                                    className="flex items-center gap-2 min-w-0 flex-1 text-left"
+                                  >
+                                    <Package className="w-3.5 h-3.5 text-gray-300 group-hover:text-violet-400 flex-shrink-0" />
+                                    <span className="text-sm text-gray-800 group-hover:text-violet-700 font-medium truncate">
+                                      {product.name}
+                                    </span>
+                                  </button>
                                   <ProductStatusBadge status={product.product_status} className="ml-auto" />
                                   {product.asset_class && (
                                     <span className="text-xs text-gray-400 flex-shrink-0">
                                       {product.asset_class}
                                     </span>
                                   )}
-                                </button>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setAumProduct(product); }}
+                                    className="flex items-center gap-1 px-1.5 h-7 rounded-md bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors flex-shrink-0"
+                                    title="AUM History"
+                                  >
+                                    <BarChart3 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
                               ))}
                             </div>
                           )}
@@ -290,6 +312,14 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
           )}
         </div>
       )}
+
+      <AumHistoryDialog
+        open={!!aumProduct}
+        onOpenChange={(v) => { if (!v) setAumProduct(null); }}
+        entityName="Product"
+        recordId={aumProduct?.id}
+        recordName={aumProduct?.name}
+      />
     </div>
   );
 }
