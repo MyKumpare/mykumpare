@@ -133,20 +133,33 @@ export default function DeletedRecordsModal({ open, onOpenChange }) {
     });
   };
 
+  // Run an async operation over a list of ids with a bounded concurrency so large
+  // batches (e.g. 955 contacts) don't fire hundreds of simultaneous requests and
+  // overwhelm the server/proxy (which caused all-at-once failures).
+  const runBatch = async (ids, fn, concurrency = 15) => {
+    let ok = 0, fail = 0;
+    let cursor = 0;
+    const workers = Array.from({ length: Math.min(concurrency, ids.length) }, async () => {
+      while (cursor < ids.length) {
+        const idx = cursor++;
+        try {
+          await fn(ids[idx]);
+          ok++;
+        } catch {
+          fail++;
+        }
+      }
+    });
+    await Promise.all(workers);
+    return { ok, fail };
+  };
+
   const handleBulkRestore = async () => {
     const entity = ENTITY_TYPES.find((e) => e.key === activeTab)?.entity;
     if (!entity || selectedIds.size === 0) return;
     setBusyBulk(true);
     const ids = Array.from(selectedIds);
-    let ok = 0, fail = 0;
-    await Promise.all(ids.map(async (id) => {
-      try {
-        await base44.entities[entity].update(id, { deleted_at: null });
-        ok++;
-      } catch {
-        fail++;
-      }
-    }));
+    const { ok, fail } = await runBatch(ids, (id) => base44.entities[entity].update(id, { deleted_at: null }));
     invalidateAll();
     setSelectedIds(new Set());
     setBusyBulk(false);
@@ -159,15 +172,7 @@ export default function DeletedRecordsModal({ open, onOpenChange }) {
     if (!window.confirm(`Permanently delete ${selectedIds.size} record${selectedIds.size !== 1 ? "s" : ""}? This action cannot be undone.`)) return;
     setBusyBulk(true);
     const ids = Array.from(selectedIds);
-    let ok = 0, fail = 0;
-    await Promise.all(ids.map(async (id) => {
-      try {
-        await base44.entities[entity].delete(id);
-        ok++;
-      } catch {
-        fail++;
-      }
-    }));
+    const { ok, fail } = await runBatch(ids, (id) => base44.entities[entity].delete(id));
     invalidateAll();
     setSelectedIds(new Set());
     setBusyBulk(false);
