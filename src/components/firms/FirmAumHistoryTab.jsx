@@ -10,7 +10,6 @@ import {
   Trash2,
   Download,
   Upload,
-  ClipboardPaste,
   TrendingUp,
   Save,
   Loader2,
@@ -308,29 +307,6 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
     e.target.value = "";
   };
 
-  const handlePaste = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      if (!text) {
-        toast({ title: "Clipboard is empty", variant: "destructive" });
-        return;
-      }
-      const parsed = parseCsvText(text);
-      if (parsed.length === 0) {
-        toast({ title: "No valid rows found in clipboard", variant: "destructive" });
-        return;
-      }
-      setRows((prev) => mergeParsedIntoRows(prev, parsed).rows);
-      toast({ title: `Pasted ${parsed.length} rows` });
-    } catch (e) {
-      toast({
-        title: "Could not read clipboard",
-        description: "Try uploading a CSV file instead.",
-        variant: "destructive",
-      });
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -370,16 +346,6 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
           className="hidden"
           onChange={handleUploadFile}
         />
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="gap-1.5"
-          onClick={handlePaste}
-        >
-          <ClipboardPaste className="w-3.5 h-3.5" />
-          Paste from Clipboard
-        </Button>
         <Button
           type="button"
           variant="outline"
