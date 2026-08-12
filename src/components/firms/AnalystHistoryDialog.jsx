@@ -103,9 +103,13 @@ export default function AnalystHistoryDialog({ open, onOpenChange, record }) {
                       >
                         {entry.analyst_type === "primary" ? "Primary" : "Secondary"}
                       </Badge>
-                      {isActive && (
+                      {isActive ? (
                         <Badge className="text-[10px] bg-emerald-100 text-emerald-700 border border-emerald-200">
                           Active
+                        </Badge>
+                      ) : (
+                        <Badge className="text-[10px] bg-gray-100 text-gray-500 border border-gray-200">
+                          Inactive
                         </Badge>
                       )}
                     </div>
