@@ -17,6 +17,7 @@ import OnboardingGuard from '@/components/onboarding/OnboardingGuard';
 import ExternalPartyRegister from './pages/ExternalPartyRegister';
 import ExternalParty from './pages/ExternalParty';
 import ActivityCalendar from './pages/ActivityCalendar';
+import AnalystCoverageReport from './pages/AnalystCoverageReport';
 
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -85,6 +86,7 @@ const AuthenticatedApp = () => {
       <Route path="/UserManagement" element={<LayoutWrapper currentPageName="UserManagement"><UserManagement /></LayoutWrapper>} />
       <Route path="/ExternalPortal" element={<LayoutWrapper currentPageName="ExternalPortal"><ExternalParty /></LayoutWrapper>} />
       <Route path="/ActivityCalendar" element={<LayoutWrapper currentPageName="ActivityCalendar"><ActivityCalendar /></LayoutWrapper>} />
+      <Route path="/AnalystCoverageReport" element={<LayoutWrapper currentPageName="AnalystCoverageReport"><AnalystCoverageReport /></LayoutWrapper>} />
       <Route path="/register" element={<ExternalPartyRegister />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
