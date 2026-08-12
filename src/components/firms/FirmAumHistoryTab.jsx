@@ -265,6 +265,32 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
     URL.revokeObjectURL(url);
   };
 
+  // Merge parsed rows into existing rows by month_end_date.
+  // For matching dates, only overwrite fields where the parsed value is non-empty,
+  // so users can paste partial data to fill in missing fields without losing existing values.
+  const mergeParsedIntoRows = (prev, parsed) => {
+    const map = new Map(prev.map((r) => [r.month_end_date, r]));
+    let added = 0;
+    let updated = 0;
+    parsed.forEach((r) => {
+      const existing = map.get(r.month_end_date);
+      if (existing) {
+        const merged = { ...existing };
+        if (r.firm_aum) merged.firm_aum = r.firm_aum;
+        if (r.assets_gained) merged.assets_gained = r.assets_gained;
+        if (r.assets_loss) merged.assets_loss = r.assets_loss;
+        merged.net_asset_flows =
+          toNumber(merged.assets_gained) - toNumber(merged.assets_loss);
+        map.set(r.month_end_date, merged);
+        updated++;
+      } else {
+        map.set(r.month_end_date, r);
+        added++;
+      }
+    });
+    return { rows: Array.from(map.values()), added, updated };
+  };
+
   const handleUploadFile = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -275,12 +301,7 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
         toast({ title: "No valid rows found in file", variant: "destructive" });
         return;
       }
-      setRows((prev) => {
-        // merge by month_end_date, replacing duplicates
-        const map = new Map(prev.map((r) => [r.month_end_date, r]));
-        parsed.forEach((r) => map.set(r.month_end_date, r));
-        return Array.from(map.values());
-      });
+      setRows((prev) => mergeParsedIntoRows(prev, parsed).rows);
       toast({ title: `Imported ${parsed.length} rows` });
     };
     reader.readAsText(file);
@@ -299,11 +320,7 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
         toast({ title: "No valid rows found in clipboard", variant: "destructive" });
         return;
       }
-      setRows((prev) => {
-        const map = new Map(prev.map((r) => [r.month_end_date, r]));
-        parsed.forEach((r) => map.set(r.month_end_date, r));
-        return Array.from(map.values());
-      });
+      setRows((prev) => mergeParsedIntoRows(prev, parsed).rows);
       toast({ title: `Pasted ${parsed.length} rows` });
     } catch (e) {
       toast({
@@ -402,7 +419,7 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
       </div>
 
       <p className="text-xs text-gray-500">
-        Upload, paste, or manually enter monthly AUM. Month-end date format: MM/DD/YYYY. Net Asset Flows auto-calculates as Assets Gained − Assets Loss.
+        Upload, paste, or manually enter monthly AUM. Month-end date format: MM/DD/YYYY. Net Asset Flows auto-calculates as Assets Gained − Assets Loss. Pasting or uploading fills in missing fields for existing dates without overwriting values already entered.
       </p>
 
       {/* Chart */}
