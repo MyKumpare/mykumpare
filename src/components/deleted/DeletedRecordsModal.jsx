@@ -77,7 +77,7 @@ export default function DeletedRecordsModal({ open, onOpenChange }) {
   };
 
   const invalidateAll = () => {
-    Object.values(QUERY_KEYS).forEach(([key]) => queryClient.invalidateQueries({ queryKey: key }));
+    Object.values(QUERY_KEYS).forEach((keyArr) => queryClient.invalidateQueries({ queryKey: keyArr }));
     // Also refresh the active lists so restored records reappear / permanent deletes clear out
     queryClient.invalidateQueries({ queryKey: ["firms"] });
     queryClient.invalidateQueries({ queryKey: ["products"] });
