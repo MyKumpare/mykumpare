@@ -23,6 +23,7 @@ import PhoneForm from "./PhoneForm";
 import ContactsTab from "../contacts/ContactsTab";
 import OwnershipTab from "./OwnershipTab";
 import OrgChartTab from "./OrgChartTab";
+import FirmAumHistoryTab from "./FirmAumHistoryTab";
 import FirmProductsTab from "./FirmProductsTab";
 import FirmPortfoliosTab from "./FirmPortfoliosTab";
 import FirmActivityLogTab from "./FirmActivityLogTab";
@@ -1183,14 +1184,16 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                    <TabsTrigger value="activity-log">Activity Log</TabsTrigger>
                    <TabsTrigger value="ownership">Ownership</TabsTrigger>
                    <TabsTrigger value="orgchart">Org Chart</TabsTrigger>
-                 </>
-               )}
-               {hideProductTabs && (
-                 <>
+                   <TabsTrigger value="aum-history">AUM History</TabsTrigger>
+                   </>
+                   )}
+                   {hideProductTabs && (
+                   <>
                    <TabsTrigger value="orgchart">Org Chart</TabsTrigger>
+                   <TabsTrigger value="aum-history">AUM History</TabsTrigger>
                    <TabsTrigger value="activity-log">Activity Log</TabsTrigger>
-                 </>
-               )}
+                   </>
+                   )}
              </TabsList>
 
             <TabsContent value="contacts" className="space-y-3">
@@ -1486,6 +1489,16 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               ) : (
                 <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
                   Save the firm first to build the org chart
+                </div>
+              )}
+              </TabsContent>
+
+              <TabsContent value="aum-history" className="space-y-3">
+              {editingFirm ? (
+                <FirmAumHistoryTab firmId={editingFirm.id} firmName={editingFirm.name} />
+              ) : (
+                <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
+                  Save the firm first to add AUM history
                 </div>
               )}
               </TabsContent>
