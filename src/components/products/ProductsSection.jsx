@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, ChevronDown, ChevronRight, Package, BarChart3 } from "lucide-react";
+import { Plus, ChevronDown, ChevronRight, Package } from "lucide-react";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
 import SectionSearch from "@/components/common/SectionSearch";
 import SectionTypeFilter from "@/components/common/SectionTypeFilter";
 import SectionExpandCollapse from "@/components/common/SectionExpandCollapse";
 import ProductStatusBadge from "@/components/products/ProductStatusBadge";
-import AumHistoryDialog from "@/components/firms/AumHistoryDialog";
 import { useViewMode } from "@/hooks/useViewMode";
 
 const PRODUCT_GROUP_TYPES = ["Manager of Managers", "Investment Manager"];
@@ -23,7 +22,6 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
   const [viewMode, setViewMode] = useViewMode("products");
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [aumProduct, setAumProduct] = useState(null);
 
   useEffect(() => {
     if (forceExpanded !== undefined) setExpanded(forceExpanded);
@@ -116,13 +114,6 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
           {product.asset_class && (
             <p className="text-xs text-gray-400 pl-9">{product.asset_class}</p>
           )}
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); setAumProduct(product); }}
-          className="absolute top-2 right-2 flex items-center gap-1 px-1.5 h-7 rounded-md bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors flex-shrink-0"
-          title="AUM History"
-        >
-          <BarChart3 className="w-3.5 h-3.5" />
         </button>
       </div>
     );
@@ -252,13 +243,6 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
                                       {product.asset_class}
                                     </span>
                                   )}
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); setAumProduct(product); }}
-                                    className="flex items-center gap-1 px-1.5 h-7 rounded-md bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors flex-shrink-0"
-                                    title="AUM History"
-                                  >
-                                    <BarChart3 className="w-3.5 h-3.5" />
-                                  </button>
                                 </div>
                               ))}
                             </div>
@@ -313,13 +297,6 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
         </div>
       )}
 
-      <AumHistoryDialog
-        open={!!aumProduct}
-        onOpenChange={(v) => { if (!v) setAumProduct(null); }}
-        entityName="Product"
-        recordId={aumProduct?.id}
-        recordName={aumProduct?.name}
-      />
     </div>
   );
 }

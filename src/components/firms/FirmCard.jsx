@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Building2, Plus, Package, ChevronDown, ChevronRight, LayoutList, BarChart3 } from "lucide-react";
-import AumHistoryDialog from "./AumHistoryDialog";
+import { Building2, Plus, Package, ChevronDown, ChevronRight, LayoutList } from "lucide-react";
 
 const FIRM_TYPE_TO_PRODUCT_TYPE = {
   "Investment Manager": "Investment Manager Product",
@@ -15,8 +14,6 @@ export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditP
   const productType = allowedType ? FIRM_TYPE_TO_PRODUCT_TYPE[allowedType] : null;
   const isAllocator = effectiveTypes.includes("Allocator");
   const [expanded, setExpanded] = useState(false);
-  const [aumOpen, setAumOpen] = useState(false);
-  const [productAum, setProductAum] = useState(null);
   const isExpanded = forceExpand || expanded;
 
   const firmProducts = products.filter((p) => p.firm_id === firm.id).sort((a, b) => a.name.localeCompare(b.name));
@@ -72,14 +69,6 @@ export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditP
         </div>
 
         <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-          <button
-            onClick={(e) => { e.stopPropagation(); setAumOpen(true); }}
-            className="flex items-center gap-1 px-2 h-8 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors sm:opacity-0 sm:group-hover:opacity-100"
-            title="AUM History"
-          >
-            <BarChart3 className="w-3.5 h-3.5 flex-shrink-0" />
-            <span className="hidden sm:inline text-xs font-medium whitespace-nowrap">AUM</span>
-          </button>
           {showProducts && onAddProduct && (
             <button
               onClick={(e) => { e.stopPropagation(); onAddProduct(firm, productType); }}
@@ -128,13 +117,6 @@ export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditP
                       <Package className="w-3.5 h-3.5 text-violet-500 flex-shrink-0" />
                       <span className="truncate font-medium">{product.name}</span>
                     </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setProductAum(product); }}
-                      className="flex items-center gap-1 px-1.5 h-7 rounded-md bg-white hover:bg-indigo-100 text-indigo-600 transition-colors flex-shrink-0"
-                      title="AUM History"
-                    >
-                      <BarChart3 className="w-3.5 h-3.5" />
-                    </button>
                   </div>
                 ))
               )}
@@ -143,20 +125,6 @@ export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditP
         )}
       </AnimatePresence>
 
-      <AumHistoryDialog
-        open={aumOpen}
-        onOpenChange={setAumOpen}
-        entityName="Firm"
-        recordId={firm.id}
-        recordName={firm.name}
-      />
-      <AumHistoryDialog
-        open={!!productAum}
-        onOpenChange={(v) => { if (!v) setProductAum(null); }}
-        entityName="Product"
-        recordId={productAum?.id}
-        recordName={productAum?.name}
-      />
     </motion.div>
   );
 }
