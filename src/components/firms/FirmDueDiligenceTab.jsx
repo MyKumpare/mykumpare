@@ -6,6 +6,7 @@ import { Plus, ClipboardCheck, Pencil, Trash2 } from "lucide-react";
 import AddDueDiligenceDialog from "./AddDueDiligenceDialog";
 import { syncDdNotifications, syncProductStatusFromDd, deleteDdNotifications } from "./ddNotificationSync";
 import { saveStageNoteVersions } from "./ddNoteVersionSync";
+import { computeAnalystHistory, initAnalystHistory } from "@/lib/analystHistoryClient";
 import DdFilterTabs, { getDdCounts, filterDdRecords } from "./DdFilterTabs";
 
 const STATUS_STYLES = {
@@ -43,6 +44,14 @@ export default function FirmDueDiligenceTab({ firmId, firmName, contacts = [], o
 
   const createMutation = useMutation({
     mutationFn: async (data) => {
+      if (!data.analyst_history) {
+        data.analyst_history = initAnalystHistory(
+          data.primary_analyst_contact_id,
+          data.primary_analyst_name || "",
+          data.secondary_analyst_contact_id,
+          data.secondary_analyst_name || "",
+        );
+      }
       const savedRecord = await base44.entities.DueDiligence.create(data);
       await syncDdNotifications(savedRecord);
       await syncProductStatusFromDd(savedRecord, queryClient);
@@ -54,6 +63,15 @@ export default function FirmDueDiligenceTab({ firmId, firmName, contacts = [], o
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }) => {
       const previousRecord = await base44.entities.DueDiligence.get(id);
+      data.analyst_history = computeAnalystHistory(
+        previousRecord?.analyst_history,
+        previousRecord?.primary_analyst_contact_id,
+        previousRecord?.secondary_analyst_contact_id,
+        data.primary_analyst_contact_id,
+        data.primary_analyst_name || "",
+        data.secondary_analyst_contact_id,
+        data.secondary_analyst_name || "",
+      );
       const savedRecord = await base44.entities.DueDiligence.update(id, data);
       await syncDdNotifications(savedRecord);
       await syncProductStatusFromDd(savedRecord, queryClient);

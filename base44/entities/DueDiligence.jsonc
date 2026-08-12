@@ -48,6 +48,44 @@
       "type": "string",
       "description": "Full name of the secondary analyst (denormalized)"
     },
+    "analyst_history": {
+      "type": "array",
+      "description": "History of primary and secondary analyst assignments. Each entry tracks the analyst type, contact, and start/end dates of coverage. When an analyst is changed, the previous entry is closed (end_date set) and a new entry is opened (start_date set).",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "analyst_type": {
+            "type": "string",
+            "enum": [
+              "primary",
+              "secondary"
+            ],
+            "description": "Whether this was a primary or secondary analyst assignment"
+          },
+          "contact_id": {
+            "type": "string",
+            "description": "ID of the analyst contact"
+          },
+          "contact_name": {
+            "type": "string",
+            "description": "Full name of the analyst (denormalized)"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "description": "Date the analyst started coverage (YYYY-MM-DD)"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "description": "Date the analyst ended coverage (YYYY-MM-DD). Null/empty means the analyst is currently active."
+          }
+        }
+      }
+    },
     "template_id": {
       "type": "string",
       "description": "ID of the due diligence template that defines the stages for this record"

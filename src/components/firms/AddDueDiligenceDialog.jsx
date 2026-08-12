@@ -22,6 +22,8 @@ import { useFirmOwner } from "@/components/admin/useFirmOwner";
 import StatusOptionSelect from "./StatusOptionSelect";
 import { syncDdNotifications, syncProductStatusFromDd } from "./ddNotificationSync";
 import { saveStageNoteVersions } from "./ddNoteVersionSync";
+import { initAnalystHistory, computeAnalystHistory } from "@/lib/analystHistoryClient";
+import AnalystHistoryDialog from "./AnalystHistoryDialog";
 const PRODUCT_TYPES = ["Investment Manager Product", "Multi-Manager Product"];
 const FIRM_TYPES = ["Manager of Managers", "Investment Manager", "Allocator", "Investment Consultant", "Securities Brokerage", "Trade Organizations"];
 const NOT_STARTED_ALLOWED = ["In-process"];
@@ -371,6 +373,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
   const [duplicateCheck, setDuplicateCheck] = useState(null); // { records, canCreate } | null
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showAnalystHistory, setShowAnalystHistory] = useState(false);
 
   // Analysts are sourced from the OWNER firm (the firm that owns this app),
   // not the firm under due diligence. The owner firm is resolved from the
@@ -580,7 +583,8 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
   const isAutoSavingRef = useRef(false);
 
   // Build the same payload handleSave sends — used by both auto-save and manual save.
-  const buildPayload = useCallback(() => ({
+  const buildPayload = useCallback(() => {
+    const _payload = {
     firm_id: effectiveFirmId,
     firm_name: effectiveFirmName,
     product_id: productId,
@@ -600,7 +604,18 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
     start_date: processStatus === "In-process" ? (startDate || undefined) : undefined,
     current_stage_index: processStatus === "In-process" ? currentStageIndex : undefined,
     assigned_contact_ids: processStatus === "In-process" ? assignedContactIds : undefined,
-  }), [effectiveFirmId, effectiveFirmName, productId, selectedProduct, status, processStatus, primaryId, primaryContact, secondaryId, secondaryContact, stages, docChecklist, approvalProcess, approvalLogic, templateId, templateName, startDate, currentStageIndex, assignedContactIds]);
+  };
+  // Initialize analyst coverage history for new records
+  if (!editingRecord) {
+    _payload.analyst_history = initAnalystHistory(
+      primaryId || undefined,
+      primaryId ? contactName(primaryContact) || "" : "",
+      secondaryId || undefined,
+      secondaryId ? contactName(secondaryContact) || "" : "",
+    );
+  }
+  return _payload;
+  }, [effectiveFirmId, effectiveFirmName, productId, selectedProduct, status, processStatus, primaryId, primaryContact, secondaryId, secondaryContact, stages, docChecklist, approvalProcess, approvalLogic, templateId, templateName, startDate, currentStageIndex, assignedContactIds, editingRecord]);
 
   // Debounced auto-save — fires 800ms after the last change to any tracked field.
   useEffect(() => {
@@ -620,6 +635,15 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
       setSaveStatus("saving");
       try {
         const previousRecord = await base44.entities.DueDiligence.get(editingRecord.id);
+        payload.analyst_history = computeAnalystHistory(
+          previousRecord?.analyst_history,
+          previousRecord?.primary_analyst_contact_id,
+          previousRecord?.secondary_analyst_contact_id,
+          payload.primary_analyst_contact_id,
+          payload.primary_analyst_name || "",
+          payload.secondary_analyst_contact_id,
+          payload.secondary_analyst_name || "",
+        );
         const savedRecord = await base44.entities.DueDiligence.update(editingRecord.id, payload);
         await syncDdNotifications(savedRecord);
         await syncProductStatusFromDd(savedRecord, queryClient);
@@ -671,6 +695,15 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
     setSaveStatus("saving");
     try {
       const previousRecord = await base44.entities.DueDiligence.get(editingRecord.id);
+      payload.analyst_history = computeAnalystHistory(
+        previousRecord?.analyst_history,
+        previousRecord?.primary_analyst_contact_id,
+        previousRecord?.secondary_analyst_contact_id,
+        payload.primary_analyst_contact_id,
+        payload.primary_analyst_name || "",
+        payload.secondary_analyst_contact_id,
+        payload.secondary_analyst_name || "",
+      );
       const savedRecord = await base44.entities.DueDiligence.update(editingRecord.id, payload);
       await syncDdNotifications(savedRecord);
       await syncProductStatusFromDd(savedRecord, queryClient);
@@ -937,7 +970,14 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
           {/* Primary analyst — shown when process status is "In-process" (or already set) */}
           {showPrimaryAnalyst && (
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-gray-700">Primary Analyst {processStatus === "In-process" && <span className="text-red-400">*</span>}</Label>
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-medium text-gray-700">Primary Analyst {processStatus === "In-process" && <span className="text-red-400">*</span>}</Label>
+                {editingRecord?.id && (
+                  <button type="button" onClick={() => setShowAnalystHistory(true)} className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
+                    <History className="w-3.5 h-3.5" /> Coverage History
+                  </button>
+                )}
+              </div>
               {addingPrimary ? (
                 <NewContactForm
                   firmId={ownerFirmId || firmId}
@@ -1161,6 +1201,11 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
             </DialogContent>
           </Dialog>
         )}
+        <AnalystHistoryDialog
+          open={showAnalystHistory}
+          onOpenChange={setShowAnalystHistory}
+          record={editingRecord}
+        />
       </DialogContent>
     </Dialog>
   );
