@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -12,12 +12,14 @@ import { User, Clock, Calendar } from "lucide-react";
  * duration of coverage.
  */
 export default function AnalystHistoryDialog({ open, onOpenChange, record }) {
+  const [roleFilter, setRoleFilter] = useState("all");
+
   const history = useMemo(() => {
     if (!record?.analyst_history) return [];
-    return [...record.analyst_history].sort((a, b) => {
-      return (b.start_date || "").localeCompare(a.start_date || "");
-    });
-  }, [record]);
+    return [...record.analyst_history]
+      .filter((entry) => roleFilter === "all" || entry.analyst_type === roleFilter)
+      .sort((a, b) => (b.start_date || "").localeCompare(a.start_date || ""));
+  }, [record, roleFilter]);
 
   const productName = record?.product_name || "—";
   const firmName = record?.firm_name || "—";
@@ -33,8 +35,34 @@ export default function AnalystHistoryDialog({ open, onOpenChange, record }) {
         </DialogHeader>
 
         <div className="space-y-1 mb-3">
-          <p className="text-sm font-medium text-gray-800">{productName}</p>
-          <p className="text-xs text-gray-500">{firmName}</p>
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-gray-800 truncate">{productName}</p>
+              <p className="text-xs text-gray-500 truncate">{firmName}</p>
+            </div>
+            {record?.analyst_history?.length > 0 && (
+              <div className="inline-flex items-center gap-0.5 rounded-lg bg-gray-100 p-0.5 flex-shrink-0">
+                {[
+                  { value: "all", label: "All" },
+                  { value: "primary", label: "Primary" },
+                  { value: "secondary", label: "Secondary" },
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setRoleFilter(opt.value)}
+                    className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                      roleFilter === opt.value
+                        ? "bg-white text-gray-800 shadow-sm"
+                        : "text-gray-500 hover:text-gray-700"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {history.length === 0 ? (
