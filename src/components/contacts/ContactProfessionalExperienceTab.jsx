@@ -1,12 +1,10 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Briefcase, ChevronDown, ChevronUp } from "lucide-react";
-import { base44 } from "@/api/base44Client";
 import ExtractFromBioButton from "./ExtractFromBioButton";
 import DeleteSubRecordDialog from "./DeleteSubRecordDialog";
-import MasterOptionPicker from "./MasterOptionPicker";
 
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: 80 }, (_, i) => CURRENT_YEAR - i);
@@ -47,17 +45,71 @@ function YearPicker({ value, onChange, placeholder = "Select year..." }) {
   );
 }
 
+function CreatableSelect({ value, onChange, options, placeholder, viewMode }) {
+  const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+  const [customOptions, setCustomOptions] = useState([]);
+
+  const allOptions = [...options, ...customOptions];
+  const filtered = allOptions.filter(o => o.toLowerCase().includes(search.toLowerCase()));
+  const canCreate = search.trim() && !allOptions.some(o => o.toLowerCase() === search.trim().toLowerCase());
+
+  const select = (val) => { onChange(val); setSearch(""); setOpen(false); };
+  const create = () => { const val = search.trim(); setCustomOptions(p => [...p, val]); select(val); };
+
+  if (viewMode) {
+    return <div className="text-sm text-gray-900 px-1">{value || <span className="text-gray-400 italic">—</span>}</div>;
+  }
+
+  return (
+    <div className="relative">
+      <button type="button" onClick={() => setOpen(!open)}
+        className="w-full h-9 flex items-center justify-between px-3 rounded-md border border-input bg-transparent text-sm shadow-sm hover:bg-accent transition-colors">
+        <span className={value ? "text-foreground" : "text-muted-foreground"}>{value || placeholder}</span>
+        {open ? <ChevronUp className="w-4 h-4 opacity-50" /> : <ChevronDown className="w-4 h-4 opacity-50" />}
+      </button>
+      {open && (
+        <div className="absolute z-50 top-full mt-1 w-full rounded-md border bg-white shadow-md">
+          <input autoFocus className="w-full px-3 py-2 text-sm border-b outline-none"
+            placeholder="Search or type to add..."
+            value={search} onChange={e => setSearch(e.target.value)} />
+          <div className="max-h-40 overflow-y-auto">
+            {filtered.map(o => (
+              <button key={o} type="button"
+                className={`w-full text-left px-3 py-2 text-sm hover:bg-indigo-50 hover:text-indigo-700 ${value === o ? "bg-indigo-50 text-indigo-700 font-medium" : ""}`}
+                onClick={() => select(o)}>{o}</button>
+            ))}
+            {canCreate && (
+              <button type="button"
+                className="w-full text-left px-3 py-2 text-sm text-indigo-600 hover:bg-indigo-50 font-medium flex items-center gap-1"
+                onClick={create}>
+                <Plus className="w-3 h-3" /> Add "{search.trim()}"
+              </button>
+            )}
+            {filtered.length === 0 && !canCreate && (
+              <div className="px-3 py-2 text-xs text-gray-400 italic">No options found</div>
+            )}
+          </div>
+          {value && (
+            <div className="border-t px-3 py-1.5">
+              <button type="button" className="text-xs text-gray-400 hover:text-gray-600"
+                onClick={() => { onChange(""); setOpen(false); setSearch(""); }}>
+                Clear selection
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function newExperience() {
   return { id: crypto.randomUUID(), company_name: "", title: "", start_year: "", end_year: "" };
 }
 
 export default function ContactProfessionalExperienceTab({ experience = [], onChange, firms = [], viewMode, biography, onExtractFromBio, extracting }) {
   const [pendingDeleteId, setPendingDeleteId] = useState(null);
-  const [companyOptions, setCompanyOptions] = useState([]);
-  const [titleOptions, setTitleOptions] = useState([]);
-  const persistedCompaniesRef = useRef(new Set());
-  const persistedTitlesRef = useRef(new Set());
-
   const sortDesc = (arr) => [...arr].sort((a, b) => (parseInt(b.start_year) || 0) - (parseInt(a.start_year) || 0));
   const addEntry = () => onChange(sortDesc([...experience, newExperience()]));
   const removeEntry = (id) => onChange(experience.filter(e => e.id !== id));
@@ -68,66 +120,10 @@ export default function ContactProfessionalExperienceTab({ experience = [], onCh
     setPendingDeleteId(null);
   };
 
-  // Load the global company / job-title master lists once.
-  useEffect(() => {
-    let active = true;
-    Promise.all([
-      base44.entities.CompanyNameOption.list("-created_date", 5000).catch(() => []),
-      base44.entities.JobTitleOption.list("-created_date", 5000).catch(() => []),
-    ]).then(([c, t]) => {
-      if (!active) return;
-      setCompanyOptions(c.map((r) => r.name).filter(Boolean));
-      setTitleOptions(t.map((r) => r.name).filter(Boolean));
-    });
-    return () => { active = false; };
-  }, []);
-
-  const persistCompany = (name) => {
-    const key = name.toLowerCase();
-    if (persistedCompaniesRef.current.has(key)) return;
-    persistedCompaniesRef.current.add(key);
-    base44.entities.CompanyNameOption.create({ name })
-      .then(() => setCompanyOptions((prev) => (prev.some((o) => o.toLowerCase() === key) ? prev : [...prev, name])))
-      .catch(() => {});
-  };
-  const persistTitle = (name) => {
-    const key = name.toLowerCase();
-    if (persistedTitlesRef.current.has(key)) return;
-    persistedTitlesRef.current.add(key);
-    base44.entities.JobTitleOption.create({ name })
-      .then(() => setTitleOptions((prev) => (prev.some((o) => o.toLowerCase() === key) ? prev : [...prev, name])))
-      .catch(() => {});
-  };
-
-  // Auto-persist any company / title on an experience entry that isn't yet in
-  // the master list (covers manual entry, bio extraction, and website scrape).
-  useEffect(() => {
-    for (const e of experience) {
-      if (e.company_name) {
-        const key = e.company_name.toLowerCase();
-        if (!persistedCompaniesRef.current.has(key) && !companyOptions.some((o) => o.toLowerCase() === key)) {
-          persistCompany(e.company_name);
-        }
-      }
-      if (e.title) {
-        const key = e.title.toLowerCase();
-        if (!persistedTitlesRef.current.has(key) && !titleOptions.some((o) => o.toLowerCase() === key)) {
-          persistTitle(e.title);
-        }
-      }
-    }
-  }, [experience, companyOptions, titleOptions]);
-
-  // Display options: master list + firm names (companies) / common titles (titles).
-  const firmNames = useMemo(() => firms.map((f) => f.name), [firms]);
-  const companyOpts = useMemo(
-    () => [...new Set([...companyOptions, ...firmNames])].sort((a, b) => a.localeCompare(b)),
-    [companyOptions, firmNames]
-  );
-  const titleOpts = useMemo(
-    () => [...new Set([...titleOptions, ...COMMON_TITLES])].sort((a, b) => a.localeCompare(b)),
-    [titleOptions]
-  );
+  // Build company options from existing firms + existing experience companies
+  const firmNames = firms.map(f => f.name);
+  const experienceCompanies = experience.map(e => e.company_name).filter(Boolean);
+  const companyOptions = [...new Set([...firmNames, ...experienceCompanies])].sort();
 
 
 
@@ -173,22 +169,20 @@ export default function ContactProfessionalExperienceTab({ experience = [], onCh
             <div className="grid grid-cols-2 gap-3 pr-6">
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium text-gray-700">Company</Label>
-                <MasterOptionPicker
-                  options={companyOpts}
+                <CreatableSelect
+                  options={companyOptions}
                   value={entry.company_name}
-                  onChange={(v) => updateEntry(entry.id, "company_name", v)}
-                  onPersist={persistCompany}
+                  onChange={v => updateEntry(entry.id, "company_name", v)}
                   placeholder="Select or add..."
                   viewMode={viewMode}
                 />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium text-gray-700">Title</Label>
-                <MasterOptionPicker
-                  options={titleOpts}
+                <CreatableSelect
+                  options={COMMON_TITLES}
                   value={entry.title}
-                  onChange={(v) => updateEntry(entry.id, "title", v)}
-                  onPersist={persistTitle}
+                  onChange={v => updateEntry(entry.id, "title", v)}
                   placeholder="Select or add..."
                   viewMode={viewMode}
                 />

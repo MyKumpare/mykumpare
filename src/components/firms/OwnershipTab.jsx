@@ -53,7 +53,7 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
   // Fetch ownership history
   const { data: ownershipHistory = [] } = useQuery({
     queryKey: ["ownership", firmId],
-    queryFn: () => base44.entities.Ownership.filter({ deleted_at: { $exists: false }, firm_id: firmId }, "-effective_date"),
+    queryFn: () => base44.entities.Ownership.filter({ firm_id: firmId }, "-effective_date"),
   });
 
   // Get most recent ownership breakdown
@@ -397,7 +397,7 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
   });
 
   const deleteOwnershipMutation = useMutation({
-    mutationFn: (id) => base44.entities.Ownership.update(id, { deleted_at: new Date().toISOString() }),
+    mutationFn: (id) => base44.entities.Ownership.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ownership", firmId] });
       if (selectedOwnership?.id === deleteTarget?.id) {

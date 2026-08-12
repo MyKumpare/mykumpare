@@ -842,13 +842,13 @@ export default function FirmActivityLogTab({ firmId, firmName, onFirmClick, onCo
 
   const { data: allActivities = [], isLoading: loadingActivities } = useQuery({
     queryKey: ["all_activities_for_firm", firmId],
-    queryFn: () => base44.entities.ContactActivity.filter({ deleted_at: { $exists: false } }, "-activity_date", 500),
+    queryFn: () => base44.entities.ContactActivity.list("-activity_date", 500),
     enabled: !!firmId,
   });
 
   const { data: allTasks = [], isLoading: loadingTasks } = useQuery({
     queryKey: ["all_tasks_for_firm", firmId],
-    queryFn: () => base44.entities.FollowUpTask.filter({ deleted_at: { $exists: false } }, "-due_date", 500),
+    queryFn: () => base44.entities.FollowUpTask.list("-due_date", 500),
     enabled: !!firmId,
   });
 

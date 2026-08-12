@@ -30,18 +30,18 @@ export default function ContactDueDiligenceTab({ contactId, contactName, onConta
 
   const { data: primary = [], isLoading: lp } = useQuery({
     queryKey: ["dd-primary-analyst", contactId],
-    queryFn: () => base44.entities.DueDiligence.filter({ deleted_at: { $exists: false }, primary_analyst_contact_id: contactId }, "-created_date", 500),
+    queryFn: () => base44.entities.DueDiligence.filter({ primary_analyst_contact_id: contactId }, "-created_date", 500),
     enabled: !!contactId,
   });
   const { data: secondary = [], isLoading: ls } = useQuery({
     queryKey: ["dd-secondary-analyst", contactId],
-    queryFn: () => base44.entities.DueDiligence.filter({ deleted_at: { $exists: false }, secondary_analyst_contact_id: contactId }, "-created_date", 500),
+    queryFn: () => base44.entities.DueDiligence.filter({ secondary_analyst_contact_id: contactId }, "-created_date", 500),
     enabled: !!contactId,
   });
   // DD records where this contact is assigned to a sub-stage task (denormalized lookup)
   const { data: assigned = [], isLoading: la } = useQuery({
     queryKey: ["dd-assigned-tasks", contactId],
-    queryFn: () => base44.entities.DueDiligence.filter({ deleted_at: { $exists: false }, assigned_contact_ids: contactId }, "-created_date", 500),
+    queryFn: () => base44.entities.DueDiligence.filter({ assigned_contact_ids: contactId }, "-created_date", 500),
     enabled: !!contactId,
   });
 
@@ -90,7 +90,7 @@ export default function ContactDueDiligenceTab({ contactId, contactName, onConta
     },
   });
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.DueDiligence.update(id, { deleted_at: new Date().toISOString() }),
+    mutationFn: (id) => base44.entities.DueDiligence.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dd-primary-analyst", contactId] });
       queryClient.invalidateQueries({ queryKey: ["dd-secondary-analyst", contactId] });

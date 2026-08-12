@@ -54,7 +54,7 @@ export default function QuestionnaireSection({ forceExpanded, onOpen, onAdd }) {
 
   const { data: questionnaires = [], isLoading } = useQuery({
     queryKey: ["questionnaires"],
-    queryFn: () => base44.entities.Questionnaire.filter({ deleted_at: { $exists: false } }, "-created_date", 500),
+    queryFn: () => base44.entities.Questionnaire.list("-created_date", 500),
   });
 
   const recent = useMemo(() => questionnaires.slice(0, 5), [questionnaires]);

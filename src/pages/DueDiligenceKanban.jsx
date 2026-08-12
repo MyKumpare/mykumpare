@@ -23,7 +23,7 @@ export default function DueDiligenceKanban() {
 
   const { data: records = [], isLoading } = useQuery({
     queryKey: ["due-diligence-all"],
-    queryFn: () => base44.entities.DueDiligence.filter({ deleted_at: { $exists: false } }, "-created_date", 500),
+    queryFn: () => base44.entities.DueDiligence.list("-created_date", 500),
   });
 
   const { data: firms = [] } = useQuery({
@@ -178,7 +178,7 @@ export default function DueDiligenceKanban() {
           setShowDialog(false);
         }}
         onDelete={(id) => {
-          base44.entities.DueDiligence.update(id, { deleted_at: new Date().toISOString() });
+          base44.entities.DueDiligence.delete(id);
           setShowDialog(false);
           setEditing(null);
         }}

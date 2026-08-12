@@ -38,7 +38,7 @@ export default function ActivityLogPickerModal({ open, onClose, onAddActivity, o
 
   const { data: activities = [], isLoading: loadingActivities } = useQuery({
     queryKey: ["all_contact_activities"],
-    queryFn: () => base44.entities.ContactActivity.filter({ deleted_at: { $exists: false } }, "-activity_date"),
+    queryFn: () => base44.entities.ContactActivity.list("-activity_date"),
     enabled: open,
   });
 

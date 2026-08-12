@@ -740,7 +740,7 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
   // Local live task state (refreshed from query)
   const { data: task } = useQuery({
     queryKey: ["task_detail", initialTask?.id],
-    queryFn: () => base44.entities.FollowUpTask.get ? base44.entities.FollowUpTask.filter({ deleted_at: { $exists: false }, id: initialTask.id }).then(r => r[0]) : Promise.resolve(initialTask),
+    queryFn: () => base44.entities.FollowUpTask.get ? base44.entities.FollowUpTask.filter({ id: initialTask.id }).then(r => r[0]) : Promise.resolve(initialTask),
     initialData: initialTask,
     enabled: open && !!initialTask?.id,
     refetchInterval: open ? 10000 : false,
@@ -806,7 +806,7 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
 
   const { data: linkedActivityData } = useQuery({
     queryKey: ["linked_activity", task?.activity_id],
-    queryFn: () => base44.entities.ContactActivity.filter({ deleted_at: { $exists: false }, id: task.activity_id }).then(r => r[0]),
+    queryFn: () => base44.entities.ContactActivity.filter({ id: task.activity_id }).then(r => r[0]),
     enabled: open && !!task?.activity_id,
   });
 
@@ -859,7 +859,7 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
   });
 
   const deleteMutation = useMutation({
-    mutationFn: () => base44.entities.FollowUpTask.update(task.id, { deleted_at: new Date().toISOString() }),
+    mutationFn: () => base44.entities.FollowUpTask.delete(task.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["follow_up_tasks", task.originator_contact_id] });
       queryClient.invalidateQueries({ queryKey: ["all_tasks_for_firm", task.originator_firm_id] });

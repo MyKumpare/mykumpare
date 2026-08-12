@@ -83,11 +83,6 @@
       "type": "string",
       "format": "date",
       "description": "End date of the uploaded monthly returns"
-    },
-    "deleted_at": {
-      "type": "string",
-      "format": "date-time",
-      "description": "Timestamp when this record was soft-deleted"
     }
   },
   "required": [

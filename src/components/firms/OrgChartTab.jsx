@@ -376,7 +376,7 @@ export default function OrgChartTab({ firmId, firmName = "" }) {
 
   const { data: orgCharts = [] } = useQuery({
     queryKey: ["orgchart", firmId],
-    queryFn: () => base44.entities.OrgChart.filter({ deleted_at: { $exists: false }, firm_id: firmId }),
+    queryFn: () => base44.entities.OrgChart.filter({ firm_id: firmId }),
     enabled: !!firmId,
   });
   const orgChart = orgCharts[0] || null;

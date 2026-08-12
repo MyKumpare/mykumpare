@@ -551,11 +551,11 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
   });
   const { data: benchmarks = [] } = useQuery({
     queryKey: ["benchmarks-all"],
-    queryFn: () => base44.entities.Benchmark.filter({ deleted_at: { $exists: false } }),
+    queryFn: () => base44.entities.Benchmark.list(),
   });
   const { data: allSeries = [] } = useQuery({
     queryKey: ["return-series-all"],
-    queryFn: () => base44.entities.ReturnSeries.filter({ deleted_at: { $exists: false } }),
+    queryFn: () => base44.entities.ReturnSeries.list(),
     enabled: open,
   });
 

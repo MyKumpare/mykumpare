@@ -310,7 +310,7 @@ export default function FollowUpTasksSection({ contactId, contactName, contactFi
 
   const { data: originatedTasks = [], isLoading: loadingOriginated } = useQuery({
     queryKey: ["follow_up_tasks", contactId],
-    queryFn: () => base44.entities.FollowUpTask.filter({ deleted_at: { $exists: false }, originator_contact_id: contactId }, "-due_date"),
+    queryFn: () => base44.entities.FollowUpTask.filter({ originator_contact_id: contactId }, "-due_date"),
     enabled: !!contactId,
   });
 
@@ -318,7 +318,7 @@ export default function FollowUpTasksSection({ contactId, contactName, contactFi
     queryKey: ["follow_up_tasks_assigned", contactId],
     queryFn: async () => {
       // Get all tasks and filter by assignments array
-      const allTasks = await base44.entities.FollowUpTask.filter({ deleted_at: { $exists: false } });
+      const allTasks = await base44.entities.FollowUpTask.list();
       return allTasks.filter(t => {
         // Check if contact is in the assignments array
         const isAssigned = (t.assignments || []).some(a => a.contact_id === contactId);

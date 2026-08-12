@@ -69,7 +69,7 @@ export default function QuestionnaireDialog({
   // Fetch questionnaire templates
   const { data: templates = [] } = useQuery({
     queryKey: ["questionnaire-templates"],
-    queryFn: () => base44.entities.Template.filter({ deleted_at: { $exists: false }, template_type: "Manager Questionnaire" }, "-created_date", 500),
+    queryFn: () => base44.entities.Template.filter({ template_type: "Manager Questionnaire" }, "-created_date", 500),
     enabled: open && !editQuestionnaire,
   });
 

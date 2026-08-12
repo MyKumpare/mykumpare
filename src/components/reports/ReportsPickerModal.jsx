@@ -17,12 +17,12 @@ export default function ReportsPickerModal({ open, onClose }) {
 
   const { data: savedReports = [] } = useQuery({
     queryKey: ["custom_reports"],
-    queryFn: () => base44.entities.CustomReport.filter({ deleted_at: { $exists: false } }, "-created_date"),
+    queryFn: () => base44.entities.CustomReport.list("-created_date"),
     enabled: open,
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.CustomReport.update(id, { deleted_at: new Date().toISOString() }),
+    mutationFn: (id) => base44.entities.CustomReport.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["custom_reports"] }),
   });
 

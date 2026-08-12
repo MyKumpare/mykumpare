@@ -126,7 +126,7 @@ export default function InvDescriptionAutoFill({
   const { data: firmDocs = [] } = useQuery({
     queryKey: ["firm-documents", firmId],
     queryFn: () =>
-      base44.entities.FirmDocument.filter({ deleted_at: { $exists: false }, firm_id: firmId }, "-created_date", 500),
+      base44.entities.FirmDocument.filter({ firm_id: firmId }, "-created_date", 500),
     enabled: !!firmId && open,
   });
 

@@ -79,7 +79,7 @@ export default function DocumentsDashboardModal({ open, onClose }) {
 
   const { data: documents = [], isLoading } = useQuery({
     queryKey: ["all-firm-documents"],
-    queryFn: () => base44.entities.FirmDocument.filter({ deleted_at: { $exists: false } }, "-entry_date", 1000),
+    queryFn: () => base44.entities.FirmDocument.list("-entry_date", 1000),
     enabled: open,
   });
 

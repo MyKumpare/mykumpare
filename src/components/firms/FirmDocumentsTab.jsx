@@ -75,7 +75,7 @@ export default function FirmDocumentsTab({ firmId, firmName }) {
   const { data: documents = [], isLoading } = useQuery({
     queryKey: ["firm-documents", firmId],
     queryFn: () =>
-      base44.entities.FirmDocument.filter({ deleted_at: { $exists: false }, firm_id: firmId }, "-created_date", 500),
+      base44.entities.FirmDocument.filter({ firm_id: firmId }, "-created_date", 500),
     enabled: !!firmId,
   });
 
@@ -85,7 +85,7 @@ export default function FirmDocumentsTab({ firmId, firmName }) {
       queryClient.invalidateQueries({ queryKey: ["firm-documents", firmId] }),
   });
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.FirmDocument.update(id, { deleted_at: new Date().toISOString() }),
+    mutationFn: (id) => base44.entities.FirmDocument.delete(id),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["firm-documents", firmId] }),
   });

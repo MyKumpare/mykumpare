@@ -303,14 +303,6 @@ export default function UserManagement() {
                       >
                         Delete
                       </button>
-                      <button
-                        type="button"
-                        title="Can view, restore & permanently delete soft-deleted records"
-                        onClick={() => updateMutation.mutate({ id: u.id, data: { can_manage_deleted: !u.can_manage_deleted } })}
-                        className={`h-7 px-2 rounded-md text-[11px] border ${u.can_manage_deleted ? "bg-gray-700 border-gray-800 text-white" : "bg-white border-gray-200 text-gray-400"}`}
-                      >
-                        Deleted
-                      </button>
                     </div>
 
                     <div className="hidden md:block text-[11px] text-gray-400 w-28 text-right">{fmtDate(u.created_date)}</div>
@@ -356,7 +348,6 @@ export default function UserManagement() {
           Roles control access: <span className="font-medium text-gray-600">Administrators</span> can manage all data and invite/manage users;
           <span className="font-medium text-gray-600"> Users</span> have standard access to firms, contacts, products and activities.
           The <span className="font-medium text-gray-600">Owner</span> is the top-level administrator of this application.
-          Per-user toggles grant <span className="font-medium text-gray-600">Edit</span>, <span className="font-medium text-gray-600">Delete</span>, and <span className="font-medium text-gray-600">Deleted</span> (view/restore/permanently-delete soft-deleted records) access for members.
         </p>
 
         {/* External Party Registration Requests */}

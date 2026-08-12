@@ -22,7 +22,7 @@ export default function BenchmarkMultiSelect({ value = [], onChange, isEditing }
 
   const { data: allBenchmarks = [] } = useQuery({
     queryKey: ["benchmarks"],
-    queryFn: () => base44.entities.Benchmark.filter({ deleted_at: { $exists: false } }, "-created_date"),
+    queryFn: () => base44.entities.Benchmark.list("-created_date"),
   });
 
   const entries = normalize(value);

@@ -31,7 +31,7 @@ export default function DueDiligencePickerModal({ open, onClose, onFirmClick, on
 
   const { data: records = [], isLoading } = useQuery({
     queryKey: ["due-diligence-all"],
-    queryFn: () => base44.entities.DueDiligence.filter({ deleted_at: { $exists: false } }, "-created_date", 5000),
+    queryFn: () => base44.entities.DueDiligence.list("-created_date", 5000),
     enabled: open,
   });
 

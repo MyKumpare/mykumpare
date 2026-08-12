@@ -45,12 +45,12 @@ export default function ActivityCalendar() {
 
   const { data: activities = [], isLoading: loadingActivities } = useQuery({
     queryKey: ["calendar_activities"],
-    queryFn: () => base44.entities.ContactActivity.filter({ deleted_at: { $exists: false } }, "-activity_date", 5000),
+    queryFn: () => base44.entities.ContactActivity.list("-activity_date", 5000),
   });
 
   const { data: tasks = [], isLoading: loadingTasks } = useQuery({
     queryKey: ["calendar_tasks"],
-    queryFn: () => base44.entities.FollowUpTask.filter({ deleted_at: { $exists: false } }, "-due_date", 5000),
+    queryFn: () => base44.entities.FollowUpTask.list("-due_date", 5000),
   });
 
   // Group all items by YYYY-MM-DD date string

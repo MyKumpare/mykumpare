@@ -94,7 +94,7 @@ export default function ExternalParty() {
   const contactId = user?.linked_contact_id;
   const { data: questionnaires = [], isLoading: qLoading } = useQuery({
     queryKey: ["external_party_questionnaires", contactId],
-    queryFn: () => base44.entities.Questionnaire.filter({ deleted_at: { $exists: false }, assignee_contact_id: contactId }, "-created_date", 500),
+    queryFn: () => base44.entities.Questionnaire.filter({ assignee_contact_id: contactId }, "-created_date", 500),
     enabled: !!contactId && isExternalUser,
   });
 
