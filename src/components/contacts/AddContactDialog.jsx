@@ -766,8 +766,8 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
         <DialogHeader>
           {viewMode && editingContact ? (
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center overflow-hidden flex-shrink-0 border-2 border-indigo-200">
-                {photoUrl ? (
+              {photoUrl && (
+                <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center overflow-hidden flex-shrink-0 border-2 border-indigo-200">
                   <button
                     type="button"
                     onClick={() => setPhotoZoomOpen(true)}
@@ -776,10 +776,8 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                   >
                     <img src={photoUrl} alt="Contact" className="w-full h-full object-cover" />
                   </button>
-                ) : (
-                  <User className="w-6 h-6 text-indigo-400" />
-                )}
-              </div>
+                </div>
+              )}
               <div className="min-w-0">
                 <DialogTitle className="text-base leading-tight flex items-center gap-2 flex-wrap">
                   <span>
