@@ -219,6 +219,39 @@
         }
       }
     },
+    "aum_history": {
+      "type": "array",
+      "description": "Monthly historical product AUM data points. Each entry tracks month-end date, product AUM, assets gained, assets loss, and net asset flows (auto-calculated as assets_gained - assets_loss).",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "month_end_date": {
+            "type": "string",
+            "format": "date",
+            "description": "Month-end date of the AUM data point (YYYY-MM-DD, displayed as MM/DD/YYYY)"
+          },
+          "firm_aum": {
+            "type": "number",
+            "description": "Product AUM at month-end"
+          },
+          "assets_gained": {
+            "type": "number",
+            "description": "Assets gained during the month (inflows)"
+          },
+          "assets_loss": {
+            "type": "number",
+            "description": "Assets lost during the month (outflows/redemptions)"
+          },
+          "net_asset_flows": {
+            "type": "number",
+            "description": "Net asset flows for the month (auto-calculated as assets_gained - assets_loss)"
+          }
+        }
+      }
+    },
     "deleted_at": {
       "type": "string",
       "format": "date-time",

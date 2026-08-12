@@ -35,7 +35,7 @@ const genId = () =>
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 
-const TEMPLATE_HEADERS = ["Month-End Date", "Firm AUM", "Assets Gained", "Assets Loss"];
+const buildTemplateHeaders = (entityLabel) => ["Month-End Date", `${entityLabel} AUM`, "Assets Gained", "Assets Loss"];
 
 function parseFlexibleDate(str) {
   if (!str) return null;
@@ -76,7 +76,7 @@ function parseCsvText(text) {
         ["month-end date", "month end date", "date", "month_end_date"].includes(h)
       ),
     aum: headerCells.findIndex((h) =>
-      ["firm aum", "aum", "firm aum (mm)", "aum ($)"].includes(h)
+      ["firm aum", "product aum", "aum", "firm aum (mm)", "product aum (mm)", "aum ($)"].includes(h)
     ),
     gained: headerCells.findIndex((h) =>
       ["assets gained", "gained", "inflows", "asset gained"].includes(h)
@@ -106,7 +106,7 @@ function parseCsvText(text) {
   return rows;
 }
 
-export default function FirmAumHistoryTab({ firmId, firmName }) {
+export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm", entityLabel = "Firm" }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [rows, setRows] = useState([]);
@@ -119,14 +119,15 @@ export default function FirmAumHistoryTab({ firmId, firmName }) {
   const [showGainedLoss, setShowGainedLoss] = useState(true);
   const fileInputRef = useRef(null);
   const pasteRef = useRef(null);
+  const entity = base44.entities[entityName];
 
   useEffect(() => {
     let active = true;
     (async () => {
       try {
-        const firm = await base44.entities.Firm.get(firmId);
+        const rec = await entity.get(firmId);
         if (!active) return;
-        setRows(firm.aum_history || []);
+        setRows(rec.aum_history || []);
       } catch (e) {
         toast({
           title: "Error loading AUM history",
@@ -154,7 +155,7 @@ export default function FirmAumHistoryTab({ firmId, firmName }) {
     () =>
       sortedRows.map((r) => ({
         date: fmtDisplay(r.month_end_date),
-        "Firm AUM": r.firm_aum,
+        [`${entityLabel} AUM`]: r.firm_aum,
         "Assets Gained": r.assets_gained,
         "Assets Loss": r.assets_loss,
         "Net Flows": r.net_asset_flows,
@@ -221,10 +222,10 @@ export default function FirmAumHistoryTab({ firmId, firmName }) {
         assets_loss: toNumber(r.assets_loss),
         net_asset_flows: toNumber(r.assets_gained) - toNumber(r.assets_loss),
       }));
-      await base44.entities.Firm.update(firmId, { aum_history: cleaned });
+      await entity.update(firmId, { aum_history: cleaned });
       setRows(cleaned);
-      queryClient.invalidateQueries({ queryKey: ["firms"] });
-      queryClient.invalidateQueries({ queryKey: ["firm", firmId] });
+      queryClient.invalidateQueries({ queryKey: [entityName.toLowerCase() + "s"] });
+      queryClient.invalidateQueries({ queryKey: [entityName.toLowerCase(), firmId] });
       toast({ title: "AUM history saved" });
     } catch (e) {
       toast({
@@ -238,19 +239,19 @@ export default function FirmAumHistoryTab({ firmId, firmName }) {
   };
 
   const downloadTemplate = () => {
-    const csv = [TEMPLATE_HEADERS.join(",")].join("\n");
+    const csv = [buildTemplateHeaders(entityLabel).join(",")].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${(firmName || "firm").replace(/\s+/g, "_")}_AUM_Template.csv`;
+    a.download = `${(firmName || entityLabel.toLowerCase()).replace(/\s+/g, "_")}_AUM_Template.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
   const downloadData = () => {
     const csv = [
-      TEMPLATE_HEADERS.join(","),
+      buildTemplateHeaders(entityLabel).join(","),
       ...sortedRows.map((r) =>
         [fmtDisplay(r.month_end_date), r.firm_aum, r.assets_gained, r.assets_loss].join(",")
       ),
@@ -259,7 +260,7 @@ export default function FirmAumHistoryTab({ firmId, firmName }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${(firmName || "firm").replace(/\s+/g, "_")}_AUM_History.csv`;
+    a.download = `${(firmName || entityLabel.toLowerCase()).replace(/\s+/g, "_")}_AUM_History.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -410,7 +411,7 @@ export default function FirmAumHistoryTab({ firmId, firmName }) {
           <div className="flex items-center gap-2 mb-3">
             <TrendingUp className="w-4 h-4 text-indigo-600" />
             <h4 className="text-sm font-semibold text-gray-800">
-              Firm AUM History {firmName ? `— ${firmName}` : ""}
+              {entityLabel} AUM History {firmName ? `— ${firmName}` : ""}
             </h4>
           </div>
           <ResponsiveContainer width="100%" height={320}>
@@ -430,7 +431,7 @@ export default function FirmAumHistoryTab({ firmId, firmName }) {
               <Legend wrapperStyle={{ fontSize: 12 }} />
               <Line
                 type="monotone"
-                dataKey="Firm AUM"
+                dataKey={`${entityLabel} AUM`}
                 stroke="#4f46e5"
                 strokeWidth={2.5}
                 dot={{ r: 3 }}
@@ -468,7 +469,7 @@ export default function FirmAumHistoryTab({ firmId, firmName }) {
             />
           </div>
           <div>
-            <Label className="text-xs text-gray-500 mb-1">Firm AUM ($)</Label>
+            <Label className="text-xs text-gray-500 mb-1">{entityLabel} AUM ($)</Label>
             <Input
               type="number"
               placeholder="0"
@@ -519,7 +520,7 @@ export default function FirmAumHistoryTab({ firmId, firmName }) {
               <thead className="bg-gray-100 text-gray-600">
                 <tr>
                   <th className="text-left font-medium px-3 py-2">Month-End Date</th>
-                  <th className="text-right font-medium px-3 py-2">Firm AUM</th>
+                  <th className="text-right font-medium px-3 py-2">{entityLabel} AUM</th>
                   <th className="text-right font-medium px-3 py-2">Assets Gained</th>
                   <th className="text-right font-medium px-3 py-2">Assets Loss</th>
                   <th className="text-right font-medium px-3 py-2">Net Asset Flows</th>

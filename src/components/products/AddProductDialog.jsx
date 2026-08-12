@@ -24,6 +24,7 @@ import ProductClassificationsTab from "./ProductClassificationsTab";
 import ProductInvestmentTeamTab from "./ProductInvestmentTeamTab";
 import ProductInvestmentDescriptionTab from "./ProductInvestmentDescriptionTab";
 import ProductReturnsTab from "./ProductReturnsTab";
+import ProductAumHistoryTab from "./ProductAumHistoryTab";
 import ProductAnalyticsTab from "./ProductAnalyticsTab";
 import ProductDueDiligenceTab from "./ProductDueDiligenceTab";
 import ConstituentProductMultiSelect from "./ConstituentProductMultiSelect";
@@ -439,6 +440,7 @@ export default function AddProductDialog({
               <TabsTrigger value="classifications">Classifications</TabsTrigger>
               <TabsTrigger value="description">Inv. Description</TabsTrigger>
               <TabsTrigger value="team" disabled={isAddMode}>Investment Team</TabsTrigger>
+              <TabsTrigger value="aum-history" disabled={isAddMode}>AUM History</TabsTrigger>
               <TabsTrigger value="returns" disabled={isAddMode}>Returns</TabsTrigger>
               <TabsTrigger value="analytics" disabled={isAddMode}>Analytics</TabsTrigger>
             </TabsList>
@@ -681,6 +683,16 @@ export default function AddProductDialog({
                 <ProductInvestmentTeamTab
                   productId={editingProduct.id}
                   firmId={editingProduct.firm_id}
+                />
+              )}
+            </TabsContent>
+
+            {/* ── AUM History Tab ── */}
+            <TabsContent value="aum-history">
+              {editingProduct && (
+                <ProductAumHistoryTab
+                  productId={editingProduct.id}
+                  productName={editingProduct.name}
                 />
               )}
             </TabsContent>
