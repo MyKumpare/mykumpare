@@ -452,12 +452,12 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
       )}
 
       {/* Add row form */}
-      <div className="border rounded-xl p-3 bg-gray-50">
-        <div className="flex items-center gap-2 mb-2">
+      <div className="border rounded-xl p-4 bg-gray-50 w-full">
+        <div className="flex items-center gap-2 mb-3">
           <Plus className="w-4 h-4 text-indigo-600" />
           <span className="text-sm font-medium text-gray-700">Add Monthly Entry</span>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           <div>
             <Label className="text-xs text-gray-500 mb-1">Month-End Date</Label>
             <Input
@@ -465,7 +465,7 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
               placeholder="MM/DD/YYYY"
               value={newDate}
               onChange={(e) => setNewDate(e.target.value)}
-              className="h-8 text-sm"
+              className="h-9 text-sm"
             />
           </div>
           <div>
@@ -475,7 +475,7 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
               placeholder="0"
               value={newAum}
               onChange={(e) => setNewAum(e.target.value)}
-              className="h-8 text-sm"
+              className="h-9 text-sm"
             />
           </div>
           <div>
@@ -485,7 +485,7 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
               placeholder="0"
               value={newGained}
               onChange={(e) => setNewGained(e.target.value)}
-              className="h-8 text-sm"
+              className="h-9 text-sm"
             />
           </div>
           <div>
@@ -495,14 +495,28 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
               placeholder="0"
               value={newLoss}
               onChange={(e) => setNewLoss(e.target.value)}
-              className="h-8 text-sm"
+              className="h-9 text-sm"
             />
+          </div>
+          <div>
+            <Label className="text-xs text-gray-500 mb-1">Net Flow ($)</Label>
+            <div className="h-9 px-3 flex items-center text-sm font-medium rounded-md border border-gray-200 bg-white">
+              <span
+                className={
+                  (toNumber(newGained) - toNumber(newLoss)) >= 0
+                    ? "text-green-600"
+                    : "text-red-600"
+                }
+              >
+                {(toNumber(newGained) - toNumber(newLoss)).toLocaleString()}
+              </span>
+            </div>
           </div>
           <div className="flex items-end">
             <Button
               type="button"
               size="sm"
-              className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white w-full"
+              className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white w-full h-9"
               onClick={handleAddRow}
             >
               <Plus className="w-3.5 h-3.5" />
@@ -531,40 +545,40 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
                 {sortedRows.map((r) => (
                   <tr key={r.id} className="border-t hover:bg-gray-50">
                     <td className="px-3 py-1.5">
-                      <Input
-                        type="text"
-                        value={fmtDisplay(r.month_end_date)}
-                        onChange={(e) => {
-                          const d = parseFlexibleDate(e.target.value);
-                          updateRow(r.id, "month_end_date", d ? format(d, "yyyy-MM-dd") : e.target.value);
-                        }}
-                        className="h-7 text-sm w-28"
-                      />
-                    </td>
-                    <td className="px-3 py-1.5">
-                      <Input
-                        type="number"
-                        value={r.firm_aum ?? ""}
-                        onChange={(e) => updateRow(r.id, "firm_aum", toNumber(e.target.value))}
-                        className="h-7 text-sm text-right w-32"
-                      />
-                    </td>
-                    <td className="px-3 py-1.5">
-                      <Input
-                        type="number"
-                        value={r.assets_gained ?? ""}
-                        onChange={(e) => updateRow(r.id, "assets_gained", toNumber(e.target.value))}
-                        className="h-7 text-sm text-right w-32"
-                      />
-                    </td>
-                    <td className="px-3 py-1.5">
-                      <Input
-                        type="number"
-                        value={r.assets_loss ?? ""}
-                        onChange={(e) => updateRow(r.id, "assets_loss", toNumber(e.target.value))}
-                        className="h-7 text-sm text-right w-32"
-                      />
-                    </td>
+                       <Input
+                         type="text"
+                         value={fmtDisplay(r.month_end_date)}
+                         onChange={(e) => {
+                           const d = parseFlexibleDate(e.target.value);
+                           updateRow(r.id, "month_end_date", d ? format(d, "yyyy-MM-dd") : e.target.value);
+                         }}
+                         className="h-8 text-sm w-full min-w-[120px]"
+                       />
+                     </td>
+                     <td className="px-3 py-1.5">
+                       <Input
+                         type="number"
+                         value={r.firm_aum ?? ""}
+                         onChange={(e) => updateRow(r.id, "firm_aum", toNumber(e.target.value))}
+                         className="h-8 text-sm text-right w-full min-w-[120px]"
+                       />
+                     </td>
+                     <td className="px-3 py-1.5">
+                       <Input
+                         type="number"
+                         value={r.assets_gained ?? ""}
+                         onChange={(e) => updateRow(r.id, "assets_gained", toNumber(e.target.value))}
+                         className="h-8 text-sm text-right w-full min-w-[120px]"
+                       />
+                     </td>
+                     <td className="px-3 py-1.5">
+                       <Input
+                         type="number"
+                         value={r.assets_loss ?? ""}
+                         onChange={(e) => updateRow(r.id, "assets_loss", toNumber(e.target.value))}
+                         className="h-8 text-sm text-right w-full min-w-[120px]"
+                       />
+                     </td>
                     <td className="px-3 py-1.5 text-right text-sm font-medium">
                       <span
                         className={
