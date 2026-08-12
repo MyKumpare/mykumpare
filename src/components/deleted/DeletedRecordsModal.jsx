@@ -35,7 +35,7 @@ const QUERY_KEYS = Object.fromEntries(
 
 // Entities where permanent (hard) delete is disabled to prevent catastrophic
 // data loss. Users can still restore these records, but cannot destroy them.
-const NO_HARD_DELETE = new Set(["firms", "portfolios", "contacts"]);
+const NO_HARD_DELETE = new Set(["firms", "products", "portfolios", "contacts"]);
 
 const getDisplayName = (record) => {
   if (record.name) return record.name;
