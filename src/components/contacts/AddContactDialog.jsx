@@ -40,6 +40,7 @@ import InviteToPortalDialog from "../external/InviteToPortalDialog";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import ImageZoomDialog from "../common/ImageZoomDialog";
+import ExperienceOptionMatchDialog from "./ExperienceOptionMatchDialog";
 
 const SALUTATIONS = ["Mr.", "Ms.", "Mrs.", "Dr.", "Prof.", "Hon."];
 const SUFFIXES = ["Jr.", "Sr.", "II", "III", "IV", "Esq.", "CFA", "CPA", "MBA", "PhD", "MD"];
@@ -103,6 +104,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [extracting, setExtracting] = useState(null); // "education" | "experience" | null
   const [portalInviteOpen, setPortalInviteOpen] = useState(false);
   const [photoZoomOpen, setPhotoZoomOpen] = useState(false);
+  const [pendingExperienceExtract, setPendingExperienceExtract] = useState(null);
 
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -493,28 +495,49 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
         toast({ title: "Nothing extracted", description: "No structured records could be found in the biography." });
         return;
       }
-      const existing = isEdu ? education : professionalExperience;
-      const sortFn = isEdu
-        ? (a, b) => (parseInt(b.graduation_year) || 0) - (parseInt(a.graduation_year) || 0)
-        : (a, b) => (parseInt(b.start_year) || 0) - (parseInt(a.start_year) || 0);
-      const combined = [...existing, ...items].sort(sortFn);
-      const pairs = isEdu ? findEducationDuplicates(combined) : findExperienceDuplicates(combined);
-      if (pairs.length > 0) {
-        setSubRecordReview({
-          pairs,
-          arrays: isEdu
-            ? { education: combined, professional_experience: professionalExperience, phones }
-            : { education: education, professional_experience: combined, phones },
-          submitAfter: null,
-        });
+      if (isEdu) {
+        const combined = [...education, ...items].sort(
+          (a, b) => (parseInt(b.graduation_year) || 0) - (parseInt(a.graduation_year) || 0)
+        );
+        const pairs = findEducationDuplicates(combined);
+        if (pairs.length > 0) {
+          setSubRecordReview({
+            pairs,
+            arrays: { education: combined, professional_experience: professionalExperience, phones },
+            submitAfter: null,
+          });
+        } else {
+          setEducation(combined);
+          toast({ title: `✅ ${items.length} record${items.length === 1 ? "" : "s"} extracted`, description: "Added from biography." });
+        }
       } else {
-        if (isEdu) setEducation(combined); else setProfessionalExperience(combined);
-        toast({ title: `✅ ${items.length} record${items.length === 1 ? "" : "s"} extracted`, description: "Added from biography." });
+        // Experience: route through the company/title match review first.
+        setPendingExperienceExtract(items);
       }
     } catch (err) {
       toast({ title: "Extraction failed", description: err?.message || "Could not extract from biography.", variant: "destructive" });
     } finally {
       setExtracting(null);
+    }
+  };
+
+  // Continue the experience bio-extraction after the user resolves any
+  // company/title matches against the global master lists.
+  const handleExperienceExtractResolved = (resolvedItems) => {
+    setPendingExperienceExtract(null);
+    const combined = [...professionalExperience, ...resolvedItems].sort(
+      (a, b) => (parseInt(b.start_year) || 0) - (parseInt(a.start_year) || 0)
+    );
+    const pairs = findExperienceDuplicates(combined);
+    if (pairs.length > 0) {
+      setSubRecordReview({
+        pairs,
+        arrays: { education, professional_experience: combined, phones },
+        submitAfter: null,
+      });
+    } else {
+      setProfessionalExperience(combined);
+      toast({ title: `✅ ${resolvedItems.length} record${resolvedItems.length === 1 ? "" : "s"} extracted`, description: "Added from biography." });
     }
   };
 
@@ -1735,6 +1758,13 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
       )}
       {guardDialog}
     </Dialog>
+
+    <ExperienceOptionMatchDialog
+      open={!!pendingExperienceExtract}
+      onOpenChange={(v) => { if (!v) setPendingExperienceExtract(null); }}
+      items={pendingExperienceExtract || []}
+      onResolve={handleExperienceExtractResolved}
+    />
 
     <ImageZoomDialog
       open={photoZoomOpen}
