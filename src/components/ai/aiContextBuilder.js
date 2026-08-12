@@ -213,11 +213,11 @@ export const buildToolContext = async (userQuery) => {
       shouldFetchContacts ? base44.entities.Contact.list(null, 500).catch(() => []) : Promise.resolve([]),
       shouldFetchProducts ? base44.entities.Product.list(null, 500).catch(() => []) : Promise.resolve([]),
       shouldFetchPortfolios ? base44.entities.Portfolio.list(null, 500).catch(() => []) : Promise.resolve([]),
-      shouldFetchBenchmarks ? base44.entities.Benchmark.list(null, 500).catch(() => []) : Promise.resolve([]),
-      shouldFetchTasks ? base44.entities.FollowUpTask.list(null, 500).catch(() => []) : Promise.resolve([]),
-      shouldFetchActivities ? base44.entities.ContactActivity.list(null, 500).catch(() => []) : Promise.resolve([]),
-      shouldFetchAnalyses ? base44.entities.Analysis.list(null, 500).catch(() => []) : Promise.resolve([]),
-      shouldFetchPerformance ? base44.entities.ReturnSeries.list(null, 500).catch(() => []) : Promise.resolve([]),
+      shouldFetchBenchmarks ? base44.entities.Benchmark.filter({ deleted_at: { $exists: false } }, null, 500).catch(() => []) : Promise.resolve([]),
+      shouldFetchTasks ? base44.entities.FollowUpTask.filter({ deleted_at: { $exists: false } }, null, 500).catch(() => []) : Promise.resolve([]),
+      shouldFetchActivities ? base44.entities.ContactActivity.filter({ deleted_at: { $exists: false } }, null, 500).catch(() => []) : Promise.resolve([]),
+      shouldFetchAnalyses ? base44.entities.Analysis.filter({ deleted_at: { $exists: false } }, null, 500).catch(() => []) : Promise.resolve([]),
+      shouldFetchPerformance ? base44.entities.ReturnSeries.filter({ deleted_at: { $exists: false } }, null, 500).catch(() => []) : Promise.resolve([]),
     ]);
 
     // Filter active records

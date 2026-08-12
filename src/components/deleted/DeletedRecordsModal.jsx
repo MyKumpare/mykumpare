@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trash2, RotateCcw, Search, Loader2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { base44 } from "@/api/base44Client";
-import { useQuery, useQueries, useQueryClient } from "@tanstack/react-query";
+import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/components/ui/use-toast";
 
 const ENTITY_TYPES = [
