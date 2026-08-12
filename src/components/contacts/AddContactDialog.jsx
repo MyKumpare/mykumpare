@@ -39,6 +39,7 @@ import { findEducationDuplicates, findExperienceDuplicates, findPhoneDuplicates 
 import InviteToPortalDialog from "../external/InviteToPortalDialog";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import ImageZoomDialog from "../common/ImageZoomDialog";
 
 const SALUTATIONS = ["Mr.", "Ms.", "Mrs.", "Dr.", "Prof.", "Hon."];
 const SUFFIXES = ["Jr.", "Sr.", "II", "III", "IV", "Esq.", "CFA", "CPA", "MBA", "PhD", "MD"];
@@ -101,6 +102,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [subRecordReview, setSubRecordReview] = useState(null);
   const [extracting, setExtracting] = useState(null); // "education" | "experience" | null
   const [portalInviteOpen, setPortalInviteOpen] = useState(false);
+  const [photoZoomOpen, setPhotoZoomOpen] = useState(false);
 
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -766,7 +768,14 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center overflow-hidden flex-shrink-0 border-2 border-indigo-200">
                 {photoUrl ? (
-                  <img src={photoUrl} alt="Contact" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setPhotoZoomOpen(true)}
+                    className="w-full h-full block cursor-zoom-in"
+                    title="Click to view full photo"
+                  >
+                    <img src={photoUrl} alt="Contact" className="w-full h-full object-cover" />
+                  </button>
                 ) : (
                   <User className="w-6 h-6 text-indigo-400" />
                 )}
@@ -1728,6 +1737,14 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
       )}
       {guardDialog}
     </Dialog>
+
+    <ImageZoomDialog
+      open={photoZoomOpen}
+      onOpenChange={setPhotoZoomOpen}
+      src={photoUrl}
+      alt="Contact photo"
+      caption={formatFullName()}
+    />
     </>
   );
 }

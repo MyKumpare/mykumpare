@@ -40,6 +40,7 @@ import { isFirmNameSimilarToLinkedin } from "./firmNameSimilarity";
 import LinkedinFirmMismatchDialog from "./LinkedinFirmMismatchDialog";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import ImageZoomDialog from "../common/ImageZoomDialog";
 
 function getCountryCodeFromCountryName(countryName) {
   if (!countryName) return "";
@@ -186,6 +187,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const [linkedinMismatch, setLinkedinMismatch] = useState(null);
   const [similarFirmWarning, setSimilarFirmWarning] = useState(null);
   const [firmFieldConflicts, setFirmFieldConflicts] = useState(null);
+  const [logoZoomOpen, setLogoZoomOpen] = useState(false);
   const nameInputRef = useRef(null);
 
   const { data: allContacts = [] } = useQuery({
@@ -862,6 +864,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={(v) => { if (!v) guardedClose(); }}>
       <DialogContent
         className="sm:max-w-3xl max-h-[90vh] flex flex-col"
@@ -874,7 +877,14 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-10 h-10 rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden flex-shrink-0">
                   {logoUrl ? (
-                    <img src={logoUrl} alt="logo" className="w-full h-full object-contain p-0.5" />
+                    <button
+                      type="button"
+                      onClick={() => setLogoZoomOpen(true)}
+                      className="w-full h-full block cursor-zoom-in"
+                      title="Click to view full logo"
+                    >
+                      <img src={logoUrl} alt="logo" className="w-full h-full object-contain p-0.5" />
+                    </button>
                   ) : (
                     <Building2 className="w-5 h-5 text-gray-300" />
                   )}
@@ -1677,5 +1687,14 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
       />
       {guardDialog}
     </Dialog>
+
+    <ImageZoomDialog
+      open={logoZoomOpen}
+      onOpenChange={setLogoZoomOpen}
+      src={logoUrl}
+      alt="Firm logo"
+      caption={firmName}
+    />
+    </>
   );
 }
