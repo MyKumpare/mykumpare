@@ -440,6 +440,14 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
                 <>
                   <Bar dataKey="Assets Gained" fill="#16a34a" barSize={14} />
                   <Bar dataKey="Assets Loss" fill="#dc2626" barSize={14} />
+                  <Line
+                    type="monotone"
+                    dataKey="Net Flows"
+                    stroke="#f59e0b"
+                    strokeWidth={2}
+                    dot={{ r: 2 }}
+                    strokeDasharray="4 2"
+                  />
                 </>
               )}
             </ComposedChart>
