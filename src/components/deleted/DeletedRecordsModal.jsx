@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trash2, RotateCcw, Search, Loader2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/components/ui/use-toast";
@@ -35,6 +36,8 @@ export default function DeletedRecordsModal({ open, onOpenChange }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("firms");
   const [busyId, setBusyId] = useState(null);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [busyBulk, setBusyBulk] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch soft-deleted records for each entity type (only when the modal is open)
@@ -113,6 +116,64 @@ export default function DeletedRecordsModal({ open, onOpenChange }) {
     }
   };
 
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    setSelectedIds((prev) => {
+      const allSelected = records.length > 0 && records.every((r) => prev.has(r.id));
+      if (allSelected) return new Set();
+      return new Set(records.map((r) => r.id));
+    });
+  };
+
+  const handleBulkRestore = async () => {
+    const entity = ENTITY_TYPES.find((e) => e.key === activeTab)?.entity;
+    if (!entity || selectedIds.size === 0) return;
+    setBusyBulk(true);
+    const ids = Array.from(selectedIds);
+    let ok = 0, fail = 0;
+    await Promise.all(ids.map(async (id) => {
+      try {
+        await base44.entities[entity].update(id, { deleted_at: null });
+        ok++;
+      } catch {
+        fail++;
+      }
+    }));
+    invalidateAll();
+    setSelectedIds(new Set());
+    setBusyBulk(false);
+    toast({ title: `Restored ${ok} record${ok !== 1 ? "s" : ""}${fail ? `, ${fail} failed` : ""}` });
+  };
+
+  const handleBulkDelete = async () => {
+    const entity = ENTITY_TYPES.find((e) => e.key === activeTab)?.entity;
+    if (!entity || selectedIds.size === 0) return;
+    if (!window.confirm(`Permanently delete ${selectedIds.size} record${selectedIds.size !== 1 ? "s" : ""}? This action cannot be undone.`)) return;
+    setBusyBulk(true);
+    const ids = Array.from(selectedIds);
+    let ok = 0, fail = 0;
+    await Promise.all(ids.map(async (id) => {
+      try {
+        await base44.entities[entity].delete(id);
+        ok++;
+      } catch {
+        fail++;
+      }
+    }));
+    invalidateAll();
+    setSelectedIds(new Set());
+    setBusyBulk(false);
+    toast({ title: `Deleted ${ok} record${ok !== 1 ? "s" : ""}${fail ? `, ${fail} failed` : ""}` });
+  };
+
   const getRecordsForTab = () => {
     const tab = ENTITY_TYPES.find((e) => e.key === activeTab);
     if (!tab || !deletedRecords[activeTab]) return [];
@@ -135,7 +196,7 @@ export default function DeletedRecordsModal({ open, onOpenChange }) {
           </p>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setSelectedIds(new Set()); setSearchQuery(""); }} className="w-full">
           <TabsList className="grid w-full grid-cols-4">
             {ENTITY_TYPES.map((type) => (
               <TabsTrigger key={type.key} value={type.key}>
@@ -159,51 +220,98 @@ export default function DeletedRecordsModal({ open, onOpenChange }) {
                     />
                   </div>
 
+                  {records.length > 0 && (
+                    <div className="flex items-center justify-between gap-2 px-1">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          checked={records.length > 0 && records.every((r) => selectedIds.has(r.id))}
+                          onCheckedChange={toggleSelectAll}
+                        />
+                        <span className="text-sm text-gray-600">
+                          {selectedIds.size > 0 ? `${selectedIds.size} selected` : `Select all (${records.length})`}
+                        </span>
+                      </div>
+                      {selectedIds.size > 0 && (
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 gap-1.5 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                            disabled={busyBulk}
+                            onClick={handleBulkRestore}
+                          >
+                            {busyBulk ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+                            Restore Selected
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            disabled={busyBulk}
+                            onClick={handleBulkDelete}
+                          >
+                            {busyBulk ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                            Delete Selected
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <div className="space-y-2 max-h-96 overflow-y-auto">
                     {isLoading ? (
                       <div className="flex items-center justify-center py-8 text-gray-400">
                         <Loader2 className="w-5 h-5 animate-spin" />
                       </div>
                     ) : records.length > 0 ? (
-                      records.map((record) => (
-                        <div
-                          key={record.id}
-                          className="p-3 rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-between hover:bg-gray-100 transition-colors"
-                        >
-                          <div className="min-w-0 flex-1">
-                            <p className="font-medium text-sm text-gray-900 truncate">
-                              {getDisplayName(record)}
-                            </p>
-                            {record.deleted_at && (
-                              <p className="text-xs text-gray-500 mt-0.5">
-                                Deleted {new Date(record.deleted_at).toLocaleDateString()}
-                              </p>
-                            )}
+                      records.map((record) => {
+                        const isSelected = selectedIds.has(record.id);
+                        return (
+                          <div
+                            key={record.id}
+                            className={`p-3 rounded-lg border flex items-center justify-between transition-colors ${isSelected ? "border-indigo-300 bg-indigo-50" : "border-gray-200 bg-gray-50 hover:bg-gray-100"}`}
+                          >
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={() => toggleSelect(record.id)}
+                              />
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-sm text-gray-900 truncate">
+                                  {getDisplayName(record)}
+                                </p>
+                                {record.deleted_at && (
+                                  <p className="text-xs text-gray-500 mt-0.5">
+                                    Deleted {new Date(record.deleted_at).toLocaleDateString()}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex gap-2 ml-3">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 gap-1.5 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                                disabled={busyId === record.id || busyBulk}
+                                onClick={() => handleRestore(record)}
+                              >
+                                <RotateCcw className="w-3.5 h-3.5" />
+                                Restore
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                disabled={busyId === record.id || busyBulk}
+                                onClick={() => handlePermanentlyDelete(record)}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                Delete
+                              </Button>
+                            </div>
                           </div>
-                          <div className="flex gap-2 ml-3">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 gap-1.5 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
-                              disabled={busyId === record.id}
-                              onClick={() => handleRestore(record)}
-                            >
-                              <RotateCcw className="w-3.5 h-3.5" />
-                              Restore
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50"
-                              disabled={busyId === record.id}
-                              onClick={() => handlePermanentlyDelete(record)}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                              Delete
-                            </Button>
-                          </div>
-                        </div>
-                      ))
+                        );
+                      })
                     ) : (
                       <div className="text-sm text-gray-400 italic py-4 text-center">
                         No matching deleted records
