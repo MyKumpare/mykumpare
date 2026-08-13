@@ -62,6 +62,26 @@ function toNumber(val) {
   return isNaN(n) ? 0 : n;
 }
 
+// Normalize an AUM history row so assets_loss is always stored as a negative
+// number (outflows represented as negative). Legacy positive values are
+// converted on load. Net asset flows = assets_gained + assets_loss.
+function normalizeAumRow(r) {
+  const gained = toNumber(r.assets_gained);
+  const rawLoss = toNumber(r.assets_loss);
+  const loss = rawLoss > 0 ? -rawLoss : rawLoss;
+  return { ...r, assets_loss: loss, net_asset_flows: gained + loss };
+}
+
+// Build a { client_type -> aum_amount } map from a month's breakdown so the
+// next month can compute per-client-type % change vs prior.
+function buildBreakdownMap(breakdown) {
+  const map = {};
+  (breakdown || []).forEach((b) => {
+    if (b.client_type) map[b.client_type] = toNumber(b.aum_amount);
+  });
+  return map;
+}
+
 function parseCsvText(text) {
   const rows = [];
   const lines = text.split(/\r?\n/).filter((l) => l.trim() !== "");
@@ -95,14 +115,14 @@ function parseCsvText(text) {
     if (!d) continue;
     const aum = idx.aum >= 0 ? toNumber(cells[idx.aum]) : 0;
     const gained = idx.gained >= 0 ? toNumber(cells[idx.gained]) : 0;
-    const loss = idx.loss >= 0 ? toNumber(cells[idx.loss]) : 0;
+    const loss = idx.loss >= 0 ? -Math.abs(toNumber(cells[idx.loss])) : 0;
     rows.push({
       id: genId(),
       month_end_date: format(d, "yyyy-MM-dd"),
       firm_aum: aum,
       assets_gained: gained,
       assets_loss: loss,
-      net_asset_flows: gained - loss,
+      net_asset_flows: gained + loss,
     });
   }
   return rows;
@@ -131,8 +151,9 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
       try {
         const rec = await entity.get(firmId);
         if (!active) return;
-        setRows(rec.aum_history || []);
-        savedRowsRef.current = rec.aum_history || [];
+        const history = (rec.aum_history || []).map(normalizeAumRow);
+        setRows(history);
+        savedRowsRef.current = history;
       } catch (e) {
         toast({
           title: "Error loading AUM history",
@@ -179,7 +200,7 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
       return;
     }
     const gained = toNumber(newGained);
-    const loss = toNumber(newLoss);
+    const loss = -Math.abs(toNumber(newLoss));
     const aum = toNumber(newAum);
     setRows([
       ...rows,
@@ -189,7 +210,7 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
         firm_aum: aum,
         assets_gained: gained,
         assets_loss: loss,
-        net_asset_flows: gained - loss,
+        net_asset_flows: gained + loss,
         client_type_breakdown: [],
       },
     ]);
@@ -203,10 +224,14 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
     setRows((prev) =>
       prev.map((r) => {
         if (r.id !== id) return r;
-        const updated = { ...r, [field]: value };
+        let nextValue = value;
+        if (field === "assets_loss") {
+          nextValue = -Math.abs(toNumber(value));
+        }
+        const updated = { ...r, [field]: nextValue };
         if (field === "assets_gained" || field === "assets_loss") {
           updated.net_asset_flows =
-            toNumber(updated.assets_gained) - toNumber(updated.assets_loss);
+            toNumber(updated.assets_gained) + toNumber(updated.assets_loss);
         }
         return updated;
       })
@@ -220,15 +245,19 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
   const handleSave = async () => {
     setSaving(true);
     try {
-      const cleaned = sortedRows.map((r) => ({
-        id: r.id,
-        month_end_date: r.month_end_date,
-        firm_aum: toNumber(r.firm_aum),
-        assets_gained: toNumber(r.assets_gained),
-        assets_loss: toNumber(r.assets_loss),
-        net_asset_flows: toNumber(r.assets_gained) - toNumber(r.assets_loss),
-        client_type_breakdown: r.client_type_breakdown || [],
-      }));
+      const cleaned = sortedRows.map((r) => {
+        const gained = toNumber(r.assets_gained);
+        const loss = -Math.abs(toNumber(r.assets_loss));
+        return {
+          id: r.id,
+          month_end_date: r.month_end_date,
+          firm_aum: toNumber(r.firm_aum),
+          assets_gained: gained,
+          assets_loss: loss,
+          net_asset_flows: gained + loss,
+          client_type_breakdown: r.client_type_breakdown || [],
+        };
+      });
       await entity.update(firmId, { aum_history: cleaned });
       setRows(cleaned);
       savedRowsRef.current = cleaned;
@@ -297,9 +326,9 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
         const merged = { ...existing };
         if (r.firm_aum) merged.firm_aum = r.firm_aum;
         if (r.assets_gained) merged.assets_gained = r.assets_gained;
-        if (r.assets_loss) merged.assets_loss = r.assets_loss;
+        if (r.assets_loss) merged.assets_loss = -Math.abs(toNumber(r.assets_loss));
         merged.net_asset_flows =
-          toNumber(merged.assets_gained) - toNumber(merged.assets_loss);
+          toNumber(merged.assets_gained) + toNumber(merged.assets_loss);
         map.set(r.month_end_date, merged);
         updated++;
       } else {
@@ -405,7 +434,7 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
       </div>
 
       <p className="text-xs text-gray-500">
-        Upload, paste, or manually enter monthly AUM. Month-end date format: MM/DD/YYYY. Net Asset Flows auto-calculates as Assets Gained − Assets Loss. Pasting or uploading fills in missing fields for existing dates without overwriting values already entered.
+        Upload, paste, or manually enter monthly AUM. Month-end date format: MM/DD/YYYY. Assets Loss is stored as a negative number; Net Asset Flows = Assets Gained + Assets Loss. Market Impact = current AUM − prior AUM − net flows. % Change = (current − prior) ÷ prior; % Change Excl. Market = net flows ÷ prior; % Change Market = % Change − % Change Excl. Market.
       </p>
 
       {/* Chart */}
@@ -496,7 +525,7 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
               placeholder="0"
               value={newGained}
               onChange={(e) => setNewGained(e.target.value)}
-              className="h-9 text-sm"
+              className="h-9 text-sm text-green-600 font-medium"
             />
           </div>
           <div>
@@ -505,8 +534,8 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
               type="number"
               placeholder="0"
               value={newLoss}
-              onChange={(e) => setNewLoss(e.target.value)}
-              className="h-9 text-sm"
+              onChange={(e) => setNewLoss(-Math.abs(toNumber(e.target.value)))}
+              className="h-9 text-sm text-red-600 font-medium"
             />
           </div>
           <div>
@@ -514,12 +543,12 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
             <div className="h-9 px-3 flex items-center text-sm font-medium rounded-md border border-gray-200 bg-white">
               <span
                 className={
-                  (toNumber(newGained) - toNumber(newLoss)) >= 0
+                  (toNumber(newGained) + toNumber(newLoss)) >= 0
                     ? "text-green-600"
                     : "text-red-600"
                 }
               >
-                {(toNumber(newGained) - toNumber(newLoss)).toLocaleString()}
+                {(toNumber(newGained) + toNumber(newLoss)).toLocaleString()}
               </span>
             </div>
           </div>
@@ -550,13 +579,28 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
                   <th className="text-right font-medium px-3 py-2">Assets Gained</th>
                   <th className="text-right font-medium px-3 py-2">Assets Loss</th>
                   <th className="text-right font-medium px-3 py-2">Net Asset Flows</th>
+                  <th className="text-right font-medium px-3 py-2">Market Impact</th>
+                  <th className="text-right font-medium px-3 py-2">% Change</th>
+                  <th className="text-right font-medium px-3 py-2">% Change Excl. Market</th>
+                  <th className="text-right font-medium px-3 py-2">% Change Market</th>
                   <th className="px-2 py-2"></th>
                 </tr>
               </thead>
               <tbody>
-                {sortedRows.map((r) => (
-                  <React.Fragment key={r.id}>
-                  <tr className="border-t hover:bg-gray-50">
+                {sortedRows.map((r) => {
+                  const idx = sortedRows.findIndex((x) => x.id === r.id);
+                  const priorRow = idx > 0 ? sortedRows[idx - 1] : null;
+                  const priorAum = priorRow ? toNumber(priorRow.firm_aum) : null;
+                  const currentAum = toNumber(r.firm_aum);
+                  const netFlow = toNumber(r.net_asset_flows);
+                  const marketImpact = priorAum != null ? currentAum - priorAum - netFlow : null;
+                  const pctChange = priorAum ? (currentAum - priorAum) / priorAum : null;
+                  const pctExclMarket = priorAum ? netFlow / priorAum : null;
+                  const pctMarket = (pctChange != null && pctExclMarket != null) ? pctChange - pctExclMarket : null;
+                  const priorBreakdownMap = priorRow ? buildBreakdownMap(priorRow.client_type_breakdown) : null;
+                  return (
+                   <React.Fragment key={r.id}>
+                   <tr className="border-t hover:bg-gray-50">
                     <td className="px-2 py-1.5 text-center">
                       <button
                         type="button"
@@ -595,7 +639,7 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
                          type="number"
                          value={r.assets_gained ?? ""}
                          onChange={(e) => updateRow(r.id, "assets_gained", toNumber(e.target.value))}
-                         className="h-8 text-sm text-right w-full min-w-[120px]"
+                         className="h-8 text-sm text-right w-full min-w-[120px] text-green-600 font-medium"
                        />
                      </td>
                      <td className="px-3 py-1.5">
@@ -603,19 +647,41 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
                          type="number"
                          value={r.assets_loss ?? ""}
                          onChange={(e) => updateRow(r.id, "assets_loss", toNumber(e.target.value))}
-                         className="h-8 text-sm text-right w-full min-w-[120px]"
+                         className="h-8 text-sm text-right w-full min-w-[120px] text-red-600 font-medium"
                        />
                      </td>
                      <td className="px-3 py-1.5 text-right text-sm font-medium">
-                       <span
-                         className={
-                           (r.net_asset_flows ?? 0) >= 0
-                             ? "text-green-600"
-                             : "text-red-600"
-                         }
-                       >
-                         {(r.net_asset_flows ?? 0).toLocaleString()}
+                       <span className={netFlow >= 0 ? "text-green-600" : "text-red-600"}>
+                         {netFlow.toLocaleString()}
                        </span>
+                     </td>
+                     <td className="px-3 py-1.5 text-right text-sm font-medium">
+                       {marketImpact != null ? (
+                         <span className={marketImpact >= 0 ? "text-green-600" : "text-red-600"}>
+                           {marketImpact.toLocaleString()}
+                         </span>
+                       ) : <span className="text-gray-300">—</span>}
+                     </td>
+                     <td className="px-3 py-1.5 text-right text-sm font-medium">
+                       {pctChange != null ? (
+                         <span className={pctChange >= 0 ? "text-green-600" : "text-red-600"}>
+                           {(pctChange * 100).toFixed(2)}%
+                         </span>
+                       ) : <span className="text-gray-300">—</span>}
+                     </td>
+                     <td className="px-3 py-1.5 text-right text-sm font-medium">
+                       {pctExclMarket != null ? (
+                         <span className={pctExclMarket >= 0 ? "text-green-600" : "text-red-600"}>
+                           {(pctExclMarket * 100).toFixed(2)}%
+                         </span>
+                       ) : <span className="text-gray-300">—</span>}
+                     </td>
+                     <td className="px-3 py-1.5 text-right text-sm font-medium">
+                       {pctMarket != null ? (
+                         <span className={pctMarket >= 0 ? "text-green-600" : "text-red-600"}>
+                           {(pctMarket * 100).toFixed(2)}%
+                         </span>
+                       ) : <span className="text-gray-300">—</span>}
                      </td>
                      <td className="px-2 py-1.5 text-center">
                        <Button
@@ -631,19 +697,21 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
                    </tr>
                    {expandedRows.has(r.id) && (
                      <tr className="border-t">
-                       <td colSpan={7} className="px-4 py-3 bg-gray-50">
+                       <td colSpan={11} className="px-4 py-3 bg-gray-50">
                          <div className="text-xs font-medium text-gray-600 mb-2">Client Type Breakdown</div>
                          <ClientTypeBreakdownEditor
                            breakdown={r.client_type_breakdown || []}
                            targetAum={toNumber(r.firm_aum)}
+                           priorBreakdownMap={priorBreakdownMap}
                            onChange={(newBreakdown) => updateRow(r.id, "client_type_breakdown", newBreakdown)}
                          />
                        </td>
                      </tr>
                    )}
                   </React.Fragment>
-                 ))}
-               </tbody>
+                  );
+                  })}
+                  </tbody>
              </table>
            </div>
          </div>

@@ -29,7 +29,7 @@ function formatCurrency(n) {
  *  - targetAum: number (the row's firm_aum / product_aum to validate against)
  *  - onChange: (newBreakdown) => void
  */
-export default function ClientTypeBreakdownEditor({ breakdown, targetAum, onChange }) {
+export default function ClientTypeBreakdownEditor({ breakdown, targetAum, onChange, priorBreakdownMap }) {
   const rows = breakdown || [];
   const hasRows = rows.length > 0;
 
@@ -111,11 +111,19 @@ export default function ClientTypeBreakdownEditor({ breakdown, targetAum, onChan
 
       {rows.length > 0 && (
         <div className="space-y-1.5">
+          <div className="flex items-center gap-2 text-[11px] font-medium text-gray-400 px-1">
+            <div className="flex-1">Client Type</div>
+            <div className="w-32 text-right">AUM</div>
+            <div className="w-20 text-right">% Change</div>
+            <div className="w-14" />
+          </div>
           {rows.map((row) => {
             const usedNames = rows.filter((r) => r.id !== row.id).map((r) => r.client_type).filter(Boolean);
             const othersTotal = rows.filter((r) => r.id !== row.id).reduce((sum, r) => sum + toNumber(r.aum_amount), 0);
             const rowBalance = hasTarget ? Math.max(0, targetAum - othersTotal) : 0;
             const canUseBalance = hasTarget && rowBalance > 0 && toNumber(row.aum_amount) !== rowBalance;
+            const priorAmount = priorBreakdownMap ? priorBreakdownMap[row.client_type] : undefined;
+            const pctChange = (priorAmount != null && priorAmount !== 0) ? (toNumber(row.aum_amount) - priorAmount) / priorAmount : null;
             return (
               <div key={row.id} className="flex items-start gap-2">
                 <div className="flex-1">
@@ -134,6 +142,13 @@ export default function ClientTypeBreakdownEditor({ breakdown, targetAum, onChan
                     onChange={(e) => updateRow(row.id, "aum_amount", e.target.value === "" ? 0 : Number(e.target.value))}
                     className="h-8 text-sm"
                   />
+                </div>
+                <div className="w-20 text-right text-xs font-medium self-center">
+                  {pctChange != null ? (
+                    <span className={pctChange >= 0 ? "text-green-600" : "text-red-600"}>
+                      {(pctChange * 100).toFixed(1)}%
+                    </span>
+                  ) : <span className="text-gray-300">—</span>}
                 </div>
                 <button
                   type="button"
