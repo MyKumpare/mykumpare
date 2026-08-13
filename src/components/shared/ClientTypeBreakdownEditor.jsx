@@ -8,7 +8,8 @@ import ClientTypePicker from "./ClientTypePicker";
 const OTHER_TYPE = "Other";
 
 function genId() {
-  return crypto.randomUUID();
+  if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
 function toNumber(v) {
@@ -31,7 +32,14 @@ function formatCurrency(n) {
  *  - onChange: (newBreakdown) => void
  */
 export default function ClientTypeBreakdownEditor({ breakdown, targetAum, onChange, priorBreakdownMap }) {
-  const rows = breakdown || [];
+  // Ensure every breakdown row has a stable unique id so per-row updates
+  // (e.g. "use remaining balance") always target the correct row. Rows
+  // loaded without an id are assigned one on first render; the assigned id
+  // is persisted back to the parent on the next change.
+  const rows = useMemo(
+    () => (breakdown || []).map((r) => ({ ...r, id: r.id || genId() })),
+    [breakdown]
+  );
   const hasRows = rows.length > 0;
 
   const breakdownTotal = useMemo(
