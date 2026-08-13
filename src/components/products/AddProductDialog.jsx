@@ -106,6 +106,8 @@ export default function AddProductDialog({
   const [investmentDescriptions, setInvestmentDescriptions] = useState({});
   const [constituentProductIds, setConstituentProductIds] = useState([]);
   const [addImProductOpen, setAddImProductOpen] = useState(false);
+  const [aumDirty, setAumDirty] = useState(false);
+  const aumSaveRef = useRef(null);
   const queryClient = useQueryClient();
   const nameInputRef = useRef(null);
   // Snapshot of original values captured when the dialog opens — prevents stale prop re-renders from resetting the form

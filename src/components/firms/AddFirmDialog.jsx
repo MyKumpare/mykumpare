@@ -188,6 +188,8 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const [similarFirmWarning, setSimilarFirmWarning] = useState(null);
   const [firmFieldConflicts, setFirmFieldConflicts] = useState(null);
   const [logoZoomOpen, setLogoZoomOpen] = useState(false);
+  const [aumDirty, setAumDirty] = useState(false);
+  const aumSaveRef = useRef(null);
   const nameInputRef = useRef(null);
 
   const { data: allContacts = [] } = useQuery({
@@ -386,7 +388,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
   // In add mode, any entered data counts as unsaved changes.
   const hasUnsavedChanges = editingFirm
-    ? hasChanges
+    ? (hasChanges || aumDirty)
     : !!(firmName.trim() || firmTypes.length > 0 || logoUrl || website || email ||
         linkedinUrl || yearFounded || description ||
         addresses.some(a => a.address_line1 || a.city || a.state || a.postal_code) ||
@@ -497,6 +499,10 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
   const performSubmit = (addrs) => {
     onSubmit({ firm_type: firmTypes[0] || "", firm_types: firmTypes, name: firmName.trim(), logo_url: logoUrl, website, email, linkedin_url: linkedinUrl, year_founded: yearFounded ? parseInt(yearFounded) : null, description, addresses: addrs, phones, pending_contacts: pendingContacts.length > 0 ? pendingContacts : undefined });
+    // Also save AUM history (including client type breakdown) if it has unsaved changes
+    if (aumSaveRef.current && aumDirty) {
+      aumSaveRef.current();
+    }
     // NOTE: do NOT clear form state here. onSubmit triggers an async save; if it
     // fails (e.g. backend validation), clearing now would wipe the user's
     // in-progress data — including enrichment they just reviewed — leaving the
@@ -1505,7 +1511,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
               <TabsContent value="aum-history" className="space-y-3">
               {editingFirm ? (
-                <FirmAumHistoryTab firmId={editingFirm.id} firmName={editingFirm.name} />
+                <FirmAumHistoryTab firmId={editingFirm.id} firmName={editingFirm.name} onDirtyChange={setAumDirty} saveRef={aumSaveRef} />
               ) : (
                 <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
                   Save the firm first to add AUM history

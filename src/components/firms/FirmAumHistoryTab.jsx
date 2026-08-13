@@ -108,7 +108,7 @@ function parseCsvText(text) {
   return rows;
 }
 
-export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm", entityLabel = "Firm" }) {
+export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm", entityLabel = "Firm", onDirtyChange, saveRef }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [rows, setRows] = useState([]);
@@ -122,6 +122,7 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
   const [expandedRows, setExpandedRows] = useState(new Set());
   const fileInputRef = useRef(null);
   const pasteRef = useRef(null);
+  const savedRowsRef = useRef([]);
   const entity = base44.entities[entityName];
 
   useEffect(() => {
@@ -131,6 +132,7 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
         const rec = await entity.get(firmId);
         if (!active) return;
         setRows(rec.aum_history || []);
+        savedRowsRef.current = rec.aum_history || [];
       } catch (e) {
         toast({
           title: "Error loading AUM history",
@@ -229,6 +231,7 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
       }));
       await entity.update(firmId, { aum_history: cleaned });
       setRows(cleaned);
+      savedRowsRef.current = cleaned;
       queryClient.invalidateQueries({ queryKey: [entityName.toLowerCase() + "s"] });
       queryClient.invalidateQueries({ queryKey: [entityName.toLowerCase(), firmId] });
       toast({ title: "AUM history saved" });
@@ -242,6 +245,17 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
       setSaving(false);
     }
   };
+
+  // Expose save handler to parent so the unsaved-changes guard can trigger it
+  useEffect(() => {
+    if (saveRef) saveRef.current = handleSave;
+  });
+
+  // Notify parent of dirty state so the dialog's close guard can warn
+  useEffect(() => {
+    const dirty = JSON.stringify(rows) !== JSON.stringify(savedRowsRef.current);
+    onDirtyChange?.(dirty);
+  }, [rows, onDirtyChange]);
 
   const downloadTemplate = () => {
     const csv = [buildTemplateHeaders(entityLabel).join(",")].join("\n");
