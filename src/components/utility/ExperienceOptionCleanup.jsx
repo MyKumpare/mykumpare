@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { Briefcase, Loader2, Check, SkipForward, RefreshCw, AlertTriangle, Type } from "lucide-react";
+import { Briefcase, Loader2, Check, SkipForward, RefreshCw, AlertTriangle, Type, Trash2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
@@ -80,6 +80,22 @@ function OptionList({ label, icon, records, pairs, onResolve, resolving }) {
                 <button
                   type="button"
                   disabled={resolving}
+                  onClick={() => onResolve(p, "delete_a")}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-white text-red-600 border border-red-200 hover:bg-red-50 disabled:opacity-50"
+                >
+                  <Trash2 className="w-3 h-3" /> Delete "{p.a.name}"
+                </button>
+                <button
+                  type="button"
+                  disabled={resolving}
+                  onClick={() => onResolve(p, "delete_b")}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-white text-red-600 border border-red-200 hover:bg-red-50 disabled:opacity-50"
+                >
+                  <Trash2 className="w-3 h-3" /> Delete "{p.b.name}"
+                </button>
+                <button
+                  type="button"
+                  disabled={resolving}
                   onClick={() => onResolve(p, "skip")}
                   className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
                 >
@@ -130,6 +146,20 @@ export default function ExperienceOptionCleanup() {
   const resolvePair = async (pair, choice, field, entityName, setRecords) => {
     if (choice === "skip") {
       setRecords((prev) => prev.filter((r) => r.id !== pair.a.id && r.id !== pair.b.id));
+      return;
+    }
+    if (choice === "delete_a" || choice === "delete_b") {
+      const target = choice === "delete_a" ? pair.a : pair.b;
+      setResolving(true);
+      try {
+        await base44.entities[entityName].delete(target.id);
+        toast({ title: `Deleted "${target.name}"`, description: "Option removed from the master list." });
+        setRecords((prev) => prev.filter((r) => r.id !== pair.a.id && r.id !== pair.b.id));
+      } catch (err) {
+        toast({ title: "Delete failed", description: err?.message, variant: "destructive" });
+      } finally {
+        setResolving(false);
+      }
       return;
     }
     const keep = choice === "a" ? pair.a : pair.b;
