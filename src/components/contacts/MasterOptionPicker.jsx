@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { ChevronDown, ChevronUp, Plus, AlertTriangle } from "lucide-react";
 import { nameSimilarity } from "./contactTypeSimilarity";
+import { titleCase } from "./titleCase";
 
 /**
  * Reusable single-value combobox backed by a globally-persisted master list.
@@ -70,8 +71,9 @@ export default function MasterOptionPicker({
   };
 
   const confirmCreate = (val) => {
-    onChange(val);
-    persistNew(val);
+    const normalized = titleCase(val);
+    onChange(normalized);
+    persistNew(normalized);
     setSearch("");
     setPendingCustom(null);
     setOpen(false);

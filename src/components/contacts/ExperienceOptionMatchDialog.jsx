@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { fetchExperienceOptionLists, buildExperienceConflicts } from "./experienceOptionMatch";
+import { titleCase } from "./titleCase";
 
 /**
  * Reviews extracted experience items against the global company / job-title
@@ -36,6 +37,13 @@ export default function ExperienceOptionMatchDialog({ open, onOpenChange, items,
     return () => { active = false; };
   }, [open, items]);
 
+  const titleCaseItems = (arr) =>
+    arr.map((it) => ({
+      ...it,
+      company_name: it.company_name ? titleCase(it.company_name) : it.company_name,
+      title: it.title ? titleCase(it.title) : it.title,
+    }));
+
   const handleApply = () => {
     const resolved = items.map((item) => ({ ...item }));
     conflicts.forEach((c, i) => {
@@ -44,10 +52,10 @@ export default function ExperienceOptionMatchDialog({ open, onOpenChange, items,
         resolved[c.itemIndex][c.field] = choice;
       }
     });
-    onResolve(resolved);
+    onResolve(titleCaseItems(resolved));
   };
 
-  const handleKeepAllNew = () => onResolve(items);
+  const handleKeepAllNew = () => onResolve(titleCaseItems(items));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

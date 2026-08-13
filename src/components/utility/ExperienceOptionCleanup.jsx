@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { Briefcase, Loader2, Check, SkipForward, RefreshCw, AlertTriangle } from "lucide-react";
+import { Briefcase, Loader2, Check, SkipForward, RefreshCw, AlertTriangle, Type } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { nameSimilarity } from "@/components/contacts/contactTypeSimilarity";
 import { OPTION_SIMILARITY_THRESHOLD } from "@/components/contacts/experienceOptionMatch";
+import { titleCase } from "@/components/contacts/titleCase";
 
 const THRESHOLD = OPTION_SIMILARITY_THRESHOLD;
 
@@ -161,6 +162,81 @@ export default function ExperienceOptionCleanup() {
     }
   };
 
+  /**
+   * One-click global normalization: title-case every company and job-title
+   * master-list option (merging any options that collapse to the same name)
+   * and every contact's professional_experience company_name / title values.
+   */
+  const normalizeAll = async () => {
+    setResolving(true);
+    try {
+      const [cs, ts, contacts] = await Promise.all([
+        base44.entities.CompanyNameOption.list("-created_date", 5000).catch(() => []),
+        base44.entities.JobTitleOption.list("-created_date", 5000).catch(() => []),
+        base44.entities.Contact.list("-updated_date", 5000).catch(() => []),
+      ]);
+
+      const replacements = { company_name: new Map(), title: new Map() };
+      const renames = { CompanyNameOption: [], JobTitleOption: [] };
+      const deletes = { CompanyNameOption: [], JobTitleOption: [] };
+
+      const plan = (records, entityName, field) => {
+        const groups = new Map();
+        for (const r of records) {
+          const tc = titleCase(r.name);
+          if (!groups.has(tc)) groups.set(tc, []);
+          groups.get(tc).push(r);
+        }
+        for (const [tc, recs] of groups) {
+          const [keep, ...rest] = recs;
+          if (keep.name !== tc) renames[entityName].push({ id: keep.id, name: tc });
+          for (const d of rest) {
+            replacements[field].set(d.name, tc);
+            deletes[entityName].push(d.id);
+          }
+        }
+      };
+
+      plan(cs, "CompanyNameOption", "company_name");
+      plan(ts, "JobTitleOption", "title");
+
+      if (renames.CompanyNameOption.length) await base44.entities.CompanyNameOption.bulkUpdate(renames.CompanyNameOption);
+      if (renames.JobTitleOption.length) await base44.entities.JobTitleOption.bulkUpdate(renames.JobTitleOption);
+
+      const updates = [];
+      for (const c of contacts) {
+        if (!c.professional_experience || c.professional_experience.length === 0) continue;
+        let changed = false;
+        const professional_experience = c.professional_experience.map((e) => {
+          if (!e) return e;
+          let ne = e;
+          if (e.company_name && replacements.company_name.has(e.company_name)) { ne = { ...ne, company_name: replacements.company_name.get(e.company_name) }; changed = true; }
+          if (e.title && replacements.title.has(e.title)) { ne = { ...ne, title: replacements.title.get(e.title) }; changed = true; }
+          if (ne.company_name && ne.company_name !== titleCase(ne.company_name)) { ne = { ...ne, company_name: titleCase(ne.company_name) }; changed = true; }
+          if (ne.title && ne.title !== titleCase(ne.title)) { ne = { ...ne, title: titleCase(ne.title) }; changed = true; }
+          return ne;
+        });
+        if (changed) updates.push({ id: c.id, professional_experience });
+      }
+      for (let i = 0; i < updates.length; i += 500) {
+        await base44.entities.Contact.bulkUpdate(updates.slice(i, i + 500));
+      }
+
+      for (const id of deletes.CompanyNameOption) await base44.entities.CompanyNameOption.delete(id);
+      for (const id of deletes.JobTitleOption) await base44.entities.JobTitleOption.delete(id);
+
+      toast({
+        title: "Normalized to title case",
+        description: `Companies: ${renames.CompanyNameOption.length} renamed, ${deletes.CompanyNameOption.length} merged. Titles: ${renames.JobTitleOption.length} renamed, ${deletes.JobTitleOption.length} merged. ${updates.length} contact${updates.length === 1 ? "" : "s"} updated.`,
+      });
+      await load();
+    } catch (err) {
+      toast({ title: "Normalize failed", description: err?.message, variant: "destructive" });
+    } finally {
+      setResolving(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -183,9 +259,14 @@ export default function ExperienceOptionCleanup() {
             </p>
           </div>
         </div>
-        <Button type="button" variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={load} disabled={resolving}>
-          <RefreshCw className="w-3 h-3" /> Rescan
-        </Button>
+        <div className="flex items-center gap-1.5">
+          <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={normalizeAll} disabled={resolving}>
+            <Type className="w-3 h-3" /> Normalize to Title Case
+          </Button>
+          <Button type="button" variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={load} disabled={resolving}>
+            <RefreshCw className="w-3 h-3" /> Rescan
+          </Button>
+        </div>
       </div>
 
       {totalPairs === 0 ? (

@@ -7,6 +7,7 @@ import { base44 } from "@/api/base44Client";
 import ExtractFromBioButton from "./ExtractFromBioButton";
 import DeleteSubRecordDialog from "./DeleteSubRecordDialog";
 import MasterOptionPicker from "./MasterOptionPicker";
+import { titleCase } from "./titleCase";
 
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: 80 }, (_, i) => CURRENT_YEAR - i);
@@ -83,19 +84,21 @@ export default function ContactProfessionalExperienceTab({ experience = [], onCh
   }, []);
 
   const persistCompany = (name) => {
-    const key = name.toLowerCase();
+    const normalized = titleCase(name);
+    const key = normalized.toLowerCase();
     if (persistedCompaniesRef.current.has(key)) return;
     persistedCompaniesRef.current.add(key);
-    base44.entities.CompanyNameOption.create({ name })
-      .then(() => setCompanyOptions((prev) => (prev.some((o) => o.toLowerCase() === key) ? prev : [...prev, name])))
+    base44.entities.CompanyNameOption.create({ name: normalized })
+      .then(() => setCompanyOptions((prev) => (prev.some((o) => o.toLowerCase() === key) ? prev : [...prev, normalized])))
       .catch(() => {});
   };
   const persistTitle = (name) => {
-    const key = name.toLowerCase();
+    const normalized = titleCase(name);
+    const key = normalized.toLowerCase();
     if (persistedTitlesRef.current.has(key)) return;
     persistedTitlesRef.current.add(key);
-    base44.entities.JobTitleOption.create({ name })
-      .then(() => setTitleOptions((prev) => (prev.some((o) => o.toLowerCase() === key) ? prev : [...prev, name])))
+    base44.entities.JobTitleOption.create({ name: normalized })
+      .then(() => setTitleOptions((prev) => (prev.some((o) => o.toLowerCase() === key) ? prev : [...prev, normalized])))
       .catch(() => {});
   };
 
