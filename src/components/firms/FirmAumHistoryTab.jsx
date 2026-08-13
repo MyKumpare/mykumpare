@@ -570,35 +570,55 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
                          className="h-8 text-sm text-right w-full min-w-[120px]"
                        />
                      </td>
-                    <td className="px-3 py-1.5 text-right text-sm font-medium">
-                      <span
-                        className={
-                          (r.net_asset_flows ?? 0) >= 0
-                            ? "text-green-600"
-                            : "text-red-600"
-                        }
-                      >
-                        {(r.net_asset_flows ?? 0).toLocaleString()}
-                      </span>
-                    </td>
-                    <td className="px-2 py-1.5 text-center">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
-                        onClick={() => deleteRow(r.id)}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                     <td className="px-3 py-1.5 text-right text-sm font-medium">
+                       <span
+                         className={
+                           (r.net_asset_flows ?? 0) >= 0
+                             ? "text-green-600"
+                             : "text-red-600"
+                         }
+                       >
+                         {(r.net_asset_flows ?? 0).toLocaleString()}
+                       </span>
+                     </td>
+                     <td className="px-2 py-1.5 text-center">
+                       <Button
+                         type="button"
+                         variant="ghost"
+                         size="sm"
+                         className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
+                         onClick={() => deleteRow(r.id)}
+                       >
+                         <Trash2 className="w-3.5 h-3.5" />
+                       </Button>
+                     </td>
+                   </tr>
+                 ))}
+               </tbody>
+             </table>
+           </div>
+         </div>
+      )}
+
+      {/* Save button at the bottom for easy access after editing rows */}
+      {sortedRows.length > 0 && (
+        <div className="flex justify-end pt-1">
+          <Button
+            type="button"
+            size="sm"
+            className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white"
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Save className="w-3.5 h-3.5" />
+            )}
+            Save Changes
+          </Button>
         </div>
       )}
-    </div>
-  );
-}
+      </div>
+      );
+      }
