@@ -437,9 +437,7 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
                       <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
                         {contact.photo_url ? (
                           <img src={contact.photo_url} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <User className="w-3 h-3 text-emerald-600" />
-                        )}
+                        ) : null}
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs font-medium text-gray-800 truncate">{formatName(contact)}</p>
@@ -480,9 +478,7 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
                         <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
                           {contact.photo_url ? (
                             <img src={contact.photo_url} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <User className="w-3 h-3 text-indigo-600" />
-                          )}
+                          ) : null}
                         </div>
                         <div className="min-w-0">
                           <p className="text-xs font-medium text-gray-800 truncate">{formatName(contact)}</p>
@@ -605,9 +601,7 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
                   <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
                     {contact.photo_url ? (
                       <img src={contact.photo_url} alt={contact.first_name} className="w-full h-full object-cover" />
-                    ) : (
-                      <User className="w-4 h-4 text-indigo-600" />
-                    )}
+                    ) : null}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">

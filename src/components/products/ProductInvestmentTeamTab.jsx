@@ -206,9 +206,7 @@ export default function ProductInvestmentTeamTab({ productId, firmId }) {
                     className="w-8 h-8 rounded-full object-cover flex-shrink-0"
                   />
                 ) : (
-                  <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                    <User className="w-4 h-4 text-indigo-400" />
-                  </div>
+                  <div className="w-8 h-8 rounded-full bg-indigo-100 flex-shrink-0" />
                 )}
 
                 {/* Name & title — clickable */}

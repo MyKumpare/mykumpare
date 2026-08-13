@@ -190,9 +190,7 @@ export default function EnrichmentApprovalDialog({
                       {nc.photo_url ? (
                         <img src={nc.photo_url} alt={name} className="w-10 h-10 rounded-full object-cover border border-gray-200 flex-shrink-0" />
                       ) : (
-                        <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                          <User className="w-5 h-5 text-indigo-400" />
-                        </div>
+                        <div className="w-10 h-10 rounded-full bg-indigo-100 flex-shrink-0" />
                       )}
                       <div className="min-w-0 flex-1">
                         <p className="font-medium text-sm text-gray-800">
@@ -210,9 +208,7 @@ export default function EnrichmentApprovalDialog({
                                 {d.contact.photo_url ? (
                                   <img src={d.contact.photo_url} alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
                                 ) : (
-                                  <div className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-                                    <User className="w-3 h-3 text-gray-400" />
-                                  </div>
+                                  <div className="w-5 h-5 rounded-full bg-gray-100 flex-shrink-0" />
                                 )}
                                 <div className="min-w-0">
                                   <p className="text-xs font-medium text-gray-700 truncate">{d.name}</p>

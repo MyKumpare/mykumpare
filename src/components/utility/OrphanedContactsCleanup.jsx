@@ -359,9 +359,7 @@ export default function OrphanedContactsCleanup({ onFirmClick }) {
                             alt=""
                             className="w-full h-full object-cover"
                           />
-                        ) : (
-                          <User className="w-4 h-4 text-gray-400" />
-                        )}
+                        ) : null}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-800">

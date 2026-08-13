@@ -72,9 +72,7 @@ function ContactAvatar({ contact, size = "sm" }) {
     <div className={`${sz} rounded-full bg-indigo-100 flex items-center justify-center overflow-hidden flex-shrink-0 border border-indigo-200`}>
       {contact.photo_url ? (
         <img src={contact.photo_url} alt="" className="w-full h-full object-cover" />
-      ) : (
-        <User className="w-3.5 h-3.5 text-indigo-400" />
-      )}
+      ) : null}
     </div>
   );
 }

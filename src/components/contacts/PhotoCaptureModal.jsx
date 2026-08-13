@@ -325,9 +325,7 @@ export default function PhotoCaptureModal({ open, onOpenChange, contacts, onCont
                     {c.photo_url ? (
                       <img src={c.photo_url} alt="" className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
                     ) : (
-                      <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-500 flex-shrink-0">
-                        {(c.first_name?.[0] || "?")}{(c.last_name?.[0] || "")}
-                      </div>
+                      <div className="w-9 h-9 rounded-full bg-gray-200 flex-shrink-0" />
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium text-gray-800 truncate">{formatName(c)}</div>

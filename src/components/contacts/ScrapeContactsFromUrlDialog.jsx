@@ -229,9 +229,7 @@ export default function ScrapeContactsFromUrlDialog({ open, onOpenChange, firmId
                           <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
                             {contact.photo_url ? (
                               <img src={contact.photo_url} alt="" className="w-full h-full object-cover" />
-                            ) : (
-                              <User className="w-4 h-4 text-gray-400" />
-                            )}
+                            ) : null}
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium text-gray-900 truncate">
@@ -388,9 +386,7 @@ export default function ScrapeContactsFromUrlDialog({ open, onOpenChange, firmId
                         <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
                           {c.photo_url ? (
                             <img src={c.photo_url} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <User className="w-3.5 h-3.5 text-gray-400" />
-                          )}
+                          ) : null}
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium text-gray-900 truncate">{c.first_name} {c.last_name}</p>

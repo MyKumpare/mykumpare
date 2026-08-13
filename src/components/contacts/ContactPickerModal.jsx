@@ -234,9 +234,7 @@ export default function ContactPickerModal({ open, onClose, contacts, firms, pro
                                       {contact.photo_url ? (
                                         <img src={contact.photo_url} alt={getFullName(contact)} className="w-7 h-7 rounded-full object-cover flex-shrink-0 border border-gray-100" />
                                       ) : (
-                                        <div className="w-7 h-7 rounded-full bg-pink-50 flex items-center justify-center flex-shrink-0">
-                                          <User className="w-3.5 h-3.5 text-pink-400" />
-                                        </div>
+                                        <div className="w-7 h-7 rounded-full bg-pink-50 flex-shrink-0" />
                                       )}
                                       <div className="min-w-0 flex-1">
                                         <p className="text-sm font-medium text-gray-800 truncate group-hover:text-pink-700">

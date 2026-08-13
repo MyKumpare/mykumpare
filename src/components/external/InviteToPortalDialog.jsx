@@ -244,9 +244,7 @@ export default function InviteToPortalDialog({
                 <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center overflow-hidden flex-shrink-0">
                   {selectedContact.photo_url ? (
                     <img src={selectedContact.photo_url} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <User className="w-5 h-5 text-indigo-400" />
-                  )}
+                  ) : null}
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-gray-800 truncate">
@@ -317,7 +315,7 @@ export default function InviteToPortalDialog({
                         className="w-full text-left px-3 py-2 text-sm hover:bg-indigo-50 transition-colors flex items-center gap-2 border-b border-gray-50 last:border-0"
                         onClick={() => handleSelectContact(c)}>
                         <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0">
-                          {c.photo_url ? <img src={c.photo_url} alt="" className="w-full h-full object-cover" /> : <User className="w-3.5 h-3.5 text-gray-400" />}
+                          {c.photo_url ? <img src={c.photo_url} alt="" className="w-full h-full object-cover" /> : null}
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium text-gray-800 truncate">
@@ -342,7 +340,7 @@ export default function InviteToPortalDialog({
               <div className="rounded-lg border border-gray-200 bg-white p-3 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center overflow-hidden flex-shrink-0">
-                    {selectedContact.photo_url ? <img src={selectedContact.photo_url} alt="" className="w-full h-full object-cover" /> : <User className="w-4 h-4 text-indigo-400" />}
+                    {selectedContact.photo_url ? <img src={selectedContact.photo_url} alt="" className="w-full h-full object-cover" /> : null}
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-800 truncate">
