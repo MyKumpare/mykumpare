@@ -33,6 +33,7 @@ import {
 import ClientTypeBreakdownEditor from "../shared/ClientTypeBreakdownEditor";
 import CurrencyInput from "../shared/CurrencyInput";
 import DateInput from "../shared/DateInput";
+import AumGrowthChart from "../shared/AumGrowthChart";
 
 const genId = () =>
   typeof crypto !== "undefined" && crypto.randomUUID
@@ -445,7 +446,10 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
         Upload, paste, or manually enter monthly AUM. Month-end date format: MM/DD/YYYY. Assets Loss is stored as a negative number; Net Asset Flows = Assets Gained + Assets Loss. Market Impact = current AUM − prior AUM − net flows. % Change = (current − prior) ÷ prior; % Change Excl. Market = net flows ÷ prior; % Change Market = % Change − % Change Excl. Market.
       </p>
 
-      {/* Chart */}
+      {/* AUM Growth & Net Flow chart */}
+      <AumGrowthChart rows={sortedRows} entityLabel={entityLabel} name={firmName} />
+
+      {/* Detailed chart */}
       {chartData.length > 0 ? (
         <div className="border rounded-xl p-4 bg-white">
           <div className="flex items-center gap-2 mb-3">
