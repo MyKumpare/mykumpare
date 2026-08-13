@@ -1,5 +1,5 @@
-import React, { useMemo } from "react";
-import { Plus, Trash2, AlertTriangle, CheckCircle2, Scale } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { Plus, Trash2, AlertTriangle, CheckCircle2, Scale, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ClientTypePicker from "./ClientTypePicker";
@@ -45,8 +45,17 @@ export default function ClientTypeBreakdownEditor({ breakdown, targetAum, onChan
   const isUnder = underBy > 0;
   const isMatched = hasTarget && breakdownTotal === targetAum;
 
+  const [newType, setNewType] = useState("");
+  const [newAmount, setNewAmount] = useState("");
+
+  const usedNames = rows.map((r) => r.client_type).filter(Boolean);
+  const canAdd = newType.trim() && !usedNames.includes(newType.trim()) && toNumber(newAmount) > 0;
+
   const addRow = () => {
-    onChange([...rows, { id: genId(), client_type: "", aum_amount: 0 }]);
+    if (!canAdd) return;
+    onChange([...rows, { id: genId(), client_type: newType.trim(), aum_amount: toNumber(newAmount) }]);
+    setNewType("");
+    setNewAmount("");
   };
 
   const updateRow = (id, field, value) => {
@@ -144,15 +153,43 @@ export default function ClientTypeBreakdownEditor({ breakdown, targetAum, onChan
         </div>
       )}
 
-      <div className="flex items-center gap-2">
-        <Button type="button" variant="ghost" size="sm" className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs h-7" onClick={addRow}>
-          <Plus className="w-3 h-3" /> Add Client Type
-        </Button>
-        {hasTarget && isUnder && (
-          <Button type="button" variant="outline" size="sm" className="text-amber-700 border-amber-300 hover:bg-amber-50 gap-1 text-xs h-7" onClick={forceMatch}>
-            <Scale className="w-3 h-3" /> Force Match
+      <div className="space-y-2">
+        <div className="flex items-start gap-2 pt-1 border-t border-gray-100">
+          <div className="flex-1">
+            <ClientTypePicker
+              value={newType}
+              onChange={setNewType}
+              excludeNames={usedNames}
+            />
+          </div>
+          <div className="w-32">
+            <Input
+              type="number"
+              min="0"
+              placeholder="Amount"
+              value={newAmount || ""}
+              onChange={(e) => setNewAmount(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && canAdd) { e.preventDefault(); addRow(); } }}
+              className="h-8 text-sm"
+            />
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            className="h-8 gap-1 text-xs"
+            disabled={!canAdd}
+            onClick={addRow}
+          >
+            <Check className="w-3.5 h-3.5" /> Add
           </Button>
-        )}
+        </div>
+        <div className="flex items-center gap-2">
+          {hasTarget && isUnder && (
+            <Button type="button" variant="outline" size="sm" className="text-amber-700 border-amber-300 hover:bg-amber-50 gap-1 text-xs h-7" onClick={forceMatch}>
+              <Scale className="w-3 h-3" /> Force Match
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );
