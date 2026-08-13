@@ -31,6 +31,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import ClientTypeBreakdownEditor from "../shared/ClientTypeBreakdownEditor";
+import CurrencyInput from "../shared/CurrencyInput";
 
 const genId = () =>
   typeof crypto !== "undefined" && crypto.randomUUID
@@ -60,6 +61,12 @@ function toNumber(val) {
   if (val === null || val === undefined || val === "") return 0;
   const n = Number(String(val).replace(/[$,\s]/g, ""));
   return isNaN(n) ? 0 : n;
+}
+
+function formatCurrency(n) {
+  if (n === null || n === undefined || isNaN(n)) return "";
+  const num = Number(n);
+  return (num < 0 ? "-$" : "$") + Math.abs(num).toLocaleString("en-US", { maximumFractionDigits: 0 });
 }
 
 // Normalize an AUM history row so assets_loss is always stored as a negative
@@ -574,15 +581,15 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
               <thead className="bg-gray-100 text-gray-600">
                 <tr>
                   <th className="px-2 py-2 w-8"></th>
-                  <th className="text-left font-medium px-3 py-2">Month-End Date</th>
-                  <th className="text-right font-medium px-3 py-2">{entityLabel} AUM</th>
-                  <th className="text-right font-medium px-3 py-2">Assets Gained</th>
-                  <th className="text-right font-medium px-3 py-2">Assets Loss</th>
-                  <th className="text-right font-medium px-3 py-2">Net Asset Flows</th>
-                  <th className="text-right font-medium px-3 py-2">Market Impact</th>
-                  <th className="text-right font-medium px-3 py-2">% Change</th>
-                  <th className="text-right font-medium px-3 py-2">% Change Excl. Market</th>
-                  <th className="text-right font-medium px-3 py-2">% Change Market</th>
+                  <th className="text-center font-medium px-3 py-2">Month-End Date</th>
+                  <th className="text-center font-medium px-3 py-2">{entityLabel} AUM</th>
+                  <th className="text-center font-medium px-3 py-2">Assets Gained</th>
+                  <th className="text-center font-medium px-3 py-2">Assets Loss</th>
+                  <th className="text-center font-medium px-3 py-2">Net Asset Flows</th>
+                  <th className="text-center font-medium px-3 py-2">Market Impact</th>
+                  <th className="text-center font-medium px-3 py-2">% Change</th>
+                  <th className="text-center font-medium px-3 py-2">% Change Excl. Market</th>
+                  <th className="text-center font-medium px-3 py-2">% Change Market</th>
                   <th className="px-2 py-2"></th>
                 </tr>
               </thead>
@@ -623,60 +630,57 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
                            const d = parseFlexibleDate(e.target.value);
                            updateRow(r.id, "month_end_date", d ? format(d, "yyyy-MM-dd") : e.target.value);
                          }}
-                         className="h-8 text-sm w-full min-w-[120px]"
+                         className="h-8 text-sm text-center w-full min-w-[120px]"
                        />
                      </td>
                      <td className="px-3 py-1.5">
-                       <Input
-                         type="number"
+                       <CurrencyInput
                          value={r.firm_aum ?? ""}
-                         onChange={(e) => updateRow(r.id, "firm_aum", toNumber(e.target.value))}
-                         className="h-8 text-sm text-right w-full min-w-[120px]"
+                         onChange={(v) => updateRow(r.id, "firm_aum", v)}
+                         className="h-8 text-sm text-center w-full min-w-[120px]"
                        />
                      </td>
                      <td className="px-3 py-1.5">
-                       <Input
-                         type="number"
+                       <CurrencyInput
                          value={r.assets_gained ?? ""}
-                         onChange={(e) => updateRow(r.id, "assets_gained", toNumber(e.target.value))}
-                         className="h-8 text-sm text-right w-full min-w-[120px] text-green-600 font-medium"
+                         onChange={(v) => updateRow(r.id, "assets_gained", v)}
+                         className="h-8 text-sm text-center w-full min-w-[120px] text-green-600 font-medium"
                        />
                      </td>
                      <td className="px-3 py-1.5">
-                       <Input
-                         type="number"
+                       <CurrencyInput
                          value={r.assets_loss ?? ""}
-                         onChange={(e) => updateRow(r.id, "assets_loss", toNumber(e.target.value))}
-                         className="h-8 text-sm text-right w-full min-w-[120px] text-red-600 font-medium"
+                         onChange={(v) => updateRow(r.id, "assets_loss", v)}
+                         className="h-8 text-sm text-center w-full min-w-[120px] text-red-600 font-medium"
                        />
                      </td>
-                     <td className="px-3 py-1.5 text-right text-sm font-medium">
+                     <td className="px-3 py-1.5 text-center text-sm font-medium">
                        <span className={netFlow >= 0 ? "text-green-600" : "text-red-600"}>
-                         {netFlow.toLocaleString()}
+                         {formatCurrency(netFlow)}
                        </span>
                      </td>
-                     <td className="px-3 py-1.5 text-right text-sm font-medium">
+                     <td className="px-3 py-1.5 text-center text-sm font-medium">
                        {marketImpact != null ? (
                          <span className={marketImpact >= 0 ? "text-green-600" : "text-red-600"}>
-                           {marketImpact.toLocaleString()}
+                           {formatCurrency(marketImpact)}
                          </span>
                        ) : <span className="text-gray-300">—</span>}
                      </td>
-                     <td className="px-3 py-1.5 text-right text-sm font-medium">
+                     <td className="px-3 py-1.5 text-center text-sm font-medium">
                        {pctChange != null ? (
                          <span className={pctChange >= 0 ? "text-green-600" : "text-red-600"}>
                            {(pctChange * 100).toFixed(2)}%
                          </span>
                        ) : <span className="text-gray-300">—</span>}
                      </td>
-                     <td className="px-3 py-1.5 text-right text-sm font-medium">
+                     <td className="px-3 py-1.5 text-center text-sm font-medium">
                        {pctExclMarket != null ? (
                          <span className={pctExclMarket >= 0 ? "text-green-600" : "text-red-600"}>
                            {(pctExclMarket * 100).toFixed(2)}%
                          </span>
                        ) : <span className="text-gray-300">—</span>}
                      </td>
-                     <td className="px-3 py-1.5 text-right text-sm font-medium">
+                     <td className="px-3 py-1.5 text-center text-sm font-medium">
                        {pctMarket != null ? (
                          <span className={pctMarket >= 0 ? "text-green-600" : "text-red-600"}>
                            {(pctMarket * 100).toFixed(2)}%
