@@ -873,7 +873,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     <>
     <Dialog open={open} onOpenChange={(v) => { if (!v) guardedClose(); }}>
       <DialogContent
-        className="sm:max-w-5xl max-h-[90vh] flex flex-col"
+        className="sm:max-w-7xl max-h-[90vh] flex flex-col"
         onInteractOutside={(e) => { if (enrichmentLoading) e.preventDefault(); }}
         onEscapeKeyDown={(e) => { if (enrichmentLoading) e.preventDefault(); }}
       >
