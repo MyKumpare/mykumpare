@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search, ArrowLeft, Users, Sparkles, ScrollText, ShieldCheck, Ghost, Upload, Eraser, Tag, UserX } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search, ArrowLeft, Users, Sparkles, ScrollText, ShieldCheck, Ghost, Upload, Eraser, Tag, UserX, Building2, Package } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -7,6 +7,8 @@ import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import AddBenchmarkDialog from "./AddBenchmarkDialog";
 import DuplicateContactsReview from "@/components/contacts/DuplicateContactsReview";
+import DuplicateFirmsReview from "@/components/firms/DuplicateFirmsReview";
+import DuplicateProductsReview from "@/components/products/DuplicateProductsReview";
 import EnrichmentLogsView from "./EnrichmentLogsView";
 import OrphanRecordCleanup from "./OrphanRecordCleanup";
 import OrphanedContactsCleanup from "./OrphanedContactsCleanup";
@@ -64,6 +66,8 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
   const [selectedBenchmark, setSelectedBenchmark] = useState(null);
   const [benchmarkQuery, setBenchmarkQuery] = useState("");
   const [cleanupStarted, setCleanupStarted] = useState(false);
+  const [firmCleanupStarted, setFirmCleanupStarted] = useState(false);
+  const [productCleanupStarted, setProductCleanupStarted] = useState(false);
 
   // Expand + reset to selection menu when the parent requests it (e.g. clicking the Utilities header icon),
   // while still letting the user collapse it manually afterwards.
@@ -72,6 +76,8 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
       setExpanded(true);
       setView("menu");
       setCleanupStarted(false);
+      setFirmCleanupStarted(false);
+      setProductCleanupStarted(false);
     }
   }, [forceExpanded]);
 
@@ -188,6 +194,26 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
                   <Users className="w-4.5 h-4.5 text-rose-600" />
                 </div>
                 <span className="text-sm font-semibold text-gray-700">Contact Cleanup</span>
+                <span className="text-[11px] text-gray-400">Review & merge duplicates</span>
+              </button>
+              <button
+                onClick={() => setView("firm-cleanup")}
+                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
+              >
+                <div className="w-9 h-9 rounded-full bg-sky-50 flex items-center justify-center">
+                  <Building2 className="w-4.5 h-4.5 text-sky-600" />
+                </div>
+                <span className="text-sm font-semibold text-gray-700">Firm Cleanup</span>
+                <span className="text-[11px] text-gray-400">Review & merge duplicates</span>
+              </button>
+              <button
+                onClick={() => setView("product-cleanup")}
+                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
+              >
+                <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center">
+                  <Package className="w-4.5 h-4.5 text-emerald-600" />
+                </div>
+                <span className="text-sm font-semibold text-gray-700">Product Cleanup</span>
                 <span className="text-[11px] text-gray-400">Review & merge duplicates</span>
               </button>
               <button
@@ -364,6 +390,58 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
                 </div>
               ) : (
                 <DuplicateContactsReview />
+              )}
+            </div>
+          )}
+
+          {/* Firm cleanup view */}
+          {view === "firm-cleanup" && (
+            <div className="space-y-3 py-1">
+              {!firmCleanupStarted ? (
+                <div className="flex flex-col items-center justify-center gap-3 p-6 rounded-xl border border-dashed border-gray-200 bg-white text-center">
+                  <div className="w-10 h-10 rounded-full bg-sky-50 flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-sky-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700">Firm Cleanup</p>
+                    <p className="text-xs text-gray-400 mt-1">Find and merge duplicate firm records.</p>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={() => setFirmCleanupStarted(true)}
+                    className="bg-sky-600 hover:bg-sky-700 text-white"
+                  >
+                    Start Firm Cleanup
+                  </Button>
+                </div>
+              ) : (
+                <DuplicateFirmsReview />
+              )}
+            </div>
+          )}
+
+          {/* Product cleanup view */}
+          {view === "product-cleanup" && (
+            <div className="space-y-3 py-1">
+              {!productCleanupStarted ? (
+                <div className="flex flex-col items-center justify-center gap-3 p-6 rounded-xl border border-dashed border-gray-200 bg-white text-center">
+                  <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700">Product Cleanup</p>
+                    <p className="text-xs text-gray-400 mt-1">Find and merge duplicate product records.</p>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={() => setProductCleanupStarted(true)}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                  >
+                    Start Product Cleanup
+                  </Button>
+                </div>
+              ) : (
+                <DuplicateProductsReview />
               )}
             </div>
           )}

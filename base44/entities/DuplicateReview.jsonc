@@ -2,19 +2,34 @@
   "name": "DuplicateReview",
   "type": "object",
   "properties": {
+    "entity_type": {
+      "type": "string",
+      "enum": [
+        "contact",
+        "firm",
+        "product"
+      ],
+      "default": "contact",
+      "description": "Which entity type this accepted (dismissed) duplicate pair belongs to"
+    },
     "contact_a_id": {
       "type": "string",
-      "description": "First contact ID in an accepted (dismissed) duplicate pair"
+      "description": "First contact ID in an accepted (dismissed) duplicate pair (legacy field, used when entity_type is 'contact')"
     },
     "contact_b_id": {
       "type": "string",
-      "description": "Second contact ID in an accepted (dismissed) duplicate pair"
+      "description": "Second contact ID in an accepted (dismissed) duplicate pair (legacy field, used when entity_type is 'contact')"
+    },
+    "record_a_id": {
+      "type": "string",
+      "description": "First record ID in an accepted (dismissed) duplicate pair (generic field for firm/product duplicates)"
+    },
+    "record_b_id": {
+      "type": "string",
+      "description": "Second record ID in an accepted (dismissed) duplicate pair (generic field for firm/product duplicates)"
     }
   },
-  "required": [
-    "contact_a_id",
-    "contact_b_id"
-  ],
+  "required": [],
   "rls": {
     "create": {
       "$or": [
