@@ -104,6 +104,9 @@ export default function ClientTypeBreakdownEditor({ breakdown, targetAum, onChan
         <div className="space-y-1.5">
           {rows.map((row) => {
             const usedNames = rows.filter((r) => r.id !== row.id).map((r) => r.client_type).filter(Boolean);
+            const othersTotal = rows.filter((r) => r.id !== row.id).reduce((sum, r) => sum + toNumber(r.aum_amount), 0);
+            const rowBalance = hasTarget ? Math.max(0, targetAum - othersTotal) : 0;
+            const canUseBalance = hasTarget && rowBalance > 0 && toNumber(row.aum_amount) !== rowBalance;
             return (
               <div key={row.id} className="flex items-start gap-2">
                 <div className="flex-1">
@@ -123,6 +126,15 @@ export default function ClientTypeBreakdownEditor({ breakdown, targetAum, onChan
                     className="h-8 text-sm"
                   />
                 </div>
+                <button
+                  type="button"
+                  onClick={() => updateRow(row.id, "aum_amount", rowBalance)}
+                  disabled={!canUseBalance}
+                  className="p-1.5 text-indigo-500 hover:text-indigo-700 disabled:text-gray-300 disabled:cursor-not-allowed"
+                  title={canUseBalance ? `Use remaining balance (${formatCurrency(rowBalance)})` : "No balance available"}
+                >
+                  <Scale className="w-3.5 h-3.5" />
+                </button>
                 <button type="button" onClick={() => deleteRow(row.id)} className="p-1.5 text-gray-400 hover:text-red-500">
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
