@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import AddBenchmarkDialog from "./AddBenchmarkDialog";
+import UtilityCardGrid from "./UtilityCardGrid";
 import DuplicateContactsReview from "@/components/contacts/DuplicateContactsReview";
 import DuplicateFirmsReview from "@/components/firms/DuplicateFirmsReview";
 import DuplicateProductsReview from "@/components/products/DuplicateProductsReview";
@@ -173,122 +174,13 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
             </button>
           )}
 
-          {/* Selection menu */}
+          {/* Selection menu — cards are drag-to-reorder (handle in top-right of each card) */}
           {view === "menu" && (
-            <div className="grid grid-cols-2 gap-2 py-1">
-              <button
-                onClick={() => setView("benchmark")}
-                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-              >
-                <div className="w-9 h-9 rounded-full bg-indigo-50 flex items-center justify-center">
-                  <Gauge className="w-4.5 h-4.5 text-indigo-600" />
-                </div>
-                <span className="text-sm font-semibold text-gray-700">Benchmark</span>
-                <span className="text-[11px] text-gray-400">Search & manage benchmarks</span>
-              </button>
-              <button
-                onClick={() => setView("cleanup")}
-                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-              >
-                <div className="w-9 h-9 rounded-full bg-rose-50 flex items-center justify-center">
-                  <Users className="w-4.5 h-4.5 text-rose-600" />
-                </div>
-                <span className="text-sm font-semibold text-gray-700">Contact Cleanup</span>
-                <span className="text-[11px] text-gray-400">Review & merge duplicates</span>
-              </button>
-              <button
-                onClick={() => setView("firm-cleanup")}
-                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-              >
-                <div className="w-9 h-9 rounded-full bg-sky-50 flex items-center justify-center">
-                  <Building2 className="w-4.5 h-4.5 text-sky-600" />
-                </div>
-                <span className="text-sm font-semibold text-gray-700">Firm Cleanup</span>
-                <span className="text-[11px] text-gray-400">Review & merge duplicates</span>
-              </button>
-              <button
-                onClick={() => setView("product-cleanup")}
-                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-              >
-                <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center">
-                  <Package className="w-4.5 h-4.5 text-emerald-600" />
-                </div>
-                <span className="text-sm font-semibold text-gray-700">Product Cleanup</span>
-                <span className="text-[11px] text-gray-400">Review & merge duplicates</span>
-              </button>
-              <button
-                onClick={() => setView("enrichment-logs")}
-                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-              >
-                <div className="w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center">
-                  <ScrollText className="w-4.5 h-4.5 text-slate-600" />
-                </div>
-                <span className="text-sm font-semibold text-gray-700">Enrichment Logs</span>
-                <span className="text-[11px] text-gray-400">Review enrichment results</span>
-              </button>
-              <button
-                onClick={() => setView("orphans")}
-                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-              >
-                <div className="w-9 h-9 rounded-full bg-amber-50 flex items-center justify-center">
-                  <Ghost className="w-4.5 h-4.5 text-amber-600" />
-                </div>
-                <span className="text-sm font-semibold text-gray-700">Orphan Cleanup</span>
-                <span className="text-[11px] text-gray-400">Find & remove stale records</span>
-              </button>
-              <button
-                onClick={() => setView("import-contacts")}
-                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-              >
-                <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center">
-                  <Upload className="w-5 h-5 text-emerald-600" />
-                </div>
-                <span className="text-sm font-semibold text-gray-700">Import Contacts</span>
-                <span className="text-[11px] text-gray-400">Bulk upload from CSV</span>
-              </button>
-              <button
-                onClick={() => setView("placeholder-cleanup")}
-                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-              >
-                <div className="w-9 h-9 rounded-full bg-indigo-50 flex items-center justify-center">
-                  <Eraser className="w-5 h-5 text-indigo-600" />
-                </div>
-                <span className="text-sm font-semibold text-gray-700">Placeholder Cleanup</span>
-                <span className="text-[11px] text-gray-400">Clear inconsistent values</span>
-              </button>
-              <button
-                onClick={() => setView("firm-type-validation")}
-                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-              >
-                <div className="w-9 h-9 rounded-full bg-purple-50 flex items-center justify-center">
-                  <Tag className="w-5 h-5 text-purple-600" />
-                </div>
-                <span className="text-sm font-semibold text-gray-700">Firm Type Check</span>
-                <span className="text-[11px] text-gray-400">Find multi-type firms</span>
-              </button>
-              <button
-                onClick={() => setView("orphaned-contacts")}
-                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-              >
-                <div className="w-9 h-9 rounded-full bg-orange-50 flex items-center justify-center">
-                  <UserX className="w-5 h-5 text-orange-600" />
-                </div>
-                <span className="text-sm font-semibold text-gray-700">Orphaned Contacts</span>
-                <span className="text-[11px] text-gray-400">Find & fix firmless contacts</span>
-              </button>
-              {isAdmin && (
-                <button
-                  onClick={() => navigate("/UserManagement")}
-                  className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-                >
-                  <div className="w-9 h-9 rounded-full bg-rose-50 flex items-center justify-center">
-                    <ShieldCheck className="w-4.5 h-4.5 text-rose-600" />
-                  </div>
-                  <span className="text-sm font-semibold text-gray-700">Admin</span>
-                  <span className="text-[11px] text-gray-400">Manage users & settings</span>
-                </button>
-              )}
-            </div>
+            <UtilityCardGrid
+              isAdmin={isAdmin}
+              onSelect={(v) => setView(v)}
+              onAdminNavigate={() => navigate("/UserManagement")}
+            />
           )}
 
           {/* Benchmark view */}
