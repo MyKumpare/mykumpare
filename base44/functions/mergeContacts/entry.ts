@@ -1,5 +1,4 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
-import { pickScalar, toArray, union, phoneKey, addrKey } from '../../shared/mergeUtils.ts';
 
 Deno.serve(async (req) => {
   try {
@@ -28,30 +27,35 @@ Deno.serve(async (req) => {
     }
 
     const merged = { ...primary };
-    const pick = pickScalar(primary, secondary);
+    const pickScalar = (key) => {
+      const pv = primary[key];
+      const sv = secondary[key];
+      if (sv === undefined || sv === null || sv === '') return pv;
+      if (pv === undefined || pv === null || pv === '') return sv;
+      return pv;
+    };
     [
       'salutation', 'first_name', 'middle_name', 'last_name', 'suffix', 'title',
       'email', 'linkedin_url', 'employee_status', 'contact_status', 'contact_role',
-      'gender', 'veteran_status', 'disability_status', 'biography',
+      'contact_type', 'gender', 'veteran_status', 'disability_status', 'biography',
       'notes', 'photo_url',
-    ].forEach((k) => { merged[k] = pick(k); });
+    ].forEach((k) => { merged[k] = pickScalar(k); });
 
-    // contact_type is an array field — normalize legacy string values to arrays
-    // before unioning, otherwise spreading a string corrupts the data and the
-    // schema validation rejects the update.
-    merged.contact_type = union(primary.contact_type, secondary.contact_type);
+    const union = (a, b) => Array.from(new Set([...(a || []), ...(b || [])]));
     merged.firm_ids = union(primary.firm_ids, secondary.firm_ids);
     merged.designations = union(primary.designations, secondary.designations);
     merged.contact_roles = union(primary.contact_roles, secondary.contact_roles);
     merged.contact_firm_roles = union(primary.contact_firm_roles, secondary.contact_firm_roles);
     merged.ethnicity = union(primary.ethnicity, secondary.ethnicity);
 
+    const phoneKey = (p) => `${p?.country_code || ''}|${p?.area_code || ''}|${p?.number_mid || ''}|${p?.number_last || ''}`;
     const phonesMap = new Map();
     [...(primary.phones || []), ...(secondary.phones || [])].forEach((p) => {
       if (p && p.id) phonesMap.set(phoneKey(p), p);
     });
     merged.phones = Array.from(phonesMap.values());
 
+    const addrKey = (a) => `${(a?.address_line1 || '').toLowerCase()}|${(a?.city || '').toLowerCase()}`;
     const addrMap = new Map();
     [...(primary.addresses || []), ...(secondary.addresses || [])].forEach((a) => {
       if (a && a.id) addrMap.set(addrKey(a), a);

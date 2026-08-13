@@ -1,19 +1,14 @@
 {
-  "name": "DuplicateReview",
+  "name": "CompanyNameOption",
   "type": "object",
   "properties": {
-    "contact_a_id": {
+    "name": {
       "type": "string",
-      "description": "First contact ID in an accepted (dismissed) duplicate pair"
-    },
-    "contact_b_id": {
-      "type": "string",
-      "description": "Second contact ID in an accepted (dismissed) duplicate pair"
+      "description": "A company name entered in a contact's professional experience (reusable across all contacts)"
     }
   },
   "required": [
-    "contact_a_id",
-    "contact_b_id"
+    "name"
   ],
   "rls": {
     "create": {
