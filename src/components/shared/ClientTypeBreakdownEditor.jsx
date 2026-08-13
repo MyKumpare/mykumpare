@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Plus, Trash2, AlertTriangle, CheckCircle2, Scale, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import CurrencyInput from "./CurrencyInput";
 import ClientTypePicker from "./ClientTypePicker";
 
 const OTHER_TYPE = "Other";
@@ -112,9 +113,9 @@ export default function ClientTypeBreakdownEditor({ breakdown, targetAum, onChan
       {rows.length > 0 && (
         <div className="space-y-1.5">
           <div className="flex items-center gap-2 text-[11px] font-medium text-gray-400 px-1">
-            <div className="flex-1">Client Type</div>
-            <div className="w-32 text-right">AUM</div>
-            <div className="w-20 text-right">% Change</div>
+            <div className="flex-1 text-center">Client Type</div>
+            <div className="w-32 text-center">AUM</div>
+            <div className="w-20 text-center">% Change</div>
             <div className="w-14" />
           </div>
           {rows.map((row) => {
@@ -134,16 +135,13 @@ export default function ClientTypeBreakdownEditor({ breakdown, targetAum, onChan
                   />
                 </div>
                 <div className="w-32">
-                  <Input
-                    type="number"
-                    min="0"
-                    placeholder="Amount"
+                  <CurrencyInput
                     value={row.aum_amount || ""}
-                    onChange={(e) => updateRow(row.id, "aum_amount", e.target.value === "" ? 0 : Number(e.target.value))}
-                    className="h-8 text-sm"
+                    onChange={(v) => updateRow(row.id, "aum_amount", v)}
+                    className="h-8 text-sm text-center"
                   />
                 </div>
-                <div className="w-20 text-right text-xs font-medium self-center">
+                <div className="w-20 text-center text-xs font-medium self-center">
                   {pctChange != null ? (
                     <span className={pctChange >= 0 ? "text-green-600" : "text-red-600"}>
                       {(pctChange * 100).toFixed(1)}%
@@ -178,14 +176,11 @@ export default function ClientTypeBreakdownEditor({ breakdown, targetAum, onChan
             />
           </div>
           <div className="w-32">
-            <Input
-              type="number"
-              min="0"
-              placeholder="Amount"
+            <CurrencyInput
               value={newAmount || ""}
-              onChange={(e) => setNewAmount(e.target.value)}
+              onChange={setNewAmount}
               onKeyDown={(e) => { if (e.key === "Enter" && canAdd) { e.preventDefault(); addRow(); } }}
-              className="h-8 text-sm"
+              className="h-8 text-sm text-center"
             />
           </div>
           <Button

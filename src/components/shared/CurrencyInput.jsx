@@ -16,7 +16,7 @@ const fmtCurrency = (n) => {
  * Text input that displays formatted currency ($X,XXX) when not focused and
  * a raw number while editing (selected on focus for quick replacement).
  */
-export default function CurrencyInput({ value, onChange, className, placeholder }) {
+export default function CurrencyInput({ value, onChange, className, placeholder, ...rest }) {
   const [focused, setFocused] = useState(false);
   const display = focused
     ? (value === null || value === undefined ? "" : String(value))
@@ -27,6 +27,7 @@ export default function CurrencyInput({ value, onChange, className, placeholder 
       inputMode="decimal"
       placeholder={placeholder || "$0"}
       value={display}
+      {...rest}
       onFocus={(e) => {
         setFocused(true);
         setTimeout(() => e.target.select(), 0);
