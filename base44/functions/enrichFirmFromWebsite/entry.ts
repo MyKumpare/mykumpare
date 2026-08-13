@@ -1253,7 +1253,12 @@ async function enrichEducationFromProfilePages(
     const hasEducation = Array.isArray(p.education) && p.education.length > 0;
     const hasExperience = Array.isArray(p.professional_experience) && p.professional_experience.length > 0;
     const hasDesignations = Array.isArray(p.designations) && p.designations.length > 0;
-    return !hasEducation || !hasExperience || !hasDesignations;
+    const hasPhoto = !!(p.photo_url && String(p.photo_url).trim());
+    // Include people with an empty photo so their individual profile page is
+    // fetched and the photo extracted — auto-fill should fill an empty photo
+    // when a photo is available on the profile page, even if the listing page
+    // had none.
+    return !hasEducation || !hasExperience || !hasDesignations || !hasPhoto;
   };
 
   let queue = people.filter(needsEnrichment).slice(0, MAX);
