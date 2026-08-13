@@ -14,6 +14,8 @@ import {
   Save,
   Loader2,
   BarChart3,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -28,6 +30,7 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
+import ClientTypeBreakdownEditor from "../shared/ClientTypeBreakdownEditor";
 
 const genId = () =>
   typeof crypto !== "undefined" && crypto.randomUUID
@@ -116,6 +119,7 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
   const [newGained, setNewGained] = useState("");
   const [newLoss, setNewLoss] = useState("");
   const [showGainedLoss, setShowGainedLoss] = useState(true);
+  const [expandedRows, setExpandedRows] = useState(new Set());
   const fileInputRef = useRef(null);
   const pasteRef = useRef(null);
   const entity = base44.entities[entityName];
@@ -184,6 +188,7 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
         assets_gained: gained,
         assets_loss: loss,
         net_asset_flows: gained - loss,
+        client_type_breakdown: [],
       },
     ]);
     setNewDate("");
@@ -220,6 +225,7 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
         assets_gained: toNumber(r.assets_gained),
         assets_loss: toNumber(r.assets_loss),
         net_asset_flows: toNumber(r.assets_gained) - toNumber(r.assets_loss),
+        client_type_breakdown: r.client_type_breakdown || [],
       }));
       await entity.update(firmId, { aum_history: cleaned });
       setRows(cleaned);
@@ -524,6 +530,7 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
             <table className="w-full text-sm">
               <thead className="bg-gray-100 text-gray-600">
                 <tr>
+                  <th className="px-2 py-2 w-8"></th>
                   <th className="text-left font-medium px-3 py-2">Month-End Date</th>
                   <th className="text-right font-medium px-3 py-2">{entityLabel} AUM</th>
                   <th className="text-right font-medium px-3 py-2">Assets Gained</th>
@@ -534,7 +541,22 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
               </thead>
               <tbody>
                 {sortedRows.map((r) => (
-                  <tr key={r.id} className="border-t hover:bg-gray-50">
+                  <React.Fragment key={r.id}>
+                  <tr className="border-t hover:bg-gray-50">
+                    <td className="px-2 py-1.5 text-center">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = new Set(expandedRows);
+                          if (next.has(r.id)) next.delete(r.id);
+                          else next.add(r.id);
+                          setExpandedRows(next);
+                        }}
+                        className="text-gray-400 hover:text-indigo-600"
+                      >
+                        {expandedRows.has(r.id) ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                      </button>
+                    </td>
                     <td className="px-3 py-1.5">
                        <Input
                          type="text"
@@ -593,6 +615,19 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
                        </Button>
                      </td>
                    </tr>
+                   {expandedRows.has(r.id) && (
+                     <tr className="border-t">
+                       <td colSpan={7} className="px-4 py-3 bg-gray-50">
+                         <div className="text-xs font-medium text-gray-600 mb-2">Client Type Breakdown</div>
+                         <ClientTypeBreakdownEditor
+                           breakdown={r.client_type_breakdown || []}
+                           targetAum={toNumber(r.firm_aum)}
+                           onChange={(newBreakdown) => updateRow(r.id, "client_type_breakdown", newBreakdown)}
+                         />
+                       </td>
+                     </tr>
+                   )}
+                  </React.Fragment>
                  ))}
                </tbody>
              </table>

@@ -221,7 +221,7 @@
     },
     "aum_history": {
       "type": "array",
-      "description": "Monthly historical product AUM data points. Each entry tracks month-end date, product AUM, assets gained, assets loss, and net asset flows (auto-calculated as assets_gained - assets_loss).",
+      "description": "Monthly historical product AUM data points. Each entry tracks month-end date, product AUM, assets gained, assets loss, net asset flows (auto-calculated as assets_gained - assets_loss), and a per-date client type breakdown.",
       "items": {
         "type": "object",
         "properties": {
@@ -248,26 +248,26 @@
           "net_asset_flows": {
             "type": "number",
             "description": "Net asset flows for the month (auto-calculated as assets_gained - assets_loss)"
-          }
-        }
-      }
-    },
-    "client_type_breakdown": {
-      "type": "array",
-      "description": "Breakdown of the product's current AUM by client type. Each entry pairs a client type with an AUM amount. The sum of all entries is validated against the latest product AUM from aum_history.",
-      "items": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
           },
-          "client_type": {
-            "type": "string",
-            "description": "Client type name (from the ClientType master list)"
-          },
-          "aum_amount": {
-            "type": "number",
-            "description": "AUM attributed to this client type"
+          "client_type_breakdown": {
+            "type": "array",
+            "description": "Breakdown of this month's AUM by client type. Each entry pairs a client type with an AUM amount. The sum of all entries is validated against this entry's firm_aum (product AUM).",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "client_type": {
+                  "type": "string",
+                  "description": "Client type name (from the ClientType master list)"
+                },
+                "aum_amount": {
+                  "type": "number",
+                  "description": "AUM attributed to this client type"
+                }
+              }
+            }
           }
         }
       }
