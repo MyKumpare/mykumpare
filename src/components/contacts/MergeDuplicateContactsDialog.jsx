@@ -6,6 +6,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Loader2, ArrowRightLeft } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 import { findContactDuplicates } from "@/components/contacts/contactDuplicateCheck";
 
 function completenessScore(c) {
@@ -48,6 +49,7 @@ function findDuplicateClusters(contacts) {
 
 export default function MergeDuplicateContactsDialog({ open, onOpenChange, contacts = [], onMerged }) {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const clusters = useMemo(() => findDuplicateClusters(contacts), [contacts]);
   // For each cluster, pick the "keep" index (primary). Default to most complete.
   const [keepIndex, setKeepIndex] = useState({});
@@ -72,6 +74,8 @@ export default function MergeDuplicateContactsDialog({ open, onOpenChange, conta
   const handleMergeAll = async () => {
     setMerging(true);
     let mergedCount = 0;
+    let failedCount = 0;
+    let lastError = "";
     try {
       for (let ci = 0; ci < clusters.length; ci++) {
         const cluster = clusters[ci];
@@ -83,13 +87,26 @@ export default function MergeDuplicateContactsDialog({ open, onOpenChange, conta
               primary_id: keepId,
               secondary_id: c.id,
             });
-            if (res?.data?.success) mergedCount++;
-          } catch {}
+            if (res?.data?.success || res?.success) mergedCount++;
+            else { failedCount++; lastError = res?.data?.error || res?.error || "Unknown error"; }
+          } catch (e) {
+            failedCount++;
+            lastError = e?.message || String(e);
+          }
         }
       }
       await queryClient.invalidateQueries({ queryKey: ["contacts"] });
       await queryClient.invalidateQueries({ queryKey: ["orgchart"] });
       await queryClient.invalidateQueries({ queryKey: ["ownership"] });
+      if (failedCount > 0) {
+        toast({
+          variant: "destructive",
+          title: `Merge failed (${failedCount})`,
+          description: lastError,
+        });
+      } else if (mergedCount > 0) {
+        toast({ title: `Merged ${mergedCount} duplicate${mergedCount > 1 ? "s" : ""}` });
+      }
       onMerged?.(mergedCount);
       onOpenChange(false);
     } finally {
@@ -110,19 +127,22 @@ export default function MergeDuplicateContactsDialog({ open, onOpenChange, conta
         primary_id: manualPrimary,
         secondary_id: manualSecondary,
       });
-      if (res?.data?.success) {
+      if (res?.data?.success || res?.success) {
         await queryClient.invalidateQueries({ queryKey: ["contacts"] });
         await queryClient.invalidateQueries({ queryKey: ["orgchart"] });
         await queryClient.invalidateQueries({ queryKey: ["ownership"] });
+        toast({ title: "Contacts merged" });
         onMerged?.(1);
         onOpenChange(false);
         setManualMode(false);
         setManualPrimary("");
         setManualSecondary("");
       } else {
+        toast({ variant: "destructive", title: "Merge failed", description: res?.data?.error || res?.error || "Unknown error" });
         onMerged?.(0);
       }
-    } catch {
+    } catch (e) {
+      toast({ variant: "destructive", title: "Merge failed", description: e?.message || String(e) });
       onMerged?.(0);
     } finally {
       setMerging(false);

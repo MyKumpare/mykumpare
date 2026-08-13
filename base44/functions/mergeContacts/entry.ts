@@ -37,11 +37,20 @@ Deno.serve(async (req) => {
     [
       'salutation', 'first_name', 'middle_name', 'last_name', 'suffix', 'title',
       'email', 'linkedin_url', 'employee_status', 'contact_status', 'contact_role',
-      'contact_type', 'gender', 'veteran_status', 'disability_status', 'biography',
+      'gender', 'veteran_status', 'disability_status', 'biography',
       'notes', 'photo_url',
     ].forEach((k) => { merged[k] = pickScalar(k); });
 
-    const union = (a, b) => Array.from(new Set([...(a || []), ...(b || [])]));
+    // contact_type is an array field — normalize legacy string values to arrays
+    // before unioning, otherwise spreading a string corrupts the data and the
+    // schema validation rejects the update.
+    const toArray = (v) => {
+      if (!v) return [];
+      if (Array.isArray(v)) return v;
+      return [v];
+    };
+    const union = (a, b) => Array.from(new Set([...toArray(a), ...toArray(b)]));
+    merged.contact_type = union(primary.contact_type, secondary.contact_type);
     merged.firm_ids = union(primary.firm_ids, secondary.firm_ids);
     merged.designations = union(primary.designations, secondary.designations);
     merged.contact_roles = union(primary.contact_roles, secondary.contact_roles);
