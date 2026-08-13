@@ -252,6 +252,26 @@
         }
       }
     },
+    "client_type_breakdown": {
+      "type": "array",
+      "description": "Breakdown of the product's current AUM by client type. Each entry pairs a client type with an AUM amount. The sum of all entries is validated against the latest product AUM from aum_history.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "client_type": {
+            "type": "string",
+            "description": "Client type name (from the ClientType master list)"
+          },
+          "aum_amount": {
+            "type": "number",
+            "description": "AUM attributed to this client type"
+          }
+        }
+      }
+    },
     "deleted_at": {
       "type": "string",
       "format": "date-time",

@@ -24,6 +24,7 @@ import ContactsTab from "../contacts/ContactsTab";
 import OwnershipTab from "./OwnershipTab";
 import OrgChartTab from "./OrgChartTab";
 import FirmAumHistoryTab from "./FirmAumHistoryTab";
+import ClientTypeBreakdownSection from "../shared/ClientTypeBreakdownSection";
 import FirmProductsTab from "./FirmProductsTab";
 import FirmPortfoliosTab from "./FirmPortfoliosTab";
 import FirmActivityLogTab from "./FirmActivityLogTab";
@@ -1195,12 +1196,14 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                    <TabsTrigger value="ownership">Ownership</TabsTrigger>
                    <TabsTrigger value="orgchart">Org Chart</TabsTrigger>
                    <TabsTrigger value="aum-history">AUM History</TabsTrigger>
+                   <TabsTrigger value="client-type-aum">Client Type AUM</TabsTrigger>
                    </>
                    )}
                    {hideProductTabs && (
                    <>
                    <TabsTrigger value="orgchart">Org Chart</TabsTrigger>
                    <TabsTrigger value="aum-history">AUM History</TabsTrigger>
+                   <TabsTrigger value="client-type-aum">Client Type AUM</TabsTrigger>
                    <TabsTrigger value="activity-log">Activity Log</TabsTrigger>
                    </>
                    )}
@@ -1509,6 +1512,16 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               ) : (
                 <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
                   Save the firm first to add AUM history
+                </div>
+              )}
+              </TabsContent>
+
+              <TabsContent value="client-type-aum" className="space-y-3">
+              {editingFirm ? (
+                <ClientTypeBreakdownSection entityId={editingFirm.id} entityName="Firm" entityLabel="Firm" />
+              ) : (
+                <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
+                  Save the firm first to break down AUM by client type
                 </div>
               )}
               </TabsContent>
