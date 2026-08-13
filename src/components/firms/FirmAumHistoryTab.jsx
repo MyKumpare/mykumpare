@@ -32,6 +32,7 @@ import {
 } from "recharts";
 import ClientTypeBreakdownEditor from "../shared/ClientTypeBreakdownEditor";
 import CurrencyInput from "../shared/CurrencyInput";
+import DateInput from "../shared/DateInput";
 
 const genId = () =>
   typeof crypto !== "undefined" && crypto.randomUUID
@@ -507,11 +508,9 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           <div>
             <Label className="text-xs text-gray-500 mb-1">Month-End Date</Label>
-            <Input
-              type="text"
-              placeholder="MM/DD/YYYY"
+            <DateInput
               value={newDate}
-              onChange={(e) => setNewDate(e.target.value)}
+              onChange={setNewDate}
               className="h-9 text-sm"
             />
           </div>
@@ -623,13 +622,9 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
                       </button>
                     </td>
                     <td className="px-3 py-1.5">
-                       <Input
-                         type="text"
-                         value={fmtDisplay(r.month_end_date)}
-                         onChange={(e) => {
-                           const d = parseFlexibleDate(e.target.value);
-                           updateRow(r.id, "month_end_date", d ? format(d, "yyyy-MM-dd") : e.target.value);
-                         }}
+                       <DateInput
+                         value={r.month_end_date || ""}
+                         onChange={(iso) => updateRow(r.id, "month_end_date", iso)}
                          className="h-8 text-sm text-center w-full min-w-[120px]"
                        />
                      </td>

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { format, parseISO, parse } from "date-fns";
+import DateInput from "@/components/shared/DateInput";
 import { Plus, Trash2, Download, Upload, TrendingUp } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -234,10 +235,9 @@ export default function PortfolioHistoricalAumTab({ portfolio }) {
           <Label className="text-xs font-medium text-gray-600 mb-1 block">
             Date (MM/DD/YYYY)
           </Label>
-          <Input
-            placeholder="MM/DD/YYYY"
+          <DateInput
             value={newDate}
-            onChange={(e) => setNewDate(e.target.value)}
+            onChange={setNewDate}
             className="h-8 text-sm"
           />
         </div>
