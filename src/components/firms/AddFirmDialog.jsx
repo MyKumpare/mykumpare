@@ -31,6 +31,7 @@ import FirmDocumentsTab from "./FirmDocumentsTab";
 import FirmDueDiligenceTab from "./FirmDueDiligenceTab";
 import LegalComplianceTab from "./LegalComplianceTab";
 import EnrichmentApprovalDialog from "./EnrichmentApprovalDialog";
+import ExperienceOptionMatchDialog from "../contacts/ExperienceOptionMatchDialog";
 import SimilarAddressDialog from "../SimilarAddressDialog";
 import { findAddressIssues, addressesAreExact } from "../addressDuplicateCheck";
 import SimilarFirmFieldDialog from "./SimilarFirmFieldDialog";
@@ -182,6 +183,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const [pendingContacts, setPendingContacts] = useState([]);
   const [contactDuplicateWarning, setContactDuplicateWarning] = useState(null);
   const [enrichmentApproval, setEnrichmentApproval] = useState(null);
+  const [pendingEnrichmentExperience, setPendingEnrichmentExperience] = useState(null);
   const [similarAddressPairs, setSimilarAddressPairs] = useState(null);
   const [linkedinLookupLoading, setLinkedinLookupLoading] = useState(false);
   const [linkedinMismatch, setLinkedinMismatch] = useState(null);
@@ -522,7 +524,28 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     performSubmit(cleaned);
   };
 
-  const handleApplyEnrichment = async (selected) => {
+  // Continue the website auto-fill after the user resolves any company/title
+  // near-matches against the global master lists. Writes the chosen values back
+  // onto each person's experience items, then re-runs the enrichment apply.
+  const handleEnrichmentExperienceResolved = (resolvedItems) => {
+    const pending = pendingEnrichmentExperience;
+    setPendingEnrichmentExperience(null);
+    if (!pending) return;
+    const selected = pending.selected;
+    resolvedItems.forEach((r) => {
+      const p = selected.people?.[r._pi];
+      if (p && Array.isArray(p.professional_experience) && p.professional_experience[r._ei]) {
+        p.professional_experience[r._ei] = {
+          ...p.professional_experience[r._ei],
+          company_name: r.company_name,
+          title: r.title,
+        };
+      }
+    });
+    handleApplyEnrichment(selected, true);
+  };
+
+  const handleApplyEnrichment = async (selected, skipExpReview = false) => {
     const applied = [];
     // Enriched firm fields are applied to local form state only and committed
     // to the DB when the user clicks Save Changes (via the update mutation).
@@ -581,6 +604,24 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
       }
     }
     if (selected.people?.length) {
+      // Route every scraped professional-experience item through the company/title
+      // near-duplicate review before building/adding contacts, so the user can
+      // accept an existing master-list entry or keep the new value.
+      if (!skipExpReview) {
+        const expItems = [];
+        selected.people.forEach((p, pi) => {
+          (p.professional_experience || []).forEach((e, ei) => {
+            if (e && (e.company_name || e.title)) {
+              if (!e.id) e.id = crypto.randomUUID();
+              expItems.push({ ...e, _pi: pi, _ei: ei });
+            }
+          });
+        });
+        if (expItems.length > 0) {
+          setPendingEnrichmentExperience({ items: expItems, selected });
+          return;
+        }
+      }
       if (editingFirm) {
         const contactUpdates = [];
         const newContacts = [];
@@ -1668,6 +1709,13 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         contactUpdates={enrichmentApproval?.contactUpdates || []}
         newContacts={enrichmentApproval?.newContacts || []}
         firmFieldsApplied={enrichmentApproval?.firmFieldsApplied || []}
+      />
+
+      <ExperienceOptionMatchDialog
+        open={!!pendingEnrichmentExperience}
+        onOpenChange={(v) => { if (!v) setPendingEnrichmentExperience(null); }}
+        items={pendingEnrichmentExperience?.items || []}
+        onResolve={handleEnrichmentExperienceResolved}
       />
 
       <SimilarFirmFieldDialog
