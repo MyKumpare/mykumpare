@@ -107,9 +107,7 @@ export default function ExternalPortalPickerModal({ open, onClose }) {
                     {firm.logo_url ? (
                       <img src={firm.logo_url} alt="" className="w-9 h-9 rounded-lg bg-gray-50 object-contain p-0.5 border border-gray-100" />
                     ) : (
-                      <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center">
-                        <Building2 className="w-4 h-4 text-indigo-400" />
-                      </div>
+                      <div className="w-9 h-9 rounded-lg flex items-center justify-center" />
                     )}
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-gray-800 truncate">{firm.name}</p>

@@ -142,9 +142,7 @@ export default function ExternalParty() {
             {firm?.logo_url ? (
               <img src={firm.logo_url} alt="" className="w-10 h-10 rounded-lg bg-white object-contain p-0.5 border border-white/30" />
             ) : (
-              <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
-                <Building2 className="w-5 h-5 text-white" />
-              </div>
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center" />
             )}
             <div>
               <h1 className="text-lg font-bold leading-tight">{firm?.name || "External Portal"}</h1>
@@ -208,9 +206,7 @@ export default function ExternalParty() {
                     {firm.logo_url ? (
                       <img src={firm.logo_url} alt="" className="w-16 h-16 rounded-xl bg-gray-50 object-contain p-1 border border-gray-100" />
                     ) : (
-                      <div className="w-16 h-16 rounded-xl bg-indigo-50 flex items-center justify-center">
-                        <Building2 className="w-7 h-7 text-indigo-400" />
-                      </div>
+                      <div className="w-16 h-16 rounded-xl flex items-center justify-center" />
                     )}
                     <div className="flex-1 min-w-0">
                       <h2 className="text-base font-bold text-gray-800">{firm.name}</h2>

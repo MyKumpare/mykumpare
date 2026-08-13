@@ -185,9 +185,7 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
                             {firm.logo_url ? (
                               <img src={firm.logo_url} alt={firm.name} className="w-7 h-7 rounded-md object-cover flex-shrink-0 border border-gray-100" />
                             ) : (
-                              <div className="w-7 h-7 rounded-md bg-indigo-50 flex items-center justify-center flex-shrink-0">
-                                <Building className="w-3.5 h-3.5 text-indigo-400" />
-                              </div>
+                              <div className="w-7 h-7 rounded-md flex-shrink-0" />
                             )}
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-medium text-gray-800 truncate group-hover:text-indigo-700">

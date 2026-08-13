@@ -587,9 +587,7 @@ export default function Home() {
             {firmOwner?.logo_url ? (
               <img src={firmOwner.logo_url} alt={firmOwner.name || "logo"} className="w-8 h-8 rounded-lg bg-white object-contain p-0.5 border border-white/30" />
             ) : (
-              <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center">
-                <Building className="w-4 h-4 text-white" />
-              </div>
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center" />
             )}
             <span className="text-base font-bold tracking-tight hidden sm:block">{firmOwner?.name || "MyKumpare"}</span>
           </div>

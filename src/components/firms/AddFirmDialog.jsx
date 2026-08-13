@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Pencil, Building2, Plus, Upload, X, Globe, AlertTriangle, Linkedin, Loader2 } from "lucide-react";
+import { Pencil, Plus, Upload, X, Globe, AlertTriangle, Linkedin, Loader2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
@@ -881,7 +881,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
           <div className="flex items-center justify-between pr-6">
             {!isAddMode && !isEditing ? (
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden flex-shrink-0">
+                <div className="w-10 h-10 rounded-lg border border-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
                   {logoUrl ? (
                     <button
                       type="button"
@@ -891,9 +891,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                     >
                       <img src={logoUrl} alt="logo" className="w-full h-full object-contain p-0.5" />
                     </button>
-                  ) : (
-                    <Building2 className="w-5 h-5 text-gray-300" />
-                  )}
+                  ) : null}
                 </div>
                 <div className="min-w-0">
                   <DialogTitle className="text-base font-semibold leading-tight">Firm Details</DialogTitle>

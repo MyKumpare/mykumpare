@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Building2, Plus, Package, ChevronDown, ChevronRight, LayoutList } from "lucide-react";
+import { Plus, Package, ChevronDown, ChevronRight, LayoutList } from "lucide-react";
 
 const FIRM_TYPE_TO_PRODUCT_TYPE = {
   "Investment Manager": "Investment Manager Product",
@@ -31,15 +31,13 @@ export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditP
         <div className="flex items-center gap-3 min-w-0 flex-1">
           {/* Logo / icon — clicking opens form */}
           <button
-            className="flex-shrink-0 w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center overflow-hidden hover:ring-2 hover:ring-indigo-300 transition-all"
+            className="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center overflow-hidden hover:ring-2 hover:ring-indigo-300 transition-all"
             onClick={() => onEdit(firm)}
             title={firm.name}
           >
             {firm.logo_url ? (
               <img src={firm.logo_url} alt={firm.name} className="w-full h-full object-contain p-1" />
-            ) : (
-              <Building2 className="w-4 h-4 text-indigo-600" />
-            )}
+            ) : null}
           </button>
 
           {/* Firm name — clicking opens form */}

@@ -79,12 +79,10 @@ function ContactAvatar({ contact, size = "sm" }) {
 
 function FirmLogo({ firm }) {
   return (
-    <div className="w-7 h-7 rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden flex-shrink-0">
+    <div className="w-7 h-7 rounded-lg border border-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
       {firm.logo_url ? (
         <img src={firm.logo_url} alt="" className="w-full h-full object-contain p-0.5" />
-      ) : (
-        <Building2 className="w-3.5 h-3.5 text-gray-400" />
-      )}
+      ) : null}
     </div>
   );
 }
@@ -389,7 +387,7 @@ export default function SearchResults({ query, firms, products, contacts, portfo
                       <div className="flex flex-wrap gap-1.5 mt-1.5">
                         {assocFirms.map(f => (
                           <span key={f.id} className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-600 rounded-md px-1.5 py-0.5">
-                            {f.logo_url ? <img src={f.logo_url} alt="" className="w-3 h-3 object-contain" /> : <Building2 className="w-3 h-3" />}
+                            {f.logo_url ? <img src={f.logo_url} alt="" className="w-3 h-3 object-contain" /> : null}
                             {f.name}
                           </span>
                         ))}
@@ -426,7 +424,7 @@ export default function SearchResults({ query, firms, products, contacts, portfo
                     <div className="text-sm font-medium text-gray-900 truncate">{product.name}</div>
                     {firm && (
                       <div className="flex items-center gap-1 mt-0.5">
-                        {firm.logo_url ? <img src={firm.logo_url} alt="" className="w-3 h-3 object-contain" /> : <Building2 className="w-3 h-3 text-gray-400" />}
+                        {firm.logo_url ? <img src={firm.logo_url} alt="" className="w-3 h-3 object-contain" /> : null}
                         <span className="text-xs text-gray-500">{firm.name}</span>
                       </div>
                     )}
@@ -474,7 +472,7 @@ export default function SearchResults({ query, firms, products, contacts, portfo
                     <div className="text-sm font-medium text-gray-900 truncate">{portfolio.portfolio_name}</div>
                     {allocatorFirm && (
                       <div className="flex items-center gap-1 mt-0.5">
-                        {allocatorFirm.logo_url ? <img src={allocatorFirm.logo_url} alt="" className="w-3 h-3 object-contain" /> : <Building2 className="w-3 h-3 text-gray-400" />}
+                        {allocatorFirm.logo_url ? <img src={allocatorFirm.logo_url} alt="" className="w-3 h-3 object-contain" /> : null}
                         <span className="text-xs text-gray-500">{allocatorFirm.name}</span>
                       </div>
                     )}
