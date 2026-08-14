@@ -34,6 +34,7 @@ import ClientTypeBreakdownEditor from "../shared/ClientTypeBreakdownEditor";
 import CurrencyInput from "../shared/CurrencyInput";
 import DateInput from "../shared/DateInput";
 import AumGrowthChart from "../shared/AumGrowthChart";
+import AumTrendsChart from "../shared/AumTrendsChart";
 
 const genId = () =>
   typeof crypto !== "undefined" && crypto.randomUUID
@@ -458,6 +459,9 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
 
       {/* AUM Growth & Net Flow chart */}
       <AumGrowthChart rows={sortedRows} entityLabel={entityLabel} name={firmName} />
+
+      {/* AUM Flows trends chart (gained / lost / net) */}
+      <AumTrendsChart rows={sortedRows} entityLabel={entityLabel} name={firmName} />
 
       {/* Detailed chart */}
       {chartData.length > 0 ? (

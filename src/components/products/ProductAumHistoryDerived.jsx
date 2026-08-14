@@ -14,6 +14,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import AumGrowthChart from "@/components/shared/AumGrowthChart";
+import AumTrendsChart from "@/components/shared/AumTrendsChart";
 import { useToast } from "@/components/ui/use-toast";
 
 const genId = () =>
@@ -165,6 +166,9 @@ export default function ProductAumHistoryDerived({ productId, productName }) {
       </div>
 
       <AumGrowthChart rows={sortedRows} entityLabel="Product" name={productName} />
+
+      {/* AUM Flows trends chart (gained / lost / net) */}
+      <AumTrendsChart rows={sortedRows} entityLabel="Product" name={productName} />
 
       {chartData.length > 0 ? (
         <div className="border rounded-xl p-4 bg-white">
