@@ -12,6 +12,7 @@ import {
   CheckCircle2, XCircle, Loader2, UserCircle, Globe,
   ShieldCheck, AlertCircle, Activity, FileText, CalendarRange,
 } from "lucide-react";
+import AumAllocationSummary from "@/components/analytics/AumAllocationSummary";
 import { format, subDays, eachDayOfInterval, parseISO } from "date-fns";
 import { useAuth } from "@/lib/AuthContext";
 
@@ -309,6 +310,9 @@ export default function OverviewDashboard() {
             loading={ddLoading}
           />
         </div>
+
+        {/* AUM Allocation Reconciliation */}
+        <AumAllocationSummary firms={scopedFirms} loading={firmsLoading} />
 
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
