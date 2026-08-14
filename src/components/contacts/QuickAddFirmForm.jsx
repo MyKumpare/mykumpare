@@ -12,7 +12,6 @@ const FIRM_TYPES = [
   "Investment Manager",
   "Allocator",
   "Investment Consultant",
-  "Outsourced Chief Investment Officer",
   "Securities Brokerage",
   "Trade Organizations",
 ];

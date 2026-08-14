@@ -9,7 +9,6 @@ const TYPE_COLORS = {
   "Investment Manager": "bg-blue-100 text-blue-700",
   "Allocator": "bg-emerald-100 text-emerald-700",
   "Investment Consultant": "bg-amber-100 text-amber-700",
-  "Outsourced Chief Investment Officer": "bg-teal-100 text-teal-700",
   "Securities Brokerage": "bg-rose-100 text-rose-700",
   "Trade Organizations": "bg-cyan-100 text-cyan-700",
 };
