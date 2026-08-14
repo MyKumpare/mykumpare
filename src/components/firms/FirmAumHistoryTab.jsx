@@ -534,31 +534,25 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
           </div>
           <div>
             <Label className="text-xs text-gray-500 mb-1">{entityLabel} AUM ($)</Label>
-            <Input
-              type="number"
-              placeholder="0"
+            <CurrencyInput
               value={newAum}
-              onChange={(e) => setNewAum(e.target.value)}
+              onChange={setNewAum}
               className="h-9 text-sm"
             />
           </div>
           <div>
             <Label className="text-xs text-gray-500 mb-1">Assets Gained ($)</Label>
-            <Input
-              type="number"
-              placeholder="0"
+            <CurrencyInput
               value={newGained}
-              onChange={(e) => setNewGained(e.target.value)}
+              onChange={setNewGained}
               className="h-9 text-sm text-green-600 font-medium"
             />
           </div>
           <div>
             <Label className="text-xs text-gray-500 mb-1">Assets Loss ($)</Label>
-            <Input
-              type="number"
-              placeholder="0"
+            <CurrencyInput
               value={newLoss}
-              onChange={(e) => setNewLoss(-Math.abs(toNumber(e.target.value)))}
+              onChange={(v) => setNewLoss(-Math.abs(v))}
               className="h-9 text-sm text-red-600 font-medium"
             />
           </div>
