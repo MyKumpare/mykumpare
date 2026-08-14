@@ -41,7 +41,7 @@ function pctText(p) {
  *  - onChange: (newBreakdown) => void
  *  - priorBreakdownMap: { client_type -> aum_amount } from the prior month
  */
-export default function ClientTypeBreakdownEditor({ breakdown, targetAum, onChange, priorBreakdownMap }) {
+export default function ClientTypeBreakdownEditor({ breakdown, targetAum, onChange, priorBreakdownMap, targetGained = 0, targetLoss = 0 }) {
   // Ensure every breakdown row has a stable unique id so per-row updates
   // always target the correct row.
   const rows = useMemo(
@@ -61,6 +61,20 @@ export default function ClientTypeBreakdownEditor({ breakdown, targetAum, onChan
   const isOver = overBy > 0;
   const isUnder = underBy > 0;
   const isMatched = hasTarget && breakdownTotal === targetAum;
+
+  // Remaining (unallocated) Assets Gained / Loss from the parent AUM record.
+  // "Use remaining" passes these down to the new breakdown row so the
+  // breakdown's gained/loss totals match the parent firm/product AUM record.
+  const sumGained = useMemo(
+    () => rows.reduce((sum, r) => sum + toNumber(r.assets_gained), 0),
+    [rows]
+  );
+  const sumLoss = useMemo(
+    () => rows.reduce((sum, r) => sum + toNumber(r.assets_loss), 0),
+    [rows]
+  );
+  const remainingGained = Math.max(0, toNumber(targetGained) - sumGained);
+  const remainingLoss = Math.min(0, toNumber(targetLoss) - sumLoss);
 
   const [newType, setNewType] = useState("");
   const [newAmount, setNewAmount] = useState("");
@@ -334,9 +348,13 @@ export default function ClientTypeBreakdownEditor({ breakdown, targetAum, onChan
                 variant="ghost"
                 size="sm"
                 className="h-6 px-2 text-[11px] text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1"
-                onClick={() => setNewAmount(String(underBy))}
+                onClick={() => {
+                  setNewAmount(String(underBy));
+                  setNewGained(String(remainingGained));
+                  setNewLoss(String(remainingLoss));
+                }}
                 disabled={underBy <= 0}
-                title="Fill AUM with remaining balance"
+                title="Fill AUM, Assets Gained, and Assets Loss with the remaining balance from the parent record"
               >
                 <Scale className="w-3 h-3" /> Use remaining
               </Button>

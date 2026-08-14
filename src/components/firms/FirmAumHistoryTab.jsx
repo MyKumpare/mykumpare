@@ -705,6 +705,8 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
                          <ClientTypeBreakdownEditor
                            breakdown={r.client_type_breakdown || []}
                            targetAum={toNumber(r.firm_aum)}
+                           targetGained={toNumber(r.assets_gained)}
+                           targetLoss={toNumber(r.assets_loss)}
                            priorBreakdownMap={priorBreakdownMap}
                            onChange={(newBreakdown) => updateRow(r.id, "client_type_breakdown", newBreakdown)}
                          />
