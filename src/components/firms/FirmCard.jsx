@@ -28,32 +28,30 @@ export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditP
       className="bg-white rounded-xl border border-gray-100 hover:border-indigo-200 hover:shadow-md transition-all duration-200"
     >
       <div className="group flex items-center justify-between p-4">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          {/* Logo / icon — clicking opens form */}
-          <button
-            className="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center overflow-hidden hover:ring-2 hover:ring-indigo-300 transition-all"
-            onClick={() => onEdit(firm)}
-            title={firm.name}
-          >
+        {/* Clicking the card body opens the edit dialog */}
+        <div
+          className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
+          onClick={() => onEdit(firm)}
+          title={`Edit ${firm.name}`}
+        >
+          {/* Logo / icon */}
+          <div className="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center overflow-hidden hover:ring-2 hover:ring-indigo-300 transition-all">
             {firm.logo_url ? (
               <img src={firm.logo_url} alt={firm.name} className="w-full h-full object-contain p-1" onError={(e) => { e.currentTarget.style.display = "none"; }} />
             ) : null}
-          </button>
+          </div>
 
-          {/* Firm name — clicking opens form */}
-          <button
-            className="font-medium text-gray-900 truncate hover:text-indigo-600 transition-colors text-left"
-            onClick={() => onEdit(firm)}
-            title={firm.name}
-          >
+          {/* Firm name */}
+          <span className="font-medium text-gray-900 truncate hover:text-indigo-600 transition-colors text-left">
             {firm.name}
-          </button>
+          </span>
 
-          {/* Product count + chevron — clicking toggles expansion */}
+          {/* Product count — chevron is an explicit expand toggle */}
           {showProducts && (
             <button
-              className="flex items-center gap-1 flex-shrink-0 ml-1"
-              onClick={() => setExpanded((v) => !v)}
+              className="flex items-center gap-1 flex-shrink-0 ml-1 rounded hover:bg-gray-100 px-1"
+              onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}
+              title="Toggle products"
             >
               <span className="text-xs text-gray-400 font-medium">
                 {firmProducts.length > 0 ? firmProducts.length : ""}
