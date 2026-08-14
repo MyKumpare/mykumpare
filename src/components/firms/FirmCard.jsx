@@ -36,7 +36,7 @@ export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditP
             title={firm.name}
           >
             {firm.logo_url ? (
-              <img src={firm.logo_url} alt={firm.name} className="w-full h-full object-contain p-1" />
+              <img src={firm.logo_url} alt={firm.name} className="w-full h-full object-contain p-1" onError={(e) => { e.currentTarget.style.display = "none"; }} />
             ) : null}
           </button>
 
