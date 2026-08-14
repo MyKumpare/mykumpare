@@ -251,7 +251,7 @@
           },
           "client_type_breakdown": {
             "type": "array",
-            "description": "Breakdown of this month's AUM by client type. Each entry pairs a client type with an AUM amount. The sum of all entries is validated against this entry's firm_aum (product AUM).",
+            "description": "Breakdown of this month's AUM by client type. Each entry pairs a client type with an AUM amount and its own assets gained/loss/net flows, mirroring the product AUM row. The sum of all entries' aum_amount is validated against this entry's firm_aum (product AUM).",
             "items": {
               "type": "object",
               "properties": {
@@ -265,6 +265,18 @@
                 "aum_amount": {
                   "type": "number",
                   "description": "AUM attributed to this client type"
+                },
+                "assets_gained": {
+                  "type": "number",
+                  "description": "Assets gained for this client type during the month (inflows)"
+                },
+                "assets_loss": {
+                  "type": "number",
+                  "description": "Assets lost for this client type during the month (outflows, stored as negative)"
+                },
+                "net_asset_flows": {
+                  "type": "number",
+                  "description": "Net asset flows for this client type (auto-calculated as assets_gained + assets_loss)"
                 }
               }
             }

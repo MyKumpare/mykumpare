@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from "react";
-import { Plus, Trash2, AlertTriangle, CheckCircle2, Scale, Check } from "lucide-react";
+import { Trash2, AlertTriangle, CheckCircle2, Scale, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import CurrencyInput from "./CurrencyInput";
 import ClientTypePicker from "./ClientTypePicker";
 
@@ -21,21 +20,30 @@ function formatCurrency(n) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n || 0);
 }
 
+function pctText(p) {
+  if (p == null) return "—";
+  return `${(p * 100).toFixed(1)}%`;
+}
+
 /**
  * Lightweight per-row client type breakdown editor.
  * Used inside AUM history rows — the breakdown is stored on each aum_history
  * entry and saved together with the AUM history save.
  *
+ * Each breakdown row mirrors the firm/product AUM row: AUM, Assets Gained,
+ * Assets Loss, Net Asset Flows (auto = gained + loss), Market Impact, and the
+ * three % Change variants — all computed against the prior month's breakdown
+ * for the same client type (priorBreakdownMap).
+ *
  * Props:
- *  - breakdown: array of { id, client_type, aum_amount }
+ *  - breakdown: array of { id, client_type, aum_amount, assets_gained, assets_loss, net_asset_flows }
  *  - targetAum: number (the row's firm_aum / product_aum to validate against)
  *  - onChange: (newBreakdown) => void
+ *  - priorBreakdownMap: { client_type -> aum_amount } from the prior month
  */
 export default function ClientTypeBreakdownEditor({ breakdown, targetAum, onChange, priorBreakdownMap }) {
   // Ensure every breakdown row has a stable unique id so per-row updates
-  // (e.g. "use remaining balance") always target the correct row. Rows
-  // loaded without an id are assigned one on first render; the assigned id
-  // is persisted back to the parent on the next change.
+  // always target the correct row.
   const rows = useMemo(
     () => (breakdown || []).map((r) => ({ ...r, id: r.id || genId() })),
     [breakdown]
@@ -56,19 +64,42 @@ export default function ClientTypeBreakdownEditor({ breakdown, targetAum, onChan
 
   const [newType, setNewType] = useState("");
   const [newAmount, setNewAmount] = useState("");
+  const [newGained, setNewGained] = useState("");
+  const [newLoss, setNewLoss] = useState("");
 
   const usedNames = rows.map((r) => r.client_type).filter(Boolean);
   const canAdd = newType.trim() && !usedNames.includes(newType.trim()) && toNumber(newAmount) > 0;
+  const newNetFlow = toNumber(newGained) + toNumber(newLoss);
 
   const addRow = () => {
     if (!canAdd) return;
-    onChange([...rows, { id: genId(), client_type: newType.trim(), aum_amount: toNumber(newAmount) }]);
+    const gained = toNumber(newGained);
+    const loss = -Math.abs(toNumber(newLoss));
+    onChange([...rows, {
+      id: genId(),
+      client_type: newType.trim(),
+      aum_amount: toNumber(newAmount),
+      assets_gained: gained,
+      assets_loss: loss,
+      net_asset_flows: gained + loss,
+    }]);
     setNewType("");
     setNewAmount("");
+    setNewGained("");
+    setNewLoss("");
   };
 
   const updateRow = (id, field, value) => {
-    onChange(rows.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
+    onChange(rows.map((r) => {
+      if (r.id !== id) return r;
+      let nextValue = value;
+      if (field === "assets_loss") nextValue = -Math.abs(toNumber(value));
+      const updated = { ...r, [field]: nextValue };
+      if (field === "assets_gained" || field === "assets_loss") {
+        updated.net_asset_flows = toNumber(updated.assets_gained) + toNumber(updated.assets_loss);
+      }
+      return updated;
+    }));
   };
 
   const deleteRow = (id) => {
@@ -83,9 +114,24 @@ export default function ClientTypeBreakdownEditor({ breakdown, targetAum, onChan
         r.id === existing.id ? { ...r, aum_amount: toNumber(r.aum_amount) + underBy } : r
       ));
     } else {
-      onChange([...rows, { id: genId(), client_type: OTHER_TYPE, aum_amount: underBy }]);
+      onChange([...rows, { id: genId(), client_type: OTHER_TYPE, aum_amount: underBy, assets_gained: 0, assets_loss: 0, net_asset_flows: 0 }]);
     }
   };
+
+  // Column widths — kept aligned between header, data rows, and the add form.
+  const COL = {
+    aum: "w-28",
+    gained: "w-28",
+    loss: "w-28",
+    net: "w-28",
+    market: "w-28",
+    pctTotal: "w-24",
+    pctExcl: "w-24",
+    pctMarket: "w-24",
+    actions: "w-14",
+  };
+
+  const onEnterAdd = (e) => { if (e.key === "Enter" && canAdd) { e.preventDefault(); addRow(); } };
 
   return (
     <div className="space-y-2">
@@ -119,58 +165,106 @@ export default function ClientTypeBreakdownEditor({ breakdown, targetAum, onChan
       )}
 
       {rows.length > 0 && (
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-2 text-[11px] font-medium text-gray-400 px-1">
-            <div className="flex-1 text-center">Client Type</div>
-            <div className="w-32 text-center">AUM</div>
-            <div className="w-20 text-center">% Change</div>
-            <div className="w-14" />
+        <div className="overflow-x-auto -mx-1 px-1">
+          <div className="min-w-[980px] space-y-1.5">
+            <div className="flex items-center gap-2 text-[11px] font-medium text-gray-400 px-1">
+              <div className="flex-1 text-center">Client Type</div>
+              <div className={`${COL.aum} text-center`}>AUM</div>
+              <div className={`${COL.gained} text-center`}>Assets Gained</div>
+              <div className={`${COL.loss} text-center`}>Assets Loss</div>
+              <div className={`${COL.net} text-center`}>Net Flows</div>
+              <div className={`${COL.market} text-center`}>Market Impact</div>
+              <div className={`${COL.pctTotal} text-center`}>% Change Total</div>
+              <div className={`${COL.pctExcl} text-center`}>% Excl. Market</div>
+              <div className={`${COL.pctMarket} text-center`}>% Market</div>
+              <div className={COL.actions} />
+            </div>
+            {rows.map((row) => {
+              const rowUsedNames = rows.filter((r) => r.id !== row.id).map((r) => r.client_type).filter(Boolean);
+              const othersTotal = rows.filter((r) => r.id !== row.id).reduce((sum, r) => sum + toNumber(r.aum_amount), 0);
+              const rowBalance = hasTarget ? Math.max(0, targetAum - othersTotal) : 0;
+              const canUseBalance = hasTarget && rowBalance > 0 && toNumber(row.aum_amount) !== rowBalance;
+              const currentAum = toNumber(row.aum_amount);
+              const gained = toNumber(row.assets_gained);
+              const loss = toNumber(row.assets_loss);
+              const netFlow = gained + loss;
+              const priorAum = priorBreakdownMap ? priorBreakdownMap[row.client_type] : undefined;
+              const hasPrior = priorAum != null && priorAum !== 0;
+              const marketImpact = hasPrior ? currentAum - priorAum - netFlow : null;
+              const pctTotal = hasPrior ? (currentAum - priorAum) / priorAum : null;
+              const pctExcl = hasPrior ? netFlow / priorAum : null;
+              const pctMarket = (pctTotal != null && pctExcl != null) ? pctTotal - pctExcl : null;
+              return (
+                <div key={row.id} className="flex items-start gap-2">
+                  <div className="flex-1">
+                    <ClientTypePicker
+                      value={row.client_type}
+                      onChange={(name) => updateRow(row.id, "client_type", name)}
+                      excludeNames={rowUsedNames}
+                    />
+                  </div>
+                  <div className={COL.aum}>
+                    <CurrencyInput
+                      value={row.aum_amount || ""}
+                      onChange={(v) => updateRow(row.id, "aum_amount", v)}
+                      className="h-8 text-sm text-center"
+                    />
+                  </div>
+                  <div className={COL.gained}>
+                    <CurrencyInput
+                      value={row.assets_gained || ""}
+                      onChange={(v) => updateRow(row.id, "assets_gained", v)}
+                      className="h-8 text-sm text-center text-green-600 font-medium"
+                    />
+                  </div>
+                  <div className={COL.loss}>
+                    <CurrencyInput
+                      value={row.assets_loss || ""}
+                      onChange={(v) => updateRow(row.id, "assets_loss", v)}
+                      className="h-8 text-sm text-center text-red-600 font-medium"
+                    />
+                  </div>
+                  <div className={`${COL.net} text-center text-xs font-medium self-center`}>
+                    <span className={netFlow >= 0 ? "text-green-600" : "text-red-600"}>{formatCurrency(netFlow)}</span>
+                  </div>
+                  <div className={`${COL.market} text-center text-xs font-medium self-center`}>
+                    {marketImpact != null ? (
+                      <span className={marketImpact >= 0 ? "text-green-600" : "text-red-600"}>{formatCurrency(marketImpact)}</span>
+                    ) : <span className="text-gray-300">—</span>}
+                  </div>
+                  <div className={`${COL.pctTotal} text-center text-xs font-medium self-center`}>
+                    {pctTotal != null ? (
+                      <span className={pctTotal >= 0 ? "text-green-600" : "text-red-600"}>{pctText(pctTotal)}</span>
+                    ) : <span className="text-gray-300">—</span>}
+                  </div>
+                  <div className={`${COL.pctExcl} text-center text-xs font-medium self-center`}>
+                    {pctExcl != null ? (
+                      <span className={pctExcl >= 0 ? "text-green-600" : "text-red-600"}>{pctText(pctExcl)}</span>
+                    ) : <span className="text-gray-300">—</span>}
+                  </div>
+                  <div className={`${COL.pctMarket} text-center text-xs font-medium self-center`}>
+                    {pctMarket != null ? (
+                      <span className={pctMarket >= 0 ? "text-green-600" : "text-red-600"}>{pctText(pctMarket)}</span>
+                    ) : <span className="text-gray-300">—</span>}
+                  </div>
+                  <div className={`${COL.actions} flex items-center justify-center self-center`}>
+                    <button
+                      type="button"
+                      onClick={() => updateRow(row.id, "aum_amount", rowBalance)}
+                      disabled={!canUseBalance}
+                      className="p-1.5 text-indigo-500 hover:text-indigo-700 disabled:text-gray-300 disabled:cursor-not-allowed"
+                      title={canUseBalance ? `Use remaining balance (${formatCurrency(rowBalance)})` : "No balance available"}
+                    >
+                      <Scale className="w-3.5 h-3.5" />
+                    </button>
+                    <button type="button" onClick={() => deleteRow(row.id)} className="p-1.5 text-gray-400 hover:text-red-500">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          {rows.map((row) => {
-            const usedNames = rows.filter((r) => r.id !== row.id).map((r) => r.client_type).filter(Boolean);
-            const othersTotal = rows.filter((r) => r.id !== row.id).reduce((sum, r) => sum + toNumber(r.aum_amount), 0);
-            const rowBalance = hasTarget ? Math.max(0, targetAum - othersTotal) : 0;
-            const canUseBalance = hasTarget && rowBalance > 0 && toNumber(row.aum_amount) !== rowBalance;
-            const priorAmount = priorBreakdownMap ? priorBreakdownMap[row.client_type] : undefined;
-            const pctChange = (priorAmount != null && priorAmount !== 0) ? (toNumber(row.aum_amount) - priorAmount) / priorAmount : null;
-            return (
-              <div key={row.id} className="flex items-start gap-2">
-                <div className="flex-1">
-                  <ClientTypePicker
-                    value={row.client_type}
-                    onChange={(name) => updateRow(row.id, "client_type", name)}
-                    excludeNames={usedNames}
-                  />
-                </div>
-                <div className="w-32">
-                  <CurrencyInput
-                    value={row.aum_amount || ""}
-                    onChange={(v) => updateRow(row.id, "aum_amount", v)}
-                    className="h-8 text-sm text-center"
-                  />
-                </div>
-                <div className="w-20 text-center text-xs font-medium self-center">
-                  {pctChange != null ? (
-                    <span className={pctChange >= 0 ? "text-green-600" : "text-red-600"}>
-                      {(pctChange * 100).toFixed(1)}%
-                    </span>
-                  ) : <span className="text-gray-300">—</span>}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => updateRow(row.id, "aum_amount", rowBalance)}
-                  disabled={!canUseBalance}
-                  className="p-1.5 text-indigo-500 hover:text-indigo-700 disabled:text-gray-300 disabled:cursor-not-allowed"
-                  title={canUseBalance ? `Use remaining balance (${formatCurrency(rowBalance)})` : "No balance available"}
-                >
-                  <Scale className="w-3.5 h-3.5" />
-                </button>
-                <button type="button" onClick={() => deleteRow(row.id)} className="p-1.5 text-gray-400 hover:text-red-500">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            );
-          })}
         </div>
       )}
 
@@ -183,23 +277,44 @@ export default function ClientTypeBreakdownEditor({ breakdown, targetAum, onChan
               excludeNames={usedNames}
             />
           </div>
-          <div className="w-32">
+          <div className={COL.aum}>
             <CurrencyInput
               value={newAmount || ""}
               onChange={setNewAmount}
-              onKeyDown={(e) => { if (e.key === "Enter" && canAdd) { e.preventDefault(); addRow(); } }}
+              onKeyDown={onEnterAdd}
               className="h-8 text-sm text-center"
             />
           </div>
-          <Button
-            type="button"
-            size="sm"
-            className="h-8 gap-1 text-xs"
-            disabled={!canAdd}
-            onClick={addRow}
-          >
-            <Check className="w-3.5 h-3.5" /> Add
-          </Button>
+          <div className={COL.gained}>
+            <CurrencyInput
+              value={newGained || ""}
+              onChange={setNewGained}
+              onKeyDown={onEnterAdd}
+              className="h-8 text-sm text-center text-green-600 font-medium"
+            />
+          </div>
+          <div className={COL.loss}>
+            <CurrencyInput
+              value={newLoss || ""}
+              onChange={(v) => setNewLoss(-Math.abs(toNumber(v)))}
+              onKeyDown={onEnterAdd}
+              className="h-8 text-sm text-center text-red-600 font-medium"
+            />
+          </div>
+          <div className={`${COL.net} text-center text-xs font-medium self-center`}>
+            <span className={newNetFlow >= 0 ? "text-green-600" : "text-red-600"}>{formatCurrency(newNetFlow)}</span>
+          </div>
+          <div className="flex-1 flex justify-end">
+            <Button
+              type="button"
+              size="sm"
+              className="h-8 gap-1 text-xs"
+              disabled={!canAdd}
+              onClick={addRow}
+            >
+              <Check className="w-3.5 h-3.5" /> Add
+            </Button>
+          </div>
         </div>
         {hasTarget && (
           <div className="flex items-center justify-between gap-2 text-xs px-1">
@@ -221,7 +336,7 @@ export default function ClientTypeBreakdownEditor({ breakdown, targetAum, onChan
                 className="h-6 px-2 text-[11px] text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1"
                 onClick={() => setNewAmount(String(underBy))}
                 disabled={underBy <= 0}
-                title="Fill with remaining balance"
+                title="Fill AUM with remaining balance"
               >
                 <Scale className="w-3 h-3" /> Use remaining
               </Button>
