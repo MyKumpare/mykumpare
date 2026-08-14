@@ -578,10 +578,10 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50/80 flex flex-col">
+    <div className="min-h-screen bg-gray-50/80 flex flex-col overflow-x-hidden">
       {/* Compact top bar — sticky so it stays visible while scrolling */}
       <div className="bg-gradient-to-r from-indigo-600 via-indigo-700 to-violet-800 text-white shadow-md flex-shrink-0 sticky top-0 z-30">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2.5 flex items-center gap-3">
+        <div className="max-w-7xl xl:max-w-[1400px] mx-auto px-4 sm:px-6 py-2.5 flex items-center gap-3 overflow-hidden">
           {/* Logo + title */}
           <div className="flex items-center gap-2 mr-3 flex-shrink-0">
             {firmOwner?.logo_url ? (
@@ -593,7 +593,7 @@ export default function Home() {
           </div>
 
           {/* Search bar inline in header — opens an expanded overlay on focus */}
-          <div className="flex-1 relative max-w-xl">
+          <div className="flex-1 relative max-w-xl min-w-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/50" />
             <input
               type="text"
@@ -748,9 +748,9 @@ export default function Home() {
                     {(userDisplayName || user.email).slice(0, 2).toUpperCase()}
                   </div>
                 )}
-                <div className="flex flex-col leading-tight">
-                  {userDisplayName && <span className="text-[11px] text-white/90 font-medium">{userDisplayName}</span>}
-                  <span className="text-[10px] text-white/50">{userContactFullName || user.email}</span>
+                <div className="flex flex-col leading-tight min-w-0">
+                  {userDisplayName && <span className="text-[11px] text-white/90 font-medium max-w-[140px] truncate">{userDisplayName}</span>}
+                  <span className="text-[10px] text-white/50 max-w-[140px] truncate">{userContactFullName || user.email}</span>
                 </div>
               </button>
               <button
@@ -770,7 +770,7 @@ export default function Home() {
       </div>
 
       {/* Main content — full width below header */}
-      <div className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 pt-4 pb-24 sm:pb-4">
+      <div className="flex-1 max-w-7xl xl:max-w-[1400px] w-full mx-auto px-4 sm:px-6 pt-4 pb-24 sm:pb-4">
         {/* Sign-in prompt for unauthenticated users */}
         {!isAuthenticated && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 flex items-center justify-between gap-3">
@@ -946,7 +946,7 @@ export default function Home() {
         className="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-white/95 backdrop-blur border-t border-gray-200 shadow-lg"
         style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}
       >
-        <div className="flex overflow-x-auto scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="flex overflow-x-auto scrollbar-hide w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
           {mobileNavItems.map(({ label, icon: MobileIcon, color, ref, onClick, submenu }) => (
             submenu ? (
               <DropdownMenu key={label}>
