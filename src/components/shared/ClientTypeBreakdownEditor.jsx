@@ -201,13 +201,38 @@ export default function ClientTypeBreakdownEditor({ breakdown, targetAum, onChan
             <Check className="w-3.5 h-3.5" /> Add
           </Button>
         </div>
-        <div className="flex items-center gap-2">
-          {hasTarget && isUnder && (
-            <Button type="button" variant="outline" size="sm" className="text-amber-700 border-amber-300 hover:bg-amber-50 gap-1 text-xs h-7" onClick={forceMatch}>
-              <Scale className="w-3 h-3" /> Force Match
-            </Button>
-          )}
-        </div>
+        {hasTarget && (
+          <div className="flex items-center justify-between gap-2 text-xs px-1">
+            <span className="text-gray-500">Remaining balance to allocate:</span>
+            <span className={`font-semibold ${
+              isOver ? "text-red-600" : isMatched ? "text-emerald-600" : "text-amber-600"
+            }`}>
+              {isOver
+                ? `Over by ${formatCurrency(overBy)}`
+                : isMatched
+                  ? "Fully allocated ✓"
+                  : formatCurrency(underBy)}
+            </span>
+            {isUnder && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-[11px] text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1"
+                onClick={() => setNewAmount(String(underBy))}
+                disabled={underBy <= 0}
+                title="Fill with remaining balance"
+              >
+                <Scale className="w-3 h-3" /> Use remaining
+              </Button>
+            )}
+            {hasTarget && isUnder && (
+              <Button type="button" variant="outline" size="sm" className="text-amber-700 border-amber-300 hover:bg-amber-50 gap-1 text-xs h-7 ml-auto" onClick={forceMatch}>
+                <Scale className="w-3 h-3" /> Force Match
+              </Button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
