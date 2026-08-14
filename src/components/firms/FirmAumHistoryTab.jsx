@@ -149,6 +149,7 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
   const [newLoss, setNewLoss] = useState("");
   const [showGainedLoss, setShowGainedLoss] = useState(true);
   const [expandedRows, setExpandedRows] = useState(new Set());
+  const [firmProducts, setFirmProducts] = useState([]);
   const fileInputRef = useRef(null);
   const pasteRef = useRef(null);
   const savedRowsRef = useRef([]);
@@ -163,6 +164,15 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
         const history = (rec.aum_history || []).map(normalizeAumRow);
         setRows(history);
         savedRowsRef.current = history;
+        // Load the firm's products so each client type can allocate its AUM
+        // across the firm's products (firm allocation matrix = single source
+        // of truth for product AUM and client-type investors).
+        if (entityName === "Firm") {
+          try {
+            const prods = await base44.entities.Product.filter({ firm_id: firmId });
+            if (active) setFirmProducts(prods || []);
+          } catch {}
+        }
       } catch (e) {
         toast({
           title: "Error loading AUM history",
@@ -708,6 +718,7 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
                            targetGained={toNumber(r.assets_gained)}
                            targetLoss={toNumber(r.assets_loss)}
                            priorBreakdownMap={priorBreakdownMap}
+                           products={firmProducts}
                            onChange={(newBreakdown) => updateRow(r.id, "client_type_breakdown", newBreakdown)}
                          />
                        </td>

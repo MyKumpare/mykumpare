@@ -138,7 +138,7 @@
     },
     "aum_history": {
       "type": "array",
-      "description": "Monthly historical firm AUM data points. Each entry tracks month-end date, firm AUM, assets gained, assets loss, net asset flows (auto-calculated as assets_gained - assets_loss), and a per-date client type breakdown.",
+      "description": "Monthly historical firm AUM data points. Each entry tracks month-end date, firm AUM, assets gained, assets loss, net asset flows (auto-calculated as assets_gained - assets_loss), and a per-date client type breakdown. Each client type breakdown row holds product_allocations \u2014 the firm allocation matrix that is the single source of truth for product AUM and client-type investors.",
       "items": {
         "type": "object",
         "properties": {
@@ -168,7 +168,7 @@
           },
           "client_type_breakdown": {
             "type": "array",
-            "description": "Breakdown of this month's AUM by client type. Each entry pairs a client type with an AUM amount and its own assets gained/loss/net flows, mirroring the firm AUM row. The sum of all entries' aum_amount is validated against this entry's firm_aum.",
+            "description": "Breakdown of this month's AUM by client type. Each entry pairs a client type with an AUM amount and its own assets gained/loss/net flows, mirroring the firm AUM row. The sum of all entries' aum_amount is validated against this entry's firm_aum. Each entry also holds product_allocations \u2014 the firm allocation matrix (single source of truth) from which each product's AUM and client-type investors are derived.",
             "items": {
               "type": "object",
               "properties": {
@@ -194,6 +194,42 @@
                 "net_asset_flows": {
                   "type": "number",
                   "description": "Net asset flows for this client type (auto-calculated as assets_gained + assets_loss)"
+                },
+                "product_allocations": {
+                  "type": "array",
+                  "description": "Allocations from this client type to the firm's products for this record date. The firm allocation matrix is the single source of truth: each product's AUM and its client-type investors are derived from these entries. The sum of all entries' amounts is validated against this client type's aum_amount (allocations cannot exceed the client type's allocation).",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "product_id": {
+                        "type": "string",
+                        "description": "ID of the firm's product this client type is invested in"
+                      },
+                      "product_name": {
+                        "type": "string",
+                        "description": "Name of the product (denormalized)"
+                      },
+                      "amount": {
+                        "type": "number",
+                        "description": "AUM allocated to this product for this client type"
+                      },
+                      "assets_gained": {
+                        "type": "number",
+                        "description": "Assets gained for this product allocation during the month (inflows)"
+                      },
+                      "assets_loss": {
+                        "type": "number",
+                        "description": "Assets lost for this product allocation during the month (outflows, stored as negative)"
+                      },
+                      "net_asset_flows": {
+                        "type": "number",
+                        "description": "Net asset flows for this product allocation (auto-calculated as assets_gained + assets_loss)"
+                      }
+                    }
+                  }
                 }
               }
             }

@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from "react";
-import { Trash2, AlertTriangle, CheckCircle2, Scale, Check } from "lucide-react";
+import { Trash2, AlertTriangle, CheckCircle2, Scale, Check, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CurrencyInput from "./CurrencyInput";
 import ClientTypePicker from "./ClientTypePicker";
+import ProductAllocationEditor from "./ProductAllocationEditor";
 
 const OTHER_TYPE = "Other";
 
@@ -41,7 +42,7 @@ function pctText(p) {
  *  - onChange: (newBreakdown) => void
  *  - priorBreakdownMap: { client_type -> aum_amount } from the prior month
  */
-export default function ClientTypeBreakdownEditor({ breakdown, targetAum, onChange, priorBreakdownMap, targetGained = 0, targetLoss = 0 }) {
+export default function ClientTypeBreakdownEditor({ breakdown, targetAum, onChange, priorBreakdownMap, targetGained = 0, targetLoss = 0, products = [] }) {
   // Ensure every breakdown row has a stable unique id so per-row updates
   // always target the correct row.
   const rows = useMemo(
@@ -80,6 +81,7 @@ export default function ClientTypeBreakdownEditor({ breakdown, targetAum, onChan
   const [newAmount, setNewAmount] = useState("");
   const [newGained, setNewGained] = useState("");
   const [newLoss, setNewLoss] = useState("");
+  const [expandedRows, setExpandedRows] = useState(new Set());
 
   const usedNames = rows.map((r) => r.client_type).filter(Boolean);
   const canAdd = newType.trim() && !usedNames.includes(newType.trim()) && toNumber(newAmount) > 0;
@@ -134,6 +136,7 @@ export default function ClientTypeBreakdownEditor({ breakdown, targetAum, onChan
 
   // Column widths — kept aligned between header, data rows, and the add form.
   const COL = {
+    expand: "w-8",
     aum: "w-28",
     gained: "w-28",
     loss: "w-28",
@@ -182,6 +185,7 @@ export default function ClientTypeBreakdownEditor({ breakdown, targetAum, onChan
         <div className="overflow-x-auto -mx-1 px-1">
           <div className="min-w-[980px] space-y-1.5">
             <div className="flex items-center gap-2 text-[11px] font-medium text-gray-400 px-1">
+              <div className={COL.expand} />
               <div className="flex-1 text-center">Client Type</div>
               <div className={`${COL.aum} text-center`}>AUM</div>
               <div className={`${COL.gained} text-center`}>Assets Gained</div>
@@ -209,7 +213,23 @@ export default function ClientTypeBreakdownEditor({ breakdown, targetAum, onChan
               const pctExcl = hasPrior ? netFlow / priorAum : null;
               const pctMarket = (pctTotal != null && pctExcl != null) ? pctTotal - pctExcl : null;
               return (
-                <div key={row.id} className="flex items-start gap-2">
+                <div key={row.id} className="space-y-1">
+                <div className="flex items-start gap-2">
+                  <div className={COL.expand}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = new Set(expandedRows);
+                        if (next.has(row.id)) next.delete(row.id);
+                        else next.add(row.id);
+                        setExpandedRows(next);
+                      }}
+                      className="text-gray-400 hover:text-indigo-600 flex items-center justify-center h-8"
+                      title="Product allocations for this client type"
+                    >
+                      {expandedRows.has(row.id) ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
                   <div className="flex-1">
                     <ClientTypePicker
                       value={row.client_type}
@@ -276,6 +296,20 @@ export default function ClientTypeBreakdownEditor({ breakdown, targetAum, onChan
                     </button>
                   </div>
                 </div>
+                {expandedRows.has(row.id) && (
+                  <div className="ml-10 border-l-2 border-indigo-100 pl-3 py-1">
+                    <div className="text-[11px] font-medium text-gray-500 mb-1">Product Allocations — this client type's investments in the firm's products</div>
+                    <ProductAllocationEditor
+                      allocations={row.product_allocations || []}
+                      targetAmount={toNumber(row.aum_amount)}
+                      targetGained={toNumber(row.assets_gained)}
+                      targetLoss={toNumber(row.assets_loss)}
+                      products={products}
+                      onChange={(newAllocations) => updateRow(row.id, "product_allocations", newAllocations)}
+                    />
+                  </div>
+                )}
+                </div>
               );
             })}
           </div>
@@ -284,6 +318,7 @@ export default function ClientTypeBreakdownEditor({ breakdown, targetAum, onChan
 
       <div className="space-y-2">
         <div className="flex items-start gap-2 pt-1 border-t border-gray-100">
+          <div className={COL.expand} />
           <div className="flex-1">
             <ClientTypePicker
               value={newType}
