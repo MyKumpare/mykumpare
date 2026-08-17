@@ -1,0 +1,105 @@
+{
+  "name": "ChatConversation",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Display title for the conversation (usually derived from the first user message)"
+    },
+    "messages": {
+      "type": "array",
+      "description": "Full persisted message history for this conversation. Transient UI-only fields (pending_creation, options) are stripped before saving so old chats render as read-only text/tables/charts without re-triggering action buttons.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "description": "Message role: 'user' or 'assistant'"
+          },
+          "content": {
+            "type": "string",
+            "description": "Message text content (markdown for assistant)"
+          },
+          "tables": {
+            "type": "array",
+            "description": "Structured tables attached to the message",
+            "items": {
+              "type": "object"
+            }
+          },
+          "charts": {
+            "type": "array",
+            "description": "Structured chart data attached to the message",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "ai_assistant",
+        "research_assistant"
+      ],
+      "description": "Which AI chat this conversation belongs to. Currently only 'ai_assistant' uses this entity; the Research Assistant persists via the agents SDK."
+    }
+  },
+  "required": [
+    "title",
+    "source"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "user"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

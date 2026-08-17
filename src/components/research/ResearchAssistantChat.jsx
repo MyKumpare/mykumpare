@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { base44 } from "@/api/base44Client";
-import { Send, MessageSquare, Plus, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
+import { Send, MessageSquare, Plus, ChevronDown, ChevronRight, Loader2, Pencil } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
 const AGENT_NAME = "research_assistant";
@@ -146,6 +146,17 @@ export default function ResearchAssistantChat() {
     }
   };
 
+  const handleRenameConversation = async (conv) => {
+    const newName = window.prompt("Rename session", conv.metadata?.name || "Research Session");
+    if (!newName || !newName.trim()) return;
+    try {
+      await base44.agents.updateConversation(conv.id, { metadata: { name: newName.trim(), description: conv.metadata?.description || "Comparative research & benchmarking" } });
+      setConversations((prev) => prev.map((c) => (c.id === conv.id ? { ...c, metadata: { ...c.metadata, name: newName.trim() } } : c)));
+    } catch (e) {
+      console.error("Failed to rename conversation", e);
+    }
+  };
+
   const handleSend = async () => {
     if (!input.trim() || loading) return;
     let convId = activeConversationId;
@@ -153,7 +164,7 @@ export default function ResearchAssistantChat() {
     if (!convId) {
       conv = await base44.agents.createConversation({
         agent_name: AGENT_NAME,
-        metadata: { name: "New Research Session", description: "Comparative research & benchmarking" },
+        metadata: { name: input.trim().slice(0, 60) || "New Research Session", description: "Comparative research & benchmarking" },
       });
       convId = conv.id;
       setConversations((prev) => [conv, ...prev]);
@@ -201,16 +212,24 @@ export default function ResearchAssistantChat() {
               <div className="text-center py-4 text-gray-400 text-xs">No sessions yet</div>
             ) : (
               conversations.map((conv) => (
-                <button
-                  key={conv.id}
-                  onClick={() => { setActiveConversationId(conv.id); setShowSidebar(false); }}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-                    conv.id === activeConversationId ? "bg-indigo-50 text-indigo-700" : "text-gray-600 hover:bg-gray-50"
-                  }`}
-                >
-                  <MessageSquare className="w-3 h-3 inline mr-1.5 opacity-50" />
-                  {conv.metadata?.name || "Research Session"}
-                </button>
+                <div key={conv.id} className={`group flex items-center rounded-lg ${conv.id === activeConversationId ? "bg-indigo-50" : "hover:bg-gray-50"}`}>
+                  <button
+                    onClick={() => { setActiveConversationId(conv.id); setShowSidebar(false); }}
+                    className={`flex-1 text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors truncate ${
+                      conv.id === activeConversationId ? "text-indigo-700" : "text-gray-600"
+                    }`}
+                  >
+                    <MessageSquare className="w-3 h-3 inline mr-1.5 opacity-50" />
+                    {conv.metadata?.name || "Research Session"}
+                  </button>
+                  <button
+                    onClick={() => handleRenameConversation(conv)}
+                    className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-indigo-600 transition-opacity flex-shrink-0"
+                    title="Rename session"
+                  >
+                    <Pencil className="w-3 h-3" />
+                  </button>
+                </div>
               ))
             )}
           </div>

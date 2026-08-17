@@ -1,10 +1,16 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Send, Bot, Loader2, X } from "lucide-react";
+import { Send, Bot, Loader2, X, History, Trash2, Plus, MessageSquare } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
+import { useChatHistory } from "@/hooks/useChatHistory";
 import AIAssistantMessage from "./AIAssistantMessage";
+
+const INITIAL_GREETING = {
+  role: "assistant",
+  content: "Hello! I'm your MyKumpare AI assistant. I can help you:\n\n- **Browse All Data**: View firms, contacts, products, portfolios, benchmarks, activities, and tasks\n- **Analyze & Summarize**: Get counts, distributions, performance metrics, and custom computations\n- **Visualize Results**: See data as **tables**, **charts**, or **text** — or all three at once — plus populate firms from their public websites\n\nTry asking:\n- \"Show all firms\"\n- \"Chart of firms by type\"\n- \"Summarize the entire database\"\n- \"Populate a firm from their website\"\n- \"Show performance data for all products\"\n\nWhat would you like to see?",
+};
 import { buildSystemPrompt, buildToolContext } from "./aiContextBuilder";
 import {
   detectEnrichmentIntent,
@@ -54,18 +60,20 @@ const RESPONSE_SCHEMA = {
 };
 
 export default function AIAssistant() {
-  const [messages, setMessages] = useState([
-    {
-      role: "assistant",
-      content: "Hello! I'm your MyKumpare AI assistant. I can help you:\n\n- **Browse All Data**: View firms, contacts, products, portfolios, benchmarks, activities, and tasks\n- **Analyze & Summarize**: Get counts, distributions, performance metrics, and custom computations\n- **Visualize Results**: See data as **tables**, **charts**, or **text** — or all three at once — plus populate firms from their public websites\n\nTry asking:\n- \"Show all firms\"\n- \"Chart of firms by type\"\n- \"Summarize the entire database\"\n- \"Populate a firm from their website\"\n- \"Show performance data for all products\"\n\nWhat would you like to see?",
-    },
-  ]);
+  const [messages, setMessages] = useState([INITIAL_GREETING]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const [isOpen, setIsOpen] = useState(false);
   const { user } = useAuth();
   const queryClient = useQueryClient();
+
+  const { conversations, loading: loadingConvs, createConversation, updateConversation, deleteConversation } = useChatHistory("ai_assistant");
+  const [activeConversationId, setActiveConversationId] = useState(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const activeConvRef = useRef(null);
+  const skipPersistRef = useRef(false);
+  useEffect(() => { activeConvRef.current = activeConversationId; }, [activeConversationId]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -74,6 +82,52 @@ export default function AIAssistant() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Persist messages to the ChatConversation entity whenever they change.
+  // Creates a conversation on the first user message, then updates on subsequent turns.
+  useEffect(() => {
+    if (skipPersistRef.current) { skipPersistRef.current = false; return; }
+    if (!messages.some((m) => m.role === "user")) return; // don't persist greeting-only state
+    let cancelled = false;
+    (async () => {
+      try {
+        if (activeConvRef.current) {
+          await updateConversation(activeConvRef.current, { messages });
+        } else {
+          const firstUser = messages.find((m) => m.role === "user");
+          const title = (firstUser?.content || "New Chat").slice(0, 60);
+          const conv = await createConversation(title, messages);
+          if (!cancelled) setActiveConversationId(conv.id);
+        }
+      } catch {
+        // persistence failures shouldn't break the chat
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [messages, createConversation, updateConversation]);
+
+  const loadConversation = (conv) => {
+    skipPersistRef.current = true;
+    setActiveConversationId(conv.id);
+    setMessages(conv.messages?.length ? conv.messages : [INITIAL_GREETING]);
+    setShowHistory(false);
+  };
+
+  const handleNewChat = () => {
+    skipPersistRef.current = true;
+    setActiveConversationId(null);
+    setMessages([INITIAL_GREETING]);
+    setShowHistory(false);
+  };
+
+  const handleDeleteConv = async (id) => {
+    await deleteConversation(id);
+    if (id === activeConversationId) {
+      skipPersistRef.current = true;
+      setActiveConversationId(null);
+      setMessages([INITIAL_GREETING]);
+    }
+  };
 
   const handleFirmEnrichment = async (firmName, { skipAlternates = false } = {}) => {
     try {
@@ -482,54 +536,95 @@ export default function AIAssistant() {
                 <p className="text-[10px] text-indigo-200">Tables · Charts · Analytics</p>
               </div>
             </div>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="text-white/80 hover:text-white transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-            {messages.map((message, idx) => (
-              <AIAssistantMessage key={idx} message={message} onSelectOption={handleSelectFirmOption} onConfirmCreation={handleConfirmCreation} onCancelCreation={handleCancelCreation} isLoading={isLoading} />
-            ))}
-            {isLoading && (
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center">
-                  <Bot className="w-4 h-4" />
-                </div>
-                <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
-                  <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
-                </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-
-          <form onSubmit={handleSubmit} className="border-t border-gray-200 p-3 bg-white">
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask me anything... (try 'show all firms' or 'chart of tasks by status')"
-                className="flex-1 h-10 px-3 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                disabled={isLoading}
-              />
-              <Button
-                type="submit"
-                size="icon"
-                className="h-10 w-10 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white"
-                disabled={isLoading || !input.trim()}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setShowHistory((s) => !s)}
+                className={`p-1 rounded transition-colors ${showHistory ? "text-white bg-white/20" : "text-white/80 hover:text-white"}`}
+                title="Chat history"
               >
-                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              </Button>
+                <History className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="text-white/80 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <p className="text-[10px] text-gray-400 mt-2 text-center">
-              AI can make mistakes. Verify important information.
-            </p>
-          </form>
+          </div>
+
+          {showHistory ? (
+            <div className="flex-1 flex flex-col bg-gray-50 overflow-hidden">
+              <div className="p-3 border-b border-gray-200 bg-white flex items-center justify-between">
+                <span className="text-xs font-semibold text-gray-700">Chat History</span>
+                <button onClick={handleNewChat} className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700 font-medium">
+                  <Plus className="w-3.5 h-3.5" /> New Chat
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                {loadingConvs ? (
+                  <div className="text-center py-4 text-gray-400 text-xs">Loading…</div>
+                ) : conversations.length === 0 ? (
+                  <div className="text-center py-4 text-gray-400 text-xs">No saved chats yet</div>
+                ) : (
+                  conversations.map((conv) => (
+                    <div key={conv.id} className={`group flex items-center gap-1 px-2 py-2 rounded-lg text-xs ${conv.id === activeConversationId ? "bg-indigo-50 text-indigo-700" : "text-gray-600 hover:bg-gray-100"}`}>
+                      <button onClick={() => loadConversation(conv)} className="flex-1 text-left truncate">
+                        <MessageSquare className="w-3 h-3 inline mr-1.5 opacity-50" />
+                        {conv.title || "Untitled"}
+                      </button>
+                      <button onClick={() => handleDeleteConv(conv.id)} className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity flex-shrink-0">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+                {messages.map((message, idx) => (
+                  <AIAssistantMessage key={idx} message={message} onSelectOption={handleSelectFirmOption} onConfirmCreation={handleConfirmCreation} onCancelCreation={handleCancelCreation} isLoading={isLoading} />
+                ))}
+                {isLoading && (
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center">
+                      <Bot className="w-4 h-4" />
+                    </div>
+                    <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
+                      <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
+                    </div>
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+
+              <form onSubmit={handleSubmit} className="border-t border-gray-200 p-3 bg-white">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder="Ask me anything... (try 'show all firms' or 'chart of tasks by status')"
+                    className="flex-1 h-10 px-3 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    disabled={isLoading}
+                  />
+                  <Button
+                    type="submit"
+                    size="icon"
+                    className="h-10 w-10 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white"
+                    disabled={isLoading || !input.trim()}
+                  >
+                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  </Button>
+                </div>
+                <p className="text-[10px] text-gray-400 mt-2 text-center">
+                  AI can make mistakes. Verify important information.
+                </p>
+              </form>
+            </>
+          )}
         </div>
       )}
     </>
