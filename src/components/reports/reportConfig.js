@@ -117,6 +117,17 @@ export const OUTPUT_FORMATS = [
   { value: "print", label: "Print" },
 ];
 
+export const FILTER_OPERATORS = [
+  { value: "equals", label: "equals", needsValue: true },
+  { value: "not_equals", label: "not equals", needsValue: true },
+  { value: "contains", label: "contains", needsValue: true },
+  { value: "not_contains", label: "does not contain", needsValue: true },
+  { value: "is_empty", label: "is empty", needsValue: false },
+  { value: "is_not_empty", label: "is not empty", needsValue: false },
+  { value: "gt", label: "greater than", needsValue: true },
+  { value: "lt", label: "less than", needsValue: true },
+];
+
 export const STANDARD_REPORTS = [
   {
     id: "firm-directory",

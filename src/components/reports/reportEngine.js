@@ -60,6 +60,45 @@ export function sortData(data, sortBy, sortOrder) {
   return sortOrder === "desc" ? sorted.reverse() : sorted;
 }
 
+export function applyFilters(data, filters) {
+  if (!filters || filters.length === 0) return data;
+  return data.filter((item) =>
+    filters.every((f) => {
+      if (!f.field || !f.operator) return true;
+      const val = item[f.field];
+      const target = String(f.value ?? "");
+      switch (f.operator) {
+        case "equals":
+          return String(val ?? "") === target;
+        case "not_equals":
+          return String(val ?? "") !== target;
+        case "contains": {
+          if (val == null) return false;
+          if (Array.isArray(val))
+            return val.some((v) => String(v).toLowerCase().includes(target.toLowerCase()));
+          return String(val).toLowerCase().includes(target.toLowerCase());
+        }
+        case "not_contains": {
+          if (val == null) return true;
+          if (Array.isArray(val))
+            return !val.some((v) => String(v).toLowerCase().includes(target.toLowerCase()));
+          return !String(val).toLowerCase().includes(target.toLowerCase());
+        }
+        case "is_empty":
+          return val == null || val === "" || (Array.isArray(val) && val.length === 0);
+        case "is_not_empty":
+          return val != null && val !== "" && !(Array.isArray(val) && val.length === 0);
+        case "gt":
+          return Number(val) > Number(f.value);
+        case "lt":
+          return Number(val) < Number(f.value);
+        default:
+          return true;
+      }
+    })
+  );
+}
+
 export function groupData(data, groupBy) {
   if (!groupBy) return { _all: data };
   const groups = {};

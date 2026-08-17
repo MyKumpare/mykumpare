@@ -97,9 +97,48 @@
       "default": "asc",
       "description": "Sort order"
     },
+    "filters": {
+      "type": "array",
+      "description": "Structured field-based filters applied to scope the report to specific records (e.g. a single product by ID or name). Each filter is AND-combined.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique id for this filter row"
+          },
+          "field": {
+            "type": "string",
+            "description": "Entity field key to filter on (e.g. 'id', 'name', 'firm_id')"
+          },
+          "operator": {
+            "type": "string",
+            "enum": [
+              "equals",
+              "not_equals",
+              "contains",
+              "not_contains",
+              "is_empty",
+              "is_not_empty",
+              "gt",
+              "lt"
+            ],
+            "description": "Comparison operator"
+          },
+          "value": {
+            "type": "string",
+            "description": "Value to compare against (not used for is_empty / is_not_empty)"
+          }
+        },
+        "required": [
+          "field",
+          "operator"
+        ]
+      }
+    },
     "filters_description": {
       "type": "string",
-      "description": "Free-text description of filters to apply"
+      "description": "Free-text description of filters to apply (descriptive only; use the structured 'filters' array for actual filtering)"
     },
     "output_formats": {
       "type": "array",

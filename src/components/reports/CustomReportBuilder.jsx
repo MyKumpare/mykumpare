@@ -7,11 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Save, Database, Columns3, Calculator, LayoutTemplate, Printer, X, Play, Loader2 } from "lucide-react";
+import { Plus, Trash2, Save, Database, Columns3, Calculator, LayoutTemplate, Printer, X, Play, Loader2, Filter } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { DATA_SOURCES, COMPUTATION_TYPES, CHART_TYPES, OUTPUT_FORMATS } from "./reportConfig";
-import { fetchReportData } from "./reportEngine";
+import { DATA_SOURCES, COMPUTATION_TYPES, CHART_TYPES, OUTPUT_FORMATS, FILTER_OPERATORS } from "./reportConfig";
+import { fetchReportData, applyFilters } from "./reportEngine";
 import ReportResults from "./ReportResults";
 
 const EMPTY_FORM = {
@@ -26,6 +26,7 @@ const EMPTY_FORM = {
   sort_by: "",
   sort_order: "asc",
   filters_description: "",
+  filters: [],
   output_formats: ["pdf"],
   page_orientation: "landscape",
   include_summary: true,
@@ -232,6 +233,80 @@ function OutputOptions({ form, update }) {
   );
 }
 
+function FilterEditor({ filters, onChange, fields }) {
+  const filterFields = [{ key: "id", label: "Record ID", type: "text" }, ...fields];
+
+  const add = () =>
+    onChange([
+      ...filters,
+      { id: (crypto.randomUUID && crypto.randomUUID()) || String(Date.now() + Math.random()), field: "", operator: "equals", value: "" },
+    ]);
+  const update = (idx, field, value) =>
+    onChange(filters.map((f, i) => (i === idx ? { ...f, [field]: value } : f)));
+  const remove = (idx) => onChange(filters.filter((_, i) => i !== idx));
+
+  return (
+    <div className="space-y-2">
+      {filters.length === 0 && (
+        <p className="text-xs text-gray-400 italic">
+          No filters. Add a filter to scope this report to specific records (e.g. a single product by Record ID or Name).
+        </p>
+      )}
+      {filters.map((flt, idx) => {
+        const op = FILTER_OPERATORS.find((o) => o.value === flt.operator);
+        const needsValue = op ? op.needsValue : true;
+        return (
+          <div key={idx} className="flex items-start gap-2 p-2.5 rounded-lg border border-gray-100 bg-gray-50/50">
+            <div className="flex-1 grid grid-cols-3 gap-2">
+              <div>
+                <Label className="text-[10px] text-gray-400 uppercase">Field</Label>
+                <Select value={flt.field} onValueChange={(v) => update(idx, "field", v)}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select field" /></SelectTrigger>
+                  <SelectContent>
+                    {filterFields.map((f) => (
+                      <SelectItem key={f.key} value={f.key}>{f.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-[10px] text-gray-400 uppercase">Operator</Label>
+                <Select value={flt.operator} onValueChange={(v) => update(idx, "operator", v)}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {FILTER_OPERATORS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-[10px] text-gray-400 uppercase">Value</Label>
+                <Input
+                  value={flt.value}
+                  onChange={(e) => update(idx, "value", e.target.value)}
+                  disabled={!needsValue}
+                  placeholder={needsValue ? "Enter value" : "—"}
+                  className="h-8 text-xs"
+                />
+              </div>
+            </div>
+            <button
+              onClick={() => remove(idx)}
+              className="p-1.5 rounded hover:bg-red-100 text-gray-400 hover:text-red-500 mt-4"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        );
+      })}
+      <Button variant="outline" size="sm" onClick={add} className="w-full border-dashed">
+        <Plus className="w-3.5 h-3.5" /> Add Filter
+      </Button>
+    </div>
+  );
+}
+
 export default function CustomReportBuilder({ open, onClose, editingReport, prefillConfig }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [resultsData, setResultsData] = useState(null);
@@ -277,8 +352,8 @@ export default function CustomReportBuilder({ open, onClose, editingReport, pref
     setGenerating(true);
     setGenError(null);
     try {
-      const data = await fetchReportData(form.data_source);
-      setResultsData(data);
+      const raw = await fetchReportData(form.data_source);
+      setResultsData(applyFilters(raw, form.filters));
     } catch (err) {
       setGenError(err.message || "Failed to generate report");
     } finally {
@@ -352,6 +427,14 @@ export default function CustomReportBuilder({ open, onClose, editingReport, pref
                 <section>
                   <SectionHeader icon={Columns3} title="Fields to Include" subtitle="Select which data fields appear in the report" />
                   <FieldSelector fields={fields} selected={form.selected_fields} onChange={(v) => update("selected_fields", v)} />
+                </section>
+              )}
+
+              {/* Filters */}
+              {form.data_source && (
+                <section>
+                  <SectionHeader icon={Filter} title="Filters" subtitle="Scope the report to specific records (e.g. one product by ID or name)" />
+                  <FilterEditor filters={form.filters} onChange={(v) => update("filters", v)} fields={fields} />
                 </section>
               )}
 

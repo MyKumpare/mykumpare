@@ -246,6 +246,16 @@ export default function ReportResults({ config, data, onBack }) {
         <p className="text-xs text-gray-400 mt-1">
           Data source: {DATA_SOURCES[config.data_source]?.label || config.data_source} · {sortedData.length} records
         </p>
+        {config.filters?.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-1.5">
+            {config.filters.map((f, i) => (
+              <span key={i} className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">
+                {f.field} {f.operator}
+                {f.operator !== "is_empty" && f.operator !== "is_not_empty" ? ` "${f.value}"` : ""}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Summary section */}
