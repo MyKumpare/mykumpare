@@ -603,15 +603,24 @@ export default function Home() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => setSearchFocused(true)}
-              className="w-full pl-9 pr-10 h-8 rounded-lg bg-white/15 border border-white/20 text-white placeholder-white/50 text-sm focus:outline-none focus:bg-white/25 focus:border-white/40 transition-colors cursor-pointer"
+              className="w-full pl-9 pr-[68px] h-8 rounded-lg bg-white/15 border border-white/20 text-white placeholder-white/50 text-sm focus:outline-none focus:bg-white/25 focus:border-white/40 transition-colors cursor-pointer"
             />
-            <button
-              onClick={() => setPhotoCaptureOpen(true)}
-              title="Search by Photo"
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-md hover:bg-white/15 text-white/80 hover:text-white transition-colors"
-            >
-              <Camera className="w-4 h-4" />
-            </button>
+            <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center">
+              <button
+                onClick={() => setMapSearchOpen(true)}
+                title="Search on Map"
+                className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-white/15 text-white/80 hover:text-white transition-colors"
+              >
+                <MapPin className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setPhotoCaptureOpen(true)}
+                title="Search by Photo"
+                className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-white/15 text-white/80 hover:text-white transition-colors"
+              >
+                <Camera className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           {/* Expanded search overlay — auto-opens on focus so the user can
