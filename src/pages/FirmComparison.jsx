@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { GitCompare, TrendingUp, Package, Users } from "lucide-react";
+import { GitCompare, TrendingUp, Package, Users, X } from "lucide-react";
 import AumGrowthChart from "@/components/shared/AumGrowthChart";
 import FirmCompareSelector from "@/components/firms/FirmCompareSelector";
 import FirmCompareProducts from "@/components/firms/FirmCompareProducts";
@@ -16,6 +17,7 @@ function Placeholder() {
 }
 
 export default function FirmComparison() {
+  const navigate = useNavigate();
   const [firmAId, setFirmAId] = useState("");
   const [firmBId, setFirmBId] = useState("");
 
@@ -42,9 +44,18 @@ export default function FirmComparison() {
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
-      <div className="flex items-center gap-2">
-        <GitCompare className="w-5 h-5 text-indigo-600" />
-        <h1 className="text-xl font-bold text-gray-800">Firm Comparison</h1>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <GitCompare className="w-5 h-5 text-indigo-600" />
+          <h1 className="text-xl font-bold text-gray-800">Firm Comparison</h1>
+        </div>
+        <button
+          onClick={() => navigate("/")}
+          className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+          title="Close"
+        >
+          <X className="w-5 h-5" />
+        </button>
       </div>
 
       {/* Selectors */}
