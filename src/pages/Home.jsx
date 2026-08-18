@@ -675,7 +675,7 @@ export default function Home() {
           <button
             onClick={() => setPhotoCaptureOpen(true)}
             title="Search by Photo"
-            className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/15 hover:bg-white/25 border border-white/20 text-white transition-colors flex-shrink-0"
+            className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/15 text-white/80 hover:text-white transition-colors flex-shrink-0"
           >
             <Camera className="w-4 h-4" />
           </button>
