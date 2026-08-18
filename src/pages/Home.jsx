@@ -576,8 +576,10 @@ export default function Home() {
       { label: "Analytics", icon: LineChart, onClick: () => setAnalyticsLaunchOpen(true) },
       { label: "Reports", icon: FileText, onClick: () => setReportsPickerOpen(true) },
     ] },
-    { label: "Ext Portal", icon: ExternalLink, ref: null, color: "text-teal-600", activeBg: "bg-teal-50", onClick: () => setExternalPortalOpen(true) },
-    { label: "Utilities", icon: Wrench, ref: utilityRef, color: "text-gray-600", activeBg: "bg-gray-100", onClick: () => setUtilityModalOpen(true) },
+    { label: "Utilities", icon: Wrench, ref: utilityRef, color: "text-gray-600", activeBg: "bg-gray-100", onClick: () => setUtilityModalOpen(true), submenu: [
+      { label: "Utilities", icon: Wrench, onClick: () => setUtilityModalOpen(true) },
+      { label: "Ext Portal", icon: ExternalLink, onClick: () => setExternalPortalOpen(true) },
+    ] },
   ];
 
   return (
