@@ -563,7 +563,7 @@ export default function Home() {
       { label: "Forms", icon: ClipboardCheck, onClick: () => setQuestionnairePickerOpen(true) },
       { label: "Templates", icon: FileText, onClick: () => setTemplatesPickerOpen(true) },
     ] },
-    { label: "Monitoring", icon: Radar, ref: null, color: "text-rose-600", activeBg: "bg-rose-50", onClick: () => navigate("/ActivityCalendar"), submenu: [
+    { label: "Monitor", icon: Radar, ref: null, color: "text-rose-600", activeBg: "bg-rose-50", onClick: () => navigate("/ActivityCalendar"), submenu: [
       { label: "Activity", icon: ClipboardList, onClick: () => setActivityPickerOpen(true) },
       { label: "Calendar", icon: CalendarDays, onClick: () => navigate("/ActivityCalendar") },
       { label: "Tasks", icon: LayoutList, onClick: () => setTaskPickerOpen(true) },
