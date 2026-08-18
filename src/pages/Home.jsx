@@ -137,11 +137,19 @@ export default function Home() {
   // Voice search — routes spoken commands to app search, photo search, or map search.
   const handleVoiceResult = (transcript) => {
     const lower = transcript.toLowerCase();
-    if (/\b(photo|picture|image|camera|face)\b/.test(lower)) {
+    // Only route to photo/map mode on explicit commands — a query like
+    // "show me the photo of Cesar Gonzales" is a name search, not a camera search.
+    const isPhotoCmd =
+      /\b(search by photo|photo search|camera search|face search|find by photo|use camera|use the camera|open camera)\b/.test(lower) ||
+      /^camera\s*$/.test(lower);
+    const isMapCmd =
+      /\b(search on map|map search|on the map|near me|nearby|find nearby|open map|show map)\b/.test(lower) ||
+      /^map\s*$/.test(lower);
+    if (isPhotoCmd) {
       setSearchFocused(false);
       setPhotoCaptureOpen(true);
       toast({ title: "Voice command", description: "Opening photo search…" });
-    } else if (/\b(map|location|nearby|near me|directions)\b/.test(lower)) {
+    } else if (isMapCmd) {
       setSearchFocused(false);
       setMapSearchOpen(true);
       toast({ title: "Voice command", description: "Opening map search…" });
@@ -159,7 +167,7 @@ export default function Home() {
     if (voiceListening) {
       stopVoice();
     } else {
-      toast({ title: "Listening…", description: "Speak the name of a firm, product, or contact — or say “photo” / “map”." });
+      toast({ title: "Listening…", description: "Speak a name to search, or say “search by photo” / “map search”." });
       startVoice();
     }
   };
