@@ -39,6 +39,7 @@ export default function PhotoCaptureModal({ open, onOpenChange, contacts, onCont
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const fileInputRef = useRef(null);
+  const cancelRef = useRef(false);
 
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
@@ -109,6 +110,7 @@ export default function PhotoCaptureModal({ open, onOpenChange, contacts, onCont
       setError("No contacts with photos in the database to compare against.");
       return;
     }
+    cancelRef.current = false;
     setStage("searching");
     setError(null);
     setSearchProgress({ done: 0, total: withPhotos.length });
@@ -116,6 +118,7 @@ export default function PhotoCaptureModal({ open, onOpenChange, contacts, onCont
     const allMatches = [];
     let failedBatches = 0;
     for (let i = 0; i < withPhotos.length; i += BATCH) {
+      if (cancelRef.current) break;
       const batch = withPhotos.slice(i, i + BATCH);
       const file_urls = [capturedUrl, ...batch.map((c) => c.photo_url)];
       const prompt = `The FIRST image (index 1) is a reference photo of a person. Images 2 through ${batch.length + 1} are photos of contacts from a database. For EACH image from index 2 onward, compare it to the first image and determine how likely it is the SAME person. Return a confidence score from 0 to 100. Only include entries with confidence >= 20.`;
@@ -155,6 +158,7 @@ export default function PhotoCaptureModal({ open, onOpenChange, contacts, onCont
       }
       setSearchProgress({ done: Math.min(i + BATCH, withPhotos.length), total: withPhotos.length });
     }
+    if (cancelRef.current) return; // closed mid-search — discard results
     allMatches.sort((a, b) => b.confidence - a.confidence);
     setMatches(allMatches.slice(0, 8));
     setStage("results");
@@ -210,18 +214,13 @@ export default function PhotoCaptureModal({ open, onOpenChange, contacts, onCont
   const isBusy = stage === "searching";
 
   const handleOpenChange = (next) => {
-    if (isBusy && !next) return;
+    if (!next && isBusy) cancelRef.current = true; // abort in-flight search
     onOpenChange(next);
   };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent
-        className="max-w-md"
-        onPointerDownOutside={(e) => { if (isBusy) e.preventDefault(); }}
-        onInteractOutside={(e) => { if (isBusy) e.preventDefault(); }}
-        onEscapeKeyDown={(e) => { if (isBusy) e.preventDefault(); }}
-      >
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Camera className="w-4 h-4 text-indigo-500" />
