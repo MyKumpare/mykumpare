@@ -1,6 +1,7 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FileText, LayoutGrid, Plus, Pencil, Trash2, FileBarChart } from "lucide-react";
+import { FileText, LayoutGrid, Plus, Pencil, Trash2, FileBarChart, GitCompare } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import CustomReportBuilder from "./CustomReportBuilder";
@@ -8,10 +9,16 @@ import StandardReportsList from "./StandardReportsList";
 import { STANDARD_REPORTS } from "./reportConfig";
 
 export default function ReportsPickerModal({ open, onClose }) {
+  const navigate = useNavigate();
   const [builderOpen, setBuilderOpen] = useState(false);
   const [standardOpen, setStandardOpen] = useState(false);
   const [editingReport, setEditingReport] = useState(null);
   const [prefillConfig, setPrefillConfig] = useState(null);
+
+  const handleOpenCompare = () => {
+    onClose();
+    navigate("/FirmComparison");
+  };
 
   const queryClient = useQueryClient();
 
@@ -70,7 +77,7 @@ export default function ReportsPickerModal({ open, onClose }) {
 
           <div className="space-y-5">
             {/* Two action cards */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <button
                 onClick={() => setStandardOpen(true)}
                 className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-blue-100 bg-white hover:border-blue-300 hover:bg-blue-50/50 transition-colors text-center"
@@ -91,6 +98,17 @@ export default function ReportsPickerModal({ open, onClose }) {
                 </div>
                 <span className="text-sm font-semibold text-gray-800">Create Custom Report</span>
                 <span className="text-[11px] text-gray-400 leading-tight">Define your own fields & layout</span>
+              </button>
+
+              <button
+                onClick={handleOpenCompare}
+                className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-fuchsia-100 bg-white hover:border-fuchsia-300 hover:bg-fuchsia-50/50 transition-colors text-center"
+              >
+                <div className="w-10 h-10 rounded-lg bg-fuchsia-100 flex items-center justify-center">
+                  <GitCompare className="w-5 h-5 text-fuchsia-600" />
+                </div>
+                <span className="text-sm font-semibold text-gray-800">Compare Firms</span>
+                <span className="text-[11px] text-gray-400 leading-tight">Side-by-side AUM & products</span>
               </button>
             </div>
 
