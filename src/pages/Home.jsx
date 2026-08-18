@@ -137,31 +137,52 @@ export default function Home() {
   // Voice search — routes spoken commands to app search, photo search, or map search.
   const handleVoiceResult = (transcript) => {
     const lower = transcript.toLowerCase();
-    // Only route to photo/map mode on explicit commands — a query like
-    // "show me the photo of Cesar Gonzales" is a name search, not a camera search.
-    const isPhotoCmd =
-      /\b(search by photo|photo search|camera search|face search|find by photo|use camera|use the camera|open camera)\b/.test(lower) ||
-      /^camera\s*$/.test(lower);
-    const isMapCmd =
-      /\b(search on map|map search|on the map|near me|nearby|find nearby|open map|show map)\b/.test(lower) ||
-      /^map\s*$/.test(lower);
-    if (isPhotoCmd) {
-      setSearchFocused(false);
-      setPhotoCaptureOpen(true);
-      toast({ title: "Voice command", description: "Opening photo search…" });
-    } else if (isMapCmd) {
+    const photoPhraseRe = /\b(search by photo|photo search|camera search|face search|find by photo|use camera|use the camera|open camera)\b/i;
+    const mapToolRe = /\b(search on map|map search|on the map|open map|show map)\b/i;
+    const locationRe = /\b(near me|nearby|find nearby|directions)\b/i;
+    const isPureCamera = /^camera\s*$/.test(lower);
+    const isPureMap = /^map\s*$/.test(lower);
+    const hasPhoto = isPureCamera || photoPhraseRe.test(lower);
+    const hasMapTool = isPureMap || mapToolRe.test(lower);
+    const hasLocation = locationRe.test(lower);
+
+    // The name/firm target = transcript with mode phrases removed.
+    let target = transcript
+      .replace(photoPhraseRe, "")
+      .replace(mapToolRe, "")
+      .replace(locationRe, "")
+      .trim();
+    // Strip leading command words ("and", "to", "search for", …) repeatedly.
+    let prev;
+    do {
+      prev = target;
+      target = target.replace(/^(please\s+|can you\s+|search for\s+|search\s+|find\s+|show me\s+|show\s+|look up\s+|lookup\s+|look for\s+|look\s+|find me\s+|give me\s+|and\s+|to\s+|for\s+)/i, "").trim();
+    } while (target !== prev);
+
+    // Location intent always opens map search.
+    if (hasLocation) {
       setSearchFocused(false);
       setMapSearchOpen(true);
       toast({ title: "Voice command", description: "Opening map search…" });
-    } else {
-      // Strip a leading command phrase ("search for", "show me", …) so the
-      // remaining keywords match entity names more reliably.
-      const cleaned = transcript
-        .replace(/^(please\s+)?(can you\s+)?(search for|search|find|show me|show|look up|lookup|look for|look|find me|give me)\s+/i, "")
-        .trim();
-      setSearchQuery(cleaned || transcript);
-      setSearchFocused(true);
+      return;
     }
+    // Photo/map tool with no name → open the dedicated tool.
+    if (hasPhoto && !target) {
+      setSearchFocused(false);
+      setPhotoCaptureOpen(true);
+      toast({ title: "Voice command", description: "Opening photo search…" });
+      return;
+    }
+    if (hasMapTool && !target) {
+      setSearchFocused(false);
+      setMapSearchOpen(true);
+      toast({ title: "Voice command", description: "Opening map search…" });
+      return;
+    }
+    // Otherwise it's a name search — e.g. "search by photo Cesar Gonzales"
+    // finds Cesar Gonzales (whose card shows the photo) instead of the camera.
+    setSearchQuery(target || transcript);
+    setSearchFocused(true);
   };
   const handleVoiceError = (code) => {
     const msg = code === "not-allowed" || code === "service-not-allowed"
