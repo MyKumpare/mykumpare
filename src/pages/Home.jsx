@@ -554,7 +554,6 @@ export default function Home() {
   const hasResults = Object.keys(groupedFirms).length > 0;
 
   const mobileNavItems = [
-    { label: "Map Search", icon: MapPin, ref: null, color: "text-rose-600", activeBg: "bg-rose-50", onClick: () => setMapSearchOpen(true) },
     { label: "Dashboard", icon: LayoutDashboard, ref: null, color: "text-indigo-300", activeBg: "bg-indigo-50", onClick: () => navigate("/Overview") },
     { label: "AI Agents", icon: Bot, ref: null, color: "text-violet-300", activeBg: "bg-violet-50", onClick: () => navigate("/AiAgents") },
     { label: "Due Diligence", icon: ShieldCheck, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => setDueDiligencePickerOpen(true), submenu: [
@@ -671,8 +670,26 @@ export default function Home() {
                       onBenchmarkClick={(benchmark) => { setSearchQuery(""); setSearchFocused(false); setEditingBenchmark(benchmark); setBenchmarkDialogOpen(true); }}
                     />
                   ) : (
-                    <div className="bg-white border border-gray-200 rounded-xl shadow-xl p-6 text-sm text-gray-400 text-center">
-                      Start typing to search across firms, products, contacts, portfolios, due diligence, activities, tasks, reports, benchmarks and documents.
+                    <div className="bg-white border border-gray-200 rounded-xl shadow-xl p-6">
+                      <div className="flex flex-col sm:flex-row items-center gap-3 mb-4">
+                        <button
+                          onClick={() => { setSearchFocused(false); setMapSearchOpen(true); }}
+                          className="flex items-center gap-2 w-full sm:w-auto px-4 py-2.5 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-sm font-medium transition-colors"
+                        >
+                          <MapPin className="w-4 h-4" />
+                          Search on Map
+                        </button>
+                        <button
+                          onClick={() => { setSearchFocused(false); setPhotoCaptureOpen(true); }}
+                          className="flex items-center gap-2 w-full sm:w-auto px-4 py-2.5 rounded-lg bg-pink-50 hover:bg-pink-100 border border-pink-200 text-pink-700 text-sm font-medium transition-colors"
+                        >
+                          <Camera className="w-4 h-4" />
+                          Search by Photo
+                        </button>
+                      </div>
+                      <p className="text-sm text-gray-400 text-center">
+                        Start typing to search across firms, products, contacts, portfolios, due diligence, activities, tasks, reports, benchmarks and documents.
+                      </p>
                     </div>
                   )}
                 </div>
