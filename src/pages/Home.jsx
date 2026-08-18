@@ -568,14 +568,14 @@ export default function Home() {
       { label: "Calendar", icon: CalendarDays, onClick: () => navigate("/ActivityCalendar") },
       { label: "Tasks", icon: LayoutList, onClick: () => setTaskPickerOpen(true) },
     ] },
-    { label: "Portfolios", icon: BarChart3, ref: null, color: "text-emerald-600", activeBg: "bg-emerald-50", onClick: () => setPortfolioPickerOpen(true) },
-    { label: "Firms", icon: Building, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => setFirmPickerOpen(true) },
-    { label: "Products", icon: Package, ref: null, color: "text-violet-600", activeBg: "bg-violet-50", onClick: () => setProductPickerOpen(true) },
-    { label: "Contacts", icon: User, ref: null, color: "text-pink-600", activeBg: "bg-pink-50", onClick: () => setContactPickerOpen(true) },
     { label: "Reporting", icon: FileBarChart, ref: null, color: "text-cyan-600", activeBg: "bg-cyan-50", onClick: () => setAnalyticsLaunchOpen(true), submenu: [
       { label: "Analytics", icon: LineChart, onClick: () => setAnalyticsLaunchOpen(true) },
       { label: "Reports", icon: FileText, onClick: () => setReportsPickerOpen(true) },
     ] },
+    { label: "Portfolios", icon: BarChart3, ref: null, color: "text-emerald-600", activeBg: "bg-emerald-50", onClick: () => setPortfolioPickerOpen(true) },
+    { label: "Firms", icon: Building, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => setFirmPickerOpen(true) },
+    { label: "Products", icon: Package, ref: null, color: "text-violet-600", activeBg: "bg-violet-50", onClick: () => setProductPickerOpen(true) },
+    { label: "Contacts", icon: User, ref: null, color: "text-pink-600", activeBg: "bg-pink-50", onClick: () => setContactPickerOpen(true) },
     { label: "Utilities", icon: Wrench, ref: utilityRef, color: "text-gray-600", activeBg: "bg-gray-100", onClick: () => setUtilityModalOpen(true), submenu: [
       { label: "Utilities", icon: Wrench, onClick: () => setUtilityModalOpen(true) },
       { label: "Ext Portal", icon: ExternalLink, onClick: () => setExternalPortalOpen(true) },
