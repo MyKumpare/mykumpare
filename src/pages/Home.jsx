@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, ClipboardCheck, FileText, Files, ShieldCheck, X, LayoutDashboard, FlaskConical, MapPin, Camera, LayoutGrid, PieChart, Bot, ExternalLink, ChevronDown, CalendarDays, Radar, FileBarChart } from "lucide-react";
+import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, ClipboardCheck, FileText, Files, ShieldCheck, X, LayoutDashboard, FlaskConical, MapPin, Camera,   LayoutGrid, PieChart, Bot, ExternalLink, ChevronDown, CalendarDays, Radar, FileBarChart, Mic } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
@@ -60,6 +60,7 @@ const TaskDetailModal = lazyDialog(() => import("../components/activity/TaskDeta
 const UserProfileDialog = lazyDialog(() => import("../components/user/UserProfileDialog"));
 const ExternalPortalPickerModal = lazyDialog(() => import("../components/external/ExternalPortalPickerModal"));
 import { useFirmOwner } from "@/components/admin/useFirmOwner";
+import { useVoiceSearch } from "@/hooks/useVoiceSearch";
 
 const FIRM_TYPES = [
   "Manager of Managers",
@@ -132,6 +133,36 @@ export default function Home() {
   const [externalPortalOpen, setExternalPortalOpen] = useState(false);
   const [photoCaptureOpen, setPhotoCaptureOpen] = useState(false);
   const [addContactPhotoUrl, setAddContactPhotoUrl] = useState(null);
+
+  // Voice search — routes spoken commands to app search, photo search, or map search.
+  const handleVoiceResult = (transcript) => {
+    const lower = transcript.toLowerCase();
+    if (/\b(photo|picture|image|camera|face)\b/.test(lower)) {
+      setSearchFocused(false);
+      setPhotoCaptureOpen(true);
+      toast({ title: "Voice command", description: "Opening photo search…" });
+    } else if (/\b(map|location|nearby|near me|directions)\b/.test(lower)) {
+      setSearchFocused(false);
+      setMapSearchOpen(true);
+      toast({ title: "Voice command", description: "Opening map search…" });
+    } else {
+      setSearchQuery(transcript);
+      setSearchFocused(true);
+    }
+  };
+  const { listening: voiceListening, supported: voiceSupported, start: startVoice, stop: stopVoice } = useVoiceSearch({ onResult: handleVoiceResult });
+  const handleMicClick = () => {
+    if (!voiceSupported) {
+      toast({ title: "Voice search unavailable", description: "Your browser doesn't support voice input.", variant: "destructive" });
+      return;
+    }
+    if (voiceListening) {
+      stopVoice();
+    } else {
+      toast({ title: "Listening…", description: "Speak the name of a firm, product, or contact — or say “photo” / “map”." });
+      startVoice();
+    }
+  };
 
   const portfoliosRef = useRef(null);
   const firmsRef = useRef(null);
@@ -609,9 +640,16 @@ export default function Home() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => setSearchFocused(true)}
-              className="w-full pl-9 pr-[68px] h-8 rounded-lg bg-white/15 border border-white/20 text-white placeholder-white/50 text-sm focus:outline-none focus:bg-white/25 focus:border-white/40 transition-colors cursor-pointer"
+              className="w-full pl-9 pr-[96px] h-8 rounded-lg bg-white/15 border border-white/20 text-white placeholder-white/50 text-sm focus:outline-none focus:bg-white/25 focus:border-white/40 transition-colors cursor-pointer"
             />
             <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center">
+              <button
+                onClick={handleMicClick}
+                title="Voice search"
+                className={`w-7 h-7 flex items-center justify-center rounded-md hover:bg-white/15 transition-colors ${voiceListening ? "text-red-300 animate-pulse" : "text-white/80 hover:text-white"}`}
+              >
+                <Mic className="w-4 h-4" />
+              </button>
               <button
                 onClick={() => setMapSearchOpen(true)}
                 title="Search on Map"
