@@ -14,6 +14,7 @@ import { toast } from "@/components/ui/use-toast";
 
 import { lazyDialog } from "@/components/common/lazyDialog";
 import SearchResults from "../components/search/SearchResults";
+import ImageZoomDialog from "@/components/common/ImageZoomDialog";
 
 const AddFirmDialog = lazyDialog(() => import("../components/firms/AddFirmDialog"));
 const DeleteConfirmDialog = lazyDialog(() => import("../components/firms/DeleteConfirmDialog"));
@@ -71,6 +72,11 @@ const FIRM_TYPES = [
   "Trade Organizations",
 ];
 
+function formatContactName(c) {
+  if (!c) return "";
+  return [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ");
+}
+
 export default function Home() {
   const { isAuthenticated, user, navigateToLogin, logout, updateUser } = useAuth();
   const navigate = useNavigate();
@@ -85,6 +91,7 @@ export default function Home() {
   const [contactsModalOpen, setContactsModalOpen] = useState(false);
   const [addContactOpen, setAddContactOpen] = useState(false);
   const [viewingContact, setViewingContact] = useState(null);
+  const [photoViewerContact, setPhotoViewerContact] = useState(null);
   const [searchFocused, setSearchFocused] = useState(false);
   const [ownershipNavTarget, setOwnershipNavTarget] = useState(null); // { firmId, ownershipId }
   const [documentsNavTarget, setDocumentsNavTarget] = useState(null); // firmId to open at Documents tab
@@ -179,8 +186,34 @@ export default function Home() {
       toast({ title: "Voice command", description: "Opening map search…" });
       return;
     }
-    // Otherwise it's a name search — e.g. "search by photo Cesar Gonzales"
-    // finds Cesar Gonzales (whose card shows the photo) instead of the camera.
+    // "search by photo <name>" → find the contact, open their record (so all
+    // their info is available) and show the full-size photo on top.
+    if (hasPhoto && target) {
+      const tokens = target.toLowerCase().split(/\s+/).filter((t) => t.length > 1);
+      const active = contacts.filter((c) => !c.deleted_at);
+      let best = null;
+      let bestScore = 0;
+      for (const c of active) {
+        const name = formatContactName(c).toLowerCase();
+        const firmNames = (c.firm_ids || [])
+          .map((fid) => firms.find((f) => f.id === fid)?.name)
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        const hay = `${name} ${firmNames}`;
+        let score = 0;
+        for (const t of tokens) if (hay.includes(t)) score++;
+        if (score > bestScore) { bestScore = score; best = c; }
+      }
+      if (best && bestScore >= Math.min(2, tokens.length)) {
+        setSearchFocused(false);
+        setViewingContact(best);
+        if (best.photo_url) setPhotoViewerContact(best);
+        toast({ title: "Contact found", description: formatContactName(best) });
+        return;
+      }
+    }
+    // Otherwise a plain name search.
     setSearchQuery(target || transcript);
     setSearchFocused(true);
   };
@@ -1447,6 +1480,15 @@ export default function Home() {
         onClose={() => setUtilityModalOpen(false)}
         deletedCount={deletedCount}
         onFirmClick={handleEdit}
+      />
+
+      {/* Full-size photo viewer — opened by voice "search by photo <name>" */}
+      <ImageZoomDialog
+        open={!!photoViewerContact}
+        onOpenChange={(o) => { if (!o) setPhotoViewerContact(null); }}
+        src={photoViewerContact?.photo_url}
+        alt={formatContactName(photoViewerContact) || "Contact photo"}
+        caption={formatContactName(photoViewerContact)}
       />
 
       {/* AI Assistant */}
