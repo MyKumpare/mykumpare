@@ -830,69 +830,6 @@ export default function Home() {
           forceExpanded={allExpanded}
         />
 
-        {/* Portfolios section */}
-        <div ref={portfoliosRef} />
-        <PortfoliosSection
-          portfolios={portfolios.filter(p => !p.deleted_at)}
-          onPortfolioClick={(portfolio) => { setEditingPortfolio(portfolio); setPreselectedAllocatorId(null); setPortfolioDialogOpen(true); }}
-          onAddPortfolio={() => { setEditingPortfolio(null); setPreselectedAllocatorId(null); setPortfolioDialogOpen(true); }}
-          forceExpanded={allExpanded}
-        />
-
-        {/* Firms section */}
-        <div ref={firmsRef} />
-        {isLoading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="space-y-2">
-                <Skeleton className="h-6 w-40 rounded-lg" />
-                <Skeleton className="h-16 w-full rounded-xl" />
-                <Skeleton className="h-16 w-full rounded-xl" />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <FirmsSection
-            groupedFirms={groupedFirms}
-            totalFirms={totalFirms}
-            products={activeProducts}
-            searchQuery={searchQuery}
-            onEdit={handleEdit}
-            onDelete={setDeletingFirm}
-            onAddToType={handleAddToType}
-            onAddFirm={() => { setEditingFirm(null); setPreselectedType(null); setDialogOpen(true); }}
-            onAddProduct={handleAddProductFromFirm}
-            onEditProduct={handleEditProduct}
-            onAddPortfolio={(firm) => { setPreselectedAllocatorId(firm.id); setPortfolioDialogOpen(true); }}
-            forceExpanded={allExpanded}
-          />
-        )}
-
-        {/* Products section */}
-        <div ref={productsRef} />
-        <ProductsSection
-          products={activeProducts}
-          firms={activeFirms}
-          onProductClick={handleEditProduct}
-          onFirmClick={(firm) => handleEdit(firm)}
-          onAddProduct={() => { setEditingProduct(null); setPreselectedProductType(null); setPreselectedFirmId(null); setProductDialogOpen(true); }}
-          forceExpanded={allExpanded}
-        />
-
-        {/* Contacts section */}
-        <div ref={contactsRef} />
-        <ContactsSection
-          contacts={activeContacts}
-          firms={activeFirms}
-          products={activeProducts}
-          portfolios={portfolios.filter(p => !p.deleted_at)}
-          onContactClick={(contact) => setViewingContact(contact)}
-          onFirmClick={(firm) => handleEdit(firm, false, false)}
-          onAddContact={() => setAddContactOpen(true)}
-          onPhotoSearch={() => setPhotoCaptureOpen(true)}
-          forceExpanded={allExpanded}
-        />
-
         {/* Activity section */}
         <PickerSection
           label="Activity"
@@ -964,6 +901,69 @@ export default function Home() {
         {/* Reports section */}
         <div ref={reportsRef} />
         <ReportsSection forceExpanded={allExpanded} />
+
+        {/* Portfolios section */}
+        <div ref={portfoliosRef} />
+        <PortfoliosSection
+          portfolios={portfolios.filter(p => !p.deleted_at)}
+          onPortfolioClick={(portfolio) => { setEditingPortfolio(portfolio); setPreselectedAllocatorId(null); setPortfolioDialogOpen(true); }}
+          onAddPortfolio={() => { setEditingPortfolio(null); setPreselectedAllocatorId(null); setPortfolioDialogOpen(true); }}
+          forceExpanded={allExpanded}
+        />
+
+        {/* Firms section */}
+        <div ref={firmsRef} />
+        {isLoading ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="h-6 w-40 rounded-lg" />
+                <Skeleton className="h-16 w-full rounded-xl" />
+                <Skeleton className="h-16 w-full rounded-xl" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <FirmsSection
+            groupedFirms={groupedFirms}
+            totalFirms={totalFirms}
+            products={activeProducts}
+            searchQuery={searchQuery}
+            onEdit={handleEdit}
+            onDelete={setDeletingFirm}
+            onAddToType={handleAddToType}
+            onAddFirm={() => { setEditingFirm(null); setPreselectedType(null); setDialogOpen(true); }}
+            onAddProduct={handleAddProductFromFirm}
+            onEditProduct={handleEditProduct}
+            onAddPortfolio={(firm) => { setPreselectedAllocatorId(firm.id); setPortfolioDialogOpen(true); }}
+            forceExpanded={allExpanded}
+          />
+        )}
+
+        {/* Products section */}
+        <div ref={productsRef} />
+        <ProductsSection
+          products={activeProducts}
+          firms={activeFirms}
+          onProductClick={handleEditProduct}
+          onFirmClick={(firm) => handleEdit(firm)}
+          onAddProduct={() => { setEditingProduct(null); setPreselectedProductType(null); setPreselectedFirmId(null); setProductDialogOpen(true); }}
+          forceExpanded={allExpanded}
+        />
+
+        {/* Contacts section */}
+        <div ref={contactsRef} />
+        <ContactsSection
+          contacts={activeContacts}
+          firms={activeFirms}
+          products={activeProducts}
+          portfolios={portfolios.filter(p => !p.deleted_at)}
+          onContactClick={(contact) => setViewingContact(contact)}
+          onFirmClick={(firm) => handleEdit(firm, false, false)}
+          onAddContact={() => setAddContactOpen(true)}
+          onPhotoSearch={() => setPhotoCaptureOpen(true)}
+          forceExpanded={allExpanded}
+        />
 
         {/* Utility section */}
         <div ref={utilityRef} />
