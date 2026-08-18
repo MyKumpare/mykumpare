@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Send, Bot, Loader2, X, History, Trash2, Plus, MessageSquare } from "lucide-react";
+import { Send, Bot, Loader2, X, History, Trash2, Plus, MessageSquare, Mic } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { useChatHistory } from "@/hooks/useChatHistory";
+import { useVoiceSearch } from "@/hooks/useVoiceSearch";
 import AIAssistantMessage from "./AIAssistantMessage";
 
 const INITIAL_GREETING = {
@@ -74,6 +75,22 @@ export default function AIAssistant() {
   const activeConvRef = useRef(null);
   const skipPersistRef = useRef(false);
   useEffect(() => { activeConvRef.current = activeConversationId; }, [activeConversationId]);
+
+  // Voice input — speak to the assistant instead of typing.
+  const handleVoiceResult = (transcript) => {
+    const text = transcript.trim();
+    if (!text) return;
+    handleSubmit(null, text);
+  };
+  const handleVoiceError = () => {
+    setMessages((prev) => [...prev, { role: "assistant", content: "Sorry, I couldn't hear you. Please try again or type your question." }]);
+  };
+  const { listening: voiceListening, supported: voiceSupported, start: startVoice, stop: stopVoice } = useVoiceSearch({ onResult: handleVoiceResult, onError: handleVoiceError });
+  const handleMicClick = () => {
+    if (!voiceSupported) return;
+    if (voiceListening) stopVoice();
+    else startVoice();
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -434,11 +451,10 @@ export default function AIAssistant() {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading) return;
-
-    const userMessage = input.trim();
+  const handleSubmit = async (e, overrideMessage) => {
+    if (e) e.preventDefault();
+    const userMessage = (overrideMessage ?? input).trim();
+    if (!userMessage || isLoading) return;
     setInput("");
     setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
     setIsLoading(true);
@@ -610,6 +626,17 @@ export default function AIAssistant() {
                     className="flex-1 h-10 px-3 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     disabled={isLoading}
                   />
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={handleMicClick}
+                    disabled={isLoading || !voiceSupported}
+                    className={`h-10 w-10 rounded-xl border border-gray-300 ${voiceListening ? "text-red-500 border-red-300 animate-pulse" : "text-indigo-600 hover:bg-indigo-50"}`}
+                    title={voiceListening ? "Stop listening" : "Speak to the assistant"}
+                  >
+                    <Mic className="w-4 h-4" />
+                  </Button>
                   <Button
                     type="submit"
                     size="icon"
