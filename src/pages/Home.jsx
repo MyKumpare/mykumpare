@@ -154,11 +154,24 @@ export default function Home() {
       setMapSearchOpen(true);
       toast({ title: "Voice command", description: "Opening map search…" });
     } else {
-      setSearchQuery(transcript);
+      // Strip a leading command phrase ("search for", "show me", …) so the
+      // remaining keywords match entity names more reliably.
+      const cleaned = transcript
+        .replace(/^(please\s+)?(can you\s+)?(search for|search|find|show me|show|look up|lookup|look for|look|find me|give me)\s+/i, "")
+        .trim();
+      setSearchQuery(cleaned || transcript);
       setSearchFocused(true);
     }
   };
-  const { listening: voiceListening, supported: voiceSupported, start: startVoice, stop: stopVoice } = useVoiceSearch({ onResult: handleVoiceResult });
+  const handleVoiceError = (code) => {
+    const msg = code === "not-allowed" || code === "service-not-allowed"
+      ? "Microphone access was blocked."
+      : code === "no-speech"
+      ? "No speech detected."
+      : "Voice search failed.";
+    toast({ title: "Voice search", description: msg, variant: "destructive" });
+  };
+  const { listening: voiceListening, supported: voiceSupported, start: startVoice, stop: stopVoice } = useVoiceSearch({ onResult: handleVoiceResult, onError: handleVoiceError });
   const handleMicClick = () => {
     if (!voiceSupported) {
       toast({ title: "Voice search unavailable", description: "Your browser doesn't support voice input.", variant: "destructive" });
