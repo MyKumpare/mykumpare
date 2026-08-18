@@ -37,6 +37,7 @@ import ReportsSection from "../components/reports/ReportsSection";
 import PickerSection from "../components/common/PickerSection";
 import DueDiligenceNavSection from "../components/firms/DueDiligenceNavSection";
 import MonitorNavSection from "../components/activity/MonitorNavSection";
+import ReportingNavSection from "../components/reports/ReportingNavSection";
 import AnalyticsSection from "../components/analytics/AnalyticsSection";
 
 const ReportsPickerModal = lazyDialog(() => import("../components/reports/ReportsPickerModal"));
@@ -843,43 +844,43 @@ export default function Home() {
           forceExpanded={allExpanded}
         />
 
-        {/* Analytics section */}
+        {/* Reporting section — Analytics and Reports nested as expandable sub-items */}
         <div ref={analyticsRef} />
-        <AnalyticsSection
-          openLaunch={analyticsLaunchOpen}
-          onLaunchOpenChange={setAnalyticsLaunchOpen}
-          totalAnalyses={totalAnalyses}
-          forceExpanded={allExpanded}
-          editingAnalysis={editingAnalysis}
-          onEditAnalysisChange={setEditingAnalysis}
-          onProductClick={(product) => {
-            setAnalyticsReturnState({ type: 'product', product });
-            handleEditProduct(product);
-          }}
-          onFirmClick={(firm) => {
-            setAnalyticsReturnState({ type: 'firm', firm });
-            handleEdit(firm);
-          }}
-          onBenchmarkClick={(benchmarkId) => {
-            const bm = benchmarks.find(b => b.id === benchmarkId);
-            if (bm) {
-              setEditingBenchmark(bm);
-              setBenchmarkDialogOpen(true);
-            }
-          }}
-          onProductClick={(product) => {
-            setAnalyticsReturnState({ type: 'product', product });
-            handleEditProduct(product);
-          }}
-          onFirmClick={(firm) => {
-            setAnalyticsReturnState({ type: 'firm', firm });
-            handleEdit(firm);
-          }}
-        />
-
-        {/* Reports section */}
         <div ref={reportsRef} />
-        <ReportsSection forceExpanded={allExpanded} />
+        <ReportingNavSection totalAnalyses={totalAnalyses} forceExpanded={allExpanded}>
+          <AnalyticsSection
+            openLaunch={analyticsLaunchOpen}
+            onLaunchOpenChange={setAnalyticsLaunchOpen}
+            totalAnalyses={totalAnalyses}
+            forceExpanded={allExpanded}
+            editingAnalysis={editingAnalysis}
+            onEditAnalysisChange={setEditingAnalysis}
+            onProductClick={(product) => {
+              setAnalyticsReturnState({ type: 'product', product });
+              handleEditProduct(product);
+            }}
+            onFirmClick={(firm) => {
+              setAnalyticsReturnState({ type: 'firm', firm });
+              handleEdit(firm);
+            }}
+            onBenchmarkClick={(benchmarkId) => {
+              const bm = benchmarks.find(b => b.id === benchmarkId);
+              if (bm) {
+                setEditingBenchmark(bm);
+                setBenchmarkDialogOpen(true);
+              }
+            }}
+            onProductClick={(product) => {
+              setAnalyticsReturnState({ type: 'product', product });
+              handleEditProduct(product);
+            }}
+            onFirmClick={(firm) => {
+              setAnalyticsReturnState({ type: 'firm', firm });
+              handleEdit(firm);
+            }}
+          />
+          <ReportsSection forceExpanded={allExpanded} />
+        </ReportingNavSection>
 
         {/* Portfolios section */}
         <div ref={portfoliosRef} />
