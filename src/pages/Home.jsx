@@ -36,6 +36,7 @@ import UtilityFullScreenModal from "../components/utility/UtilityFullScreenModal
 import ReportsSection from "../components/reports/ReportsSection";
 import PickerSection from "../components/common/PickerSection";
 import DueDiligenceNavSection from "../components/firms/DueDiligenceNavSection";
+import MonitorNavSection from "../components/activity/MonitorNavSection";
 import AnalyticsSection from "../components/analytics/AnalyticsSection";
 
 const ReportsPickerModal = lazyDialog(() => import("../components/reports/ReportsPickerModal"));
@@ -830,37 +831,15 @@ export default function Home() {
           forceExpanded={allExpanded}
         />
 
-        {/* Activity section */}
-        <PickerSection
-          label="Activity"
-          icon={ClipboardList}
-          iconColor="text-amber-500"
-          count={activities.filter(a => !a.deleted_at).length}
-          onOpen={() => setActivityPickerOpen(true)}
-          onAdd={() => { setActivityLogDefaultTab("activity"); setActivityLogModalOpen(true); }}
-          addLabel="Add Activity"
-          addColor="text-amber-600"
-          addHoverColor="hover:text-amber-700"
-          addHoverBg="hover:bg-amber-50"
-          openLabel="Open Activity"
-          description="Open the activity log to view and log contact activities."
-          forceExpanded={allExpanded}
-        />
-
-        {/* Tasks section */}
-        <PickerSection
-          label="Tasks"
-          icon={LayoutList}
-          iconColor="text-orange-500"
-          count={followUpTasks.filter(t => !t.deleted_at).length}
-          onOpen={() => setTaskPickerOpen(true)}
-          onAdd={() => { setActivityLogDefaultTab("task"); setActivityLogModalOpen(true); }}
-          addLabel="Add Task"
-          addColor="text-orange-600"
-          addHoverColor="hover:text-orange-700"
-          addHoverBg="hover:bg-orange-50"
-          openLabel="Open Tasks"
-          description="Open the task picker to view and manage follow-up tasks."
+        {/* Monitor section — Activity, Calendar, Tasks nested as sub-items */}
+        <MonitorNavSection
+          activitiesCount={activities.filter(a => !a.deleted_at).length}
+          tasksCount={followUpTasks.filter(t => !t.deleted_at).length}
+          onOpenActivity={() => setActivityPickerOpen(true)}
+          onAddActivity={() => { setActivityLogDefaultTab("activity"); setActivityLogModalOpen(true); }}
+          onOpenCalendar={() => navigate("/ActivityCalendar")}
+          onOpenTasks={() => setTaskPickerOpen(true)}
+          onAddTasks={() => { setActivityLogDefaultTab("task"); setActivityLogModalOpen(true); }}
           forceExpanded={allExpanded}
         />
 
