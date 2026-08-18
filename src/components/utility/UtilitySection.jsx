@@ -70,8 +70,8 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
   // Expand + reset to selection menu when the parent requests it (e.g. clicking the Utilities header icon),
   // while still letting the user collapse it manually afterwards.
   useEffect(() => {
+    if (forceExpanded !== undefined) setExpanded(forceExpanded);
     if (forceExpanded) {
-      setExpanded(true);
       setView("menu");
       setCleanupStarted(false);
     }

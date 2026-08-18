@@ -21,7 +21,7 @@ export default function MonitorNavSection({
   forceExpanded,
 }) {
   const [expanded, setExpanded] = useState(false);
-  const isExpanded = forceExpanded || expanded;
+  const isExpanded = forceExpanded !== undefined ? forceExpanded : expanded;
 
   const subItems = [
     {

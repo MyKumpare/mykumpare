@@ -19,7 +19,7 @@ export default function ReportsSection({ forceExpanded = false }) {
   const [search, setSearch] = useState("");
 
   const queryClient = useQueryClient();
-  const isOpen = forceExpanded || expanded;
+  const isOpen = forceExpanded !== undefined ? forceExpanded : expanded;
 
   const { data: savedReports = [] } = useQuery({
     queryKey: ["custom_reports"],

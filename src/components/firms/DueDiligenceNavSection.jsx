@@ -47,7 +47,7 @@ export default function DueDiligenceNavSection({
   });
   const templatesCount = templates.filter((x) => !x.deleted_at).length;
 
-  const isExpanded = forceExpanded || expanded;
+  const isExpanded = forceExpanded !== undefined ? forceExpanded : expanded;
 
   const subItems = [
     {

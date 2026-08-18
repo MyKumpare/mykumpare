@@ -10,7 +10,7 @@ import { FileBarChart, ChevronRight, ChevronDown } from "lucide-react";
  */
 export default function ReportingNavSection({ totalAnalyses = 0, forceExpanded, children }) {
   const [expanded, setExpanded] = useState(false);
-  const isExpanded = forceExpanded || expanded;
+  const isExpanded = forceExpanded !== undefined ? forceExpanded : expanded;
 
   return (
     <div className="mb-6">
