@@ -592,17 +592,25 @@ export default function Home() {
             <span className="text-base font-bold tracking-tight hidden sm:block">{firmOwner?.name || "MyKumpare"}</span>
           </div>
 
-          {/* Search bar inline in header — opens an expanded overlay on focus */}
-          <div className="flex-1 relative max-w-xl min-w-0">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/50" />
+          {/* Search bar inline in header — opens an expanded overlay on focus.
+              Camera suffix lives inside the field so it can never overlap the input. */}
+          <div className="flex-1 sm:flex-none sm:w-[320px] relative min-w-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/50 pointer-events-none" />
             <input
               type="text"
               placeholder="Search firms, products, contacts, documents..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => setSearchFocused(true)}
-              className="w-full pl-9 pr-3 h-8 rounded-lg bg-white/15 border border-white/20 text-white placeholder-white/50 text-sm focus:outline-none focus:bg-white/25 focus:border-white/40 transition-colors cursor-pointer"
+              className="w-full pl-9 pr-10 h-8 rounded-lg bg-white/15 border border-white/20 text-white placeholder-white/50 text-sm focus:outline-none focus:bg-white/25 focus:border-white/40 transition-colors cursor-pointer"
             />
+            <button
+              onClick={() => setPhotoCaptureOpen(true)}
+              title="Search by Photo"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-md hover:bg-white/15 text-white/80 hover:text-white transition-colors"
+            >
+              <Camera className="w-4 h-4" />
+            </button>
           </div>
 
           {/* Expanded search overlay — auto-opens on focus so the user can
@@ -669,15 +677,6 @@ export default function Home() {
               </div>
             </div>
           )}
-
-          {/* Photo ID — camera search */}
-          <button
-            onClick={() => setPhotoCaptureOpen(true)}
-            title="Search by Photo"
-            className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/15 text-white/80 hover:text-white transition-colors flex-shrink-0"
-          >
-            <Camera className="w-4 h-4" />
-          </button>
 
           {/* Desktop nav — single row of icon buttons */}
           <div className="hidden sm:flex items-center gap-0.5 ml-2">
