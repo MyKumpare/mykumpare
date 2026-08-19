@@ -1,14 +1,16 @@
 import React, { useState, useMemo, useCallback } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Upload, CheckCircle2, AlertTriangle, Loader2, Download, ArrowLeft, Globe } from "lucide-react";
 import { parseCSV, autoMapHeader, validateEnum } from "./csvUtils";
 import { enrichFirmFromWeb, mergeEnrichmentData, mergeContactEnrichment, parsePhoneString } from "../ai/firmEnrichment";
 import { detectDesignations } from "../contacts/designationDetector";
+import { findFirmNameDuplicates } from "../firms/firmNameDuplicateCheck";
 
 const FIRM_TYPES = [
   "Manager of Managers",
@@ -124,6 +126,12 @@ export default function CsvFirmImport() {
   const [results, setResults] = useState(null);
   const [dragOver, setDragOver] = useState(false);
   const [enrichProgress, setEnrichProgress] = useState(null);
+  const [reviewItems, setReviewItems] = useState(null);
+
+  const { data: existingFirms = [] } = useQuery({
+    queryKey: ["firms"],
+    queryFn: () => base44.entities.Firm.list(null, 5000),
+  });
 
   const handleFile = useCallback((file) => {
     if (!file) return;
@@ -205,16 +213,41 @@ export default function CsvFirmImport() {
     return { valid, skipped };
   }, [csvData, mapping, user]);
 
-  const handleImport = async () => {
+  const handleImportClick = () => {
+    const { valid, skipped: validationSkipped } = buildFirms();
+    if (valid.length === 0) return;
+    // Check each firm against existing firms + earlier firms in the same file
+    // for exact/similar names. Flagged firms need explicit accept/reject before
+    // they're created — mirrors the duplicate check used when adding a firm manually.
+    const seenNames = [];
+    const items = valid.map((b) => {
+      const dups = findFirmNameDuplicates(b.firm.name, [...(existingFirms || []), ...seenNames]);
+      seenNames.push({ name: b.firm.name, id: `batch_${b.row}` });
+      return { firm: b.firm, row: b.row, duplicates: dups, accept: dups.length === 0 };
+    });
+    const flagged = items.filter((it) => it.duplicates.length > 0);
+    if (flagged.length > 0) {
+      setReviewItems({ items, validationSkipped });
+      setStage("review");
+    } else {
+      runImport(items, validationSkipped);
+    }
+  };
+
+  const runImport = async (items, validationSkipped) => {
     setStage("importing");
-    const { valid, skipped } = buildFirms();
+    const accepted = items.filter((it) => it.accept);
+    const duplicateSkipped = items
+      .filter((it) => !it.accept)
+      .map((it) => ({ row: it.row, reason: "Skipped — duplicate firm name" }));
+    const skipped = [...(validationSkipped || []), ...duplicateSkipped];
     const createdFirms = [];
     const failed = [];
 
     try {
       const BATCH = 100;
-      for (let i = 0; i < valid.length; i += BATCH) {
-        const batch = valid.slice(i, i + BATCH);
+      for (let i = 0; i < accepted.length; i += BATCH) {
+        const batch = accepted.slice(i, i + BATCH);
         try {
           const created = await base44.entities.Firm.bulkCreate(batch.map((b) => b.firm));
           (Array.isArray(created) ? created : []).forEach((f) => createdFirms.push(f));
@@ -281,6 +314,7 @@ export default function CsvFirmImport() {
     setMapping({});
     setResults(null);
     setEnrichProgress(null);
+    setReviewItems(null);
     setStage("upload");
   };
 
@@ -399,8 +433,73 @@ export default function CsvFirmImport() {
         </div>
 
         <div className="flex justify-end">
-          <Button onClick={handleImport} disabled={valid.length === 0} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+          <Button onClick={handleImportClick} disabled={valid.length === 0} className="bg-indigo-600 hover:bg-indigo-700 text-white">
             <Upload className="w-4 h-4 mr-1" /> Import {valid.length} Firm{valid.length === 1 ? "" : "s"}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (stage === "review" && reviewItems) {
+    const { items, validationSkipped } = reviewItems;
+    const flagged = items.filter((it) => it.duplicates.length > 0);
+    const autoAccepted = items.length - flagged.length;
+    const toggleItem = (idx) => {
+      const next = items.map((it, i) => (i === idx ? { ...it, accept: !it.accept } : it));
+      setReviewItems({ items: next, validationSkipped });
+    };
+    const acceptedCount = items.filter((it) => it.accept).length;
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold text-gray-700">Review duplicates</p>
+            <p className="text-xs text-gray-400">
+              {flagged.length} firm{flagged.length === 1 ? "" : "s"} match existing names · {autoAccepted} will import automatically
+            </p>
+          </div>
+          <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={reset}>
+            <ArrowLeft className="w-3.5 h-3.5" /> Start Over
+          </Button>
+        </div>
+
+        <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3 flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-amber-700">
+            Uncheck a firm to skip it. Checked firms will be created and then auto-filled from the web.
+          </p>
+        </div>
+
+        <div className="space-y-2 max-h-[45vh] overflow-y-auto">
+          {flagged.map((it, i) => (
+            <div key={i} className={`rounded-lg border p-3 ${it.accept ? "border-indigo-200 bg-white" : "border-gray-200 bg-gray-50 opacity-70"}`}>
+              <label className="flex items-start gap-2 cursor-pointer">
+                <Checkbox checked={it.accept} onCheckedChange={() => toggleItem(i)} className="mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-800">{it.firm.name}</p>
+                  <p className="text-[11px] text-gray-400">Row {it.row} · {(it.firm.firm_types || []).join(", ")}</p>
+                  <div className="mt-1.5 space-y-1">
+                    {it.duplicates.map((d, di) => (
+                      <div key={di} className="text-xs text-amber-700 flex items-start gap-1">
+                        <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                        <span>Matches <strong>{d.name}</strong> — {d.reasons.join(", ")}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </label>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={reset}>Cancel</Button>
+          <Button
+            onClick={() => runImport(items, validationSkipped)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+          >
+            <Upload className="w-4 h-4 mr-1" /> Import {acceptedCount} Firm{acceptedCount === 1 ? "" : "s"}
           </Button>
         </div>
       </div>
