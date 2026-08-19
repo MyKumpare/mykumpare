@@ -184,10 +184,12 @@ export default function CsvProductImport() {
       if (exactFirm) {
         const product = buildProductFromRaw(raw, productType, exactFirm, tenant_id);
         const dups = findProductDuplicates(raw.name, productsByFirm[exactFirm.id] || []);
+        const isExactProduct = dups.some((d) => d.score === 1);
         items.push({
           product, row: rowIdx + 2, firmName: raw.firm_name,
           firmId: exactFirm.id, firmDups: [], productDups: dups,
           accept: dups.length === 0,
+          autoSkipped: isExactProduct,
         });
       } else {
         // No exact firm match — look for similar firms so the user can map to
@@ -212,7 +214,7 @@ export default function CsvProductImport() {
   const handleImportClick = () => {
     const { items, skipped } = buildReview();
     if (items.length === 0) return;
-    const needsReview = items.some((it) => !it.firmId || (it.productDups.length > 0 && !it.accept));
+    const needsReview = items.some((it) => !it.firmId || (it.firmId && it.productDups.length > 0 && !it.accept && !it.autoSkipped));
     if (needsReview) {
       setReviewItems({ items, skipped });
       setStage("review");
@@ -237,7 +239,9 @@ export default function CsvProductImport() {
           batch.forEach((_, bi) => failed.push({ row: items[bi]?.row, error: err.message || "Create failed" }));
         }
       }
-      const rejected = items.filter((it) => !it.accept && it.firmId).map((it) => ({ row: it.row, error: "Skipped — duplicate product" }));
+      const rejected = items
+        .filter((it) => !it.accept && it.firmId)
+        .map((it) => ({ row: it.row, error: it.autoSkipped ? "Skipped — exact duplicate product" : "Skipped — duplicate product" }));
       setResults({
         total: csvData.rows.length,
         success: successCount,
@@ -394,8 +398,9 @@ export default function CsvProductImport() {
   if (stage === "review" && reviewItems) {
     const { items, skipped } = reviewItems;
     const firmReviewItems = items.map((it, i) => ({ it, i })).filter(({ it }) => !it.firmId && it.firmDups.length > 0);
-    const productReviewItems = items.map((it, i) => ({ it, i })).filter(({ it }) => it.firmId && it.productDups.length > 0);
+    const productReviewItems = items.map((it, i) => ({ it, i })).filter(({ it }) => it.firmId && it.productDups.length > 0 && !it.autoSkipped);
     const autoAccepted = items.filter((it) => it.firmId && it.productDups.length === 0).length;
+    const exactSkipped = items.filter((it) => it.autoSkipped).length;
 
     const updateItem = (idx, patch) => {
       const next = items.map((it, i) => (i === idx ? { ...it, ...patch } : it));
@@ -405,7 +410,8 @@ export default function CsvProductImport() {
       const it = items[idx];
       const product = { ...it.product, firm_id: firmId, firm_name: firmName };
       const dups = findProductDuplicates(it.product.name, productsByFirm[firmId] || []);
-      updateItem(idx, { firmId: firmId, product, productDups: dups, accept: dups.length === 0 });
+      const isExactProduct = dups.some((d) => d.score === 1);
+      updateItem(idx, { firmId: firmId, product, productDups: dups, accept: dups.length === 0, autoSkipped: isExactProduct });
       setFirmPickerIdx(null);
     };
     const skipFirmReview = (idx) => {
@@ -424,7 +430,7 @@ export default function CsvProductImport() {
           <div>
             <p className="text-sm font-semibold text-gray-700">Review before import</p>
             <p className="text-xs text-gray-400">
-              {firmReviewItems.length} firm{firmReviewItems.length === 1 ? "" : "s"} to confirm · {productReviewItems.length} duplicate product{productReviewItems.length === 1 ? "" : "s"} · {autoAccepted} will import automatically
+              {firmReviewItems.length} firm{firmReviewItems.length === 1 ? "" : "s"} to confirm · {productReviewItems.length} duplicate product{productReviewItems.length === 1 ? "" : "s"} · {autoAccepted} will import automatically{exactSkipped > 0 ? ` · ${exactSkipped} exact duplicate${exactSkipped === 1 ? "" : "s"} skipped` : ""}
             </p>
           </div>
           <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={reset}>

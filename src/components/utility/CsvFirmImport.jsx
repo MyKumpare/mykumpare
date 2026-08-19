@@ -270,10 +270,12 @@ export default function CsvFirmImport() {
     const items = valid.map((b) => {
       const dups = findFirmNameDuplicates(b.firm.name, [...(existingFirms || []), ...seenNames]);
       seenNames.push({ name: b.firm.name, id: `batch_${b.row}` });
-      return { firm: b.firm, row: b.row, duplicates: dups, accept: dups.length === 0 };
+      const isExact = dups.some((d) => d.score === 1);
+      return { firm: b.firm, row: b.row, duplicates: dups, accept: !isExact && dups.length === 0 };
     });
-    const flagged = items.filter((it) => it.duplicates.length > 0);
-    if (flagged.length > 0) {
+    // Exact matches are auto-skipped (accept: false) and never shown for review.
+    const needsReview = items.some((it) => it.duplicates.length > 0 && !it.duplicates.some((d) => d.score === 1));
+    if (needsReview) {
       setReviewItems({ items, validationSkipped });
       setStage("review");
     } else {
@@ -529,48 +531,9 @@ export default function CsvFirmImport() {
         <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3 flex items-start gap-2">
           <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
           <p className="text-xs text-amber-700">
-            Exact matches are skipped automatically. For any match, choose <strong>Merge</strong> to fold the CSV data into an existing firm. For similar names, <strong>Accept</strong> creates it as a new firm and <strong>Reject</strong> skips it.
+            Exact name matches are skipped automatically. For similar names, <strong>Accept</strong> creates a new firm, <strong>Reject</strong> skips it, or <strong>Merge</strong> folds the CSV data into an existing firm.
           </p>
         </div>
-
-        {exactIdxs.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Exact matches — skipped unless merged</p>
-            <div className="space-y-2 max-h-[30vh] overflow-y-auto">
-              {exactIdxs.map(({ it, i }) => (
-                <div key={i} className={`rounded-lg border p-3 ${it.mergeTargetId ? "border-teal-300 bg-teal-50" : "border-gray-200 bg-gray-50"}`}>
-                  <div className="flex items-start gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-700">{it.firm.name}</p>
-                      <p className="text-[11px] text-gray-400">Row {it.row} · {(it.firm.firm_types || []).join(", ")}</p>
-                      <div className="mt-1.5 space-y-1">
-                        {it.duplicates.map((d, di) => (
-                          <div key={di} className="text-xs text-gray-500 flex items-start gap-1">
-                            <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                            <span>{d.score === 1 ? "Exact match" : "Similar match"}: <strong>{d.name}</strong></span>
-                          </div>
-                        ))}
-                      </div>
-                      {it.mergeTargetId && (
-                        <p className="mt-1.5 text-xs text-teal-700 flex items-center gap-1">
-                          <Merge className="w-3 h-3" /> Merging into <strong>{it.mergeTargetName || targetNameOf(it)}</strong>
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                      {it.mergeTargetId ? (
-                        <button onClick={() => clearMerge(i)} className="px-2.5 py-1 text-xs rounded-md border bg-white text-gray-600 border-gray-300 hover:bg-gray-50">Cancel merge</button>
-                      ) : (
-                        <button onClick={() => handleMergeClick(i, it)} className="px-2.5 py-1 text-xs rounded-md border bg-white text-teal-700 border-teal-300 hover:bg-teal-50">Merge</button>
-                      )}
-                    </div>
-                  </div>
-                  {renderMergePicker(it, i)}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {similarIdxs.length > 0 && (
           <div className="space-y-2">
