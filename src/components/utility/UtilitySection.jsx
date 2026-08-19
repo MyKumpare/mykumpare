@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 // Utility section — tools for cleanup, imports, and validation
-import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search, ArrowLeft, Users, Sparkles, ScrollText, ShieldCheck, Ghost, Upload, Eraser, Tag, UserX, Briefcase, Building, Package } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search, ArrowLeft, Users, Sparkles, ScrollText, ShieldCheck, Ghost, Upload, Eraser, Tag, UserX, Briefcase, Building, Package, Activity } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -17,6 +17,7 @@ import CsvProductImport from "./CsvProductImport";
 import PlaceholderCleanup from "./PlaceholderCleanup";
 import FirmTypeValidation from "./FirmTypeValidation";
 import ExperienceOptionCleanup from "./ExperienceOptionCleanup";
+import ImportJobsDashboard from "./ImportJobsDashboard";
 
 function BenchmarkItem({ b, onClick }) {
   return (
@@ -284,6 +285,16 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
                 <span className="text-sm font-semibold text-gray-700">Orphaned Contacts</span>
                 <span className="text-[11px] text-gray-400">Find & fix firmless contacts</span>
               </button>
+              <button
+                onClick={() => setView("import-jobs")}
+                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
+              >
+                <div className="w-9 h-9 rounded-full bg-cyan-50 flex items-center justify-center">
+                  <Activity className="w-5 h-5 text-cyan-600" />
+                </div>
+                <span className="text-sm font-semibold text-gray-700">Import Jobs</span>
+                <span className="text-[11px] text-gray-400">Status & errors for bulk imports</span>
+              </button>
               {isAdmin && (
                 <button
                   onClick={() => navigate("/UserManagement")}
@@ -445,6 +456,11 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
           {/* Orphaned contacts cleanup view */}
           {view === "orphaned-contacts" && (
             <OrphanedContactsCleanup onFirmClick={onFirmClick} />
+          )}
+
+          {/* Import jobs status dashboard */}
+          {view === "import-jobs" && (
+            <ImportJobsDashboard />
           )}
         </div>
       )}

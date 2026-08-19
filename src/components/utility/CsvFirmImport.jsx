@@ -11,6 +11,7 @@ import { enrichFirmFromWeb, mergeEnrichmentData, mergeContactEnrichment, parsePh
 import { detectDesignations } from "../contacts/designationDetector";
 import { findFirmNameDuplicates } from "../firms/firmNameDuplicateCheck";
 import MergeTargetPicker from "./MergeTargetPicker";
+import ImportJobsDashboard from "./ImportJobsDashboard";
 
 // Human-readable status messages cycled by elapsed time while each firm is
 // being enriched. The backend scrape is a single long call, so we surface
@@ -280,91 +281,29 @@ export default function CsvFirmImport() {
     }
   };
 
+  // Submit the reviewed items to the server-side import job. The backend
+  // bulk-creates the accepted firms, applies the append-only merges, and
+  // creates an ImportJob record. The "Process Import Jobs" workflow then
+  // enriches each firm in the background — surviving navigation/close. We
+  // hand off to the Import Jobs dashboard so the user can watch progress.
   const runImport = async (items, validationSkipped) => {
     setStage("importing");
-    const accepted = items.filter((it) => it.accept);
-    const mergedItems = items.filter((it) => it.mergeTargetId);
-    const duplicateSkipped = items
-      .filter((it) => !it.accept && !it.mergeTargetId)
-      .map((it) => ({ row: it.row, reason: "Skipped — duplicate firm name" }));
-    const skipped = [...(validationSkipped || []), ...duplicateSkipped];
-    const createdFirms = [];
-    const mergedFirms = [];
-    const failed = [];
-
     try {
-      const BATCH = 100;
-      for (let i = 0; i < accepted.length; i += BATCH) {
-        const batch = accepted.slice(i, i + BATCH);
-        try {
-          const created = await base44.entities.Firm.bulkCreate(batch.map((b) => b.firm));
-          (Array.isArray(created) ? created : []).forEach((f) => createdFirms.push(f));
-        } catch (err) {
-          batch.forEach((b) => failed.push({ row: b.row, error: err.message || "Create failed" }));
-        }
-      }
-
-      // Merge: append CSV data into the chosen existing firm (fill empty fields only)
-      for (const it of mergedItems) {
-        const target = (existingFirms || []).find((f) => f.id === it.mergeTargetId)
-          || (it.duplicates.find((d) => d.firm?.id === it.mergeTargetId) || {}).firm;
-        if (!target) {
-          failed.push({ row: it.row, error: "Merge target firm not found" });
-          continue;
-        }
-        try {
-          const updates = buildCsvMergeUpdates(target, it.firm);
-          if (Object.keys(updates).length > 0) {
-            await base44.entities.Firm.update(target.id, updates);
-          }
-          mergedFirms.push({ name: target.name, row: it.row, fieldsUpdated: Object.keys(updates).length });
-        } catch (err) {
-          failed.push({ row: it.row, error: err.message || "Merge failed" });
-        }
-      }
-
-      const successCount = createdFirms.length;
-      const mergedCount = mergedFirms.length;
-      queryClient.invalidateQueries({ queryKey: ["firms"] });
-
-      // Auto-fill each created firm from its website. Enrichment is slow
-      // (30-90s/firm), so run sequentially with a live progress indicator.
-      const enrichmentSummaries = [];
-      if (createdFirms.length > 0) {
-        setStage("enriching");
-        setEnrichProgress({ current: 0, total: createdFirms.length, currentName: createdFirms[0].name, summaries: [] });
-        let existingContacts = [];
-        try {
-          existingContacts = await base44.entities.Contact.list(null, 5000);
-        } catch { /* start empty */ }
-        const tenantId = user?.linked_firm_id;
-        for (let i = 0; i < createdFirms.length; i++) {
-          const firm = createdFirms[i];
-          setEnrichProgress({ current: i, total: createdFirms.length, currentName: firm.name, summaries: enrichmentSummaries });
-          const summary = await enrichAndApplyFirm(firm, existingContacts, tenantId);
-          enrichmentSummaries.push(summary);
-        }
-        setEnrichProgress({ current: createdFirms.length, total: createdFirms.length, currentName: "", summaries: enrichmentSummaries });
-        queryClient.invalidateQueries({ queryKey: ["firms"] });
-        queryClient.invalidateQueries({ queryKey: ["contacts"] });
-      }
-
-      setResults({
-        total: csvData.rows.length,
-        success: successCount,
-        merged: mergedCount,
-        mergedFirms,
-        skipped,
-        failed,
-        enrichmentSummaries,
+      const res = await base44.functions.invoke("startImportJob", {
+        source: "firm",
+        items,
+        validationSkipped,
+        tenant_id: user?.linked_firm_id,
       });
-      setEnrichProgress(null);
-      setStage("results");
-      if (successCount > 0 || mergedCount > 0) {
-        toast({ title: `✅ ${successCount} firm${successCount === 1 ? "" : "s"} imported${mergedCount > 0 ? ` · ${mergedCount} merged` : ""}` });
+      const data = res?.data || res || {};
+      queryClient.invalidateQueries({ queryKey: ["firms"] });
+      queryClient.invalidateQueries({ queryKey: ["import-jobs"] });
+      setStage("job_status");
+      if ((data.created || 0) > 0 || (data.merged || 0) > 0) {
+        toast({ title: `✅ ${data.created} firm${data.created === 1 ? "" : "s"} submitted${data.merged > 0 ? ` · ${data.merged} merged` : ""}` });
       }
     } catch (err) {
-      toast({ title: "Import failed", description: err.message, variant: "destructive" });
+      toast({ title: "Import failed", description: err?.message || "Failed to start import job", variant: "destructive" });
       setStage("mapping");
     }
   };
@@ -710,54 +649,24 @@ export default function CsvFirmImport() {
     return (
       <div className="flex flex-col items-center justify-center gap-3 py-12">
         <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-        <p className="text-sm font-semibold text-gray-700">Creating firms...</p>
+        <p className="text-sm font-semibold text-gray-700">Starting import job...</p>
       </div>
     );
   }
 
-  if (stage === "enriching" && enrichProgress) {
-    const pct = enrichProgress.total > 0 ? (enrichProgress.current / enrichProgress.total) * 100 : 0;
-    const stageIdx = Math.min(ENRICH_STAGES.length - 1, Math.floor(enrichElapsed / 5));
-    const enrichStage = ENRICH_STAGES[stageIdx];
+  if (stage === "job_status") {
     return (
-      <div className="space-y-4 py-2">
-        <div className="flex items-center gap-3">
-          <Loader2 className="w-6 h-6 text-indigo-600 animate-spin flex-shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-700">
-              {enrichProgress.current < enrichProgress.total
-                ? `${enrichStage.label}…`
-                : `Completing ${enrichProgress.total} firm${enrichProgress.total === 1 ? "" : "s"}`}
-            </p>
-            <p className="text-xs text-gray-500 truncate">
-              {enrichProgress.current < enrichProgress.total
-                ? `Firm ${enrichProgress.current + 1} of ${enrichProgress.total}: ${enrichProgress.currentName}`
-                : "Finishing up…"}
-            </p>
-            <p className="text-[11px] text-gray-400 truncate mt-0.5">{enrichStage.detail}</p>
-          </div>
-          <div className="flex flex-col items-end gap-0.5">
-            <span className="text-xs text-gray-400 tabular-nums">{enrichProgress.current}/{enrichProgress.total}</span>
-            {enrichProgress.current < enrichProgress.total && enrichElapsed > 0 && (
-              <span className="text-[11px] text-gray-400 tabular-nums">{enrichElapsed}s</span>
-            )}
-          </div>
+      <div className="space-y-3">
+        <div className="rounded-lg bg-indigo-50 border border-indigo-100 p-3 flex items-start gap-2">
+          <Globe className="w-4 h-4 text-indigo-600 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-indigo-700">
+            Your import is running in the background. Firms are created immediately and enriched from their websites — this survives navigation and close. Track progress below or reopen <strong>Import Jobs</strong> anytime from the Utility menu.
+          </p>
         </div>
-        <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-          <div className="h-full bg-indigo-500 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+        <ImportJobsDashboard />
+        <div className="flex justify-end">
+          <Button onClick={reset} className="bg-indigo-600 hover:bg-indigo-700 text-white">Import Another File</Button>
         </div>
-        {enrichProgress.summaries.length > 0 && (
-          <div className="max-h-48 overflow-y-auto rounded-lg border border-gray-200 divide-y divide-gray-100">
-            {enrichProgress.summaries.map((s, i) => (
-              <div key={i} className="px-3 py-2 text-xs flex justify-between gap-2">
-                <span className="text-gray-700 font-medium truncate">{s.name}</span>
-                <span className={s.error ? "text-amber-600" : "text-gray-500"}>
-                  {s.error ? "⚠ " + s.error : `✓ ${s.fieldsUpdated} field(s), ${s.contactsCreated} new, ${s.contactsUpdated} updated`}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     );
   }
