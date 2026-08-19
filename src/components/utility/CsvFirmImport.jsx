@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, CheckCircle2, AlertTriangle, Loader2, Download, ArrowLeft, Globe } from "lucide-react";
+import { Upload, CheckCircle2, AlertTriangle, Loader2, Download, ArrowLeft, Globe, Merge } from "lucide-react";
 import { parseCSV, autoMapHeader, validateEnum } from "./csvUtils";
 import { enrichFirmFromWeb, mergeEnrichmentData, mergeContactEnrichment, parsePhoneString } from "../ai/firmEnrichment";
 import { detectDesignations } from "../contacts/designationDetector";
@@ -128,6 +128,27 @@ async function enrichAndApplyFirm(firm, existingContacts, tenantId) {
   return summary;
 }
 
+// Append-only merge of CSV firm data into an existing firm record. Fills only
+// empty fields and unions firm_types — never overwrites existing data.
+function buildCsvMergeUpdates(existingFirm, csvFirm) {
+  const updates = {};
+  const fillIfEmpty = (field) => {
+    if (csvFirm[field] && !existingFirm[field]) updates[field] = csvFirm[field];
+  };
+  fillIfEmpty("logo_url");
+  fillIfEmpty("website");
+  fillIfEmpty("linkedin_url");
+  fillIfEmpty("email");
+  fillIfEmpty("description");
+  if (csvFirm.year_founded && !existingFirm.year_founded) updates.year_founded = csvFirm.year_founded;
+  if (csvFirm.firm_types && csvFirm.firm_types.length > 0) {
+    const existing = existingFirm.firm_types || [];
+    const mergedTypes = [...new Set([...existing, ...csvFirm.firm_types])];
+    if (mergedTypes.length > existing.length) updates.firm_types = mergedTypes;
+  }
+  return updates;
+}
+
 export default function CsvFirmImport() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -138,6 +159,7 @@ export default function CsvFirmImport() {
   const [dragOver, setDragOver] = useState(false);
   const [enrichProgress, setEnrichProgress] = useState(null);
   const [reviewItems, setReviewItems] = useState(null);
+  const [mergePickerIdx, setMergePickerIdx] = useState(null);
   const [enrichElapsed, setEnrichElapsed] = useState(0);
 
   const { data: existingFirms = [] } = useQuery({
@@ -260,11 +282,13 @@ export default function CsvFirmImport() {
   const runImport = async (items, validationSkipped) => {
     setStage("importing");
     const accepted = items.filter((it) => it.accept);
+    const mergedItems = items.filter((it) => it.mergeTargetId);
     const duplicateSkipped = items
-      .filter((it) => !it.accept)
+      .filter((it) => !it.accept && !it.mergeTargetId)
       .map((it) => ({ row: it.row, reason: "Skipped — duplicate firm name" }));
     const skipped = [...(validationSkipped || []), ...duplicateSkipped];
     const createdFirms = [];
+    const mergedFirms = [];
     const failed = [];
 
     try {
@@ -279,7 +303,27 @@ export default function CsvFirmImport() {
         }
       }
 
+      // Merge: append CSV data into the chosen existing firm (fill empty fields only)
+      for (const it of mergedItems) {
+        const target = (existingFirms || []).find((f) => f.id === it.mergeTargetId)
+          || (it.duplicates.find((d) => d.firm?.id === it.mergeTargetId) || {}).firm;
+        if (!target) {
+          failed.push({ row: it.row, error: "Merge target firm not found" });
+          continue;
+        }
+        try {
+          const updates = buildCsvMergeUpdates(target, it.firm);
+          if (Object.keys(updates).length > 0) {
+            await base44.entities.Firm.update(target.id, updates);
+          }
+          mergedFirms.push({ name: target.name, row: it.row, fieldsUpdated: Object.keys(updates).length });
+        } catch (err) {
+          failed.push({ row: it.row, error: err.message || "Merge failed" });
+        }
+      }
+
       const successCount = createdFirms.length;
+      const mergedCount = mergedFirms.length;
       queryClient.invalidateQueries({ queryKey: ["firms"] });
 
       // Auto-fill each created firm from its website. Enrichment is slow
@@ -307,13 +351,17 @@ export default function CsvFirmImport() {
       setResults({
         total: csvData.rows.length,
         success: successCount,
+        merged: mergedCount,
+        mergedFirms,
         skipped,
         failed,
         enrichmentSummaries,
       });
       setEnrichProgress(null);
       setStage("results");
-      if (successCount > 0) toast({ title: `✅ ${successCount} firm${successCount === 1 ? "" : "s"} imported` });
+      if (successCount > 0 || mergedCount > 0) {
+        toast({ title: `✅ ${successCount} firm${successCount === 1 ? "" : "s"} imported${mergedCount > 0 ? ` · ${mergedCount} merged` : ""}` });
+      }
     } catch (err) {
       toast({ title: "Import failed", description: err.message, variant: "destructive" });
       setStage("mapping");
@@ -477,22 +525,59 @@ export default function CsvFirmImport() {
     const autoAccepted = items.length - flaggedWithIdx.length;
 
     const setAccept = (idx, val) => {
-      const next = items.map((it, i) => (i === idx ? { ...it, accept: val } : it));
+      const next = items.map((it, i) => (i === idx ? { ...it, accept: val, mergeTargetId: null } : it));
       setReviewItems({ items: next, validationSkipped });
+    };
+    const setMerge = (idx, firmId) => {
+      const next = items.map((it, i) => (i === idx ? { ...it, accept: false, mergeTargetId: firmId } : it));
+      setReviewItems({ items: next, validationSkipped });
+      setMergePickerIdx(null);
+    };
+    const clearMerge = (idx) => {
+      const next = items.map((it, i) => (i === idx ? { ...it, mergeTargetId: null } : it));
+      setReviewItems({ items: next, validationSkipped });
+    };
+    const handleMergeClick = (idx, it) => {
+      if (it.duplicates.length === 1) {
+        setMerge(idx, it.duplicates[0].firm.id);
+      } else {
+        setMergePickerIdx(mergePickerIdx === idx ? null : idx);
+      }
     };
     // Bulk only affects similar names — exact matches are always rejected.
     const setAllSimilar = (val) => {
       const exactSet = new Set(exactIdxs.map(({ i }) => i));
-      const next = items.map((it, i) =>
-        exactSet.has(i) ? { ...it, accept: false }
-          : it.duplicates.length > 0 ? { ...it, accept: val }
-          : it
-      );
+      const next = items.map((it, i) => {
+        if (exactSet.has(i)) return { ...it, accept: false };
+        if (it.duplicates.length > 0 && !it.mergeTargetId) return { ...it, accept: val };
+        return it;
+      });
       setReviewItems({ items: next, validationSkipped });
     };
 
     const similarAccepted = similarIdxs.filter(({ it }) => it.accept).length;
+    const mergedCount = items.filter((it) => it.mergeTargetId).length;
     const acceptedCount = autoAccepted + similarAccepted;
+    const targetNameOf = (it) => {
+      const d = it.duplicates.find((x) => x.firm?.id === it.mergeTargetId);
+      return d ? d.name : "";
+    };
+    const renderMergePicker = (it, i) =>
+      mergePickerIdx === i && !it.mergeTargetId ? (
+        <div className="mt-2 pt-2 border-t border-teal-100 space-y-1">
+          <p className="text-[11px] text-gray-500">Choose a firm to merge into:</p>
+          {it.duplicates.map((d, di) => (
+            <button
+              key={di}
+              onClick={() => setMerge(i, d.firm.id)}
+              className="w-full text-left px-2 py-1.5 text-xs rounded-md border border-gray-200 hover:border-teal-300 hover:bg-teal-50"
+            >
+              <strong className="text-gray-800">{d.name}</strong>
+              <span className="text-gray-400"> — {d.reasons.join(", ")}</span>
+            </button>
+          ))}
+        </div>
+      ) : null;
 
     return (
       <div className="space-y-4">
@@ -500,7 +585,7 @@ export default function CsvFirmImport() {
           <div>
             <p className="text-sm font-semibold text-gray-700">Review duplicates</p>
             <p className="text-xs text-gray-400">
-              {exactIdxs.length} exact match{exactIdxs.length === 1 ? "" : "es"} (auto-skipped) · {similarIdxs.length} similar name{similarIdxs.length === 1 ? "" : "s"} · {autoAccepted} will import automatically
+              {exactIdxs.length} exact match{exactIdxs.length === 1 ? "" : "es"} (auto-skipped) · {similarIdxs.length} similar name{similarIdxs.length === 1 ? "" : "s"} · {autoAccepted} will import automatically{mergedCount > 0 ? ` · ${mergedCount} to merge` : ""}
             </p>
           </div>
           <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={reset}>
@@ -511,16 +596,16 @@ export default function CsvFirmImport() {
         <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3 flex items-start gap-2">
           <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
           <p className="text-xs text-amber-700">
-            Exact matches are skipped automatically. For similar names, choose <strong>Accept</strong> to import anyway or <strong>Reject</strong> to skip. Accepted firms are created and then auto-filled from the web.
+            Exact matches are skipped automatically. For any match, choose <strong>Merge</strong> to fold the CSV data into an existing firm. For similar names, <strong>Accept</strong> creates it as a new firm and <strong>Reject</strong> skips it.
           </p>
         </div>
 
         {exactIdxs.length > 0 && (
           <div className="space-y-2">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Exact matches — will be skipped</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Exact matches — skipped unless merged</p>
             <div className="space-y-2 max-h-[30vh] overflow-y-auto">
               {exactIdxs.map(({ it, i }) => (
-                <div key={i} className="rounded-lg border border-gray-200 bg-gray-50 p-3 opacity-80">
+                <div key={i} className={`rounded-lg border p-3 ${it.mergeTargetId ? "border-teal-300 bg-teal-50" : "border-gray-200 bg-gray-50"}`}>
                   <div className="flex items-start gap-3">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-700">{it.firm.name}</p>
@@ -533,9 +618,21 @@ export default function CsvFirmImport() {
                           </div>
                         ))}
                       </div>
+                      {it.mergeTargetId && (
+                        <p className="mt-1.5 text-xs text-teal-700 flex items-center gap-1">
+                          <Merge className="w-3 h-3" /> Merging into <strong>{targetNameOf(it)}</strong>
+                        </p>
+                      )}
                     </div>
-                    <span className="px-2 py-1 text-[11px] rounded-md bg-gray-200 text-gray-600 flex-shrink-0">Skipped</span>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {it.mergeTargetId ? (
+                        <button onClick={() => clearMerge(i)} className="px-2.5 py-1 text-xs rounded-md border bg-white text-gray-600 border-gray-300 hover:bg-gray-50">Cancel merge</button>
+                      ) : (
+                        <button onClick={() => handleMergeClick(i, it)} className="px-2.5 py-1 text-xs rounded-md border bg-white text-teal-700 border-teal-300 hover:bg-teal-50">Merge</button>
+                      )}
+                    </div>
                   </div>
+                  {renderMergePicker(it, i)}
                 </div>
               ))}
             </div>
@@ -555,7 +652,7 @@ export default function CsvFirmImport() {
             </div>
             <div className="space-y-2 max-h-[40vh] overflow-y-auto">
               {similarIdxs.map(({ it, i }) => (
-                <div key={i} className={`rounded-lg border p-3 ${it.accept ? "border-indigo-200 bg-white" : "border-gray-200 bg-gray-50"}`}>
+                <div key={i} className={`rounded-lg border p-3 ${it.mergeTargetId ? "border-teal-300 bg-teal-50" : it.accept ? "border-indigo-200 bg-white" : "border-gray-200 bg-gray-50"}`}>
                   <div className="flex items-start gap-3">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-800">{it.firm.name}</p>
@@ -568,22 +665,35 @@ export default function CsvFirmImport() {
                           </div>
                         ))}
                       </div>
+                      {it.mergeTargetId && (
+                        <p className="mt-1.5 text-xs text-teal-700 flex items-center gap-1">
+                          <Merge className="w-3 h-3" /> Merging into <strong>{targetNameOf(it)}</strong>
+                        </p>
+                      )}
                     </div>
                     <div className="flex items-center gap-1.5 flex-shrink-0">
-                      <button
-                        onClick={() => setAccept(i, false)}
-                        className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${!it.accept ? "bg-red-600 text-white border-red-600" : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"}`}
-                      >
-                        Reject
-                      </button>
-                      <button
-                        onClick={() => setAccept(i, true)}
-                        className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${it.accept ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"}`}
-                      >
-                        Accept
-                      </button>
+                      {it.mergeTargetId ? (
+                        <button onClick={() => clearMerge(i)} className="px-2.5 py-1 text-xs rounded-md border bg-white text-gray-600 border-gray-300 hover:bg-gray-50">Cancel merge</button>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => setAccept(i, false)}
+                            className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${!it.accept ? "bg-red-600 text-white border-red-600" : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"}`}
+                          >
+                            Reject
+                          </button>
+                          <button
+                            onClick={() => setAccept(i, true)}
+                            className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${it.accept ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"}`}
+                          >
+                            Accept
+                          </button>
+                          <button onClick={() => handleMergeClick(i, it)} className="px-2.5 py-1 text-xs rounded-md border bg-white text-teal-700 border-teal-300 hover:bg-teal-50">Merge</button>
+                        </>
+                      )}
                     </div>
                   </div>
+                  {renderMergePicker(it, i)}
                 </div>
               ))}
             </div>
@@ -596,7 +706,7 @@ export default function CsvFirmImport() {
             onClick={() => runImport(items, validationSkipped)}
             className="bg-indigo-600 hover:bg-indigo-700 text-white"
           >
-            <Upload className="w-4 h-4 mr-1" /> Import {acceptedCount} Firm{acceptedCount === 1 ? "" : "s"}
+            <Upload className="w-4 h-4 mr-1" /> {mergedCount > 0 ? `Import ${acceptedCount} & Merge ${mergedCount}` : `Import ${acceptedCount} Firm${acceptedCount === 1 ? "" : "s"}`}
           </Button>
         </div>
       </div>
@@ -672,9 +782,23 @@ export default function CsvFirmImport() {
           </div>
           <div>
             <p className="text-sm font-semibold text-gray-700">Import Complete</p>
-            <p className="text-xs text-gray-400">{results.success} imported · {results.skipped.length} skipped · {results.failed.length} failed · {results.total} total</p>
+            <p className="text-xs text-gray-400">{results.success} imported{results.merged ? ` · ${results.merged} merged` : ""} · {results.skipped.length} skipped · {results.failed.length} failed · {results.total} total</p>
           </div>
         </div>
+
+        {results.mergedFirms && results.mergedFirms.length > 0 && (
+          <div className="rounded-lg border border-teal-200 bg-teal-50/50 p-3 space-y-1">
+            <p className="text-xs font-semibold text-teal-700">Merged into existing firms ({results.mergedFirms.length})</p>
+            <div className="max-h-32 overflow-y-auto divide-y divide-teal-100">
+              {results.mergedFirms.map((m, i) => (
+                <div key={i} className="py-1 text-xs flex justify-between gap-2">
+                  <span className="text-gray-700 font-medium truncate">{m.name}</span>
+                  <span className="text-gray-500">{m.fieldsUpdated > 0 ? `${m.fieldsUpdated} field(s) updated` : "no new fields"}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {enriched.length > 0 && (
           <div className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-3 space-y-1">
