@@ -468,8 +468,8 @@ export default function CsvFirmImport() {
       const next = items.map((it, i) => (i === idx ? { ...it, accept: val, mergeTargetId: null } : it));
       setReviewItems({ items: next, validationSkipped });
     };
-    const setMerge = (idx, firmId) => {
-      const next = items.map((it, i) => (i === idx ? { ...it, accept: false, mergeTargetId: firmId } : it));
+    const setMerge = (idx, firmId, chosenName) => {
+      const next = items.map((it, i) => (i === idx ? { ...it, accept: false, mergeTargetId: firmId, mergeTargetName: chosenName || null } : it));
       setReviewItems({ items: next, validationSkipped });
       setMergePickerIdx(null);
     };
@@ -507,7 +507,8 @@ export default function CsvFirmImport() {
         <MergeTargetPicker
           duplicates={it.duplicates}
           allFirms={existingFirms}
-          onPick={(firmId) => setMerge(i, firmId)}
+          importedName={it.firm.name}
+          onPick={(firmId, chosenName) => setMerge(i, firmId, chosenName)}
         />
       ) : null;
 
@@ -552,7 +553,7 @@ export default function CsvFirmImport() {
                       </div>
                       {it.mergeTargetId && (
                         <p className="mt-1.5 text-xs text-teal-700 flex items-center gap-1">
-                          <Merge className="w-3 h-3" /> Merging into <strong>{targetNameOf(it)}</strong>
+                          <Merge className="w-3 h-3" /> Merging into <strong>{it.mergeTargetName || targetNameOf(it)}</strong>
                         </p>
                       )}
                     </div>
@@ -599,7 +600,7 @@ export default function CsvFirmImport() {
                       </div>
                       {it.mergeTargetId && (
                         <p className="mt-1.5 text-xs text-teal-700 flex items-center gap-1">
-                          <Merge className="w-3 h-3" /> Merging into <strong>{targetNameOf(it)}</strong>
+                          <Merge className="w-3 h-3" /> Merging into <strong>{it.mergeTargetName || targetNameOf(it)}</strong>
                         </p>
                       )}
                     </div>

@@ -1,12 +1,20 @@
 import React, { useState, useMemo } from "react";
-import { Search } from "lucide-react";
+import { Search, ArrowLeft } from "lucide-react";
 
 // Lets the user explicitly choose which existing firm a CSV row should merge
 // into. Detected duplicate matches are shown first as suggestions; a search
 // box lists every other existing firm so the user can override the auto-detected
 // target (e.g. merge "Acuitas Investments, LLC" into a differently-named firm).
-export default function MergeTargetPicker({ duplicates = [], allFirms = [], onPick }) {
+//
+// After picking a target, if the target's name differs from the imported firm's
+// name, the user chooses which name to keep on the merged record. onPick is
+// called with (firmId, chosenName) where chosenName is the imported name when
+// the user chose it, or null to keep the existing name unchanged.
+export default function MergeTargetPicker({ duplicates = [], allFirms = [], importedName = "", onPick }) {
   const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState(null); // { id, name }
+  const [nameChoice, setNameChoice] = useState("existing"); // "existing" | "imported"
+
   const suggestedIds = useMemo(
     () => new Set(duplicates.map((d) => d.firm?.id).filter(Boolean)),
     [duplicates]
@@ -19,6 +27,47 @@ export default function MergeTargetPicker({ duplicates = [], allFirms = [], onPi
     return base.filter((f) => (f.name || "").toLowerCase().includes(q)).slice(0, 50);
   }, [query, allFirms, suggestedIds]);
 
+  const namesDiffer = !!(selected && importedName && selected.name && selected.name !== importedName);
+
+  const pickTarget = (id, name) => {
+    setSelected({ id, name });
+    setNameChoice("existing");
+  };
+
+  const confirm = () => {
+    const chosenName = namesDiffer && nameChoice === "imported" ? importedName : null;
+    onPick(selected.id, chosenName);
+  };
+
+  if (selected) {
+    return (
+      <div className="mt-2 pt-2 border-t border-teal-100 space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="text-[11px] text-gray-500">Merge into <strong className="text-gray-800">{selected.name}</strong></p>
+          <button onClick={() => setSelected(null)} className="text-[11px] text-gray-500 hover:text-gray-700 flex items-center gap-1">
+            <ArrowLeft className="w-3 h-3" /> Change
+          </button>
+        </div>
+        {namesDiffer ? (
+          <div className="space-y-1.5">
+            <p className="text-[11px] text-gray-500">Which name should be saved on the merged record?</p>
+            <label className={`flex items-center gap-2 text-xs px-2 py-1.5 rounded-md border cursor-pointer ${nameChoice === "existing" ? "border-teal-300 bg-teal-50/50" : "border-gray-200"}`}>
+              <input type="radio" checked={nameChoice === "existing"} onChange={() => setNameChoice("existing")} />
+              <span className="text-gray-700">Keep existing: <strong>{selected.name}</strong></span>
+            </label>
+            <label className={`flex items-center gap-2 text-xs px-2 py-1.5 rounded-md border cursor-pointer ${nameChoice === "imported" ? "border-teal-300 bg-teal-50/50" : "border-gray-200"}`}>
+              <input type="radio" checked={nameChoice === "imported"} onChange={() => setNameChoice("imported")} />
+              <span className="text-gray-700">Use imported: <strong>{importedName}</strong></span>
+            </label>
+            <button onClick={confirm} className="w-full px-2 py-1.5 text-xs rounded-md bg-teal-600 text-white hover:bg-teal-700">Confirm merge</button>
+          </div>
+        ) : (
+          <button onClick={confirm} className="w-full px-2 py-1.5 text-xs rounded-md bg-teal-600 text-white hover:bg-teal-700">Confirm merge</button>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="mt-2 pt-2 border-t border-teal-100 space-y-2">
       <p className="text-[11px] text-gray-500">Choose a firm to merge into:</p>
@@ -29,7 +78,7 @@ export default function MergeTargetPicker({ duplicates = [], allFirms = [], onPi
           {duplicates.map((d, di) => (
             <button
               key={di}
-              onClick={() => onPick(d.firm.id)}
+              onClick={() => pickTarget(d.firm.id, d.name)}
               className="w-full text-left px-2 py-1.5 text-xs rounded-md border border-teal-200 bg-teal-50/50 hover:bg-teal-50"
             >
               <strong className="text-gray-800">{d.name}</strong>
@@ -57,7 +106,7 @@ export default function MergeTargetPicker({ duplicates = [], allFirms = [], onPi
           filtered.map((f) => (
             <button
               key={f.id}
-              onClick={() => onPick(f.id)}
+              onClick={() => pickTarget(f.id, f.name)}
               className="w-full text-left px-2 py-1.5 text-xs hover:bg-teal-50"
             >
               <span className="text-gray-800 font-medium">{f.name}</span>

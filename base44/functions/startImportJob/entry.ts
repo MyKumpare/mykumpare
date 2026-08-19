@@ -60,6 +60,11 @@ export default async function(req: Request): Promise<Response> {
           continue;
         }
         const updates = buildCsvMergeUpdates(target, it.firm || {});
+        // Apply the user's name choice from the merge picker: if they chose the
+        // imported name (differs from the existing name), update the record name.
+        if (it.mergeTargetName && it.mergeTargetName !== target.name) {
+          updates.name = it.mergeTargetName;
+        }
         if (Object.keys(updates).length > 0) {
           await svc.entities.Firm.update(target.id, updates);
         }
