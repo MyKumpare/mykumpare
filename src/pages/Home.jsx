@@ -685,7 +685,6 @@ export default function Home() {
     { label: "Products", icon: Package, ref: null, color: "text-violet-600", activeBg: "bg-violet-50", onClick: () => setProductPickerOpen(true) },
     { label: "Contacts", icon: User, ref: null, color: "text-pink-600", activeBg: "bg-pink-50", onClick: () => setContactPickerOpen(true) },
     { label: "Utilities", icon: Wrench, ref: utilityRef, color: "text-gray-600", activeBg: "bg-gray-100", onClick: () => setUtilityModalOpen(true), submenu: [
-      { label: "Utilities", icon: Wrench, onClick: () => setUtilityModalOpen(true) },
       { label: "Ext Portal", icon: ExternalLink, onClick: () => setExternalPortalOpen(true) },
     ] },
   ];
