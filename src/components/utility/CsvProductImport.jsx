@@ -7,10 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Upload, CheckCircle2, AlertTriangle, Loader2, Download, ArrowLeft } from "lucide-react";
 import { parseCSV, autoMapHeader, validateEnum } from "./csvUtils";
+import { findFirmNameDuplicates } from "../firms/firmNameDuplicateCheck";
+import { findProductDuplicates } from "../products/productNameDuplicateCheck";
+import MergeTargetPicker from "./MergeTargetPicker";
 
 const PRODUCT_TYPES = ["Investment Manager Product", "Multi-Manager Product"];
 const PRODUCT_STATUSES = ["Not Reviewed", "In-Process", "On-Hold", "Rejected", "Approved", "Removed"];
 
+// Only name, product_type, and firm_name are required. Everything else is
+// optional and only filled in if present in the file.
 const IMPORTABLE_FIELDS = [
   { key: "name", label: "Product Name", required: true },
   { key: "product_type", label: "Product Type", required: true, enum: PRODUCT_TYPES },
@@ -45,6 +50,37 @@ const FIELD_ALIASES = {
   description: ["description", "desc", "summary", "about", "overview"],
 };
 
+// Build a product object from mapped raw CSV values. `firm` is the resolved
+// existing firm (exact match or user-chosen); may be null when the firm is
+// still pending review.
+function buildProductFromRaw(raw, productType, firm, tenantId) {
+  const product = {
+    tenant_id: tenantId,
+    name: raw.name,
+    product_type: productType,
+    firm_id: firm ? firm.id : "",
+    firm_name: firm ? firm.name : raw.firm_name,
+  };
+  if (raw.product_status) {
+    const s = validateEnum(raw.product_status, PRODUCT_STATUSES);
+    if (s) product.product_status = s;
+  }
+  if (raw.asset_class) product.asset_class = raw.asset_class;
+  if (raw.geography) product.geography = raw.geography;
+  if (raw.market_cap) product.market_cap = raw.market_cap;
+  if (raw.style) product.style = raw.style;
+  if (raw.investment_process) product.investment_process = raw.investment_process;
+  if (raw.implementation_process) product.implementation_process = raw.implementation_process;
+  if (raw.diversification_classification) product.diversification_classification = raw.diversification_classification;
+  if (raw.aapryl_style) product.aapryl_style = raw.aapryl_style;
+  if (raw.vehicle_offerings) {
+    const v = raw.vehicle_offerings.split(/[;|]/).map((t) => t.trim()).filter(Boolean);
+    if (v.length > 0) product.vehicle_offerings = v;
+  }
+  if (raw.description) product.description = raw.description;
+  return product;
+}
+
 export default function CsvProductImport() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -53,10 +89,17 @@ export default function CsvProductImport() {
   const [mapping, setMapping] = useState({});
   const [results, setResults] = useState(null);
   const [dragOver, setDragOver] = useState(false);
+  const [reviewItems, setReviewItems] = useState(null);
+  const [firmPickerIdx, setFirmPickerIdx] = useState(null);
 
   const { data: firms = [] } = useQuery({
     queryKey: ["firms"],
-    queryFn: () => base44.entities.Firm.list(),
+    queryFn: () => base44.entities.Firm.list(null, 5000),
+  });
+
+  const { data: products = [] } = useQuery({
+    queryKey: ["products"],
+    queryFn: () => base44.entities.Product.list(null, 5000),
   });
 
   const firmByName = useMemo(() => {
@@ -66,6 +109,17 @@ export default function CsvProductImport() {
     });
     return map;
   }, [firms]);
+
+  // Existing products grouped by firm_id, for duplicate-product checks.
+  const productsByFirm = useMemo(() => {
+    const map = {};
+    (products || []).forEach((p) => {
+      if (p.deleted_at) return;
+      if (!map[p.firm_id]) map[p.firm_id] = [];
+      map[p.firm_id].push(p);
+    });
+    return map;
+  }, [products]);
 
   const handleFile = useCallback((file) => {
     if (!file) return;
@@ -100,12 +154,16 @@ export default function CsvProductImport() {
     }));
   }, [csvData, mapping]);
 
-  const buildProducts = useCallback(() => {
-    if (!csvData) return { valid: [], skipped: [], firmsNotFound: [] };
+  // Build the full review set: every valid row becomes an item. Items with an
+  // exact firm match are checked for product duplicates immediately; items
+  // whose firm isn't an exact match but is similar to an existing firm go to
+  // firm review; rows missing required fields or with no similar firm are
+  // skipped.
+  const buildReview = useCallback(() => {
+    if (!csvData) return { items: [], skipped: [] };
     const tenant_id = user?.linked_firm_id;
-    const valid = [];
+    const items = [];
     const skipped = [];
-    const firmsNotFound = new Set();
 
     csvData.rows.forEach((row, rowIdx) => {
       const raw = {};
@@ -121,64 +179,71 @@ export default function CsvProductImport() {
       const productType = validateEnum(raw.product_type, PRODUCT_TYPES);
       if (!productType) { skipped.push({ row: rowIdx + 2, reason: `Invalid product type: ${raw.product_type}` }); return; }
 
-      const firm = firmByName[raw.firm_name.toLowerCase().trim()];
-      if (!firm) {
-        firmsNotFound.add(raw.firm_name);
-        skipped.push({ row: rowIdx + 2, reason: `Firm not found: ${raw.firm_name}` });
-        return;
-      }
+      const exactFirm = firmByName[raw.firm_name.toLowerCase().trim()];
 
-      const product = {
-        tenant_id,
-        name: raw.name,
-        product_type: productType,
-        firm_id: firm.id,
-        firm_name: firm.name,
-      };
-
-      if (raw.product_status) {
-        const s = validateEnum(raw.product_status, PRODUCT_STATUSES);
-        if (s) product.product_status = s;
-      }
-      if (raw.asset_class) product.asset_class = raw.asset_class;
-      if (raw.geography) product.geography = raw.geography;
-      if (raw.market_cap) product.market_cap = raw.market_cap;
-      if (raw.style) product.style = raw.style;
-      if (raw.investment_process) product.investment_process = raw.investment_process;
-      if (raw.implementation_process) product.implementation_process = raw.implementation_process;
-      if (raw.diversification_classification) product.diversification_classification = raw.diversification_classification;
-      if (raw.aapryl_style) product.aapryl_style = raw.aapryl_style;
-      if (raw.vehicle_offerings) {
-        const v = raw.vehicle_offerings.split(/[;|]/).map((t) => t.trim()).filter(Boolean);
-        if (v.length > 0) product.vehicle_offerings = v;
-      }
-      if (raw.description) product.description = raw.description;
-
-      valid.push({ product, row: rowIdx + 2 });
-    });
-
-    return { valid, skipped, firmsNotFound: [...firmsNotFound] };
-  }, [csvData, mapping, user, firmByName]);
-
-  const handleImport = async () => {
-    setStage("importing");
-    const { valid, skipped, firmsNotFound } = buildProducts();
-    let successCount = 0;
-    const failed = [];
-
-    try {
-      const BATCH = 100;
-      for (let i = 0; i < valid.length; i += BATCH) {
-        const batch = valid.slice(i, i + BATCH);
-        try {
-          await base44.entities.Product.bulkCreate(batch.map((b) => b.product));
-          successCount += batch.length;
-        } catch (err) {
-          batch.forEach((b) => failed.push({ row: b.row, error: err.message || "Create failed" }));
+      if (exactFirm) {
+        const product = buildProductFromRaw(raw, productType, exactFirm, tenant_id);
+        const dups = findProductDuplicates(raw.name, productsByFirm[exactFirm.id] || []);
+        items.push({
+          product, row: rowIdx + 2, firmName: raw.firm_name,
+          firmId: exactFirm.id, firmDups: [], productDups: dups,
+          accept: dups.length === 0,
+        });
+      } else {
+        // No exact firm match — look for similar firms so the user can map to
+        // the existing one instead of creating a duplicate.
+        const firmDups = findFirmNameDuplicates(raw.firm_name, firms || []);
+        if (firmDups.length > 0) {
+          const product = buildProductFromRaw(raw, productType, null, tenant_id);
+          items.push({
+            product, row: rowIdx + 2, firmName: raw.firm_name,
+            firmId: null, firmDups, productDups: [],
+            accept: false,
+          });
+        } else {
+          skipped.push({ row: rowIdx + 2, reason: `Firm not found: ${raw.firm_name}` });
         }
       }
+    });
 
-      setResults({ total: csvData.rows.length, success: successCount, skipped, failed, firmsNotFound });
+    return { items, skipped };
+  }, [csvData, mapping, user, firmByName, firms, productsByFirm]);
+
+  const handleImportClick = () => {
+    const { items, skipped } = buildReview();
+    if (items.length === 0) return;
+    const needsReview = items.some((it) => !it.firmId || (it.productDups.length > 0 && !it.accept));
+    if (needsReview) {
+      setReviewItems({ items, skipped });
+      setStage("review");
+    } else {
+      runImport(items, skipped);
+    }
+  };
+
+  const runImport = async (items, skipped) => {
+    setStage("importing");
+    const toCreate = items.filter((it) => it.accept && it.firmId).map((it) => it.product);
+    let successCount = 0;
+    const failed = [];
+    try {
+      const BATCH = 100;
+      for (let i = 0; i < toCreate.length; i += BATCH) {
+        const batch = toCreate.slice(i, i + BATCH);
+        try {
+          await base44.entities.Product.bulkCreate(batch);
+          successCount += batch.length;
+        } catch (err) {
+          batch.forEach((_, bi) => failed.push({ row: items[bi]?.row, error: err.message || "Create failed" }));
+        }
+      }
+      const rejected = items.filter((it) => !it.accept && it.firmId).map((it) => ({ row: it.row, error: "Skipped — duplicate product" }));
+      setResults({
+        total: csvData.rows.length,
+        success: successCount,
+        skipped: [...skipped, ...rejected],
+        failed,
+      });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       setStage("results");
       if (successCount > 0) toast({ title: `✅ ${successCount} product${successCount === 1 ? "" : "s"} imported` });
@@ -189,8 +254,8 @@ export default function CsvProductImport() {
   };
 
   const downloadTemplate = () => {
-    const headers = IMPORTABLE_FIELDS.map((f) => f.key).join(",");
-    const sample = "US Large Cap Equity,Investment Manager Product,Example Capital,Approved,Equity,US,Large Cap,Growth,Active,Active,Diversified,Growth,Separate Account;ETF,US large cap growth strategy.";
+    const headers = "name,product_type,firm_name";
+    const sample = "US Large Cap Equity,Investment Manager Product,Example Capital";
     const blob = new Blob([headers + "\n" + sample + "\n"], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -204,6 +269,8 @@ export default function CsvProductImport() {
     setCsvData(null);
     setMapping({});
     setResults(null);
+    setReviewItems(null);
+    setFirmPickerIdx(null);
     setStage("upload");
   };
 
@@ -232,23 +299,24 @@ export default function CsvProductImport() {
           <input id="product-csv-file-input" type="file" accept=".csv,.txt" className="hidden" onChange={(e) => handleFile(e.target.files[0])} />
         </div>
         <div className="text-xs text-gray-500 bg-gray-50 rounded-lg p-3 space-y-1">
-          <p className="font-semibold text-gray-600">Supported fields:</p>
-          <p>{IMPORTABLE_FIELDS.map((f) => f.label).join(", ")}</p>
-          <p className="text-gray-400 mt-1">Product Name, Product Type, and Firm Name are required. Firm Name is matched to existing firms in your database.</p>
+          <p className="font-semibold text-gray-600">Only three columns are required:</p>
+          <p><strong>Product Name</strong>, <strong>Product Type</strong>, and <strong>Firm Name</strong>.</p>
+          <p className="text-gray-400 mt-1">Firm Name is matched to existing firms in your database. If it's not an exact match but is similar to an existing firm, you'll be asked to confirm the firm before adding. Products that already exist (exact or similar name) in the associated firm will be flagged for you to accept or reject.</p>
         </div>
       </div>
     );
   }
 
   if (stage === "mapping" && csvData) {
-    const { valid, skipped } = buildProducts();
+    const { items, skipped } = buildReview();
+    const validCount = items.length;
     const activeFields = IMPORTABLE_FIELDS.filter((f) => Object.values(mapping).includes(f.key));
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold text-gray-700">Map Columns</p>
-            <p className="text-xs text-gray-400">{csvData.rows.length} rows · {valid.length} valid · {skipped.length} will skip</p>
+            <p className="text-xs text-gray-400">{csvData.rows.length} rows · {validCount} valid · {skipped.length} will skip</p>
           </div>
           <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={reset}>
             <ArrowLeft className="w-3.5 h-3.5" /> Start Over
@@ -315,8 +383,155 @@ export default function CsvProductImport() {
         </div>
 
         <div className="flex justify-end">
-          <Button onClick={handleImport} disabled={valid.length === 0} className="bg-indigo-600 hover:bg-indigo-700 text-white">
-            <Upload className="w-4 h-4 mr-1" /> Import {valid.length} Product{valid.length === 1 ? "" : "s"}
+          <Button onClick={handleImportClick} disabled={validCount === 0} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+            <Upload className="w-4 h-4 mr-1" /> Import {validCount} Product{validCount === 1 ? "" : "s"}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (stage === "review" && reviewItems) {
+    const { items, skipped } = reviewItems;
+    const firmReviewItems = items.map((it, i) => ({ it, i })).filter(({ it }) => !it.firmId && it.firmDups.length > 0);
+    const productReviewItems = items.map((it, i) => ({ it, i })).filter(({ it }) => it.firmId && it.productDups.length > 0);
+    const autoAccepted = items.filter((it) => it.firmId && it.productDups.length === 0).length;
+
+    const updateItem = (idx, patch) => {
+      const next = items.map((it, i) => (i === idx ? { ...it, ...patch } : it));
+      setReviewItems({ items: next, skipped });
+    };
+    const setFirm = (idx, firmId, firmName) => {
+      const it = items[idx];
+      const product = { ...it.product, firm_id: firmId, firm_name: firmName };
+      const dups = findProductDuplicates(it.product.name, productsByFirm[firmId] || []);
+      updateItem(idx, { firmId: firmId, product, productDups: dups, accept: dups.length === 0 });
+      setFirmPickerIdx(null);
+    };
+    const skipFirmReview = (idx) => {
+      updateItem(idx, { accept: false, productDups: [] });
+      setFirmPickerIdx(null);
+    };
+    const setAccept = (idx, val) => updateItem(idx, { accept: val });
+    const isExact = (dups) => dups.some((d) => d.score === 1);
+
+    // Final accepted = items with a resolved firm and accept=true.
+    const finalAccepted = items.filter((it) => it.firmId && it.accept).length;
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold text-gray-700">Review before import</p>
+            <p className="text-xs text-gray-400">
+              {firmReviewItems.length} firm{firmReviewItems.length === 1 ? "" : "s"} to confirm · {productReviewItems.length} duplicate product{productReviewItems.length === 1 ? "" : "s"} · {autoAccepted} will import automatically
+            </p>
+          </div>
+          <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={reset}>
+            <ArrowLeft className="w-3.5 h-3.5" /> Start Over
+          </Button>
+        </div>
+
+        {firmReviewItems.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Firms not found — confirm to avoid duplicates</p>
+            <div className="space-y-2 max-h-[40vh] overflow-y-auto">
+              {firmReviewItems.map(({ it, i }) => (
+                <div key={i} className="rounded-lg border border-amber-200 bg-amber-50/50 p-3">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-800">{it.firmName}</p>
+                      <p className="text-[11px] text-gray-400">Row {it.row} · Product: {it.product.name}</p>
+                      <div className="mt-1.5 space-y-1">
+                        {it.firmDups.map((d, di) => (
+                          <div key={di} className="text-xs text-amber-700 flex items-start gap-1">
+                            <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                            <span>Similar to <strong>{d.name}</strong> — {d.reasons.join(", ")}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <button onClick={() => skipFirmReview(i)} className="px-2.5 py-1 text-xs rounded-md border bg-white text-gray-600 border-gray-300 hover:bg-gray-50">Skip</button>
+                      <button onClick={() => setFirmPickerIdx(firmPickerIdx === i ? null : i)} className="px-2.5 py-1 text-xs rounded-md border bg-white text-teal-700 border-teal-300 hover:bg-teal-50">Map to firm</button>
+                    </div>
+                  </div>
+                  {firmPickerIdx === i && (
+                    <MergeTargetPicker
+                      duplicates={it.firmDups}
+                      allFirms={firms}
+                      importedName={it.firmName}
+                      onPick={(firmId, _chosenName) => {
+                        const f = (firms || []).find((x) => x.id === firmId);
+                        setFirm(i, firmId, f ? f.name : it.firmName);
+                      }}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {productReviewItems.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Duplicate products — review</p>
+            <div className="space-y-2 max-h-[40vh] overflow-y-auto">
+              {productReviewItems.map(({ it, i }) => (
+                <div key={i} className={`rounded-lg border p-3 ${it.accept ? "border-indigo-200 bg-white" : "border-gray-200 bg-gray-50"}`}>
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-800">{it.product.name}</p>
+                      <p className="text-[11px] text-gray-400">Row {it.row} · {it.product.firm_name}</p>
+                      <div className="mt-1.5 space-y-1">
+                        {it.productDups.map((d, di) => (
+                          <div key={di} className="text-xs text-amber-700 flex items-start gap-1">
+                            <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                            <span>{isExact([d]) ? "Exact match" : "Similar match"}: <strong>{d.name}</strong> — {d.reasons.join(", ")}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <button
+                        onClick={() => setAccept(i, false)}
+                        className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${!it.accept ? "bg-red-600 text-white border-red-600" : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"}`}
+                      >
+                        Reject
+                      </button>
+                      <button
+                        onClick={() => setAccept(i, true)}
+                        className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${it.accept ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"}`}
+                      >
+                        Accept
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {skipped.length > 0 && (
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+            <p className="text-xs font-semibold text-gray-500 mb-1">Will skip ({skipped.length})</p>
+            <div className="max-h-24 overflow-y-auto divide-y divide-gray-100">
+              {skipped.slice(0, 20).map((s, i) => (
+                <div key={i} className="py-1 text-xs flex justify-between gap-2">
+                  <span className="text-gray-500">Row {s.row}</span>
+                  <span className="text-gray-700 truncate">{s.reason}</span>
+                </div>
+              ))}
+              {skipped.length > 20 && <div className="py-1 text-[11px] text-gray-400 text-center">…and {skipped.length - 20} more</div>}
+            </div>
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={reset}>Cancel</Button>
+          <Button onClick={() => runImport(items, skipped)} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+            <Upload className="w-4 h-4 mr-1" /> Import {finalAccepted} Product{finalAccepted === 1 ? "" : "s"}
           </Button>
         </div>
       </div>
@@ -345,24 +560,17 @@ export default function CsvProductImport() {
           </div>
         </div>
 
-        {results.firmsNotFound?.length > 0 && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
-            <p className="text-xs font-semibold text-amber-700 mb-1">Firms not found ({results.firmsNotFound.length})</p>
-            <p className="text-xs text-amber-600">Create these firms first, then re-import: {results.firmsNotFound.slice(0, 5).join(", ")}{results.firmsNotFound.length > 5 ? "..." : ""}</p>
-          </div>
-        )}
-
         {results.skipped.length > 0 && (
           <div>
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Skipped ({results.skipped.length})</p>
             <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-200 divide-y divide-gray-100">
-              {results.skipped.slice(0, 20).map((s, i) => (
+              {results.skipped.slice(0, 50).map((s, i) => (
                 <div key={i} className="px-3 py-2 text-xs flex justify-between gap-2">
                   <span className="text-gray-500">Row {s.row}</span>
-                  <span className="text-gray-700 truncate">{s.reason}</span>
+                  <span className="text-gray-700 truncate">{s.reason || s.error}</span>
                 </div>
               ))}
-              {results.skipped.length > 20 && <div className="px-3 py-2 text-xs text-gray-400 text-center">... and {results.skipped.length - 20} more</div>}
+              {results.skipped.length > 50 && <div className="px-3 py-2 text-xs text-gray-400 text-center">... and {results.skipped.length - 50} more</div>}
             </div>
           </div>
         )}
