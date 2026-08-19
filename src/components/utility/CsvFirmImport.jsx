@@ -5,13 +5,14 @@ import { useAuth } from "@/lib/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, CheckCircle2, AlertTriangle, Loader2, Download, ArrowLeft, Globe, Merge } from "lucide-react";
+import { Upload, CheckCircle2, AlertTriangle, Loader2, Download, ArrowLeft, Globe, Merge, History } from "lucide-react";
 import { parseCSV, autoMapHeader, validateEnum } from "./csvUtils";
 import { enrichFirmFromWeb, mergeEnrichmentData, mergeContactEnrichment, parsePhoneString } from "../ai/firmEnrichment";
 import { detectDesignations } from "../contacts/designationDetector";
 import { findFirmNameDuplicates } from "../firms/firmNameDuplicateCheck";
 import MergeTargetPicker from "./MergeTargetPicker";
-import ImportJobsDashboard from "./ImportJobsDashboard";
+import ImportJobStatus from "./ImportJobStatus";
+import ImportJobsList from "./ImportJobsList";
 
 // Human-readable status messages cycled by elapsed time while each firm is
 // being enriched. The backend scrape is a single long call, so we surface
@@ -163,6 +164,8 @@ export default function CsvFirmImport() {
   const [reviewItems, setReviewItems] = useState(null);
   const [mergePickerIdx, setMergePickerIdx] = useState(null);
   const [enrichElapsed, setEnrichElapsed] = useState(0);
+  const [activeJobId, setActiveJobId] = useState(null);
+  const [showPastJobs, setShowPastJobs] = useState(false);
 
   const { data: existingFirms = [] } = useQuery({
     queryKey: ["firms"],
@@ -281,29 +284,28 @@ export default function CsvFirmImport() {
     }
   };
 
-  // Submit the reviewed items to the server-side import job. The backend
-  // bulk-creates the accepted firms, applies the append-only merges, and
-  // creates an ImportJob record. The "Process Import Jobs" workflow then
-  // enriches each firm in the background — surviving navigation/close. We
-  // hand off to the Import Jobs dashboard so the user can watch progress.
   const runImport = async (items, validationSkipped) => {
-    setStage("importing");
+    // Submit to the server-side import job. The backend bulk-creates the firms,
+    // applies merges, and creates an ImportJob record; the "Process Import Jobs"
+    // workflow then enriches each firm in the background — surviving navigation
+    // and page close. The frontend just polls the job for status.
+    setStage("submitting");
     try {
+      const tenantId = user?.linked_firm_id;
       const res = await base44.functions.invoke("startImportJob", {
         source: "firm",
         items,
         validationSkipped,
-        tenant_id: user?.linked_firm_id,
+        tenant_id: tenantId,
       });
-      const data = res?.data || res || {};
-      queryClient.invalidateQueries({ queryKey: ["firms"] });
-      queryClient.invalidateQueries({ queryKey: ["import-jobs"] });
+      const data = res?.data || res;
+      if (data?.error) throw new Error(data.error);
+      setActiveJobId(data.job_id);
       setStage("job_status");
-      if ((data.created || 0) > 0 || (data.merged || 0) > 0) {
-        toast({ title: `✅ ${data.created} firm${data.created === 1 ? "" : "s"} submitted${data.merged > 0 ? ` · ${data.merged} merged` : ""}` });
-      }
+      queryClient.invalidateQueries({ queryKey: ["firms"] });
+      toast({ title: `✅ ${data.created} firm${data.created === 1 ? "" : "s"} queued${data.merged ? ` · ${data.merged} merged` : ""}` });
     } catch (err) {
-      toast({ title: "Import failed", description: err?.message || "Failed to start import job", variant: "destructive" });
+      toast({ title: "Import failed", description: err.message, variant: "destructive" });
       setStage("mapping");
     }
   };
@@ -326,17 +328,23 @@ export default function CsvFirmImport() {
     setResults(null);
     setEnrichProgress(null);
     setReviewItems(null);
+    setActiveJobId(null);
+    setShowPastJobs(false);
     setStage("upload");
   };
 
   if (stage === "upload") {
     return (
       <div className="space-y-3">
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-1">
+          <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-gray-500" onClick={() => setShowPastJobs((v) => !v)}>
+            <History className="w-3.5 h-3.5" /> {showPastJobs ? "Hide past imports" : "View past imports"}
+          </Button>
           <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-indigo-600" onClick={downloadTemplate}>
             <Download className="w-3.5 h-3.5" /> Download Template
           </Button>
         </div>
+        {showPastJobs && <ImportJobsList />}
         <div
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
@@ -645,28 +653,64 @@ export default function CsvFirmImport() {
     );
   }
 
-  if (stage === "importing") {
+  if (stage === "submitting") {
     return (
       <div className="flex flex-col items-center justify-center gap-3 py-12">
         <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-        <p className="text-sm font-semibold text-gray-700">Starting import job...</p>
+        <p className="text-sm font-semibold text-gray-700">Starting import job…</p>
       </div>
     );
   }
 
-  if (stage === "job_status") {
+  if (stage === "job_status" && activeJobId) {
     return (
-      <div className="space-y-3">
-        <div className="rounded-lg bg-indigo-50 border border-indigo-100 p-3 flex items-start gap-2">
-          <Globe className="w-4 h-4 text-indigo-600 flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-indigo-700">
-            Your import is running in the background. Firms are created immediately and enriched from their websites — this survives navigation and close. Track progress below or reopen <strong>Import Jobs</strong> anytime from the Utility menu.
-          </p>
+      <ImportJobStatus jobId={activeJobId} onReset={reset} />
+    );
+  }
+
+  if (stage === "enriching" && enrichProgress) {
+    const pct = enrichProgress.total > 0 ? (enrichProgress.current / enrichProgress.total) * 100 : 0;
+    const stageIdx = Math.min(ENRICH_STAGES.length - 1, Math.floor(enrichElapsed / 5));
+    const enrichStage = ENRICH_STAGES[stageIdx];
+    return (
+      <div className="space-y-4 py-2">
+        <div className="flex items-center gap-3">
+          <Loader2 className="w-6 h-6 text-indigo-600 animate-spin flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-gray-700">
+              {enrichProgress.current < enrichProgress.total
+                ? `${enrichStage.label}…`
+                : `Completing ${enrichProgress.total} firm${enrichProgress.total === 1 ? "" : "s"}`}
+            </p>
+            <p className="text-xs text-gray-500 truncate">
+              {enrichProgress.current < enrichProgress.total
+                ? `Firm ${enrichProgress.current + 1} of ${enrichProgress.total}: ${enrichProgress.currentName}`
+                : "Finishing up…"}
+            </p>
+            <p className="text-[11px] text-gray-400 truncate mt-0.5">{enrichStage.detail}</p>
+          </div>
+          <div className="flex flex-col items-end gap-0.5">
+            <span className="text-xs text-gray-400 tabular-nums">{enrichProgress.current}/{enrichProgress.total}</span>
+            {enrichProgress.current < enrichProgress.total && enrichElapsed > 0 && (
+              <span className="text-[11px] text-gray-400 tabular-nums">{enrichElapsed}s</span>
+            )}
+          </div>
         </div>
-        <ImportJobsDashboard />
-        <div className="flex justify-end">
-          <Button onClick={reset} className="bg-indigo-600 hover:bg-indigo-700 text-white">Import Another File</Button>
+        <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+          <div className="h-full bg-indigo-500 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
         </div>
+        {enrichProgress.summaries.length > 0 && (
+          <div className="max-h-48 overflow-y-auto rounded-lg border border-gray-200 divide-y divide-gray-100">
+            {enrichProgress.summaries.map((s, i) => (
+              <div key={i} className="px-3 py-2 text-xs flex justify-between gap-2">
+                <span className="text-gray-700 font-medium truncate">{s.name}</span>
+                <span className={s.error ? "text-amber-600" : "text-gray-500"}>
+                  {s.error ? "⚠ " + s.error : `✓ ${s.fieldsUpdated} field(s), ${s.contactsCreated} new, ${s.contactsUpdated} updated`}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   }
