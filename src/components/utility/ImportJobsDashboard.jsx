@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -55,6 +55,17 @@ function JobRow({ job }) {
   const enrichmentErrors = summaries.filter((s) => s.error);
   const items = Array.isArray(job.pending_items) ? job.pending_items : [];
   const hasErrors = failed.length > 0 || enrichmentErrors.length > 0;
+  // Group skipped/failed rows by reason so the user can see WHY rows were
+  // skipped (e.g. "Missing firm name: 412") and address each cause.
+  const failedGroups = useMemo(() => {
+    const map = new Map();
+    failed.forEach((f) => {
+      const reason = f.error || f.reason || "Unknown";
+      if (!map.has(reason)) map.set(reason, []);
+      map.get(reason).push(f);
+    });
+    return Array.from(map.entries()).map(([reason, items]) => ({ reason, items }));
+  }, [failed]);
   const sourceLabel = job.source === "firm" ? "Firms" : job.source === "product" ? "Products" : job.source === "contact" ? "Contacts" : "Import";
 
   return (
@@ -128,15 +139,23 @@ function JobRow({ job }) {
           {/* Errors needing attention */}
           {failed.length > 0 && (
             <div>
-              <p className="text-[11px] font-semibold text-red-500 uppercase tracking-wide mb-1.5">Skipped / failed rows</p>
-              <div className="max-h-32 overflow-y-auto rounded-md border border-red-200 divide-y divide-red-100 bg-white">
-                {failed.slice(0, 30).map((f, i) => (
+              <p className="text-[11px] font-semibold text-red-500 uppercase tracking-wide mb-1.5">Skipped / failed rows ({failed.length})</p>
+              {failedGroups.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {failedGroups.map((g) => (
+                    <span key={g.reason} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 border border-red-200 text-[11px] text-red-700">
+                      {g.reason} · {g.items.length}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="max-h-56 overflow-y-auto rounded-md border border-red-200 divide-y divide-red-100 bg-white">
+                {failed.map((f, i) => (
                   <div key={i} className="px-2.5 py-1.5 text-xs flex justify-between gap-2">
                     <span className="text-gray-500 flex-shrink-0">Row {f.row ?? "—"}</span>
                     <span className="text-red-600 truncate">{f.error || f.reason}</span>
                   </div>
                 ))}
-                {failed.length > 30 && <div className="px-2.5 py-1.5 text-[11px] text-gray-400 text-center">…and {failed.length - 30} more</div>}
               </div>
             </div>
           )}
