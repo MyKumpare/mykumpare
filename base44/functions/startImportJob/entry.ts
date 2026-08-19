@@ -21,14 +21,59 @@ export default async function(req: Request): Promise<Response> {
     const validationSkipped: any[] = Array.isArray(body?.validationSkipped) ? body.validationSkipped : [];
     const tenantId = body?.tenant_id || user?.data?.linked_firm_id || '';
 
-    if (source !== 'firm') {
-      return Response.json({ error: `Import source '${source}' is not yet supported by the server-side job.` }, { status: 400 });
-    }
     if (!tenantId) {
       return Response.json({ error: 'Tenant id is required to start an import job.' }, { status: 400 });
     }
 
     const svc = base44.asServiceRole;
+
+    // Product import: bulk-create accepted products server-side so the import
+    // survives navigation/close. Products need no web enrichment, so the job
+    // completes immediately with created/failed counts.
+    if (source === 'product') {
+      const accepted = items.filter((it: any) => it?.accept && it?.firmId && it?.product);
+      const duplicateSkipped = items
+        .filter((it: any) => !it?.accept && it?.firmId)
+        .map((it: any) => ({ row: it?.row, error: it?.autoSkipped ? 'Skipped — exact duplicate product' : 'Skipped — duplicate product' }));
+      const failed: any[] = [];
+      const createdProducts: any[] = [];
+      const BATCH = 100;
+      for (let i = 0; i < accepted.length; i += BATCH) {
+        const batch = accepted.slice(i, i + BATCH);
+        try {
+          const toCreate = batch.map((b: any) => ({ ...b.product, tenant_id: b.product.tenant_id || tenantId }));
+          const created = await svc.entities.Product.bulkCreate(toCreate);
+          (Array.isArray(created) ? created : []).forEach((p: any) => createdProducts.push(p));
+        } catch (err: any) {
+          batch.forEach((b: any) => failed.push({ row: b.row, error: err?.message || 'Create failed' }));
+        }
+      }
+      const job = await svc.entities.ImportJob.create({
+        tenant_id: tenantId,
+        source: 'product',
+        status: 'completed',
+        total: createdProducts.length,
+        progress: createdProducts.length,
+        pending_items: [],
+        results: {
+          created: createdProducts.length,
+          merged: 0,
+          failed: [...(validationSkipped || []), ...duplicateSkipped, ...failed],
+          enrichment_summaries: [],
+        },
+      });
+      return Response.json({
+        job_id: job.id,
+        created: createdProducts.length,
+        merged: 0,
+        failed: failed.length,
+        total: createdProducts.length,
+      });
+    }
+
+    if (source !== 'firm') {
+      return Response.json({ error: `Import source '${source}' is not yet supported by the server-side job.` }, { status: 400 });
+    }
     const accepted = items.filter((it: any) => it?.accept && it?.firm);
     const mergedItems = items.filter((it: any) => it?.mergeTargetId);
     const duplicateSkipped = items

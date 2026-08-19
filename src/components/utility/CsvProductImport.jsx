@@ -10,6 +10,7 @@ import { parseCSV, autoMapHeader, validateEnum } from "./csvUtils";
 import { findFirmNameDuplicates } from "../firms/firmNameDuplicateCheck";
 import { findProductDuplicates } from "../products/productNameDuplicateCheck";
 import MergeTargetPicker from "./MergeTargetPicker";
+import ImportJobsDashboard from "./ImportJobsDashboard";
 
 const PRODUCT_TYPES = ["Investment Manager Product", "Multi-Manager Product"];
 const PRODUCT_STATUSES = ["Not Reviewed", "In-Process", "On-Hold", "Rejected", "Approved", "Removed"];
@@ -223,36 +224,28 @@ export default function CsvProductImport() {
     }
   };
 
+  // Submit the reviewed items to the server-side import job. The backend
+  // bulk-creates the accepted products and records an ImportJob. The job
+  // completes server-side, so the import survives navigation/close. We hand
+  // off to the Import Jobs dashboard so the user can watch progress.
   const runImport = async (items, skipped) => {
     setStage("importing");
-    const toCreate = items.filter((it) => it.accept && it.firmId).map((it) => it.product);
-    let successCount = 0;
-    const failed = [];
     try {
-      const BATCH = 100;
-      for (let i = 0; i < toCreate.length; i += BATCH) {
-        const batch = toCreate.slice(i, i + BATCH);
-        try {
-          await base44.entities.Product.bulkCreate(batch);
-          successCount += batch.length;
-        } catch (err) {
-          batch.forEach((_, bi) => failed.push({ row: items[bi]?.row, error: err.message || "Create failed" }));
-        }
-      }
-      const rejected = items
-        .filter((it) => !it.accept && it.firmId)
-        .map((it) => ({ row: it.row, error: it.autoSkipped ? "Skipped — exact duplicate product" : "Skipped — duplicate product" }));
-      setResults({
-        total: csvData.rows.length,
-        success: successCount,
-        skipped: [...skipped, ...rejected],
-        failed,
+      const res = await base44.functions.invoke("startImportJob", {
+        source: "product",
+        items,
+        validationSkipped: skipped,
+        tenant_id: user?.linked_firm_id,
       });
+      const data = res?.data || res || {};
       queryClient.invalidateQueries({ queryKey: ["products"] });
-      setStage("results");
-      if (successCount > 0) toast({ title: `✅ ${successCount} product${successCount === 1 ? "" : "s"} imported` });
+      queryClient.invalidateQueries({ queryKey: ["import-jobs"] });
+      setStage("job_status");
+      if ((data.created || 0) > 0) {
+        toast({ title: `✅ ${data.created} product${data.created === 1 ? "" : "s"} submitted` });
+      }
     } catch (err) {
-      toast({ title: "Import failed", description: err.message, variant: "destructive" });
+      toast({ title: "Import failed", description: err?.message || "Failed to start import job", variant: "destructive" });
       setStage("mapping");
     }
   };
@@ -553,48 +546,16 @@ export default function CsvProductImport() {
     );
   }
 
-  if (stage === "results" && results) {
+  if (stage === "job_status") {
     return (
-      <div className="space-y-4">
-        <div className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 bg-white">
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${results.success > 0 ? "bg-green-50" : "bg-red-50"}`}>
-            {results.success > 0 ? <CheckCircle2 className="w-5 h-5 text-green-600" /> : <AlertTriangle className="w-5 h-5 text-red-600" />}
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-gray-700">Import Complete</p>
-            <p className="text-xs text-gray-400">{results.success} imported · {results.skipped.length} skipped · {results.failed.length} failed · {results.total} total</p>
-          </div>
+      <div className="space-y-3">
+        <div className="rounded-lg bg-indigo-50 border border-indigo-100 p-3 flex items-start gap-2">
+          <CheckCircle2 className="w-4 h-4 text-indigo-600 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-indigo-700">
+            Your product import has been submitted and is processing in the background — this survives navigation and close. Track progress below or reopen <strong>Import Jobs</strong> anytime from the Utility menu.
+          </p>
         </div>
-
-        {results.skipped.length > 0 && (
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Skipped ({results.skipped.length})</p>
-            <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-200 divide-y divide-gray-100">
-              {results.skipped.slice(0, 50).map((s, i) => (
-                <div key={i} className="px-3 py-2 text-xs flex justify-between gap-2">
-                  <span className="text-gray-500">Row {s.row}</span>
-                  <span className="text-gray-700 truncate">{s.reason || s.error}</span>
-                </div>
-              ))}
-              {results.skipped.length > 50 && <div className="px-3 py-2 text-xs text-gray-400 text-center">... and {results.skipped.length - 50} more</div>}
-            </div>
-          </div>
-        )}
-
-        {results.failed.length > 0 && (
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Failed ({results.failed.length})</p>
-            <div className="max-h-40 overflow-y-auto rounded-lg border border-red-200 divide-y divide-red-100">
-              {results.failed.slice(0, 20).map((f, i) => (
-                <div key={i} className="px-3 py-2 text-xs flex justify-between gap-2">
-                  <span className="text-gray-500">Row {f.row}</span>
-                  <span className="text-red-600 truncate">{f.error}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
+        <ImportJobsDashboard />
         <div className="flex justify-end">
           <Button onClick={reset} className="bg-indigo-600 hover:bg-indigo-700 text-white">Import Another File</Button>
         </div>
