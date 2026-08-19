@@ -1,0 +1,175 @@
+{
+  "name": "ImportJob",
+  "type": "object",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "ID of the firm (tenant) that owns this import job. Drives tenant isolation via RLS."
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "firm",
+        "product",
+        "contact"
+      ],
+      "description": "Which kind of import this job runs. The processing backend function dispatches by this value (currently 'firm' is implemented)."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "enriching",
+        "completed",
+        "failed"
+      ],
+      "default": "pending",
+      "description": "Job lifecycle state. 'enriching' means records were created and the job is being enriched in the background by the Process Import Jobs workflow."
+    },
+    "total": {
+      "type": "integer",
+      "description": "Total number of items to process (e.g. created firms awaiting enrichment)."
+    },
+    "progress": {
+      "type": "integer",
+      "default": 0,
+      "description": "Number of items fully processed (enriched or failed). Drives the workflow continuation condition (progress < total)."
+    },
+    "pending_items": {
+      "type": "array",
+      "description": "Per-item tracking for the background processor. Each entry is one created record awaiting enrichment.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "ID of the created record (e.g. Firm id)"
+          },
+          "name": {
+            "type": "string"
+          },
+          "website": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "in_progress",
+              "done",
+              "failed"
+            ],
+            "default": "pending"
+          },
+          "error": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "results": {
+      "type": "object",
+      "description": "Aggregate outcome of the job, updated as the background processor works through pending_items.",
+      "properties": {
+        "created": {
+          "type": "integer"
+        },
+        "merged": {
+          "type": "integer"
+        },
+        "failed": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "row": {
+                "type": "integer"
+              },
+              "error": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "enrichment_summaries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "fields_updated": {
+                "type": "integer"
+              },
+              "contacts_created": {
+                "type": "integer"
+              },
+              "contacts_updated": {
+                "type": "integer"
+              },
+              "error": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "source",
+    "total",
+    "tenant_id"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    }
+  }
+}
