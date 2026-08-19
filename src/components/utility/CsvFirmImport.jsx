@@ -4,7 +4,6 @@ import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Upload, CheckCircle2, AlertTriangle, Loader2, Download, ArrowLeft, Globe } from "lucide-react";
 import { parseCSV, autoMapHeader, validateEnum } from "./csvUtils";
@@ -469,18 +468,23 @@ export default function CsvFirmImport() {
     const { items, validationSkipped } = reviewItems;
     const flagged = items.filter((it) => it.duplicates.length > 0);
     const autoAccepted = items.length - flagged.length;
-    const toggleItem = (idx) => {
-      const next = items.map((it, i) => (i === idx ? { ...it, accept: !it.accept } : it));
+    const setAccept = (idx, val) => {
+      const next = items.map((it, i) => (i === idx ? { ...it, accept: val } : it));
       setReviewItems({ items: next, validationSkipped });
     };
-    const acceptedCount = items.filter((it) => it.accept).length;
+    const setAll = (val) => {
+      const next = items.map((it) => (it.duplicates.length > 0 ? { ...it, accept: val } : it));
+      setReviewItems({ items: next, validationSkipped });
+    };
+    const flaggedAccepted = flagged.filter((it) => it.accept).length;
+    const acceptedCount = autoAccepted + flaggedAccepted;
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold text-gray-700">Review duplicates</p>
             <p className="text-xs text-gray-400">
-              {flagged.length} firm{flagged.length === 1 ? "" : "s"} match existing names · {autoAccepted} will import automatically
+              {flagged.length} firm{flagged.length === 1 ? "" : "s"} match existing names · {autoAccepted} will import automatically · {flaggedAccepted} of {flagged.length} duplicates accepted
             </p>
           </div>
           <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={reset}>
@@ -491,15 +495,23 @@ export default function CsvFirmImport() {
         <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3 flex items-start gap-2">
           <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
           <p className="text-xs text-amber-700">
-            Uncheck a firm to skip it. Checked firms will be created and then auto-filled from the web.
+            For each potential duplicate, choose <strong>Accept</strong> to import it anyway or <strong>Reject</strong> to skip it. Accepted firms are created and then auto-filled from the web.
           </p>
         </div>
 
+        {flagged.length > 0 && (
+          <div className="flex items-center justify-end gap-2 text-xs">
+            <span className="text-gray-400">Bulk:</span>
+            <button onClick={() => setAll(true)} className="text-indigo-600 hover:text-indigo-700 font-medium">Accept all</button>
+            <span className="text-gray-300">·</span>
+            <button onClick={() => setAll(false)} className="text-gray-600 hover:text-gray-800 font-medium">Reject all</button>
+          </div>
+        )}
+
         <div className="space-y-2 max-h-[45vh] overflow-y-auto">
           {flagged.map((it, i) => (
-            <div key={i} className={`rounded-lg border p-3 ${it.accept ? "border-indigo-200 bg-white" : "border-gray-200 bg-gray-50 opacity-70"}`}>
-              <label className="flex items-start gap-2 cursor-pointer">
-                <Checkbox checked={it.accept} onCheckedChange={() => toggleItem(i)} className="mt-0.5" />
+            <div key={i} className={`rounded-lg border p-3 ${it.accept ? "border-indigo-200 bg-white" : "border-gray-200 bg-gray-50"}`}>
+              <div className="flex items-start gap-3">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-800">{it.firm.name}</p>
                   <p className="text-[11px] text-gray-400">Row {it.row} · {(it.firm.firm_types || []).join(", ")}</p>
@@ -512,7 +524,21 @@ export default function CsvFirmImport() {
                     ))}
                   </div>
                 </div>
-              </label>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <button
+                    onClick={() => setAccept(i, false)}
+                    className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${!it.accept ? "bg-red-600 text-white border-red-600" : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"}`}
+                  >
+                    Reject
+                  </button>
+                  <button
+                    onClick={() => setAccept(i, true)}
+                    className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${it.accept ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"}`}
+                  >
+                    Accept
+                  </button>
+                </div>
+              </div>
             </div>
           ))}
         </div>
