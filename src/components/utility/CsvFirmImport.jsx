@@ -5,8 +5,10 @@ import { useAuth } from "@/lib/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, CheckCircle2, AlertTriangle, Loader2, Download, ArrowLeft } from "lucide-react";
+import { Upload, CheckCircle2, AlertTriangle, Loader2, Download, ArrowLeft, Globe } from "lucide-react";
 import { parseCSV, autoMapHeader, validateEnum } from "./csvUtils";
+import { enrichFirmFromWeb, mergeEnrichmentData, mergeContactEnrichment, parsePhoneString } from "../ai/firmEnrichment";
+import { detectDesignations } from "../contacts/designationDetector";
 
 const FIRM_TYPES = [
   "Manager of Managers",
@@ -17,9 +19,12 @@ const FIRM_TYPES = [
   "Trade Organizations",
 ];
 
+// Only name + firm_types are required. Everything else is auto-filled from the
+// firm's website after the record is created. The optional fields below are
+// still mappable if a user happens to include them in their file.
 const IMPORTABLE_FIELDS = [
   { key: "name", label: "Firm Name", required: true },
-  { key: "firm_types", label: "Firm Types (semicolon-separated)", isArray: true, enum: FIRM_TYPES },
+  { key: "firm_types", label: "Firm Types (semicolon-separated)", required: true, isArray: true, enum: FIRM_TYPES },
   { key: "logo_url", label: "Logo URL" },
   { key: "website", label: "Website" },
   { key: "linkedin_url", label: "LinkedIn URL" },
@@ -39,6 +44,77 @@ const FIELD_ALIASES = {
   description: ["description", "desc", "summary", "about", "bio", "overview"],
 };
 
+// Run web enrichment for a created firm and apply the results: fill empty
+// firm fields and create/link contacts discovered on the website. Mutates
+// `existingContacts` so subsequent firms dedupe against newly created ones.
+async function enrichAndApplyFirm(firm, existingContacts, tenantId) {
+  const summary = { name: firm.name, fieldsUpdated: 0, contactsCreated: 0, contactsUpdated: 0, error: null };
+  let enriched;
+  try {
+    enriched = await enrichFirmFromWeb(firm.name, firm.website || "");
+  } catch (err) {
+    summary.error = err.message || "Enrichment failed";
+    return summary;
+  }
+
+  // Firm-level: fill only empty fields (append-only merge).
+  try {
+    const { updates } = mergeEnrichmentData(firm, enriched);
+    if (updates && Object.keys(updates).length > 0) {
+      await base44.entities.Firm.update(firm.id, updates);
+      summary.fieldsUpdated = Object.keys(updates).length;
+    }
+  } catch { /* non-fatal */ }
+
+  // Contacts: update existing matches (fill missing fields), create new ones.
+  const people = (enriched.people || []).filter((p) => p.first_name || p.last_name);
+  if (people.length > 0) {
+    const { contactUpdates, newPeople } = mergeContactEnrichment(people, existingContacts, firm.id);
+    for (const cu of contactUpdates) {
+      try {
+        await base44.entities.Contact.update(cu.id, cu.updates);
+        summary.contactsUpdated++;
+      } catch { /* non-fatal */ }
+    }
+    for (const person of newPeople) {
+      try {
+        const fullName = `${person.first_name || ""} ${person.last_name || ""}`.trim();
+        const designations = detectDesignations(fullName, person.biography);
+        const contactData = {
+          tenant_id: tenantId,
+          first_name: person.first_name || "",
+          last_name: person.last_name || "",
+          title: person.title || "",
+          email: person.email || "",
+          linkedin_url: person.linkedin_url || "",
+          biography: person.biography || "",
+          photo_url: person.photo_url || "",
+          bio_url: person.bio_url || "",
+          firm_ids: [firm.id],
+          employee_status: "Employee",
+        };
+        if (designations.length > 0) contactData.designations = designations;
+        const parsedPhone = person.phone ? parsePhoneString(person.phone) : null;
+        if (parsedPhone) contactData.phones = [parsedPhone];
+        if (person.education?.length) {
+          contactData.education = person.education
+            .filter((e) => e && (e.institution || e.degree || e.area_of_specialization))
+            .map((e) => ({ ...e, id: crypto.randomUUID() }));
+        }
+        if (person.professional_experience?.length) {
+          contactData.professional_experience = person.professional_experience
+            .filter((e) => e && (e.company_name || e.title))
+            .map((e) => ({ ...e, id: crypto.randomUUID() }));
+        }
+        const created = await base44.entities.Contact.create(contactData);
+        existingContacts.push(created);
+        summary.contactsCreated++;
+      } catch { /* non-fatal */ }
+    }
+  }
+  return summary;
+}
+
 export default function CsvFirmImport() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -47,6 +123,7 @@ export default function CsvFirmImport() {
   const [mapping, setMapping] = useState({});
   const [results, setResults] = useState(null);
   const [dragOver, setDragOver] = useState(false);
+  const [enrichProgress, setEnrichProgress] = useState(null);
 
   const handleFile = useCallback((file) => {
     if (!file) return;
@@ -98,15 +175,20 @@ export default function CsvFirmImport() {
         skipped.push({ row: rowIdx + 2, reason: "Missing firm name" });
         return;
       }
-
-      const firm = { tenant_id, name: raw.name };
-
-      if (raw.firm_types) {
-        const types = raw.firm_types
-          .split(/[;|]/).map((t) => t.trim()).filter(Boolean)
-          .map((t) => validateEnum(t, FIRM_TYPES)).filter(Boolean);
-        if (types.length > 0) firm.firm_types = [...new Set(types)];
+      if (!raw.firm_types) {
+        skipped.push({ row: rowIdx + 2, reason: "Missing firm type(s)" });
+        return;
       }
+
+      const types = raw.firm_types
+        .split(/[;|]/).map((t) => t.trim()).filter(Boolean)
+        .map((t) => validateEnum(t, FIRM_TYPES)).filter(Boolean);
+      if (types.length === 0) {
+        skipped.push({ row: rowIdx + 2, reason: `Invalid firm type: ${raw.firm_types}` });
+        return;
+      }
+
+      const firm = { tenant_id, name: raw.name, firm_types: [...new Set(types)] };
       if (raw.logo_url) firm.logo_url = raw.logo_url;
       if (raw.website) firm.website = raw.website;
       if (raw.linkedin_url) firm.linkedin_url = raw.linkedin_url;
@@ -126,7 +208,7 @@ export default function CsvFirmImport() {
   const handleImport = async () => {
     setStage("importing");
     const { valid, skipped } = buildFirms();
-    let successCount = 0;
+    const createdFirms = [];
     const failed = [];
 
     try {
@@ -134,15 +216,46 @@ export default function CsvFirmImport() {
       for (let i = 0; i < valid.length; i += BATCH) {
         const batch = valid.slice(i, i + BATCH);
         try {
-          await base44.entities.Firm.bulkCreate(batch.map((b) => b.firm));
-          successCount += batch.length;
+          const created = await base44.entities.Firm.bulkCreate(batch.map((b) => b.firm));
+          (Array.isArray(created) ? created : []).forEach((f) => createdFirms.push(f));
         } catch (err) {
           batch.forEach((b) => failed.push({ row: b.row, error: err.message || "Create failed" }));
         }
       }
 
-      setResults({ total: csvData.rows.length, success: successCount, skipped, failed });
+      const successCount = createdFirms.length;
       queryClient.invalidateQueries({ queryKey: ["firms"] });
+
+      // Auto-fill each created firm from its website. Enrichment is slow
+      // (30-90s/firm), so run sequentially with a live progress indicator.
+      const enrichmentSummaries = [];
+      if (createdFirms.length > 0) {
+        setStage("enriching");
+        setEnrichProgress({ current: 0, total: createdFirms.length, currentName: createdFirms[0].name, summaries: [] });
+        let existingContacts = [];
+        try {
+          existingContacts = await base44.entities.Contact.list(null, 5000);
+        } catch { /* start empty */ }
+        const tenantId = user?.linked_firm_id;
+        for (let i = 0; i < createdFirms.length; i++) {
+          const firm = createdFirms[i];
+          setEnrichProgress({ current: i, total: createdFirms.length, currentName: firm.name, summaries: enrichmentSummaries });
+          const summary = await enrichAndApplyFirm(firm, existingContacts, tenantId);
+          enrichmentSummaries.push(summary);
+        }
+        setEnrichProgress({ current: createdFirms.length, total: createdFirms.length, currentName: "", summaries: enrichmentSummaries });
+        queryClient.invalidateQueries({ queryKey: ["firms"] });
+        queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      }
+
+      setResults({
+        total: csvData.rows.length,
+        success: successCount,
+        skipped,
+        failed,
+        enrichmentSummaries,
+      });
+      setEnrichProgress(null);
       setStage("results");
       if (successCount > 0) toast({ title: `✅ ${successCount} firm${successCount === 1 ? "" : "s"} imported` });
     } catch (err) {
@@ -152,8 +265,8 @@ export default function CsvFirmImport() {
   };
 
   const downloadTemplate = () => {
-    const headers = IMPORTABLE_FIELDS.map((f) => f.key).join(",");
-    const sample = "Example Capital,Investment Manager;Allocator,https://example.com/logo.png,https://example.com,https://linkedin.com/company/example,info@example.com,2005,Example Capital is a global investment manager.";
+    const headers = "name,firm_types";
+    const sample = "Example Capital,Investment Manager";
     const blob = new Blob([headers + "\n" + sample + "\n"], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -167,6 +280,7 @@ export default function CsvFirmImport() {
     setCsvData(null);
     setMapping({});
     setResults(null);
+    setEnrichProgress(null);
     setStage("upload");
   };
 
@@ -195,9 +309,9 @@ export default function CsvFirmImport() {
           <input id="firm-csv-file-input" type="file" accept=".csv,.txt" className="hidden" onChange={(e) => handleFile(e.target.files[0])} />
         </div>
         <div className="text-xs text-gray-500 bg-gray-50 rounded-lg p-3 space-y-1">
-          <p className="font-semibold text-gray-600">Supported fields:</p>
-          <p>{IMPORTABLE_FIELDS.map((f) => f.label).join(", ")}</p>
-          <p className="text-gray-400 mt-1">Firm Name is required. Firm Types can be multiple, separated by semicolons.</p>
+          <p className="font-semibold text-gray-600">Only two columns are required:</p>
+          <p><strong>Firm Name</strong> and <strong>Firm Types</strong> (semicolon-separated for multiple).</p>
+          <p className="text-gray-400 mt-1">After import, each firm is automatically enriched from its public website — logo, description, address, phone, LinkedIn, and key personnel are filled in for you. This takes ~30-90 seconds per firm.</p>
         </div>
       </div>
     );
@@ -263,7 +377,7 @@ export default function CsvFirmImport() {
                     const fk = mapping[i];
                     if (fk) raw[fk] = (row[i] || "").trim();
                   });
-                  const missing = !raw.name;
+                  const missing = !raw.name || !raw.firm_types;
                   return (
                     <tr key={ri} className={missing ? "bg-red-50" : ri % 2 ? "bg-gray-50/50" : ""}>
                       {activeFields.map((f) => (
@@ -275,6 +389,13 @@ export default function CsvFirmImport() {
               </tbody>
             </table>
           </div>
+        </div>
+
+        <div className="rounded-lg bg-indigo-50 border border-indigo-100 p-3 flex items-start gap-2">
+          <Globe className="w-4 h-4 text-indigo-600 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-indigo-700">
+            After creating the firms, each one is automatically enriched from its public website (logo, description, address, phone, LinkedIn, personnel). This runs sequentially and takes ~30-90 seconds per firm.
+          </p>
         </div>
 
         <div className="flex justify-end">
@@ -290,12 +411,51 @@ export default function CsvFirmImport() {
     return (
       <div className="flex flex-col items-center justify-center gap-3 py-12">
         <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-        <p className="text-sm font-semibold text-gray-700">Importing firms...</p>
+        <p className="text-sm font-semibold text-gray-700">Creating firms...</p>
+      </div>
+    );
+  }
+
+  if (stage === "enriching" && enrichProgress) {
+    const pct = enrichProgress.total > 0 ? (enrichProgress.current / enrichProgress.total) * 100 : 0;
+    return (
+      <div className="space-y-4 py-2">
+        <div className="flex items-center gap-3">
+          <Loader2 className="w-6 h-6 text-indigo-600 animate-spin flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-gray-700">Auto-filling from the web...</p>
+            <p className="text-xs text-gray-500 truncate">
+              {enrichProgress.current < enrichProgress.total
+                ? `Firm ${enrichProgress.current + 1} of ${enrichProgress.total}: ${enrichProgress.currentName}`
+                : `Completing ${enrichProgress.total} firm${enrichProgress.total === 1 ? "" : "s"}`}
+            </p>
+          </div>
+          <span className="text-xs text-gray-400 tabular-nums">{enrichProgress.current}/{enrichProgress.total}</span>
+        </div>
+        <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+          <div className="h-full bg-indigo-500 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+        </div>
+        {enrichProgress.summaries.length > 0 && (
+          <div className="max-h-48 overflow-y-auto rounded-lg border border-gray-200 divide-y divide-gray-100">
+            {enrichProgress.summaries.map((s, i) => (
+              <div key={i} className="px-3 py-2 text-xs flex justify-between gap-2">
+                <span className="text-gray-700 font-medium truncate">{s.name}</span>
+                <span className={s.error ? "text-amber-600" : "text-gray-500"}>
+                  {s.error ? "⚠ " + s.error : `✓ ${s.fieldsUpdated} field(s), ${s.contactsCreated} new, ${s.contactsUpdated} updated`}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   }
 
   if (stage === "results" && results) {
+    const enriched = results.enrichmentSummaries || [];
+    const enrichedOk = enriched.filter((s) => !s.error);
+    const enrichedFail = enriched.filter((s) => s.error);
+    const totalContactsCreated = enriched.reduce((sum, s) => sum + (s.contactsCreated || 0), 0);
     return (
       <div className="space-y-4">
         <div className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 bg-white">
@@ -307,6 +467,16 @@ export default function CsvFirmImport() {
             <p className="text-xs text-gray-400">{results.success} imported · {results.skipped.length} skipped · {results.failed.length} failed · {results.total} total</p>
           </div>
         </div>
+
+        {enriched.length > 0 && (
+          <div className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-3 space-y-1">
+            <p className="text-xs font-semibold text-indigo-700">Web auto-fill</p>
+            <p className="text-xs text-gray-600">
+              {enrichedOk.length} firm{enrichedOk.length === 1 ? "" : "s"} enriched · {totalContactsCreated} contact{totalContactsCreated === 1 ? "" : "s"} created
+              {enrichedFail.length > 0 ? ` · ${enrichedFail.length} could not be enriched` : ""}
+            </p>
+          </div>
+        )}
 
         {results.skipped.length > 0 && (
           <div>
