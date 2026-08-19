@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 // Utility section — tools for cleanup, imports, and validation
-import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search, ArrowLeft, Users, Sparkles, ScrollText, ShieldCheck, Ghost, Upload, Eraser, Tag, UserX, Briefcase } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search, ArrowLeft, Users, Sparkles, ScrollText, ShieldCheck, Ghost, Upload, Eraser, Tag, UserX, Briefcase, Building, Package } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -12,6 +12,8 @@ import EnrichmentLogsView from "./EnrichmentLogsView";
 import OrphanRecordCleanup from "./OrphanRecordCleanup";
 import OrphanedContactsCleanup from "./OrphanedContactsCleanup";
 import CsvContactImport from "./CsvContactImport";
+import CsvFirmImport from "./CsvFirmImport";
+import CsvProductImport from "./CsvProductImport";
 import PlaceholderCleanup from "./PlaceholderCleanup";
 import FirmTypeValidation from "./FirmTypeValidation";
 import ExperienceOptionCleanup from "./ExperienceOptionCleanup";
@@ -223,6 +225,26 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
                 <span className="text-[11px] text-gray-400">Bulk upload from CSV</span>
               </button>
               <button
+                onClick={() => setView("import-firms")}
+                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
+              >
+                <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center">
+                  <Building className="w-5 h-5 text-blue-600" />
+                </div>
+                <span className="text-sm font-semibold text-gray-700">Import Firms</span>
+                <span className="text-[11px] text-gray-400">Bulk upload from CSV</span>
+              </button>
+              <button
+                onClick={() => setView("import-products")}
+                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
+              >
+                <div className="w-9 h-9 rounded-full bg-violet-50 flex items-center justify-center">
+                  <Package className="w-5 h-5 text-violet-600" />
+                </div>
+                <span className="text-sm font-semibold text-gray-700">Import Products</span>
+                <span className="text-[11px] text-gray-400">Bulk upload from CSV</span>
+              </button>
+              <button
                 onClick={() => setView("placeholder-cleanup")}
                 className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
               >
@@ -393,6 +415,16 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
           {/* CSV contact import view */}
           {view === "import-contacts" && (
             <CsvContactImport />
+          )}
+
+          {/* CSV firm import view */}
+          {view === "import-firms" && (
+            <CsvFirmImport />
+          )}
+
+          {/* CSV product import view */}
+          {view === "import-products" && (
+            <CsvProductImport />
           )}
 
           {/* Placeholder cleanup view */}
