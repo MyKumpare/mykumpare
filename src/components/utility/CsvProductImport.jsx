@@ -15,12 +15,22 @@ import ImportJobsDashboard from "./ImportJobsDashboard";
 const PRODUCT_TYPES = ["Investment Manager Product", "Multi-Manager Product"];
 const PRODUCT_STATUSES = ["Not Reviewed", "In-Process", "On-Hold", "Rejected", "Approved", "Removed"];
 
-// Only name, product_type, and firm_name are required. Everything else is
-// optional and only filled in if present in the file.
+const FIRM_TYPES = [
+  "Manager of Managers",
+  "Investment Manager",
+  "Allocator",
+  "Investment Consultant",
+  "Securities Brokerage",
+  "Trade Organizations",
+];
+
+// Required: name, product_type, firm_name, firm_type. firm_type is used to
+// create the associated firm when it isn't already in the system.
 const IMPORTABLE_FIELDS = [
   { key: "name", label: "Product Name", required: true },
   { key: "product_type", label: "Product Type", required: true, enum: PRODUCT_TYPES },
-  { key: "firm_name", label: "Firm Name (lookup)", required: true, virtual: true },
+  { key: "firm_name", label: "Associated Firm Name", required: true, virtual: true },
+  { key: "firm_type", label: "Associated Firm Type", required: true, virtual: true, enum: FIRM_TYPES },
   { key: "product_status", label: "Product Status", enum: PRODUCT_STATUSES },
   { key: "asset_class", label: "Asset Class" },
   { key: "geography", label: "Geography" },
@@ -38,6 +48,7 @@ const FIELD_ALIASES = {
   name: ["name", "productname", "product", "strategy", "strategyname"],
   product_type: ["producttype", "type", "offeringtype"],
   firm_name: ["firm", "firmname", "company", "companyname", "organization", "org", "manager"],
+  firm_type: ["firmtype", "associatedfirmtype", "companytype", "firmcategory"],
   product_status: ["productstatus", "status", "reviewstatus"],
   asset_class: ["assetclass", "asset", "class"],
   geography: ["geography", "geo", "region", "focus"],
@@ -175,10 +186,13 @@ export default function CsvProductImport() {
 
       if (!raw.name) { skipped.push({ row: rowIdx + 2, reason: "Missing product name" }); return; }
       if (!raw.product_type) { skipped.push({ row: rowIdx + 2, reason: "Missing product type" }); return; }
-      if (!raw.firm_name) { skipped.push({ row: rowIdx + 2, reason: "Missing firm name" }); return; }
+      if (!raw.firm_name) { skipped.push({ row: rowIdx + 2, reason: "Missing associated firm name" }); return; }
+      if (!raw.firm_type) { skipped.push({ row: rowIdx + 2, reason: "Missing associated firm type" }); return; }
 
       const productType = validateEnum(raw.product_type, PRODUCT_TYPES);
       if (!productType) { skipped.push({ row: rowIdx + 2, reason: `Invalid product type: ${raw.product_type}` }); return; }
+      const firmType = validateEnum(raw.firm_type, FIRM_TYPES);
+      if (!firmType) { skipped.push({ row: rowIdx + 2, reason: `Invalid firm type: ${raw.firm_type}` }); return; }
 
       const exactFirm = firmByName[raw.firm_name.toLowerCase().trim()];
 
@@ -191,20 +205,28 @@ export default function CsvProductImport() {
           firmId: exactFirm.id, firmDups: [], productDups: dups,
           accept: dups.length === 0,
           autoSkipped: isExactProduct,
+          createFirm: false, firmType,
         });
       } else {
         // No exact firm match — look for similar firms so the user can map to
-        // the existing one instead of creating a duplicate.
+        // the existing one, or create a new firm using the firm_type column.
         const firmDups = findFirmNameDuplicates(raw.firm_name, firms || []);
+        const product = buildProductFromRaw(raw, productType, null, tenant_id);
         if (firmDups.length > 0) {
-          const product = buildProductFromRaw(raw, productType, null, tenant_id);
           items.push({
             product, row: rowIdx + 2, firmName: raw.firm_name,
             firmId: null, firmDups, productDups: [],
             accept: false,
+            createFirm: false, firmType,
           });
         } else {
-          skipped.push({ row: rowIdx + 2, reason: `Firm not found: ${raw.firm_name}` });
+          // No similar firm either — auto-create a new firm using firm_type.
+          items.push({
+            product, row: rowIdx + 2, firmName: raw.firm_name,
+            firmId: null, firmDups: [], productDups: [],
+            accept: true,
+            createFirm: true, firmType,
+          });
         }
       }
     });
@@ -215,7 +237,7 @@ export default function CsvProductImport() {
   const handleImportClick = () => {
     const { items, skipped } = buildReview();
     if (items.length === 0) return;
-    const needsReview = items.some((it) => !it.firmId || (it.firmId && it.productDups.length > 0 && !it.accept && !it.autoSkipped));
+    const needsReview = items.some((it) => (!it.firmId && !it.createFirm) || (it.firmId && it.productDups.length > 0 && !it.accept && !it.autoSkipped));
     if (needsReview) {
       setReviewItems({ items, skipped });
       setStage("review");
@@ -296,9 +318,9 @@ export default function CsvProductImport() {
           <input id="product-csv-file-input" type="file" accept=".csv,.txt" className="hidden" onChange={(e) => handleFile(e.target.files[0])} />
         </div>
         <div className="text-xs text-gray-500 bg-gray-50 rounded-lg p-3 space-y-1">
-          <p className="font-semibold text-gray-600">Only three columns are required:</p>
-          <p><strong>Product Name</strong>, <strong>Product Type</strong>, and <strong>Firm Name</strong>.</p>
-          <p className="text-gray-400 mt-1">Firm Name is matched to existing firms in your database. If it's not an exact match but is similar to an existing firm, you'll be asked to confirm the firm before adding. Products that already exist (exact or similar name) in the associated firm will be flagged for you to accept or reject.</p>
+          <p className="font-semibold text-gray-600">Four columns are required:</p>
+          <p><strong>Product Name</strong>, <strong>Product Type</strong>, <strong>Associated Firm Name</strong>, and <strong>Associated Firm Type</strong>.</p>
+          <p className="text-gray-400 mt-1">Firm Name is matched to existing firms in your database. If the firm isn't found, a new firm is created using the Associated Firm Type and the product is linked to it. If the name is similar to an existing firm, you'll be asked to map it, create a new firm, or skip. Products that already exist (exact or similar name) in the associated firm will be flagged for you to accept or reject.</p>
         </div>
       </div>
     );
@@ -365,7 +387,7 @@ export default function CsvProductImport() {
                     const fk = mapping[i];
                     if (fk) raw[fk] = (row[i] || "").trim();
                   });
-                  const missing = !raw.name || !raw.product_type || !raw.firm_name;
+                  const missing = !raw.name || !raw.product_type || !raw.firm_name || !raw.firm_type;
                   return (
                     <tr key={ri} className={missing ? "bg-red-50" : ri % 2 ? "bg-gray-50/50" : ""}>
                       {activeFields.map((f) => (
@@ -390,8 +412,9 @@ export default function CsvProductImport() {
 
   if (stage === "review" && reviewItems) {
     const { items, skipped } = reviewItems;
-    const firmReviewItems = items.map((it, i) => ({ it, i })).filter(({ it }) => !it.firmId && it.firmDups.length > 0);
+    const firmReviewItems = items.map((it, i) => ({ it, i })).filter(({ it }) => !it.firmId && !it.createFirm && it.firmDups.length > 0);
     const productReviewItems = items.map((it, i) => ({ it, i })).filter(({ it }) => it.firmId && it.productDups.length > 0 && !it.autoSkipped);
+    const createFirmItems = items.map((it, i) => ({ it, i })).filter(({ it }) => it.createFirm && it.accept);
     const autoAccepted = items.filter((it) => it.firmId && it.productDups.length === 0).length;
     const exactSkipped = items.filter((it) => it.autoSkipped).length;
 
@@ -404,18 +427,22 @@ export default function CsvProductImport() {
       const product = { ...it.product, firm_id: firmId, firm_name: firmName };
       const dups = findProductDuplicates(it.product.name, productsByFirm[firmId] || []);
       const isExactProduct = dups.some((d) => d.score === 1);
-      updateItem(idx, { firmId: firmId, product, productDups: dups, accept: dups.length === 0, autoSkipped: isExactProduct });
+      updateItem(idx, { firmId: firmId, product, productDups: dups, accept: dups.length === 0, autoSkipped: isExactProduct, createFirm: false });
       setFirmPickerIdx(null);
     };
     const skipFirmReview = (idx) => {
       updateItem(idx, { accept: false, productDups: [] });
       setFirmPickerIdx(null);
     };
+    const createNewFirm = (idx) => {
+      updateItem(idx, { createFirm: true, accept: true, firmId: null, productDups: [], autoSkipped: false });
+      setFirmPickerIdx(null);
+    };
     const setAccept = (idx, val) => updateItem(idx, { accept: val });
     const isExact = (dups) => dups.some((d) => d.score === 1);
 
-    // Final accepted = items with a resolved firm and accept=true.
-    const finalAccepted = items.filter((it) => it.firmId && it.accept).length;
+    // Final accepted = items with a resolved firm or a new firm to create, and accept=true.
+    const finalAccepted = items.filter((it) => it.accept && (it.firmId || it.createFirm)).length;
 
     return (
       <div className="space-y-4">
@@ -452,6 +479,7 @@ export default function CsvProductImport() {
                     </div>
                     <div className="flex items-center gap-1.5 flex-shrink-0">
                       <button onClick={() => skipFirmReview(i)} className="px-2.5 py-1 text-xs rounded-md border bg-white text-gray-600 border-gray-300 hover:bg-gray-50">Skip</button>
+                      <button onClick={() => createNewFirm(i)} className="px-2.5 py-1 text-xs rounded-md border bg-white text-indigo-700 border-indigo-300 hover:bg-indigo-50">Create new</button>
                       <button onClick={() => setFirmPickerIdx(firmPickerIdx === i ? null : i)} className="px-2.5 py-1 text-xs rounded-md border bg-white text-teal-700 border-teal-300 hover:bg-teal-50">Map to firm</button>
                     </div>
                   </div>
@@ -466,6 +494,23 @@ export default function CsvProductImport() {
                       }}
                     />
                   )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {createFirmItems.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">New firms to be created ({createFirmItems.length})</p>
+            <div className="space-y-2 max-h-[30vh] overflow-y-auto">
+              {createFirmItems.map(({ it, i }) => (
+                <div key={i} className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-3 flex items-start gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800">{it.firmName}</p>
+                    <p className="text-[11px] text-gray-400">Row {it.row} · Type: {it.firmType} · Product: {it.product.name}</p>
+                  </div>
+                  <button onClick={() => updateItem(i, { createFirm: false, accept: false })} className="px-2.5 py-1 text-xs rounded-md border bg-white text-gray-600 border-gray-300 hover:bg-gray-50 flex-shrink-0">Skip</button>
                 </div>
               ))}
             </div>

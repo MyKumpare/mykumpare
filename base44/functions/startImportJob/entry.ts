@@ -31,21 +31,56 @@ export default async function(req: Request): Promise<Response> {
     // survives navigation/close. Products need no web enrichment, so the job
     // completes immediately with created/failed counts.
     if (source === 'product') {
-      const accepted = items.filter((it: any) => it?.accept && it?.firmId && it?.product);
+      const accepted = items.filter((it: any) => it?.accept && it?.product);
       const duplicateSkipped = items
-        .filter((it: any) => !it?.accept && it?.firmId)
+        .filter((it: any) => !it?.accept)
         .map((it: any) => ({ row: it?.row, error: it?.autoSkipped ? 'Skipped — exact duplicate product' : 'Skipped — duplicate product' }));
       const failed: any[] = [];
       const createdProducts: any[] = [];
-      const BATCH = 100;
-      for (let i = 0; i < accepted.length; i += BATCH) {
-        const batch = accepted.slice(i, i + BATCH);
+
+      // Create new firms for items flagged createFirm (deduped by firm name).
+      const newFirmMap: Record<string, any> = {};
+      const createFirmItems = accepted.filter((it: any) => it?.createFirm && !it?.firmId);
+      for (const it of createFirmItems) {
+        const key = (it?.firmName || '').toLowerCase().trim();
+        if (!key || newFirmMap[key]) continue;
         try {
-          const toCreate = batch.map((b: any) => ({ ...b.product, tenant_id: b.product.tenant_id || tenantId }));
-          const created = await svc.entities.Product.bulkCreate(toCreate);
+          const firm = await svc.entities.Firm.create({
+            tenant_id: tenantId,
+            name: it.firmName,
+            firm_types: Array.isArray(it.firmType) ? it.firmType : (it.firmType ? [it.firmType] : []),
+          });
+          newFirmMap[key] = firm;
+        } catch (err: any) {
+          failed.push({ row: it.row, error: `Failed to create firm "${it.firmName}": ${err?.message || 'unknown'}` });
+        }
+      }
+
+      // Resolve each accepted product to a firm id, then bulk-create.
+      const toCreate: { product: any; row: any }[] = [];
+      for (const it of accepted) {
+        let firmId = it.firmId || null;
+        let firmName = it.product.firm_name;
+        if (!firmId && it.createFirm) {
+          const key = (it.firmName || '').toLowerCase().trim();
+          const newFirm = newFirmMap[key];
+          if (!newFirm) { failed.push({ row: it.row, error: `Firm not created: ${it.firmName}` }); continue; }
+          firmId = newFirm.id;
+          firmName = newFirm.name;
+        }
+        if (!firmId) { failed.push({ row: it.row, error: 'No associated firm' }); continue; }
+        toCreate.push({ product: { ...it.product, firm_id: firmId, firm_name: firmName, tenant_id: it.product.tenant_id || tenantId }, row: it.row });
+      }
+
+      const BATCH = 100;
+      for (let i = 0; i < toCreate.length; i += BATCH) {
+        const batch = toCreate.slice(i, i + BATCH);
+        try {
+          const productsToCreate = batch.map((b) => b.product);
+          const created = await svc.entities.Product.bulkCreate(productsToCreate);
           (Array.isArray(created) ? created : []).forEach((p: any) => createdProducts.push(p));
         } catch (err: any) {
-          batch.forEach((b: any) => failed.push({ row: b.row, error: err?.message || 'Create failed' }));
+          batch.forEach((b) => failed.push({ row: b.row, error: err?.message || 'Create failed' }));
         }
       }
       const job = await svc.entities.ImportJob.create({
