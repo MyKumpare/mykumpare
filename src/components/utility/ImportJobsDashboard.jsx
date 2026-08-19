@@ -125,11 +125,15 @@ function JobRow({ job }) {
               <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Items</p>
               <div className="max-h-40 overflow-y-auto rounded-md border border-gray-200 divide-y divide-gray-100 bg-white">
                 {items.map((it, i) => (
-                  <div key={it.id || i} className="px-2.5 py-1.5 flex items-center gap-2 text-xs">
-                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${it.state === "done" ? "bg-green-500" : it.state === "failed" ? "bg-red-500" : it.state === "in_progress" ? "bg-blue-500" : "bg-gray-300"}`} />
-                    <span className="text-gray-700 truncate flex-1">{it.name || it.id}</span>
-                    {it.state === "in_progress" && <Loader2 className="w-3 h-3 text-blue-500 animate-spin flex-shrink-0" />}
-                    {it.state === "failed" && <span className="text-red-500 truncate max-w-[55%]" title={it.error}>{it.error}</span>}
+                  <div key={it.id || i} className="px-2.5 py-1.5 text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${it.state === "done" ? "bg-green-500" : it.state === "failed" ? "bg-red-500" : it.state === "in_progress" ? "bg-blue-500" : "bg-gray-300"}`} />
+                      <span className="text-gray-700 truncate flex-1">{it.name || it.id}</span>
+                      {it.state === "in_progress" && <Loader2 className="w-3 h-3 text-blue-500 animate-spin flex-shrink-0" />}
+                    </div>
+                    {it.state === "failed" && it.error && (
+                      <p className="mt-1 ml-3.5 text-red-600 break-words">{it.error}</p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -151,9 +155,9 @@ function JobRow({ job }) {
               )}
               <div className="max-h-56 overflow-y-auto rounded-md border border-red-200 divide-y divide-red-100 bg-white">
                 {failed.map((f, i) => (
-                  <div key={i} className="px-2.5 py-1.5 text-xs flex justify-between gap-2">
-                    <span className="text-gray-500 flex-shrink-0">Row {f.row ?? "—"}</span>
-                    <span className="text-red-600 truncate">{f.error || f.reason}</span>
+                  <div key={i} className="px-2.5 py-1.5 text-xs">
+                    <span className="text-gray-500">Row {f.row ?? "—"}</span>
+                    <p className="mt-0.5 text-red-600 break-words">{f.error || f.reason}</p>
                   </div>
                 ))}
               </div>
@@ -162,15 +166,14 @@ function JobRow({ job }) {
 
           {enrichmentErrors.length > 0 && (
             <div>
-              <p className="text-[11px] font-semibold text-amber-600 uppercase tracking-wide mb-1.5">Enrichment errors</p>
-              <div className="max-h-32 overflow-y-auto rounded-md border border-amber-200 divide-y divide-amber-100 bg-white">
-                {enrichmentErrors.slice(0, 30).map((s, i) => (
-                  <div key={i} className="px-2.5 py-1.5 text-xs flex justify-between gap-2">
-                    <span className="text-gray-700 truncate flex-1">{s.name}</span>
-                    <span className="text-amber-700 truncate max-w-[60%]">{s.error}</span>
+              <p className="text-[11px] font-semibold text-amber-600 uppercase tracking-wide mb-1.5">Enrichment errors ({enrichmentErrors.length})</p>
+              <div className="max-h-56 overflow-y-auto rounded-md border border-amber-200 divide-y divide-amber-100 bg-white">
+                {enrichmentErrors.map((s, i) => (
+                  <div key={i} className="px-2.5 py-1.5 text-xs">
+                    <span className="text-gray-700 font-medium">{s.name}</span>
+                    <p className="mt-0.5 text-amber-700 break-words">{s.error}</p>
                   </div>
                 ))}
-                {enrichmentErrors.length > 30 && <div className="px-2.5 py-1.5 text-[11px] text-gray-400 text-center">…and {enrichmentErrors.length - 30} more</div>}
               </div>
             </div>
           )}
