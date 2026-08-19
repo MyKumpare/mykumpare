@@ -466,25 +466,41 @@ export default function CsvFirmImport() {
 
   if (stage === "review" && reviewItems) {
     const { items, validationSkipped } = reviewItems;
-    const flagged = items.filter((it) => it.duplicates.length > 0);
-    const autoAccepted = items.length - flagged.length;
+    // Preserve the real `items` index for each flagged firm so Accept/Reject
+    // targets the correct row (flagged is a filtered subset of items).
+    const flaggedWithIdx = items
+      .map((it, i) => ({ it, i }))
+      .filter(({ it }) => it.duplicates.length > 0);
+    const isExact = (it) => it.duplicates.some((d) => d.score === 1);
+    const exactIdxs = flaggedWithIdx.filter(({ it }) => isExact(it));
+    const similarIdxs = flaggedWithIdx.filter(({ it }) => !isExact(it));
+    const autoAccepted = items.length - flaggedWithIdx.length;
+
     const setAccept = (idx, val) => {
       const next = items.map((it, i) => (i === idx ? { ...it, accept: val } : it));
       setReviewItems({ items: next, validationSkipped });
     };
-    const setAll = (val) => {
-      const next = items.map((it) => (it.duplicates.length > 0 ? { ...it, accept: val } : it));
+    // Bulk only affects similar names — exact matches are always rejected.
+    const setAllSimilar = (val) => {
+      const exactSet = new Set(exactIdxs.map(({ i }) => i));
+      const next = items.map((it, i) =>
+        exactSet.has(i) ? { ...it, accept: false }
+          : it.duplicates.length > 0 ? { ...it, accept: val }
+          : it
+      );
       setReviewItems({ items: next, validationSkipped });
     };
-    const flaggedAccepted = flagged.filter((it) => it.accept).length;
-    const acceptedCount = autoAccepted + flaggedAccepted;
+
+    const similarAccepted = similarIdxs.filter(({ it }) => it.accept).length;
+    const acceptedCount = autoAccepted + similarAccepted;
+
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold text-gray-700">Review duplicates</p>
             <p className="text-xs text-gray-400">
-              {flagged.length} firm{flagged.length === 1 ? "" : "s"} match existing names · {autoAccepted} will import automatically · {flaggedAccepted} of {flagged.length} duplicates accepted
+              {exactIdxs.length} exact match{exactIdxs.length === 1 ? "" : "es"} (auto-skipped) · {similarIdxs.length} similar name{similarIdxs.length === 1 ? "" : "s"} · {autoAccepted} will import automatically
             </p>
           </div>
           <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={reset}>
@@ -495,53 +511,84 @@ export default function CsvFirmImport() {
         <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3 flex items-start gap-2">
           <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
           <p className="text-xs text-amber-700">
-            For each potential duplicate, choose <strong>Accept</strong> to import it anyway or <strong>Reject</strong> to skip it. Accepted firms are created and then auto-filled from the web.
+            Exact matches are skipped automatically. For similar names, choose <strong>Accept</strong> to import anyway or <strong>Reject</strong> to skip. Accepted firms are created and then auto-filled from the web.
           </p>
         </div>
 
-        {flagged.length > 0 && (
-          <div className="flex items-center justify-end gap-2 text-xs">
-            <span className="text-gray-400">Bulk:</span>
-            <button onClick={() => setAll(true)} className="text-indigo-600 hover:text-indigo-700 font-medium">Accept all</button>
-            <span className="text-gray-300">·</span>
-            <button onClick={() => setAll(false)} className="text-gray-600 hover:text-gray-800 font-medium">Reject all</button>
+        {exactIdxs.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Exact matches — will be skipped</p>
+            <div className="space-y-2 max-h-[30vh] overflow-y-auto">
+              {exactIdxs.map(({ it, i }) => (
+                <div key={i} className="rounded-lg border border-gray-200 bg-gray-50 p-3 opacity-80">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-700">{it.firm.name}</p>
+                      <p className="text-[11px] text-gray-400">Row {it.row} · {(it.firm.firm_types || []).join(", ")}</p>
+                      <div className="mt-1.5 space-y-1">
+                        {it.duplicates.map((d, di) => (
+                          <div key={di} className="text-xs text-gray-500 flex items-start gap-1">
+                            <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                            <span>Exact match: <strong>{d.name}</strong></span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <span className="px-2 py-1 text-[11px] rounded-md bg-gray-200 text-gray-600 flex-shrink-0">Skipped</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
-        <div className="space-y-2 max-h-[45vh] overflow-y-auto">
-          {flagged.map((it, i) => (
-            <div key={i} className={`rounded-lg border p-3 ${it.accept ? "border-indigo-200 bg-white" : "border-gray-200 bg-gray-50"}`}>
-              <div className="flex items-start gap-3">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-800">{it.firm.name}</p>
-                  <p className="text-[11px] text-gray-400">Row {it.row} · {(it.firm.firm_types || []).join(", ")}</p>
-                  <div className="mt-1.5 space-y-1">
-                    {it.duplicates.map((d, di) => (
-                      <div key={di} className="text-xs text-amber-700 flex items-start gap-1">
-                        <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                        <span>Matches <strong>{d.name}</strong> — {d.reasons.join(", ")}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <button
-                    onClick={() => setAccept(i, false)}
-                    className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${!it.accept ? "bg-red-600 text-white border-red-600" : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"}`}
-                  >
-                    Reject
-                  </button>
-                  <button
-                    onClick={() => setAccept(i, true)}
-                    className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${it.accept ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"}`}
-                  >
-                    Accept
-                  </button>
-                </div>
+        {similarIdxs.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Similar names — review</p>
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-gray-400">Bulk:</span>
+                <button onClick={() => setAllSimilar(true)} className="text-indigo-600 hover:text-indigo-700 font-medium">Accept all</button>
+                <span className="text-gray-300">·</span>
+                <button onClick={() => setAllSimilar(false)} className="text-gray-600 hover:text-gray-800 font-medium">Reject all</button>
               </div>
             </div>
-          ))}
-        </div>
+            <div className="space-y-2 max-h-[40vh] overflow-y-auto">
+              {similarIdxs.map(({ it, i }) => (
+                <div key={i} className={`rounded-lg border p-3 ${it.accept ? "border-indigo-200 bg-white" : "border-gray-200 bg-gray-50"}`}>
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-800">{it.firm.name}</p>
+                      <p className="text-[11px] text-gray-400">Row {it.row} · {(it.firm.firm_types || []).join(", ")}</p>
+                      <div className="mt-1.5 space-y-1">
+                        {it.duplicates.map((d, di) => (
+                          <div key={di} className="text-xs text-amber-700 flex items-start gap-1">
+                            <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                            <span>Matches <strong>{d.name}</strong> — {d.reasons.join(", ")}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <button
+                        onClick={() => setAccept(i, false)}
+                        className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${!it.accept ? "bg-red-600 text-white border-red-600" : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"}`}
+                      >
+                        Reject
+                      </button>
+                      <button
+                        onClick={() => setAccept(i, true)}
+                        className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${it.accept ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"}`}
+                      >
+                        Accept
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={reset}>Cancel</Button>
