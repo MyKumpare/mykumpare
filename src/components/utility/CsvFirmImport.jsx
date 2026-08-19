@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -11,6 +11,18 @@ import { parseCSV, autoMapHeader, validateEnum } from "./csvUtils";
 import { enrichFirmFromWeb, mergeEnrichmentData, mergeContactEnrichment, parsePhoneString } from "../ai/firmEnrichment";
 import { detectDesignations } from "../contacts/designationDetector";
 import { findFirmNameDuplicates } from "../firms/firmNameDuplicateCheck";
+
+// Human-readable status messages cycled by elapsed time while each firm is
+// being enriched. The backend scrape is a single long call, so we surface
+// these so the user knows what's happening.
+const ENRICH_STAGES = [
+  { label: "Fetching website", detail: "Connecting to the firm's public website" },
+  { label: "Reading page content", detail: "Scraping text, links, and images" },
+  { label: "Extracting firm details", detail: "Parsing logo, description, addresses, phones" },
+  { label: "Finding personnel", detail: "Discovering team members and bios" },
+  { label: "Deep-reading profiles", detail: "Extracting education and experience" },
+  { label: "Finalizing", detail: "Saving enriched data" },
+];
 
 const FIRM_TYPES = [
   "Manager of Managers",
@@ -127,11 +139,23 @@ export default function CsvFirmImport() {
   const [dragOver, setDragOver] = useState(false);
   const [enrichProgress, setEnrichProgress] = useState(null);
   const [reviewItems, setReviewItems] = useState(null);
+  const [enrichElapsed, setEnrichElapsed] = useState(0);
 
   const { data: existingFirms = [] } = useQuery({
     queryKey: ["firms"],
     queryFn: () => base44.entities.Firm.list(null, 5000),
   });
+
+  // Cycle status messages per firm while enrichment runs. The timer resets for
+  // each firm (enrichProgress.current changes) so the stage reflects the firm
+  // currently being processed.
+  useEffect(() => {
+    if (stage !== "enriching") return;
+    const start = Date.now();
+    setEnrichElapsed(0);
+    const id = setInterval(() => setEnrichElapsed(Math.floor((Date.now() - start) / 1000)), 1000);
+    return () => clearInterval(id);
+  }, [stage, enrichProgress?.current]);
 
   const handleFile = useCallback((file) => {
     if (!file) return;
@@ -517,19 +541,31 @@ export default function CsvFirmImport() {
 
   if (stage === "enriching" && enrichProgress) {
     const pct = enrichProgress.total > 0 ? (enrichProgress.current / enrichProgress.total) * 100 : 0;
+    const stageIdx = Math.min(ENRICH_STAGES.length - 1, Math.floor(enrichElapsed / 5));
+    const enrichStage = ENRICH_STAGES[stageIdx];
     return (
       <div className="space-y-4 py-2">
         <div className="flex items-center gap-3">
           <Loader2 className="w-6 h-6 text-indigo-600 animate-spin flex-shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-700">Auto-filling from the web...</p>
+            <p className="text-sm font-semibold text-gray-700">
+              {enrichProgress.current < enrichProgress.total
+                ? `${enrichStage.label}…`
+                : `Completing ${enrichProgress.total} firm${enrichProgress.total === 1 ? "" : "s"}`}
+            </p>
             <p className="text-xs text-gray-500 truncate">
               {enrichProgress.current < enrichProgress.total
                 ? `Firm ${enrichProgress.current + 1} of ${enrichProgress.total}: ${enrichProgress.currentName}`
-                : `Completing ${enrichProgress.total} firm${enrichProgress.total === 1 ? "" : "s"}`}
+                : "Finishing up…"}
             </p>
+            <p className="text-[11px] text-gray-400 truncate mt-0.5">{enrichStage.detail}</p>
           </div>
-          <span className="text-xs text-gray-400 tabular-nums">{enrichProgress.current}/{enrichProgress.total}</span>
+          <div className="flex flex-col items-end gap-0.5">
+            <span className="text-xs text-gray-400 tabular-nums">{enrichProgress.current}/{enrichProgress.total}</span>
+            {enrichProgress.current < enrichProgress.total && enrichElapsed > 0 && (
+              <span className="text-[11px] text-gray-400 tabular-nums">{enrichElapsed}s</span>
+            )}
+          </div>
         </div>
         <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
           <div className="h-full bg-indigo-500 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
