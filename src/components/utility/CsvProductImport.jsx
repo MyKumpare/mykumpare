@@ -251,8 +251,8 @@ export default function CsvProductImport() {
   };
 
   const downloadTemplate = () => {
-    const headers = "name,product_type,firm_name";
-    const sample = "US Large Cap Equity,Investment Manager Product,Example Capital";
+    const headers = "name,product_type,firm_name,firm_type";
+    const sample = "US Large Cap Equity,Investment Manager Product,Example Capital,Investment Manager";
     const blob = new Blob([headers + "\n" + sample + "\n"], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
