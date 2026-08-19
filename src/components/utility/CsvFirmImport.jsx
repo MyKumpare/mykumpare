@@ -10,6 +10,7 @@ import { parseCSV, autoMapHeader, validateEnum } from "./csvUtils";
 import { enrichFirmFromWeb, mergeEnrichmentData, mergeContactEnrichment, parsePhoneString } from "../ai/firmEnrichment";
 import { detectDesignations } from "../contacts/designationDetector";
 import { findFirmNameDuplicates } from "../firms/firmNameDuplicateCheck";
+import MergeTargetPicker from "./MergeTargetPicker";
 
 // Human-readable status messages cycled by elapsed time while each firm is
 // being enriched. The backend scrape is a single long call, so we surface
@@ -537,12 +538,10 @@ export default function CsvFirmImport() {
       const next = items.map((it, i) => (i === idx ? { ...it, mergeTargetId: null } : it));
       setReviewItems({ items: next, validationSkipped });
     };
-    const handleMergeClick = (idx, it) => {
-      if (it.duplicates.length === 1) {
-        setMerge(idx, it.duplicates[0].firm.id);
-      } else {
-        setMergePickerIdx(mergePickerIdx === idx ? null : idx);
-      }
+    const handleMergeClick = (idx) => {
+      // Always open the picker so the user can confirm or override the merge
+      // target — never auto-pick, even when only one duplicate was detected.
+      setMergePickerIdx(mergePickerIdx === idx ? null : idx);
     };
     // Bulk only affects similar names — exact matches are always rejected.
     const setAllSimilar = (val) => {
@@ -560,23 +559,17 @@ export default function CsvFirmImport() {
     const acceptedCount = autoAccepted + similarAccepted;
     const targetNameOf = (it) => {
       const d = it.duplicates.find((x) => x.firm?.id === it.mergeTargetId);
-      return d ? d.name : "";
+      if (d) return d.name;
+      const f = (existingFirms || []).find((x) => x.id === it.mergeTargetId);
+      return f ? f.name : "";
     };
     const renderMergePicker = (it, i) =>
       mergePickerIdx === i && !it.mergeTargetId ? (
-        <div className="mt-2 pt-2 border-t border-teal-100 space-y-1">
-          <p className="text-[11px] text-gray-500">Choose a firm to merge into:</p>
-          {it.duplicates.map((d, di) => (
-            <button
-              key={di}
-              onClick={() => setMerge(i, d.firm.id)}
-              className="w-full text-left px-2 py-1.5 text-xs rounded-md border border-gray-200 hover:border-teal-300 hover:bg-teal-50"
-            >
-              <strong className="text-gray-800">{d.name}</strong>
-              <span className="text-gray-400"> — {d.reasons.join(", ")}</span>
-            </button>
-          ))}
-        </div>
+        <MergeTargetPicker
+          duplicates={it.duplicates}
+          allFirms={existingFirms}
+          onPick={(firmId) => setMerge(i, firmId)}
+        />
       ) : null;
 
     return (
