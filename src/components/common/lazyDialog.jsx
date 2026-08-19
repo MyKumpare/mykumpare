@@ -22,9 +22,13 @@ function withRetry(loadFn, retries = 3) {
         }
       }
     }
-    // All retries failed — a reload picks up fresh chunk hashes.
+    // All retries failed — force a cache-busting reload so the browser
+    // re-fetches fresh HTML and the current chunk hashes (a plain reload()
+    // can still serve stale chunks from cache, which loops the same error).
     if (typeof window !== "undefined" && window.location) {
-      window.location.reload();
+      const url = new URL(window.location.href);
+      url.searchParams.set("_rr", Date.now());
+      window.location.replace(url.toString());
     }
     throw lastErr;
   };
