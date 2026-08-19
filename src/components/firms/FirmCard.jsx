@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Package, ChevronDown, ChevronRight, LayoutList } from "lucide-react";
+import FirmStatusBadges from "./FirmStatusBadges";
 
 const FIRM_TYPE_TO_PRODUCT_TYPE = {
   "Investment Manager": "Investment Manager Product",
@@ -13,6 +14,7 @@ export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditP
   const allowedType = effectiveTypes.find(t => ALLOWED_FIRM_TYPES.includes(t));
   const productType = allowedType ? FIRM_TYPE_TO_PRODUCT_TYPE[allowedType] : null;
   const isAllocator = effectiveTypes.includes("Allocator");
+  const isInvestmentManager = effectiveTypes.includes("Investment Manager");
   const [expanded, setExpanded] = useState(false);
   const isExpanded = forceExpand || expanded;
 
@@ -65,6 +67,9 @@ export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditP
         </div>
 
         <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+          {isInvestmentManager && (
+            <FirmStatusBadges firm={firm} products={products} onEditProduct={onEditProduct} />
+          )}
           {showProducts && onAddProduct && (
             <button
               onClick={(e) => { e.stopPropagation(); onAddProduct(firm, productType); }}
