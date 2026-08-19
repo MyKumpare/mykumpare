@@ -546,7 +546,7 @@ export default function CsvFirmImport() {
                         {it.duplicates.map((d, di) => (
                           <div key={di} className="text-xs text-gray-500 flex items-start gap-1">
                             <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                            <span>Exact match: <strong>{d.name}</strong></span>
+                            <span>{d.score === 1 ? "Exact match" : "Similar match"}: <strong>{d.name}</strong></span>
                           </div>
                         ))}
                       </div>

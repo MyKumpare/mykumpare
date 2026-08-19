@@ -82,17 +82,19 @@ export function findFirmNameDuplicates(newFirmName, existingFirms) {
     // Exact normalized match
     if (sim === 1) {
       reasons.push("Firm name is an exact match.");
-    } else if (sim >= 0.85) {
-      reasons.push(`Name is very similar to "${existing.name}".`);
     } else if (sim >= 0.7) {
-      // Only flag if the normalized names share a token prefix (first word)
-      // to reduce false positives on short generic names.
+      // Only flag near-matches if the normalized names share the same first
+      // (distinguishing) token. Generic shared words like "investment
+      // management" alone must not make two different firms look alike.
       const newTokens = normalizedName.split(" ");
       const existTokens = normalizeFirmName(existing.name).split(" ");
-      if (newTokens[0] && existTokens[0] && newTokens[0] === existTokens[0]) {
-        reasons.push(`Name is similar to "${existing.name}".`);
-      } else {
+      if (!newTokens[0] || !existTokens[0] || newTokens[0] !== existTokens[0]) {
         continue;
+      }
+      if (sim >= 0.85) {
+        reasons.push(`Name is very similar to "${existing.name}".`);
+      } else {
+        reasons.push(`Name is similar to "${existing.name}".`);
       }
     } else {
       continue;
