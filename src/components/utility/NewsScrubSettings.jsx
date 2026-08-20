@@ -6,12 +6,21 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import {
   Newspaper, Plus, X, Loader2, Save, Sparkles, Clock,
-  History, AlertTriangle, CheckCircle2, Info,
+  History, AlertTriangle, CheckCircle2, Info, CalendarClock,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // ── News Scrub Settings — admin-managed keywords and historical scraping
 //    preferences that focus the nightly news scrub on priority topics ──
+
+function formatTimeLabel(hhmm) {
+  const [h, m] = hhmm.split(":").map(Number);
+  const period = h >= 12 ? "PM" : "AM";
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${h12}:${m.toString().padStart(2, "0")} ${period}`;
+}
+
 export default function NewsScrubSettings() {
   const queryClient = useQueryClient();
   const [keywords, setKeywords] = useState([]);
@@ -20,6 +29,8 @@ export default function NewsScrubSettings() {
   const [runningScrub, setRunningScrub] = useState(false);
   const [runningHistorical, setRunningHistorical] = useState(false);
   const [includeHistorical, setIncludeHistorical] = useState(true);
+  const [scheduleTime, setScheduleTime] = useState("02:00");
+  const [scheduleEnabled, setScheduleEnabled] = useState(true);
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ["news_scrub_settings"],
@@ -30,6 +41,8 @@ export default function NewsScrubSettings() {
 
   useEffect(() => {
     if (existing?.keywords) setKeywords(existing.keywords);
+    if (existing?.schedule_time) setScheduleTime(existing.schedule_time);
+    if (existing?.schedule_enabled !== undefined) setScheduleEnabled(existing.schedule_enabled);
   }, [existing?.id]);
 
   const addKeyword = () => {
@@ -44,9 +57,9 @@ export default function NewsScrubSettings() {
     setSaving(true);
     try {
       if (existing) {
-        await base44.entities.NewsScrubSettings.update(existing.id, { keywords });
+        await base44.entities.NewsScrubSettings.update(existing.id, { keywords, schedule_time: scheduleTime, schedule_enabled: scheduleEnabled });
       } else {
-        await base44.entities.NewsScrubSettings.create({ keywords, label: "Default" });
+        await base44.entities.NewsScrubSettings.create({ keywords, label: "Default", schedule_time: scheduleTime, schedule_enabled: scheduleEnabled });
       }
       queryClient.invalidateQueries({ queryKey: ["news_scrub_settings"] });
       toast({ title: "Settings saved", description: "Nightly news scrub keywords updated." });
@@ -86,7 +99,10 @@ export default function NewsScrubSettings() {
     setRunningHistorical(false);
   };
 
-  const hasChanges = JSON.stringify(keywords) !== JSON.stringify(existing?.keywords || []);
+  const hasChanges =
+    JSON.stringify(keywords) !== JSON.stringify(existing?.keywords || []) ||
+    scheduleTime !== (existing?.schedule_time || "02:00") ||
+    scheduleEnabled !== (existing?.schedule_enabled !== undefined ? existing.schedule_enabled : true);
 
   return (
     <div className="space-y-4 py-1">
@@ -101,16 +117,56 @@ export default function NewsScrubSettings() {
         </div>
       </div>
 
-      {/* Nightly schedule info */}
-      <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-3 flex items-start gap-2.5">
-        <Clock className="w-4 h-4 text-indigo-500 mt-0.5 flex-shrink-0" />
-        <div>
-          <p className="text-xs font-semibold text-gray-700">Nightly Schedule</p>
-          <p className="text-xs text-gray-500 mt-0.5">
-            The news scrub runs automatically every night at 2:00 AM Eastern Time across all active firms.
-            The keywords below are passed to the AI search so it prioritizes articles matching these topics.
-          </p>
+      {/* Scheduling preferences */}
+      <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <CalendarClock className="w-4 h-4 text-indigo-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-700">Nightly Schedule</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Controls when the automated news scrub runs across all active firms.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span className="text-xs text-gray-500">{scheduleEnabled ? "Enabled" : "Disabled"}</span>
+            <Switch checked={scheduleEnabled} onCheckedChange={setScheduleEnabled} />
+          </div>
         </div>
+
+        {scheduleEnabled && (
+          <div className="flex items-center gap-3 rounded-lg bg-indigo-50/40 border border-indigo-100 p-3">
+            <Clock className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-xs font-semibold text-gray-700">Run Time (Eastern)</p>
+              <p className="text-xs text-gray-500 mt-0.5">The scrub runs daily at this time.</p>
+            </div>
+            <Select value={scheduleTime} onValueChange={setScheduleTime}>
+              <SelectTrigger className="w-32 h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {["00:00","01:00","02:00","03:00","04:00","05:00","06:00","07:00","08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00","21:00","22:00","23:00"].map(t => (
+                  <SelectItem key={t} value={t} className="text-xs">
+                    {formatTimeLabel(t)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {!scheduleEnabled && (
+          <div className="flex items-start gap-2 rounded-lg bg-gray-50 border border-gray-200 p-2.5">
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
+            <p className="text-xs text-gray-500">
+              The nightly scrub is disabled. You can still run a scrub manually using the button below.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Keywords editor */}

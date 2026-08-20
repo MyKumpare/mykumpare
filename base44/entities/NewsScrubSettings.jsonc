@@ -12,6 +12,15 @@
     "label": {
       "type": "string",
       "description": "Optional display label for this settings record (defaults to 'Default')."
+    },
+    "schedule_time": {
+      "type": "string",
+      "description": "Time of day to run the nightly news scrub, in 24-hour HH:MM format (e.g. '02:00'). Defaults to '02:00' (2:00 AM Eastern)."
+    },
+    "schedule_enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether the nightly news scrub workflow is enabled. When false, the scheduled scrub is skipped."
     }
   },
   "required": [

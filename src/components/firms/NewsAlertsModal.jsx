@@ -15,9 +15,9 @@ const ALERT_STYLES = {
 };
 
 const STATUS_STYLES = {
-  Positive: { color: "text-green-600", bg: "bg-green-50", border: "border-green-200" },
-  Negative: { color: "text-red-600", bg: "bg-red-50", border: "border-red-200" },
-  Neutral: { color: "text-gray-500", bg: "bg-gray-50", border: "border-gray-200" },
+  Positive: { color: "text-green-600", bg: "bg-green-50", border: "border-green-200", dot: "bg-green-500" },
+  Negative: { color: "text-red-600", bg: "bg-red-50", border: "border-red-200", dot: "bg-red-500" },
+  Neutral: { color: "text-gray-500", bg: "bg-gray-50", border: "border-gray-200", dot: "bg-gray-400" },
 };
 
 function fmt(dateStr) {
@@ -101,7 +101,11 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick }) {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start gap-2 flex-wrap">
-                        <button type="button" onClick={() => setExpandedId(expanded ? null : item.id)} className="text-left flex-1 min-w-0">
+                        <button type="button" onClick={() => setExpandedId(expanded ? null : item.id)} className="text-left flex-1 min-w-0 flex items-start gap-1.5">
+                          <span
+                            className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${statusStyle.dot}`}
+                            title={`Sentiment: ${item.news_status || "Neutral"}`}
+                          />
                           <p className="text-sm font-semibold text-gray-800 hover:text-indigo-600 transition-colors line-clamp-2">
                             {item.headline}
                           </p>
