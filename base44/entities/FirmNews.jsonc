@@ -85,6 +85,13 @@
         "type": "string"
       }
     },
+    "tagged_firm_ids": {
+      "type": "array",
+      "description": "IDs of firms tagged in this news article. Tagged firms see the news item in their firm News tab.",
+      "items": {
+        "type": "string"
+      }
+    },
     "scrub_batch_id": {
       "type": "string",
       "description": "ID of the scrub batch that produced this news item (for deduplication)"

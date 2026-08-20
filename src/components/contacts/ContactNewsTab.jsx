@@ -24,12 +24,24 @@ export default function ContactNewsTab({ contactId, contactName, firmId, firmNam
   const [keywordInput, setKeywordInput] = useState("");
   const [showKeywords, setShowKeywords] = useState(false);
 
-  // Fetch all news for the contact's firm, then filter to this contact
-  const { data: newsItems = [], isLoading } = useQuery({
-    queryKey: ["firm_news", firmId],
+  // Owned news (from contact's firm) + cross-firm tagged news
+  const { data: ownedNews = [], isLoading: loadingOwned } = useQuery({
+    queryKey: ["firm_news", firmId, "owned"],
     queryFn: () => base44.entities.FirmNews.filter({ firm_id: firmId }, "-news_date", 200),
     enabled: !!firmId,
   });
+  const { data: taggedContactNews = [], isLoading: loadingTagged } = useQuery({
+    queryKey: ["firm_news", "tagged_contact", contactId],
+    queryFn: () => base44.entities.FirmNews.filter({ tagged_contact_ids: contactId }, "-news_date", 200),
+    enabled: !!contactId,
+  });
+  const isLoading = loadingOwned || loadingTagged;
+
+  const newsItems = useMemo(() => {
+    const map = new Map();
+    [...ownedNews, ...taggedContactNews].forEach(n => { if (!n.deleted_at) map.set(n.id, n); });
+    return Array.from(map.values());
+  }, [ownedNews, taggedContactNews]);
 
   const activeNews = useMemo(
     () => newsItems.filter(n => !n.deleted_at && (
@@ -37,6 +49,24 @@ export default function ContactNewsTab({ contactId, contactName, firmId, firmNam
       (n.tagged_contact_ids || []).includes(contactId)
     )),
     [newsItems, contactId]
+  );
+
+  // Fetch all contacts and firms for tagging
+  const { data: allContacts = [] } = useQuery({
+    queryKey: ["contacts"],
+    queryFn: () => base44.entities.Contact.list("-created_date", 5000),
+  });
+  const taggableContacts = useMemo(
+    () => allContacts.filter(c => !c.deleted_at && c.id !== contactId),
+    [allContacts, contactId]
+  );
+  const { data: allFirms = [] } = useQuery({
+    queryKey: ["firms"],
+    queryFn: () => base44.entities.Firm.list("-created_date", 5000),
+  });
+  const taggableFirms = useMemo(
+    () => allFirms.filter(f => !f.deleted_at),
+    [allFirms]
   );
 
   const sortedNews = useMemo(() => {
@@ -63,7 +93,7 @@ export default function ContactNewsTab({ contactId, contactName, firmId, firmNam
       } else {
         toast({ title: "Scrub complete", description: `No new news found for ${contactName}.` });
       }
-      queryClient.invalidateQueries({ queryKey: ["firm_news", firmId] });
+      queryClient.invalidateQueries({ queryKey: ["firm_news"] });
     } catch (e) {
       toast({ title: "Scrub failed", description: e.message, variant: "destructive" });
     }
@@ -78,10 +108,10 @@ export default function ContactNewsTab({ contactId, contactName, firmId, firmNam
         keywords: keywords.length ? keywords : undefined,
       });
       toast({ title: "Historical scrub started", description: "Searching across multiple time periods — news will appear shortly." });
-      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["firm_news", firmId] }), 15000);
-      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["firm_news", firmId] }), 45000);
-      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["firm_news", firmId] }), 90000);
-      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["firm_news", firmId] }), 150000);
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["firm_news"] }), 15000);
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["firm_news"] }), 45000);
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["firm_news"] }), 90000);
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["firm_news"] }), 150000);
     } catch (e) {
       toast({ title: "Historical scrub failed", description: e.message, variant: "destructive" });
     }
@@ -90,20 +120,29 @@ export default function ContactNewsTab({ contactId, contactName, firmId, firmNam
 
   const handleTogglePin = async (item) => {
     await base44.entities.FirmNews.update(item.id, { is_pinned: !item.is_pinned });
-    queryClient.invalidateQueries({ queryKey: ["firm_news", firmId] });
+    queryClient.invalidateQueries({ queryKey: ["firm_news"] });
     queryClient.invalidateQueries({ queryKey: ["pinned_news_alerts"] });
   };
 
   const handleDelete = async (item) => {
     await base44.entities.FirmNews.delete(item.id);
-    queryClient.invalidateQueries({ queryKey: ["firm_news", firmId] });
+    queryClient.invalidateQueries({ queryKey: ["firm_news"] });
     queryClient.invalidateQueries({ queryKey: ["pinned_news_alerts"] });
   };
 
   const handleUpdate = async (id, data) => {
     await base44.entities.FirmNews.update(id, data);
-    queryClient.invalidateQueries({ queryKey: ["firm_news", firmId] });
+    queryClient.invalidateQueries({ queryKey: ["firm_news"] });
     queryClient.invalidateQueries({ queryKey: ["pinned_news_alerts"] });
+  };
+
+  const handleTagContacts = async (item, taggedContactIds) => {
+    await base44.entities.FirmNews.update(item.id, { tagged_contact_ids: taggedContactIds });
+    queryClient.invalidateQueries({ queryKey: ["firm_news"] });
+  };
+  const handleTagFirms = async (item, taggedFirmIds) => {
+    await base44.entities.FirmNews.update(item.id, { tagged_firm_ids: taggedFirmIds });
+    queryClient.invalidateQueries({ queryKey: ["firm_news"] });
   };
 
   const addKeyword = () => {
@@ -250,7 +289,7 @@ export default function ContactNewsTab({ contactId, contactName, firmId, firmNam
               firm_id: firmId,
               firm_name: firmName,
             });
-            queryClient.invalidateQueries({ queryKey: ["firm_news", firmId] });
+            queryClient.invalidateQueries({ queryKey: ["firm_news"] });
             setAddingManual(false);
           }}
           onCancel={() => setAddingManual(false)}
@@ -278,6 +317,10 @@ export default function ContactNewsTab({ contactId, contactName, firmId, firmNam
               onSaveEdit={(data) => { handleUpdate(item.id, data); setEditingId(null); }}
               onTogglePin={() => handleTogglePin(item)}
               onDelete={() => handleDelete(item)}
+              contacts={taggableContacts}
+              onTagContacts={(ids) => handleTagContacts(item, ids)}
+              firms={taggableFirms}
+              onTagFirms={(ids) => handleTagFirms(item, ids)}
             />
           ))}
         </div>

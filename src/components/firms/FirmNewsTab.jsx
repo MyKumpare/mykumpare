@@ -15,6 +15,7 @@ import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { toast } from "@/components/ui/use-toast";
 import ContactTaggerPopover from "./ContactTaggerPopover";
+import FirmTaggerPopover from "./FirmTaggerPopover";
 
 const QUILL_MODULES = {
   toolbar: [
@@ -54,23 +55,46 @@ export default function FirmNewsTab({ firmId, firmName }) {
   const [keywordInput, setKeywordInput] = useState("");
   const [showKeywords, setShowKeywords] = useState(false);
 
-  const { data: newsItems = [], isLoading } = useQuery({
-    queryKey: ["firm_news", firmId],
+  // Owned news (firm_id = this firm) + tagged news (tagged_firm_ids includes this firm)
+  const { data: ownedNews = [], isLoading: loadingOwned } = useQuery({
+    queryKey: ["firm_news", firmId, "owned"],
     queryFn: () => base44.entities.FirmNews.filter({ firm_id: firmId }, "-news_date", 200),
     enabled: !!firmId,
   });
+  const { data: taggedByFirm = [], isLoading: loadingTagged } = useQuery({
+    queryKey: ["firm_news", firmId, "tagged_firm"],
+    queryFn: () => base44.entities.FirmNews.filter({ tagged_firm_ids: firmId }, "-news_date", 200),
+    enabled: !!firmId,
+  });
+  const isLoading = loadingOwned || loadingTagged;
 
-  // Fetch contacts linked to this firm so the user can tag them on news items
+  const newsItems = useMemo(() => {
+    const map = new Map();
+    [...ownedNews, ...taggedByFirm].forEach(n => { if (!n.deleted_at) map.set(n.id, n); });
+    return Array.from(map.values());
+  }, [ownedNews, taggedByFirm]);
+
+  // Fetch all contacts for tagging
   const { data: allContacts = [] } = useQuery({
     queryKey: ["contacts"],
     queryFn: () => base44.entities.Contact.list("-created_date", 5000),
   });
-  const firmContacts = useMemo(
-    () => allContacts.filter(c => !c.deleted_at && (c.firm_ids || []).includes(firmId)),
-    [allContacts, firmId]
+  const taggableContacts = useMemo(
+    () => allContacts.filter(c => !c.deleted_at),
+    [allContacts]
   );
 
-  const activeNews = useMemo(() => newsItems.filter(n => !n.deleted_at), [newsItems]);
+  // Fetch all firms for tagging (exclude the current firm — its news is already shown)
+  const { data: allFirms = [] } = useQuery({
+    queryKey: ["firms"],
+    queryFn: () => base44.entities.Firm.list("-created_date", 5000),
+  });
+  const taggableFirms = useMemo(
+    () => allFirms.filter(f => !f.deleted_at && f.id !== firmId),
+    [allFirms, firmId]
+  );
+
+  const activeNews = useMemo(() => newsItems, [newsItems]);
 
   const sortedNews = useMemo(() => {
     const filtered = alertFilter === "All"
@@ -93,7 +117,7 @@ export default function FirmNewsTab({ firmId, firmName }) {
       } else {
         toast({ title: "Scrub complete", description: "No new news found for this firm." });
       }
-      queryClient.invalidateQueries({ queryKey: ["firm_news", firmId] });
+      queryClient.invalidateQueries({ queryKey: ["firm_news"] });
     } catch (e) {
       toast({ title: "Scrub failed", description: e.message, variant: "destructive" });
     }
@@ -106,10 +130,10 @@ export default function FirmNewsTab({ firmId, firmName }) {
       await base44.functions.invoke('scrubFirmNewsHistorical', { mode: 'single', firm_id: firmId, keywords: keywords.length ? keywords : undefined });
       toast({ title: "Historical scrub started", description: "Searching across multiple time periods — news will appear shortly." });
       // Poll for results since the scrub runs in the background
-      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["firm_news", firmId] }), 15000);
-      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["firm_news", firmId] }), 45000);
-      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["firm_news", firmId] }), 90000);
-      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["firm_news", firmId] }), 150000);
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["firm_news"] }), 15000);
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["firm_news"] }), 45000);
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["firm_news"] }), 90000);
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["firm_news"] }), 150000);
     } catch (e) {
       toast({ title: "Historical scrub failed", description: e.message, variant: "destructive" });
     }
@@ -126,25 +150,29 @@ export default function FirmNewsTab({ firmId, firmName }) {
 
   const handleTogglePin = async (item) => {
     await base44.entities.FirmNews.update(item.id, { is_pinned: !item.is_pinned });
-    queryClient.invalidateQueries({ queryKey: ["firm_news", firmId] });
+    queryClient.invalidateQueries({ queryKey: ["firm_news"] });
     queryClient.invalidateQueries({ queryKey: ["pinned_news_alerts"] });
   };
 
   const handleDelete = async (item) => {
     await base44.entities.FirmNews.delete(item.id);
-    queryClient.invalidateQueries({ queryKey: ["firm_news", firmId] });
+    queryClient.invalidateQueries({ queryKey: ["firm_news"] });
     queryClient.invalidateQueries({ queryKey: ["pinned_news_alerts"] });
   };
 
   const handleUpdate = async (id, data) => {
     await base44.entities.FirmNews.update(id, data);
-    queryClient.invalidateQueries({ queryKey: ["firm_news", firmId] });
+    queryClient.invalidateQueries({ queryKey: ["firm_news"] });
     queryClient.invalidateQueries({ queryKey: ["pinned_news_alerts"] });
   };
 
   const handleTagContacts = async (item, taggedContactIds) => {
     await base44.entities.FirmNews.update(item.id, { tagged_contact_ids: taggedContactIds });
-    queryClient.invalidateQueries({ queryKey: ["firm_news", firmId] });
+    queryClient.invalidateQueries({ queryKey: ["firm_news"] });
+  };
+  const handleTagFirms = async (item, taggedFirmIds) => {
+    await base44.entities.FirmNews.update(item.id, { tagged_firm_ids: taggedFirmIds });
+    queryClient.invalidateQueries({ queryKey: ["firm_news"] });
   };
 
   return (
@@ -281,7 +309,7 @@ export default function FirmNewsTab({ firmId, firmName }) {
               firm_id: firmId,
               firm_name: firmName,
             });
-            queryClient.invalidateQueries({ queryKey: ["firm_news", firmId] });
+            queryClient.invalidateQueries({ queryKey: ["firm_news"] });
             setAddingManual(false);
           }}
           onCancel={() => setAddingManual(false)}
@@ -309,8 +337,10 @@ export default function FirmNewsTab({ firmId, firmName }) {
               onSaveEdit={(data) => { handleUpdate(item.id, data); setEditingId(null); }}
               onTogglePin={() => handleTogglePin(item)}
               onDelete={() => handleDelete(item)}
-              contacts={firmContacts}
+              contacts={taggableContacts}
               onTagContacts={(ids) => handleTagContacts(item, ids)}
+              firms={taggableFirms}
+              onTagFirms={(ids) => handleTagFirms(item, ids)}
             />
           ))}
         </div>
@@ -320,7 +350,7 @@ export default function FirmNewsTab({ firmId, firmName }) {
 }
 
 // ── News item card (view / expand / edit) ───────────────────────────────────
-export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, onCancelEdit, onSaveEdit, onTogglePin, onDelete, contacts = [], onTagContacts }) {
+export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, onCancelEdit, onSaveEdit, onTogglePin, onDelete, contacts = [], onTagContacts, firms = [], onTagFirms }) {
   const alertStyle = ALERT_STYLES[item.alert_status] || ALERT_STYLES.Low;
   const statusStyle = STATUS_STYLES[item.news_status] || STATUS_STYLES.Neutral;
   const AlertIcon = alertStyle.icon;
@@ -388,15 +418,26 @@ export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, 
             <p className="text-xs text-gray-600 mt-1 line-clamp-2">{item.summary}</p>
           )}
 
-          {/* Tagged contacts (always visible) */}
-          {onTagContacts && (
-            <div className="mt-1.5">
-              <ContactTaggerPopover
-                contacts={contacts}
-                taggedIds={item.tagged_contact_ids || []}
-                onTagChange={onTagContacts}
-                size="xs"
-              />
+          {/* Tagged contacts & firms (always visible) */}
+          {(onTagContacts || onTagFirms) && (
+            <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+              {onTagContacts && (
+                <ContactTaggerPopover
+                  contacts={contacts}
+                  taggedIds={item.tagged_contact_ids || []}
+                  onTagChange={onTagContacts}
+                  size="xs"
+                />
+              )}
+              {onTagFirms && (
+                <FirmTaggerPopover
+                  firms={firms}
+                  taggedIds={item.tagged_firm_ids || []}
+                  onTagChange={onTagFirms}
+                  size="xs"
+                  excludeFirmId={item.firm_id}
+                />
+              )}
             </div>
           )}
 
