@@ -27,6 +27,7 @@ import FirmAumHistoryTab from "./FirmAumHistoryTab";
 import FirmProductsTab from "./FirmProductsTab";
 import FirmPortfoliosTab from "./FirmPortfoliosTab";
 import FirmActivityLogTab from "./FirmActivityLogTab";
+import FirmNewsTab from "./FirmNewsTab";
 import FirmDocumentsTab from "./FirmDocumentsTab";
 import FirmDueDiligenceTab from "./FirmDueDiligenceTab";
 import LegalComplianceTab from "./LegalComplianceTab";
@@ -1253,6 +1254,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                    <TabsTrigger value="ownership">Ownership</TabsTrigger>
                    <TabsTrigger value="orgchart">Org Chart</TabsTrigger>
                    <TabsTrigger value="aum-history">AUM History</TabsTrigger>
+                   <TabsTrigger value="news">News</TabsTrigger>
                    </>
                    )}
                    {hideProductTabs && (
@@ -1260,6 +1262,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                    <TabsTrigger value="orgchart">Org Chart</TabsTrigger>
                    <TabsTrigger value="aum-history">AUM History</TabsTrigger>
                    <TabsTrigger value="activity-log">Activity Log</TabsTrigger>
+                   <TabsTrigger value="news">News</TabsTrigger>
                    </>
                    )}
              </TabsList>

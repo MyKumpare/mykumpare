@@ -1,0 +1,192 @@
+{
+  "name": "FirmNews",
+  "type": "object",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "ID of the firm (tenant) that owns this news record. Set on creation to the creator's linked_firm_id; drives tenant isolation via RLS."
+    },
+    "firm_id": {
+      "type": "string",
+      "description": "ID of the associated firm"
+    },
+    "firm_name": {
+      "type": "string",
+      "description": "Name of the firm (denormalized for display)"
+    },
+    "news_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of the news article (YYYY-MM-DD)"
+    },
+    "headline": {
+      "type": "string",
+      "description": "News headline"
+    },
+    "summary": {
+      "type": "string",
+      "description": "AI-generated summary of the article"
+    },
+    "alert_status": {
+      "type": "string",
+      "enum": [
+        "High",
+        "Medium",
+        "Low"
+      ],
+      "default": "Low",
+      "description": "Impact-based alert level assigned by the AI scrub"
+    },
+    "news_status": {
+      "type": "string",
+      "enum": [
+        "Positive",
+        "Negative",
+        "Neutral"
+      ],
+      "default": "Neutral",
+      "description": "Sentiment of the news article"
+    },
+    "article_url": {
+      "type": "string",
+      "description": "URL link to the original news article"
+    },
+    "notes": {
+      "type": "string",
+      "description": "User-added notes (rich text HTML)"
+    },
+    "is_pinned": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this news item is pinned in the Monitor News Alerts section"
+    },
+    "source_type": {
+      "type": "string",
+      "enum": [
+        "firm",
+        "contact",
+        "product"
+      ],
+      "default": "firm",
+      "description": "What the news relates to (firm, contact, or product)"
+    },
+    "source_id": {
+      "type": "string",
+      "description": "ID of the related contact or product (if source_type is not 'firm')"
+    },
+    "source_name": {
+      "type": "string",
+      "description": "Name of the related contact or product (denormalized)"
+    },
+    "scrub_batch_id": {
+      "type": "string",
+      "description": "ID of the scrub batch that produced this news item (for deduplication)"
+    },
+    "deleted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when this news item was soft-deleted"
+    }
+  },
+  "required": [
+    "firm_id",
+    "firm_name",
+    "headline"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_edit": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_delete": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

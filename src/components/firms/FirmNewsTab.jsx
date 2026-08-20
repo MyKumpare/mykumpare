@@ -1,0 +1,417 @@
+import React, { useState, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Newspaper, Plus, Trash2, Pin, PinOff, ExternalLink, Sparkles, Loader2,
+  AlertTriangle, ChevronDown, ChevronUp, Edit2, Check, X, Calendar,
+} from "lucide-react";
+import { format } from "date-fns";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
+import { toast } from "@/components/ui/use-toast";
+
+const QUILL_MODULES = {
+  toolbar: [
+    [{ header: [false] }],
+    ["bold", "italic", "underline", "strike"],
+    [{ list: "ordered" }, { list: "bullet" }],
+    ["blockquote", "clean"],
+  ],
+};
+
+const ALERT_STYLES = {
+  High: { color: "text-red-600", bg: "bg-red-50", border: "border-red-200", icon: AlertTriangle },
+  Medium: { color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-200", icon: AlertTriangle },
+  Low: { color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-200", icon: ChevronDown },
+};
+
+const STATUS_STYLES = {
+  Positive: { color: "text-green-600", bg: "bg-green-50", border: "border-green-200" },
+  Negative: { color: "text-red-600", bg: "bg-red-50", border: "border-red-200" },
+  Neutral: { color: "text-gray-500", bg: "bg-gray-50", border: "border-gray-200" },
+};
+
+function fmt(dateStr) {
+  if (!dateStr) return "—";
+  try { return format(new Date(dateStr + "T00:00:00"), "MMM d, yyyy"); } catch { return dateStr; }
+}
+
+export default function FirmNewsTab({ firmId, firmName }) {
+  const queryClient = useQueryClient();
+  const [scrubbing, setScrubbing] = useState(false);
+  const [addingManual, setAddingManual] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [expandedId, setExpandedId] = useState(null);
+
+  const { data: newsItems = [], isLoading } = useQuery({
+    queryKey: ["firm_news", firmId],
+    queryFn: () => base44.entities.FirmNews.filter({ firm_id: firmId }, "-news_date", 200),
+    enabled: !!firmId,
+  });
+
+  const activeNews = useMemo(() => newsItems.filter(n => !n.deleted_at), [newsItems]);
+
+  const sortedNews = useMemo(() => {
+    return [...activeNews].sort((a, b) => {
+      if (a.is_pinned && !b.is_pinned) return -1;
+      if (!a.is_pinned && b.is_pinned) return 1;
+      return (b.news_date || "").localeCompare(a.news_date || "");
+    });
+  }, [activeNews]);
+
+  const handleScrub = async () => {
+    setScrubbing(true);
+    try {
+      const res = await base44.functions.invoke('scrubFirmNews', { mode: 'single', firm_id: firmId });
+      const count = res.data?.created || 0;
+      if (count > 0) {
+        toast({ title: `Scrub complete`, description: `${count} news item${count > 1 ? "s" : ""} found.` });
+      } else {
+        toast({ title: "Scrub complete", description: "No new news found for this firm." });
+      }
+      queryClient.invalidateQueries({ queryKey: ["firm_news", firmId] });
+    } catch (e) {
+      toast({ title: "Scrub failed", description: e.message, variant: "destructive" });
+    }
+    setScrubbing(false);
+  };
+
+  const handleTogglePin = async (item) => {
+    await base44.entities.FirmNews.update(item.id, { is_pinned: !item.is_pinned });
+    queryClient.invalidateQueries({ queryKey: ["firm_news", firmId] });
+    queryClient.invalidateQueries({ queryKey: ["pinned_news_alerts"] });
+  };
+
+  const handleDelete = async (item) => {
+    await base44.entities.FirmNews.delete(item.id);
+    queryClient.invalidateQueries({ queryKey: ["firm_news", firmId] });
+    queryClient.invalidateQueries({ queryKey: ["pinned_news_alerts"] });
+  };
+
+  const handleUpdate = async (id, data) => {
+    await base44.entities.FirmNews.update(id, data);
+    queryClient.invalidateQueries({ queryKey: ["firm_news", firmId] });
+    queryClient.invalidateQueries({ queryKey: ["pinned_news_alerts"] });
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Header actions */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5">
+          <Newspaper className="w-4 h-4 text-rose-500" />
+          <span className="text-sm font-semibold text-gray-700">News & Alerts</span>
+          {activeNews.length > 0 && (
+            <span className="text-xs text-gray-400">({activeNews.length})</span>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 gap-1 text-xs"
+            onClick={handleScrub}
+            disabled={scrubbing}
+          >
+            {scrubbing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+            {scrubbing ? "Scrubbing..." : "Scrub Now"}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs"
+            onClick={() => setAddingManual(true)}
+          >
+            <Plus className="w-3.5 h-3.5" /> Add
+          </Button>
+        </div>
+      </div>
+
+      {/* AI scrub info banner */}
+      {activeNews.length === 0 && !addingManual && (
+        <div className="rounded-xl border border-dashed border-rose-200 bg-rose-50/40 p-4 text-center">
+          <Sparkles className="w-5 h-5 text-rose-400 mx-auto mb-1.5" />
+          <p className="text-sm text-gray-600 font-medium">No news yet</p>
+          <p className="text-xs text-gray-400 mt-0.5">
+            Click "Scrub Now" to run an AI news search, or "Add" to create a manual entry.
+          </p>
+        </div>
+      )}
+
+      {/* Manual add form */}
+      {addingManual && (
+        <NewsItemForm
+          firmId={firmId}
+          firmName={firmName}
+          onSave={async (data) => {
+            await base44.entities.FirmNews.create({
+              ...data,
+              tenant_id: firmId,
+              firm_id: firmId,
+              firm_name: firmName,
+            });
+            queryClient.invalidateQueries({ queryKey: ["firm_news", firmId] });
+            setAddingManual(false);
+          }}
+          onCancel={() => setAddingManual(false)}
+        />
+      )}
+
+      {/* News list */}
+      {isLoading ? (
+        <div className="text-xs text-gray-400 italic py-6 text-center">Loading...</div>
+      ) : (
+        <div className="space-y-2">
+          {sortedNews.map((item) => (
+            <NewsItemCard
+              key={item.id}
+              item={item}
+              expanded={expandedId === item.id}
+              onToggleExpand={() => setExpandedId(expandedId === item.id ? null : item.id)}
+              editing={editingId === item.id}
+              onEdit={() => setEditingId(item.id)}
+              onCancelEdit={() => setEditingId(null)}
+              onSaveEdit={(data) => { handleUpdate(item.id, data); setEditingId(null); }}
+              onTogglePin={() => handleTogglePin(item)}
+              onDelete={() => handleDelete(item)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── News item card (view / expand / edit) ───────────────────────────────────
+function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, onCancelEdit, onSaveEdit, onTogglePin, onDelete }) {
+  const alertStyle = ALERT_STYLES[item.alert_status] || ALERT_STYLES.Low;
+  const statusStyle = STATUS_STYLES[item.news_status] || STATUS_STYLES.Neutral;
+  const AlertIcon = alertStyle.icon;
+
+  if (editing) {
+    return (
+      <NewsItemForm
+        item={item}
+        onSave={onSaveEdit}
+        onCancel={onCancelEdit}
+      />
+    );
+  }
+
+  return (
+    <div className={`rounded-xl border ${item.is_pinned ? 'border-rose-300 bg-rose-50/30' : 'border-gray-200 bg-white'} overflow-hidden`}>
+      <div className="flex items-start gap-2.5 px-3 py-2.5">
+        {/* Alert level indicator */}
+        <div className={`mt-0.5 w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${alertStyle.bg}`}>
+          <AlertIcon className={`w-3.5 h-3.5 ${alertStyle.color}`} />
+        </div>
+
+        <div className="flex-1 min-w-0">
+          {/* Headline + badges */}
+          <div className="flex items-start gap-2 flex-wrap">
+            <button type="button" onClick={onToggleExpand} className="text-left flex-1 min-w-0">
+              <p className="text-sm font-semibold text-gray-800 hover:text-indigo-600 transition-colors line-clamp-2">
+                {item.headline}
+              </p>
+            </button>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${alertStyle.bg} ${alertStyle.color}`}>
+                {item.alert_status}
+              </span>
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${statusStyle.bg} ${statusStyle.color}`}>
+                {item.news_status}
+              </span>
+              {item.is_pinned && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-600 flex items-center gap-0.5">
+                  <Pin className="w-2.5 h-2.5" /> Pinned
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Date + source */}
+          <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-2 flex-wrap">
+            <span className="flex items-center gap-0.5">
+              <Calendar className="w-3 h-3" /> {fmt(item.news_date)}
+            </span>
+            {item.source_type !== 'firm' && item.source_name && (
+              <span className="text-indigo-500">{item.source_type}: {item.source_name}</span>
+            )}
+          </div>
+
+          {/* Summary (always visible) */}
+          {item.summary && (
+            <p className="text-xs text-gray-600 mt-1 line-clamp-2">{item.summary}</p>
+          )}
+
+          {/* Expanded content */}
+          {expanded && (
+            <div className="mt-2 space-y-2">
+              {item.summary && (
+                <p className="text-xs text-gray-600">{item.summary}</p>
+              )}
+              {item.article_url && (
+                <a href={item.article_url} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700 hover:underline">
+                  <ExternalLink className="w-3 h-3" /> View article
+                </a>
+              )}
+              {item.notes && (
+                <div className="rounded-lg bg-gray-50 border border-gray-200 p-2">
+                  <p className="text-[10px] font-semibold text-gray-500 mb-1">Notes</p>
+                  <div className="text-xs text-gray-700 quill-preview" dangerouslySetInnerHTML={{ __html: item.notes }} />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex items-center gap-0.5 flex-shrink-0">
+          <button type="button" onClick={onTogglePin}
+            className={`p-1 rounded hover:bg-gray-100 ${item.is_pinned ? 'text-rose-500' : 'text-gray-300 hover:text-rose-500'}`}
+            title={item.is_pinned ? 'Unpin' : 'Pin to News Alerts'}>
+            {item.is_pinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
+          </button>
+          <button type="button" onClick={onEdit}
+            className="p-1 rounded text-gray-300 hover:text-indigo-500 hover:bg-gray-100" title="Edit">
+            <Edit2 className="w-3.5 h-3.5" />
+          </button>
+          <button type="button" onClick={onDelete}
+            className="p-1 rounded text-gray-300 hover:text-red-500 hover:bg-gray-100" title="Delete">
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+          <button type="button" onClick={onToggleExpand}
+            className="p-1 rounded text-gray-300 hover:text-gray-500 hover:bg-gray-100">
+            {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── News item form (add / edit) ─────────────────────────────────────────────
+function NewsItemForm({ item, firmName, onSave, onCancel }) {
+  const [headline, setHeadline] = useState(item?.headline || "");
+  const [newsDate, setNewsDate] = useState(item?.news_date || new Date().toISOString().split("T")[0]);
+  const [summary, setSummary] = useState(item?.summary || "");
+  const [alertStatus, setAlertStatus] = useState(item?.alert_status || "Low");
+  const [newsStatus, setNewsStatus] = useState(item?.news_status || "Neutral");
+  const [articleUrl, setArticleUrl] = useState(item?.article_url || "");
+  const [sourceType, setSourceType] = useState(item?.source_type || "firm");
+  const [sourceName, setSourceName] = useState(item?.source_name || "");
+  const [notes, setNotes] = useState(item?.notes || "");
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!headline.trim()) return;
+    setSaving(true);
+    await onSave({
+      headline: headline.trim(),
+      news_date: newsDate,
+      summary: summary.trim(),
+      alert_status: alertStatus,
+      news_status: newsStatus,
+      article_url: articleUrl.trim(),
+      source_type: sourceType,
+      source_name: sourceName.trim(),
+      notes,
+    });
+    setSaving(false);
+  };
+
+  return (
+    <div className="rounded-xl border border-indigo-200 bg-indigo-50/30 p-3 space-y-2.5">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-indigo-700">{item ? "Edit News Item" : "Add News Item"}</span>
+        <button type="button" onClick={onCancel}><X className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" /></button>
+      </div>
+
+      <div className="space-y-1">
+        <Label className="text-xs font-medium text-gray-700">Headline *</Label>
+        <Input value={headline} onChange={e => setHeadline(e.target.value)} className="h-8 text-sm" placeholder="News headline..." autoFocus />
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1">
+          <Label className="text-xs font-medium text-gray-700">Date</Label>
+          <Input type="date" value={newsDate} onChange={e => setNewsDate(e.target.value)} className="h-8 text-sm" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs font-medium text-gray-700">Article URL</Label>
+          <Input value={articleUrl} onChange={e => setArticleUrl(e.target.value)} className="h-8 text-sm" placeholder="https://..." />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1">
+          <Label className="text-xs font-medium text-gray-700">Alert Status</Label>
+          <Select value={alertStatus} onValueChange={setAlertStatus}>
+            <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="High">High</SelectItem>
+              <SelectItem value="Medium">Medium</SelectItem>
+              <SelectItem value="Low">Low</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs font-medium text-gray-700">News Status</Label>
+          <Select value={newsStatus} onValueChange={setNewsStatus}>
+            <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Positive">Positive</SelectItem>
+              <SelectItem value="Negative">Negative</SelectItem>
+              <SelectItem value="Neutral">Neutral</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1">
+          <Label className="text-xs font-medium text-gray-700">Source Type</Label>
+          <Select value={sourceType} onValueChange={setSourceType}>
+            <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="firm">Firm</SelectItem>
+              <SelectItem value="contact">Contact</SelectItem>
+              <SelectItem value="product">Product</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs font-medium text-gray-700">Source Name</Label>
+          <Input value={sourceName} onChange={e => setSourceName(e.target.value)} className="h-8 text-sm" placeholder={sourceType === 'firm' ? firmName : "Name..."} />
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <Label className="text-xs font-medium text-gray-700">Summary</Label>
+        <Textarea value={summary} onChange={e => setSummary(e.target.value)} className="min-h-16 text-sm" placeholder="Summary of the article..." />
+      </div>
+
+      <div className="space-y-1">
+        <Label className="text-xs font-medium text-gray-700">Notes</Label>
+        <div className="quill-sm border border-gray-200 rounded-lg overflow-hidden bg-white">
+          <ReactQuill theme="snow" value={notes} onChange={setNotes} modules={QUILL_MODULES} placeholder="Add your notes..." style={{ minHeight: 70 }} />
+        </div>
+      </div>
+
+      <div className="flex gap-2 justify-end">
+        <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={onCancel}>Cancel</Button>
+        <Button type="button" size="sm" className="h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white" disabled={!headline.trim() || saving} onClick={handleSave}>
+          {saving ? "Saving..." : "Save"}
+        </Button>
+      </div>
+    </div>
+  );
+}
