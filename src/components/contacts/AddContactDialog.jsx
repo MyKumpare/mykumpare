@@ -854,59 +854,51 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
         <div className="overflow-y-auto flex-1 py-2 pr-1 flex gap-3">
           <div className="flex-1 min-w-0">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <div className="space-y-1 mb-4">
-              <TabsList className="w-full">
-                <TabsTrigger value="info" className="flex-1 flex items-center gap-1.5">
+            <div className="mb-4">
+              <TabsList className="grid grid-cols-3 gap-1 w-full h-auto">
+                <TabsTrigger value="info" className="flex items-center gap-1.5">
                   <User className="w-3.5 h-3.5" /> Info
                 </TabsTrigger>
-                <TabsTrigger value="addresses" className="flex-1 flex items-center gap-1.5">
+                <TabsTrigger value="addresses" className="flex items-center gap-1.5">
                   <MapPin className="w-3.5 h-3.5" /> Addresses
                 </TabsTrigger>
-                <TabsTrigger value="phones" className="flex-1 flex items-center gap-1.5">
+                <TabsTrigger value="phones" className="flex items-center gap-1.5">
                   <Phone className="w-3.5 h-3.5" /> Phones
                 </TabsTrigger>
-              </TabsList>
-              <TabsList className="w-full">
-                <TabsTrigger value="products" className="flex-1 flex items-center gap-1.5">
+                <TabsTrigger value="products" className="flex items-center gap-1.5">
                   <Package className="w-3.5 h-3.5" /> Products
                 </TabsTrigger>
-                <TabsTrigger value="education" className="flex-1 flex items-center gap-1.5">
+                <TabsTrigger value="education" className="flex items-center gap-1.5">
                   <GraduationCap className="w-3.5 h-3.5" /> Education
                 </TabsTrigger>
-                <TabsTrigger value="experience" className="flex-1 flex items-center gap-1.5">
+                <TabsTrigger value="experience" className="flex items-center gap-1.5">
                   <Briefcase className="w-3.5 h-3.5" /> Experience
                 </TabsTrigger>
-              </TabsList>
-              <TabsList className="w-full">
-                <TabsTrigger value="classification" className="flex-1 flex items-center gap-1.5">
+                <TabsTrigger value="classification" className="flex items-center gap-1.5">
                   <Tag className="w-3.5 h-3.5" /> Classifications
                 </TabsTrigger>
-                <TabsTrigger value="demographics" className="flex-1 flex items-center gap-1.5">
+                <TabsTrigger value="demographics" className="flex items-center gap-1.5">
                   Demographics
                 </TabsTrigger>
-                <TabsTrigger value="ownership" className="flex-1 flex items-center gap-1.5">
+                <TabsTrigger value="ownership" className="flex items-center gap-1.5">
                   <TrendingUp className="w-3.5 h-3.5" /> Ownership
                 </TabsTrigger>
-              </TabsList>
-              <TabsList className="w-full">
-                <TabsTrigger value="activities" className="flex-1 flex items-center gap-1.5">
+                <TabsTrigger value="activities" className="flex items-center gap-1.5">
                   <Activity className="w-3.5 h-3.5" /> Activities
                 </TabsTrigger>
-                <TabsTrigger value="timeline" className="flex-1 flex items-center gap-1.5">
+                <TabsTrigger value="timeline" className="flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5" /> Timeline
                 </TabsTrigger>
-                <TabsTrigger value="due-diligence" className="flex-1 flex items-center gap-1.5">
+                <TabsTrigger value="due-diligence" className="flex items-center gap-1.5">
                   <ClipboardCheck className="w-3.5 h-3.5" /> Due Diligence
                 </TabsTrigger>
-              </TabsList>
-              <TabsList className="w-full">
-                <TabsTrigger value="chat" className="flex-1 flex items-center gap-1.5">
+                <TabsTrigger value="chat" className="flex items-center gap-1.5">
                   <MessageSquare className="w-3.5 h-3.5" /> Chat
                 </TabsTrigger>
-                <TabsTrigger value="news" className="flex-1 flex items-center gap-1.5">
+                <TabsTrigger value="news" className="flex items-center gap-1.5">
                   <Newspaper className="w-3.5 h-3.5" /> News
                 </TabsTrigger>
-                <TabsTrigger value="notifications" className="flex-1 flex items-center gap-1.5">
+                <TabsTrigger value="notifications" className="flex items-center gap-1.5">
                   <Bell className="w-3.5 h-3.5" /> Notifications
                 </TabsTrigger>
               </TabsList>
