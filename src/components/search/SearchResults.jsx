@@ -21,6 +21,16 @@ function nameKey(c) {
   const last = normalizeNamePart(c.last_name) || "";
   return `${first}|${last}`;
 }
+// Normalized name tokens (first/middle/last, stopwords removed) used for
+// exact full-name matching and word-boundary name scoring. Salutations,
+// suffixes and designations are excluded so they don't pollute name matches.
+function contactNameTokens(c) {
+  return [
+    normalizeNamePart(c.first_name),
+    normalizeNamePart(c.middle_name),
+    normalizeNamePart(c.last_name),
+  ].filter(Boolean).flatMap((p) => p.split(/\s+/).filter(Boolean));
+}
 // Collapse duplicate contacts: when two contacts share the same normalized
 // first + last name AND at least one firm, only show the most recently
 // updated record. Honors the user's preference to surface only the most
@@ -157,20 +167,25 @@ function tokenize(s) {
 // matches the name token "tina" but NOT "valentinas". Other fields (email,
 // title, designations) use substring matching. All keywords must match at
 // least one field (AND logic). Name-token matches weigh more so true name
-// matches rank above incidental substring hits in other fields.
+// matches rank above incidental substring hits in other fields. Exact
+// full-name matches get a large bonus so the true person floats to the top,
+// and colleagues who only match via email/title on a multi-word (name)
+// search are excluded to keep the results list clean.
 function scoreContact(keywords, c) {
   if (!keywords.length) return 0;
-  const nameTokens = tokenize(getContactFullName(c));
+  const nameTokens = contactNameTokens(c);
   const otherHaystacks = [c.email, c.title, (c.designations || []).join(" ")]
     .filter((v) => v != null && v !== "")
     .map((v) => v.toLowerCase());
 
+  let nameMatchCount = 0;
   let score = 0;
   for (const kw of keywords) {
     let matched = false;
     // Word-boundary match against name tokens (high weight)
     if (nameTokens.some((tok) => tok === kw || tok.startsWith(kw))) {
       score += 3;
+      nameMatchCount += 1;
       matched = true;
     }
     // Substring match against other fields (low weight)
@@ -185,6 +200,24 @@ function scoreContact(keywords, c) {
     }
     if (!matched) return 0; // AND logic: every keyword must match somewhere
   }
+
+  // Prioritize exact full-name matches: when the normalized name tokens
+  // exactly equal the query keywords (same tokens, same order), boost heavily.
+  const normalizedQuery = keywords.join(" ");
+  if (nameTokens.join(" ") === normalizedQuery) {
+    score += 100;
+  } else if (nameMatchCount === keywords.length) {
+    // Every keyword matched a name token (strong name match, not exact order)
+    score += 40;
+  }
+
+  // For multi-keyword queries (almost certainly full-name searches), exclude
+  // contacts that matched ONLY via non-name fields (email/title/designations).
+  // These are colleagues who happen to share the firm, not the person sought.
+  if (keywords.length >= 2 && nameMatchCount === 0) {
+    return 0;
+  }
+
   return score;
 }
 
