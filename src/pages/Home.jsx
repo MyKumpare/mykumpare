@@ -691,6 +691,7 @@ export default function Home() {
     { label: "Portfolios", icon: BarChart3, ref: null, color: "text-emerald-600", activeBg: "bg-emerald-50", onClick: () => setPortfolioPickerOpen(true), submenu: [
       { label: "Portfolio Picker", icon: Briefcase, onClick: () => setPortfolioPickerOpen(true) },
       { label: "Funding Dashboard", icon: PieChart, onClick: () => navigate("/PortfolioFundingDashboard") },
+      { label: "Funding Report", icon: FileBarChart, onClick: () => navigate("/PortfolioFundingReport") },
     ] },
     { label: "Firms", icon: Building, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => setFirmPickerOpen(true) },
     { label: "Products", icon: Package, ref: null, color: "text-violet-600", activeBg: "bg-violet-50", onClick: () => setProductPickerOpen(true) },

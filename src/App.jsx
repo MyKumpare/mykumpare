@@ -21,6 +21,7 @@ import AnalystCoverageReport from './pages/AnalystCoverageReport';
 import FirmComparison from './pages/FirmComparison';
 import MonitorPage from './pages/MonitorPage';
 import PortfolioFundingDashboard from './pages/PortfolioFundingDashboard';
+import PortfolioFundingReport from './pages/PortfolioFundingReport';
 
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -93,6 +94,7 @@ const AuthenticatedApp = () => {
       <Route path="/FirmComparison" element={<LayoutWrapper currentPageName="FirmComparison"><FirmComparison /></LayoutWrapper>} />
       <Route path="/Monitor" element={<LayoutWrapper currentPageName="Monitor"><MonitorPage /></LayoutWrapper>} />
       <Route path="/PortfolioFundingDashboard" element={<LayoutWrapper currentPageName="PortfolioFundingDashboard"><PortfolioFundingDashboard /></LayoutWrapper>} />
+      <Route path="/PortfolioFundingReport" element={<LayoutWrapper currentPageName="PortfolioFundingReport"><PortfolioFundingReport /></LayoutWrapper>} />
       <Route path="/register" element={<ExternalPartyRegister />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
