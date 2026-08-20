@@ -322,6 +322,12 @@ export default function Home() {
     enabled: searchFocused,
   });
 
+  const { data: pinnedNews = [] } = useQuery({
+    queryKey: ["pinned_news_alerts"],
+    queryFn: () => base44.entities.FirmNews.list("-news_date", 500),
+  });
+  const pinnedNewsCount = pinnedNews.filter(n => !n.deleted_at && n.is_pinned).length;
+
   const { data: documents = [] } = useQuery({
     queryKey: ["firm_documents_search"],
     queryFn: () => base44.entities.FirmDocument.list("-entry_date", 1000),
@@ -1496,6 +1502,16 @@ export default function Home() {
 
       {/* AI Assistant */}
       <AIAssistant />
+
+      {/* News Alerts — pinned news across all firms */}
+      <NewsAlertsModal
+        open={newsAlertsOpen}
+        onClose={() => setNewsAlertsOpen(false)}
+        onFirmClick={(firmId) => {
+          const firm = firms.find(f => f.id === firmId);
+          if (firm) handleEdit(firm);
+        }}
+      />
     </div>
   );
 }
