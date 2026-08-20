@@ -338,10 +338,14 @@ export default function SearchResults({ query, firms, products, contacts, portfo
     .filter((b) => b._score > 0)
     .sort(byScoreDesc);
 
-  // For a firm result, gather its contacts (deduped so the same person —
-  // e.g. one record with a salutation and one without — shows only once,
-  // surfacing the most complete full name).
-  const firmContacts = (firmId) => dedupeContacts(contacts.filter(c => (c.firm_ids || []).includes(firmId)));
+  // For a firm result, gather its contacts — but only those that also match
+  // the search keywords, so searching "tina williams" doesn't surface every
+  // employee at a matching firm. Deduped so the same person shows only once.
+  const firmContacts = (firmId) => dedupeContacts(
+    contacts
+      .filter(c => (c.firm_ids || []).includes(firmId))
+      .filter(c => scoreContact(keywords, c) > 0)
+  );
 
   // For a contact result, gather its firms
   const contactFirms = (contact) => (contact.firm_ids || []).map(id => firms.find(f => f.id === id)).filter(Boolean);
