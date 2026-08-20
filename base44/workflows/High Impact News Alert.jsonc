@@ -1,0 +1,40 @@
+{
+  "name": "High Impact News Alert",
+  "description": "Emails all admin users whenever a FirmNews item is tagged as High impact, so critical firm updates are never missed.",
+  "trigger": {
+    "config": {
+      "trigger_type": "entity",
+      "entity_name": "FirmNews",
+      "events": [
+        "create"
+      ]
+    },
+    "condition": "${ .trigger.data.alert_status == \"High\" }"
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "high_impact_news_alert",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "send_alert": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "notifyHighImpactNews",
+            "args": {
+              "news_id": "${ .trigger.entity_id }"
+            }
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Send high-impact news alert",
+            "description": "Email admins the news details"
+          }
+        }
+      }
+    ]
+  }
+}
