@@ -8,7 +8,7 @@ import SectionTypeFilter from "@/components/common/SectionTypeFilter";
 import SectionExpandCollapse from "@/components/common/SectionExpandCollapse";
 import { useViewMode } from "@/hooks/useViewMode";
 
-const ADVISOR_TYPES = ["Manager of Managers", "Investment Manager"];
+const ADVISOR_TYPES = ["Investment Manager"];
 
 export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddPortfolio, forceExpanded }) {
   const [expanded, setExpanded] = useState(false);

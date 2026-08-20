@@ -19,7 +19,7 @@ function buildLevelOptions(portfolio) {
   if (portfolio.advisor_type && portfolio.advisor_firm_id) {
     opts.push({
       value: "advisor",
-      label: `${portfolio.advisor_type === "Manager of Managers" ? "MoM" : "IM"}: ${portfolio.advisor_firm_name || ""}`,
+      label: `IM: ${portfolio.advisor_firm_name || ""}`,
       refId: portfolio.advisor_firm_id,
     });
   }

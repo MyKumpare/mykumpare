@@ -42,11 +42,19 @@
       "enum": [
         "Investment Manager"
       ],
-      "description": "Type of advisor managing this portfolio"
+      "description": "Type of advisor managing this portfolio. Always 'Investment Manager' \u2014 the advisor firm is an Investment Manager hired to run the product."
+    },
+    "advisor_product_type": {
+      "type": "string",
+      "enum": [
+        "Investment Manager Product",
+        "Multi-Manager Product"
+      ],
+      "description": "The type of product the advisor (Investment Manager) is hired to run. 'Multi-Manager Product' uses sub-managers (other Investment Managers); 'Investment Manager Product' has no sub-managers."
     },
     "advisor_firm_id": {
       "type": "string",
-      "description": "ID of the advisor firm (MoM or IM)"
+      "description": "ID of the advisor firm (Investment Manager)"
     },
     "advisor_firm_name": {
       "type": "string",
@@ -55,12 +63,12 @@
     "advisor_inception_date": {
       "type": "string",
       "format": "date",
-      "description": "Inception date of the advisor (MoM or IM) for this portfolio"
+      "description": "Inception date of the advisor (Investment Manager) for this portfolio"
     },
     "advisor_termination_date": {
       "type": "string",
       "format": "date",
-      "description": "Termination date of the advisor (MoM or IM) for this portfolio (YYYY-MM-DD)"
+      "description": "Termination date of the advisor (Investment Manager) for this portfolio (YYYY-MM-DD)"
     },
     "advisor_funding_status": {
       "type": "string",
@@ -69,15 +77,15 @@
         "Terminated"
       ],
       "default": "Active",
-      "description": "Funding status of the advisor (MoM or IM) for this portfolio"
+      "description": "Funding status of the advisor (Investment Manager) for this portfolio"
     },
     "advisor_initial_allocation_amount": {
       "type": "number",
-      "description": "Initial allocation amount for the advisor (MoM or IM) for this portfolio"
+      "description": "Initial allocation amount for the advisor (Investment Manager) for this portfolio"
     },
     "sub_managers": {
       "type": "array",
-      "description": "Sub-manager products (only for Manager of Managers advisor type)",
+      "description": "Sub-manager products (only for Multi-Manager Product advisor product type). These are other Investment Managers' products that the advisor allocates to.",
       "items": {
         "type": "object",
         "properties": {

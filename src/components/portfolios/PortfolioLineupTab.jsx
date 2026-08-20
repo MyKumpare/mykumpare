@@ -110,7 +110,7 @@ export default function PortfolioLineupTab({ portfolio }) {
         const advisorMVPrev = getAum("advisor", portfolio.advisor_firm_id, prevDate);
         const advisorMVFirst = getAum("advisor", portfolio.advisor_firm_id, firstDate);
         result.push({
-          level: portfolio.advisor_type === "Manager of Managers" ? "Manager of Managers" : "Investment Manager",
+          level: "Investment Manager",
           name: portfolio.advisor_firm_name || "—",
           benchmark: "—",
           marketValue: advisorMV,
@@ -124,8 +124,8 @@ export default function PortfolioLineupTab({ portfolio }) {
       }
     }
 
-    // ── Sub-managers (only for MoM) ──
-    if (portfolio.advisor_type === "Manager of Managers") {
+    // ── Sub-managers (only for Multi-Manager Product) ──
+    if (portfolio.advisor_product_type === "Multi-Manager Product" || portfolio.advisor_type === "Manager of Managers") {
       (portfolio.sub_managers || []).forEach((sm) => {
         const active = isActiveAsOf(sm.inception_date, sm.termination_date, selectedDate);
         if (active) {

@@ -44,7 +44,7 @@ const PortfolioPdfSummary = forwardRef(function PortfolioPdfSummary({ portfolio 
       if (hasAdvisorData) {
         defs.push({
           key: "advisor",
-          label: `${portfolio.advisor_type === "Manager of Managers" ? "MoM" : "IM"}: ${portfolio.advisor_firm_name || ""}`,
+          label: `IM: ${portfolio.advisor_firm_name || ""}`,
           level: "advisor",
           refId: portfolio.advisor_firm_id,
         });
