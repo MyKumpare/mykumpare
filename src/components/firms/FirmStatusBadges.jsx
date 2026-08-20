@@ -30,9 +30,53 @@ export function getFirmStatuses(firm, products) {
 
 export default function FirmStatusBadges({ firm, products, onEditProduct }) {
   const groups = getFirmStatuses(firm, products);
+
+  // Products whose funding status matches the firm's aggregated funding status.
+  // Shown in the funding-status hover card so the user can see which products
+  // drive the badge and jump straight to the funded product (and its portfolios).
+  const fundingStatus = firm?.funding_status;
+  const fundedProducts = fundingStatus
+    ? products
+        .filter((p) => p.firm_id === firm.id && p.funding_status === fundingStatus)
+        .sort((a, b) => a.name.localeCompare(b.name))
+    : [];
+
   return (
     <div className="flex items-center gap-1 flex-shrink-0">
-      <FundingStatusBadge status={firm?.funding_status} />
+      {fundingStatus && fundedProducts.length > 0 ? (
+        <HoverCard openDelay={100} closeDelay={200}>
+          <HoverCardTrigger asChild>
+            <button
+              type="button"
+              onClick={(e) => e.stopPropagation()}
+              className="cursor-pointer leading-none"
+              title={`${fundingStatus} · ${fundedProducts.length} product${fundedProducts.length > 1 ? "s" : ""} — hover to view`}
+            >
+              <FundingStatusBadge status={fundingStatus} />
+            </button>
+          </HoverCardTrigger>
+          <HoverCardContent align="start" sideOffset={6} className="w-64 p-2">
+            <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide px-1 pb-1.5">
+              {fundingStatus} · {fundedProducts.length} product{fundedProducts.length > 1 ? "s" : ""}
+            </div>
+            <div className="space-y-0.5 max-h-60 overflow-y-auto">
+              {fundedProducts.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); e.preventDefault(); onEditProduct?.(p); }}
+                  className="w-full flex items-center gap-1.5 px-1.5 py-1.5 rounded-md hover:bg-emerald-50 text-left text-xs text-gray-700 transition-colors"
+                >
+                  <Package className="w-3 h-3 text-emerald-500 flex-shrink-0" />
+                  <span className="truncate">{p.name}</span>
+                </button>
+              ))}
+            </div>
+          </HoverCardContent>
+        </HoverCard>
+      ) : (
+        <FundingStatusBadge status={firm?.funding_status} />
+      )}
       {groups.map(({ status, products: groupProducts }) =>
         groupProducts.length === 0 ? (
           <ProductStatusBadge key={status} status={status} />
