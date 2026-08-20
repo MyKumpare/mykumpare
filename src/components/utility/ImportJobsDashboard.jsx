@@ -201,28 +201,33 @@ function JobRow({ job }) {
                 </div>
               )}
               <div className="max-h-56 overflow-y-auto rounded-md border border-red-200 divide-y divide-red-100 bg-white">
-                {failed.map((f, i) => (
-                  <div key={i} className="px-2.5 py-1.5 text-xs">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-gray-500">Row {f.row ?? "—"}</span>
-                          {f.product_name ? <span className="text-gray-700 font-medium truncate">{f.product_name}</span> : null}
-                          {f.firm_name ? <span className="text-gray-400 truncate">· {f.firm_name}</span> : null}
+                {failed.map((f, i) => {
+                  const fixable = job.source === "product" || job.source === "firm";
+                  return (
+                    <div
+                      key={i}
+                      onClick={fixable ? () => setReImport({ ...f, _source: job.source }) : undefined}
+                      className={`px-2.5 py-1.5 text-xs ${fixable ? "cursor-pointer hover:bg-red-50/60" : ""}`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-gray-500">Row {f.row ?? "—"}</span>
+                            {f.product_name ? <span className="text-gray-700 font-medium truncate">{f.product_name}</span> : null}
+                            {f.name ? <span className="text-gray-700 font-medium truncate">{f.name}</span> : null}
+                            {f.firm_name ? <span className="text-gray-400 truncate">· {f.firm_name}</span> : null}
+                          </div>
+                          <p className="mt-0.5 text-red-600 break-words">{f.error || f.reason}</p>
                         </div>
-                        <p className="mt-0.5 text-red-600 break-words">{f.error || f.reason}</p>
+                        {fixable ? (
+                          <span className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-1 text-[11px] rounded-md border border-teal-300 text-teal-700 bg-white">
+                            <Wand2 className="w-3 h-3" /> Fix
+                          </span>
+                        ) : null}
                       </div>
-                      {job.source === "product" || job.source === "firm" ? (
-                        <button
-                          onClick={() => setReImport({ ...f, _source: job.source })}
-                          className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-1 text-[11px] rounded-md border border-teal-300 text-teal-700 bg-white hover:bg-teal-50"
-                        >
-                          <Wand2 className="w-3 h-3" /> Fix & re-import
-                        </button>
-                      ) : null}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
