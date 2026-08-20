@@ -331,6 +331,8 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
   const [advisorType, setAdvisorType] = useState("");
   const [advisorProductType, setAdvisorProductType] = useState("");
   const [advisorFirmId, setAdvisorFirmId] = useState("");
+  const [advisorProductId, setAdvisorProductId] = useState("");
+  const [advisorProductName, setAdvisorProductName] = useState("");
   const [advisorInceptionDate, setAdvisorInceptionDate] = useState(null);
   const [advisorTerminationDate, setAdvisorTerminationDate] = useState(null);
   const [advisorFundingStatus, setAdvisorFundingStatus] = useState("Active");
@@ -390,6 +392,8 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
             : editingPortfolio.advisor_type ? "Investment Manager Product" : "")
         );
         setAdvisorFirmId(editingPortfolio.advisor_firm_id || "");
+        setAdvisorProductId(editingPortfolio.advisor_product_id || "");
+        setAdvisorProductName(editingPortfolio.advisor_product_name || "");
         setAdvisorInceptionDate(editingPortfolio.advisor_inception_date ? parseISO(editingPortfolio.advisor_inception_date) : null);
         setAdvisorTerminationDate(editingPortfolio.advisor_termination_date ? parseISO(editingPortfolio.advisor_termination_date) : null);
         setAdvisorFundingStatus(editingPortfolio.advisor_funding_status || "Active");
@@ -416,6 +420,8 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
           : ""
         );
         setAdvisorFirmId(preselectedAdvisorFirmId || "");
+        setAdvisorProductId("");
+        setAdvisorProductName("");
         setAdvisorInceptionDate(null);
         setAdvisorTerminationDate(null);
         setAdvisorFundingStatus("Active");
@@ -463,13 +469,14 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
 
   const handleAdvisorProductTypeChange = (newType) => {
     const next = advisorProductType === newType ? "" : newType;
-    if (editingPortfolio && isEditing && (advisorFirmId || subManagers.length > 0)) {
+    if (editingPortfolio && isEditing && (advisorProductId || subManagers.length > 0)) {
       setPendingAdvisorType(next);
       setShowAdvisorTypeWarning(true);
     } else {
       setAdvisorProductType(next);
       setAdvisorType(next ? "Investment Manager" : "");
-      setAdvisorFirmId("");
+      setAdvisorProductId("");
+      setAdvisorProductName("");
       setAdvisorInceptionDate(null);
       setAdvisorTerminationDate(null);
       setAdvisorFundingStatus("Active");
@@ -480,7 +487,8 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
   const confirmAdvisorTypeChange = () => {
     setAdvisorProductType(pendingAdvisorType);
     setAdvisorType(pendingAdvisorType ? "Investment Manager" : "");
-    setAdvisorFirmId("");
+    setAdvisorProductId("");
+    setAdvisorProductName("");
     setAdvisorInceptionDate(null);
     setAdvisorTerminationDate(null);
     setAdvisorFundingStatus("Active");
@@ -510,11 +518,27 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
       setShowAdvisorFirmChangeWarning(true);
     } else {
       setAdvisorFirmId(newId);
+      setAdvisorProductType("");
+      setAdvisorType("");
+      setAdvisorProductId("");
+      setAdvisorProductName("");
+      setAdvisorInceptionDate(null);
+      setAdvisorTerminationDate(null);
+      setAdvisorFundingStatus("Active");
+      setSubManagers([]);
     }
   };
 
   const confirmAdvisorFirmChange = () => {
     setAdvisorFirmId(pendingAdvisorFirmId);
+    setAdvisorProductType("");
+    setAdvisorType("");
+    setAdvisorProductId("");
+    setAdvisorProductName("");
+    setAdvisorInceptionDate(null);
+    setAdvisorTerminationDate(null);
+    setAdvisorFundingStatus("Active");
+    setSubManagers([]);
     setPendingAdvisorFirmId(null);
     setShowAdvisorFirmChangeWarning(false);
   };
@@ -593,6 +617,8 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
       advisor_product_type: advisorProductType || undefined,
       advisor_firm_id: advisorFirmId || undefined,
       advisor_firm_name: advisorFirm?.name || undefined,
+      advisor_product_id: advisorProductId || undefined,
+      advisor_product_name: advisorProductName || undefined,
       advisor_inception_date: advisorProductType && advisorInceptionDate ? format(advisorInceptionDate, "yyyy-MM-dd") : undefined,
       advisor_termination_date: advisorProductType && advisorTerminationDate ? format(advisorTerminationDate, "yyyy-MM-dd") : undefined,
       advisor_funding_status: advisorProductType ? (advisorFundingStatus || "Active") : undefined,
@@ -631,11 +657,29 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
     const created = await base44.entities.Firm.create(firmData);
     queryClient.invalidateQueries({ queryKey: ["firms"] });
     if (pendingFirmTarget === "allocator") setAllocatorId(created.id);
-    if (pendingFirmTarget === "advisor") setAdvisorFirmId(created.id);
+    if (pendingFirmTarget === "advisor") {
+      setAdvisorFirmId(created.id);
+      setAdvisorProductType("");
+      setAdvisorType("");
+      setAdvisorProductId("");
+      setAdvisorProductName("");
+      setAdvisorInceptionDate(null);
+      setAdvisorTerminationDate(null);
+      setAdvisorFundingStatus("Active");
+      setSubManagers([]);
+    }
     setAddFirmOpen(false);
   };
 
   const advisorFirmOptions = imOptions;
+
+  const advisorProductOptions = useMemo(() => {
+    if (!advisorFirmId || !advisorProductType) return [];
+    return products
+      .filter((p) => p.firm_id === advisorFirmId && p.product_type === advisorProductType)
+      .map((p) => ({ value: p.id, label: p.name }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [products, advisorFirmId, advisorProductType]);
 
   const momInceptionDate = advisorProductType === "Multi-Manager Product" ? advisorInceptionDate : null;
 
@@ -677,6 +721,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
         advisorType !== (editingPortfolio.advisor_type || "") ||
         advisorProductType !== (editingPortfolio.advisor_product_type || (editingPortfolio.advisor_type === "Manager of Managers" || (editingPortfolio.sub_managers && editingPortfolio.sub_managers.length > 0) ? "Multi-Manager Product" : editingPortfolio.advisor_type ? "Investment Manager Product" : "")) ||
         advisorFirmId !== (editingPortfolio.advisor_firm_id || "") ||
+        advisorProductId !== (editingPortfolio.advisor_product_id || "") ||
         fmt(advisorInceptionDate) !== (editingPortfolio.advisor_inception_date || "") ||
         fmt(advisorTerminationDate) !== (editingPortfolio.advisor_termination_date || "") ||
         (advisorFundingStatus || "Active") !== (editingPortfolio.advisor_funding_status || "Active") ||
@@ -688,7 +733,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
         guidelinesProgram !== (editingPortfolio.guidelines_program || "") ||
         guidelinesCompliance !== (editingPortfolio.guidelines_compliance || "");
     }
-    return !!(allocatorId || portfolioName.trim() || inceptionDate || initialAllocationAmount || advisorType || advisorProductType || advisorFirmId || advisorInceptionDate || advisorInitialAllocationAmount || subManagers.length > 0 || primaryBenchmarkId || secondaryBenchmarks.length > 0 || guidelinesInvestments || guidelinesProgram || guidelinesCompliance);
+    return !!(allocatorId || portfolioName.trim() || inceptionDate || initialAllocationAmount || advisorType || advisorProductType || advisorFirmId || advisorProductId || advisorInceptionDate || advisorInitialAllocationAmount || subManagers.length > 0 || primaryBenchmarkId || secondaryBenchmarks.length > 0 || guidelinesInvestments || guidelinesProgram || guidelinesCompliance);
   })();
 
   const { guardedClose, guardDialog } = useUnsavedChangesGuard(hasPortfolioChanges, () => onOpenChange(false), handleSave);
@@ -700,7 +745,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
         <Dialog open={showAdvisorTypeWarning} onOpenChange={() => setShowAdvisorTypeWarning(false)}>
           <DialogContent className="max-w-sm">
             <DialogHeader><DialogTitle className="flex items-center gap-2"><AlertTriangle className="w-5 h-5 text-amber-500" />Change Advisor Type?</DialogTitle></DialogHeader>
-            <p className="text-sm text-gray-600">Changing the advisor type will clear the currently selected advisor firm and related data. Do you want to proceed?</p>
+            <p className="text-sm text-gray-600">Changing the product type will clear the selected product and sub-managers. Do you want to proceed?</p>
             <DialogFooter className="gap-2 pt-2">
               <Button variant="outline" onClick={() => setShowAdvisorTypeWarning(false)}>Cancel</Button>
               <Button className="bg-amber-500 hover:bg-amber-600 text-white" onClick={confirmAdvisorTypeChange}>Yes, Change It</Button>
@@ -854,6 +899,12 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                       {viewAdvisorFirmName || <span className="text-gray-400">—</span>}
                     </button>
                   </div>
+                </div>
+              )}
+              {advisorProductName && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">Selected Product</p>
+                  <p className="text-sm text-gray-900 px-3 py-2 rounded-md border bg-gray-50">{advisorProductName}</p>
                 </div>
               )}
               {advisorType && (
@@ -1023,40 +1074,68 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                 />
               )}
 
-              {/* Product Type */}
+              {/* Investment Manager Firm (first step) */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-gray-700">Product Type</Label>
-                <div className="flex gap-2">
-                  {["Investment Manager Product", "Multi-Manager Product"].map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => handleAdvisorProductTypeChange(t)}
-                      className={cn(
-                        "flex-1 h-9 rounded-md border text-sm font-medium transition-colors",
-                        advisorProductType === t
-                          ? "bg-indigo-600 border-indigo-600 text-white"
-                          : "border-gray-200 text-gray-600 hover:border-indigo-300 hover:text-indigo-600"
-                      )}
-                    >
-                      {t === "Investment Manager Product" ? "Investment Manager" : "Multi-Manager"}
-                    </button>
-                  ))}
-                </div>
+                <Label className="text-xs font-medium text-gray-700">Investment Manager Firm</Label>
+                <SearchableSelect
+                  options={advisorFirmOptions}
+                  value={advisorFirmId}
+                  onChange={handleAdvisorFirmChange}
+                  placeholder="Select Investment Manager..."
+                  onAddNew={handleAddAdvisorFirm}
+                  addNewLabel="Add new Investment Manager..."
+                />
               </div>
 
-              {/* Advisor Firm (conditional) */}
-              {advisorProductType && (
+              {/* Product Type (conditional on firm selection) */}
+              {advisorFirmId && (
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-gray-700">Investment Manager Firm</Label>
-                  <SearchableSelect
-                    options={advisorFirmOptions}
-                    value={advisorFirmId}
-                    onChange={handleAdvisorFirmChange}
-                    placeholder="Select Investment Manager..."
-                    onAddNew={handleAddAdvisorFirm}
-                    addNewLabel="Add new Investment Manager..."
-                  />
+                  <Label className="text-xs font-medium text-gray-700">Product Type</Label>
+                  <div className="flex gap-2">
+                    {["Investment Manager Product", "Multi-Manager Product"].map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => handleAdvisorProductTypeChange(t)}
+                        className={cn(
+                          "flex-1 h-9 rounded-md border text-sm font-medium transition-colors",
+                          advisorProductType === t
+                            ? "bg-indigo-600 border-indigo-600 text-white"
+                            : "border-gray-200 text-gray-600 hover:border-indigo-300 hover:text-indigo-600"
+                        )}
+                      >
+                        {t === "Investment Manager Product" ? "Investment Manager" : "Multi-Manager"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Available Products (conditional on product type) */}
+              {advisorFirmId && advisorProductType && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-gray-700">
+                    Available Products
+                    {advisorProductOptions.length === 0 && (
+                      <span className="text-gray-400 font-normal"> (no products found)</span>
+                    )}
+                  </Label>
+                  {advisorProductOptions.length > 0 ? (
+                    <SearchableSelect
+                      options={advisorProductOptions}
+                      value={advisorProductId}
+                      onChange={(id) => {
+                        setAdvisorProductId(id);
+                        const prod = products.find((p) => p.id === id);
+                        setAdvisorProductName(prod?.name || "");
+                      }}
+                      placeholder="Select a product..."
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-400 px-3 py-2 rounded-md border bg-gray-50">
+                      No {advisorProductType === "Investment Manager Product" ? "Investment Manager" : "Multi-Manager"} products found for this firm.
+                    </p>
+                  )}
                 </div>
               )}
 

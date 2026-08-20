@@ -60,6 +60,14 @@
       "type": "string",
       "description": "Name of the advisor firm (denormalized)"
     },
+    "advisor_product_id": {
+      "type": "string",
+      "description": "ID of the specific advisor firm product selected for this portfolio (filtered by advisor_product_type)"
+    },
+    "advisor_product_name": {
+      "type": "string",
+      "description": "Name of the selected advisor firm product (denormalized)"
+    },
     "advisor_inception_date": {
       "type": "string",
       "format": "date",
