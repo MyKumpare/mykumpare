@@ -104,6 +104,13 @@
         "type": "string"
       }
     },
+    "sub_manager_firm_ids": {
+      "type": "array",
+      "description": "IDs of Investment Manager firms linked as sub-managers to this Multi-Manager Product.",
+      "items": {
+        "type": "string"
+      }
+    },
     "inv_desc_edge": {
       "type": "string",
       "description": "Investment Edge narrative"

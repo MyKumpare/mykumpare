@@ -28,6 +28,7 @@ import ProductAumHistoryTab from "./ProductAumHistoryTab";
 import ProductAnalyticsTab from "./ProductAnalyticsTab";
 import ProductDueDiligenceTab from "./ProductDueDiligenceTab";
 import ConstituentProductMultiSelect from "./ConstituentProductMultiSelect";
+import SubManagerFirmMultiSelect from "./SubManagerFirmMultiSelect";
 import AddIMProductValidatedDialog from "./AddIMProductValidatedDialog";
 import ProductStatusBadge from "./ProductStatusBadge";
 import { base44 } from "@/api/base44Client";
@@ -105,6 +106,7 @@ export default function AddProductDialog({
   const [classifications, setClassifications] = useState(EMPTY_CLASSIFICATIONS);
   const [investmentDescriptions, setInvestmentDescriptions] = useState({});
   const [constituentProductIds, setConstituentProductIds] = useState([]);
+  const [subManagerFirmIds, setSubManagerFirmIds] = useState([]);
   const [addImProductOpen, setAddImProductOpen] = useState(false);
   const [aumDirty, setAumDirty] = useState(false);
   const aumSaveRef = useRef(null);
@@ -151,6 +153,7 @@ export default function AddProductDialog({
           product_biases: editingProduct.inv_desc_product_biases || {},
         },
         constituent_product_ids: editingProduct.constituent_product_ids || [],
+        sub_manager_firm_ids: editingProduct.sub_manager_firm_ids || [],
       };
       originalSnapshotRef.current = snapshot;
       setProductType(snapshot.product_type);
@@ -161,6 +164,7 @@ export default function AddProductDialog({
       setClassifications(snapshot.classifications);
       setInvestmentDescriptions(snapshot.descriptions);
       setConstituentProductIds(snapshot.constituent_product_ids);
+      setSubManagerFirmIds(snapshot.sub_manager_firm_ids);
       setIsEditing(false);
     } else {
       originalSnapshotRef.current = null;
@@ -172,6 +176,7 @@ export default function AddProductDialog({
       setClassifications(EMPTY_CLASSIFICATIONS);
       setInvestmentDescriptions({});
       setConstituentProductIds([]);
+      setSubManagerFirmIds([]);
       setIsEditing(true);
     }
   }, [open]);
@@ -237,6 +242,16 @@ export default function AddProductDialog({
       .sort((a, b) => a.label.localeCompare(b.label));
   }, [firms, existingProducts]);
 
+  // Investment Manager firms available as sub-managers for a Multi-Manager Product
+  const imFirmOptions = useMemo(() => {
+    const getFirmTypes = (f) =>
+      f.firm_types?.length ? f.firm_types : f.firm_type ? [f.firm_type] : [];
+    return firms
+      .filter((f) => getFirmTypes(f).includes("Investment Manager") && !f.deleted_at)
+      .map((f) => ({ value: f.id, label: f.name }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [firms]);
+
   const originalDescriptions = originalSnapshotRef.current?.descriptions ?? {};
 
   const hasChanges = originalSnapshotRef.current
@@ -246,6 +261,7 @@ export default function AddProductDialog({
       description !== originalSnapshotRef.current.description ||
       productStatus !== (originalSnapshotRef.current.product_status || "Not Reviewed") ||
       JSON.stringify(constituentProductIds) !== JSON.stringify(originalSnapshotRef.current.constituent_product_ids || []) ||
+      JSON.stringify(subManagerFirmIds) !== JSON.stringify(originalSnapshotRef.current.sub_manager_firm_ids || []) ||
       JSON.stringify(classifications) !== JSON.stringify(originalSnapshotRef.current.classifications) ||
       JSON.stringify(investmentDescriptions.product_biases ?? {}) !== JSON.stringify(originalDescriptions.product_biases ?? {}) ||
       JSON.stringify(investmentDescriptions.benchmarks ?? []) !== JSON.stringify(originalDescriptions.benchmarks ?? []) ||
@@ -260,7 +276,8 @@ export default function AddProductDialog({
     productStatus !== "Not Reviewed" ||
     JSON.stringify(classifications) !== JSON.stringify(EMPTY_CLASSIFICATIONS) ||
     Object.keys(investmentDescriptions).length > 0 ||
-    constituentProductIds.length > 0
+    constituentProductIds.length > 0 ||
+    subManagerFirmIds.length > 0
   ));
 
   const matchingProducts =
@@ -309,6 +326,7 @@ export default function AddProductDialog({
       inv_desc_holdings_max: investmentDescriptions.holdings_max !== "" ? Number(investmentDescriptions.holdings_max) : null,
       inv_desc_product_biases: investmentDescriptions.product_biases || {},
       constituent_product_ids: productType === "Multi-Manager Product" ? constituentProductIds : [],
+      sub_manager_firm_ids: productType === "Multi-Manager Product" ? subManagerFirmIds : [],
     });
     setProductType("");
     setFirmId("");
@@ -317,6 +335,7 @@ export default function AddProductDialog({
     setProductStatus("Not Reviewed");
     setClassifications(EMPTY_CLASSIFICATIONS);
     setConstituentProductIds([]);
+    setSubManagerFirmIds([]);
   };
 
   const handleClose = () => {
@@ -337,6 +356,7 @@ export default function AddProductDialog({
     setClassifications(snap.classifications);
     setInvestmentDescriptions(snap.descriptions);
     setConstituentProductIds(snap.constituent_product_ids);
+    setSubManagerFirmIds(snap.sub_manager_firm_ids);
     setIsEditing(false);
   };
 
@@ -637,6 +657,40 @@ export default function AddProductDialog({
                         </p>
                       )}
                     </>
+                  )}
+                </div>
+              )}
+
+              {/* Sub-Manager Firms (Multi-Manager Product only) */}
+              {productType === "Multi-Manager Product" && (
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium text-gray-700">Sub-Manager Firms</Label>
+                  {!activelyEditing ? (
+                    <div className="space-y-1">
+                      {subManagerFirmIds.length === 0 ? (
+                        <div className="px-3 py-2 rounded-md border bg-gray-50 text-sm text-gray-400">
+                          —
+                        </div>
+                      ) : (
+                        subManagerFirmIds.map((id) => {
+                          const f = firms.find((x) => x.id === id);
+                          return (
+                            <div
+                              key={id}
+                              className="px-3 py-2 rounded-md border bg-gray-50 text-sm text-gray-800"
+                            >
+                              <span className="font-medium">{f?.name || "Unknown firm"}</span>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  ) : (
+                    <SubManagerFirmMultiSelect
+                      options={imFirmOptions}
+                      value={subManagerFirmIds}
+                      onChange={setSubManagerFirmIds}
+                    />
                   )}
                 </div>
               )}
