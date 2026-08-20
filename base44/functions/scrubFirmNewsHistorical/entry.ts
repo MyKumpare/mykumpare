@@ -8,8 +8,10 @@ export default async function(req: Request): Promise<Response> {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json().catch(() => ({}));
-    const mode = body.mode || 'single'; // "single" | "all"
+    const mode = body.mode || 'single'; // "single" | "all" | "contact"
     const firmId = body.firm_id || null;
+    const contactId = body.contact_id || null;
+    const keywords = Array.isArray(body.keywords) ? body.keywords.filter(k => k && k.trim()).map(k => k.trim()) : null;
     const tenantId = user.data?.linked_firm_id || null;
 
     // ── "all" mode: enqueue every firm for background historical scrubbing ──
@@ -21,15 +23,52 @@ export default async function(req: Request): Promise<Response> {
       const activeFirms = allFirms.filter(f => !f.deleted_at);
       const batchId = `scrub_hist_${Date.now()}`;
 
+      // Read global keyword settings (admin-managed) to focus the historical scrub
+      let globalKeywords = null;
+      try {
+        const settings = await base44.asServiceRole.entities.NewsScrubSettings.list('-created_date', 10);
+        if (settings && settings.length) {
+          globalKeywords = (settings[0].keywords || []).filter(k => k && k.trim()).map(k => k.trim());
+          if (!globalKeywords.length) globalKeywords = null;
+        }
+      } catch (e) {
+        console.error('Failed to read NewsScrubSettings:', e.message);
+      }
+
       for (const firm of activeFirms) {
-        waitUntil(scrubOneFirmHistorical(base44, firm, batchId));
+        waitUntil(scrubOneFirmHistorical(base44, firm, batchId, null, globalKeywords));
       }
 
       return Response.json({
         status: 'enqueued',
         total_firms: activeFirms.length,
         batch_id: batchId,
+        keywords: globalKeywords || [],
       });
+    }
+
+    // ── "contact" mode: scrub historical news for a specific contact ──
+    if (mode === 'contact') {
+      if (!contactId) {
+        return Response.json({ error: 'contact_id is required for contact mode' }, { status: 400 });
+      }
+      const contact = await base44.entities.Contact.get(contactId);
+      if (!contact || contact.deleted_at) {
+        return Response.json({ error: 'Contact not found' }, { status: 404 });
+      }
+      const owningFirmId = contact.firm_ids?.[0] || firmId;
+      if (!owningFirmId) {
+        return Response.json({ error: 'Contact has no associated firm' }, { status: 400 });
+      }
+      const firm = await base44.entities.Firm.get(owningFirmId);
+      if (!firm || firm.deleted_at) {
+        return Response.json({ error: 'Firm not found' }, { status: 404 });
+      }
+
+      const batchId = `scrub_hist_${Date.now()}`;
+      waitUntil(scrubOneContactHistorical(base44, firm, contact, batchId, tenantId, keywords));
+
+      return Response.json({ status: 'enqueued', batch_id: batchId });
     }
 
     // ── "single" mode: scrub one firm synchronously ──
@@ -44,7 +83,7 @@ export default async function(req: Request): Promise<Response> {
 
     const batchId = `scrub_hist_${Date.now()}`;
     // Process in the background so the function returns fast; UI polls for results
-    waitUntil(scrubOneFirmHistorical(base44, firm, batchId, tenantId));
+    waitUntil(scrubOneFirmHistorical(base44, firm, batchId, tenantId, keywords));
 
     return Response.json({ status: 'enqueued', batch_id: batchId });
   } catch (error) {

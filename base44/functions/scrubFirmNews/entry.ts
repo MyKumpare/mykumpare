@@ -8,8 +8,10 @@ export default async function(req: Request): Promise<Response> {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json().catch(() => ({}));
-    const mode = body.mode || 'single'; // "single" | "all"
+    const mode = body.mode || 'single'; // "single" | "all" | "contact"
     const firmId = body.firm_id || null;
+    const contactId = body.contact_id || null;
+    const keywords = Array.isArray(body.keywords) ? body.keywords.filter(k => k && k.trim()).map(k => k.trim()) : null;
     const tenantId = user.data?.linked_firm_id || null;
 
     // ── "all" mode: enqueue every firm for background scrubbing ──
@@ -21,16 +23,54 @@ export default async function(req: Request): Promise<Response> {
       const activeFirms = allFirms.filter(f => !f.deleted_at);
       const batchId = `scrub_${Date.now()}`;
 
+      // Read global keyword settings (admin-managed) to focus the nightly scrub
+      let globalKeywords = null;
+      try {
+        const settings = await base44.asServiceRole.entities.NewsScrubSettings.list('-created_date', 10);
+        if (settings && settings.length) {
+          globalKeywords = (settings[0].keywords || []).filter(k => k && k.trim()).map(k => k.trim());
+          if (!globalKeywords.length) globalKeywords = null;
+        }
+      } catch (e) {
+        console.error('Failed to read NewsScrubSettings:', e.message);
+      }
+
       // Process each firm as a background task so the function returns fast
       for (const firm of activeFirms) {
-        waitUntil(scrubOneFirm(base44, firm, batchId));
+        waitUntil(scrubOneFirm(base44, firm, batchId, null, globalKeywords));
       }
 
       return Response.json({
         status: 'enqueued',
         total_firms: activeFirms.length,
         batch_id: batchId,
+        keywords: globalKeywords || [],
       });
+    }
+
+    // ── "contact" mode: scrub news for a specific contact ──
+    if (mode === 'contact') {
+      if (!contactId) {
+        return Response.json({ error: 'contact_id is required for contact mode' }, { status: 400 });
+      }
+      const contact = await base44.entities.Contact.get(contactId);
+      if (!contact || contact.deleted_at) {
+        return Response.json({ error: 'Contact not found' }, { status: 404 });
+      }
+      // Use the contact's first associated firm as the owning firm for the news record
+      const owningFirmId = contact.firm_ids?.[0] || firmId;
+      if (!owningFirmId) {
+        return Response.json({ error: 'Contact has no associated firm' }, { status: 400 });
+      }
+      const firm = await base44.entities.Firm.get(owningFirmId);
+      if (!firm || firm.deleted_at) {
+        return Response.json({ error: 'Firm not found' }, { status: 404 });
+      }
+
+      const batchId = `scrub_${Date.now()}`;
+      const created = await scrubOneContact(base44, firm, contact, batchId, tenantId, keywords);
+
+      return Response.json({ status: 'success', created: created.length, items: created });
     }
 
     // ── "single" mode: scrub one firm synchronously ──
@@ -44,7 +84,7 @@ export default async function(req: Request): Promise<Response> {
     }
 
     const batchId = `scrub_${Date.now()}`;
-    const created = await scrubOneFirm(base44, firm, batchId, tenantId);
+    const created = await scrubOneFirm(base44, firm, batchId, tenantId, keywords);
 
     return Response.json({ status: 'success', created: created.length, items: created });
   } catch (error) {
@@ -53,7 +93,7 @@ export default async function(req: Request): Promise<Response> {
 }
 
 // ── Scrub a single firm: search the web for news, create FirmNews records ──
-async function scrubOneFirm(base44, firm, batchId, tenantId = null) {
+async function scrubOneFirm(base44, firm, batchId, tenantId = null, keywords = null) {
   try {
     // Gather context: contacts and products for this firm
     const [contacts, products] = await Promise.all([
@@ -72,9 +112,13 @@ async function scrubOneFirm(base44, firm, batchId, tenantId = null) {
 
     const firmTypes = firm.firm_types?.length ? firm.firm_types : firm.firm_type ? [firm.firm_type] : [];
 
+    const keywordLine = keywords && keywords.length
+      ? `\nPay special attention to articles matching these priority topics: ${keywords.join(', ')}. Flag any matching items with a higher alert_status.`
+      : '';
+
     const prompt = `Search for recent news and public information about "${firm.name}", a ${firmTypes.join(' / ') || 'investment'} firm${firm.website ? ` (website: ${firm.website})` : ''}.
 ${contactNames ? `Key contacts to look for: ${contactNames}.` : ''}
-${productNames ? `Products to look for: ${productNames}.` : ''}
+${productNames ? `Products to look for: ${productNames}.` : ''}${keywordLine}
 
 Find up to 10 recent, relevant news articles, press releases, regulatory filings, or public announcements about this firm, its contacts, or its products. For each item provide:
 - date: the publication date (YYYY-MM-DD format, use the current date ${new Date().toISOString().split('T')[0]} if unknown)
@@ -151,6 +195,101 @@ Only include real, findable articles. Do not fabricate news. If no news is found
     return created;
   } catch (error) {
     console.error(`scrubOneFirm error for ${firm.name}:`, error.message);
+    return [];
+  }
+}
+
+// ── Scrub a single contact: search the web for news about this person ──
+async function scrubOneContact(base44, firm, contact, batchId, tenantId = null, keywords = null) {
+  try {
+    const contactName = [contact.first_name, contact.last_name].filter(Boolean).join(' ');
+    if (!contactName) return [];
+
+    const firmTypes = firm.firm_types?.length ? firm.firm_types : firm.firm_type ? [firm.firm_type] : [];
+    const titleLine = contact.title ? `, ${contact.title}` : '';
+
+    const keywordLine = keywords && keywords.length
+      ? `\nPay special attention to articles matching these priority topics: ${keywords.join(', ')}. Flag any matching items with a higher alert_status.`
+      : '';
+
+    const prompt = `Search for recent news and public information about "${contactName}"${titleLine} at "${firm.name}", a ${firmTypes.join(' / ') || 'investment'} firm${firm.linkedin_url ? ` (LinkedIn: ${firm.linkedin_url})` : ''}.${keywordLine}
+
+Find up to 10 recent, relevant news articles, press releases, regulatory filings, interviews, conference appearances, or public announcements specifically about this person. For each item provide:
+- date: the publication date (YYYY-MM-DD format, use the current date ${new Date().toISOString().split('T')[0]} if unknown)
+- headline: a concise news headline
+- summary: a 1-3 sentence summary of the article
+- alert_status: "High" (major impact: SEC actions, leadership departures, fraud, large AUM changes, fund closures), "Medium" (notable: hires, promotions, performance news, awards, conference keynotes), "Low" (minor: routine mentions, general coverage)
+- news_status: "Positive" (good news), "Negative" (bad news), "Neutral" (informational)
+- article_url: the full URL to the article
+- source_type: "contact"
+- source_name: "${contactName}"
+
+Only include real, findable articles about this specific person. Do not fabricate news. If no news is found, return an empty array.`;
+
+    const llmResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
+      prompt,
+      add_context_from_internet: true,
+      model: 'gemini_3_flash',
+      response_json_schema: {
+        type: 'object',
+        properties: {
+          news_items: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                date: { type: 'string' },
+                headline: { type: 'string' },
+                summary: { type: 'string' },
+                alert_status: { type: 'string', enum: ['High', 'Medium', 'Low'] },
+                news_status: { type: 'string', enum: ['Positive', 'Negative', 'Neutral'] },
+                article_url: { type: 'string' },
+                source_type: { type: 'string', enum: ['firm', 'contact', 'product'] },
+                source_name: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const newsItems = llmResponse?.news_items || [];
+    if (!newsItems.length) return [];
+
+    // Deduplicate against existing news for this firm + contact (same headline + URL)
+    const existing = await base44.asServiceRole.entities.FirmNews.filter({ firm_id: firm.id }).catch(() => []);
+    const existingKeys = new Set(existing.map(n => `${(n.headline || '').toLowerCase().trim()}||${(n.article_url || '').toLowerCase().trim()}`));
+
+    const resolvedTenant = tenantId || firm.tenant_id || firm.id;
+
+    const toCreate = newsItems
+      .filter(item => {
+        const key = `${(item.headline || '').toLowerCase().trim()}||${(item.article_url || '').toLowerCase().trim()}`;
+        return !existingKeys.has(key);
+      })
+      .map(item => ({
+        tenant_id: resolvedTenant,
+        firm_id: firm.id,
+        firm_name: firm.name,
+        news_date: item.date || new Date().toISOString().split('T')[0],
+        headline: item.headline || 'Untitled',
+        summary: item.summary || '',
+        alert_status: item.alert_status || 'Low',
+        news_status: item.news_status || 'Neutral',
+        article_url: item.article_url || '',
+        source_type: 'contact',
+        source_id: contact.id,
+        source_name: contactName,
+        scrub_batch_id: batchId,
+        is_pinned: false,
+      }));
+
+    if (!toCreate.length) return [];
+
+    const created = await base44.asServiceRole.entities.FirmNews.bulkCreate(toCreate);
+    return created;
+  } catch (error) {
+    console.error(`scrubOneContact error for ${contact.first_name} ${contact.last_name}:`, error.message);
     return [];
   }
 }

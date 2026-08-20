@@ -1,0 +1,38 @@
+{
+  "name": "NewsScrubSettings",
+  "type": "object",
+  "properties": {
+    "keywords": {
+      "type": "array",
+      "description": "Keywords to prioritize during the nightly news scrub. These are passed to the AI search prompt for every firm so the scrub focuses on topics the team cares about (e.g. 'SEC action', 'fund closure', 'leadership departure').",
+      "items": {
+        "type": "string"
+      }
+    },
+    "label": {
+      "type": "string",
+      "description": "Optional display label for this settings record (defaults to 'Default')."
+    }
+  },
+  "required": [
+    "keywords"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": null,
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
