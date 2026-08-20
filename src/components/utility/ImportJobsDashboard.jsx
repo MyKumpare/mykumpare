@@ -212,9 +212,9 @@ function JobRow({ job }) {
                         </div>
                         <p className="mt-0.5 text-red-600 break-words">{f.error || f.reason}</p>
                       </div>
-                      {job.source === "product" && f.product_name ? (
+                      {job.source === "product" || job.source === "firm" ? (
                         <button
-                          onClick={() => setReImport(f)}
+                          onClick={() => setReImport({ ...f, _source: job.source })}
                           className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-1 text-[11px] rounded-md border border-teal-300 text-teal-700 bg-white hover:bg-teal-50"
                         >
                           <Wand2 className="w-3 h-3" /> Fix & re-import
@@ -249,7 +249,7 @@ function JobRow({ job }) {
         </div>
       )}
 
-      {reImport ? <ReImportRowDialog rowData={reImport} onClose={() => setReImport(null)} /> : null}
+      {reImport ? <ReImportRowDialog rowData={reImport} source={reImport._source || "product"} onClose={() => setReImport(null)} /> : null}
     </div>
   );
 }

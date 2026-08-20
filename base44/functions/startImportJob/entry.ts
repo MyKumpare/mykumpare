@@ -144,7 +144,7 @@ export default async function(req: Request): Promise<Response> {
     const mergedItems = items.filter((it: any) => it?.mergeTargetId);
     const duplicateSkipped = items
       .filter((it: any) => !it?.accept && !it?.mergeTargetId)
-      .map((it: any) => ({ row: it?.row, error: 'Skipped — duplicate firm name' }));
+      .map((it: any) => ({ row: it?.row, error: 'Skipped — duplicate firm name', name: it?.firm?.name || '', firm_types: (it?.firm?.firm_types || []).join('; ') }));
     const failed: any[] = [];
     const createdFirms: any[] = [];
     const createdItems: any[] = [];
@@ -161,7 +161,7 @@ export default async function(req: Request): Promise<Response> {
           createdItems.push({ row: batch[idx]?.row, name: f.name });
         });
       } catch (err: any) {
-        batch.forEach((b: any) => failed.push({ row: b.row, error: err?.message || 'Create failed' }));
+        batch.forEach((b: any) => failed.push({ row: b.row, error: err?.message || 'Create failed', name: b?.firm?.name || '', firm_types: (b?.firm?.firm_types || []).join('; ') }));
       }
     }
 
@@ -171,7 +171,7 @@ export default async function(req: Request): Promise<Response> {
       try {
         const target = await svc.entities.Firm.get(it.mergeTargetId);
         if (!target) {
-          failed.push({ row: it.row, error: 'Merge target firm not found' });
+          failed.push({ row: it.row, error: 'Merge target firm not found', name: it?.firm?.name || '', firm_types: (it?.firm?.firm_types || []).join('; ') });
           continue;
         }
         const updates = buildCsvMergeUpdates(target, it.firm || {});
@@ -185,7 +185,7 @@ export default async function(req: Request): Promise<Response> {
         }
         mergedCount++;
       } catch (err: any) {
-        failed.push({ row: it.row, error: err?.message || 'Merge failed' });
+        failed.push({ row: it.row, error: err?.message || 'Merge failed', name: it?.firm?.name || '', firm_types: (it?.firm?.firm_types || []).join('; ') });
       }
     }
 

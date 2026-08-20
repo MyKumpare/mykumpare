@@ -227,11 +227,11 @@ export default function CsvFirmImport() {
       });
 
       if (!raw.name) {
-        skipped.push({ row: rowIdx + 2, reason: "Missing firm name" });
+        skipped.push({ row: rowIdx + 2, reason: "Missing firm name", name: "", firm_types: raw.firm_types || "" });
         return;
       }
       if (!raw.firm_types) {
-        skipped.push({ row: rowIdx + 2, reason: "Missing firm type(s)" });
+        skipped.push({ row: rowIdx + 2, reason: "Missing firm type(s)", name: raw.name || "", firm_types: "" });
         return;
       }
 
@@ -239,7 +239,7 @@ export default function CsvFirmImport() {
         .split(/[;|]/).map((t) => t.trim()).filter(Boolean)
         .map((t) => validateEnum(t, FIRM_TYPES)).filter(Boolean);
       if (types.length === 0) {
-        skipped.push({ row: rowIdx + 2, reason: `Invalid firm type: ${raw.firm_types}` });
+        skipped.push({ row: rowIdx + 2, reason: `Invalid firm type: ${raw.firm_types}`, name: raw.name || "", firm_types: raw.firm_types || "" });
         return;
       }
 
