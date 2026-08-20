@@ -854,7 +854,829 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
         <div className="overflow-y-auto flex-1 py-2 pr-1 flex gap-3">
           <div className="flex-1 min-w-0">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-...
+            <div className="space-y-1 mb-4">
+              <TabsList className="w-full">
+                <TabsTrigger value="info" className="flex-1 flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5" /> Info
+                </TabsTrigger>
+                <TabsTrigger value="addresses" className="flex-1 flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5" /> Addresses
+                </TabsTrigger>
+                <TabsTrigger value="phones" className="flex-1 flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5" /> Phones
+                </TabsTrigger>
+              </TabsList>
+              <TabsList className="w-full">
+                <TabsTrigger value="products" className="flex-1 flex items-center gap-1.5">
+                  <Package className="w-3.5 h-3.5" /> Products
+                </TabsTrigger>
+                <TabsTrigger value="education" className="flex-1 flex items-center gap-1.5">
+                  <GraduationCap className="w-3.5 h-3.5" /> Education
+                </TabsTrigger>
+                <TabsTrigger value="experience" className="flex-1 flex items-center gap-1.5">
+                  <Briefcase className="w-3.5 h-3.5" /> Experience
+                </TabsTrigger>
+              </TabsList>
+              <TabsList className="w-full">
+                <TabsTrigger value="classification" className="flex-1 flex items-center gap-1.5">
+                  <Tag className="w-3.5 h-3.5" /> Classifications
+                </TabsTrigger>
+                <TabsTrigger value="demographics" className="flex-1 flex items-center gap-1.5">
+                  Demographics
+                </TabsTrigger>
+                <TabsTrigger value="ownership" className="flex-1 flex items-center gap-1.5">
+                  <TrendingUp className="w-3.5 h-3.5" /> Ownership
+                </TabsTrigger>
+              </TabsList>
+              <div className="flex gap-1">
+                <TabsList className="">
+                  <TabsTrigger value="activities" className="flex items-center gap-1.5">
+                    <Activity className="w-3.5 h-3.5" /> Activities
+                  </TabsTrigger>
+                  <TabsTrigger value="timeline" className="flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5" /> Timeline
+                  </TabsTrigger>
+                  <TabsTrigger value="due-diligence" className="flex items-center gap-1.5">
+                    <ClipboardCheck className="w-3.5 h-3.5" /> Due Diligence
+                  </TabsTrigger>
+                  <TabsTrigger value="chat" className="flex items-center gap-1.5">
+                    <MessageSquare className="w-3.5 h-3.5" /> Chat
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+              <div className="flex gap-1">
+                <TabsList className="">
+                  <TabsTrigger value="news" className="flex items-center gap-1.5">
+                    <Newspaper className="w-3.5 h-3.5" /> News
+                  </TabsTrigger>
+                  <TabsTrigger value="notifications" className="flex items-center gap-1.5">
+                    <Bell className="w-3.5 h-3.5" /> Notifications
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+            </div>
+
+            {/* ── INFO TAB ── */}
+            <TabsContent value="info" className="space-y-4 mt-0">
+              {/* Photo (edit mode only — in view mode it appears in the header) */}
+              {!viewMode && (
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center overflow-hidden flex-shrink-0 border-2 border-indigo-200">
+                    {photoUrl ? (
+                      <img src={photoUrl} alt="Contact" className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="w-7 h-7 text-indigo-400" />
+                    )}
+                  </div>
+                  <div>
+                    <label className="cursor-pointer">
+                      <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+                      <div className="flex items-center gap-1.5 text-sm text-indigo-600 hover:text-indigo-800 font-medium border border-indigo-200 rounded-md px-3 py-1.5 hover:bg-indigo-50 transition-colors">
+                        <Upload className="w-3.5 h-3.5" />
+                        {uploadingPhoto ? "Uploading..." : photoUrl ? "Change Photo" : "Upload Photo"}
+                      </div>
+                    </label>
+                    {photoUrl && (
+                      <button type="button" onClick={() => setPhotoUrl("")} className="mt-1 text-xs text-red-500 hover:text-red-700 ml-1">
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Salutation + First Name + Middle Name */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-gray-700">Salutation</Label>
+                  {viewMode ? ro(salutation) : (
+                    <Select value={salutation} onValueChange={setSalutation}>
+                      <SelectTrigger className="h-9"><SelectValue placeholder="—" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={null}>—</SelectItem>
+                        {SALUTATIONS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-gray-700">First Name *</Label>
+                  {viewMode ? ro(firstName) : (
+                    <Input placeholder="First name" value={firstName} onChange={(e) => setFirstName(e.target.value)} onBlur={() => setFirstName(autoCaseName(firstName))} className="h-9" />
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-gray-700">Middle Name</Label>
+                  {viewMode ? ro(middleName) : (
+                    <Input placeholder="Middle" value={middleName} onChange={(e) => setMiddleName(e.target.value)} onBlur={() => setMiddleName(autoCaseName(middleName))} className="h-9" />
+                  )}
+                </div>
+              </div>
+
+              {/* Last Name + Suffix */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2 space-y-1.5">
+                  <Label className="text-xs font-medium text-gray-700">Last Name *</Label>
+                  {viewMode ? ro(lastName) : (
+                    <Input placeholder="Last name" value={lastName} onChange={(e) => setLastName(e.target.value)} onBlur={() => setLastName(autoCaseName(lastName))} className="h-9" />
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-gray-700">Suffix</Label>
+                  {viewMode ? ro(suffix) : (
+                    <Select value={suffix} onValueChange={setSuffix}>
+                      <SelectTrigger className="h-9"><SelectValue placeholder="—" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={null}>—</SelectItem>
+                        {SUFFIXES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+              </div>
+
+              {/* Title */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Title</Label>
+                {viewMode ? ro(title) : (
+                  <Input placeholder="e.g. Portfolio Manager" value={title} onChange={(e) => setTitle(e.target.value)} className="h-9" />
+                )}
+              </div>
+
+              {/* Contact Status */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Contact Status</Label>
+                {viewMode ? (
+                  <div className="text-sm px-1">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${(contactStatus || "Active") === "Inactive" ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${(contactStatus || "Active") === "Inactive" ? "bg-red-500" : "bg-green-500"}`} />
+                      {contactStatus || "Active"}
+                    </span>
+                  </div>
+                ) : (
+                  <Select value={contactStatus || "Active"} onValueChange={setContactStatus}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Select status..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Active">Active</SelectItem>
+                      <SelectItem value="Inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              {/* Email */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Email</Label>
+                {viewMode ? (
+                  <div className="text-sm px-1">
+                    {email ? <a href={`mailto:${email}`} className="text-indigo-600 hover:underline">{email}</a> : <span className="text-gray-400 italic">—</span>}
+                  </div>
+                ) : (
+                  <Input type="email" placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="h-9" />
+                )}
+              </div>
+
+              {/* LinkedIn URL */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium text-gray-700">LinkedIn</Label>
+                </div>
+                {viewMode ? (
+                  <div className="text-sm px-1">
+                    {linkedinUrl ? <a href={linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">View LinkedIn</a> : <span className="text-gray-400 italic">—</span>}
+                  </div>
+                ) : (
+                  <div className="flex gap-1.5">
+                    <Input type="url" placeholder="https://linkedin.com/in/..." value={linkedinUrl} onChange={(e) => setLinkedinUrl(e.target.value)} className="h-9 flex-1" />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-9 px-2 text-[#0A66C2] border-[#0A66C2]/30 hover:bg-[#0A66C2]/10 gap-1"
+                      onClick={handleLinkedInLookup}
+                      disabled={linkedinLookupLoading || !firstName.trim() || !lastName.trim()}
+                      title="Find LinkedIn profile"
+                    >
+                      {linkedinLookupLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Linkedin className="w-4 h-4" />}
+                      <span className="text-xs">Find</span>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-9 px-2 text-[#0A66C2] border-[#0A66C2]/30 hover:bg-[#0A66C2]/10 gap-1"
+                      onClick={handleLinkedInPhoto}
+                      disabled={linkedinPhotoLoading || !linkedinUrl.trim()}
+                      title="Extract photo from LinkedIn profile"
+                    >
+                      {linkedinPhotoLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />}
+                      <span className="text-xs">Photo</span>
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Biography */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Biography</Label>
+                {viewMode ? (
+                  <div className="text-sm text-gray-900 px-1 whitespace-pre-wrap">{biography || <span className="text-gray-400 italic">—</span>}</div>
+                ) : (
+                  <Textarea placeholder="Brief biography..." value={biography} onChange={(e) => setBiography(e.target.value)} className="min-h-20 text-sm" />
+                )}
+              </div>
+
+              {/* Scrape Profile Page — lets the user point at the contact's
+                  individual profile URL and re-scrape it for bio, education,
+                  experience, and designations. Only shown for existing contacts
+                  (needs a contact_id to update). */}
+              {editingContact && (
+                <ScrapeProfileButton
+                  contactId={editingContact.id}
+                  bioUrl={bioUrl}
+                  onScrapeComplete={handleScrapeComplete}
+                />
+              )}
+
+              {/* Associated Firms */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Associated Firms *</Label>
+                {!viewMode && firmIds.length === 0 && (
+                  <p className="text-xs text-red-600 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" />
+                    At least one firm is required to save a contact.
+                  </p>
+                )}
+                <div className="flex flex-wrap gap-1.5 mb-1">
+                  {firmIds.map((id) => (
+                    <Badge key={id} variant="secondary" className="gap-1 pl-2 pr-1 py-0.5 text-xs">
+                      <Building2 className="w-3 h-3" />
+                      {onFirmClick ? (
+                        <button
+                          type="button"
+                          className="underline hover:text-indigo-800 text-left"
+                          onClick={() => onFirmClick(firms.find(f => f.id === id))}
+                        >
+                          {getFirmName(id)}
+                        </button>
+                      ) : (
+                        <span>{getFirmName(id)}</span>
+                      )}
+                      {!viewMode && (
+                        <button type="button" onClick={() => removeFirm(id)} className="ml-0.5 hover:text-red-500 transition-colors">
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </Badge>
+                  ))}
+                  {viewMode && firmIds.length === 0 && <span className="text-sm text-gray-400 italic px-1">—</span>}
+                </div>
+                {!viewMode && (!showFirmPicker ? (
+                  <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1 text-indigo-600 border-indigo-200 hover:bg-indigo-50" onClick={() => setShowFirmPicker(true)}>
+                    <Plus className="w-3 h-3" /> Add Firm
+                  </Button>
+                ) : (
+                  <div className="border rounded-lg overflow-hidden">
+                    <Input autoFocus placeholder="Search firms..." value={firmSearch} onChange={(e) => setFirmSearch(e.target.value)} className="h-8 border-0 border-b rounded-none text-sm" />
+                    <div className="max-h-40 overflow-y-auto">
+                      {filteredFirms.length === 0 ? (
+                        <div className="text-xs text-gray-400 italic text-center py-3">No firms available</div>
+                      ) : (
+                        filteredFirms.map((f) => (
+                          <button key={f.id} type="button" className="w-full text-left px-3 py-2 text-sm hover:bg-indigo-50 hover:text-indigo-700 transition-colors" onClick={() => addFirm(f.id)}>
+                            {f.name}<span className="ml-1.5 text-xs text-gray-400">{f.firm_type}</span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                    {showQuickAddFirm ? (
+                      <QuickAddFirmForm
+                        onFirmCreated={(newFirm) => { setFirmIds((prev) => [...prev, newFirm.id]); setShowQuickAddFirm(false); setShowFirmPicker(false); setFirmSearch(""); }}
+                        onCancel={() => setShowQuickAddFirm(false)}
+                      />
+                    ) : (
+                      <div className="border-t px-2 py-1.5 flex items-center justify-between">
+                        <button type="button" onClick={() => setShowFirmPicker(false)} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
+                        <button type="button" onClick={() => setShowQuickAddFirm(true)} className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-0.5">
+                          <Plus className="w-3 h-3" /> Add New Firm
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Notes */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Notes</Label>
+                {viewMode ? (
+                  <div className="text-sm text-gray-900 px-1 whitespace-pre-wrap">{notes || <span className="text-gray-400 italic">—</span>}</div>
+                ) : (
+                  <Textarea placeholder="Additional notes..." value={notes} onChange={(e) => setNotes(e.target.value)} className="min-h-16 text-sm" />
+                )}
+              </div>
+            </TabsContent>
+
+            {/* ── PHONES TAB ── */}
+            <TabsContent value="phones" className="space-y-3 mt-0">
+              {/* Firm phones suggestion */}
+              {!viewMode && (() => {
+                const firmPhones = firms
+                  .filter(f => firmIds.includes(f.id) && f.phones?.length > 0)
+                  .flatMap(f => f.phones.map(p => ({ ...p, _firmName: f.name })));
+                if (firmPhones.length === 0) return null;
+                const formatNum = (p) => [p.country_code ? `+${p.country_code}` : null, p.area_code ? `(${p.area_code})` : null, [p.number_mid, p.number_last].filter(Boolean).join("-") || null].filter(Boolean).join(" ") || "—";
+                const alreadyAdded = (p) => phones.some(ph => ph.area_code === p.area_code && ph.number_mid === p.number_mid && ph.number_last === p.number_last);
+                return (
+                  <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-3 space-y-2">
+                    <p className="text-xs font-medium text-indigo-700 flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5" /> Firm Phone Numbers</p>
+                    {firmPhones.map((p, i) => (
+                      <div key={i} className="flex items-center justify-between bg-white rounded-lg border border-indigo-100 px-3 py-2">
+                        <div>
+                          <div className="text-sm text-gray-800 font-mono">{formatNum(p)}</div>
+                          <div className="text-xs text-gray-400">{p.phone_type || "Phone"} · {p._firmName}</div>
+                        </div>
+                        {alreadyAdded(p) ? (
+                          <span className="text-xs text-green-600 font-medium">Added</span>
+                        ) : (
+                          <Button type="button" size="sm" variant="outline"
+                            className="h-7 text-xs text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                            onClick={() => setPhones(prev => {
+                              const hasEmpty = prev.some(ph => !ph.number_mid && !ph.number_last);
+                              const newEntry = { ...p, id: crypto.randomUUID(), is_default: false };
+                              return hasEmpty ? prev.map((ph, i) => i === prev.findIndex(ph => !ph.number_mid && !ph.number_last) ? newEntry : ph) : [...prev, newEntry];
+                            })}>
+                            Use This
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+              <DragDropContext onDragEnd={onDragEndPhones}>
+                <Droppable droppableId="contact-phones">
+                  {(provided) => (
+                    <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-3">
+                      {phones.map((ph, idx) => (
+                        <Draggable key={ph.id} draggableId={ph.id} index={idx} isDragDisabled={viewMode}>
+                          {(prov, snap) => (
+                            <div
+                              ref={prov.innerRef}
+                              {...prov.draggableProps}
+                              className={snap.isDragging ? "ring-2 ring-indigo-400 shadow-lg rounded-xl z-50" : ""}
+                            >
+                              <ContactPhoneForm
+                                phone={ph}
+                                onChange={(p) => updatePhone(idx, p)}
+                                onDelete={() => deletePhone(idx)}
+                                onSetDefault={() => setDefaultPhone(idx)}
+                                isDefault={!!ph.is_default}
+                                isEditing={!viewMode}
+                                isOnly={phones.length === 1}
+                                dragHandleProps={viewMode ? null : prov.dragHandleProps}
+                              />
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </DragDropContext>
+              <Button type="button" variant="outline" size="sm" className="w-full h-8 text-xs gap-1 text-indigo-600 border-indigo-200 hover:bg-indigo-50" onClick={() => { if (viewMode) setViewMode(false); addPhone(); }}>
+                <Plus className="w-3.5 h-3.5" /> Add Phone
+              </Button>
+            </TabsContent>
+
+            {/* ── ADDRESSES TAB ── */}
+            <TabsContent value="addresses" className="space-y-3 mt-0">
+              {/* Firm addresses suggestion */}
+              {!viewMode && (() => {
+                const firmAddresses = firms
+                  .filter(f => firmIds.includes(f.id) && f.addresses?.length > 0)
+                  .flatMap(f => f.addresses.map(a => ({ ...a, _firmName: f.name })));
+                if (firmAddresses.length === 0) return null;
+                const formatAddr = (a) => [a.address_line1, a.city, a.state, a.country].filter(Boolean).join(", ") || "—";
+                const alreadyAdded = (a) => addresses.some(ad => ad.address_line1 === a.address_line1 && ad.city === a.city && ad.postal_code === a.postal_code);
+                return (
+                  <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-3 space-y-2">
+                    <p className="text-xs font-medium text-indigo-700 flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5" /> Firm Addresses</p>
+                    {firmAddresses.map((a, i) => (
+                      <div key={i} className="flex items-center justify-between bg-white rounded-lg border border-indigo-100 px-3 py-2">
+                        <div>
+                          <div className="text-sm text-gray-800">{formatAddr(a)}</div>
+                          <div className="text-xs text-gray-400">{a.is_headquarters ? "HQ · " : ""}{a._firmName}</div>
+                        </div>
+                        {alreadyAdded(a) ? (
+                          <span className="text-xs text-green-600 font-medium">Added</span>
+                        ) : (
+                          <Button type="button" size="sm" variant="outline"
+                            className="h-7 text-xs text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                            onClick={() => setAddresses(prev => {
+                              const hasEmpty = prev.some(ad => !ad.address_line1 && !ad.city);
+                              const newEntry = { ...a, id: crypto.randomUUID(), is_primary: false, _firmName: undefined };
+                              return hasEmpty ? prev.map((ad, i) => i === prev.findIndex(ad => !ad.address_line1 && !ad.city) ? newEntry : ad) : [...prev, newEntry];
+                            })}>
+                            Use This
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+              <DragDropContext onDragEnd={onDragEndAddresses}>
+                <Droppable droppableId="contact-addresses">
+                  {(provided) => (
+                    <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-3">
+                      {addresses.map((addr, idx) => (
+                        <Draggable key={addr.id} draggableId={addr.id} index={idx} isDragDisabled={viewMode}>
+                          {(prov, snap) => (
+                            <div
+                              ref={prov.innerRef}
+                              {...prov.draggableProps}
+                              className={snap.isDragging ? "ring-2 ring-indigo-400 shadow-lg rounded-xl z-50" : ""}
+                            >
+                              <ContactAddressForm
+                                address={addr}
+                                onChange={(a) => updateAddress(idx, a)}
+                                onDelete={() => deleteAddress(idx)}
+                                onSetPrimary={() => setPrimaryAddress(idx)}
+                                isPrimary={!!addr.is_primary}
+                                isEditing={!viewMode}
+                                isOnly={addresses.length === 1}
+                                dragHandleProps={viewMode ? null : prov.dragHandleProps}
+                              />
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </DragDropContext>
+              <Button type="button" variant="outline" size="sm" className="w-full h-8 text-xs gap-1 text-indigo-600 border-indigo-200 hover:bg-indigo-50" onClick={() => { if (viewMode) setViewMode(false); addAddress(); }}>
+                <Plus className="w-3.5 h-3.5" /> Add Address
+              </Button>
+            </TabsContent>
+
+            {/* ── PRODUCTS TAB ── */}
+            <TabsContent value="products" className="mt-0">
+              <ContactProductsTab
+                contactId={editingContact?.id}
+                firmIds={firmIds}
+                onProductClick={onProductClick}
+              />
+            </TabsContent>
+
+            {/* ── EDUCATION TAB ── */}
+            <TabsContent value="education" className="mt-0">
+              <ContactEducationTab
+                education={education}
+                onChange={setEducation}
+                designations={designations}
+                onDesignationsChange={setDesignations}
+                viewMode={viewMode}
+                biography={biography}
+                onExtractFromBio={handleExtractFromBio}
+                extracting={extracting === "education"}
+              />
+            </TabsContent>
+
+            {/* ── EXPERIENCE TAB ── */}
+            <TabsContent value="experience" className="mt-0">
+              <ContactProfessionalExperienceTab
+                experience={professionalExperience}
+                onChange={setProfessionalExperience}
+                firms={firms}
+                viewMode={viewMode}
+                biography={biography}
+                onExtractFromBio={handleExtractFromBio}
+                extracting={extracting === "experience"}
+              />
+            </TabsContent>
+
+            {/* ── CLASSIFICATION TAB ── */}
+            <TabsContent value="classification" className="space-y-4 mt-0">
+              {/* Contact Status */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Contact Status</Label>
+                {viewMode ? (
+                  <div className="text-sm px-1">
+                    {contactStatus ? (
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${contactStatus === "Active" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                        {contactStatus}
+                      </span>
+                    ) : <span className="text-gray-400 italic">—</span>}
+                  </div>
+                ) : (
+                  <Select value={contactStatus} onValueChange={setContactStatus}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Select status..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Active">Active</SelectItem>
+                      <SelectItem value="Inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              {/* Employee Status */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Employee Status</Label>
+                {viewMode ? (
+                  <div className="text-sm px-1">
+                    {employeeStatus ? (
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${employeeStatus === "Employee" ? "bg-indigo-100 text-indigo-700" : "bg-amber-100 text-amber-700"}`}>
+                        {employeeStatus}
+                      </span>
+                    ) : <span className="text-gray-400 italic">—</span>}
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    {["Employee", "Non-Employee"].map(status => (
+                      <button key={status} type="button"
+                        onClick={() => setEmployeeStatus(employeeStatus === status ? "" : status)}
+                        className={`px-4 py-1.5 rounded-full text-xs font-medium border transition-colors ${employeeStatus === status
+                          ? status === "Employee" ? "bg-indigo-600 text-white border-indigo-600" : "bg-amber-600 text-white border-amber-600"
+                          : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-indigo-600"}`}>
+                        {status}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Contact Priority */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Contact Priority</Label>
+                {viewMode ? (
+                  <div className="text-sm px-1">
+                    {contactRole ? (
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${contactRole === "Primary" ? "bg-indigo-100 text-indigo-700" : "bg-gray-100 text-gray-600"}`}>
+                        {contactRole}
+                      </span>
+                    ) : <span className="text-gray-400 italic">—</span>}
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    {["Primary", "Secondary"].map(role => (
+                      <button key={role} type="button"
+                        onClick={() => setContactRole(contactRole === role ? "" : role)}
+                        className={`px-4 py-1.5 rounded-full text-xs font-medium border transition-colors ${contactRole === role
+                          ? role === "Primary" ? "bg-indigo-600 text-white border-indigo-600" : "bg-gray-600 text-white border-gray-600"
+                          : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-indigo-600"}`}>
+                        {role}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Contact Type */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Contact Type</Label>
+                <ContactTypePicker value={contactType} onChange={setContactType} viewMode={viewMode} />
+              </div>
+
+              {/* Contact Department (firm-specific, for IM / MoM / Allocator / IC firms) */}
+              {(showContactFirmRoles || contactFirmRoles.length > 0) && (
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium text-gray-700">Contact Department</Label>
+                  <ContactDepartmentPicker value={contactFirmRoles} onChange={setContactFirmRoles} viewMode={viewMode} />
+                </div>
+              )}
+
+              {/* Contact Role — searchable multi-select (always available) */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Contact Role</Label>
+                <ContactRolePicker
+                  value={contactRoles}
+                  onChange={setContactRoles}
+                  viewMode={viewMode}
+                />
+              </div>
+            </TabsContent>
+
+            {/* ── DEMOGRAPHICS TAB ── */}
+            <TabsContent value="demographics" className="space-y-4 mt-0">
+              <div className={`space-y-3 rounded-xl border p-3 ${hasUndetermined && !viewMode ? "border-red-200 bg-red-50/40" : "border-gray-100 bg-gray-50/60"}`}>
+                {/* Gender */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-gray-700">Gender</Label>
+                  {viewMode ? (
+                    <div className="text-sm px-1 text-gray-900">{gender || "Undetermined"}</div>
+                  ) : (
+                    <div className="flex gap-2 flex-wrap">
+                      {["Undetermined", "Male", "Female"].map(g => (
+                        <button key={g} type="button" onClick={() => setGender(g)}
+                          className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${gender === g
+                            ? g === "Undetermined" ? "bg-red-500 text-white border-red-500" : "bg-indigo-600 text-white border-indigo-600"
+                            : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-indigo-600"}`}>
+                          {g}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Ethnicity */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-gray-700">Ethnicity</Label>
+                  {viewMode ? (
+                    <div className="text-sm px-1 text-gray-900">{ethnicity?.length > 0 ? ethnicity.join(", ") : "Undetermined"}</div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button"
+                        className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${ethnicity.length === 0 ? "bg-red-500 text-white border-red-500" : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-indigo-600"}`}
+                        onClick={() => setEthnicity([])}>
+                        Undetermined
+                      </button>
+                      {["African American", "Asian American", "Caucasian", "Latino American", "Native American Indian", "Native Alaskan Indian"].map(e => {
+                        const selected = ethnicity.includes(e);
+                        return (
+                          <button key={e} type="button"
+                            onClick={() => setEthnicity(selected ? ethnicity.filter(x => x !== e) : [...ethnicity, e])}
+                            className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${selected ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-indigo-600"}`}>
+                            {e}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Veteran Status */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-gray-700">Veteran Status</Label>
+                  {viewMode ? (
+                    <div className="text-sm px-1 text-gray-900">{veteranStatus || "Undetermined"}</div>
+                  ) : (
+                    <div className="flex gap-2 flex-wrap">
+                      {["Undetermined", "Veteran Owned", "Non-Veteran Owned"].map(v => (
+                        <button key={v} type="button" onClick={() => setVeteranStatus(v)}
+                          className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${veteranStatus === v
+                            ? v === "Undetermined" ? "bg-red-500 text-white border-red-500" : "bg-indigo-600 text-white border-indigo-600"
+                            : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-indigo-600"}`}>
+                          {v}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Disability Status */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-gray-700">Disability Status</Label>
+                  {viewMode ? (
+                    <div className="text-sm px-1 text-gray-900">{disabilityStatus || "Undetermined"}</div>
+                  ) : (
+                    <div className="flex gap-2 flex-wrap">
+                      {["Undetermined", "Disabled", "Non-Disabled"].map(d => (
+                        <button key={d} type="button" onClick={() => setDisabilityStatus(d)}
+                          className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${disabilityStatus === d
+                            ? d === "Undetermined" ? "bg-red-500 text-white border-red-500" : "bg-indigo-600 text-white border-indigo-600"
+                            : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-indigo-600"}`}>
+                          {d}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* ── OWNERSHIP TAB ── */}
+            <TabsContent value="ownership" className="space-y-4 mt-0">
+              {editingContact && Object.keys(contactOwnershipByFirm).length > 0 ? (
+                <div className="rounded-lg border border-indigo-100 bg-indigo-50/40 divide-y divide-indigo-100">
+                  {Object.entries(contactOwnershipByFirm).map(([firmId, history]) => {
+                    const firmName = getFirmName(firmId);
+                    const latest = history[0];
+                    return (
+                      <div key={firmId} className="p-2.5 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold text-indigo-700">{firmName}</span>
+                          <span className="text-sm font-bold text-indigo-600">{latest.percentage?.toFixed(2)}%</span>
+                        </div>
+                        <div className="space-y-0.5">
+                          {history.map((h, i) => (
+                            <div key={i} className="flex items-center justify-between text-xs text-gray-500">
+                              {onNavigateToOwnership && h.ownershipId ? (
+                                <button
+                                  type="button"
+                                  onClick={() => { onOpenChange(false); onNavigateToOwnership(firmId, h.ownershipId); }}
+                                  className="text-indigo-600 hover:underline font-medium"
+                                >
+                                  {new Date(h.effective_date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+                                </button>
+                              ) : (
+                                <span>{new Date(h.effective_date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}</span>
+                              )}
+                              <span className="font-medium text-gray-700">{h.percentage?.toFixed(2)}% · {h.owner_type}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-3 py-8">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500">Not an Equity Owner</span>
+                  <p className="text-sm text-gray-400 italic">No ownership records found.</p>
+                  {onNavigateToOwnership && firmIds.length > 0 && (
+                    <div className="flex flex-col items-center gap-2 mt-1">
+                      <p className="text-xs text-gray-400">Add ownership via a firm's Ownership tab:</p>
+                      <div className="flex flex-wrap gap-1.5 justify-center">
+                        {firmIds.map((fid) => (
+                          <button
+                            key={fid}
+                            type="button"
+                            onClick={() => { onOpenChange(false); onNavigateToOwnership(fid, null); }}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-colors"
+                          >
+                            <Plus className="w-3 h-3" />
+                            {getFirmName(fid)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </TabsContent>
+            {/* ── ACTIVITIES TAB ── */}
+            <TabsContent value="activities" className="mt-0">
+              <ContactActivitiesTab
+                contactId={editingContact?.id}
+                contactName={[firstName, lastName].filter(Boolean).join(" ")}
+                contactFirmId={firmIds?.[0]}
+                contactFirmName={firmIds?.[0] ? firms?.find?.(f => f.id === firmIds[0])?.name : undefined}
+              />
+            </TabsContent>
+            {/* ── TIMELINE TAB ── */}
+            <TabsContent value="timeline" className="mt-0">
+              <ContactTimeline
+                contactId={editingContact?.id}
+                contactNotes={notes}
+              />
+            </TabsContent>
+            {/* ── DUE DILIGENCE TAB ── */}
+            <TabsContent value="due-diligence" className="mt-0">
+              <ContactDueDiligenceTab
+                contactId={editingContact?.id}
+                contactName={[firstName, lastName].filter(Boolean).join(" ")}
+                onContactClick={onContactClick ? (contact) => { onOpenChange(false); onContactClick(contact); } : undefined}
+                onProductClick={onProductClick ? (product) => { onOpenChange(false); onProductClick(product); } : undefined}
+              />
+            </TabsContent>
+            {/* ── NOTIFICATIONS TAB ── */}
+            <TabsContent value="notifications" className="mt-0">
+              <ContactNotificationsTab
+                contactId={editingContact?.id}
+                contactName={[firstName, lastName].filter(Boolean).join(" ")}
+                onContactClick={onContactClick ? (contact) => { onOpenChange(false); onContactClick(contact); } : undefined}
+                onProductClick={onProductClick ? (product) => { onOpenChange(false); onProductClick(product); } : undefined}
+                onOpenChat={(chatId) => { setHighlightChatId(chatId); setActiveTab("chat"); }}
+              />
+            </TabsContent>
+
+            {/* ── CHAT TAB ── */}
+            <TabsContent value="chat" className="space-y-3 mt-0">
+              {editingContact ? (
+                <ContactChatTab
+                  contactId={editingContact.id}
+                  contactName={[editingContact.first_name, editingContact.last_name].filter(Boolean).join(" ")}
+                  firmIds={firmIds}
+                  firms={firms}
+                  highlightChatId={highlightChatId}
+                />
+              ) : (
+                <div className="text-sm text-gray-400 italic py-4 text-center">
+                  Save the contact to start chatting.
+                </div>
+              )}
+            </TabsContent>
+
+            {/* ── NEWS TAB ── */}
+            <TabsContent value="news" className="mt-0">
+              {editingContact ? (
+                <ContactNewsTab
+                  contactId={editingContact.id}
+                  contactName={[editingContact.first_name, editingContact.last_name].filter(Boolean).join(" ")}
+                  firmId={firmIds?.[0]}
+                  firmName={firmIds?.[0] ? firms?.find?.(f => f.id === firmIds[0])?.name : undefined}
+                />
+              ) : (
+                <div className="text-sm text-gray-400 italic py-4 text-center">
+                  Save the contact to manage news.
+                </div>
+              )}
           </Tabs>
           </div>
           {editingContact && (
