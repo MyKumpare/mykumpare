@@ -422,12 +422,25 @@ export default function CsvProductImport() {
       const next = items.map((it, i) => (i === idx ? { ...it, ...patch } : it));
       setReviewItems({ items: next, skipped });
     };
-    const setFirm = (idx, firmId, firmName) => {
+    const applyFirmMapping = (idx, firmId, firmName) => {
       const it = items[idx];
       const product = { ...it.product, firm_id: firmId, firm_name: firmName };
       const dups = findProductDuplicates(it.product.name, productsByFirm[firmId] || []);
       const isExactProduct = dups.some((d) => d.score === 1);
-      updateItem(idx, { firmId: firmId, product, productDups: dups, accept: dups.length === 0, autoSkipped: isExactProduct, createFirm: false, mergeTargetName: firmName });
+      return { firmId, product, productDups: dups, accept: dups.length === 0, autoSkipped: isExactProduct, createFirm: false, mergeTargetName: firmName };
+    };
+    const setFirm = (idx, firmId, firmName) => {
+      const sourceName = items[idx].firmName;
+      const next = items.map((it, i) => {
+        if (i === idx) return { ...it, ...applyFirmMapping(i, firmId, firmName) };
+        // Auto-map all other pending firm-review items with the same imported
+        // firm name so the user doesn't have to map them one by one.
+        if (it.firmName === sourceName && !it.firmId && !it.createFirm && it.firmDups.length > 0) {
+          return { ...it, ...applyFirmMapping(i, firmId, firmName) };
+        }
+        return it;
+      });
+      setReviewItems({ items: next, skipped });
       setFirmPickerIdx(null);
     };
     const skipFirmReview = (idx) => {
