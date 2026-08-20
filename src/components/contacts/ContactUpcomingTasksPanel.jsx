@@ -3,11 +3,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import {
-  CheckCircle2, Clock, AlertCircle, Calendar, User, Paperclip, Loader2, ClipboardList,
+  CheckCircle2, Clock, AlertCircle, Calendar, User, Loader2, ClipboardList,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "@/components/ui/use-toast";
-import TaskDetailModal from "@/components/activity/TaskDetailModal";
+import { lazyDialog } from "@/components/common/lazyDialog";
+
+const TaskDetailModal = lazyDialog(() => import("@/components/activity/TaskDetailModal"));
 
 const STATUS_STYLES = {
   "Not Started": { color: "text-gray-500", bg: "bg-gray-100", icon: Clock },
