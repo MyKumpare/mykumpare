@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Radar, Newspaper, LayoutList, ClipboardList, CalendarDays } from "lucide-react";
+import { Radar, Newspaper, LayoutList, ClipboardList, CalendarDays, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import NewsAlertsModal from "@/components/firms/NewsAlertsModal";
 import FollowUpTaskPickerModal from "@/components/activity/FollowUpTaskPickerModal";
@@ -29,15 +29,26 @@ export default function MonitorPage() {
             <Radar className="w-5 h-5" />
             <h1 className="text-base font-bold">Monitor</h1>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-white hover:bg-white/15"
-            onClick={() => navigate("/ActivityCalendar")}
-          >
-            <CalendarDays className="w-4 h-4" />
-            <span className="hidden sm:inline">Open Calendar</span>
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-white hover:bg-white/15"
+              onClick={() => navigate("/ActivityCalendar")}
+            >
+              <CalendarDays className="w-4 h-4" />
+              <span className="hidden sm:inline">Open Calendar</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-white/15"
+              onClick={() => navigate("/")}
+              title="Close Monitor"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
