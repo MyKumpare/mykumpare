@@ -123,7 +123,9 @@ function parseKeywords(query) {
 }
 // Count how many (keyword, field) pairs match across the provided field values.
 // A field matches a keyword when the keyword appears as a substring of that
-// field's value. Returns 0 if nothing matches.
+// field's value. Returns the count only when ALL keywords match at least one
+// field (AND logic); partial matches return 0 so multi-word queries like
+// "tina williams" don't flood results with every contact named Tina.
 function scoreFields(keywords, fields) {
   if (!keywords.length) return 0;
   const haystacks = (Array.isArray(fields) ? fields : [fields])
@@ -131,13 +133,15 @@ function scoreFields(keywords, fields) {
     .map((v) => v.toLowerCase());
   let score = 0;
   for (const kw of keywords) {
+    let matched = false;
     for (const hay of haystacks) {
       if (hay.includes(kw)) {
-        score += 1;
-        // A keyword only needs to match once per entity for ranking purposes
+        matched = true;
         break;
       }
     }
+    if (matched) score += 1;
+    else return 0; // a keyword didn't match anywhere → exclude this entity
   }
   return score;
 }
