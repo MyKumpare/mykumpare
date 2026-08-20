@@ -13,6 +13,7 @@ import {
   ShieldCheck, AlertCircle, Activity, FileText, CalendarRange,
 } from "lucide-react";
 import AumAllocationSummary from "@/components/analytics/AumAllocationSummary";
+import NewsSentimentTrendChart from "@/components/analytics/NewsSentimentTrendChart";
 import { format, subDays, eachDayOfInterval, parseISO } from "date-fns";
 import { useAuth } from "@/lib/AuthContext";
 
@@ -428,6 +429,9 @@ export default function OverviewDashboard() {
             </ResponsiveContainer>
           )}
         </div>
+
+        {/* News Sentiment Trend — Last 30 Days */}
+        <NewsSentimentTrendChart scope={dataScope} linkedFirmId={linkedFirmId} />
 
         {/* Active Questionnaires & Logged Activities by Firm Type */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">

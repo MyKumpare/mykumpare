@@ -3,17 +3,23 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Newspaper, Plus, X, Loader2, Save, Sparkles, Clock } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import {
+  Newspaper, Plus, X, Loader2, Save, Sparkles, Clock,
+  History, AlertTriangle, CheckCircle2, Info,
+} from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 
-// ── News Scrub Settings — admin-managed keywords that focus the nightly
-//    news scrub on priority topics across all firms ──
+// ── News Scrub Settings — admin-managed keywords and historical scraping
+//    preferences that focus the nightly news scrub on priority topics ──
 export default function NewsScrubSettings() {
   const queryClient = useQueryClient();
   const [keywords, setKeywords] = useState([]);
   const [keywordInput, setKeywordInput] = useState("");
   const [saving, setSaving] = useState(false);
   const [runningScrub, setRunningScrub] = useState(false);
+  const [runningHistorical, setRunningHistorical] = useState(false);
+  const [includeHistorical, setIncludeHistorical] = useState(true);
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ["news_scrub_settings"],
@@ -65,17 +71,33 @@ export default function NewsScrubSettings() {
     setRunningScrub(false);
   };
 
+  const handleRunHistorical = async () => {
+    setRunningHistorical(true);
+    try {
+      const res = await base44.functions.invoke('scrubFirmNewsHistorical', { mode: 'all' });
+      const count = res.data?.total_firms || 0;
+      toast({
+        title: "Historical scrub started",
+        description: `Enqueued ${count} firm${count > 1 ? "s" : ""} for deep-dive historical news recovery. Results will appear in the News tabs as they are found.`,
+      });
+    } catch (e) {
+      toast({ title: "Historical scrub failed", description: e.message, variant: "destructive" });
+    }
+    setRunningHistorical(false);
+  };
+
   const hasChanges = JSON.stringify(keywords) !== JSON.stringify(existing?.keywords || []);
 
   return (
     <div className="space-y-4 py-1">
+      {/* Header */}
       <div className="flex items-center gap-2">
         <div className="w-9 h-9 rounded-full bg-rose-50 flex items-center justify-center">
           <Newspaper className="w-4 h-4 text-rose-600" />
         </div>
         <div>
           <p className="text-sm font-semibold text-gray-700">News Scrub Settings</p>
-          <p className="text-xs text-gray-400">Configure the keywords and schedule for the nightly news scrub.</p>
+          <p className="text-xs text-gray-400">Configure keywords and historical scraping preferences for the nightly news scrub.</p>
         </div>
       </div>
 
@@ -160,6 +182,73 @@ export default function NewsScrubSettings() {
                 {saving ? "Saving..." : "Save Keywords"}
               </Button>
             </div>
+          </>
+        )}
+      </div>
+
+      {/* Historical scraping preferences */}
+      <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <History className="w-4 h-4 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-700">Historical Scraping</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Deep-dive news recovery searches across three time periods to find older articles the nightly scrub may have missed.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span className="text-xs text-gray-500">{includeHistorical ? "Enabled" : "Disabled"}</span>
+            <Switch checked={includeHistorical} onCheckedChange={setIncludeHistorical} />
+          </div>
+        </div>
+
+        {includeHistorical && (
+          <>
+            {/* Time period strategy */}
+            <div className="rounded-lg bg-amber-50/50 border border-amber-100 p-3 space-y-2">
+              <p className="text-xs font-semibold text-amber-800 flex items-center gap-1.5">
+                <Info className="w-3.5 h-3.5" />
+                Search Strategy — 3 Time Periods
+              </p>
+              <div className="space-y-1.5">
+                {[
+                  { label: "Recent", desc: "Past year (2025–2026)", icon: Clock },
+                  { label: "Mid-term", desc: "2022–2024", icon: History },
+                  { label: "Founding era", desc: "Earliest available through 2021", icon: History },
+                ].map((p) => (
+                  <div key={p.label} className="flex items-center gap-2 text-xs">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+                    <span className="font-medium text-gray-700">{p.label}:</span>
+                    <span className="text-gray-500">{p.desc}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Warning note */}
+            <div className="flex items-start gap-2 rounded-lg bg-gray-50 border border-gray-200 p-2.5">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-gray-500">
+                Historical scrubs run in the background and may take several minutes per firm. Results are deduplicated against existing news records.
+              </p>
+            </div>
+
+            {/* Run button */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full h-9 gap-1.5 text-xs border-amber-300 text-amber-700 hover:bg-amber-50"
+              onClick={handleRunHistorical}
+              disabled={runningHistorical}
+            >
+              {runningHistorical ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <History className="w-3.5 h-3.5" />}
+              {runningHistorical ? "Starting historical scrub..." : "Run Historical Scrub (All Firms)"}
+            </Button>
           </>
         )}
       </div>
