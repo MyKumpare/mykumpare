@@ -6,7 +6,8 @@ import DueDiligenceKanbanBoard, { computeApprovalStatus } from "@/components/fir
 import DdSummaryChart from "@/components/firms/DdSummaryChart";
 import AddDueDiligenceDialog from "@/components/firms/AddDueDiligenceDialog";
 import DdFilterTabs, { getDdCounts, filterDdRecords } from "@/components/firms/DdFilterTabs";
-import { LayoutDashboard, List, Loader2 } from "lucide-react";
+import { LayoutDashboard, List, Loader2, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 const GROUP_MODES = [
@@ -17,6 +18,7 @@ const GROUP_MODES = [
 
 export default function DueDiligenceKanban() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [groupMode, setGroupMode] = useState("approval_status");
   const [showDialog, setShowDialog] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -97,14 +99,26 @@ export default function DueDiligenceKanban() {
           <LayoutDashboard className="w-5 h-5 text-indigo-600" />
           <h2 className="text-lg font-bold text-gray-800">Due Diligence Pipeline</h2>
         </div>
-        <Button
-          type="button"
-          size="sm"
-          className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1"
-          onClick={() => { setEditing(null); setShowDialog(true); }}
-        >
-          <List className="w-4 h-4" /> Add Due Diligence
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1"
+            onClick={() => { setEditing(null); setShowDialog(true); }}
+          >
+            <List className="w-4 h-4" /> Add Due Diligence
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="gap-1"
+            onClick={() => navigate("/")}
+            title="Close and return to dashboard"
+          >
+            <X className="w-4 h-4" /> Close
+          </Button>
+        </div>
       </div>
 
       {/* Filter tabs */}
