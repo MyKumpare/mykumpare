@@ -18,7 +18,6 @@ import {
 import DueDiligenceTemplateFlow from "./DueDiligenceTemplateFlow";
 import { cn } from "@/lib/utils";
 import { findContactDuplicates } from "@/components/contacts/contactDuplicateCheck";
-import { useFirmOwner } from "@/components/admin/useFirmOwner";
 import StatusOptionSelect from "./StatusOptionSelect";
 import { syncDdNotifications, syncProductStatusFromDd } from "./ddNotificationSync";
 import { saveStageNoteVersions } from "./ddNoteVersionSync";
@@ -375,10 +374,8 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
   const [deleting, setDeleting] = useState(false);
   const [showAnalystHistory, setShowAnalystHistory] = useState(false);
 
-  // Analysts are sourced from the OWNER firm (the firm that owns this app),
-  // not the firm under due diligence. The owner firm is resolved from the
-  // FirmOwner config by matching its name to a Firm record.
-  const firmOwner = useFirmOwner();
+  // Analysts (primary & secondary) are sourced from "Xponance, Inc." — the
+  // firm that performs due diligence — not the firm under due diligence.
   const { data: currentUser } = useQuery({
     queryKey: ["me"],
     queryFn: () => base44.auth.me(),
