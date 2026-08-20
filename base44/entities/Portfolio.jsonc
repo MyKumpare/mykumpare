@@ -296,12 +296,12 @@
       "$or": [
         {
           "user_condition": {
-            "role": "user"
+            "role": "admin"
           }
         },
         {
           "user_condition": {
-            "role": "admin"
+            "data.linked_firm_id": "69b18412204649ac3a5b4c88"
           }
         }
       ]
@@ -310,11 +310,13 @@
     "update": {
       "$or": [
         {
-          "created_by_id": "{{user.id}}"
+          "user_condition": {
+            "role": "admin"
+          }
         },
         {
           "user_condition": {
-            "role": "admin"
+            "data.linked_firm_id": "69b18412204649ac3a5b4c88"
           }
         }
       ]
@@ -322,11 +324,13 @@
     "delete": {
       "$or": [
         {
-          "created_by_id": "{{user.id}}"
+          "user_condition": {
+            "role": "admin"
+          }
         },
         {
           "user_condition": {
-            "role": "admin"
+            "data.linked_firm_id": "69b18412204649ac3a5b4c88"
           }
         }
       ]
