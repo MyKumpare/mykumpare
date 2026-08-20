@@ -2,9 +2,10 @@ import React, { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/use-toast";
 import {
   Loader2, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight,
-  Activity, RefreshCw, Building, Users, FileWarning, Wand2,
+  Activity, RefreshCw, Building, Users, FileWarning, Wand2, Trash2,
 } from "lucide-react";
 import ReImportRowDialog from "./ReImportRowDialog";
 
@@ -46,6 +47,22 @@ function fmtDate(d) {
 function JobRow({ job }) {
   const [open, setOpen] = useState(false);
   const [reImport, setReImport] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const queryClient = useQueryClient();
+
+  const handleDelete = async () => {
+    if (!window.confirm("Delete this import log? This removes the log entry only — imported records are kept.")) return;
+    setDeleting(true);
+    try {
+      await base44.entities.ImportJob.delete(job.id);
+      queryClient.invalidateQueries({ queryKey: ["import-jobs"] });
+      toast({ title: "Import log deleted" });
+    } catch (err) {
+      toast({ title: "Delete failed", description: err?.message || "Failed", variant: "destructive" });
+    } finally {
+      setDeleting(false);
+    }
+  };
   const meta = statusMeta(job.status);
   const Icon = meta.icon;
   const total = job.total || 0;
@@ -95,6 +112,16 @@ function JobRow({ job }) {
             {meta.label}
           </span>
           <span className="text-[11px] text-gray-400 tabular-nums">{progress}/{total}</span>
+          {job.status === "completed" || job.status === "failed" ? (
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              title="Delete this import log"
+              className="ml-1 p-1 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-50"
+            >
+              {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+            </button>
+          ) : null}
         </div>
       </div>
 
