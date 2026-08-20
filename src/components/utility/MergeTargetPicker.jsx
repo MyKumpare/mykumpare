@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Search, ArrowLeft } from "lucide-react";
 
 // Lets the user explicitly choose which existing firm a CSV row should merge
@@ -19,6 +19,16 @@ export default function MergeTargetPicker({ duplicates = [], allFirms = [], impo
     () => new Set(duplicates.map((d) => d.firm?.id).filter(Boolean)),
     [duplicates]
   );
+
+  // Auto-select the top suggested firm on open so the name-choice options
+  // (Keep existing / Use imported) appear immediately, without requiring
+  // the user to click the suggestion first.
+  useEffect(() => {
+    if (!selected && duplicates.length > 0 && duplicates[0].firm) {
+      setSelected({ id: duplicates[0].firm.id, name: duplicates[0].name });
+      setNameChoice("existing");
+    }
+  }, [duplicates, selected]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
