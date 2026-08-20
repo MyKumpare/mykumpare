@@ -18,7 +18,6 @@ import { format, subDays, eachDayOfInterval, parseISO } from "date-fns";
 import { useAuth } from "@/lib/AuthContext";
 
 const FIRM_TYPES = [
-  "Manager of Managers",
   "Investment Manager",
   "Allocator",
   "Investment Consultant",

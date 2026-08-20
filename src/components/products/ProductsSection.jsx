@@ -8,10 +8,9 @@ import SectionExpandCollapse from "@/components/common/SectionExpandCollapse";
 import ProductStatusBadge from "@/components/products/ProductStatusBadge";
 import { useViewMode } from "@/hooks/useViewMode";
 
-const PRODUCT_GROUP_TYPES = ["Manager of Managers", "Investment Manager"];
+const PRODUCT_GROUP_TYPES = ["Investment Manager"];
 
 const GROUP_COLORS = {
-  "Manager of Managers": "bg-violet-100 text-violet-700",
   "Investment Manager": "bg-blue-100 text-blue-700",
 };
 

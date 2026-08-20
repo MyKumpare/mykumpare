@@ -12,7 +12,6 @@ import { toast } from "@/components/ui/use-toast";
 import { findFirmNameDuplicates } from "@/components/firms/firmNameDuplicateCheck";
 
 const FIRM_TYPE_OPTIONS = [
-  "Manager of Managers",
   "Investment Manager",
   "Allocator",
   "Investment Consultant",

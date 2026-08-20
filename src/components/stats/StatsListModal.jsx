@@ -5,7 +5,6 @@ import { Building2, Package, Search, X, LayoutList } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
 const FIRM_TYPES = [
-  "Manager of Managers",
   "Investment Manager",
   "Allocator",
   "Investment Consultant",
@@ -19,7 +18,6 @@ const PRODUCT_TYPES = [
 ];
 
 const TYPE_COLORS = {
-  "Manager of Managers": "bg-violet-100 text-violet-700",
   "Investment Manager": "bg-blue-100 text-blue-700",
   "Allocator": "bg-emerald-100 text-emerald-700",
   "Investment Consultant": "bg-amber-100 text-amber-700",

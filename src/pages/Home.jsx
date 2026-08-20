@@ -66,7 +66,6 @@ import { useFirmOwner } from "@/components/admin/useFirmOwner";
 import { useVoiceSearch } from "@/hooks/useVoiceSearch";
 
 const FIRM_TYPES = [
-  "Manager of Managers",
   "Investment Manager",
   "Allocator",
   "Investment Consultant",

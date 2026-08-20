@@ -9,7 +9,6 @@ import { X, Loader2 } from "lucide-react";
 
 const PRODUCT_TYPES = ["Investment Manager Product", "Multi-Manager Product"];
 const FIRM_TYPES = [
-  "Manager of Managers",
   "Investment Manager",
   "Allocator",
   "Investment Consultant",

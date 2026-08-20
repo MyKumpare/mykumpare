@@ -16,7 +16,6 @@ const PRODUCT_TYPES = ["Investment Manager Product", "Multi-Manager Product"];
 const PRODUCT_STATUSES = ["Not Reviewed", "In-Process", "On-Hold", "Rejected", "Approved", "Removed"];
 
 const FIRM_TYPES = [
-  "Manager of Managers",
   "Investment Manager",
   "Allocator",
   "Investment Consultant",

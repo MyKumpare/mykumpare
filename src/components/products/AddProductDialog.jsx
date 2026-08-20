@@ -39,7 +39,7 @@ import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 // Map product type -> firm type(s) that can be associated
 const PRODUCT_TYPE_TO_FIRM_TYPE = {
   "Investment Manager Product": "Investment Manager",
-  "Multi-Manager Product": "Manager of Managers",
+  "Multi-Manager Product": "Investment Manager",
 };
 
 const PRODUCT_TYPES = ["Investment Manager Product", "Multi-Manager Product"];
