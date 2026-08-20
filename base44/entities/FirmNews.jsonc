@@ -78,6 +78,13 @@
       "type": "string",
       "description": "Name of the related contact or product (denormalized)"
     },
+    "tagged_contact_ids": {
+      "type": "array",
+      "description": "IDs of contacts mentioned in this news article. Tagged contacts see the news item in their contact News tab.",
+      "items": {
+        "type": "string"
+      }
+    },
     "scrub_batch_id": {
       "type": "string",
       "description": "ID of the scrub batch that produced this news item (for deduplication)"

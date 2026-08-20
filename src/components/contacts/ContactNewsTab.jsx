@@ -32,7 +32,10 @@ export default function ContactNewsTab({ contactId, contactName, firmId, firmNam
   });
 
   const activeNews = useMemo(
-    () => newsItems.filter(n => !n.deleted_at && n.source_type === "contact" && n.source_id === contactId),
+    () => newsItems.filter(n => !n.deleted_at && (
+      (n.source_type === "contact" && n.source_id === contactId) ||
+      (n.tagged_contact_ids || []).includes(contactId)
+    )),
     [newsItems, contactId]
   );
 

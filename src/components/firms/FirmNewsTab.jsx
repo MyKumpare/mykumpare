@@ -14,6 +14,7 @@ import { format } from "date-fns";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { toast } from "@/components/ui/use-toast";
+import ContactTaggerPopover from "./ContactTaggerPopover";
 
 const QUILL_MODULES = {
   toolbar: [
@@ -58,6 +59,16 @@ export default function FirmNewsTab({ firmId, firmName }) {
     queryFn: () => base44.entities.FirmNews.filter({ firm_id: firmId }, "-news_date", 200),
     enabled: !!firmId,
   });
+
+  // Fetch contacts linked to this firm so the user can tag them on news items
+  const { data: allContacts = [] } = useQuery({
+    queryKey: ["contacts"],
+    queryFn: () => base44.entities.Contact.list("-created_date", 5000),
+  });
+  const firmContacts = useMemo(
+    () => allContacts.filter(c => !c.deleted_at && (c.firm_ids || []).includes(firmId)),
+    [allContacts, firmId]
+  );
 
   const activeNews = useMemo(() => newsItems.filter(n => !n.deleted_at), [newsItems]);
 
@@ -129,6 +140,11 @@ export default function FirmNewsTab({ firmId, firmName }) {
     await base44.entities.FirmNews.update(id, data);
     queryClient.invalidateQueries({ queryKey: ["firm_news", firmId] });
     queryClient.invalidateQueries({ queryKey: ["pinned_news_alerts"] });
+  };
+
+  const handleTagContacts = async (item, taggedContactIds) => {
+    await base44.entities.FirmNews.update(item.id, { tagged_contact_ids: taggedContactIds });
+    queryClient.invalidateQueries({ queryKey: ["firm_news", firmId] });
   };
 
   return (
@@ -293,6 +309,8 @@ export default function FirmNewsTab({ firmId, firmName }) {
               onSaveEdit={(data) => { handleUpdate(item.id, data); setEditingId(null); }}
               onTogglePin={() => handleTogglePin(item)}
               onDelete={() => handleDelete(item)}
+              contacts={firmContacts}
+              onTagContacts={(ids) => handleTagContacts(item, ids)}
             />
           ))}
         </div>
@@ -302,7 +320,7 @@ export default function FirmNewsTab({ firmId, firmName }) {
 }
 
 // ── News item card (view / expand / edit) ───────────────────────────────────
-export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, onCancelEdit, onSaveEdit, onTogglePin, onDelete }) {
+export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, onCancelEdit, onSaveEdit, onTogglePin, onDelete, contacts = [], onTagContacts }) {
   const alertStyle = ALERT_STYLES[item.alert_status] || ALERT_STYLES.Low;
   const statusStyle = STATUS_STYLES[item.news_status] || STATUS_STYLES.Neutral;
   const AlertIcon = alertStyle.icon;
@@ -364,6 +382,18 @@ export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, 
           {/* Summary (always visible) */}
           {item.summary && (
             <p className="text-xs text-gray-600 mt-1 line-clamp-2">{item.summary}</p>
+          )}
+
+          {/* Tagged contacts (always visible) */}
+          {onTagContacts && (
+            <div className="mt-1.5">
+              <ContactTaggerPopover
+                contacts={contacts}
+                taggedIds={item.tagged_contact_ids || []}
+                onTagChange={onTagContacts}
+                size="xs"
+              />
+            </div>
           )}
 
           {/* Expanded content */}
