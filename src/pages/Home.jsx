@@ -39,6 +39,7 @@ import PickerSection from "../components/common/PickerSection";
 import DueDiligenceNavSection from "../components/firms/DueDiligenceNavSection";
 import MonitorNavSection from "../components/activity/MonitorNavSection";
 import ReportingNavSection from "../components/reports/ReportingNavSection";
+import DashboardNavSection from "../components/dashboard/DashboardNavSection";
 import AnalyticsSection from "../components/analytics/AnalyticsSection";
 
 const ReportsPickerModal = lazyDialog(() => import("../components/reports/ReportsPickerModal"));
@@ -948,6 +949,9 @@ export default function Home() {
             </button>
           </div>
         )}
+        {/* Dashboard section — link to Overview dashboard page */}
+        <DashboardNavSection onOpenDashboard={() => navigate("/Overview")} />
+
         {/* Due Diligence section — with Documents, Forms, Templates nested as sub-items */}
         <div ref={formsRef} />
         <DueDiligenceNavSection
