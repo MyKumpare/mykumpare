@@ -1,11 +1,56 @@
 import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { X, ShieldCheck, Plus, Search, Pencil, ClipboardCheck, LayoutGrid, List } from "lucide-react";
+import { X, ShieldCheck, Plus, Search, Pencil, ClipboardCheck, LayoutGrid, List, ArrowDownUp } from "lucide-react";
 import AddDueDiligenceDialog from "../firms/AddDueDiligenceDialog";
 import DueDiligenceKanbanBoard from "./DueDiligenceKanbanBoard";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
 import { useViewMode } from "@/hooks/useViewMode";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const SORT_OPTIONS = [
+  { value: "newest", label: "Newest" },
+  { value: "oldest", label: "Oldest" },
+  { value: "product_asc", label: "Product (A–Z)" },
+  { value: "product_desc", label: "Product (Z–A)" },
+  { value: "firm_asc", label: "Firm (A–Z)" },
+  { value: "analyst_asc", label: "Primary Analyst (A–Z)" },
+  { value: "status_asc", label: "Status (A–Z)" },
+  { value: "process_asc", label: "Process Status (A–Z)" },
+];
+
+function applySort(records, sortBy) {
+  const sorted = [...records];
+  const cmpStr = (a, b) => (a || "").localeCompare(b || "", undefined, { sensitivity: "base" });
+  switch (sortBy) {
+    case "oldest":
+      sorted.sort((a, b) => new Date(a.created_date || 0) - new Date(b.created_date || 0));
+      break;
+    case "product_asc":
+      sorted.sort((a, b) => cmpStr(a.product_name, b.product_name));
+      break;
+    case "product_desc":
+      sorted.sort((a, b) => cmpStr(b.product_name, a.product_name));
+      break;
+    case "firm_asc":
+      sorted.sort((a, b) => cmpStr(a.firm_name, b.firm_name));
+      break;
+    case "analyst_asc":
+      sorted.sort((a, b) => cmpStr(a.primary_analyst_name, b.primary_analyst_name));
+      break;
+    case "status_asc":
+      sorted.sort((a, b) => cmpStr(a.status, b.status));
+      break;
+    case "process_asc":
+      sorted.sort((a, b) => cmpStr(a.process_status, b.process_status));
+      break;
+    case "newest":
+    default:
+      sorted.sort((a, b) => new Date(b.created_date || 0) - new Date(a.created_date || 0));
+      break;
+  }
+  return sorted;
+}
 
 const STATUS_STYLES = {
   "Pipeline": "bg-blue-50 text-blue-700 border-blue-200",
@@ -28,6 +73,7 @@ export default function DueDiligencePickerModal({ open, onClose, onFirmClick, on
   const [editing, setEditing] = useState(null);
   const [viewMode, setViewMode] = useViewMode("dueDiligence"); // 'list' | 'card' | 'kanban' (persisted, shared with nav section)
   const [kanbanField, setKanbanField] = useState("status"); // 'status' | 'process_status'
+  const [sortBy, setSortBy] = useState("newest");
 
   const { data: records = [], isLoading } = useQuery({
     queryKey: ["due-diligence-all"],
@@ -64,16 +110,18 @@ export default function DueDiligencePickerModal({ open, onClose, onFirmClick, on
   const q = search.toLowerCase();
   const filtered = useMemo(() => {
     const active = records.filter(r => !r.deleted_at);
-    if (!q) return active;
-    return active.filter(r =>
-      (r.product_name || "").toLowerCase().includes(q) ||
-      (r.firm_name || "").toLowerCase().includes(q) ||
-      (r.primary_analyst_name || "").toLowerCase().includes(q) ||
-      (r.secondary_analyst_name || "").toLowerCase().includes(q) ||
-      (r.status || "").toLowerCase().includes(q) ||
-      (r.process_status || "").toLowerCase().includes(q)
-    );
-  }, [records, q]);
+    const matched = q
+      ? active.filter(r =>
+          (r.product_name || "").toLowerCase().includes(q) ||
+          (r.firm_name || "").toLowerCase().includes(q) ||
+          (r.primary_analyst_name || "").toLowerCase().includes(q) ||
+          (r.secondary_analyst_name || "").toLowerCase().includes(q) ||
+          (r.status || "").toLowerCase().includes(q) ||
+          (r.process_status || "").toLowerCase().includes(q)
+        )
+      : active;
+    return applySort(matched, sortBy);
+  }, [records, q, sortBy]);
 
   const handleSubmit = (data) => {
     if (editing) updateMutation.mutate({ id: editing.id, data });
@@ -157,9 +205,9 @@ export default function DueDiligencePickerModal({ open, onClose, onFirmClick, on
           </div>
         )}
 
-        {/* Search */}
-        <div className="px-4 py-3 border-b border-gray-100">
-          <div className="relative">
+        {/* Search + Sort */}
+        <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
             <input
               autoFocus
@@ -175,6 +223,21 @@ export default function DueDiligencePickerModal({ open, onClose, onFirmClick, on
               </button>
             )}
           </div>
+          {viewMode !== "kanban" && (
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="h-9 w-[170px] text-xs shrink-0 gap-1.5">
+                <ArrowDownUp className="w-3.5 h-3.5 text-gray-400" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SORT_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         {/* List / Kanban */}
