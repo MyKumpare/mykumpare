@@ -77,11 +77,19 @@ export function findFirmNameDuplicates(newFirmName, existingFirms) {
     if (!existing.name) continue;
 
     const reasons = [];
+    const rawMatch = newFirmName.trim().toLowerCase() === existing.name.trim().toLowerCase();
     const sim = nameSimilarity(newFirmName, existing.name);
 
-    // Exact normalized match
-    if (sim === 1) {
+    if (rawMatch) {
+      // True exact match — raw strings are identical (case-insensitive).
       reasons.push("Firm name is an exact match.");
+      duplicates.push({ firm: existing, name: existing.name, score: 1, reasons });
+    } else if (sim === 1) {
+      // Normalized match but raw strings differ (e.g. one has a legal suffix
+      // like "LLC" the other lacks). Treat as a near match, not exact, so the
+      // user can choose which name version to keep on the firm record.
+      reasons.push("Firm name is a near match (differs only by legal suffix or punctuation).");
+      duplicates.push({ firm: existing, name: existing.name, score: 0.99, reasons });
     } else if (sim >= 0.7) {
       // Only flag near-matches if the normalized names share the same first
       // (distinguishing) token. Generic shared words like "investment
@@ -96,16 +104,8 @@ export function findFirmNameDuplicates(newFirmName, existingFirms) {
       } else {
         reasons.push(`Name is similar to "${existing.name}".`);
       }
-    } else {
-      continue;
+      duplicates.push({ firm: existing, name: existing.name, score: sim, reasons });
     }
-
-    duplicates.push({
-      firm: existing,
-      name: existing.name,
-      score: sim,
-      reasons,
-    });
   }
 
   return duplicates.sort((a, b) => b.score - a.score);

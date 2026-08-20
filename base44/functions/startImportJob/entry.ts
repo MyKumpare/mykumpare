@@ -56,6 +56,25 @@ export default async function(req: Request): Promise<Response> {
         }
       }
 
+      // Apply user-chosen name updates to mapped existing firms (near-match
+      // name resolution). If the user chose the imported name over the
+      // existing firm's name, update the firm record so the canonical name
+      // matches the user's choice.
+      const firmNameUpdates: Record<string, string> = {};
+      for (const it of accepted) {
+        if (it.firmId && it.mergeTargetName) firmNameUpdates[it.firmId] = it.mergeTargetName;
+      }
+      for (const fid of Object.keys(firmNameUpdates)) {
+        try {
+          const firm = await svc.entities.Firm.get(fid);
+          if (firm && firmNameUpdates[fid] && firmNameUpdates[fid] !== firm.name) {
+            await svc.entities.Firm.update(fid, { name: firmNameUpdates[fid] });
+          }
+        } catch (err: any) {
+          // non-fatal — name update is best-effort
+        }
+      }
+
       // Resolve each accepted product to a firm id, then bulk-create.
       const toCreate: { product: any; row: any }[] = [];
       for (const it of accepted) {

@@ -427,7 +427,7 @@ export default function CsvProductImport() {
       const product = { ...it.product, firm_id: firmId, firm_name: firmName };
       const dups = findProductDuplicates(it.product.name, productsByFirm[firmId] || []);
       const isExactProduct = dups.some((d) => d.score === 1);
-      updateItem(idx, { firmId: firmId, product, productDups: dups, accept: dups.length === 0, autoSkipped: isExactProduct, createFirm: false });
+      updateItem(idx, { firmId: firmId, product, productDups: dups, accept: dups.length === 0, autoSkipped: isExactProduct, createFirm: false, mergeTargetName: firmName });
       setFirmPickerIdx(null);
     };
     const skipFirmReview = (idx) => {
@@ -488,9 +488,9 @@ export default function CsvProductImport() {
                       duplicates={it.firmDups}
                       allFirms={firms}
                       importedName={it.firmName}
-                      onPick={(firmId, _chosenName) => {
+                      onPick={(firmId, chosenName) => {
                         const f = (firms || []).find((x) => x.id === firmId);
-                        setFirm(i, firmId, f ? f.name : it.firmName);
+                        setFirm(i, firmId, chosenName || (f ? f.name : it.firmName));
                       }}
                     />
                   )}
