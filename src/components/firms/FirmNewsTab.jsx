@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Newspaper, Plus, Trash2, Pin, PinOff, ExternalLink, Sparkles, Loader2,
-  AlertTriangle, ChevronDown, ChevronUp, Edit2, Check, X, Calendar, History,
+  AlertTriangle, ChevronDown, ChevronUp, Edit2, Check, X, Calendar, History, Search,
 } from "lucide-react";
 import { format } from "date-fns";
 import ReactQuill from "react-quill";
@@ -24,19 +24,19 @@ const QUILL_MODULES = {
   ],
 };
 
-const ALERT_STYLES = {
+export const ALERT_STYLES = {
   High: { color: "text-red-600", bg: "bg-red-50", border: "border-red-200", icon: AlertTriangle },
   Medium: { color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-200", icon: AlertTriangle },
   Low: { color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-200", icon: ChevronDown },
 };
 
-const STATUS_STYLES = {
+export const STATUS_STYLES = {
   Positive: { color: "text-green-600", bg: "bg-green-50", border: "border-green-200" },
   Negative: { color: "text-red-600", bg: "bg-red-50", border: "border-red-200" },
   Neutral: { color: "text-gray-500", bg: "bg-gray-50", border: "border-gray-200" },
 };
 
-function fmt(dateStr) {
+export function fmt(dateStr) {
   if (!dateStr) return "—";
   try { return format(new Date(dateStr + "T00:00:00"), "MMM d, yyyy"); } catch { return dateStr; }
 }
@@ -49,6 +49,9 @@ export default function FirmNewsTab({ firmId, firmName }) {
   const [editingId, setEditingId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
   const [alertFilter, setAlertFilter] = useState("All");
+  const [keywords, setKeywords] = useState([]);
+  const [keywordInput, setKeywordInput] = useState("");
+  const [showKeywords, setShowKeywords] = useState(false);
 
   const { data: newsItems = [], isLoading } = useQuery({
     queryKey: ["firm_news", firmId],
@@ -72,7 +75,7 @@ export default function FirmNewsTab({ firmId, firmName }) {
   const handleScrub = async () => {
     setScrubbing(true);
     try {
-      const res = await base44.functions.invoke('scrubFirmNews', { mode: 'single', firm_id: firmId });
+      const res = await base44.functions.invoke('scrubFirmNews', { mode: 'single', firm_id: firmId, keywords: keywords.length ? keywords : undefined });
       const count = res.data?.created || 0;
       if (count > 0) {
         toast({ title: `Scrub complete`, description: `${count} news item${count > 1 ? "s" : ""} found.` });
@@ -89,7 +92,7 @@ export default function FirmNewsTab({ firmId, firmName }) {
   const handleHistoricalScrub = async () => {
     setHistoricalScrubbing(true);
     try {
-      await base44.functions.invoke('scrubFirmNewsHistorical', { mode: 'single', firm_id: firmId });
+      await base44.functions.invoke('scrubFirmNewsHistorical', { mode: 'single', firm_id: firmId, keywords: keywords.length ? keywords : undefined });
       toast({ title: "Historical scrub started", description: "Searching across multiple time periods — news will appear shortly." });
       // Poll for results since the scrub runs in the background
       setTimeout(() => queryClient.invalidateQueries({ queryKey: ["firm_news", firmId] }), 15000);
@@ -101,6 +104,14 @@ export default function FirmNewsTab({ firmId, firmName }) {
     }
     setHistoricalScrubbing(false);
   };
+
+  const addKeyword = () => {
+    const k = keywordInput.trim();
+    if (k && !keywords.includes(k)) setKeywords([...keywords, k]);
+    setKeywordInput("");
+  };
+
+  const removeKeyword = (k) => setKeywords(keywords.filter(x => x !== k));
 
   const handleTogglePin = async (item) => {
     await base44.entities.FirmNews.update(item.id, { is_pinned: !item.is_pinned });
@@ -149,6 +160,17 @@ export default function FirmNewsTab({ firmId, firmName }) {
             type="button"
             variant="ghost"
             size="sm"
+            className={`h-7 px-2 gap-1 text-xs ${keywords.length ? "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50" : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"}`}
+            onClick={() => setShowKeywords(v => !v)}
+            title="Set keywords to focus the news scrub"
+          >
+            <Search className="w-3.5 h-3.5" />
+            Keywords{keywords.length > 0 && ` (${keywords.length})`}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
             className="h-7 px-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 gap-1 text-xs"
             onClick={handleScrub}
             disabled={scrubbing}
@@ -179,6 +201,46 @@ export default function FirmNewsTab({ firmId, firmName }) {
           </Button>
         </div>
       </div>
+
+      {/* Keywords input */}
+      {showKeywords && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50/30 p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-emerald-700">Scrub Keywords</span>
+            <button type="button" onClick={() => setShowKeywords(false)} className="text-gray-400 hover:text-gray-600">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <p className="text-[11px] text-gray-500">
+            Add keywords to prioritize specific topics (e.g. "SEC action", "fund closure"). The AI scrub will flag matching articles with higher alert levels.
+          </p>
+          <div className="flex gap-1.5">
+            <Input
+              value={keywordInput}
+              onChange={e => setKeywordInput(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addKeyword(); } }}
+              placeholder="Type a keyword and press Enter..."
+              className="h-8 text-sm flex-1"
+            />
+            <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={addKeyword}>Add</Button>
+          </div>
+          {keywords.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {keywords.map(k => (
+                <span key={k} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
+                  {k}
+                  <button type="button" onClick={() => removeKeyword(k)} className="hover:text-red-500">
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+              <button type="button" onClick={() => setKeywords([])} className="text-xs text-gray-400 hover:text-red-500 ml-1">
+                Clear all
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* AI scrub info banner */}
       {activeNews.length === 0 && !addingManual && (
@@ -240,7 +302,7 @@ export default function FirmNewsTab({ firmId, firmName }) {
 }
 
 // ── News item card (view / expand / edit) ───────────────────────────────────
-function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, onCancelEdit, onSaveEdit, onTogglePin, onDelete }) {
+export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, onCancelEdit, onSaveEdit, onTogglePin, onDelete }) {
   const alertStyle = ALERT_STYLES[item.alert_status] || ALERT_STYLES.Low;
   const statusStyle = STATUS_STYLES[item.news_status] || STATUS_STYLES.Neutral;
   const AlertIcon = alertStyle.icon;
@@ -352,7 +414,7 @@ function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, onCance
 }
 
 // ── News item form (add / edit) ─────────────────────────────────────────────
-function NewsItemForm({ item, firmName, onSave, onCancel }) {
+export function NewsItemForm({ item, firmName, onSave, onCancel }) {
   const [headline, setHeadline] = useState(item?.headline || "");
   const [newsDate, setNewsDate] = useState(item?.news_date || new Date().toISOString().split("T")[0]);
   const [summary, setSummary] = useState(item?.summary || "");

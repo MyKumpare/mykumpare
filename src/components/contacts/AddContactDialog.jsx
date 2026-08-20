@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload, TrendingUp, Tag, GraduationCap, Briefcase, Activity, Package, AlertTriangle, Linkedin, Loader2, ClipboardCheck, Image as ImageIcon, Bell, MessageSquare, Mail, Clock } from "lucide-react";
+import { X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload, TrendingUp, Tag, GraduationCap, Briefcase, Activity, Package, AlertTriangle, Linkedin, Loader2, ClipboardCheck, Image as ImageIcon, Bell, MessageSquare, Mail, Clock, Newspaper } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
@@ -27,6 +27,7 @@ import ContactDueDiligenceTab from "./ContactDueDiligenceTab";
 import ContactNotificationsTab from "./ContactNotificationsTab";
 import ContactChatTab from "./ContactChatTab";
 import ContactProductsTab from "./ContactProductsTab";
+import ContactNewsTab from "./ContactNewsTab";
 import ScrapeProfileButton from "./ScrapeProfileButton";
 import ContactRolePicker from "./ContactRolePicker";
 import ContactDepartmentPicker from "./ContactDepartmentPicker";
@@ -903,6 +904,9 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
               </div>
               <div className="flex gap-1">
                 <TabsList className="">
+                  <TabsTrigger value="news" className="flex items-center gap-1.5">
+                    <Newspaper className="w-3.5 h-3.5" /> News
+                  </TabsTrigger>
                   <TabsTrigger value="notifications" className="flex items-center gap-1.5">
                     <Bell className="w-3.5 h-3.5" /> Notifications
                   </TabsTrigger>
@@ -1653,6 +1657,22 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
               ) : (
                 <div className="text-sm text-gray-400 italic py-4 text-center">
                   Save the contact to start chatting.
+                </div>
+              )}
+            </TabsContent>
+
+            {/* ── NEWS TAB ── */}
+            <TabsContent value="news" className="mt-0">
+              {editingContact ? (
+                <ContactNewsTab
+                  contactId={editingContact.id}
+                  contactName={[editingContact.first_name, editingContact.last_name].filter(Boolean).join(" ")}
+                  firmId={firmIds?.[0]}
+                  firmName={firmIds?.[0] ? firms?.find?.(f => f.id === firmIds[0])?.name : undefined}
+                />
+              ) : (
+                <div className="text-sm text-gray-400 italic py-4 text-center">
+                  Save the contact to manage news.
                 </div>
               )}
             </TabsContent>

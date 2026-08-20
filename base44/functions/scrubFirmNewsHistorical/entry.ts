@@ -99,7 +99,7 @@ const TIME_PERIODS = [
 ];
 
 // ── Scrub a single firm: search the web for historical news across multiple time periods ──
-async function scrubOneFirmHistorical(base44, firm, batchId, tenantId = null) {
+async function scrubOneFirmHistorical(base44, firm, batchId, tenantId = null, keywords = null) {
   try {
     // Gather context: contacts and products for this firm
     const [allContacts, allProducts] = await Promise.all([
@@ -119,6 +119,10 @@ async function scrubOneFirmHistorical(base44, firm, batchId, tenantId = null) {
     const firmTypes = firm.firm_types?.length ? firm.firm_types : firm.firm_type ? [firm.firm_type] : [];
     const foundedYear = firm.year_founded ? ` (founded ${firm.year_founded})` : '';
 
+    const keywordLine = keywords && keywords.length
+      ? `\nPay special attention to articles matching these priority topics: ${keywords.join(', ')}. Flag any matching items with a higher alert_status.`
+      : '';
+
     // Run a search for each time period and collect all results
     const allNewsItems = [];
 
@@ -126,7 +130,7 @@ async function scrubOneFirmHistorical(base44, firm, batchId, tenantId = null) {
       const prompt = `Search for historical news and public information about "${firm.name}", a ${firmTypes.join(' / ') || 'investment'} firm${foundedYear}${firm.website ? ` (website: ${firm.website})` : ''}.
 Focus specifically on news from ${period.label}.
 ${contactNames ? `Key contacts to look for: ${contactNames}.` : ''}
-${productNames ? `Products to look for: ${productNames}.` : ''}
+${productNames ? `Products to look for: ${productNames}.` : ''}${keywordLine}
 
 Find up to 10 news articles, press releases, regulatory filings, leadership announcements, fund launches/closures, performance news, awards, or public announcements from ${period.label} about this firm, its contacts, or its products. For each item provide:
 - date: the publication date (YYYY-MM-DD format; if only month/year is known, use the first of that month)
@@ -215,6 +219,115 @@ Only include real, findable articles. Do not fabricate news. If no news is found
     return created;
   } catch (error) {
     console.error(`scrubOneFirmHistorical error for ${firm.name}:`, error.message);
+    return [];
+  }
+}
+
+// ── Scrub a single contact: search the web for historical news across multiple time periods ──
+async function scrubOneContactHistorical(base44, firm, contact, batchId, tenantId = null, keywords = null) {
+  try {
+    const contactName = [contact.first_name, contact.last_name].filter(Boolean).join(' ');
+    if (!contactName) return [];
+
+    const firmTypes = firm.firm_types?.length ? firm.firm_types : firm.firm_type ? [firm.firm_type] : [];
+    const titleLine = contact.title ? `, ${contact.title}` : '';
+
+    const keywordLine = keywords && keywords.length
+      ? `\nPay special attention to articles matching these priority topics: ${keywords.join(', ')}. Flag any matching items with a higher alert_status.`
+      : '';
+
+    const allNewsItems = [];
+
+    for (const period of TIME_PERIODS) {
+      const prompt = `Search for historical news and public information about "${contactName}"${titleLine} at "${firm.name}", a ${firmTypes.join(' / ') || 'investment'} firm.
+Focus specifically on news from ${period.label}.${keywordLine}
+
+Find up to 10 news articles, press releases, regulatory filings, interviews, conference appearances, leadership announcements, or public announcements from ${period.label} specifically about this person. For each item provide:
+- date: the publication date (YYYY-MM-DD format; if only month/year is known, use the first of that month)
+- headline: a concise news headline
+- summary: a 1-3 sentence summary of the article
+- alert_status: "High" (major impact: SEC actions, leadership departures, fraud, large AUM changes, fund closures, mergers/acquisitions), "Medium" (notable: hires, promotions, performance news, awards, conference keynotes, AUM milestones), "Low" (minor: routine mentions, general coverage)
+- news_status: "Positive" (good news), "Negative" (bad news), "Neutral" (informational)
+- article_url: the full URL to the article
+- source_type: "contact"
+- source_name: "${contactName}"
+
+Only include real, findable articles about this specific person. Do not fabricate news. If no news is found for this period, return an empty array.`;
+
+      try {
+        const llmResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
+          prompt,
+          add_context_from_internet: true,
+          model: 'gemini_3_flash',
+          response_json_schema: {
+            type: 'object',
+            properties: {
+              news_items: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    date: { type: 'string' },
+                    headline: { type: 'string' },
+                    summary: { type: 'string' },
+                    alert_status: { type: 'string', enum: ['High', 'Medium', 'Low'] },
+                    news_status: { type: 'string', enum: ['Positive', 'Negative', 'Neutral'] },
+                    article_url: { type: 'string' },
+                    source_type: { type: 'string', enum: ['firm', 'contact', 'product'] },
+                    source_name: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        const items = llmResponse?.news_items || [];
+        if (items.length) allNewsItems.push(...items);
+      } catch (err) {
+        console.error(`Historical contact scrub error for ${contactName} (${period.label}):`, err.message);
+      }
+    }
+
+    if (!allNewsItems.length) return [];
+
+    // Deduplicate against existing news for this firm + contact (same headline + URL)
+    const existing = await base44.asServiceRole.entities.FirmNews.filter({ firm_id: firm.id }).catch(() => []);
+    const existingKeys = new Set(existing.map(n => `${(n.headline || '').toLowerCase().trim()}||${(n.article_url || '').toLowerCase().trim()}`));
+
+    const seenInBatch = new Set();
+    const resolvedTenant = tenantId || firm.tenant_id || firm.id;
+
+    const toCreate = allNewsItems
+      .filter(item => {
+        const key = `${(item.headline || '').toLowerCase().trim()}||${(item.article_url || '').toLowerCase().trim()}`;
+        if (existingKeys.has(key) || seenInBatch.has(key)) return false;
+        seenInBatch.add(key);
+        return true;
+      })
+      .map(item => ({
+        tenant_id: resolvedTenant,
+        firm_id: firm.id,
+        firm_name: firm.name,
+        news_date: item.date || new Date().toISOString().split('T')[0],
+        headline: item.headline || 'Untitled',
+        summary: item.summary || '',
+        alert_status: item.alert_status || 'Low',
+        news_status: item.news_status || 'Neutral',
+        article_url: item.article_url || '',
+        source_type: 'contact',
+        source_id: contact.id,
+        source_name: contactName,
+        scrub_batch_id: batchId,
+        is_pinned: false,
+      }));
+
+    if (!toCreate.length) return [];
+
+    const created = await base44.asServiceRole.entities.FirmNews.bulkCreate(toCreate);
+    return created;
+  } catch (error) {
+    console.error(`scrubOneContactHistorical error for ${contact.first_name} ${contact.last_name}:`, error.message);
     return [];
   }
 }
