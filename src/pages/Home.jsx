@@ -679,12 +679,6 @@ export default function Home() {
       { label: "Forms", icon: ClipboardCheck, onClick: () => setQuestionnairePickerOpen(true) },
       { label: "Templates", icon: FileText, onClick: () => setTemplatesPickerOpen(true) },
     ] },
-    { label: "Monitor", icon: Radar, ref: null, color: "text-rose-600", activeBg: "bg-rose-50", onClick: () => navigate("/ActivityCalendar"), submenu: [
-      { label: "Activity", icon: ClipboardList, onClick: () => setActivityPickerOpen(true) },
-      { label: "Calendar", icon: CalendarDays, onClick: () => navigate("/ActivityCalendar") },
-      { label: "Tasks", icon: LayoutList, onClick: () => setTaskPickerOpen(true) },
-      { label: "News Alerts", icon: Newspaper, onClick: () => setNewsAlertsOpen(true) },
-    ] },
     { label: "Reporting", icon: FileBarChart, ref: null, color: "text-cyan-600", activeBg: "bg-cyan-50", onClick: () => setAnalyticsLaunchOpen(true), submenu: [
       { label: "Analytics", icon: LineChart, onClick: () => setAnalyticsLaunchOpen(true) },
       { label: "Reports", icon: FileText, onClick: () => setReportsPickerOpen(true) },
@@ -954,6 +948,7 @@ export default function Home() {
           activitiesCount={activities.filter(a => !a.deleted_at).length}
           tasksCount={followUpTasks.filter(t => !t.deleted_at).length}
           newsCount={pinnedNewsCount}
+          onOpenMonitor={() => navigate("/Monitor")}
           onOpenActivity={() => setActivityPickerOpen(true)}
           onAddActivity={() => { setActivityLogDefaultTab("activity"); setActivityLogModalOpen(true); }}
           onOpenCalendar={() => navigate("/ActivityCalendar")}

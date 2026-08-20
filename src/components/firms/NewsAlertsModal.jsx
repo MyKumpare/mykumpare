@@ -25,7 +25,7 @@ function fmt(dateStr) {
   try { return format(new Date(dateStr + "T00:00:00"), "MMM d, yyyy"); } catch { return dateStr; }
 }
 
-export default function NewsAlertsModal({ open, onClose, onFirmClick }) {
+export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) {
   const queryClient = useQueryClient();
   const [expandedId, setExpandedId] = useState(null);
 
@@ -53,12 +53,12 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick }) {
     queryClient.invalidateQueries({ queryKey: ["firm_news", item.firm_id] });
   };
 
-  if (!open) return null;
+  if (!inline && !open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl mx-4 max-h-[85vh] flex flex-col">
+    <div className={inline ? "" : "fixed inset-0 z-50 flex items-center justify-center"}>
+      {!inline && <div className="absolute inset-0 bg-black/40" onClick={onClose} />}
+      <div className={inline ? "bg-white rounded-2xl w-full flex flex-col border border-gray-100" : "relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl mx-4 max-h-[85vh] flex flex-col"}>
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
           <div className="flex items-center gap-2">
@@ -70,9 +70,11 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick }) {
               <p className="text-xs text-gray-400">Pinned news across all firms</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X className="w-4 h-4" />
-          </button>
+          {!inline && (
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {/* Body */}

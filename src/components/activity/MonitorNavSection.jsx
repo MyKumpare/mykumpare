@@ -14,6 +14,7 @@ export default function MonitorNavSection({
   activitiesCount,
   tasksCount,
   newsCount,
+  onOpenMonitor,
   onOpenActivity,
   onAddActivity,
   onOpenCalendar,
@@ -83,7 +84,7 @@ export default function MonitorNavSection({
               : <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
             }
           </button>
-          <button onClick={() => setExpanded((v) => !v)} className="flex items-center gap-2 group">
+          <button onClick={onOpenMonitor} className="flex items-center gap-2 group">
             <Radar className="w-4 h-4 text-rose-600" />
             <span className="text-sm font-semibold text-gray-700 group-hover:text-gray-900">Monitor</span>
             <span className="text-xs text-gray-400 font-normal">({(activitiesCount ?? 0) + (tasksCount ?? 0)})</span>

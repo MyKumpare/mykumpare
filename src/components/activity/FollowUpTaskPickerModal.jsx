@@ -32,7 +32,7 @@ function stripHtml(html) {
   return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 
-export default function FollowUpTaskPickerModal({ open, onClose, onAddTask, onTaskClick }) {
+export default function FollowUpTaskPickerModal({ open, onClose, onAddTask, onTaskClick, inline }) {
   const handleTaskClick = (task) => {
     setPreviousViewMode(viewMode);
     onTaskClick(task);
@@ -213,12 +213,12 @@ export default function FollowUpTaskPickerModal({ open, onClose, onAddTask, onTa
     });
   }, [tasks, contacts]);
 
-  if (!open) return null;
+  if (!inline && !open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-8 px-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+    <div className={inline ? "" : "fixed inset-0 z-50 flex items-start justify-center pt-8 px-4"}>
+      {!inline && <div className="absolute inset-0 bg-black/40" onClick={onClose} />}
+      <div className={inline ? "bg-white rounded-2xl w-full flex flex-col border border-gray-100" : "relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col"}>
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
@@ -226,9 +226,11 @@ export default function FollowUpTaskPickerModal({ open, onClose, onAddTask, onTa
             Follow-up Tasks
             <span className="text-xs text-gray-400 font-normal">({sorted.length})</span>
           </h2>
-          <button type="button" onClick={onClose}>
-            <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
-          </button>
+          {!inline && (
+            <button type="button" onClick={onClose}>
+              <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+            </button>
+          )}
         </div>
 
         {/* Search and Filters */}
@@ -509,16 +511,17 @@ export default function FollowUpTaskPickerModal({ open, onClose, onAddTask, onTa
           )}
         </div>
 
-        {/* Footer */}
-        <div className="px-5 py-3 border-t border-gray-100">
-          <button
-            type="button"
-            onClick={() => { onAddTask(); onClose(); }}
-            className="w-full flex items-center justify-center gap-2 h-9 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium transition-colors"
-          >
-            <Plus className="w-4 h-4" /> Add Follow-up Task
-          </button>
-        </div>
+        {!inline && (
+          <div className="px-5 py-3 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={() => { onAddTask?.(); onClose?.(); }}
+              className="w-full flex items-center justify-center gap-2 h-9 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium transition-colors"
+            >
+              <Plus className="w-4 h-4" /> Add Follow-up Task
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

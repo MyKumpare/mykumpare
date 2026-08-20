@@ -26,7 +26,7 @@ function fmt(dateStr) {
   try { return format(new Date(dateStr + "T00:00:00"), "MMM d, yyyy"); } catch { return dateStr; }
 }
 
-export default function ActivityLogPickerModal({ open, onClose, onAddActivity, onActivityClick }) {
+export default function ActivityLogPickerModal({ open, onClose, onAddActivity, onActivityClick, inline }) {
   const [search, setSearch] = useState("");
   const [collapsedTypes, setCollapsedTypes] = useState({});
   const [collapsedFirms, setCollapsedFirms] = useState({});
@@ -125,12 +125,12 @@ export default function ActivityLogPickerModal({ open, onClose, onAddActivity, o
 
   const totalCount = filtered.length;
 
-  if (!open) return null;
+  if (!inline && !open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 px-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[78vh] overflow-hidden flex flex-col">
+    <div className={inline ? "" : "fixed inset-0 z-50 flex items-start justify-center pt-16 px-4"}>
+      {!inline && <div className="absolute inset-0 bg-black/40" onClick={onClose} />}
+      <div className={inline ? "bg-white rounded-2xl w-full flex flex-col border border-gray-100" : "relative bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[78vh] overflow-hidden flex flex-col"}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
@@ -139,9 +139,11 @@ export default function ActivityLogPickerModal({ open, onClose, onAddActivity, o
             Activity Log
             <span className="text-xs text-gray-400 font-normal">({totalCount})</span>
           </h2>
-          <button type="button" onClick={onClose}>
-            <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
-          </button>
+          {!inline && (
+            <button type="button" onClick={onClose}>
+              <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+            </button>
+          )}
         </div>
 
         {/* Search */}
@@ -294,16 +296,17 @@ export default function ActivityLogPickerModal({ open, onClose, onAddActivity, o
           )}
         </div>
 
-        {/* Footer */}
-        <div className="px-4 py-3 border-t border-gray-100">
-          <button
-            type="button"
-            onClick={() => { onAddActivity(); onClose(); }}
-            className="w-full flex items-center justify-center gap-2 h-9 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium transition-colors"
-          >
-            <Plus className="w-4 h-4" /> Add Activity Log
-          </button>
-        </div>
+        {!inline && (
+          <div className="px-4 py-3 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={() => { onAddActivity?.(); onClose?.(); }}
+              className="w-full flex items-center justify-center gap-2 h-9 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium transition-colors"
+            >
+              <Plus className="w-4 h-4" /> Add Activity Log
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
