@@ -17,10 +17,27 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
   const [viewMode, setViewMode] = useViewMode("portfolios");
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [allocatorFilter, setAllocatorFilter] = useState("all");
+  const [benchmarkFilter, setBenchmarkFilter] = useState("all");
+  const [managerFilter, setManagerFilter] = useState("all");
 
   useEffect(() => {
     if (forceExpanded !== undefined) setExpanded(forceExpanded);
   }, [forceExpanded]);
+
+  // Derive unique filter options from the loaded portfolios
+  const allocatorOptions = useMemo(
+    () => Array.from(new Set(portfolios.map((p) => p.allocator_name).filter(Boolean))).sort(),
+    [portfolios]
+  );
+  const benchmarkOptions = useMemo(
+    () => Array.from(new Set(portfolios.map((p) => p.primary_benchmark_name).filter(Boolean))).sort(),
+    [portfolios]
+  );
+  const managerOptions = useMemo(
+    () => Array.from(new Set(portfolios.map((p) => p.advisor_firm_name).filter(Boolean))).sort(),
+    [portfolios]
+  );
 
   const searchLower = search.toLowerCase().trim();
   const filteredPortfolios = useMemo(() => {
@@ -36,8 +53,17 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
     if (typeFilter !== "all") {
       result = result.filter((p) => (p.advisor_type || "No Advisor") === typeFilter);
     }
+    if (allocatorFilter !== "all") {
+      result = result.filter((p) => (p.allocator_name || "Unknown") === allocatorFilter);
+    }
+    if (benchmarkFilter !== "all") {
+      result = result.filter((p) => (p.primary_benchmark_name || "") === benchmarkFilter);
+    }
+    if (managerFilter !== "all") {
+      result = result.filter((p) => (p.advisor_firm_name || "Unknown") === managerFilter);
+    }
     return result;
-  }, [portfolios, searchLower, typeFilter]);
+  }, [portfolios, searchLower, typeFilter, allocatorFilter, benchmarkFilter, managerFilter]);
 
   // Group portfolios by advisor type → allocator → portfolio name
   const grouped = useMemo(() => {
@@ -159,13 +185,34 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
       {expanded && (
         <div className="space-y-3">
           <SectionSearch value={search} onChange={setSearch} placeholder="Search by portfolio, firm, or type..." />
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-2">
             <SectionTypeFilter
               label="Filter by type"
               value={typeFilter}
               onChange={setTypeFilter}
               options={ADVISOR_TYPES}
               allLabel="All Advisor Types"
+            />
+            <SectionTypeFilter
+              label="Allocator"
+              value={allocatorFilter}
+              onChange={setAllocatorFilter}
+              options={allocatorOptions}
+              allLabel="All Allocators"
+            />
+            <SectionTypeFilter
+              label="Primary Benchmark"
+              value={benchmarkFilter}
+              onChange={setBenchmarkFilter}
+              options={benchmarkOptions}
+              allLabel="All Benchmarks"
+            />
+            <SectionTypeFilter
+              label="Investment Manager"
+              value={managerFilter}
+              onChange={setManagerFilter}
+              options={managerOptions}
+              allLabel="All Managers"
             />
             {viewMode === "list" && (
               <SectionExpandCollapse onExpandAll={handleExpandAll} onCollapseAll={handleCollapseAll} />
