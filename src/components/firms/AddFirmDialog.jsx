@@ -315,11 +315,24 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   };
 
   const handleDeleteAddress = (index) => {
+    const deletedId = addresses[index]?.id;
     const remaining = addresses.filter((_, i) => i !== index);
     if (addresses[index].is_headquarters && remaining.length > 0) {
       remaining[0].is_headquarters = true;
     }
     setAddresses(remaining);
+    // Reassign any phones that pointed at the removed address to the first
+    // remaining address (or clear the link if none remain).
+    if (deletedId && phones.some((p) => p.address_id === deletedId)) {
+      const fallbackAddr = remaining[0];
+      const fallbackCode = fallbackAddr ? getCountryCodeFromCountryName(fallbackAddr.country) : "";
+      setPhones(phones.map((p) => {
+        if (p.address_id !== deletedId) return p;
+        return fallbackAddr
+          ? { ...p, address_id: fallbackAddr.id, country_code: p.country_code || fallbackCode }
+          : { ...p, address_id: "", country_code: "" };
+      }));
+    }
   };
 
   const handleSetHeadquarters = (index) => {
