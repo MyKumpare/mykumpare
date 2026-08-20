@@ -1617,7 +1617,7 @@ Extract and return as JSON:
 - email: general contact email
 - linkedin_url: LinkedIn company page URL
 - year_founded: integer year founded (0 if unknown)
-- firm_types: array of firm types ("Investment Manager", "Allocator", "Investment Consultant", "Manager of Managers", "Securities Brokerage", "Trade Organizations")
+- firm_types: array of firm types ("Investment Manager", "Allocator", "Investment Consultant", "Securities Brokerage", "Trade Organizations")
 - logo_url: firm logo URL (full URL starting with http). Do NOT use social media icon URLs (LinkedIn, Twitter, Facebook, Instagram, YouTube icons) — the firm logo is a unique brand image.
 - phones: array of {phone_type, country_code, area_code, number_mid, number_last}
 - people: array of {first_name, last_name, title, email, linkedin_url, photo_url, biography} for EVERY person mentioned
@@ -1636,7 +1636,7 @@ CRITICAL: Include the photo_url for each person if mentioned in the research. Ph
             type: 'array',
             items: {
               type: 'string',
-              enum: ['Investment Manager', 'Allocator', 'Investment Consultant', 'Manager of Managers', 'Securities Brokerage', 'Trade Organizations'],
+              enum: ['Investment Manager', 'Allocator', 'Investment Consultant', 'Securities Brokerage', 'Trade Organizations'],
             },
           },
           logo_url: { type: 'string' },
@@ -2183,7 +2183,7 @@ Extract the following information from this website content:
 - Website URL
 - LinkedIn URL
 - General contact email address
-- Firm type(s): classify as one or more of "Investment Manager", "Allocator", "Investment Consultant", "Manager of Managers", "Securities Brokerage", "Trade Organizations"
+- Firm type(s): classify as one or more of "Investment Manager", "Allocator", "Investment Consultant", "Securities Brokerage", "Trade Organizations"
 - Firm logo URL (full URL starting with http)
 - Office addresses (street address, city, state, postal code, country)
 - Phone numbers (for US numbers: country_code, area_code, number_mid, number_last)
@@ -2234,7 +2234,7 @@ IMPORTANT:
             type: 'array',
             items: {
               type: 'string',
-              enum: ['Investment Manager', 'Allocator', 'Investment Consultant', 'Manager of Managers', 'Securities Brokerage', 'Trade Organizations'],
+              enum: ['Investment Manager', 'Allocator', 'Investment Consultant', 'Securities Brokerage', 'Trade Organizations'],
             },
           },
           logo_url: { type: 'string' },
