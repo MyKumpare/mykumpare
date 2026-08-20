@@ -1,0 +1,99 @@
+{
+  "name": "FundingStatusHistory",
+  "type": "object",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "ID of the firm (tenant) that owns this history record. Set on creation to the creator's linked_firm_id; drives tenant isolation via RLS."
+    },
+    "product_id": {
+      "type": "string",
+      "description": "ID of the product whose funding status changed"
+    },
+    "product_name": {
+      "type": "string",
+      "description": "Name of the product (denormalized for display)"
+    },
+    "firm_id": {
+      "type": "string",
+      "description": "ID of the firm that owns the product"
+    },
+    "previous_status": {
+      "type": "string",
+      "enum": [
+        "Funded",
+        "Terminated"
+      ],
+      "description": "Funding status before this change. null/empty means the product had no funding status yet (the change 'started' its funding lifecycle)."
+    },
+    "new_status": {
+      "type": "string",
+      "enum": [
+        "Funded",
+        "Terminated"
+      ],
+      "description": "Funding status after this change. null/empty means the funding status was cleared."
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "auto",
+        "manual"
+      ],
+      "default": "auto",
+      "description": "What caused the change. 'auto' = driven by due diligence completion / portfolio state (fundingStatusSync). 'manual' = a user overrode the value in the product form."
+    },
+    "changed_by_id": {
+      "type": "string",
+      "description": "User ID of the person who triggered the change (for manual overrides). Empty for auto-sync."
+    },
+    "changed_by_name": {
+      "type": "string",
+      "description": "Display name of the user who triggered the change (denormalized)"
+    },
+    "note": {
+      "type": "string",
+      "description": "Optional context note about the change"
+    }
+  },
+  "required": [
+    "product_id",
+    "new_status"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

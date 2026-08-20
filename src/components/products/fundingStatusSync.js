@@ -1,6 +1,53 @@
 import { base44 } from "@/api/base44Client";
 
 /**
+ * Append a funding-status history entry for a product. Captures every
+ * transition (including 'started' — null → Funded/Terminated — and clears).
+ * Silently no-ops when prev and next are identical so callers can pass through.
+ *
+ * @param {object} args
+ * @param {string} args.productId
+ * @param {string} [args.productName]
+ * @param {string} [args.firmId]
+ * @param {string|null} args.prevStatus  - previous funding status (Funded|Terminated|null)
+ * @param {string|null} args.newStatus   - new funding status (Funded|Terminated|null)
+ * @param {string} [args.source]        - "auto" | "manual"
+ * @param {string} [args.changedById]
+ * @param {string} [args.changedByName]
+ * @param {string} [args.note]
+ */
+export async function logFundingStatusChange({
+  productId,
+  productName,
+  firmId,
+  prevStatus,
+  newStatus,
+  source = "auto",
+  changedById,
+  changedByName,
+  note,
+}) {
+  const prev = prevStatus || null;
+  const next = newStatus || null;
+  if (prev === next) return; // no transition
+  try {
+    await base44.entities.FundingStatusHistory.create({
+      product_id: productId,
+      product_name: productName || "",
+      firm_id: firmId || "",
+      previous_status: prev || undefined,
+      new_status: next || undefined,
+      source,
+      changed_by_id: changedById || "",
+      changed_by_name: changedByName || "",
+      note: note || "",
+    });
+  } catch (err) {
+    console.error("logFundingStatusChange failed:", err);
+  }
+}
+
+/**
  * Recompute and persist a product's funding_status based on its due diligence
  * completion and portfolio state, then refresh the owning firm's aggregated
  * funding_status.
@@ -54,6 +101,15 @@ export async function syncProductFundingStatus(product, queryClient) {
     }
 
     if ((fresh.funding_status || null) !== (nextStatus || null)) {
+      await logFundingStatusChange({
+        productId: fresh.id,
+        productName: fresh.name,
+        firmId: fresh.firm_id,
+        prevStatus: fresh.funding_status,
+        newStatus: nextStatus,
+        source: "auto",
+        note: "Auto-synced from due diligence completion and portfolio state",
+      });
       await base44.entities.Product.update(fresh.id, {
         funding_status: nextStatus || undefined,
       });

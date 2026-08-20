@@ -9,7 +9,7 @@ import { Plus, Package, Trash2, X } from "lucide-react";
 import AddProductDialog from "@/components/products/AddProductDialog";
 import ProductStatusBadge from "@/components/products/ProductStatusBadge";
 import FundingStatusBadge from "@/components/products/FundingStatusBadge";
-import { syncProductFundingStatus } from "@/components/products/fundingStatusSync";
+import { syncProductFundingStatus, logFundingStatusChange } from "@/components/products/fundingStatusSync";
 
 const PRODUCT_TYPES = ["Investment Manager Product", "Multi-Manager Product"];
 
@@ -43,6 +43,11 @@ export default function FirmProductsTab({ firmId, firmName, firms = [] }) {
     enabled: !!firmId,
   });
 
+  const { data: currentUser } = useQuery({
+    queryKey: ["me"],
+    queryFn: () => base44.auth.me(),
+  });
+
   const investmentManagerProducts = [...products]
     .filter(p => p.product_type === "Investment Manager Product")
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -73,10 +78,25 @@ export default function FirmProductsTab({ firmId, firmName, firms = [] }) {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Product.update(id, data),
-    onSuccess: (_res, { id }) => {
+    onSuccess: (_res, { id, prevFundingStatus, productName, fundingStatusManualPrev }) => {
       queryClient.invalidateQueries({ queryKey: ["products", firmId] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       setShowEditDialog(false);
+      // Log a manual funding-status change when the user explicitly set a value
+      // (funding_status_manual on) and the value actually changed.
+      if (prevFundingStatus !== undefined) {
+        logFundingStatusChange({
+          productId: id,
+          productName,
+          firmId,
+          prevStatus: prevFundingStatus,
+          newStatus: _res?.funding_status,
+          source: "manual",
+          changedById: currentUser?.id,
+          changedByName: currentUser?.full_name,
+          note: "Manual override in product form",
+        });
+      }
       // Recompute funding status + firm aggregate (respects manual override).
       syncProductFundingStatus({ id, firm_id: firmId }, queryClient);
     },
@@ -196,7 +216,12 @@ export default function FirmProductsTab({ firmId, firmName, firms = [] }) {
         editingProduct={editingProduct}
         firms={firms}
         existingProducts={products}
-        onSubmit={(data) => updateMutation.mutate({ id: editingProduct.id, data })}
+        onSubmit={(data) => updateMutation.mutate({
+          id: editingProduct.id,
+          data,
+          prevFundingStatus: editingProduct.funding_status || null,
+          productName: editingProduct.name,
+        })}
         onDelete={(p) => deleteMutation.mutate(p.id)}
       />
     </div>
