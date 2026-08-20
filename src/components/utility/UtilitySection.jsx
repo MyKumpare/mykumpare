@@ -475,6 +475,11 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
           {view === "import-jobs" && (
             <ImportJobsDashboard />
           )}
+
+          {/* News scrub settings (admin) */}
+          {view === "news-scrub-settings" && (
+            <NewsScrubSettings />
+          )}
         </div>
       )}
 

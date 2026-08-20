@@ -71,7 +71,7 @@ export default function NewsScrubSettings() {
     <div className="space-y-4 py-1">
       <div className="flex items-center gap-2">
         <div className="w-9 h-9 rounded-full bg-rose-50 flex items-center justify-center">
-          <Newspaper className="w-4.5 h-4.5 text-rose-600" />
+          <Newspaper className="w-4 h-4 text-rose-600" />
         </div>
         <div>
           <p className="text-sm font-semibold text-gray-700">News Scrub Settings</p>
