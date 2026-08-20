@@ -146,6 +146,48 @@ function scoreFields(keywords, fields) {
   return score;
 }
 
+// Tokenize a string into lowercase words for word-boundary matching.
+function tokenize(s) {
+  if (!s) return [];
+  return s.toLowerCase().replace(/[.'’\-,/]/g, " ").split(/\s+/).filter(Boolean);
+}
+
+// Score a contact against the query keywords. Name fields use word-boundary
+// matching (keyword must equal or be a prefix of a name token) so "tina"
+// matches the name token "tina" but NOT "valentinas". Other fields (email,
+// title, designations) use substring matching. All keywords must match at
+// least one field (AND logic). Name-token matches weigh more so true name
+// matches rank above incidental substring hits in other fields.
+function scoreContact(keywords, c) {
+  if (!keywords.length) return 0;
+  const nameTokens = tokenize(getContactFullName(c));
+  const otherHaystacks = [c.email, c.title, (c.designations || []).join(" ")]
+    .filter((v) => v != null && v !== "")
+    .map((v) => v.toLowerCase());
+
+  let score = 0;
+  for (const kw of keywords) {
+    let matched = false;
+    // Word-boundary match against name tokens (high weight)
+    if (nameTokens.some((tok) => tok === kw || tok.startsWith(kw))) {
+      score += 3;
+      matched = true;
+    }
+    // Substring match against other fields (low weight)
+    if (!matched) {
+      for (const hay of otherHaystacks) {
+        if (hay.includes(kw)) {
+          score += 1;
+          matched = true;
+          break;
+        }
+      }
+    }
+    if (!matched) return 0; // AND logic: every keyword must match somewhere
+  }
+  return score;
+}
+
 export default function SearchResults({ query, firms, products, contacts, portfolios = [], analyses = [], activities = [], followUpTasks = [], documents = [], dueDiligences = [], customReports = [], benchmarks = [], onFirmClick, onContactClick, onProductClick, onPortfolioClick, onAnalysisClick, onActivityClick, onTaskClick, onDocumentClick, onDueDiligenceClick, onReportClick, onBenchmarkClick }) {
   const keywords = parseKeywords(query);
   if (!keywords.length) return null;
@@ -155,14 +197,10 @@ export default function SearchResults({ query, firms, products, contacts, portfo
   // --- Match contacts (excluding soft-deleted), then collapse duplicates ---
   const matchedContacts = dedupeContacts(
     contacts
+      .filter((c) => !c.deleted_at)
       .map((c) => ({
         ...c,
-        _score: scoreFields(keywords, [
-          getContactFullName(c),
-          c.email,
-          c.title,
-          (c.designations || []).join(" "),
-        ]),
+        _score: scoreContact(keywords, c),
       }))
       .filter((c) => c._score > 0)
   ).sort(byScoreDesc);
