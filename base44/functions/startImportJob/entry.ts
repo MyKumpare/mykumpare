@@ -34,7 +34,14 @@ export default async function(req: Request): Promise<Response> {
       const accepted = items.filter((it: any) => it?.accept && it?.product);
       const duplicateSkipped = items
         .filter((it: any) => !it?.accept)
-        .map((it: any) => ({ row: it?.row, error: it?.autoSkipped ? 'Skipped — exact duplicate product' : 'Skipped — duplicate product' }));
+        .map((it: any) => ({
+          row: it?.row,
+          error: it?.autoSkipped ? 'Skipped — exact duplicate product' : 'Skipped — duplicate product',
+          product_name: it?.product?.name || '',
+          product_type: it?.product?.product_type || '',
+          firm_name: it?.firmName || it?.product?.firm_name || '',
+          firm_type: it?.firmType || '',
+        }));
       const failed: any[] = [];
       const createdProducts: any[] = [];
 
@@ -52,7 +59,7 @@ export default async function(req: Request): Promise<Response> {
           });
           newFirmMap[key] = firm;
         } catch (err: any) {
-          failed.push({ row: it.row, error: `Failed to create firm "${it.firmName}": ${err?.message || 'unknown'}` });
+          failed.push({ row: it.row, error: `Failed to create firm "${it.firmName}": ${err?.message || 'unknown'}`, product_name: it?.product?.name || '', product_type: it?.product?.product_type || '', firm_name: it.firmName || '', firm_type: it.firmType || '' });
         }
       }
 
@@ -83,12 +90,12 @@ export default async function(req: Request): Promise<Response> {
         if (!firmId && it.createFirm) {
           const key = (it.firmName || '').toLowerCase().trim();
           const newFirm = newFirmMap[key];
-          if (!newFirm) { failed.push({ row: it.row, error: `Firm not created: ${it.firmName}` }); continue; }
+          if (!newFirm) { failed.push({ row: it.row, error: `Firm not created: ${it.firmName}`, product_name: it?.product?.name || '', product_type: it?.product?.product_type || '', firm_name: it.firmName || '', firm_type: it.firmType || '' }); continue; }
           firmId = newFirm.id;
           firmName = newFirm.name;
         }
-        if (!firmId) { failed.push({ row: it.row, error: 'No associated firm' }); continue; }
-        toCreate.push({ product: { ...it.product, firm_id: firmId, firm_name: firmName, tenant_id: it.product.tenant_id || tenantId }, row: it.row });
+        if (!firmId) { failed.push({ row: it.row, error: 'No associated firm', product_name: it?.product?.name || '', product_type: it?.product?.product_type || '', firm_name: it.firmName || '', firm_type: it.firmType || '' }); continue; }
+        toCreate.push({ product: { ...it.product, firm_id: firmId, firm_name: firmName, tenant_id: it.product.tenant_id || tenantId }, row: it.row, firmName: it.firmName || firmName, firmType: it.firmType || '' });
       }
 
       const BATCH = 100;
@@ -99,7 +106,7 @@ export default async function(req: Request): Promise<Response> {
           const created = await svc.entities.Product.bulkCreate(productsToCreate);
           (Array.isArray(created) ? created : []).forEach((p: any) => createdProducts.push(p));
         } catch (err: any) {
-          batch.forEach((b) => failed.push({ row: b.row, error: err?.message || 'Create failed' }));
+          batch.forEach((b) => failed.push({ row: b.row, error: err?.message || 'Create failed', product_name: b.product?.name || '', product_type: b.product?.product_type || '', firm_name: b.firmName || b.product?.firm_name || '', firm_type: b.firmType || '' }));
         }
       }
       const job = await svc.entities.ImportJob.create({

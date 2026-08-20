@@ -4,8 +4,9 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import {
   Loader2, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight,
-  Activity, RefreshCw, Building, Users, FileWarning,
+  Activity, RefreshCw, Building, Users, FileWarning, Wand2,
 } from "lucide-react";
+import ReImportRowDialog from "./ReImportRowDialog";
 
 // Status dashboard for server-side bulk import jobs. Lists every ImportJob
 // for the tenant with its lifecycle state (running / completed / failed),
@@ -44,6 +45,7 @@ function fmtDate(d) {
 
 function JobRow({ job }) {
   const [open, setOpen] = useState(false);
+  const [reImport, setReImport] = useState(null);
   const meta = statusMeta(job.status);
   const Icon = meta.icon;
   const total = job.total || 0;
@@ -156,8 +158,24 @@ function JobRow({ job }) {
               <div className="max-h-56 overflow-y-auto rounded-md border border-red-200 divide-y divide-red-100 bg-white">
                 {failed.map((f, i) => (
                   <div key={i} className="px-2.5 py-1.5 text-xs">
-                    <span className="text-gray-500">Row {f.row ?? "—"}</span>
-                    <p className="mt-0.5 text-red-600 break-words">{f.error || f.reason}</p>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-gray-500">Row {f.row ?? "—"}</span>
+                          {f.product_name ? <span className="text-gray-700 font-medium truncate">{f.product_name}</span> : null}
+                          {f.firm_name ? <span className="text-gray-400 truncate">· {f.firm_name}</span> : null}
+                        </div>
+                        <p className="mt-0.5 text-red-600 break-words">{f.error || f.reason}</p>
+                      </div>
+                      {job.source === "product" && f.product_name ? (
+                        <button
+                          onClick={() => setReImport(f)}
+                          className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-1 text-[11px] rounded-md border border-teal-300 text-teal-700 bg-white hover:bg-teal-50"
+                        >
+                          <Wand2 className="w-3 h-3" /> Fix & re-import
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -185,6 +203,8 @@ function JobRow({ job }) {
           )}
         </div>
       )}
+
+      {reImport ? <ReImportRowDialog rowData={reImport} onClose={() => setReImport(null)} /> : null}
     </div>
   );
 }

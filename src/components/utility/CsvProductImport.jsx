@@ -184,15 +184,16 @@ export default function CsvProductImport() {
         if (fk) raw[fk] = (row[i] || "").trim();
       });
 
-      if (!raw.name) { skipped.push({ row: rowIdx + 2, reason: "Missing product name" }); return; }
-      if (!raw.product_type) { skipped.push({ row: rowIdx + 2, reason: "Missing product type" }); return; }
-      if (!raw.firm_name) { skipped.push({ row: rowIdx + 2, reason: "Missing associated firm name" }); return; }
-      if (!raw.firm_type) { skipped.push({ row: rowIdx + 2, reason: "Missing associated firm type" }); return; }
+      const baseSkip = { product_name: raw.name || '', product_type: raw.product_type || '', firm_name: raw.firm_name || '', firm_type: raw.firm_type || '' };
+      if (!raw.name) { skipped.push({ row: rowIdx + 2, reason: "Missing product name", ...baseSkip, product_name: '' }); return; }
+      if (!raw.product_type) { skipped.push({ row: rowIdx + 2, reason: "Missing product type", ...baseSkip, product_type: '' }); return; }
+      if (!raw.firm_name) { skipped.push({ row: rowIdx + 2, reason: "Missing associated firm name", ...baseSkip, firm_name: '' }); return; }
+      if (!raw.firm_type) { skipped.push({ row: rowIdx + 2, reason: "Missing associated firm type", ...baseSkip, firm_type: '' }); return; }
 
       const productType = validateEnum(raw.product_type, PRODUCT_TYPES);
-      if (!productType) { skipped.push({ row: rowIdx + 2, reason: `Invalid product type: ${raw.product_type}` }); return; }
+      if (!productType) { skipped.push({ row: rowIdx + 2, reason: `Invalid product type: ${raw.product_type}`, ...baseSkip }); return; }
       const firmType = validateEnum(raw.firm_type, FIRM_TYPES);
-      if (!firmType) { skipped.push({ row: rowIdx + 2, reason: `Invalid firm type: ${raw.firm_type}` }); return; }
+      if (!firmType) { skipped.push({ row: rowIdx + 2, reason: `Invalid firm type: ${raw.firm_type}`, ...baseSkip }); return; }
 
       const exactFirm = firmByName[raw.firm_name.toLowerCase().trim()];
 
