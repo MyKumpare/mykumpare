@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, ClipboardCheck, FileText, Files, ShieldCheck, X, LayoutDashboard, FlaskConical, MapPin, Camera,   LayoutGrid, PieChart, Bot, ExternalLink, ChevronDown, CalendarDays, Radar, FileBarChart, Mic } from "lucide-react";
+import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, ClipboardCheck, FileText, Files, ShieldCheck, X, LayoutDashboard, FlaskConical, MapPin, Camera,   LayoutGrid, PieChart, Bot, ExternalLink, ChevronDown, CalendarDays, Radar, FileBarChart, Mic, Newspaper } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
@@ -683,6 +683,7 @@ export default function Home() {
       { label: "Activity", icon: ClipboardList, onClick: () => setActivityPickerOpen(true) },
       { label: "Calendar", icon: CalendarDays, onClick: () => navigate("/ActivityCalendar") },
       { label: "Tasks", icon: LayoutList, onClick: () => setTaskPickerOpen(true) },
+      { label: "News Alerts", icon: Newspaper, onClick: () => setNewsAlertsOpen(true) },
     ] },
     { label: "Reporting", icon: FileBarChart, ref: null, color: "text-cyan-600", activeBg: "bg-cyan-50", onClick: () => setAnalyticsLaunchOpen(true), submenu: [
       { label: "Analytics", icon: LineChart, onClick: () => setAnalyticsLaunchOpen(true) },
