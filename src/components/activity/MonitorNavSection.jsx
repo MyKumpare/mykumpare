@@ -1,23 +1,25 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  Radar, ClipboardList, CalendarDays, LayoutList, Plus, ChevronRight, ChevronDown, ExternalLink,
+  Radar, ClipboardList, CalendarDays, LayoutList, Plus, ChevronRight, ChevronDown, ExternalLink, Newspaper,
 } from "lucide-react";
 
 /**
  * Monitor navigation section.
- * Renders Monitor as a parent row with Activity, Calendar, and Tasks as
+ * Renders Monitor as a parent row with Activity, Calendar, Tasks, and News Alerts as
  * indented sub-items (expandable/collapsible), mirroring the Due Diligence
  * nav section pattern and the header "Monitor" icon's submenu.
  */
 export default function MonitorNavSection({
   activitiesCount,
   tasksCount,
+  newsCount,
   onOpenActivity,
   onAddActivity,
   onOpenCalendar,
   onOpenTasks,
   onAddTasks,
+  onOpenNews,
   forceExpanded,
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -55,6 +57,14 @@ export default function MonitorNavSection({
       addColor: "text-orange-600",
       addHoverColor: "hover:text-orange-700",
       addHoverBg: "hover:bg-orange-50",
+    },
+    {
+      label: "News Alerts",
+      icon: Newspaper,
+      iconColor: "text-rose-500",
+      count: newsCount,
+      onOpen: onOpenNews,
+      onAdd: null,
     },
   ];
 

@@ -58,6 +58,7 @@ const ActivityLogPickerModal = lazyDialog(() => import("../components/activity/A
 const ActivityDetailModal = lazyDialog(() => import("../components/activity/ActivityDetailModal"));
 const FollowUpTaskPickerModal = lazyDialog(() => import("../components/activity/FollowUpTaskPickerModal"));
 const TaskDetailModal = lazyDialog(() => import("../components/activity/TaskDetailModal"));
+const NewsAlertsModal = lazyDialog(() => import("../components/firms/NewsAlertsModal"));
 const UserProfileDialog = lazyDialog(() => import("../components/user/UserProfileDialog"));
 const ExternalPortalPickerModal = lazyDialog(() => import("../components/external/ExternalPortalPickerModal"));
 import { useFirmOwner } from "@/components/admin/useFirmOwner";
@@ -118,6 +119,7 @@ export default function Home() {
   const [editingBenchmark, setEditingBenchmark] = useState(null);
   const [activityLogModalOpen, setActivityLogModalOpen] = useState(false);
   const [activityLogDefaultTab, setActivityLogDefaultTab] = useState("activity");
+  const [newsAlertsOpen, setNewsAlertsOpen] = useState(false);
   const [portfolioPickerOpen, setPortfolioPickerOpen] = useState(false);
   const [firmPickerOpen, setFirmPickerOpen] = useState(false);
   const [dueDiligencePickerOpen, setDueDiligencePickerOpen] = useState(false);
@@ -948,11 +950,13 @@ export default function Home() {
         <MonitorNavSection
           activitiesCount={activities.filter(a => !a.deleted_at).length}
           tasksCount={followUpTasks.filter(t => !t.deleted_at).length}
+          newsCount={pinnedNewsCount}
           onOpenActivity={() => setActivityPickerOpen(true)}
           onAddActivity={() => { setActivityLogDefaultTab("activity"); setActivityLogModalOpen(true); }}
           onOpenCalendar={() => navigate("/ActivityCalendar")}
           onOpenTasks={() => setTaskPickerOpen(true)}
           onAddTasks={() => { setActivityLogDefaultTab("task"); setActivityLogModalOpen(true); }}
+          onOpenNews={() => setNewsAlertsOpen(true)}
           forceExpanded={allExpanded}
         />
 
