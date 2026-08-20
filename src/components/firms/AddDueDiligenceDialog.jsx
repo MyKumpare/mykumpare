@@ -391,24 +391,20 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
     queryKey: ["contacts"],
     queryFn: () => base44.entities.Contact.list("-created_date", 5000),
   });
-  // Resolve the owner firm: prefer the signed-in user's linked firm, fall back
-  // to the FirmOwner config (matched by name), then to the analyzed firm.
+  // Analysts (primary & secondary) may only come from "Xponance, Inc." — the
+  // firm that performs due diligence. Resolve that firm by name (case-insensitive).
   const ownerFirmId = useMemo(() => {
-    if (currentUser?.linked_firm_id) return currentUser.linked_firm_id;
-    if (firmOwner?.name) {
-      const f = allFirms.find(
-        (x) => !x.deleted_at && (x.name || "").toLowerCase() === (firmOwner.name || "").toLowerCase()
-      );
-      return f?.id || null;
-    }
-    return null;
-  }, [currentUser, firmOwner, allFirms]);
+    const xponance = allFirms.find(
+      (x) => !x.deleted_at && (x.name || "").toLowerCase() === "xponance, inc."
+    );
+    return xponance?.id || currentUser?.linked_firm_id || null;
+  }, [allFirms, currentUser]);
   const analystContacts = useMemo(() => {
     if (ownerFirmId) {
       return ownerContactsRaw.filter((c) => !c.deleted_at && (c.firm_ids || []).includes(ownerFirmId));
     }
-    return contacts; // fallback to the analyzed firm's contacts when no owner is configured
-  }, [ownerFirmId, ownerContactsRaw, contacts]);
+    return [];
+  }, [ownerFirmId, ownerContactsRaw]);
 
   // Effective firm: when editing, use the record's firm; when in firm-selection
   // (create) mode, use the firm the user picked; otherwise the supplied firmId.
