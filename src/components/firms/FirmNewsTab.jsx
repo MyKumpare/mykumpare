@@ -48,6 +48,7 @@ export default function FirmNewsTab({ firmId, firmName }) {
   const [addingManual, setAddingManual] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+  const [alertFilter, setAlertFilter] = useState("All");
 
   const { data: newsItems = [], isLoading } = useQuery({
     queryKey: ["firm_news", firmId],
@@ -58,12 +59,15 @@ export default function FirmNewsTab({ firmId, firmName }) {
   const activeNews = useMemo(() => newsItems.filter(n => !n.deleted_at), [newsItems]);
 
   const sortedNews = useMemo(() => {
-    return [...activeNews].sort((a, b) => {
+    const filtered = alertFilter === "All"
+      ? activeNews
+      : activeNews.filter(n => n.alert_status === alertFilter);
+    return [...filtered].sort((a, b) => {
       if (a.is_pinned && !b.is_pinned) return -1;
       if (!a.is_pinned && b.is_pinned) return 1;
       return (b.news_date || "").localeCompare(a.news_date || "");
     });
-  }, [activeNews]);
+  }, [activeNews, alertFilter]);
 
   const handleScrub = async () => {
     setScrubbing(true);
@@ -125,6 +129,19 @@ export default function FirmNewsTab({ firmId, firmName }) {
           <span className="text-sm font-semibold text-gray-700">News & Alerts</span>
           {activeNews.length > 0 && (
             <span className="text-xs text-gray-400">({activeNews.length})</span>
+          )}
+          {activeNews.length > 0 && (
+            <Select value={alertFilter} onValueChange={setAlertFilter}>
+              <SelectTrigger className="h-6 w-[105px] text-xs gap-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All Impact Levels</SelectItem>
+                <SelectItem value="High">High</SelectItem>
+                <SelectItem value="Medium">Medium</SelectItem>
+                <SelectItem value="Low">Low</SelectItem>
+              </SelectContent>
+            </Select>
           )}
         </div>
         <div className="flex items-center gap-1.5">
@@ -196,6 +213,10 @@ export default function FirmNewsTab({ firmId, firmName }) {
       {/* News list */}
       {isLoading ? (
         <div className="text-xs text-gray-400 italic py-6 text-center">Loading...</div>
+      ) : sortedNews.length === 0 && activeNews.length > 0 ? (
+        <div className="text-xs text-gray-400 italic py-6 text-center">
+          No {alertFilter.toLowerCase()} impact news found. Try a different filter.
+        </div>
       ) : (
         <div className="space-y-2">
           {sortedNews.map((item) => (
