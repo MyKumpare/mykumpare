@@ -250,18 +250,21 @@ function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, onCance
                 {item.headline}
               </p>
             </button>
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${alertStyle.bg} ${alertStyle.color}`}>
-                {item.alert_status}
-              </span>
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${statusStyle.bg} ${statusStyle.color}`}>
-                {item.news_status}
-              </span>
-              {item.is_pinned && (
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-600 flex items-center gap-0.5">
-                  <Pin className="w-2.5 h-2.5" /> Pinned
+            <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+              <span className="text-[9px] text-gray-400 font-semibold uppercase tracking-wide">Alert &amp; Status</span>
+              <div className="flex items-center gap-1">
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${alertStyle.bg} ${alertStyle.color}`}>
+                  {item.alert_status}
                 </span>
-              )}
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${statusStyle.bg} ${statusStyle.color}`}>
+                  {item.news_status}
+                </span>
+                {item.is_pinned && (
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-600 flex items-center gap-0.5">
+                    <Pin className="w-2.5 h-2.5" /> Pinned
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
