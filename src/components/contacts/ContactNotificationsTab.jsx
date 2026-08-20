@@ -62,14 +62,14 @@ export default function ContactNotificationsTab({ contactId, contactName, onCont
     queryKey: ["dd-notifications", contactId],
     queryFn: async () => {
       const all = await base44.entities.DdNotification.filter({ contact_id: contactId }, "-created_date", 200);
-      // Filter out orphaned notifications whose DD record has been deleted
+      // Filter out orphaned notifications whose DD record has been deleted.
+      // Use a single $in query (returns only existing records) instead of per-ID
+      // .get() calls, which throw a "not found" error for every deleted DD record.
       const ddIds = [...new Set(all.map((n) => n.due_diligence_id).filter(Boolean))];
-      const validDdIds = new Set();
-      for (const ddId of ddIds) {
-        try {
-          await base44.entities.DueDiligence.get(ddId);
-          validDdIds.add(ddId);
-        } catch { /* DD deleted — skip */ }
+      let validDdIds = new Set();
+      if (ddIds.length) {
+        const existing = await base44.entities.DueDiligence.filter({ id: { $in: ddIds } });
+        validDdIds = new Set(existing.map((d) => d.id));
       }
       const orphaned = all.filter((n) => n.due_diligence_id && !validDdIds.has(n.due_diligence_id));
       // Best-effort cleanup of orphaned notifications
