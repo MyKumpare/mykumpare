@@ -204,9 +204,9 @@ function getFieldValue(c, f, firmMap, contactProductMap, contactPortfolioMap) {
 
 // Pure filter function: text search + per-field multi-select
 export function filterSectionContacts(contacts, text, selected, firmMap, contactProductMap, contactPortfolioMap) {
-  const q = text.trim().toLowerCase();
+  const keywords = text.trim().toLowerCase().split(/\s+/).filter(Boolean);
   return contacts.filter((c) => {
-    if (q) {
+    if (keywords.length) {
       const name = [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix]
         .filter(Boolean).join(" ").toLowerCase();
       const firmNames = (c.firm_ids || []).map(fid => firmMap[fid]?.name || "").filter(Boolean).join(" ");
@@ -219,7 +219,9 @@ export function filterSectionContacts(contacts, text, selected, firmMap, contact
       ).join(" ");
       const haystack = [name, c.title || "", c.email || "", (Array.isArray(c.contact_type) ? c.contact_type.join(" ") : c.contact_type || ""),
         designations, firmNames, eduText, expText].join(" ").toLowerCase();
-      if (!haystack.includes(q)) return false;
+      // AND logic: every keyword must appear somewhere in the haystack so
+      // "tina williams" matches "Tina Byles Williams" (words need not be adjacent).
+      if (!keywords.every((kw) => haystack.includes(kw))) return false;
     }
     for (const group of FIELD_GROUPS) {
       for (const f of group.fields) {
