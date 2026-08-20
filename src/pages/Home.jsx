@@ -849,10 +849,6 @@ export default function Home() {
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="min-w-[10rem]">
-                    <DropdownMenuItem onClick={onClick} className="gap-2 cursor-pointer">
-                      <NavIcon className="w-4 h-4" />
-                      <span>{label}</span>
-                    </DropdownMenuItem>
                     {submenu.map((sub) => {
                       const SubIcon = sub.icon;
                       return (
@@ -1097,10 +1093,6 @@ export default function Home() {
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent side="top" className="min-w-[10rem]">
-                  <DropdownMenuItem onClick={onClick} className="gap-2 cursor-pointer">
-                    <MobileIcon className="w-4 h-4" />
-                    <span>{label}</span>
-                  </DropdownMenuItem>
                   {submenu.map((sub) => {
                     const SubIcon = sub.icon;
                     return (
