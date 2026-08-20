@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Newspaper, Plus, Trash2, Pin, PinOff, ExternalLink, Sparkles, Loader2,
-  AlertTriangle, ChevronDown, ChevronUp, Edit2, Check, X, Calendar,
+  AlertTriangle, ChevronDown, ChevronUp, Edit2, Check, X, Calendar, History,
 } from "lucide-react";
 import { format } from "date-fns";
 import ReactQuill from "react-quill";
@@ -44,6 +44,7 @@ function fmt(dateStr) {
 export default function FirmNewsTab({ firmId, firmName }) {
   const queryClient = useQueryClient();
   const [scrubbing, setScrubbing] = useState(false);
+  const [historicalScrubbing, setHistoricalScrubbing] = useState(false);
   const [addingManual, setAddingManual] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
@@ -79,6 +80,22 @@ export default function FirmNewsTab({ firmId, firmName }) {
       toast({ title: "Scrub failed", description: e.message, variant: "destructive" });
     }
     setScrubbing(false);
+  };
+
+  const handleHistoricalScrub = async () => {
+    setHistoricalScrubbing(true);
+    try {
+      await base44.functions.invoke('scrubFirmNewsHistorical', { mode: 'single', firm_id: firmId });
+      toast({ title: "Historical scrub started", description: "Searching across multiple time periods — news will appear shortly." });
+      // Poll for results since the scrub runs in the background
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["firm_news", firmId] }), 15000);
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["firm_news", firmId] }), 45000);
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["firm_news", firmId] }), 90000);
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["firm_news", firmId] }), 150000);
+    } catch (e) {
+      toast({ title: "Historical scrub failed", description: e.message, variant: "destructive" });
+    }
+    setHistoricalScrubbing(false);
   };
 
   const handleTogglePin = async (item) => {
@@ -121,6 +138,18 @@ export default function FirmNewsTab({ firmId, firmName }) {
           >
             {scrubbing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
             {scrubbing ? "Scrubbing..." : "Scrub Now"}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50 gap-1 text-xs"
+            onClick={handleHistoricalScrub}
+            disabled={historicalScrubbing || scrubbing}
+            title="Search for historical news going back several years"
+          >
+            {historicalScrubbing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <History className="w-3.5 h-3.5" />}
+            {historicalScrubbing ? "Searching..." : "Historical"}
           </Button>
           <Button
             type="button"
