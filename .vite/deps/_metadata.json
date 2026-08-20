@@ -2,24 +2,33 @@
   "hash": "77e5b528",
   "configHash": "16a1459d",
   "lockfileHash": "e3911b93",
-  "browserHash": "5c984cb6",
+  "browserHash": "96ddd02b",
   "optimized": {
     "react": {
       "src": "../../node_modules/react/index.js",
       "file": "react.js",
-      "fileHash": "63ff4263",
+      "fileHash": "f65a714d",
       "needsInterop": true
     },
     "react-dom/client": {
       "src": "../../node_modules/react-dom/client.js",
       "file": "react-dom_client.js",
-      "fileHash": "cdd0873d",
+      "fileHash": "c8d1f5b3",
       "needsInterop": true
+    },
+    "@base44/sdk": {
+      "src": "../../node_modules/@base44/sdk/dist/index.js",
+      "file": "@base44_sdk.js",
+      "fileHash": "d4bc3d93",
+      "needsInterop": false
     }
   },
   "chunks": {
-    "chunk-GFWMZNU4": {
-      "file": "chunk-GFWMZNU4.js"
+    "chunk-TWJRYSII": {
+      "file": "chunk-TWJRYSII.js"
+    },
+    "chunk-DC5AMYBS": {
+      "file": "chunk-DC5AMYBS.js"
     }
   }
 }
