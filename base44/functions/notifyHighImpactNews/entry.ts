@@ -21,7 +21,31 @@ export default async function(req: Request): Promise<Response> {
     // Notify all admin users.
     const users = await base44.asServiceRole.entities.User.list();
     const admins = users.filter((u) => u.role === 'admin' && u.email);
-    if (admins.length === 0) return Response.json({ skipped: 'no admins to notify' });
+
+    // Notify the firm's primary and secondary contacts (active, with an email).
+    let firmContacts = [];
+    if (news.firm_id) {
+      const contacts = await base44.asServiceRole.entities.Contact.list("-created_date", 5000);
+      firmContacts = contacts.filter(
+        (c) =>
+          !c.deleted_at &&
+          (c.firm_ids || []).includes(news.firm_id) &&
+          (c.contact_role === 'Primary' || c.contact_role === 'Secondary') &&
+          c.contact_status !== 'Inactive' &&
+          !!c.email
+      );
+    }
+
+    const recipients = [
+      ...admins.map((a) => ({ email: a.email, name: a.full_name || a.email, kind: 'admin' })),
+      ...firmContacts.map((c) => ({
+        email: c.email,
+        name: [c.first_name, c.last_name].filter(Boolean).join(' '),
+        kind: 'contact',
+      })),
+    ];
+
+    if (recipients.length === 0) return Response.json({ skipped: 'no recipients to notify' });
 
     const subject = `🚨 High Impact News Alert — ${news.firm_name || 'Firm'}`;
     const emailBody = [
@@ -41,20 +65,25 @@ export default async function(req: Request): Promise<Response> {
 
     let sent = 0;
     const errors = [];
-    for (const admin of admins) {
+    for (const recipient of recipients) {
       try {
         await base44.asServiceRole.integrations.Core.SendEmail({
-          to: admin.email,
+          to: recipient.email,
           subject,
           body: emailBody,
         });
         sent++;
       } catch (e) {
-        errors.push({ email: admin.email, error: (e as Error).message });
+        errors.push({ email: recipient.email, error: (e as Error).message });
       }
     }
 
-    return Response.json({ sent, total_admins: admins.length, errors });
+    return Response.json({
+      sent,
+      total_admins: admins.length,
+      total_firm_contacts: firmContacts.length,
+      errors,
+    });
   } catch (error) {
     return Response.json({ error: (error as Error).message }, { status: 500 });
   }
