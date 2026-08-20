@@ -60,6 +60,24 @@ export default function DuplicateContactsReview() {
     [clusters, isGroupAccepted]
   );
 
+  // For each cluster, compute the pairwise match reasons so the user can see
+  // exactly which records are duplicates of which and on what fields.
+  const clusterPairMatches = useMemo(
+    () => clusters.map((cluster) => {
+      const pairs = [];
+      for (let i = 0; i < cluster.length; i++) {
+        for (let j = i + 1; j < cluster.length; j++) {
+          const dups = findContactDuplicates(cluster[i], [cluster[j]]);
+          if (dups.length > 0 && dups[0].reasons?.length) {
+            pairs.push({ a: cluster[i], b: cluster[j], reasons: dups[0].reasons });
+          }
+        }
+      }
+      return pairs;
+    }),
+    [clusters]
+  );
+
   const runScan = () => {
     setBusy(true);
     // Allow the list query to settle before revealing results.
@@ -122,6 +140,16 @@ export default function DuplicateContactsReview() {
           {pendingClusters.map((group, gi) => (
             <div key={gi} className="rounded-lg border border-amber-200 bg-amber-50/60 p-2.5 space-y-2">
               <div className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Duplicate set {gi + 1}</div>
+              {(clusterPairMatches[gi] || []).length > 0 && (
+                <div className="space-y-0.5 rounded-md bg-amber-100/50 border border-amber-200/70 px-2 py-1">
+                  {(clusterPairMatches[gi] || []).map((p, pi) => (
+                    <div key={pi} className="text-[10px] leading-tight text-gray-600">
+                      <span className="font-semibold text-amber-700">{contactName(p.a)} ↔ {contactName(p.b)}:</span>{" "}
+                      {p.reasons.join(" · ")}
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="space-y-1.5">
                 {group.map((c) => (
                   <div key={c.id} className="flex items-center gap-2 bg-white rounded-md border border-gray-200 px-2 py-1.5">
@@ -147,9 +175,10 @@ export default function DuplicateContactsReview() {
                   <Check className="w-3.5 h-3.5" /> Accept (keep both)
                 </Button>
                 <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={() => setMergeCluster(group)} disabled={busy || group.length < 2}>
-                  <ArrowRightLeft className="w-3.5 h-3.5" /> Merge
+                  <ArrowRightLeft className="w-3.5 h-3.5" /> Merge…
                 </Button>
               </div>
+              <p className="text-[10px] text-gray-400 pt-0.5">Merge opens a picker to choose which record to keep — the others are combined into it and removed.</p>
             </div>
           ))}
         </div>
