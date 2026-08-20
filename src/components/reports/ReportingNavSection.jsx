@@ -26,7 +26,7 @@ export default function ReportingNavSection({ totalAnalyses = 0, forceExpanded, 
             : <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
           }
           <FileBarChart className="w-4 h-4 text-cyan-600" />
-          <span className="text-sm font-semibold text-gray-700 group-hover:text-gray-900">Reporting</span>
+          <span className="text-sm font-semibold text-gray-700 group-hover:text-gray-900">Report</span>
           <span className="text-xs text-gray-400 font-normal">({totalAnalyses})</span>
         </button>
       </div>

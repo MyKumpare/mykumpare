@@ -682,7 +682,7 @@ export default function Home() {
       { label: "Forms", icon: ClipboardCheck, onClick: () => setQuestionnairePickerOpen(true) },
       { label: "Templates", icon: FileText, onClick: () => setTemplatesPickerOpen(true) },
     ] },
-    { label: "Reporting", icon: FileBarChart, ref: null, color: "text-cyan-600", activeBg: "bg-cyan-50", onClick: () => setAnalyticsLaunchOpen(true), submenu: [
+    { label: "Report", icon: FileBarChart, ref: null, color: "text-cyan-600", activeBg: "bg-cyan-50", onClick: () => setAnalyticsLaunchOpen(true), submenu: [
       { label: "Analytics", icon: LineChart, onClick: () => setAnalyticsLaunchOpen(true) },
       { label: "Reports", icon: FileText, onClick: () => setReportsPickerOpen(true) },
     ] },
