@@ -1,7 +1,10 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Radar, Newspaper, LayoutList, ClipboardList, CalendarDays, X } from "lucide-react";
+import { Radar, Newspaper, LayoutList, ClipboardList, CalendarDays, X, FileDown, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { base44 } from "@/api/base44Client";
+import { toast } from "@/components/ui/use-toast";
+import { generateWeeklyMonitorReportPdf } from "@/components/news/weeklyMonitorReportPdf";
 import NewsAlertsModal from "@/components/firms/NewsAlertsModal";
 import FollowUpTaskPickerModal from "@/components/activity/FollowUpTaskPickerModal";
 import ActivityLogPickerModal from "@/components/activity/ActivityLogPickerModal";
@@ -19,6 +22,24 @@ export default function MonitorPage() {
   const [tab, setTab] = useState("news");
   const [viewingTask, setViewingTask] = useState(null);
   const [viewingActivity, setViewingActivity] = useState(null);
+  const [generatingReport, setGeneratingReport] = useState(false);
+
+  const handleGenerateReport = async () => {
+    setGeneratingReport(true);
+    try {
+      const res = await base44.functions.invoke("generateWeeklyMonitorReport", { days: 7 });
+      const report = res.data;
+      if (!report || report.error) throw new Error(report?.error || "Failed to generate report");
+      generateWeeklyMonitorReportPdf(report);
+      toast({
+        title: "Report downloaded",
+        description: `${report.total_news} news, ${report.total_activities} activities, ${report.total_tasks} completed tasks.`,
+      });
+    } catch (e) {
+      toast({ title: "Report failed", description: e.message, variant: "destructive" });
+    }
+    setGeneratingReport(false);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50/80">
@@ -30,6 +51,16 @@ export default function MonitorPage() {
             <h1 className="text-base font-bold">Monitor</h1>
           </div>
           <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-white hover:bg-white/15"
+              onClick={handleGenerateReport}
+              disabled={generatingReport}
+            >
+              {generatingReport ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+              <span className="hidden sm:inline">{generatingReport ? "Generating..." : "Weekly Report"}</span>
+            </Button>
             <Button
               variant="ghost"
               size="sm"

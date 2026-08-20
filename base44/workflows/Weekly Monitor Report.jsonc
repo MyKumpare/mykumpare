@@ -1,0 +1,48 @@
+{
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "weekly_monitor_report",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "generate_report": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "generateWeeklyMonitorReport",
+            "args": {
+              "days": 7,
+              "email_to_admins": true
+            }
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Generate & email weekly report",
+            "description": "Aggregates news, activity, and completed tasks; emails admins"
+          }
+        }
+      }
+    ]
+  },
+  "description": "Generates a weekly summary report aggregating firm news, activity, and completed follow-up tasks, then emails it to all admin users every Monday at 8 AM Eastern.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "0 8 * * 1",
+      "one_time_date": null,
+      "timezone": "America/New_York",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "name": "Weekly Monitor Report"
+}
