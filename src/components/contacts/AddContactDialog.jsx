@@ -787,7 +787,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
       </Dialog>
     )}
     <Dialog open={open} onOpenChange={(v) => { if (!v) guardedClose(); }}>
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-6xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           {viewMode && editingContact ? (
             <div className="flex items-center gap-3">
