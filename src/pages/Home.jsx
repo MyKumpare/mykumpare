@@ -967,7 +967,8 @@ export default function Home() {
           forceExpanded={allExpanded}
         />
 
-        {/* Monitor section — Activity, Calendar, Tasks nested as sub-items */}
+        {/* Monitor section — Activity, Calendar, Tasks, Analytics nested as sub-items */}
+        <div ref={analyticsRef} />
         <MonitorNavSection
           activitiesCount={activities.filter(a => !a.deleted_at).length}
           tasksCount={followUpTasks.filter(t => !t.deleted_at).length}
@@ -980,12 +981,7 @@ export default function Home() {
           onAddTasks={() => { setActivityLogDefaultTab("task"); setActivityLogModalOpen(true); }}
           onOpenNews={() => setNewsAlertsOpen(true)}
           forceExpanded={allExpanded}
-        />
-
-        {/* Reporting section — Analytics and Reports nested as expandable sub-items */}
-        <div ref={analyticsRef} />
-        <div ref={reportsRef} />
-        <ReportingNavSection totalAnalyses={totalAnalyses} forceExpanded={allExpanded}>
+        >
           <AnalyticsSection
             openLaunch={analyticsLaunchOpen}
             onLaunchOpenChange={setAnalyticsLaunchOpen}
@@ -1017,6 +1013,11 @@ export default function Home() {
               handleEdit(firm);
             }}
           />
+        </MonitorNavSection>
+
+        {/* Reporting section — Reports nested as expandable sub-items */}
+        <div ref={reportsRef} />
+        <ReportingNavSection totalAnalyses={0} forceExpanded={allExpanded}>
           <ReportsSection forceExpanded={allExpanded} />
         </ReportingNavSection>
 

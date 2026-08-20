@@ -22,6 +22,7 @@ export default function MonitorNavSection({
   onAddTasks,
   onOpenNews,
   forceExpanded,
+  children,
 }) {
   const [expanded, setExpanded] = useState(false);
   const isExpanded = forceExpanded !== undefined ? forceExpanded : expanded;
@@ -103,10 +104,9 @@ export default function MonitorNavSection({
         </div>
       </div>
 
-      {/* Nested sub-items */}
-      {isExpanded && (
-        <div className="ml-6 mt-1 space-y-1 border-l border-gray-200 pl-3">
-          {subItems.map((item) => {
+      {/* Nested sub-items — kept mounted, hidden when collapsed so child modals stay functional */}
+      <div className={`ml-6 mt-1 space-y-1 border-l border-gray-200 pl-3 ${isExpanded ? "" : "hidden"}`}>
+        {subItems.map((item) => {
             const Icon = item.icon;
             return (
               <div key={item.label} className="flex items-center justify-between px-1 py-1 rounded-lg hover:bg-gray-50">
@@ -132,8 +132,8 @@ export default function MonitorNavSection({
               </div>
             );
           })}
-        </div>
-      )}
+        {children}
+      </div>
     </div>
   );
 }
