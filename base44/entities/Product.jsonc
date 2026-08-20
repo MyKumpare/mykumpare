@@ -43,6 +43,19 @@
       "default": "Not Reviewed",
       "description": "Product-level status decision (separate from due diligence). 'In-Process' is set automatically when a due diligence is started. 'Approved' is set automatically when the DD reaches 'Buy List'. 'Rejected' here is a product decision; the due diligence 'Rejected' is a separate DD decision."
     },
+    "funding_status": {
+      "type": "string",
+      "enum": [
+        "Funded",
+        "Terminated"
+      ],
+      "description": "Funding status derived from the product's due diligence completion and portfolio state. Auto-set to 'Funded' when the DD reaches Buy List and the product is in an active portfolio; 'Terminated' when that portfolio is terminated. Only appears once the DD is completed and the product has been added to a portfolio. Users can manually override (sets funding_status_manual=true, which pauses auto-sync)."
+    },
+    "funding_status_manual": {
+      "type": "boolean",
+      "default": false,
+      "description": "True when a user has manually overridden funding_status. While true, the auto-sync (DD completion / portfolio state) skips this product so the manual value sticks. Clearing the field resets to auto."
+    },
     "asset_class": {
       "type": "string",
       "description": "Asset class classification"

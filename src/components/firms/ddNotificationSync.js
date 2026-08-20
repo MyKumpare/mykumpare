@@ -1,4 +1,5 @@
 import { base44 } from "@/api/base44Client";
+import { syncProductFundingStatus } from "@/components/products/fundingStatusSync";
 
 /**
  * Creates and updates DdNotification records based on the supervisor assignments
@@ -193,6 +194,8 @@ export async function syncProductStatusFromDd(ddRecord, queryClient) {
     if (ddRecord.status === "Buy List" && product.product_status !== "Approved") {
       await base44.entities.Product.update(ddRecord.product_id, { product_status: "Approved" });
       if (queryClient) queryClient.invalidateQueries({ queryKey: ["products"] });
+      // DD just completed — recompute funding status (Funded if in an active portfolio).
+      await syncProductFundingStatus({ id: ddRecord.product_id, firm_id: product.firm_id }, queryClient);
       return;
     }
 

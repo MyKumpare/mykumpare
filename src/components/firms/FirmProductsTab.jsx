@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Package, Trash2, X } from "lucide-react";
 import AddProductDialog from "@/components/products/AddProductDialog";
 import ProductStatusBadge from "@/components/products/ProductStatusBadge";
+import FundingStatusBadge from "@/components/products/FundingStatusBadge";
+import { syncProductFundingStatus } from "@/components/products/fundingStatusSync";
 
 const PRODUCT_TYPES = ["Investment Manager Product", "Multi-Manager Product"];
 
@@ -19,7 +21,10 @@ function ProductRow({ product, onClick }) {
     >
       <Package className="w-4 h-4 text-indigo-400 flex-shrink-0" />
       <div className="text-sm font-medium text-gray-800 truncate">{product.name}</div>
-      <ProductStatusBadge status={product.product_status} className="ml-auto" />
+      <div className="ml-auto flex items-center gap-1.5">
+        <FundingStatusBadge status={product.funding_status} />
+        <ProductStatusBadge status={product.product_status} />
+      </div>
     </div>
   );
 }
@@ -68,10 +73,12 @@ export default function FirmProductsTab({ firmId, firmName, firms = [] }) {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Product.update(id, data),
-    onSuccess: () => {
+    onSuccess: (_res, { id }) => {
       queryClient.invalidateQueries({ queryKey: ["products", firmId] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       setShowEditDialog(false);
+      // Recompute funding status + firm aggregate (respects manual override).
+      syncProductFundingStatus({ id, firm_id: firmId }, queryClient);
     },
   });
 

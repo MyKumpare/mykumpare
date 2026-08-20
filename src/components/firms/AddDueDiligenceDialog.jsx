@@ -732,17 +732,36 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
       const existing = allDueDiligences.filter(
         (dd) => !dd.deleted_at && dd.product_id === productId
       );
+      // Active = a DD that hasn't reached a decision (status is not "Buy List"
+      // or "Rejected"). Only one active ("Not Started" / "In-process") DD is
+      // allowed per product.
+      const active = existing.filter(
+        (dd) => dd.status !== "Buy List" && dd.status !== "Rejected"
+      );
+      if (active.length > 0) {
+        const sortedActive = [...active].sort(
+          (a, b) => new Date(b.created_date) - new Date(a.created_date)
+        );
+        setDuplicateCheck({ records: sortedActive, canCreate: false, mode: "active_open" });
+        return;
+      }
       if (existing.length > 0) {
-        // A new DD is only allowed if the most recent DD decision was
-        // "Rejected" (a due diligence decision). Active DD records
-        // (Pipeline, Buy List, etc.) block creation. "Terminated" is a
-        // product status — a separate decision — and is not checked here.
+        // No active DD, but a prior decision exists. A new DD can be started:
+        //  - after a "Rejected" decision (re-evaluate), OR
+        //  - after a completed ("Buy List") decision only when the product's
+        //    funding status is "Funded" or "Terminated" (it went through the
+        //    funding lifecycle and is being re-evaluated).
         const sorted = [...existing].sort(
           (a, b) => new Date(b.created_date) - new Date(a.created_date)
         );
         const latest = sorted[0];
-        const canCreate = latest.status === "Rejected";
-        setDuplicateCheck({ records: sorted, canCreate });
+        const product = allProducts.find((p) => p.id === productId);
+        const fundingOk = !!product && ["Funded", "Terminated"].includes(product.funding_status);
+        const canCreate =
+          latest.status === "Rejected" ||
+          (latest.status === "Buy List" && fundingOk);
+        const mode = latest.status === "Buy List" ? "prior_completed" : "prior_rejected";
+        setDuplicateCheck({ records: sorted, canCreate, mode });
         return;
       }
     }
@@ -1129,10 +1148,18 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
                 </DialogTitle>
               </DialogHeader>
               <div className="space-y-3 py-1">
-                <p className="text-sm text-gray-600">
-                  This product already has due diligence record(s). Review the
-                  existing records below before proceeding.
-                </p>
+                {duplicateCheck.mode === "active_open" ? (
+                  <p className="text-sm text-gray-600">
+                    This product already has an open due diligence. Only one
+                    open ("Not Started" or "In-process") due diligence is allowed
+                    per product. Review the open record below.
+                  </p>
+                ) : (
+                  <p className="text-sm text-gray-600">
+                    This product already has a prior due diligence decision.
+                    Review the existing record(s) below before proceeding.
+                  </p>
+                )}
                 <div className="space-y-2 max-h-60 overflow-y-auto">
                   {duplicateCheck.records.map((rec) => (
                     <div
@@ -1164,7 +1191,16 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
                     </div>
                   ))}
                 </div>
-                {duplicateCheck.canCreate ? (
+                {duplicateCheck.mode === "active_open" && (
+                  <div className="rounded-lg bg-red-50 border border-red-200 p-3">
+                    <p className="text-xs text-red-800">
+                      A new due diligence cannot be started while an open due
+                      diligence exists for this product. Complete or resolve the
+                      open record first.
+                    </p>
+                  </div>
+                )}
+                {duplicateCheck.mode === "prior_rejected" && duplicateCheck.canCreate && (
                   <div className="rounded-lg bg-amber-50 border border-amber-200 p-3">
                     <p className="text-xs text-amber-800">
                       The most recent due diligence decision for this product
@@ -1172,14 +1208,29 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
                       diligence. The original record will be retained.
                     </p>
                   </div>
-                ) : (
-                  <div className="rounded-lg bg-red-50 border border-red-200 p-3">
-                    <p className="text-xs text-red-800">
-                      This product has an active due diligence record. A new due
-                      diligence can only be started after the existing one has a
-                      decision of "Rejected".
-                    </p>
-                  </div>
+                )}
+                {duplicateCheck.mode === "prior_completed" && (
+                  (duplicateCheck.canCreate) ? (
+                    <div className="rounded-lg bg-amber-50 border border-amber-200 p-3">
+                      <p className="text-xs text-amber-800">
+                        The prior due diligence was <strong>completed (Buy
+                        List)</strong> and the product's funding status is now
+                        <strong> {selectedProduct?.funding_status || "Funded/Terminated"}</strong>.
+                        You may start a new due diligence. The original record
+                        will be retained.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="rounded-lg bg-red-50 border border-red-200 p-3">
+                      <p className="text-xs text-red-800">
+                        The prior due diligence was completed (Buy List). A new
+                        due diligence can only be started once the product has a
+                        funding status of <strong>Funded</strong> or
+                        <strong>Terminated</strong> — i.e. it has been added to
+                        a portfolio and later terminated or is currently funded.
+                      </p>
+                    </div>
+                  )
                 )}
               </div>
               <DialogFooter className="gap-2 pt-2 border-t">

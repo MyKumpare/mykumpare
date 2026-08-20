@@ -59,6 +59,14 @@
       "type": "string",
       "description": "Description of the firm"
     },
+    "funding_status": {
+      "type": "string",
+      "enum": [
+        "Funded",
+        "Terminated"
+      ],
+      "description": "Aggregated funding status derived from the firm's products. 'Funded' if at least one product is Funded; 'Terminated' if no product is Funded but at least one is Terminated; otherwise empty. Auto-maintained by the funding-status sync whenever a product's funding status changes."
+    },
     "addresses": {
       "type": "array",
       "description": "List of addresses for the firm",

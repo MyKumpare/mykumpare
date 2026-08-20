@@ -22,6 +22,7 @@ import SecondaryBenchmarksPicker from "./SecondaryBenchmarksPicker";
 import CapitalFlowFields from "./CapitalFlowFields";
 import { calculateCapitalFlow } from "./capitalFlowCalculator";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
+import { syncProductFundingStatus } from "@/components/products/fundingStatusSync";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import PortfolioGuidelinesTab from "./PortfolioGuidelinesTab";
 import PortfolioHistoricalAumTab from "./PortfolioHistoricalAumTab";
@@ -586,19 +587,30 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Portfolio.create(data),
-    onSuccess: () => {
+    onSuccess: (_created, variables) => {
       queryClient.invalidateQueries({ queryKey: ["portfolios"] });
       onOpenChange(false);
       if (onSuccess) onSuccess();
+      // Portfolio added — recompute the advisor product's funding status.
+      if (variables?.advisor_product_id) {
+        const prod = products.find((p) => p.id === variables.advisor_product_id);
+        syncProductFundingStatus({ id: variables.advisor_product_id, firm_id: prod?.firm_id }, queryClient);
+      }
     },
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Portfolio.update(id, data),
-    onSuccess: () => {
+    onSuccess: (_updated, { data }) => {
       queryClient.invalidateQueries({ queryKey: ["portfolios"] });
       onOpenChange(false);
       if (onSuccess) onSuccess();
+      // Portfolio funding status or linked product may have changed — recompute.
+      const productId = data?.advisor_product_id || editingPortfolio?.advisor_product_id;
+      if (productId) {
+        const prod = products.find((p) => p.id === productId);
+        syncProductFundingStatus({ id: productId, firm_id: prod?.firm_id }, queryClient);
+      }
     },
   });
 

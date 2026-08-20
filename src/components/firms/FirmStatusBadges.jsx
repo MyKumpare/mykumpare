@@ -1,6 +1,7 @@
 import React from "react";
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
 import ProductStatusBadge from "@/components/products/ProductStatusBadge";
+import FundingStatusBadge from "@/components/products/FundingStatusBadge";
 import { Package } from "lucide-react";
 
 // Product statuses that count as "under due diligence / reviewed".
@@ -31,6 +32,7 @@ export default function FirmStatusBadges({ firm, products, onEditProduct }) {
   const groups = getFirmStatuses(firm, products);
   return (
     <div className="flex items-center gap-1 flex-shrink-0">
+      <FundingStatusBadge status={firm?.funding_status} />
       {groups.map(({ status, products: groupProducts }) =>
         groupProducts.length === 0 ? (
           <ProductStatusBadge key={status} status={status} />

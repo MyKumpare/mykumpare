@@ -31,6 +31,8 @@ import ConstituentProductMultiSelect from "./ConstituentProductMultiSelect";
 import SubManagerFirmMultiSelect from "./SubManagerFirmMultiSelect";
 import AddIMProductValidatedDialog from "./AddIMProductValidatedDialog";
 import ProductStatusBadge from "./ProductStatusBadge";
+import FundingStatusBadge from "./FundingStatusBadge";
+import { syncProductFundingStatus } from "./fundingStatusSync";
 import { base44 } from "@/api/base44Client";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 
@@ -103,6 +105,8 @@ export default function AddProductDialog({
   const [productName, setProductName] = useState("");
   const [description, setDescription] = useState("");
   const [productStatus, setProductStatus] = useState("Not Reviewed");
+  const [fundingStatus, setFundingStatus] = useState("");
+  const [fundingStatusManual, setFundingStatusManual] = useState(false);
   const [classifications, setClassifications] = useState(EMPTY_CLASSIFICATIONS);
   const [investmentDescriptions, setInvestmentDescriptions] = useState({});
   const [constituentProductIds, setConstituentProductIds] = useState([]);
@@ -131,6 +135,8 @@ export default function AddProductDialog({
         name: editingProduct.name,
         description: editingProduct.description || "",
         product_status: editingProduct.product_status || "Not Reviewed",
+        funding_status: editingProduct.funding_status || "",
+        funding_status_manual: !!editingProduct.funding_status_manual,
         classifications: classificationsFromProduct(editingProduct),
         descriptions: {
           investment_edge: editingProduct.inv_desc_edge || "",
@@ -161,6 +167,8 @@ export default function AddProductDialog({
       setProductName(snapshot.name);
       setDescription(snapshot.description);
       setProductStatus(snapshot.product_status);
+      setFundingStatus(snapshot.funding_status);
+      setFundingStatusManual(snapshot.funding_status_manual);
       setClassifications(snapshot.classifications);
       setInvestmentDescriptions(snapshot.descriptions);
       setConstituentProductIds(snapshot.constituent_product_ids);
@@ -173,6 +181,8 @@ export default function AddProductDialog({
       setProductName("");
       setDescription("");
       setProductStatus("Not Reviewed");
+      setFundingStatus("");
+      setFundingStatusManual(false);
       setClassifications(EMPTY_CLASSIFICATIONS);
       setInvestmentDescriptions({});
       setConstituentProductIds([]);
@@ -260,6 +270,8 @@ export default function AddProductDialog({
       firmId !== originalSnapshotRef.current.firm_id ||
       description !== originalSnapshotRef.current.description ||
       productStatus !== (originalSnapshotRef.current.product_status || "Not Reviewed") ||
+      (fundingStatus || "") !== (originalSnapshotRef.current.funding_status || "") ||
+      fundingStatusManual !== originalSnapshotRef.current.funding_status_manual ||
       JSON.stringify(constituentProductIds) !== JSON.stringify(originalSnapshotRef.current.constituent_product_ids || []) ||
       JSON.stringify(subManagerFirmIds) !== JSON.stringify(originalSnapshotRef.current.sub_manager_firm_ids || []) ||
       JSON.stringify(classifications) !== JSON.stringify(originalSnapshotRef.current.classifications) ||
@@ -274,6 +286,7 @@ export default function AddProductDialog({
   const hasUnsavedChanges = hasChanges || (isAddMode && !!(
     productName.trim() || productType || firmId || description ||
     productStatus !== "Not Reviewed" ||
+    fundingStatus ||
     JSON.stringify(classifications) !== JSON.stringify(EMPTY_CLASSIFICATIONS) ||
     Object.keys(investmentDescriptions).length > 0 ||
     constituentProductIds.length > 0 ||
@@ -306,6 +319,8 @@ export default function AddProductDialog({
       name: isAddMode ? titleCaseProductName(productName.trim()) : productName.trim(),
       description,
       product_status: productStatus,
+      funding_status: fundingStatus || undefined,
+      funding_status_manual: fundingStatusManual || undefined,
       ...classifications,
       inv_desc_edge: investmentDescriptions.investment_edge || "",
       inv_desc_philosophy: investmentDescriptions.investment_philosophy || "",
@@ -333,6 +348,8 @@ export default function AddProductDialog({
     setProductName("");
     setDescription("");
     setProductStatus("Not Reviewed");
+    setFundingStatus("");
+    setFundingStatusManual(false);
     setClassifications(EMPTY_CLASSIFICATIONS);
     setConstituentProductIds([]);
     setSubManagerFirmIds([]);
@@ -353,6 +370,8 @@ export default function AddProductDialog({
     setProductName(snap.name);
     setDescription(snap.description);
     setProductStatus(snap.product_status);
+    setFundingStatus(snap.funding_status);
+    setFundingStatusManual(snap.funding_status_manual);
     setClassifications(snap.classifications);
     setInvestmentDescriptions(snap.descriptions);
     setConstituentProductIds(snap.constituent_product_ids);
@@ -613,6 +632,49 @@ export default function AddProductDialog({
                       ))}
                     </SelectContent>
                   </Select>
+                )}
+              </div>
+
+              {/* Funding Status (auto-derived; manually overridable) */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Funding Status</Label>
+                {!activelyEditing ? (
+                  <div className="h-9 px-3 flex items-center rounded-md border bg-gray-50">
+                    {fundingStatus ? (
+                      <FundingStatusBadge status={fundingStatus} />
+                    ) : (
+                      <span className="text-sm text-gray-400">—</span>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <Select
+                      value={fundingStatus || "none"}
+                      onValueChange={(v) => {
+                        if (v === "none") {
+                          setFundingStatus("");
+                          setFundingStatusManual(false);
+                        } else {
+                          setFundingStatus(v);
+                          setFundingStatusManual(true);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Auto (none)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Auto (none)</SelectItem>
+                        <SelectItem value="Funded">Funded</SelectItem>
+                        <SelectItem value="Terminated">Terminated</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-400">
+                      {fundingStatusManual
+                        ? "Manually set — auto-sync paused. Set to \"Auto\" to re-sync from due diligence and portfolio state."
+                        : "Auto-set when the due diligence is completed and the product is added to a portfolio."}
+                    </p>
+                  </>
                 )}
               </div>
 
