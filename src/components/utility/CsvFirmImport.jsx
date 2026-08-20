@@ -26,7 +26,6 @@ const ENRICH_STAGES = [
 ];
 
 const FIRM_TYPES = [
-  "Manager of Managers",
   "Investment Manager",
   "Allocator",
   "Investment Consultant",

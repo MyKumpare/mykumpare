@@ -10,7 +10,6 @@ import SectionExpandCollapse from "@/components/common/SectionExpandCollapse";
 import { useViewMode } from "@/hooks/useViewMode";
 
 const FIRM_TYPES = [
-  "Manager of Managers",
   "Investment Manager",
   "Allocator",
   "Investment Consultant",

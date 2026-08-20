@@ -40,7 +40,6 @@
     "advisor_type": {
       "type": "string",
       "enum": [
-        "Manager of Managers",
         "Investment Manager"
       ],
       "description": "Type of advisor managing this portfolio"

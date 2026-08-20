@@ -9,7 +9,6 @@ import { useViewMode } from "@/hooks/useViewMode";
 import { exportContactsToCSV } from "./exportContactsCsv";
 
 const FIRM_TYPES = [
-  "Manager of Managers",
   "Investment Manager",
   "Allocator",
   "Investment Consultant",
@@ -18,7 +17,6 @@ const FIRM_TYPES = [
 ];
 
 const GROUP_COLORS = {
-  "Manager of Managers": "bg-violet-100 text-violet-700",
   "Investment Manager": "bg-blue-100 text-blue-700",
   "Allocator": "bg-emerald-100 text-emerald-700",
   "Investment Consultant": "bg-amber-100 text-amber-700",

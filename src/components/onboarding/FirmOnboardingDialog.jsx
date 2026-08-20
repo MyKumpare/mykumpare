@@ -12,7 +12,6 @@ import { toast } from "@/components/ui/use-toast";
 
 // Firm types a new signer can select for their own firm at signup.
 const SIGNUP_FIRM_TYPES = [
-  "Manager of Managers",
   "Investment Manager",
   "Investment Consultant",
 ];

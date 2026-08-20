@@ -135,7 +135,6 @@ function getManuallyAssignedContactIds(firmId) {
 }
 
 const FIRM_TYPES = [
-  "Manager of Managers",
   "Investment Manager",
   "Allocator",
   "Investment Consultant",

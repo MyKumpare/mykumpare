@@ -1011,7 +1011,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium text-gray-700">Advisor Type</Label>
                 <div className="flex gap-2">
-                  {["Manager of Managers", "Investment Manager"].map((t) => (
+                  {["Investment Manager"].map((t) => (
                     <button
                       key={t}
                       type="button"

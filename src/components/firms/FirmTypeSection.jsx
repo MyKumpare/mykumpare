@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import FirmCard from "./FirmCard";
 
 const TYPE_COLORS = {
-  "Manager of Managers": "bg-violet-100 text-violet-700",
   "Investment Manager": "bg-blue-100 text-blue-700",
   "Allocator": "bg-emerald-100 text-emerald-700",
   "Investment Consultant": "bg-amber-100 text-amber-700",
