@@ -502,7 +502,9 @@
           }
         },
         {
-          "data.tenant_id": "{{user.data.linked_firm_id}}"
+          "user_condition": {
+            "data.linked_firm_id": "69b18412204649ac3a5b4c88"
+          }
         }
       ]
     },
@@ -528,7 +530,9 @@
         {
           "$and": [
             {
-              "data.tenant_id": "{{user.data.linked_firm_id}}"
+              "user_condition": {
+                "data.linked_firm_id": "69b18412204649ac3a5b4c88"
+              }
             },
             {
               "$or": [
@@ -563,7 +567,9 @@
         {
           "$and": [
             {
-              "data.tenant_id": "{{user.data.linked_firm_id}}"
+              "user_condition": {
+                "data.linked_firm_id": "69b18412204649ac3a5b4c88"
+              }
             },
             {
               "$or": [
