@@ -730,7 +730,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
     // Check for existing DD records on this product (skip when editing).
     if (!editingRecord && productId) {
       const existing = allDueDiligences.filter(
-        (dd) => dd.product_id === productId
+        (dd) => !dd.deleted_at && dd.product_id === productId
       );
       if (existing.length > 0) {
         // A new DD is only allowed if the most recent DD decision was

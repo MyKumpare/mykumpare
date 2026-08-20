@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import DueDiligenceKanbanBoard, { computeApprovalStatus } from "@/components/firms/DueDiligenceKanbanBoard";
@@ -16,6 +16,7 @@ const GROUP_MODES = [
 ];
 
 export default function DueDiligenceKanban() {
+  const queryClient = useQueryClient();
   const [groupMode, setGroupMode] = useState("approval_status");
   const [showDialog, setShowDialog] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -173,12 +174,21 @@ export default function DueDiligenceKanban() {
         contacts={contacts.filter((c) => !c.deleted_at)}
         editingRecord={editing}
         onSubmit={(data) => {
-          if (editing) base44.entities.DueDiligence.update(editing.id, data);
-          else base44.entities.DueDiligence.create(data);
+          const op = editing
+            ? base44.entities.DueDiligence.update(editing.id, data)
+            : base44.entities.DueDiligence.create(data);
+          op.finally(() => {
+            queryClient.invalidateQueries({ queryKey: ["due-diligence-all"] });
+            queryClient.invalidateQueries({ queryKey: ["due-diligence-search"] });
+            queryClient.invalidateQueries({ queryKey: ["due-diligence"] });
+          });
           setShowDialog(false);
         }}
         onDelete={(id) => {
           base44.entities.DueDiligence.delete(id);
+          queryClient.invalidateQueries({ queryKey: ["due-diligence-all"] });
+          queryClient.invalidateQueries({ queryKey: ["due-diligence-search"] });
+          queryClient.invalidateQueries({ queryKey: ["due-diligence"] });
           setShowDialog(false);
           setEditing(null);
         }}
