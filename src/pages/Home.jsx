@@ -688,7 +688,10 @@ export default function Home() {
       { label: "Analytics", icon: LineChart, onClick: () => setAnalyticsLaunchOpen(true) },
       { label: "Reports", icon: FileText, onClick: () => setReportsPickerOpen(true) },
     ] },
-    { label: "Portfolios", icon: BarChart3, ref: null, color: "text-emerald-600", activeBg: "bg-emerald-50", onClick: () => setPortfolioPickerOpen(true) },
+    { label: "Portfolios", icon: BarChart3, ref: null, color: "text-emerald-600", activeBg: "bg-emerald-50", onClick: () => setPortfolioPickerOpen(true), submenu: [
+      { label: "Portfolio Picker", icon: Briefcase, onClick: () => setPortfolioPickerOpen(true) },
+      { label: "Funding Dashboard", icon: PieChart, onClick: () => navigate("/PortfolioFundingDashboard") },
+    ] },
     { label: "Firms", icon: Building, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => setFirmPickerOpen(true) },
     { label: "Products", icon: Package, ref: null, color: "text-violet-600", activeBg: "bg-violet-50", onClick: () => setProductPickerOpen(true) },
     { label: "Contacts", icon: User, ref: null, color: "text-pink-600", activeBg: "bg-pink-50", onClick: () => setContactPickerOpen(true) },
