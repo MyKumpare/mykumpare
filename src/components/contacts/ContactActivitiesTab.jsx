@@ -51,7 +51,7 @@ function FirmPickerDropdown({ availableFirms, onSelect }) {
 
   const FIRM_TYPES = [
     "Allocator", "Investment Consultant", "Investment Manager",
-    "Manager of Managers", "Securities Brokerage", "Trade Organizations",
+    "Securities Brokerage", "Trade Organizations",
   ];
 
   const filtered = availableFirms.filter(f =>

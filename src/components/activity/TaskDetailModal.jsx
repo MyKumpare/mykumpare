@@ -16,7 +16,7 @@ import "react-quill/dist/quill.snow.css";
 import { sanitizeHtml } from "@/lib/sanitizeHtml";
 
 const TASK_STATUSES = ["Not Started", "In-process", "Completed", "Cancelled"];
-const FIRM_TYPES_ORDER = ["Allocator", "Investment Consultant", "Investment Manager", "Manager of Managers", "Securities Brokerage", "Trade Organizations"];
+const FIRM_TYPES_ORDER = ["Allocator", "Investment Consultant", "Investment Manager", "Securities Brokerage", "Trade Organizations"];
 
 const STATUS_STYLES = {
   "Not Started": { color: "text-gray-500",  bg: "bg-gray-100",  border: "border-gray-200",  icon: Clock },

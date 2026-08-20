@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Building2, User, Plus, X, ChevronDown, ChevronUp, UserPlus } from "lucide-react";
 
-const FIRM_TYPES_ORDER = ["Allocator", "Investment Consultant", "Investment Manager", "Manager of Managers", "Securities Brokerage", "Trade Organizations"];
+const FIRM_TYPES_ORDER = ["Allocator", "Investment Consultant", "Investment Manager", "Securities Brokerage", "Trade Organizations"];
 
 function FirmPickerDropdown({ availableFirms, onSelect, onAddNew }) {
   const [open, setOpen] = useState(false);

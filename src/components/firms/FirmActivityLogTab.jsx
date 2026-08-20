@@ -154,7 +154,7 @@ function FirmPickerDropdown({ availableFirms, onSelect }) {
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  const FIRM_TYPES = ["Allocator", "Investment Consultant", "Investment Manager", "Manager of Managers", "Securities Brokerage", "Trade Organizations"];
+  const FIRM_TYPES = ["Allocator", "Investment Consultant", "Investment Manager", "Securities Brokerage", "Trade Organizations"];
 
   const filtered = availableFirms.filter(f =>
     !search || f.name.toLowerCase().includes(search.toLowerCase()) ||

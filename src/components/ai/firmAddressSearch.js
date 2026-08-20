@@ -1,7 +1,6 @@
 import { base44 } from "@/api/base44Client";
 
 const FIRM_TYPES = [
-  "Manager of Managers",
   "Investment Manager",
   "Allocator",
   "Investment Consultant",
@@ -13,7 +12,6 @@ const FIRM_TYPES = [
 function detectFirmType(text) {
   const t = text.toLowerCase();
   // Order matters: check more-specific / multi-word types first.
-  if (/\bmanager(s)?\s+of\s+manager(s)?\b/.test(t) || /\bmom(s)?\b/.test(t)) return "Manager of Managers";
   if (/\binvestment\s+manager(s)?\b/.test(t) || /\bim(s)?\b/.test(t)) return "Investment Manager";
   if (/\binvestment\s+consultant(s)?\b/.test(t)) return "Investment Consultant";
   if (/\bsecurities\s+brokerage(s)?\b/.test(t) || /\bbrokerage(s)?\b/.test(t) || /\bbroker(s)?\b/.test(t)) return "Securities Brokerage";

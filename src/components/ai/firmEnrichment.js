@@ -65,7 +65,7 @@ const ENRICHMENT_SCHEMA = {
       type: "array",
       items: {
         type: "string",
-        enum: ["Investment Manager", "Allocator", "Investment Consultant", "Manager of Managers", "Securities Brokerage", "Trade Organizations"],
+        enum: ["Investment Manager", "Allocator", "Investment Consultant", "Securities Brokerage", "Trade Organizations"],
       },
     },
     addresses: {
@@ -195,7 +195,7 @@ export function detectEnrichmentIntent(query) {
   const q = query.toLowerCase();
 
   const hasEnrichmentKeyword =
-    /populate|enrich|fill\s+in|look\s+up\s+(?:online|web)|search\s+(?:the\s+)?web|fetch\s+(?:from|web)|get\s+(?:info|data|details)\s+(?:from|online)|from\s+(?:their\s+)?(?:website|web|public\s+website|public\s+site)|(?:add|create)\s+(?:a\s+)?(?:new\s+)?(?:firm|company|investment\s+manager|allocator|investment\s+consultant|manager\s+of\s+managers|securities\s+brokerage|trade\s+organization)/i.test(
+    /populate|enrich|fill\s+in|look\s+up\s+(?:online|web)|search\s+(?:the\s+)?web|fetch\s+(?:from|web)|get\s+(?:info|data|details)\s+(?:from|online)|from\s+(?:their\s+)?(?:website|web|public\s+website|public\s+site)|(?:add|create)\s+(?:a\s+)?(?:new\s+)?(?:firm|company|investment\s+manager|allocator|investment\s+consultant|securities\s+brokerage|trade\s+organization)/i.test(
       q
     );
 
@@ -207,7 +207,7 @@ export function detectEnrichmentIntent(query) {
     /(?:look\s+up|search|fetch|get)\s+(.+?)\s+(?:from|on|via|online|web)/i,
     /fill\s+in\s+(.+?)(?:\s+(?:from|with|using)\s+|\s*$)/i,
     /update\s+(.+?)\s+(?:from|with|using|info|information)/i,
-    /(?:add|create)\s+(?:a\s+)?(?:new\s+)?(?:firm|company|investment\s+manager|allocator|investment\s+consultant|manager\s+of\s+managers|securities\s+brokerage|trade\s+organization)\s+(?:called\s+|named\s+)?(.+?)(?:\s+(?:from|with|using)\s+|\s*$)/i,
+    /(?:add|create)\s+(?:a\s+)?(?:new\s+)?(?:firm|company|investment\s+manager|allocator|investment\s+consultant|securities\s+brokerage|trade\s+organization)\s+(?:called\s+|named\s+)?(.+?)(?:\s+(?:from|with|using)\s+|\s*$)/i,
   ];
 
   let firmName = null;

@@ -24,7 +24,7 @@ import { saveStageNoteVersions } from "./ddNoteVersionSync";
 import { initAnalystHistory, computeAnalystHistory } from "@/lib/analystHistoryClient";
 import AnalystHistoryDialog from "./AnalystHistoryDialog";
 const PRODUCT_TYPES = ["Investment Manager Product", "Multi-Manager Product"];
-const FIRM_TYPES = ["Manager of Managers", "Investment Manager", "Allocator", "Investment Consultant", "Securities Brokerage", "Trade Organizations"];
+const FIRM_TYPES = ["Investment Manager", "Allocator", "Investment Consultant", "Securities Brokerage", "Trade Organizations"];
 const NOT_STARTED_ALLOWED = ["In-process"];
 
 const contactName = (c) => [c?.first_name, c?.last_name].filter(Boolean).join(" ").trim();

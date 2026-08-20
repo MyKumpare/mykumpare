@@ -2,7 +2,6 @@ import React, { useState, useMemo } from "react";
 import { X, Building, Plus, Search, ChevronRight, ChevronDown } from "lucide-react";
 
 const FIRM_TYPES = [
-  "Manager of Managers",
   "Investment Manager",
   "Allocator",
   "Investment Consultant",

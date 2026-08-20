@@ -2,7 +2,6 @@ import React from "react";
 import { Filter, Building2, ListTodo } from "lucide-react";
 
 const FIRM_TYPES = [
-  "Manager of Managers",
   "Investment Manager",
   "Allocator",
   "Investment Consultant",

@@ -33,7 +33,7 @@ const TASK_STATUSES = ["Not Started", "In-process", "Completed", "Cancelled"];
 
 const FIRM_TYPES_ORDER = [
   "Allocator", "Investment Consultant", "Investment Manager",
-  "Manager of Managers", "Securities Brokerage", "Trade Organizations",
+  "Securities Brokerage", "Trade Organizations",
 ];
 
 function fmt(dateStr) {

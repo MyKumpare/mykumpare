@@ -8,7 +8,6 @@ const FIRM_TYPES_ORDER = [
   "Allocator",
   "Investment Consultant",
   "Investment Manager",
-  "Manager of Managers",
   "Securities Brokerage",
   "Trade Organizations",
 ];

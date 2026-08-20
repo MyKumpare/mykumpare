@@ -617,7 +617,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
   }, [allOwnerships, editingContact]);
 
   // Firm types that show Contact Role and Contact Department
-  const CONTACT_ROLE_FIRM_TYPES = ["Manager of Managers", "Investment Manager", "Allocator", "Investment Consultant"];
+  const CONTACT_ROLE_FIRM_TYPES = ["Investment Manager", "Allocator", "Investment Consultant"];
   const associatedFirmTypes = firmIds.flatMap(fid => {
     const firm = firms.find(f => f.id === fid);
     return firm?.firm_types || (firm?.firm_type ? [firm.firm_type] : []);
@@ -1431,7 +1431,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                 <ContactTypePicker value={contactType} onChange={setContactType} viewMode={viewMode} />
               </div>
 
-              {/* Contact Department (firm-specific, for IM / MoM / Allocator / IC firms) */}
+              {/* Contact Department (firm-specific, for IM / Allocator / IC firms) */}
               {(showContactFirmRoles || contactFirmRoles.length > 0) && (
                 <div className="space-y-1.5">
                   <Label className="text-sm font-medium text-gray-700">Contact Department</Label>

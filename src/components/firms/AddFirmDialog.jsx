@@ -464,7 +464,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const NON_PRODUCT_TYPES = ["Trade Organizations"];
   const hideProductTabs = firmTypes.length > 0 && firmTypes.every(t => NON_PRODUCT_TYPES.includes(t));
   const showPortfolioTab = firmTypes.includes("Allocator");
-  const showAdvisorPortfolioTab = firmTypes.includes("Manager of Managers") || firmTypes.includes("Investment Manager");
+  const showAdvisorPortfolioTab = firmTypes.includes("Investment Manager");
 
   const handleSubmit = (forceFirmName = false, forceFieldConflicts = false) => {
     if (!isValid) return;
@@ -1543,7 +1543,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                   firmId={editingFirm.id}
                   firmName={editingFirm.name}
                   advisorMode
-                  advisorType={firmTypes.includes("Manager of Managers") ? "Manager of Managers" : "Investment Manager"}
+                  advisorType="Investment Manager"
                   onPortfolioClick={onPortfolioClick}
                 />
               ) : (

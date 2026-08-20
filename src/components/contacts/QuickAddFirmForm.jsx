@@ -8,7 +8,6 @@ import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
 
 const FIRM_TYPES = [
-  "Manager of Managers",
   "Investment Manager",
   "Allocator",
   "Investment Consultant",

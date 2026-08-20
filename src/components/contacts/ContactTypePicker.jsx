@@ -19,7 +19,6 @@ export const FIRM_TYPE_TO_CONTACT_TYPE = {
   "Investment Manager": "Investment Manager",
   "Securities Brokerage": "Securities Broker",
   "Trade Organizations": "Trade Organization Representative",
-  "Manager of Managers": "Investment Manager",
 };
 
 /**

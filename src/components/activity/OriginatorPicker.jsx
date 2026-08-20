@@ -8,7 +8,7 @@ import { Building2, User, UserPlus, Plus, ChevronDown, ChevronUp, X } from "luci
 
 const FIRM_TYPES_ORDER = [
   "Allocator", "Investment Consultant", "Investment Manager",
-  "Manager of Managers", "Securities Brokerage", "Trade Organizations",
+  "Securities Brokerage", "Trade Organizations",
 ];
 
 // ── Searchable firm picker (type-aware) ──────────────────────────────────────

@@ -556,15 +556,6 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
     [firms]
   );
 
-  const momOptions = useMemo(
-    () =>
-      firms
-        .filter((f) => getFirmTypes(f).includes("Manager of Managers"))
-        .map((f) => ({ value: f.id, label: f.name }))
-        .sort((a, b) => a.label.localeCompare(b.label)),
-    [firms]
-  );
-
   const imOptions = useMemo(
     () =>
       firms

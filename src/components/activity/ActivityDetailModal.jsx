@@ -36,7 +36,7 @@ const QUILL_MODULES = {
 
 const FIRM_TYPES_ORDER = [
   "Allocator", "Investment Consultant", "Investment Manager",
-  "Manager of Managers", "Securities Brokerage", "Trade Organizations",
+  "Securities Brokerage", "Trade Organizations",
 ];
 
 const TASK_STATUS_COLORS = {
