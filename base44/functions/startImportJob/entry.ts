@@ -44,6 +44,7 @@ export default async function(req: Request): Promise<Response> {
         }));
       const failed: any[] = [];
       const createdProducts: any[] = [];
+      const createdItems: any[] = [];
 
       // Create new firms for items flagged createFirm (deduped by firm name).
       const newFirmMap: Record<string, any> = {};
@@ -104,7 +105,10 @@ export default async function(req: Request): Promise<Response> {
         try {
           const productsToCreate = batch.map((b) => b.product);
           const created = await svc.entities.Product.bulkCreate(productsToCreate);
-          (Array.isArray(created) ? created : []).forEach((p: any) => createdProducts.push(p));
+          (Array.isArray(created) ? created : []).forEach((p: any, idx: number) => {
+            createdProducts.push(p);
+            createdItems.push({ row: batch[idx]?.row, product_name: p.name, firm_name: batch[idx]?.product?.firm_name || batch[idx]?.firmName || '' });
+          });
         } catch (err: any) {
           batch.forEach((b) => failed.push({ row: b.row, error: err?.message || 'Create failed', product_name: b.product?.name || '', product_type: b.product?.product_type || '', firm_name: b.firmName || b.product?.firm_name || '', firm_type: b.firmType || '' }));
         }
@@ -121,6 +125,7 @@ export default async function(req: Request): Promise<Response> {
           merged: 0,
           failed: [...(validationSkipped || []), ...duplicateSkipped, ...failed],
           enrichment_summaries: [],
+          created_items: createdItems,
         },
       });
       return Response.json({
@@ -142,6 +147,7 @@ export default async function(req: Request): Promise<Response> {
       .map((it: any) => ({ row: it?.row, error: 'Skipped — duplicate firm name' }));
     const failed: any[] = [];
     const createdFirms: any[] = [];
+    const createdItems: any[] = [];
 
     // Bulk-create accepted firms in batches (SDK bulkCreate cap).
     const BATCH = 100;
@@ -150,7 +156,10 @@ export default async function(req: Request): Promise<Response> {
       try {
         const toCreate = batch.map((b: any) => ({ ...b.firm, tenant_id: b.firm.tenant_id || tenantId }));
         const created = await svc.entities.Firm.bulkCreate(toCreate);
-        (Array.isArray(created) ? created : []).forEach((f: any) => createdFirms.push(f));
+        (Array.isArray(created) ? created : []).forEach((f: any, idx: number) => {
+          createdFirms.push(f);
+          createdItems.push({ row: batch[idx]?.row, name: f.name });
+        });
       } catch (err: any) {
         batch.forEach((b: any) => failed.push({ row: b.row, error: err?.message || 'Create failed' }));
       }
@@ -199,6 +208,7 @@ export default async function(req: Request): Promise<Response> {
         merged: mergedCount,
         failed: [...(validationSkipped || []), ...duplicateSkipped, ...failed],
         enrichment_summaries: [],
+        created_items: createdItems,
       },
     });
 

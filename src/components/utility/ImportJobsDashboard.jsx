@@ -73,6 +73,7 @@ function JobRow({ job }) {
   const summaries = Array.isArray(results.enrichment_summaries) ? results.enrichment_summaries : [];
   const enrichmentErrors = summaries.filter((s) => s.error);
   const items = Array.isArray(job.pending_items) ? job.pending_items : [];
+  const createdItems = Array.isArray(results.created_items) ? results.created_items : [];
   const hasErrors = failed.length > 0 || enrichmentErrors.length > 0;
   // Group skipped/failed rows by reason so the user can see WHY rows were
   // skipped (e.g. "Missing firm name: 412") and address each cause.
@@ -148,6 +149,23 @@ function JobRow({ job }) {
 
       {open && (
         <div className="border-t border-gray-100 px-3 py-2.5 space-y-3 bg-gray-50/50">
+          {/* Created records */}
+          {createdItems.length > 0 && (
+            <div>
+              <p className="text-[11px] font-semibold text-green-600 uppercase tracking-wide mb-1.5">Created ({createdItems.length})</p>
+              <div className="max-h-40 overflow-y-auto rounded-md border border-gray-200 divide-y divide-gray-100 bg-white">
+                {createdItems.map((c, i) => (
+                  <div key={i} className="px-2.5 py-1.5 text-xs flex items-center gap-2">
+                    <span className="text-gray-500 flex-shrink-0">Row {c.row ?? "—"}</span>
+                    {c.name ? <span className="text-gray-700 font-medium truncate">{c.name}</span> : null}
+                    {c.product_name ? <span className="text-gray-700 font-medium truncate">{c.product_name}</span> : null}
+                    {c.firm_name ? <span className="text-gray-400 truncate">· {c.firm_name}</span> : null}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Per-item states */}
           {items.length > 0 && (
             <div>
