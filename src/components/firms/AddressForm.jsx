@@ -186,17 +186,16 @@ export default function AddressForm({ address, onChange, onDelete, onSetHeadquar
               <Star className={`w-3.5 h-3.5 ${isHeadquarters ? "fill-amber-400 text-amber-500" : ""}`} />
               <span>{isHeadquarters ? "HQ" : "Set HQ"}</span>
             </Button>
-            {!isOnly && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-7 w-7 p-0 text-red-400 hover:text-red-600 hover:bg-red-50"
-                onClick={onDelete}
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </Button>
-            )}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 text-red-400 hover:text-red-600 hover:bg-red-50"
+              onClick={onDelete}
+              title="Delete address"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </Button>
           </div>
         )}
         {!isEditing && isHeadquarters && (
