@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import {
   Newspaper, Plus, X, Loader2, Save, Sparkles, Clock,
-  History, AlertTriangle, CheckCircle2, Info, CalendarClock,
+  History, AlertTriangle, CheckCircle2, Info, CalendarClock, FileDown,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { generateWeeklyDigestPdf } from "@/components/news/weeklyDigestPdf";
 
 // ── News Scrub Settings — admin-managed keywords and historical scraping
 //    preferences that focus the nightly news scrub on priority topics ──
@@ -31,6 +32,7 @@ export default function NewsScrubSettings() {
   const [includeHistorical, setIncludeHistorical] = useState(true);
   const [scheduleTime, setScheduleTime] = useState("02:00");
   const [scheduleEnabled, setScheduleEnabled] = useState(true);
+  const [generatingDigest, setGeneratingDigest] = useState(false);
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ["news_scrub_settings"],
@@ -103,6 +105,28 @@ export default function NewsScrubSettings() {
     JSON.stringify(keywords) !== JSON.stringify(existing?.keywords || []) ||
     scheduleTime !== (existing?.schedule_time || "02:00") ||
     scheduleEnabled !== (existing?.schedule_enabled !== undefined ? existing.schedule_enabled : true);
+
+  const handleGenerateDigest = async () => {
+    setGeneratingDigest(true);
+    try {
+      const res = await base44.functions.invoke('generateWeeklyNewsDigest', { days: 7 });
+      const digest = res.data;
+      if (!digest || digest.error) throw new Error(digest?.error || 'Failed to generate digest');
+      if (!digest.total_items) {
+        toast({ title: "No news found", description: "There were no tracked news items in the past week to include." });
+        setGeneratingDigest(false);
+        return;
+      }
+      generateWeeklyDigestPdf(digest);
+      toast({
+        title: "Digest downloaded",
+        description: `Weekly digest with ${digest.total_items} item${digest.total_items !== 1 ? "s" : ""} across ${digest.firm_count} firm${digest.firm_count !== 1 ? "s" : ""} has been downloaded.`,
+      });
+    } catch (e) {
+      toast({ title: "Digest failed", description: e.message, variant: "destructive" });
+    }
+    setGeneratingDigest(false);
+  };
 
   return (
     <div className="space-y-4 py-1">
@@ -307,6 +331,32 @@ export default function NewsScrubSettings() {
             </Button>
           </>
         )}
+      </div>
+
+      {/* Weekly digest export */}
+      <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
+        <div className="flex items-start gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <FileDown className="w-4 h-4 text-emerald-600" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-gray-700">Weekly News Digest</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Compile the past week's tracked news into a shareable PDF with an AI-generated executive summary, key themes, and a per-firm breakdown.
+            </p>
+          </div>
+        </div>
+
+        <Button
+          type="button"
+          size="sm"
+          className="w-full h-9 gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+          onClick={handleGenerateDigest}
+          disabled={generatingDigest}
+        >
+          {generatingDigest ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileDown className="w-3.5 h-3.5" />}
+          {generatingDigest ? "Generating digest..." : "Generate & Download Weekly Digest"}
+        </Button>
       </div>
     </div>
   );
