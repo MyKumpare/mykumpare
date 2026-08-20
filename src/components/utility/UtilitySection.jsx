@@ -59,13 +59,13 @@ function CollapsibleGroup({ label, labelClass = "text-xs font-semibold text-indi
   );
 }
 
-export default function UtilitySection({ deletedCount, forceExpanded = false, onFirmClick }) {
+export default function UtilitySection({ deletedCount, forceExpanded = false, onFirmClick, defaultView }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [expanded, setExpanded] = useState(false);
   // 'menu' = selection screen, 'benchmark' = benchmark list + search, 'cleanup' = contact cleanup, 'orphans' = orphan record cleanup
-  const [view, setView] = useState("menu");
+  const [view, setView] = useState(defaultView || "menu");
   const [benchmarkDialogOpen, setBenchmarkDialogOpen] = useState(false);
   const [selectedBenchmark, setSelectedBenchmark] = useState(null);
   const [benchmarkQuery, setBenchmarkQuery] = useState("");
@@ -75,7 +75,7 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
   // while still letting the user collapse it manually afterwards.
   useEffect(() => {
     if (forceExpanded !== undefined) setExpanded(forceExpanded);
-    if (forceExpanded) {
+    if (forceExpanded && !defaultView) {
       setView("menu");
       setCleanupStarted(false);
     }

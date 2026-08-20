@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, ClipboardCheck, FileText, Files, ShieldCheck, X, LayoutDashboard, FlaskConical, MapPin, Camera,   LayoutGrid, PieChart, Bot, ExternalLink, ChevronDown, CalendarDays, Radar, FileBarChart, Mic, Newspaper } from "lucide-react";
+import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, ClipboardCheck, FileText, Files, ShieldCheck, X, LayoutDashboard, FlaskConical, MapPin, Camera,   LayoutGrid, PieChart, Bot, ExternalLink, ChevronDown, CalendarDays, Radar, FileBarChart, Mic, Newspaper, Gauge, Users, ScrollText, Ghost, Upload, Eraser, Tag, UserX, Briefcase, Activity } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
@@ -113,6 +113,7 @@ export default function Home() {
   const [allExpanded, setAllExpanded] = useState(false);
   const [utilityForceExpanded, setUtilityForceExpanded] = useState(false);
   const [utilityModalOpen, setUtilityModalOpen] = useState(false);
+  const [utilityDefaultView, setUtilityDefaultView] = useState(null);
   const [editingAnalysis, setEditingAnalysis] = useState(null);
   const [analyticsReturnState, setAnalyticsReturnState] = useState(null); // { type: 'product'|'firm'|'benchmark', data: ... }
   const [benchmarkDialogOpen, setBenchmarkDialogOpen] = useState(false);
@@ -669,6 +670,8 @@ export default function Home() {
   const totalAnalyses = analyses.length;
   const hasResults = Object.keys(groupedFirms).length > 0;
 
+  const isAdmin = user?.role === "admin";
+
   const mobileNavItems = [
     { label: "Dashboard", icon: LayoutDashboard, ref: null, color: "text-indigo-300", activeBg: "bg-indigo-50", onClick: () => navigate("/Overview") },
     { label: "AI Agents", icon: Bot, ref: null, color: "text-violet-300", activeBg: "bg-violet-50", onClick: () => navigate("/AiAgents") },
@@ -687,7 +690,23 @@ export default function Home() {
     { label: "Firms", icon: Building, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => setFirmPickerOpen(true) },
     { label: "Products", icon: Package, ref: null, color: "text-violet-600", activeBg: "bg-violet-50", onClick: () => setProductPickerOpen(true) },
     { label: "Contacts", icon: User, ref: null, color: "text-pink-600", activeBg: "bg-pink-50", onClick: () => setContactPickerOpen(true) },
-    { label: "Utilities", icon: Wrench, ref: utilityRef, color: "text-gray-600", activeBg: "bg-gray-100", onClick: () => setUtilityModalOpen(true), submenu: [
+    { label: "Utilities", icon: Wrench, ref: utilityRef, color: "text-gray-600", activeBg: "bg-gray-100", onClick: () => { setUtilityDefaultView(null); setUtilityModalOpen(true); }, submenu: [
+      { label: "Benchmark", icon: Gauge, onClick: () => { setUtilityDefaultView("benchmark"); setUtilityModalOpen(true); } },
+      { label: "Contact Cleanup", icon: Users, onClick: () => { setUtilityDefaultView("cleanup"); setUtilityModalOpen(true); } },
+      { label: "Enrichment Logs", icon: ScrollText, onClick: () => { setUtilityDefaultView("enrichment-logs"); setUtilityModalOpen(true); } },
+      { label: "Orphan Cleanup", icon: Ghost, onClick: () => { setUtilityDefaultView("orphans"); setUtilityModalOpen(true); } },
+      { label: "Import Contacts", icon: Upload, onClick: () => { setUtilityDefaultView("import-contacts"); setUtilityModalOpen(true); } },
+      { label: "Import Firms", icon: Building, onClick: () => { setUtilityDefaultView("import-firms"); setUtilityModalOpen(true); } },
+      { label: "Import Products", icon: Package, onClick: () => { setUtilityDefaultView("import-products"); setUtilityModalOpen(true); } },
+      { label: "Placeholder Cleanup", icon: Eraser, onClick: () => { setUtilityDefaultView("placeholder-cleanup"); setUtilityModalOpen(true); } },
+      { label: "Firm Type Check", icon: Tag, onClick: () => { setUtilityDefaultView("firm-type-validation"); setUtilityModalOpen(true); } },
+      { label: "Company / Title Cleanup", icon: Briefcase, onClick: () => { setUtilityDefaultView("experience-option-cleanup"); setUtilityModalOpen(true); } },
+      { label: "Orphaned Contacts", icon: UserX, onClick: () => { setUtilityDefaultView("orphaned-contacts"); setUtilityModalOpen(true); } },
+      { label: "Import Jobs", icon: Activity, onClick: () => { setUtilityDefaultView("import-jobs"); setUtilityModalOpen(true); } },
+      ...(isAdmin ? [
+        { label: "News Scrub Settings", icon: Newspaper, onClick: () => { setUtilityDefaultView("news-scrub-settings"); setUtilityModalOpen(true); } },
+        { label: "Admin", icon: ShieldCheck, onClick: () => navigate("/UserManagement") },
+      ] : []),
       { label: "Ext Portal", icon: ExternalLink, onClick: () => setExternalPortalOpen(true) },
     ] },
   ];
@@ -842,7 +861,7 @@ export default function Home() {
                       <span className="text-[9px] text-white/70 group-hover:text-white font-medium leading-none">{label}</span>
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="min-w-[10rem]">
+                  <DropdownMenuContent align="start" className="min-w-[10rem] max-h-[75vh] overflow-y-auto">
                     {submenu.map((sub) => {
                       const SubIcon = sub.icon;
                       return (
@@ -1087,7 +1106,7 @@ export default function Home() {
                     <span className={`text-[10px] font-medium ${color}`}>{label}</span>
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent side="top" className="min-w-[10rem]">
+                <DropdownMenuContent side="top" className="min-w-[10rem] max-h-[75vh] overflow-y-auto">
                   {submenu.map((sub) => {
                     const SubIcon = sub.icon;
                     return (
@@ -1474,9 +1493,10 @@ export default function Home() {
       {/* Utility full-screen modal — opened from the header Utilities icon */}
       <UtilityFullScreenModal
         open={utilityModalOpen}
-        onClose={() => setUtilityModalOpen(false)}
+        onClose={() => { setUtilityModalOpen(false); setUtilityDefaultView(null); }}
         deletedCount={deletedCount}
         onFirmClick={handleEdit}
+        defaultView={utilityDefaultView}
       />
 
       {/* Full-size photo viewer — opened by voice "search by photo <name>" */}
