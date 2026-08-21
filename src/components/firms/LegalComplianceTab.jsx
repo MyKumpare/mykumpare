@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Scale, Plus, UserPlus, X } from "lucide-react";
+import { Scale, Plus, UserPlus, X, Search, Loader2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
@@ -66,6 +66,8 @@ export default function LegalComplianceTab({ firmId, isEditing, contacts = [] })
   const [newContactLast, setNewContactLast] = useState("");
   const [addingContact, setAddingContact] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [firmName, setFirmName] = useState("");
+  const [lookingUp, setLookingUp] = useState(false);
 
   useEffect(() => {
     if (!firmId) return;
@@ -82,6 +84,15 @@ export default function LegalComplianceTab({ firmId, isEditing, contacts = [] })
         setNotes(data.notes || "");
       }
     } catch {}
+  }, [firmId]);
+
+  useEffect(() => {
+    if (!firmId) return;
+    let active = true;
+    base44.entities.Firm.get(firmId)
+      .then((f) => { if (active) setFirmName(f?.name || ""); })
+      .catch(() => {});
+    return () => { active = false; };
   }, [firmId]);
 
   const firmContacts = useMemo(
@@ -159,6 +170,44 @@ export default function LegalComplianceTab({ firmId, isEditing, contacts = [] })
     setAddingContact(false);
   };
 
+  const handleLookupRegistration = async () => {
+    if (!firmName) {
+      toast({ title: "Firm name required", description: "The firm needs a name to search the registry.", variant: "destructive" });
+      return;
+    }
+    if (!regulatoryBody) {
+      toast({ title: "Select jurisdiction", description: "Pick the entity jurisdiction and country first.", variant: "destructive" });
+      return;
+    }
+    setLookingUp(true);
+    try {
+      const res = await base44.functions.invoke("lookupRegistrationNumber", {
+        firm_name: firmName,
+        regulatory_body: regulatoryBody,
+        jurisdiction: entityJurisdiction,
+        country: jurisdictionCountry,
+      });
+      const data = res?.data || res;
+      if (data?.found && data.registration_number) {
+        setRegistrationNumber(data.registration_number);
+        setDirty(true);
+        toast({
+          title: "Registration number found",
+          description: data.source_url ? `${data.registration_number} — via ${data.source_url}` : data.registration_number,
+        });
+      } else {
+        toast({
+          title: "Not found",
+          description: data?.note || "Couldn't find a registration number on the regulator's registry.",
+          variant: "destructive",
+        });
+      }
+    } catch (e) {
+      toast({ title: "Lookup failed", description: e.message, variant: "destructive" });
+    }
+    setLookingUp(false);
+  };
+
   return (
     <div className="space-y-4 py-1">
       <div className="flex items-center gap-2 text-indigo-700">
@@ -232,6 +281,13 @@ export default function LegalComplianceTab({ firmId, isEditing, contacts = [] })
               onChange={(e) => { setRegistrationNumber(e.target.value); setDirty(true); }}
               disabled={!isEditing}
             />
+            {isEditing && regulatoryBody && (
+              <button type="button" onClick={handleLookupRegistration} disabled={lookingUp}
+                className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50">
+                {lookingUp ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                {lookingUp ? "Searching registry..." : `Auto-detect from ${regulatoryBody}`}
+              </button>
+            )}
           </div>
         </div>
       </div>
