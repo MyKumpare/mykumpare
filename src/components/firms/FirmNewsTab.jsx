@@ -31,6 +31,7 @@ import NewsStatusBadges from "../news/NewsStatusBadges";
 import NewsStatusBadge from "../news/NewsStatusBadge";
 const NewsSummaryDialog = lazyDialog(() => import("../news/NewsSummaryDialog"));
 const NewsChatDialog = lazyDialog(() => import("../news/NewsChatDialog"));
+const AddContactDialog = lazyDialog(() => import("../contacts/AddContactDialog"));
 
 const QUILL_MODULES = {
   toolbar: [
@@ -77,6 +78,7 @@ export default function FirmNewsTab({ firmId, firmName }) {
   const [showHidden, setShowHidden] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatContext, setChatContext] = useState({ items: [], label: "" });
+  const [viewingContact, setViewingContact] = useState(null);
 
   // Owned news (firm_id = this firm) + tagged news (tagged_firm_ids includes this firm)
   const { data: ownedNews = [], isLoading: loadingOwned } = useQuery({
@@ -415,6 +417,7 @@ export default function FirmNewsTab({ firmId, firmName }) {
           onBulkTagContacts={handleBulkTagContacts}
           onBulkTagFirms={handleBulkTagFirms}
           onExportPdf={handleExportSelectedPdf}
+          onContactClick={setViewingContact}
           onChat={() => {
             const sel = sortedNews.filter(n => selectedIds.has(n.id));
             if (!sel.length) return;
@@ -528,6 +531,7 @@ export default function FirmNewsTab({ firmId, firmName }) {
               onToggleSelect={() => toggleSelect(item.id)}
               onAutoTag={() => handleAutoTag(item)}
               onChat={() => { setChatContext({ items: [item], label: "this article" }); setChatOpen(true); }}
+              onContactClick={setViewingContact}
             />
           ))}
         </div>
@@ -553,12 +557,21 @@ export default function FirmNewsTab({ firmId, firmName }) {
         items={chatContext.items}
         contextLabel={chatContext.label}
       />
+      {viewingContact && (
+        <AddContactDialog
+          open={!!viewingContact}
+          onOpenChange={(o) => { if (!o) setViewingContact(null); }}
+          editingContact={viewingContact}
+          firms={taggableFirms}
+          viewMode={true}
+        />
+      )}
     </div>
   );
 }
 
 // ── News item card (view / expand / edit) ───────────────────────────────────
-export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, onCancelEdit, onSaveEdit, onTogglePin, onDelete, onToggleHide, contacts = [], onTagContacts, firms = [], onTagFirms, onUpdateContentTags, selectable, selected, onToggleSelect, onAutoTag, onChat }) {
+export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, onCancelEdit, onSaveEdit, onTogglePin, onDelete, onToggleHide, contacts = [], onTagContacts, firms = [], onTagFirms, onUpdateContentTags, selectable, selected, onToggleSelect, onAutoTag, onChat, onContactClick }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -692,6 +705,7 @@ export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, 
                   taggedIds={item.tagged_contact_ids || []}
                   onTagChange={onTagContacts}
                   size="xs"
+                  onContactClick={onContactClick}
                 />
               )}
               {onTagFirms && (

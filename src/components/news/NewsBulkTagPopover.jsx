@@ -5,8 +5,12 @@ import { Button } from "@/components/ui/button";
 
 // ── Bulk tag popover — pick multiple contacts/firms to ADD to every selected
 //    news article at once. Has its own selection state + Apply button so the
-//    chosen set is applied in one shot (unlike the per-item tagger). ──
-export default function NewsBulkTagPopover({ items, triggerLabel, triggerIcon: Icon, accent = "indigo", onApply }) {
+//    chosen set is applied in one shot (unlike the per-item tagger).
+//
+//    Each row shows the item's photo (when `photoUrl` is provided on the item)
+//    and a clickable name hyperlink (when `onItemClick` is supplied) so the
+//    user can open the record's details without losing their selection. ──
+export default function NewsBulkTagPopover({ items, triggerLabel, triggerIcon: Icon, accent = "indigo", onApply, onItemClick }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [picked, setPicked] = useState([]);
@@ -31,6 +35,15 @@ export default function NewsBulkTagPopover({ items, triggerLabel, triggerIcon: I
     purple: { btn: "text-purple-600 hover:bg-purple-50", chk: "bg-purple-600 border-purple-600", ring: "focus:ring-purple-400", apply: "bg-purple-600 hover:bg-purple-700" },
   }[accent];
 
+  const Avatar = ({ it, className = "w-6 h-6" }) =>
+    it.photoUrl ? (
+      <img src={it.photoUrl} alt={it.label} className={`${className} rounded-full object-cover flex-shrink-0 border border-gray-100`} />
+    ) : (
+      <div className={`${className} rounded-full bg-gray-100 flex items-center justify-center text-[10px] font-bold text-gray-500 flex-shrink-0 border border-gray-100`}>
+        {(it.label || "")[0]}
+      </div>
+    );
+
   return (
     <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setPicked([]); setQuery(""); } }}>
       <PopoverTrigger asChild>
@@ -44,7 +57,7 @@ export default function NewsBulkTagPopover({ items, triggerLabel, triggerIcon: I
           {triggerLabel}
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-72 p-0" align="start">
+      <PopoverContent className="w-80 p-0" align="start">
         <div className="p-2 border-b">
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
@@ -58,24 +71,46 @@ export default function NewsBulkTagPopover({ items, triggerLabel, triggerIcon: I
             />
           </div>
         </div>
-        <div className="max-h-56 overflow-y-auto">
+        <div className="max-h-64 overflow-y-auto">
           {sorted.length === 0 ? (
             <p className="text-xs text-gray-400 italic py-4 text-center">No items found</p>
           ) : (
             sorted.map(it => {
               const on = picked.includes(it.id);
               return (
-                <button
+                <div
                   key={it.id}
-                  type="button"
-                  onClick={() => toggle(it.id)}
                   className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-gray-50 text-left ${on ? "bg-gray-50" : ""}`}
                 >
-                  <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${on ? accentClasses.chk : "border-gray-300"}`}>
-                    {on && <Check className="w-3 h-3 text-white" />}
-                  </div>
-                  <span className="flex-1 truncate text-gray-700">{it.label}</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => toggle(it.id)}
+                    className="flex items-center gap-2 shrink-0"
+                  >
+                    <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${on ? accentClasses.chk : "border-gray-300"}`}>
+                      {on && <Check className="w-3 h-3 text-white" />}
+                    </div>
+                    <Avatar it={it} />
+                  </button>
+                  {onItemClick ? (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); onItemClick(it); setOpen(false); }}
+                      className="flex-1 min-w-0 text-left text-indigo-600 hover:text-indigo-700 hover:underline truncate"
+                      title={`View ${it.label}`}
+                    >
+                      {it.label}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => toggle(it.id)}
+                      className="flex-1 min-w-0 text-left text-gray-700 truncate"
+                    >
+                      {it.label}
+                    </button>
+                  )}
+                </div>
               );
             })
           )}

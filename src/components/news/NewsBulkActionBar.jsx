@@ -15,12 +15,15 @@ export default function NewsBulkActionBar({
   onBulkTagFirms,
   onExportPdf,
   onChat,
+  onContactClick,
 }) {
   const contactItems = contacts.map(c => ({
     id: c.id,
     label: [c.first_name, c.last_name].filter(Boolean).join(" ") + (c.title ? ` — ${c.title}` : ""),
+    photoUrl: c.photo_url,
+    raw: c,
   }));
-  const firmItems = firms.map(f => ({ id: f.id, label: f.name }));
+  const firmItems = firms.map(f => ({ id: f.id, label: f.name, photoUrl: f.logo_url, raw: f }));
 
   return (
     <div className="flex items-center gap-2 flex-wrap rounded-xl border border-indigo-200 bg-indigo-50/80 backdrop-blur px-3 py-2 shadow-sm">
@@ -34,7 +37,7 @@ export default function NewsBulkActionBar({
         <X className="w-3.5 h-3.5" /> Clear
       </button>
       <div className="h-4 w-px bg-indigo-200" />
-      <NewsBulkTagPopover items={contactItems} triggerLabel="Tag contacts" triggerIcon={UserPlus} accent="indigo" onApply={onBulkTagContacts} />
+      <NewsBulkTagPopover items={contactItems} triggerLabel="Tag contacts" triggerIcon={UserPlus} accent="indigo" onApply={onBulkTagContacts} onItemClick={onContactClick ? (it) => onContactClick(it.raw) : undefined} />
       <NewsBulkTagPopover items={firmItems} triggerLabel="Tag firms" triggerIcon={Building2} accent="purple" onApply={onBulkTagFirms} />
       <div className="h-4 w-px bg-indigo-200" />
       <button type="button" onClick={onExportPdf} disabled={selectedCount === 0}
