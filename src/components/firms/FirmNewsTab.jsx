@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Newspaper, Plus, Trash2, Pin, PinOff, ExternalLink, Sparkles, Loader2,
   AlertTriangle, ChevronDown, ChevronUp, Edit2, Check, X, Calendar, History, Search,
-  ArrowDownWideNarrow, ArrowUpWideNarrow, FileText,
+  ArrowDownWideNarrow, ArrowUpWideNarrow, FileText, CheckSquare,
 } from "lucide-react";
 import { format } from "date-fns";
 import ReactQuill from "react-quill";
@@ -18,6 +18,7 @@ import { toast } from "@/components/ui/use-toast";
 import ContactTaggerPopover from "./ContactTaggerPopover";
 import FirmTaggerPopover from "./FirmTaggerPopover";
 import HistoricalScrubDialog from "../news/HistoricalScrubDialog";
+import NewsBulkActionBar from "../news/NewsBulkActionBar";
 import { lazyDialog } from "../common/lazyDialog";
 const NewsSummaryDialog = lazyDialog(() => import("../news/NewsSummaryDialog"));
 
@@ -61,6 +62,8 @@ export default function FirmNewsTab({ firmId, firmName }) {
   const [showKeywords, setShowKeywords] = useState(false);
   const [showHistorical, setShowHistorical] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
 
   // Owned news (firm_id = this firm) + tagged news (tagged_firm_ids includes this firm)
   const { data: ownedNews = [], isLoading: loadingOwned } = useQuery({
@@ -190,6 +193,45 @@ export default function FirmNewsTab({ firmId, firmName }) {
     queryClient.invalidateQueries({ queryKey: ["firm_news"] });
   };
 
+  const toggleSelect = (id) => setSelectedIds(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const selectAllNews = () => setSelectedIds(new Set(sortedNews.map(n => n.id)));
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const handleBulkTagContacts = async (idsToAdd) => {
+    const items = sortedNews.filter(n => selectedIds.has(n.id));
+    const updates = items.map(n => ({
+      id: n.id,
+      tagged_contact_ids: Array.from(new Set([...(n.tagged_contact_ids || []), ...idsToAdd])),
+    }));
+    if (!updates.length) return;
+    try {
+      await base44.entities.FirmNews.bulkUpdate(updates);
+      toast({ title: "Tags applied", description: `Added ${idsToAdd.length} contact${idsToAdd.length > 1 ? "s" : ""} to ${updates.length} article${updates.length > 1 ? "s" : ""}.` });
+      queryClient.invalidateQueries({ queryKey: ["firm_news"] });
+    } catch (e) {
+      toast({ title: "Bulk tag failed", description: e.message, variant: "destructive" });
+    }
+  };
+  const handleBulkTagFirms = async (idsToAdd) => {
+    const items = sortedNews.filter(n => selectedIds.has(n.id));
+    const updates = items.map(n => ({
+      id: n.id,
+      tagged_firm_ids: Array.from(new Set([...(n.tagged_firm_ids || []), ...idsToAdd])),
+    }));
+    if (!updates.length) return;
+    try {
+      await base44.entities.FirmNews.bulkUpdate(updates);
+      toast({ title: "Tags applied", description: `Added ${idsToAdd.length} firm${idsToAdd.length > 1 ? "s" : ""} to ${updates.length} article${updates.length > 1 ? "s" : ""}.` });
+      queryClient.invalidateQueries({ queryKey: ["firm_news"] });
+    } catch (e) {
+      toast({ title: "Bulk tag failed", description: e.message, variant: "destructive" });
+    }
+  };
+
   return (
     <div className="space-y-3">
       {/* Header actions */}
@@ -228,6 +270,18 @@ export default function FirmNewsTab({ firmId, firmName }) {
           )}
         </div>
         <div className="flex items-center gap-1.5">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className={`h-7 px-2 gap-1 text-xs ${selectMode ? "text-indigo-700 bg-indigo-50 hover:bg-indigo-100" : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"}`}
+            onClick={() => { setSelectMode(v => !v); if (selectMode) clearSelection(); }}
+            disabled={activeNews.length === 0}
+            title={selectMode ? "Exit multi-select" : "Select multiple articles to bulk-tag"}
+          >
+            <CheckSquare className="w-3.5 h-3.5" />
+            {selectMode ? "Done" : "Select"}
+          </Button>
           <Button
             type="button"
             variant="ghost"
@@ -284,6 +338,19 @@ export default function FirmNewsTab({ firmId, firmName }) {
           </Button>
         </div>
       </div>
+
+      {selectMode && (
+        <NewsBulkActionBar
+          selectedCount={selectedIds.size}
+          totalCount={sortedNews.length}
+          onSelectAll={selectAllNews}
+          onClear={clearSelection}
+          contacts={taggableContacts}
+          firms={taggableFirms}
+          onBulkTagContacts={handleBulkTagContacts}
+          onBulkTagFirms={handleBulkTagFirms}
+        />
+      )}
 
       {/* Keywords input */}
       {showKeywords && (
@@ -381,6 +448,9 @@ export default function FirmNewsTab({ firmId, firmName }) {
               onTagContacts={(ids) => handleTagContacts(item, ids)}
               firms={taggableFirms}
               onTagFirms={(ids) => handleTagFirms(item, ids)}
+              selectable={selectMode}
+              selected={selectedIds.has(item.id)}
+              onToggleSelect={() => toggleSelect(item.id)}
             />
           ))}
         </div>
@@ -405,7 +475,7 @@ export default function FirmNewsTab({ firmId, firmName }) {
 }
 
 // ── News item card (view / expand / edit) ───────────────────────────────────
-export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, onCancelEdit, onSaveEdit, onTogglePin, onDelete, contacts = [], onTagContacts, firms = [], onTagFirms }) {
+export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, onCancelEdit, onSaveEdit, onTogglePin, onDelete, contacts = [], onTagContacts, firms = [], onTagFirms, selectable, selected, onToggleSelect }) {
   const alertStyle = ALERT_STYLES[item.alert_status] || ALERT_STYLES.Low;
   const statusStyle = STATUS_STYLES[item.news_status] || STATUS_STYLES.Neutral;
   const AlertIcon = alertStyle.icon;
@@ -423,6 +493,16 @@ export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, 
   return (
     <div className={`rounded-xl border ${item.is_pinned ? 'border-rose-300 bg-rose-50/30' : 'border-gray-200 bg-white'} overflow-hidden`}>
       <div className="flex items-start gap-2.5 px-3 py-2.5">
+        {selectable && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onToggleSelect?.(); }}
+            className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${selected ? "bg-indigo-600 border-indigo-600" : "border-gray-300 bg-white hover:border-indigo-400"}`}
+            title={selected ? "Deselect" : "Select"}
+          >
+            {selected && <Check className="w-3 h-3 text-white" />}
+          </button>
+        )}
         {/* Alert level indicator */}
         <div className={`mt-0.5 w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${alertStyle.bg}`}>
           <AlertIcon className={`w-3.5 h-3.5 ${alertStyle.color}`} />

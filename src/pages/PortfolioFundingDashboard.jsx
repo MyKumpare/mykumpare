@@ -110,6 +110,35 @@ export default function PortfolioFundingDashboard() {
       .slice(0, 10);
   }, [scopedProducts]);
 
+  // Map each firm to its primary type for grouping
+  const firmTypeMap = useMemo(() => {
+    const map = new Map();
+    for (const f of firms) {
+      const type = f.firm_type || (f.firm_types && f.firm_types[0]) || "Unknown";
+      map.set(f.id, type);
+    }
+    return map;
+  }, [firms]);
+
+  // Total active capital allocation grouped by allocator firm type
+  const fundingByFirmType = useMemo(() => {
+    const totals = {};
+    for (const p of scopedPortfolios) {
+      if (p.funding_status !== "Active") continue;
+      const type = firmTypeMap.get(p.firm_id) || "Unknown";
+      const amt = Number(p.initial_allocation_amount) || 0;
+      totals[type] = (totals[type] || 0) + amt;
+    }
+    return Object.entries(totals)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [scopedPortfolios, firmTypeMap]);
+
+  const totalActiveAllocation = useMemo(
+    () => fundingByFirmType.reduce((sum, d) => sum + d.value, 0),
+    [fundingByFirmType]
+  );
+
   const loading = portfoliosLoading || productsLoading;
 
   return (
@@ -161,6 +190,39 @@ export default function PortfolioFundingDashboard() {
           <SummaryCard label="Terminated Portfolios" value={totalTerminatedPortfolios} icon={TrendingDown} color="bg-red-500" loading={loading} />
           <SummaryCard label="Funded Products" value={fundedProducts} icon={TrendingUp} color="bg-indigo-500" loading={loading} />
           <SummaryCard label="Terminated Products" value={terminatedProducts} icon={TrendingDown} color="bg-amber-500" loading={loading} />
+        </div>
+
+        {/* Capital allocation by firm type */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Building2 className="w-5 h-5 text-indigo-600" />
+            <h2 className="text-sm font-semibold text-gray-800">Capital Allocation by Firm Type</h2>
+          </div>
+          {loading ? (
+            <div className="h-64 flex items-center justify-center text-gray-400 text-sm">Loading...</div>
+          ) : fundingByFirmType.length === 0 ? (
+            <div className="h-64 flex items-center justify-center text-gray-400 text-sm">No active funding data</div>
+          ) : (
+            <>
+              <ResponsiveContainer width="100%" height={Math.max(220, fundingByFirmType.length * 46)}>
+                <BarChart data={fundingByFirmType} layout="vertical" margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} tickFormatter={formatCompactCurrency} />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} width={150} />
+                  <Tooltip
+                    cursor={{ fill: "#f9fafb" }}
+                    contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "12px" }}
+                    formatter={(v) => [formatCurrency(v), "Capital Allocation"]}
+                  />
+                  <Bar dataKey="value" name="Capital Allocation" fill="#6366f1" radius={[0, 6, 6, 0]} barSize={24} />
+                </BarChart>
+              </ResponsiveContainer>
+              <div className="mt-3 flex items-center justify-between rounded-lg bg-indigo-50/60 px-3 py-2">
+                <span className="text-xs font-medium text-gray-600">Total Active Capital Allocation</span>
+                <span className="text-base font-bold text-indigo-700">{formatCurrency(totalActiveAllocation)}</span>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Charts */}
@@ -314,6 +376,19 @@ export default function PortfolioFundingDashboard() {
       </div>
     </div>
   );
+}
+
+function formatCurrency(v) {
+  const n = Number(v) || 0;
+  return n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+}
+
+function formatCompactCurrency(v) {
+  const n = Number(v) || 0;
+  if (Math.abs(n) >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
+  if (Math.abs(n) >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+  if (Math.abs(n) >= 1e3) return `$${(n / 1e3).toFixed(0)}K`;
+  return `$${n.toFixed(0)}`;
 }
 
 function SummaryCard({ label, value, icon: Icon, color, loading }) {

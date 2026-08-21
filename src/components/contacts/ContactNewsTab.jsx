@@ -6,11 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Newspaper, Plus, Trash2, Sparkles, Loader2, History, Search, X,
-  ArrowDownWideNarrow, ArrowUpWideNarrow, FileText,
+  ArrowDownWideNarrow, ArrowUpWideNarrow, FileText, CheckSquare,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { NewsItemCard, NewsItemForm } from "../firms/FirmNewsTab";
 import HistoricalScrubDialog from "../news/HistoricalScrubDialog";
+import NewsBulkActionBar from "../news/NewsBulkActionBar";
 import { lazyDialog } from "../common/lazyDialog";
 const NewsSummaryDialog = lazyDialog(() => import("../news/NewsSummaryDialog"));
 
@@ -30,6 +31,8 @@ export default function ContactNewsTab({ contactId, contactName, firmId, firmNam
   const [showKeywords, setShowKeywords] = useState(false);
   const [showHistorical, setShowHistorical] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
 
   // Owned news (from contact's firm) + cross-firm tagged news
   const { data: ownedNews = [], isLoading: loadingOwned } = useQuery({
@@ -157,6 +160,45 @@ export default function ContactNewsTab({ contactId, contactName, firmId, firmNam
     queryClient.invalidateQueries({ queryKey: ["firm_news"] });
   };
 
+  const toggleSelect = (id) => setSelectedIds(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const selectAllNews = () => setSelectedIds(new Set(sortedNews.map(n => n.id)));
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const handleBulkTagContacts = async (idsToAdd) => {
+    const items = sortedNews.filter(n => selectedIds.has(n.id));
+    const updates = items.map(n => ({
+      id: n.id,
+      tagged_contact_ids: Array.from(new Set([...(n.tagged_contact_ids || []), ...idsToAdd])),
+    }));
+    if (!updates.length) return;
+    try {
+      await base44.entities.FirmNews.bulkUpdate(updates);
+      toast({ title: "Tags applied", description: `Added ${idsToAdd.length} contact${idsToAdd.length > 1 ? "s" : ""} to ${updates.length} article${updates.length > 1 ? "s" : ""}.` });
+      queryClient.invalidateQueries({ queryKey: ["firm_news"] });
+    } catch (e) {
+      toast({ title: "Bulk tag failed", description: e.message, variant: "destructive" });
+    }
+  };
+  const handleBulkTagFirms = async (idsToAdd) => {
+    const items = sortedNews.filter(n => selectedIds.has(n.id));
+    const updates = items.map(n => ({
+      id: n.id,
+      tagged_firm_ids: Array.from(new Set([...(n.tagged_firm_ids || []), ...idsToAdd])),
+    }));
+    if (!updates.length) return;
+    try {
+      await base44.entities.FirmNews.bulkUpdate(updates);
+      toast({ title: "Tags applied", description: `Added ${idsToAdd.length} firm${idsToAdd.length > 1 ? "s" : ""} to ${updates.length} article${updates.length > 1 ? "s" : ""}.` });
+      queryClient.invalidateQueries({ queryKey: ["firm_news"] });
+    } catch (e) {
+      toast({ title: "Bulk tag failed", description: e.message, variant: "destructive" });
+    }
+  };
+
   const addKeyword = () => {
     const k = keywordInput.trim();
     if (k && !keywords.includes(k)) setKeywords([...keywords, k]);
@@ -202,6 +244,18 @@ export default function ContactNewsTab({ contactId, contactName, firmId, firmNam
           )}
         </div>
         <div className="flex items-center gap-1.5">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className={`h-7 px-2 gap-1 text-xs ${selectMode ? "text-indigo-700 bg-indigo-50 hover:bg-indigo-100" : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"}`}
+            onClick={() => { setSelectMode(v => !v); if (selectMode) clearSelection(); }}
+            disabled={activeNews.length === 0}
+            title={selectMode ? "Exit multi-select" : "Select multiple articles to bulk-tag"}
+          >
+            <CheckSquare className="w-3.5 h-3.5" />
+            {selectMode ? "Done" : "Select"}
+          </Button>
           <Button
             type="button"
             variant="ghost"
@@ -258,6 +312,19 @@ export default function ContactNewsTab({ contactId, contactName, firmId, firmNam
           </Button>
         </div>
       </div>
+
+      {selectMode && (
+        <NewsBulkActionBar
+          selectedCount={selectedIds.size}
+          totalCount={sortedNews.length}
+          onSelectAll={selectAllNews}
+          onClear={clearSelection}
+          contacts={taggableContacts}
+          firms={taggableFirms}
+          onBulkTagContacts={handleBulkTagContacts}
+          onBulkTagFirms={handleBulkTagFirms}
+        />
+      )}
 
       {/* Keywords input */}
       {showKeywords && (
@@ -358,6 +425,9 @@ export default function ContactNewsTab({ contactId, contactName, firmId, firmNam
               onTagContacts={(ids) => handleTagContacts(item, ids)}
               firms={taggableFirms}
               onTagFirms={(ids) => handleTagFirms(item, ids)}
+              selectable={selectMode}
+              selected={selectedIds.has(item.id)}
+              onToggleSelect={() => toggleSelect(item.id)}
             />
           ))}
         </div>
