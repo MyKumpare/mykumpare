@@ -67,6 +67,16 @@
       "default": "Not Responded",
       "description": "Internal RSVP/attendance status for this firm's participation in the conference. Managed by the team to track whether the firm has committed to attending."
     },
+    "registration_status": {
+      "type": "string",
+      "enum": [
+        "Not Registered",
+        "Registered",
+        "Waitlisted"
+      ],
+      "default": "Not Registered",
+      "description": "Registration status for this conference \u2014 whether the team has registered the firm to attend. Managed by the team to track registration progress."
+    },
     "internal_notes": {
       "type": "string",
       "description": "Internal team notes about this conference attendance record (e.g. who is going, logistics, follow-ups). Free text."

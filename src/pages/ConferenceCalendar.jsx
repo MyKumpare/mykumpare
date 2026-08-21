@@ -29,6 +29,12 @@ const RSVP_COLORS = {
   "Declined": "bg-rose-50 text-rose-700 border-rose-200",
 };
 
+const REG_COLORS = {
+  "Not Registered": "bg-gray-50 text-gray-600 border-gray-200",
+  "Registered": "bg-emerald-50 text-emerald-700 border-emerald-200",
+  "Waitlisted": "bg-amber-50 text-amber-700 border-amber-200",
+};
+
 function fmtDate(d) {
   if (!d) return "—";
   try { return format(parseISO(d), "MMM d, yyyy"); } catch { return d; }
@@ -310,6 +316,8 @@ function ConferenceCard({ c, compact }) {
   const pColor = PARTICP_COLORS[c.participation_type] || PARTICP_COLORS.Unknown;
   const rsvp = c.rsvp_status || "Not Responded";
   const rsvpColor = RSVP_COLORS[rsvp] || RSVP_COLORS["Not Responded"];
+  const reg = c.registration_status || "Not Registered";
+  const regColor = REG_COLORS[reg] || REG_COLORS["Not Registered"];
   return (
     <div className={`rounded-lg border border-gray-100 bg-white ${compact ? "p-2" : "p-2.5"} hover:shadow-sm transition-shadow`}>
       <div className="flex items-center gap-1.5 flex-wrap mb-1">
@@ -320,6 +328,11 @@ function ConferenceCard({ c, compact }) {
         {rsvp !== "Not Responded" && (
           <span className={`inline-flex items-center text-[9px] font-semibold px-1.5 py-0.5 rounded-full border ${rsvpColor}`}>
             {rsvp}
+          </span>
+        )}
+        {reg !== "Not Registered" && (
+          <span className={`inline-flex items-center text-[9px] font-semibold px-1.5 py-0.5 rounded-full border ${regColor}`}>
+            {reg}
           </span>
         )}
         {!compact && (

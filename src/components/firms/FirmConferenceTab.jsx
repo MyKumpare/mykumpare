@@ -26,6 +26,14 @@ const RSVP_COLORS = {
   "Declined": "bg-rose-50 text-rose-700 border-rose-200",
 };
 
+const REG_OPTIONS = ["Not Registered", "Registered", "Waitlisted"];
+
+const REG_COLORS = {
+  "Not Registered": "bg-gray-50 text-gray-600 border-gray-200",
+  "Registered": "bg-emerald-50 text-emerald-700 border-emerald-200",
+  "Waitlisted": "bg-amber-50 text-amber-700 border-amber-200",
+};
+
 function fmtDate(d) {
   if (!d) return "—";
   try { return format(new Date(d + "T00:00:00"), "MMM d, yyyy"); } catch { return d; }
@@ -183,6 +191,17 @@ Only return real conferences you found evidence of on the web. Do not invent con
     }
   };
 
+  const handleRegChange = async (conf, newStatus) => {
+    try {
+      await base44.entities.FirmConference.update(conf.id, { registration_status: newStatus });
+      queryClient.invalidateQueries({ queryKey: ["firm_conferences", firmId] });
+      queryClient.invalidateQueries({ queryKey: ["all_conferences"] });
+      toast({ title: "Registration updated", description: `${conf.title}: ${newStatus}` });
+    } catch (e) {
+      toast({ title: "Update failed", description: e.message, variant: "destructive" });
+    }
+  };
+
   const sorted = [...conferences].sort((a, b) => {
     const da = a.conference_date || "";
     const db = b.conference_date || "";
@@ -220,6 +239,7 @@ Only return real conferences you found evidence of on the web. Do not invent con
               key={c.id}
               conf={c}
               onRsvpChange={handleRsvpChange}
+              onRegChange={handleRegChange}
               onDelete={handleDelete}
             />
           ))}
@@ -229,7 +249,7 @@ Only return real conferences you found evidence of on the web. Do not invent con
   );
 }
 
-function ConferenceRecordCard({ conf, onRsvpChange, onDelete }) {
+function ConferenceRecordCard({ conf, onRsvpChange, onRegChange, onDelete }) {
   const queryClient = useQueryClient();
   const [notesOpen, setNotesOpen] = useState(false);
   const [notesDraft, setNotesDraft] = useState(conf.internal_notes || "");
@@ -238,6 +258,8 @@ function ConferenceRecordCard({ conf, onRsvpChange, onDelete }) {
   const pColor = PARTICP_COLORS[conf.participation_type] || PARTICP_COLORS.Unknown;
   const rsvp = conf.rsvp_status || "Not Responded";
   const rsvpColor = RSVP_COLORS[rsvp] || RSVP_COLORS["Not Responded"];
+  const reg = conf.registration_status || "Not Registered";
+  const regColor = REG_COLORS[reg] || REG_COLORS["Not Registered"];
 
   const handleSaveNotes = async () => {
     setSavingNotes(true);
@@ -265,6 +287,11 @@ function ConferenceRecordCard({ conf, onRsvpChange, onDelete }) {
               <ClipboardCheck className="w-2.5 h-2.5" />
               {rsvp}
             </span>
+            {reg !== "Not Registered" && (
+              <span className={`inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${regColor}`}>
+                {reg}
+              </span>
+            )}
             {conf.conference_date && (
               <span className="inline-flex items-center gap-1 text-[10px] text-gray-500">
                 <CalendarDays className="w-3 h-3" />
@@ -323,6 +350,16 @@ function ConferenceRecordCard({ conf, onRsvpChange, onDelete }) {
             className="h-7 rounded-md border border-gray-200 bg-white px-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400"
           >
             {RSVP_OPTIONS.map(o => (
+              <option key={o} value={o}>{o}</option>
+            ))}
+          </select>
+          <label className="text-[11px] font-medium text-gray-500 ml-1">Registration:</label>
+          <select
+            value={reg}
+            onChange={e => onRegChange(conf, e.target.value)}
+            className="h-7 rounded-md border border-gray-200 bg-white px-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400"
+          >
+            {REG_OPTIONS.map(o => (
               <option key={o} value={o}>{o}</option>
             ))}
           </select>
