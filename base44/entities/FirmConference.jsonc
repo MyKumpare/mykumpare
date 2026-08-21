@@ -1,0 +1,174 @@
+{
+  "name": "FirmConference",
+  "type": "object",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "ID of the firm (tenant) that owns this conference record. Set on creation to the creator's linked_firm_id; drives tenant isolation via RLS."
+    },
+    "firm_id": {
+      "type": "string",
+      "description": "ID of the associated firm"
+    },
+    "firm_name": {
+      "type": "string",
+      "description": "Name of the firm (denormalized for display)"
+    },
+    "conference_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Start date of the conference (YYYY-MM-DD). When only a month/year is known, the first day of the known period is stored."
+    },
+    "end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "End date of the conference (YYYY-MM-DD), if known."
+    },
+    "title": {
+      "type": "string",
+      "description": "Title/name of the conference"
+    },
+    "description": {
+      "type": "string",
+      "description": "Short description of the conference (what it is about)"
+    },
+    "location": {
+      "type": "string",
+      "description": "Location of the conference (city, state, country, or venue)"
+    },
+    "fees": {
+      "type": "string",
+      "description": "Registration fees for the conference (free text, e.g. '$1,200', 'Free', 'See website')"
+    },
+    "url": {
+      "type": "string",
+      "description": "URL link to the conference website or details page"
+    },
+    "participation_type": {
+      "type": "string",
+      "enum": [
+        "Sponsoring",
+        "Attending",
+        "Speaking",
+        "Exhibiting",
+        "Unknown"
+      ],
+      "default": "Unknown",
+      "description": "How the firm or its contact is involved in the conference"
+    },
+    "source_contact_name": {
+      "type": "string",
+      "description": "Name of the contact through whom this conference was found (if the conference relates to a contact rather than the firm directly)"
+    },
+    "scrub_batch_id": {
+      "type": "string",
+      "description": "ID of the scrub batch that produced this conference record (for deduplication)"
+    },
+    "deleted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when this conference record was soft-deleted"
+    }
+  },
+  "required": [
+    "firm_id",
+    "firm_name",
+    "title"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_edit": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_delete": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
