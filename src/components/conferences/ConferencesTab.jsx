@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import ConferenceFeesChart from "@/components/conferences/ConferenceFeesChart";
+import ConferenceMonthGrid from "@/components/conferences/ConferenceMonthGrid";
 import { scrubConferencesForFirm } from "@/components/conferences/conferenceScrub";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -321,43 +322,13 @@ export default function ConferencesTab() {
               <div key={d} className="text-center text-[10px] font-semibold text-gray-400 py-1">{d}</div>
             ))}
           </div>
-          <div className="grid grid-cols-7 gap-px">
-            {days.map(day => {
-              const key = format(day, "yyyy-MM-dd");
-              const dayItems = byDate.get(key) || [];
-              const inMonth = isSameMonth(day, currentMonth);
-              const isSelected = selectedDate && isSameDay(day, selectedDate);
-              return (
-                <button
-                  type="button"
-                  key={key}
-                  onClick={() => setSelectedDate(day)}
-                  className={`min-h-[64px] md:min-h-[80px] rounded-md border p-1 text-left transition-colors ${
-                    isSelected ? "border-indigo-400 bg-indigo-50"
-                    : inMonth ? "border-gray-100 bg-white hover:bg-gray-50"
-                    : "border-gray-50 bg-gray-50/50 text-gray-400"
-                  }`}
-                >
-                  <div className={`text-[10px] font-medium ${inMonth ? "text-gray-600" : "text-gray-300"}`}>
-                    {format(day, "d")}
-                  </div>
-                  <div className="space-y-0.5 mt-0.5">
-                    {dayItems.slice(0, 3).map(c => {
-                      const pColor = PARTICP_COLORS[c.participation_type] || PARTICP_COLORS.Unknown;
-                      return (
-                        <div key={c.id} className={`text-[9px] leading-tight px-1 py-0.5 rounded border truncate ${pColor}`} title={c.title}>
-                          {c.title}
-                        </div>
-                      );
-                    })}
-                    {dayItems.length > 3 && (
-                      <div className="text-[9px] text-gray-400 px-1">+{dayItems.length - 3} more</div>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+          <ConferenceMonthGrid
+            days={days}
+            currentMonth={currentMonth}
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            conferences={sorted}
+          />
 
           {selectedDate && (
             <div className="mt-3 pt-3 border-t border-gray-100">
