@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { waitUntil } from 'base44:runtime';
+import { autoTagNewsItems } from '../../shared/newsAutoTag.ts';
 
 export default async function(req: Request): Promise<Response> {
   try {
@@ -41,9 +42,19 @@ export default async function(req: Request): Promise<Response> {
         console.error('Failed to read NewsScrubSettings:', e.message);
       }
 
+      // Preload all contacts/firms once for auto-tagging across all firms
+      const [allContacts, allFirmsList] = await Promise.all([
+        base44.asServiceRole.entities.Contact.list('-created_date', 5000).catch(() => []),
+        base44.asServiceRole.entities.Firm.list('-created_date', 5000).catch(() => []),
+      ]);
+      const tagContext = {
+        contacts: allContacts.filter(c => !c.deleted_at),
+        firms: allFirmsList.filter(f => !f.deleted_at),
+      };
+
       // Process each firm as a background task so the function returns fast
       for (const firm of activeFirms) {
-        waitUntil(scrubOneFirm(base44, firm, batchId, null, globalKeywords, globalStartDate, globalEndDate));
+        waitUntil(scrubOneFirm(base44, firm, batchId, null, globalKeywords, globalStartDate, globalEndDate, tagContext));
       }
 
       return Response.json({
@@ -101,7 +112,7 @@ export default async function(req: Request): Promise<Response> {
 }
 
 // ── Scrub a single firm: search the web for news, create FirmNews records ──
-async function scrubOneFirm(base44, firm, batchId, tenantId = null, keywords = null, startDate = null, endDate = null) {
+async function scrubOneFirm(base44, firm, batchId, tenantId = null, keywords = null, startDate = null, endDate = null, tagContext = null) {
   try {
     // Gather context: contacts and products for this firm
     const [contacts, products] = await Promise.all([
@@ -204,6 +215,8 @@ Only include real, findable articles. Do not fabricate news. If no news is found
     if (!toCreate.length) return [];
 
     const created = await base44.asServiceRole.entities.FirmNews.bulkCreate(toCreate);
+    // Auto-tag any contacts/firms mentioned in the new articles
+    await autoTagNewsItems(base44, created, tagContext?.contacts, tagContext?.firms);
     return created;
   } catch (error) {
     console.error(`scrubOneFirm error for ${firm.name}:`, error.message);
@@ -303,6 +316,8 @@ Only include real, findable articles about this specific person. Do not fabricat
     if (!toCreate.length) return [];
 
     const created = await base44.asServiceRole.entities.FirmNews.bulkCreate(toCreate);
+    // Auto-tag any contacts/firms mentioned in the new articles
+    await autoTagNewsItems(base44, created);
     return created;
   } catch (error) {
     console.error(`scrubOneContact error for ${contact.first_name} ${contact.last_name}:`, error.message);

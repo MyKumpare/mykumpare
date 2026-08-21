@@ -316,7 +316,7 @@ export default function ContactNewsTab({ contactId, contactName, firmId, firmNam
           firmId={firmId}
           firmName={firmName}
           onSave={async (data) => {
-            await base44.entities.FirmNews.create({
+            const created = await base44.entities.FirmNews.create({
               ...data,
               source_type: "contact",
               source_id: contactId,
@@ -325,6 +325,7 @@ export default function ContactNewsTab({ contactId, contactName, firmId, firmNam
               firm_id: firmId,
               firm_name: firmName,
             });
+            try { await base44.functions.invoke('autoTagNewsMention', { news_id: created.id }); } catch (e) { /* tagging is best-effort */ }
             queryClient.invalidateQueries({ queryKey: ["firm_news"] });
             setAddingManual(false);
           }}
