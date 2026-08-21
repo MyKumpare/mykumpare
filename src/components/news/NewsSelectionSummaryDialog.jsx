@@ -125,19 +125,39 @@ Write a 3-5 sentence executive summary noting the overall alert level, the overa
 
           {report && (
             <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-3 space-y-3">
-              <div className="grid grid-cols-5 gap-2 text-center">
-                {[
-                  { label: "Total", value: report.stats.total, color: "text-gray-800" },
-                  { label: "High", value: report.stats.high, color: "text-red-600" },
-                  { label: "Medium", value: report.stats.medium, color: "text-amber-600" },
-                  { label: "Negative", value: report.stats.negative, color: "text-red-600" },
-                  { label: "Positive", value: report.stats.positive, color: "text-green-600" },
-                ].map((c) => (
-                  <div key={c.label} className="rounded-lg bg-white border border-gray-100 py-2">
-                    <div className={`text-lg font-bold ${c.color}`}>{c.value}</div>
-                    <div className="text-[10px] uppercase tracking-wide text-gray-400">{c.label}</div>
+              <div className="space-y-2">
+                <div>
+                  <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">Alert Level</div>
+                  <div className="grid grid-cols-4 gap-2 text-center">
+                    {[
+                      { label: "Total", value: report.stats.total, color: "text-gray-800" },
+                      { label: "High", value: report.stats.high, color: "text-red-600" },
+                      { label: "Medium", value: report.stats.medium, color: "text-amber-600" },
+                      { label: "Low", value: report.stats.low, color: "text-blue-600" },
+                    ].map((c) => (
+                      <div key={c.label} className="rounded-lg bg-white border border-gray-100 py-2">
+                        <div className={`text-lg font-bold ${c.color}`}>{c.value}</div>
+                        <div className="text-[10px] uppercase tracking-wide text-gray-400">{c.label}</div>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
+                <div>
+                  <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">Sentiment</div>
+                  <div className="grid grid-cols-4 gap-2 text-center">
+                    {[
+                      { label: "Total", value: report.stats.total, color: "text-gray-800" },
+                      { label: "Positive", value: report.stats.positive, color: "text-green-600" },
+                      { label: "Negative", value: report.stats.negative, color: "text-red-600" },
+                      { label: "Neutral", value: report.stats.neutral, color: "text-gray-500" },
+                    ].map((c) => (
+                      <div key={c.label} className="rounded-lg bg-white border border-gray-100 py-2">
+                        <div className={`text-lg font-bold ${c.color}`}>{c.value}</div>
+                        <div className="text-[10px] uppercase tracking-wide text-gray-400">{c.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
               <div className="flex items-center gap-4 text-xs">
                 <span className="font-semibold text-gray-700">
