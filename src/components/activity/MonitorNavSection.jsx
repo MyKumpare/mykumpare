@@ -21,6 +21,7 @@ export default function MonitorNavSection({
   onOpenTasks,
   onAddTasks,
   onOpenNews,
+  onOpenConferences,
   forceExpanded,
   children,
 }) {
@@ -66,6 +67,14 @@ export default function MonitorNavSection({
       iconColor: "text-rose-500",
       count: newsCount,
       onOpen: onOpenNews,
+      onAdd: null,
+    },
+    {
+      label: "Conferences",
+      icon: CalendarDays,
+      iconColor: "text-indigo-500",
+      count: null,
+      onOpen: onOpenConferences,
       onAdd: null,
     },
   ];

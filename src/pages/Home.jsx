@@ -993,6 +993,7 @@ export default function Home() {
           onOpenTasks={() => setTaskPickerOpen(true)}
           onAddTasks={() => { setActivityLogDefaultTab("task"); setActivityLogModalOpen(true); }}
           onOpenNews={() => setNewsAlertsOpen(true)}
+          onOpenConferences={() => navigate("/ConferenceCalendar")}
           forceExpanded={allExpanded}
         >
           <AnalyticsSection
