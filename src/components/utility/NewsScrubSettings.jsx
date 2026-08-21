@@ -33,6 +33,8 @@ export default function NewsScrubSettings() {
   const [scheduleTime, setScheduleTime] = useState("02:00");
   const [scheduleEnabled, setScheduleEnabled] = useState(true);
   const [generatingDigest, setGeneratingDigest] = useState(false);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ["news_scrub_settings"],
@@ -45,6 +47,8 @@ export default function NewsScrubSettings() {
     if (existing?.keywords) setKeywords(existing.keywords);
     if (existing?.schedule_time) setScheduleTime(existing.schedule_time);
     if (existing?.schedule_enabled !== undefined) setScheduleEnabled(existing.schedule_enabled);
+    setStartDate(existing?.start_date || "");
+    setEndDate(existing?.end_date || "");
   }, [existing?.id]);
 
   const addKeyword = () => {
@@ -59,9 +63,9 @@ export default function NewsScrubSettings() {
     setSaving(true);
     try {
       if (existing) {
-        await base44.entities.NewsScrubSettings.update(existing.id, { keywords, schedule_time: scheduleTime, schedule_enabled: scheduleEnabled });
+        await base44.entities.NewsScrubSettings.update(existing.id, { keywords, schedule_time: scheduleTime, schedule_enabled: scheduleEnabled, start_date: startDate || null, end_date: endDate || null });
       } else {
-        await base44.entities.NewsScrubSettings.create({ keywords, label: "Default", schedule_time: scheduleTime, schedule_enabled: scheduleEnabled });
+        await base44.entities.NewsScrubSettings.create({ keywords, label: "Default", schedule_time: scheduleTime, schedule_enabled: scheduleEnabled, start_date: startDate || null, end_date: endDate || null });
       }
       queryClient.invalidateQueries({ queryKey: ["news_scrub_settings"] });
       toast({ title: "Settings saved", description: "Nightly news scrub keywords updated." });
@@ -74,11 +78,12 @@ export default function NewsScrubSettings() {
   const handleRunScrub = async () => {
     setRunningScrub(true);
     try {
-      const res = await base44.functions.invoke('scrubFirmNews', { mode: 'all' });
+      const res = await base44.functions.invoke('scrubFirmNews', { mode: 'all', start_date: startDate || null, end_date: endDate || null });
       const count = res.data?.total_firms || 0;
+      const rangeLabel = (startDate || endDate) ? ` between ${startDate || "anytime"} and ${endDate || "today"}` : "";
       toast({
         title: "Nightly scrub started",
-        description: `Enqueued ${count} firm${count > 1 ? "s" : ""} for news scrubbing using these keywords.`,
+        description: `Enqueued ${count} firm${count > 1 ? "s" : ""} for news scrubbing${rangeLabel}.`,
       });
     } catch (e) {
       toast({ title: "Scrub failed", description: e.message, variant: "destructive" });
@@ -104,7 +109,9 @@ export default function NewsScrubSettings() {
   const hasChanges =
     JSON.stringify(keywords) !== JSON.stringify(existing?.keywords || []) ||
     scheduleTime !== (existing?.schedule_time || "02:00") ||
-    scheduleEnabled !== (existing?.schedule_enabled !== undefined ? existing.schedule_enabled : true);
+    scheduleEnabled !== (existing?.schedule_enabled !== undefined ? existing.schedule_enabled : true) ||
+    (startDate || "") !== (existing?.start_date || "") ||
+    (endDate || "") !== (existing?.end_date || "");
 
   const handleGenerateDigest = async () => {
     setGeneratingDigest(true);
@@ -238,6 +245,47 @@ export default function NewsScrubSettings() {
             ) : (
               <p className="text-xs text-gray-400 italic">No keywords set — the scrub will search for general news.</p>
             )}
+
+            {/* Date range to focus the scrub */}
+            <div className="rounded-lg bg-rose-50/40 border border-rose-100 p-3 space-y-2">
+              <div className="flex items-center gap-1.5">
+                <CalendarClock className="w-3.5 h-3.5 text-rose-500 flex-shrink-0" />
+                <p className="text-xs font-semibold text-gray-700">Date Range (optional)</p>
+              </div>
+              <p className="text-xs text-gray-500">
+                Focus the scrub on articles published within a specific period. Leave blank to search all recent news.
+              </p>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 space-y-1">
+                  <label className="text-[11px] text-gray-500 font-medium">Start date</label>
+                  <Input
+                    type="date"
+                    value={startDate}
+                    onChange={e => setStartDate(e.target.value)}
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <span className="text-gray-400 mt-4">–</span>
+                <div className="flex-1 space-y-1">
+                  <label className="text-[11px] text-gray-500 font-medium">End date</label>
+                  <Input
+                    type="date"
+                    value={endDate}
+                    onChange={e => setEndDate(e.target.value)}
+                    className="h-8 text-xs"
+                  />
+                </div>
+                {(startDate || endDate) && (
+                  <button
+                    type="button"
+                    onClick={() => { setStartDate(""); setEndDate(""); }}
+                    className="text-xs text-gray-400 hover:text-red-500 mt-4 whitespace-nowrap"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
 
             <div className="flex items-center justify-between pt-1">
               <Button

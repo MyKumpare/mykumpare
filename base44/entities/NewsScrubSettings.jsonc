@@ -21,6 +21,16 @@
       "type": "boolean",
       "default": true,
       "description": "Whether the nightly news scrub workflow is enabled. When false, the scheduled scrub is skipped."
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Optional start of the date range to focus the news scrub. When set (with end_date), the AI search prompt is instructed to prioritize articles published within this period. Empty means no lower bound."
+    },
+    "end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Optional end of the date range to focus the news scrub. When set (with start_date), the AI search prompt is instructed to prioritize articles published within this period. Empty means no upper bound."
     }
   },
   "required": [

@@ -12,6 +12,8 @@ export default async function(req: Request): Promise<Response> {
     const firmId = body.firm_id || null;
     const contactId = body.contact_id || null;
     const keywords = Array.isArray(body.keywords) ? body.keywords.filter(k => k && k.trim()).map(k => k.trim()) : null;
+    const startDate = body.start_date || null;
+    const endDate = body.end_date || null;
     const tenantId = user.data?.linked_firm_id || null;
 
     // ── "all" mode: enqueue every firm for background scrubbing ──
@@ -25,11 +27,15 @@ export default async function(req: Request): Promise<Response> {
 
       // Read global keyword settings (admin-managed) to focus the nightly scrub
       let globalKeywords = null;
+      let globalStartDate = null;
+      let globalEndDate = null;
       try {
         const settings = await base44.asServiceRole.entities.NewsScrubSettings.list('-created_date', 10);
         if (settings && settings.length) {
           globalKeywords = (settings[0].keywords || []).filter(k => k && k.trim()).map(k => k.trim());
           if (!globalKeywords.length) globalKeywords = null;
+          globalStartDate = settings[0].start_date || null;
+          globalEndDate = settings[0].end_date || null;
         }
       } catch (e) {
         console.error('Failed to read NewsScrubSettings:', e.message);
@@ -37,7 +43,7 @@ export default async function(req: Request): Promise<Response> {
 
       // Process each firm as a background task so the function returns fast
       for (const firm of activeFirms) {
-        waitUntil(scrubOneFirm(base44, firm, batchId, null, globalKeywords));
+        waitUntil(scrubOneFirm(base44, firm, batchId, null, globalKeywords, globalStartDate, globalEndDate));
       }
 
       return Response.json({
@@ -45,6 +51,8 @@ export default async function(req: Request): Promise<Response> {
         total_firms: activeFirms.length,
         batch_id: batchId,
         keywords: globalKeywords || [],
+        start_date: globalStartDate,
+        end_date: globalEndDate,
       });
     }
 
@@ -68,7 +76,7 @@ export default async function(req: Request): Promise<Response> {
       }
 
       const batchId = `scrub_${Date.now()}`;
-      const created = await scrubOneContact(base44, firm, contact, batchId, tenantId, keywords);
+      const created = await scrubOneContact(base44, firm, contact, batchId, tenantId, keywords, startDate, endDate);
 
       return Response.json({ status: 'success', created: created.length, items: created });
     }
@@ -84,7 +92,7 @@ export default async function(req: Request): Promise<Response> {
     }
 
     const batchId = `scrub_${Date.now()}`;
-    const created = await scrubOneFirm(base44, firm, batchId, tenantId, keywords);
+    const created = await scrubOneFirm(base44, firm, batchId, tenantId, keywords, startDate, endDate);
 
     return Response.json({ status: 'success', created: created.length, items: created });
   } catch (error) {
@@ -93,7 +101,7 @@ export default async function(req: Request): Promise<Response> {
 }
 
 // ── Scrub a single firm: search the web for news, create FirmNews records ──
-async function scrubOneFirm(base44, firm, batchId, tenantId = null, keywords = null) {
+async function scrubOneFirm(base44, firm, batchId, tenantId = null, keywords = null, startDate = null, endDate = null) {
   try {
     // Gather context: contacts and products for this firm
     const [contacts, products] = await Promise.all([
@@ -116,9 +124,13 @@ async function scrubOneFirm(base44, firm, batchId, tenantId = null, keywords = n
       ? `\nPay special attention to articles matching these priority topics: ${keywords.join(', ')}. Flag any matching items with a higher alert_status.`
       : '';
 
+    const dateLine = (startDate || endDate)
+      ? `\nFocus the search on articles published within the period${startDate ? ` from ${startDate}` : ''}${endDate ? ` through ${endDate}` : ''}. Prefer items that fall within this date range; only include out-of-range items if they are highly relevant.`
+      : '';
+
     const prompt = `Search for recent news and public information about "${firm.name}", a ${firmTypes.join(' / ') || 'investment'} firm${firm.website ? ` (website: ${firm.website})` : ''}.
 ${contactNames ? `Key contacts to look for: ${contactNames}.` : ''}
-${productNames ? `Products to look for: ${productNames}.` : ''}${keywordLine}
+${productNames ? `Products to look for: ${productNames}.` : ''}${keywordLine}${dateLine}
 
 Find up to 10 recent, relevant news articles, press releases, regulatory filings, or public announcements about this firm, its contacts, or its products. For each item provide:
 - date: the publication date (YYYY-MM-DD format, use the current date ${new Date().toISOString().split('T')[0]} if unknown)
@@ -200,7 +212,7 @@ Only include real, findable articles. Do not fabricate news. If no news is found
 }
 
 // ── Scrub a single contact: search the web for news about this person ──
-async function scrubOneContact(base44, firm, contact, batchId, tenantId = null, keywords = null) {
+async function scrubOneContact(base44, firm, contact, batchId, tenantId = null, keywords = null, startDate = null, endDate = null) {
   try {
     const contactName = [contact.first_name, contact.last_name].filter(Boolean).join(' ');
     if (!contactName) return [];
@@ -212,7 +224,11 @@ async function scrubOneContact(base44, firm, contact, batchId, tenantId = null, 
       ? `\nPay special attention to articles matching these priority topics: ${keywords.join(', ')}. Flag any matching items with a higher alert_status.`
       : '';
 
-    const prompt = `Search for recent news and public information about "${contactName}"${titleLine} at "${firm.name}", a ${firmTypes.join(' / ') || 'investment'} firm${firm.linkedin_url ? ` (LinkedIn: ${firm.linkedin_url})` : ''}.${keywordLine}
+    const dateLine = (startDate || endDate)
+      ? `\nFocus the search on articles published within the period${startDate ? ` from ${startDate}` : ''}${endDate ? ` through ${endDate}` : ''}. Prefer items that fall within this date range; only include out-of-range items if they are highly relevant.`
+      : '';
+
+    const prompt = `Search for recent news and public information about "${contactName}"${titleLine} at "${firm.name}", a ${firmTypes.join(' / ') || 'investment'} firm${firm.linkedin_url ? ` (LinkedIn: ${firm.linkedin_url})` : ''}.${keywordLine}${dateLine}
 
 Find up to 10 recent, relevant news articles, press releases, regulatory filings, interviews, conference appearances, or public announcements specifically about this person. For each item provide:
 - date: the publication date (YYYY-MM-DD format, use the current date ${new Date().toISOString().split('T')[0]} if unknown)
