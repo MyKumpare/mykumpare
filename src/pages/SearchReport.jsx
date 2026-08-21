@@ -188,11 +188,12 @@ export default function SearchReport() {
           <Search className="w-4 h-4 text-violet-600" />
           <h1 className="text-sm font-semibold text-gray-800">Data Search & Report Agent</h1>
           <button
-            onClick={() => navigate(-1)}
-            className="ml-auto inline-flex items-center justify-center w-7 h-7 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-            title="Close"
+            onClick={() => navigate("/")}
+            className="ml-auto inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium transition-colors"
+            title="Close agent"
           >
             <X className="w-4 h-4" />
+            Close
           </button>
         </div>
 
