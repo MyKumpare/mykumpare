@@ -22,6 +22,7 @@ import FirmComparison from './pages/FirmComparison';
 import MonitorPage from './pages/MonitorPage';
 import PortfolioFundingDashboard from './pages/PortfolioFundingDashboard';
 import PortfolioFundingReport from './pages/PortfolioFundingReport';
+import SearchReport from './pages/SearchReport';
 
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -95,6 +96,7 @@ const AuthenticatedApp = () => {
       <Route path="/Monitor" element={<LayoutWrapper currentPageName="Monitor"><MonitorPage /></LayoutWrapper>} />
       <Route path="/PortfolioFundingDashboard" element={<LayoutWrapper currentPageName="PortfolioFundingDashboard"><PortfolioFundingDashboard /></LayoutWrapper>} />
       <Route path="/PortfolioFundingReport" element={<LayoutWrapper currentPageName="PortfolioFundingReport"><PortfolioFundingReport /></LayoutWrapper>} />
+      <Route path="/SearchReport" element={<LayoutWrapper currentPageName="SearchReport"><SearchReport /></LayoutWrapper>} />
       <Route path="/register" element={<ExternalPartyRegister />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>

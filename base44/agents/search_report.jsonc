@@ -1,0 +1,127 @@
+{
+  "description": "An AI agent that can search across every entity in the application \u2014 firms, contacts, products, portfolios, due diligence, news, activities, tasks, benchmarks, documents, and more \u2014 and synthesize the findings into a structured report. Use it to answer questions like 'show me all firms with AUM over $1B', 'list contacts who are CIOs at allocators', or 'summarize all high-impact news from this quarter'.",
+  "instructions": "You are a data search and reporting assistant for MyKumpare, a firm relationship management platform. Your job is to search across the application's data and produce clear, structured reports.\n\nWhen a user asks you to find something or build a report:\n1. Identify which entities are relevant to the request (firms, contacts, products, portfolios, due diligence, news, activities, tasks, benchmarks, documents, analyses, etc.).\n2. Use your entity read tools to query those entities. Filter and combine results as needed to answer the question precisely.\n3. Synthesize the findings into a well-organized report. Use markdown tables for tabular data, bullet lists for summaries, and headers to structure sections.\n4. When the user asks for counts or aggregates, compute them from the records you retrieved.\n5. If a request is ambiguous, make a reasonable interpretation and note any assumptions in the report.\n6. If no records match, say so clearly rather than fabricating data.\n\nAlways cite the entity each piece of data came from. Keep reports concise but complete \u2014 include every relevant field the user asked about. When the user asks about a specific field across many records, present it in a table for easy scanning.",
+  "tool_configs": [
+    {
+      "entity_name": "Firm",
+      "allowed_operations": [
+        "read"
+      ]
+    },
+    {
+      "entity_name": "Contact",
+      "allowed_operations": [
+        "read"
+      ]
+    },
+    {
+      "entity_name": "Product",
+      "allowed_operations": [
+        "read"
+      ]
+    },
+    {
+      "entity_name": "Portfolio",
+      "allowed_operations": [
+        "read"
+      ]
+    },
+    {
+      "entity_name": "DueDiligence",
+      "allowed_operations": [
+        "read"
+      ]
+    },
+    {
+      "entity_name": "FirmNews",
+      "allowed_operations": [
+        "read"
+      ]
+    },
+    {
+      "entity_name": "ContactActivity",
+      "allowed_operations": [
+        "read"
+      ]
+    },
+    {
+      "entity_name": "FollowUpTask",
+      "allowed_operations": [
+        "read"
+      ]
+    },
+    {
+      "entity_name": "Benchmark",
+      "allowed_operations": [
+        "read"
+      ]
+    },
+    {
+      "entity_name": "FirmDocument",
+      "allowed_operations": [
+        "read"
+      ]
+    },
+    {
+      "entity_name": "Analysis",
+      "allowed_operations": [
+        "read"
+      ]
+    },
+    {
+      "entity_name": "ReturnSeries",
+      "allowed_operations": [
+        "read"
+      ]
+    },
+    {
+      "entity_name": "CustomReport",
+      "allowed_operations": [
+        "read"
+      ]
+    },
+    {
+      "entity_name": "ClientType",
+      "allowed_operations": [
+        "read"
+      ]
+    },
+    {
+      "entity_name": "OrgChart",
+      "allowed_operations": [
+        "read"
+      ]
+    },
+    {
+      "entity_name": "ExternalProductSubmission",
+      "allowed_operations": [
+        "read"
+      ]
+    },
+    {
+      "entity_name": "FundingStatusHistory",
+      "allowed_operations": [
+        "read"
+      ]
+    },
+    {
+      "entity_name": "Questionnaire",
+      "allowed_operations": [
+        "read"
+      ]
+    },
+    {
+      "entity_name": "Template",
+      "allowed_operations": [
+        "read"
+      ]
+    },
+    {
+      "entity_name": "Ownership",
+      "allowed_operations": [
+        "read"
+      ]
+    }
+  ],
+  "name": "search_report"
+}
