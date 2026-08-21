@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import ReactMarkdown from "react-markdown";
-import { Search, Send, Loader2, MessageSquare, Plus, ChevronDown, ChevronRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Search, Send, Loader2, MessageSquare, Plus, ChevronDown, ChevronRight, X } from "lucide-react";
 
 const AGENT_NAME = "search_report";
 
@@ -85,6 +86,7 @@ export default function SearchReport() {
   const [loading, setLoading] = useState(false);
   const [loadingList, setLoadingList] = useState(true);
   const scrollRef = useRef(null);
+  const navigate = useNavigate();
 
   const loadConversations = async () => {
     try {
@@ -185,6 +187,13 @@ export default function SearchReport() {
         <div className="border-b border-gray-200 bg-white px-5 py-3 flex items-center gap-2">
           <Search className="w-4 h-4 text-violet-600" />
           <h1 className="text-sm font-semibold text-gray-800">Data Search & Report Agent</h1>
+          <button
+            onClick={() => navigate(-1)}
+            className="ml-auto inline-flex items-center justify-center w-7 h-7 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+            title="Close"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-4">
