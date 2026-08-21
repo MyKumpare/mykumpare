@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Newspaper, Plus, Trash2, Sparkles, Loader2, History, Search, X,
-  ArrowDownWideNarrow, ArrowUpWideNarrow,
+  ArrowDownWideNarrow, ArrowUpWideNarrow, FileText,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { NewsItemCard, NewsItemForm } from "../firms/FirmNewsTab";
