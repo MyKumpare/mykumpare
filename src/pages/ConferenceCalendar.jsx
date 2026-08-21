@@ -285,8 +285,21 @@ export default function ConferenceCalendar() {
                   <div className="space-y-0.5 mt-0.5">
                     {dayItems.slice(0, 3).map(c => {
                       const pColor = PARTICP_COLORS[c.participation_type] || PARTICP_COLORS.Unknown;
-                      return (
-                        <div key={c.id} className={`text-[9px] leading-tight px-1 py-0.5 rounded border truncate ${pColor}`} title={c.title}>
+                      const chipCls = `text-[9px] leading-tight px-1 py-0.5 rounded border truncate ${pColor} ${c.url ? "cursor-pointer hover:brightness-95" : ""}`;
+                      return c.url ? (
+                        <a
+                          key={c.id}
+                          href={c.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={e => e.stopPropagation()}
+                          className={chipCls}
+                          title={`${c.title} — open registration site`}
+                        >
+                          {c.title}
+                        </a>
+                      ) : (
+                        <div key={c.id} className={chipCls} title={c.title}>
                           {c.title}
                         </div>
                       );

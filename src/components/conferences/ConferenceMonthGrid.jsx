@@ -110,12 +110,28 @@ export default function ConferenceMonthGrid({
             >
               {visible.map(p => {
                 const pColor = PARTICP_COLORS[p.participation_type] || PARTICP_COLORS.Unknown;
-                return (
+                const barStyle = { gridColumn: `${p.colStart + 1} / span ${p.span}`, gridRow: p.lane + 1 };
+                const barCls = `text-[9px] leading-none px-1 py-0.5 rounded border truncate ${pColor} ${p.url ? "pointer-events-auto cursor-pointer hover:brightness-95" : "pointer-events-none"}`;
+                const barTitle = p.url ? `${p.title} — open registration site` : p.title;
+                return p.url ? (
+                  <a
+                    key={p.id}
+                    href={p.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={e => e.stopPropagation()}
+                    className={barCls}
+                    style={barStyle}
+                    title={barTitle}
+                  >
+                    {p.title}
+                  </a>
+                ) : (
                   <div
                     key={p.id}
-                    className={`text-[9px] leading-none px-1 py-0.5 rounded border truncate ${pColor}`}
-                    style={{ gridColumn: `${p.colStart + 1} / span ${p.span}`, gridRow: p.lane + 1 }}
-                    title={p.title}
+                    className={barCls}
+                    style={barStyle}
+                    title={barTitle}
                   >
                     {p.title}
                   </div>
