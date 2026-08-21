@@ -33,6 +33,14 @@ export default function ContactProductsTab({ contactId, firmIds = [], onProductC
     enabled: !!contactId,
   });
 
+  // Products where this contact is on the investment team, queried directly so
+  // products beyond the 500-record global list still appear in the tab.
+  const { data: teamProducts = [], isLoading: teamLoading } = useQuery({
+    queryKey: ["products", "team-by-contact", contactId],
+    queryFn: () => base44.entities.Product.filter({ "investment_team.contact_id": contactId }, "-created_date", 500),
+    enabled: !!contactId,
+  });
+
   const updateTeamMutation = useMutation({
     mutationFn: ({ productId, newTeam }) =>
       base44.entities.Product.update(productId, { investment_team: newTeam }),
@@ -56,13 +64,20 @@ export default function ContactProductsTab({ contactId, firmIds = [], onProductC
 
   if (!contactId) return null;
 
+  // Merge the global list with the team-membership query so products beyond the
+  // 500-record list limit still show up in the tab.
+  const productMap = new Map();
+  allProducts.forEach(p => productMap.set(p.id, p));
+  teamProducts.forEach(p => productMap.set(p.id, p));
+  const mergedProducts = Array.from(productMap.values());
+
   // Products this contact is already on
-  const myProducts = allProducts
+  const myProducts = mergedProducts
     .filter(p => p.investment_team?.some(m => m.contact_id === contactId))
     .sort((a, b) => a.name.localeCompare(b.name));
 
   // Other products from the same firm(s) — not yet on team
-  const availableProducts = allProducts
+  const availableProducts = mergedProducts
     .filter(p =>
       !p.investment_team?.some(m => m.contact_id === contactId) &&
       firmIds.some(fid => p.firm_id === fid)
@@ -90,7 +105,7 @@ export default function ContactProductsTab({ contactId, firmIds = [], onProductC
     updateTeamMutation.mutate({ productId: product.id, newTeam });
   };
 
-  if (isLoading) {
+  if (isLoading || teamLoading) {
     return <div className="py-8 text-center text-sm text-gray-400">Loading...</div>;
   }
 
