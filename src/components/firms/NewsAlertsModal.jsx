@@ -265,24 +265,37 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
               </SelectContent>
             </Select>
           </div>
-          {hasFilters && (
-            <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <label className="inline-flex items-center gap-1.5 text-[11px] text-gray-500 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={filteredNews.length > 0 && selectedIds.size === filteredNews.length}
+                  ref={el => { if (el) el.indeterminate = selectedIds.size > 0 && selectedIds.size < filteredNews.length; }}
+                  onChange={(e) => e.target.checked ? selectAll() : clearSelection()}
+                  disabled={filteredNews.length === 0}
+                  className="w-3.5 h-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                Select all
+              </label>
               <span className="text-[11px] text-gray-400">{filteredNews.length} of {totalCount} alerts</span>
-              <button type="button" onClick={clearFilters} className="text-[11px] text-rose-500 hover:text-rose-700 font-medium">
-                Clear filters
+            </div>
+            <div className="flex items-center gap-3">
+              {hasFilters && (
+                <button type="button" onClick={clearFilters} className="text-[11px] text-rose-500 hover:text-rose-700 font-medium">
+                  Clear filters
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowHidden(v => !v)}
+                className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md ${showHidden ? "text-gray-700 bg-gray-100 hover:bg-gray-200" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"}`}
+                title={showHidden ? "Hide hidden items" : "Show hidden items"}
+              >
+                {showHidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                {showHidden ? "Showing hidden" : "Show hidden"}
               </button>
             </div>
-          )}
-          <div className="flex items-center justify-end">
-            <button
-              type="button"
-              onClick={() => setShowHidden(v => !v)}
-              className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md ${showHidden ? "text-gray-700 bg-gray-100 hover:bg-gray-200" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"}`}
-              title={showHidden ? "Hide hidden items" : "Show hidden items"}
-            >
-              {showHidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-              {showHidden ? "Showing hidden" : "Show hidden"}
-            </button>
           </div>
         </div>
 
