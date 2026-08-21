@@ -149,6 +149,45 @@
         }
       }
     },
+    "reviews": {
+      "type": "array",
+      "description": "Per-user review log. Each entry records one user's review of this article \u2014 their note, whether they flagged it as needing more reviews, and whether they flagged it as a high alert. An article 'needs review' for a given user when no entry with their user_id exists; reviewing is therefore tracked per individual user, so one user reviewing an article does not mark it reviewed for others.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string",
+            "description": "ID of the user who reviewed this article"
+          },
+          "user_name": {
+            "type": "string",
+            "description": "Display name of the reviewer (denormalized)"
+          },
+          "reviewed_date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when the review was saved"
+          },
+          "note": {
+            "type": "string",
+            "description": "Reviewer's note for this article"
+          },
+          "needs_more_reviews": {
+            "type": "boolean",
+            "default": false,
+            "description": "Reviewer's determination that this article still needs further review by others"
+          },
+          "flagged_high_alert": {
+            "type": "boolean",
+            "default": false,
+            "description": "Reviewer's determination that this article should be tagged as a High alert. When checked on save, the article's alert_status is automatically set to High (and recorded in status_change_history)."
+          }
+        }
+      }
+    },
     "scrub_batch_id": {
       "type": "string",
       "description": "ID of the scrub batch that produced this news item (for deduplication)"

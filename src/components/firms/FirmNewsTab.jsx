@@ -10,7 +10,12 @@ import {
   Newspaper, Plus, Trash2, Pin, PinOff, ExternalLink, Sparkles, Loader2,
   AlertTriangle, ChevronDown, ChevronUp, Edit2, Check, X, Calendar, History, Search,
   ArrowDownWideNarrow, ArrowUpWideNarrow, FileText, CheckSquare, Tag, Eye, EyeOff,
+  ClipboardCheck,
 } from "lucide-react";
+import { useAuth } from "@/lib/AuthContext";
+import NewsReviewDialog from "../news/NewsReviewDialog";
+import NewsReviewBadge from "../news/NewsReviewBadge";
+import { buildReviews } from "../news/newsReview";
 import { format } from "date-fns";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
@@ -538,9 +543,43 @@ export default function FirmNewsTab({ firmId, firmName }) {
 
 // ── News item card (view / expand / edit) ───────────────────────────────────
 export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, onCancelEdit, onSaveEdit, onTogglePin, onDelete, onToggleHide, contacts = [], onTagContacts, firms = [], onTagFirms, onUpdateContentTags, selectable, selected, onToggleSelect, onAutoTag }) {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const [reviewOpen, setReviewOpen] = useState(false);
   const alertStyle = ALERT_STYLES[item.alert_status] || ALERT_STYLES.Low;
   const statusStyle = STATUS_STYLES[item.news_status] || STATUS_STYLES.Neutral;
   const AlertIcon = alertStyle.icon;
+
+  const handleSaveReview = async ({ note, needs_more_reviews, flagged_high_alert }) => {
+    const newReviews = buildReviews(item, user?.id, user?.full_name, { note, needs_more_reviews, flagged_high_alert });
+    const update = { reviews: newReviews };
+    const willTagHigh = flagged_high_alert && item.alert_status !== "High";
+    if (willTagHigh) {
+      update.alert_status = "High";
+      update.status_change_history = [
+        ...(item.status_change_history || []),
+        {
+          id: `rev_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          field: "alert_status",
+          previous_value: item.alert_status || "Low",
+          new_value: "High",
+          changed_by_id: user?.id,
+          changed_by_name: user?.full_name || "",
+          changed_date: new Date().toISOString(),
+          note: "Flagged as high alert during review",
+        },
+      ];
+    }
+    try {
+      await base44.entities.FirmNews.update(item.id, update);
+      queryClient.invalidateQueries({ queryKey: ["firm_news"] });
+      queryClient.invalidateQueries({ queryKey: ["pinned_news_alerts"] });
+      setReviewOpen(false);
+      toast({ title: willTagHigh ? "Review saved · tagged High Alert" : "Review saved" });
+    } catch (e) {
+      toast({ title: "Review failed", description: e.message, variant: "destructive" });
+    }
+  };
 
   if (editing) {
     return (
@@ -555,6 +594,7 @@ export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, 
   const hidden = !!item.is_hidden;
 
   return (
+    <>
     <div className={`rounded-xl border ${item.is_pinned ? 'border-rose-300 bg-rose-50/30' : 'border-gray-200 bg-white'} overflow-hidden ${hidden ? 'opacity-50' : ''}`}>
       <div className="flex items-start gap-2.5 px-3 py-2.5">
         {selectable && (
@@ -604,6 +644,7 @@ export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, 
                     {tag}
                   </span>
                 ))}
+                <NewsReviewBadge item={item} currentUser={user} />
               </div>
             </div>
           </div>
@@ -705,6 +746,11 @@ export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, 
               <Tag className="w-3.5 h-3.5" />
             </button>
           )}
+          <button type="button" onClick={() => setReviewOpen(true)}
+            className="p-1 rounded text-gray-300 hover:text-indigo-500 hover:bg-gray-100"
+            title="Review article">
+            <ClipboardCheck className="w-3.5 h-3.5" />
+          </button>
           <button type="button" onClick={onDelete}
             className="p-1 rounded text-gray-300 hover:text-red-500 hover:bg-gray-100" title="Delete">
             <Trash2 className="w-3.5 h-3.5" />
@@ -716,6 +762,8 @@ export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, 
         </div>
       </div>
     </div>
+    <NewsReviewDialog open={reviewOpen} onOpenChange={setReviewOpen} item={item} currentUser={user} onSave={handleSaveReview} />
+    </>
   );
 }
 

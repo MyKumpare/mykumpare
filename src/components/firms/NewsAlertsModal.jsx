@@ -7,7 +7,7 @@ import SearchableSelect from "@/components/common/SearchableSelect";
 import {
   Newspaper, Pin, PinOff, ExternalLink, Trash2, Calendar, X,
   AlertTriangle, ChevronDown, ChevronUp, Building2, Search, Download, Eye, EyeOff,
-  CheckSquare, FileText,
+  CheckSquare, FileText, ClipboardCheck,
 } from "lucide-react";
 import { format } from "date-fns";
 import { generateNewsAlertsPdf } from "@/components/news/newsAlertsPdf";
@@ -16,6 +16,10 @@ import NewsSelectionSummaryDialog from "@/components/news/NewsSelectionSummaryDi
 import NewsContentTags from "@/components/news/NewsContentTags";
 import NewsStatusBadges from "@/components/news/NewsStatusBadges";
 import NewsStatusBadge from "@/components/news/NewsStatusBadge";
+import { useAuth } from "@/lib/AuthContext";
+import NewsReviewDialog from "@/components/news/NewsReviewDialog";
+import NewsReviewBadge from "@/components/news/NewsReviewBadge";
+import { buildReviews } from "@/components/news/newsReview";
 
 const ALERT_STYLES = {
   High: { color: "text-red-600", bg: "bg-red-50", border: "border-red-200", icon: AlertTriangle },
@@ -49,6 +53,8 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
   const [showHidden, setShowHidden] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [summaryOpen, setSummaryOpen] = useState(false);
+  const { user } = useAuth();
+  const [reviewItemId, setReviewItemId] = useState(null);
 
   // All news alerts (pinned ones always sort to the top)
   const { data: allNews = [], isLoading } = useQuery({
@@ -147,6 +153,35 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
     await base44.entities.FirmNews.update(item.id, { content_tags: nextTags });
     queryClient.invalidateQueries({ queryKey: ["pinned_news_alerts"] });
     queryClient.invalidateQueries({ queryKey: ["firm_news", item.firm_id] });
+  };
+
+  const handleSaveReview = async (item, { note, needs_more_reviews, flagged_high_alert }) => {
+    const newReviews = buildReviews(item, user?.id, user?.full_name, { note, needs_more_reviews, flagged_high_alert });
+    const update = { reviews: newReviews };
+    if (flagged_high_alert && item.alert_status !== "High") {
+      update.alert_status = "High";
+      update.status_change_history = [
+        ...(item.status_change_history || []),
+        {
+          id: `rev_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          field: "alert_status",
+          previous_value: item.alert_status || "Low",
+          new_value: "High",
+          changed_by_id: user?.id,
+          changed_by_name: user?.full_name || "",
+          changed_date: new Date().toISOString(),
+          note: "Flagged as high alert during review",
+        },
+      ];
+    }
+    try {
+      await base44.entities.FirmNews.update(item.id, update);
+      queryClient.invalidateQueries({ queryKey: ["pinned_news_alerts"] });
+      queryClient.invalidateQueries({ queryKey: ["firm_news"] });
+      setReviewItemId(null);
+    } catch (e) {
+      setReviewItemId(null);
+    }
   };
 
   const toggleSelect = (id) => {
@@ -427,6 +462,7 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
                               {tag}
                             </span>
                           ))}
+                          <NewsReviewBadge item={item} currentUser={user} />
                         </div>
                       </div>
                       <div className="mt-1">
@@ -485,6 +521,11 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
                         title={item.is_hidden ? "Unhide" : "Hide from lists"}>
                         {item.is_hidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
                       </button>
+                      <button type="button" onClick={() => setReviewItemId(item.id)}
+                        className="p-1 rounded text-gray-300 hover:text-indigo-500 hover:bg-gray-100"
+                        title="Review article">
+                        <ClipboardCheck className="w-3.5 h-3.5" />
+                      </button>
                       <button type="button" onClick={() => handleDelete(item)}
                         className="p-1 rounded text-gray-300 hover:text-red-500 hover:bg-gray-100" title="Delete">
                         <Trash2 className="w-3.5 h-3.5" />
@@ -505,6 +546,16 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
         open={summaryOpen}
         onOpenChange={setSummaryOpen}
         items={selectedItems}
+      />
+      <NewsReviewDialog
+        open={!!reviewItemId}
+        onOpenChange={(v) => { if (!v) setReviewItemId(null); }}
+        item={filteredNews.find((n) => n.id === reviewItemId) || null}
+        currentUser={user}
+        onSave={async (payload) => {
+          const it = filteredNews.find((n) => n.id === reviewItemId);
+          if (it) await handleSaveReview(it, payload);
+        }}
       />
     </div>
   );
