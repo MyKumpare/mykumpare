@@ -12,6 +12,7 @@ import {
   ExternalLink, Filter, X, Building2, Tag, Loader2, Download, Award,
 } from "lucide-react";
 import { downloadConferenceTravelPdf } from "@/components/conferences/conferenceTravelPdf";
+import ConferenceFeesChart from "@/components/conferences/ConferenceFeesChart";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -239,6 +240,8 @@ export default function ConferenceCalendar() {
           </div>
         </div>
       )}
+
+      <ConferenceFeesChart conferences={filtered} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Calendar grid */}
