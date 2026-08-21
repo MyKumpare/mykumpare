@@ -54,6 +54,7 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
   const [viewMode, setViewMode] = useViewMode("contacts");
   const [filterText, setFilterText] = useState("");
   const [filterSelected, setFilterSelected] = useState({});
+  const [filterDateRange, setFilterDateRange] = useState({ start: "", end: "" });
   const [typeFilter, setTypeFilter] = useState("all");
 
   const handleToggleFilter = (fieldKey, value) => {
@@ -65,7 +66,7 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
       return next;
     });
   };
-  const handleClearFilters = () => { setFilterText(""); setFilterSelected({}); };
+  const handleClearFilters = () => { setFilterText(""); setFilterSelected({}); setFilterDateRange({ start: "", end: "" }); };
 
   useEffect(() => {
     if (forceExpanded !== undefined) setExpanded(forceExpanded);
@@ -137,11 +138,11 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
     return map;
   }, [portfolios, contacts]);
 
-  const hasFilters = filterText.trim() || Object.keys(filterSelected).length > 0;
+  const hasFilters = filterText.trim() || Object.keys(filterSelected).length > 0 || filterDateRange.start || filterDateRange.end;
   const filteredContacts = useMemo(() => {
     if (!hasFilters) return contacts;
-    return filterSectionContacts(contacts, filterText, filterSelected, firmMap, contactProductMap, contactPortfolioMap);
-  }, [contacts, filterText, filterSelected, firmMap, contactProductMap, contactPortfolioMap, hasFilters]);
+    return filterSectionContacts(contacts, filterText, filterSelected, firmMap, contactProductMap, contactPortfolioMap, filterDateRange);
+  }, [contacts, filterText, filterSelected, firmMap, contactProductMap, contactPortfolioMap, filterDateRange, hasFilters]);
 
   const visibleFirmTypes = FIRM_TYPES.filter((t) => typeFilter === "all" || t === typeFilter);
 
@@ -262,6 +263,8 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
             selected={filterSelected}
             onToggle={handleToggleFilter}
             onClear={handleClearFilters}
+            dateRange={filterDateRange}
+            onDateRangeChange={setFilterDateRange}
           />
           {viewMode === "list" && (
             <div className="flex items-center justify-between mb-2">

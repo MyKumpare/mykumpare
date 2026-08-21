@@ -3,6 +3,7 @@ import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { Search, SlidersHorizontal, MapPin, Package, Tag, Users, Shield, Building2, Briefcase, ChevronDown, ChevronRight, GripVertical, GraduationCap, Phone, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import DateRangeFilter from "@/components/common/DateRangeFilter";
 
 // Filter categories for the main Contacts section.
 // Each category maps to Contact entity fields (or derived data for address/products/firm).
@@ -202,10 +203,18 @@ function getFieldValue(c, f, firmMap, contactProductMap, contactPortfolioMap) {
   return f.isArray ? (Array.isArray(v) ? v : []) : v ? [v] : [];
 }
 
-// Pure filter function: text search + per-field multi-select
-export function filterSectionContacts(contacts, text, selected, firmMap, contactProductMap, contactPortfolioMap) {
+// Pure filter function: text search + per-field multi-select + optional date range
+export function filterSectionContacts(contacts, text, selected, firmMap, contactProductMap, contactPortfolioMap, dateRange) {
   const keywords = text.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const start = dateRange?.start ? new Date(dateRange.start + "T00:00:00") : null;
+  const end = dateRange?.end ? new Date(dateRange.end + "T23:59:59") : null;
   return contacts.filter((c) => {
+    if (start || end) {
+      if (!c.created_date) return false;
+      const d = new Date(c.created_date);
+      if (start && d < start) return false;
+      if (end && d > end) return false;
+    }
     if (keywords.length) {
       const name = [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix]
         .filter(Boolean).join(" ").toLowerCase();
@@ -235,7 +244,7 @@ export function filterSectionContacts(contacts, text, selected, firmMap, contact
   });
 }
 
-export default function ContactsSectionFilters({ contacts, firms, products, portfolios, text, onTextChange, selected, onToggle, onClear }) {
+export default function ContactsSectionFilters({ contacts, firms, products, portfolios, text, onTextChange, selected, onToggle, onClear, dateRange, onDateRangeChange }) {
   const [showFilters, setShowFilters] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState(() => new Set(FIELD_GROUPS.map((g) => g.label)));
 
@@ -308,12 +317,12 @@ export default function ContactsSectionFilters({ contacts, firms, products, port
     return opts;
   }, [contacts, firmMap, contactProductMap, contactPortfolioMap]);
 
-  const activeCount = Object.values(selected).reduce((n, s) => n + (s ? s.size : 0), 0) + (text.trim() ? 1 : 0);
+  const activeCount = Object.values(selected).reduce((n, s) => n + (s ? s.size : 0), 0) + (text.trim() ? 1 : 0) + ((dateRange?.start || dateRange?.end) ? 1 : 0);
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-2 pb-1">
-        <div className="relative flex-1">
+      <div className="flex items-center gap-2 pb-1 flex-wrap">
+        <div className="relative flex-1 min-w-[180px]">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
           <Input
             value={text}
@@ -322,6 +331,11 @@ export default function ContactsSectionFilters({ contacts, firms, products, port
             className="h-8 pl-8 text-xs"
           />
         </div>
+        <DateRangeFilter
+          value={dateRange || { start: "", end: "" }}
+          onChange={onDateRangeChange}
+          label="Filter by date added"
+        />
         <Button
           type="button"
           variant="outline"

@@ -7,6 +7,7 @@ import ViewModeToggle from "@/components/common/ViewModeToggle";
 import SectionSearch from "@/components/common/SectionSearch";
 import SectionTypeFilter from "@/components/common/SectionTypeFilter";
 import SectionExpandCollapse from "@/components/common/SectionExpandCollapse";
+import DateRangeFilter from "@/components/common/DateRangeFilter";
 import { useViewMode } from "@/hooks/useViewMode";
 
 const FIRM_TYPES = [
@@ -35,6 +36,7 @@ export default function FirmsSection({
   const [viewMode, setViewMode] = useViewMode("firms");
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [dateRange, setDateRange] = useState({ start: "", end: "" });
   const [expandedTypes, setExpandedTypes] = useState({});
 
   const searchLower = search.toLowerCase().trim();
@@ -66,8 +68,24 @@ export default function FirmsSection({
       if (result[typeFilter]) typed[typeFilter] = result[typeFilter];
       result = typed;
     }
+    if (dateRange.start || dateRange.end) {
+      const start = dateRange.start ? new Date(dateRange.start + "T00:00:00") : null;
+      const end = dateRange.end ? new Date(dateRange.end + "T23:59:59") : null;
+      const dated = {};
+      for (const [type, firms] of Object.entries(result)) {
+        const filtered = firms.filter((f) => {
+          if (!f.created_date) return false;
+          const d = new Date(f.created_date);
+          if (start && d < start) return false;
+          if (end && d > end) return false;
+          return true;
+        });
+        if (filtered.length) dated[type] = filtered;
+      }
+      result = dated;
+    }
     return result;
-  }, [groupedFirms, searchLower, typeFilter]);
+  }, [groupedFirms, searchLower, typeFilter, dateRange]);
 
   const allFirms = React.useMemo(
     () => FIRM_TYPES.flatMap((t) => filteredGrouped[t] || []).sort((a, b) => a.name.localeCompare(b.name)),
@@ -126,12 +144,17 @@ export default function FirmsSection({
       {expanded && (
         <div className="pl-2 border-l-2 border-gray-100">
           <SectionSearch value={search} onChange={setSearch} placeholder="Search by firm name or type..." />
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
             <SectionTypeFilter
               label="Filter by type"
               value={typeFilter}
               onChange={setTypeFilter}
               options={FIRM_TYPES}
+            />
+            <DateRangeFilter
+              value={dateRange}
+              onChange={setDateRange}
+              label="Filter by date added"
             />
             {viewMode === "list" && (
               <SectionExpandCollapse onExpandAll={handleExpandAll} onCollapseAll={handleCollapseAll} />
