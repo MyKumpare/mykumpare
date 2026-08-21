@@ -51,6 +51,14 @@
       "type": "string",
       "description": "General contact email address of the firm"
     },
+    "registration_number": {
+      "type": "string",
+      "description": "Official registration/identifier number from the firm's governing regulatory body (e.g. SEC CRD number). Auto-populated by the 'Auto Lookup Firm Registration' workflow on firm creation; can be manually edited in the Legal & Compliance tab."
+    },
+    "registration_source_url": {
+      "type": "string",
+      "description": "URL of the regulatory registry page where registration_number was found (denormalized for display). Set by the auto-lookup workflow."
+    },
     "year_founded": {
       "type": "integer",
       "description": "Year the firm was founded"

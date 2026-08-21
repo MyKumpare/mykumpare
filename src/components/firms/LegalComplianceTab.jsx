@@ -90,7 +90,22 @@ export default function LegalComplianceTab({ firmId, isEditing, contacts = [] })
     if (!firmId) return;
     let active = true;
     base44.entities.Firm.get(firmId)
-      .then((f) => { if (active) setFirmName(f?.name || ""); })
+      .then((f) => {
+        if (!active) return;
+        setFirmName(f?.name || "");
+        // If the auto-lookup workflow saved a CRD to the firm record and the
+        // user hasn't manually entered one in this tab, populate it.
+        const autoCrd = f?.registration_number || "";
+        if (autoCrd) {
+          try {
+            const stored = localStorage.getItem(`legal_compliance_${firmId}`);
+            const storedCrd = stored ? (JSON.parse(stored).registration_number || "") : "";
+            if (!storedCrd) setRegistrationNumber(autoCrd);
+          } catch {
+            setRegistrationNumber(autoCrd);
+          }
+        }
+      })
       .catch(() => {});
     return () => { active = false; };
   }, [firmId]);

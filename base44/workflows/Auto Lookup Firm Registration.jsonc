@@ -1,0 +1,40 @@
+{
+  "name": "Auto Lookup Firm Registration",
+  "description": "When a new firm is created, automatically looks up its SEC CRD registration number from the IAPD registry and saves it to the firm record.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "create"
+      ],
+      "entity_name": "Firm"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "auto_lookup_firm_registration",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "lookup_registration": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "autoLookupFirmRegistration",
+            "args": {
+              "firm_id": "${ .trigger.entity_id }"
+            }
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Look up SEC CRD number",
+            "description": "Search IAPD registry and save to firm"
+          }
+        }
+      }
+    ]
+  }
+}
