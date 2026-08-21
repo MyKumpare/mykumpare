@@ -4,7 +4,7 @@
   "tool_configs": [
     {
       "function_name": "searchAppData",
-      "description": "Dynamically search any entity in the app by name and return records, list all entities with their fields, or fetch one entity's schema. Use action 'list_entities' to discover what forms exist, action 'schema' to see a form's fields, and action 'search' with { entity_name, filter, limit, sort } to retrieve records. Works for any entity \u2014 including forms created after deployment \u2014 so always prefer this for searching."
+      "description": "Dynamically search any entity by name, list all entities and their fields, or fetch an entity's schema. Works for all forms including new ones created after deployment."
     },
     {
       "entity_name": "Firm",
@@ -127,5 +127,24 @@
       ]
     }
   ],
+  "context_files": [],
+  "app_user_connector_configs": [],
+  "selected_skill_names": [],
+  "selected_workspace_skill_ids": [],
+  "model": "automatic",
+  "whatsapp_greeting": null,
+  "telegram_greeting": null,
+  "line_greeting": null,
+  "memory_config": {
+    "enabled": true,
+    "scope": "both",
+    "include_other_conversation_context": false,
+    "instructions": null
+  },
+  "voice_config": {
+    "voice_id": null
+  },
+  "emails_settings": null,
+  "allow_anonymous_access": false,
   "name": "search_report"
 }
