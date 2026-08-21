@@ -37,20 +37,16 @@ function ContactPicker({ firmId, existingMemberIds, onAdd }) {
 
   const renderRow = (c) => {
     const isAdded = existingSet.has(c.id);
-    return (
-      <div
-        key={c.id}
-        className={`w-full px-2.5 py-2 rounded-md flex items-center gap-2.5 transition-colors ${
-          isAdded ? "opacity-60 bg-gray-50" : "hover:bg-indigo-50 group"
-        }`}
-      >
-        {c.photo_url ? (
-          <img src={c.photo_url} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
-        ) : (
-          <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-            <User className="w-3.5 h-3.5 text-indigo-400" />
-          </div>
-        )}
+    const avatar = c.photo_url ? (
+      <img src={c.photo_url} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+    ) : (
+      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+        <User className="w-4 h-4 text-indigo-400" />
+      </div>
+    );
+    const body = (
+      <>
+        {avatar}
         <div className="min-w-0 flex-1">
           <div className="text-sm font-medium text-gray-800 truncate">
             {getFullName(c)}
@@ -60,27 +56,41 @@ function ContactPicker({ firmId, existingMemberIds, onAdd }) {
         </div>
         {isAdded ? (
           <span className="flex items-center gap-1 text-[11px] text-green-600 font-medium flex-shrink-0">
-            <Check className="w-3.5 h-3.5" /> Added
+            <Check className="w-4 h-4" /> Added
           </span>
         ) : (
-          <button
-            type="button"
-            onClick={() => onAdd(c)}
-            className="p-1 -mr-1 rounded hover:bg-indigo-100 flex-shrink-0"
-            title="Add to team"
-          >
-            <Plus className="w-4 h-4 text-gray-300 group-hover:text-indigo-600" />
-          </button>
+          <span className="flex items-center gap-1 text-[11px] text-indigo-600 font-medium flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Plus className="w-4 h-4" /> Add
+          </span>
         )}
+      </>
+    );
+    return isAdded ? (
+      <div
+        key={c.id}
+        className="w-full px-2.5 py-2 rounded-lg flex items-center gap-2.5 bg-gray-50/70"
+      >
+        {body}
       </div>
+    ) : (
+      <button
+        key={c.id}
+        type="button"
+        onClick={() => onAdd(c)}
+        className="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 hover:bg-indigo-50 group transition-colors"
+      >
+        {body}
+      </button>
     );
   };
 
+  const availableCount = firmContacts.filter((c) => !existingSet.has(c.id)).length;
+
   return (
-    <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+    <div className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm">
       {/* Search header */}
-      <div className="flex items-center gap-2 px-2.5 py-2 border-b border-gray-100 bg-gray-50">
-        <Search className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-gray-100 bg-gray-50">
+        <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
         <input
           autoFocus
           className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
@@ -88,24 +98,24 @@ function ContactPicker({ firmId, existingMemberIds, onAdd }) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <span className="text-xs text-gray-400 flex-shrink-0">
-          {isLoading ? "Loading…" : `${firmContacts.length} contact${firmContacts.length === 1 ? "" : "s"}`}
+        <span className="text-xs text-gray-400 flex-shrink-0 whitespace-nowrap">
+          {isLoading ? "Loading…" : `${availableCount} available · ${firmContacts.length} total`}
         </span>
       </div>
 
       {/* Contact list */}
-      <div className="max-h-64 overflow-y-auto p-1.5 space-y-0.5">
-        {!isLoading && firmContacts.length === 0 ? (
-          <div className="px-3 py-6 text-sm text-gray-400 italic text-center">
+      <div className="max-h-80 overflow-y-auto p-2 space-y-1">
+        {isLoading ? (
+          <div className="px-3 py-8 text-sm text-gray-400 italic text-center">Loading firm contacts…</div>
+        ) : firmContacts.length === 0 ? (
+          <div className="px-3 py-8 text-sm text-gray-400 italic text-center">
             {search ? "No matching firm contacts" : "No contacts linked to this firm"}
           </div>
         ) : (
           <>
-            {firmId && firmContacts.length > 0 && (
-              <div className="px-2.5 pt-1 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-                Firm Contacts ({firmContacts.length})
-              </div>
-            )}
+            <div className="px-1 pt-0.5 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+              Firm Contacts
+            </div>
             {firmContacts.map(renderRow)}
           </>
         )}
