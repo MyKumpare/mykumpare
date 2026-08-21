@@ -9,6 +9,7 @@ import {
 import { format } from "date-fns";
 import { toast } from "@/components/ui/use-toast";
 import ConferenceAttendeePicker, { ConferenceAttendeeChips } from "@/components/conferences/ConferenceAttendeePicker";
+import { scrubConferencesForFirm } from "@/components/conferences/conferenceScrub";
 
 const PARTICP_COLORS = {
   Sponsoring: "bg-amber-50 text-amber-700 border-amber-200",
@@ -89,106 +90,25 @@ export default function FirmConferenceTab({ firmId, firmName }) {
   const handleScrub = async () => {
     setScrubbing(true);
     try {
-      const contactNames = (contacts || [])
-        .filter(c => !c.deleted_at)
-        .map(c => [c.first_name, c.last_name].filter(Boolean).join(" "))
-        .filter(Boolean)
-        .slice(0, 25);
-
-      const prompt = `Search the web for conferences, industry events, summits, and forums that the investment firm "${firmName}" or any of its key personnel are sponsoring, attending, speaking at, or exhibiting at.
-
-Key personnel (contacts) of the firm:
-${contactNames.length ? contactNames.map((n, i) => `${i + 1}. ${n}`).join("\n") : "(no contact names available)"}
-
-Focus on:
-- Investment management, allocator, pension, endowment, and alternatives investment conferences
-- Events where "${firmName}" is listed as a sponsor, attendee, speaker, panelist, or exhibitor
-- Events where any of the listed personnel are speaking, paneling, or attending
-- Upcoming and recent (within the last 12 months to the next 12 months) events
-
-For each conference found, return:
-- title: the conference name
-- description: a 1-2 sentence description of what the conference is about
-- start_date: YYYY-MM-DD (use the first day if a range; if only month/year is known, use the first day of that month)
-- end_date: YYYY-MM-DD (last day if a range, otherwise omit)
-- location: city, state/country, or venue
-- fees: registration fee as a string (e.g. "$1,200", "Free", "Invite-only", "See website")
-- url: link to the conference website or details page
-- participation_type: one of "Sponsoring", "Attending", "Speaking", "Exhibiting", "Unknown" — how "${firmName}" or its personnel are involved
-- source_contact_name: the name of the contact through whom this was found, if applicable (otherwise empty)
-
-Only return real conferences you found evidence of on the web. Do not invent conferences. If none are found, return an empty list.`;
-
-      const res = await base44.integrations.Core.InvokeLLM({
-        prompt,
-        add_context_from_internet: true,
-        model: "gemini_3_flash",
-        response_json_schema: {
-          type: "object",
-          properties: {
-            conferences: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  title: { type: "string" },
-                  description: { type: "string" },
-                  start_date: { type: "string" },
-                  end_date: { type: "string" },
-                  location: { type: "string" },
-                  fees: { type: "string" },
-                  url: { type: "string" },
-                  participation_type: { type: "string" },
-                  source_contact_name: { type: "string" },
-                },
-              },
-            },
-          },
-        },
+      const result = await scrubConferencesForFirm({
+        firmId,
+        firmName,
+        contacts,
+        existingConferences: conferences,
       });
 
-      const found = res?.conferences || [];
-      if (!found.length) {
+      if (result.found === 0) {
         toast({ title: "No conferences found", description: "The web scrub didn't find any conferences for this firm or its contacts." });
         setScrubbing(false);
         return;
       }
 
-      // Dedup against existing records by normalized title + start_date
-      const existingKeys = new Set(
-        conferences.map(c => `${(c.title || "").toLowerCase().trim()}|${c.conference_date || ""}`)
-      );
-      const batchId = crypto.randomUUID();
-      const toCreate = found
-        .filter(f => {
-          const key = `${(f.title || "").toLowerCase().trim()}|${f.start_date || ""}`;
-          return !existingKeys.has(key);
-        })
-        .map(f => ({
-          firm_id: firmId,
-          firm_name: firmName,
-          title: f.title?.trim() || "Untitled conference",
-          description: f.description?.trim() || "",
-          conference_date: f.start_date || undefined,
-          end_date: f.end_date || undefined,
-          location: f.location?.trim() || "",
-          fees: f.fees?.trim() || "",
-          url: f.url?.trim() || "",
-          participation_type: ["Sponsoring", "Attending", "Speaking", "Exhibiting", "Unknown"].includes(f.participation_type)
-            ? f.participation_type
-            : "Unknown",
-          source_contact_name: f.source_contact_name?.trim() || "",
-          scrub_batch_id: batchId,
-        }));
-
-      if (toCreate.length) {
-        await base44.entities.FirmConference.bulkCreate(toCreate);
-        queryClient.invalidateQueries({ queryKey: ["firm_conferences", firmId] });
-      }
+      queryClient.invalidateQueries({ queryKey: ["firm_conferences", firmId] });
+      queryClient.invalidateQueries({ queryKey: ["all_conferences"] });
 
       toast({
         title: "Conference scrub complete",
-        description: `${toCreate.length} new conference${toCreate.length !== 1 ? "s" : ""} added${found.length - toCreate.length ? `, ${found.length - toCreate.length} duplicate${found.length - toCreate.length !== 1 ? "s" : ""} skipped` : ""}.`,
+        description: `${result.created} new conference${result.created !== 1 ? "s" : ""} added${result.duplicates ? `, ${result.duplicates} duplicate${result.duplicates !== 1 ? "s" : ""} skipped` : ""}.`,
       });
     } catch (e) {
       toast({ title: "Scrub failed", description: e.message, variant: "destructive" });

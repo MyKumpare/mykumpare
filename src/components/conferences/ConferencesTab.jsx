@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import {
   startOfMonth, endOfMonth, startOfWeek, endOfWeek,
@@ -10,9 +10,11 @@ import { Button } from "@/components/ui/button";
 import {
   CalendarDays, MapPin, DollarSign, ExternalLink, Building2, Tag,
   Loader2, LayoutList, CalendarDays as CalIcon, Award, ClipboardCheck,
-  UserX,
+  UserX, Sparkles, Search,
 } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
 import ConferenceFeesChart from "@/components/conferences/ConferenceFeesChart";
+import { scrubConferencesForFirm } from "@/components/conferences/conferenceScrub";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -48,11 +50,17 @@ function fmtRange(start, end) {
 }
 
 export default function ConferencesTab() {
+  const queryClient = useQueryClient();
   const [view, setView] = useState("list"); // "list" | "calendar" | "unassigned"
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const [firmFilter, setFirmFilter] = useState("all");
   const [sortDir, setSortDir] = useState("asc"); // "asc" | "desc"
+
+  // Global web scrub state
+  const [scrubTarget, setScrubTarget] = useState("all"); // "all" | firmId
+  const [scrubbing, setScrubbing] = useState(false);
+  const [scrubProgress, setScrubProgress] = useState(null); // { current, total, firmName } | null
 
   const today = new Date();
   const todayStr = format(today, "yyyy-MM-dd");
@@ -60,6 +68,11 @@ export default function ConferencesTab() {
   const { data: conferences = [], isLoading } = useQuery({
     queryKey: ["all_conferences"],
     queryFn: () => base44.entities.FirmConference.list("conference_date", 5000),
+  });
+
+  const { data: allFirms = [] } = useQuery({
+    queryKey: ["all_firms_for_scrub"],
+    queryFn: () => base44.entities.Firm.list("name", 5000),
   });
 
   const sorted = useMemo(() => {
@@ -101,6 +114,75 @@ export default function ConferencesTab() {
       return sortDir === "asc" ? cmp : -cmp;
     });
   }, [unassignedBase, firmFilter, sortDir]);
+
+  // Group existing conferences by firm_id for dedup during global scrub
+  const conferencesByFirm = useMemo(() => {
+    const map = new Map();
+    sorted.forEach(c => {
+      if (!c.firm_id) return;
+      if (!map.has(c.firm_id)) map.set(c.firm_id, []);
+      map.get(c.firm_id).push(c);
+    });
+    return map;
+  }, [sorted]);
+
+  const handleGlobalScrub = async () => {
+    const targetFirms = scrubTarget === "all"
+      ? allFirms.filter(f => !f.deleted_at)
+      : allFirms.filter(f => f.id === scrubTarget);
+
+    if (!targetFirms.length) {
+      toast({ title: "No firm selected", description: "Choose a firm to scrub, or select 'All firms'.", variant: "destructive" });
+      return;
+    }
+
+    setScrubbing(true);
+    setScrubProgress({ current: 0, total: targetFirms.length, firmName: targetFirms[0].name });
+    let totalCreated = 0;
+    let totalDuplicates = 0;
+    let firmsWithNone = 0;
+
+    try {
+      for (let i = 0; i < targetFirms.length; i++) {
+        const firm = targetFirms[i];
+        setScrubProgress({ current: i, total: targetFirms.length, firmName: firm.name });
+
+        // Fetch this firm's contacts for personnel names
+        let contacts = [];
+        try {
+          contacts = await base44.entities.Contact.filter({ firm_ids: firm.id }, "first_name", 500);
+        } catch { /* ignore contact fetch errors */ }
+
+        try {
+          const result = await scrubConferencesForFirm({
+            firmId: firm.id,
+            firmName: firm.name,
+            contacts,
+            existingConferences: conferencesByFirm.get(firm.id) || [],
+          });
+          totalCreated += result.created;
+          totalDuplicates += result.duplicates;
+          if (result.found === 0) firmsWithNone += 1;
+        } catch (e) {
+          // continue with next firm on per-firm failure
+          console.error("Scrub failed for", firm.name, e);
+        }
+      }
+
+      setScrubProgress({ current: targetFirms.length, total: targetFirms.length, firmName: "" });
+      queryClient.invalidateQueries({ queryKey: ["all_conferences"] });
+
+      toast({
+        title: "Web scrub complete",
+        description: `${totalCreated} new conference${totalCreated !== 1 ? "s" : ""} added across ${targetFirms.length} firm${targetFirms.length !== 1 ? "s" : ""}${totalDuplicates ? `, ${totalDuplicates} duplicate${totalDuplicates !== 1 ? "s" : ""} skipped` : ""}${firmsWithNone ? `, ${firmsWithNone} firm${firmsWithNone !== 1 ? "s" : ""} had no results` : ""}.`,
+      });
+    } catch (e) {
+      toast({ title: "Scrub failed", description: e.message, variant: "destructive" });
+    } finally {
+      setScrubbing(false);
+      setScrubProgress(null);
+    }
+  };
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -147,6 +229,49 @@ export default function ConferencesTab() {
             Unassigned
           </Button>
         </div>
+      </div>
+
+      {/* Global web scrub */}
+      <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-1.5 text-indigo-700">
+            <Sparkles className="w-4 h-4" />
+            <span className="text-sm font-semibold">Scrub the web for conferences</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Search className="w-3.5 h-3.5 text-gray-400" />
+            <select
+              value={scrubTarget}
+              onChange={e => setScrubTarget(e.target.value)}
+              disabled={scrubbing}
+              className="h-8 text-xs rounded-md border border-gray-200 bg-white px-2 py-0 focus:outline-none focus:ring-1 focus:ring-indigo-300 min-w-[180px]"
+            >
+              <option value="all">All firms ({allFirms.filter(f => !f.deleted_at).length})</option>
+              {allFirms.filter(f => !f.deleted_at).map(f => (
+                <option key={f.id} value={f.id}>{f.name}</option>
+              ))}
+            </select>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            className="h-8 text-xs bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5"
+            onClick={handleGlobalScrub}
+            disabled={scrubbing || allFirms.length === 0}
+          >
+            {scrubbing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+            {scrubbing ? "Scrubbing..." : (scrubTarget === "all" ? "Scrub All Firms" : "Scrub Selected Firm")}
+          </Button>
+          {scrubbing && scrubProgress && (
+            <span className="text-xs text-indigo-600">
+              {scrubProgress.current}/{scrubProgress.total}
+              {scrubProgress.firmName ? ` — ${scrubProgress.firmName}` : ""}
+            </span>
+          )}
+        </div>
+        <p className="text-[11px] text-indigo-500/80 mt-1.5">
+          Searches the web for conferences each firm is sponsoring, attending, speaking at, or exhibiting at. New conferences are added; duplicates are skipped.
+        </p>
       </div>
 
       <ConferenceFeesChart conferences={sorted} />
