@@ -119,6 +119,16 @@ export default function ConferencesTab() {
             <CalIcon className="w-3.5 h-3.5" />
             Calendar
           </Button>
+          <Button
+            type="button"
+            variant={view === "unassigned" ? "default" : "ghost"}
+            size="sm"
+            className="h-7 text-xs gap-1"
+            onClick={() => setView("unassigned")}
+          >
+            <UserX className="w-3.5 h-3.5" />
+            Unassigned
+          </Button>
         </div>
       </div>
 
@@ -209,6 +219,34 @@ export default function ConferencesTab() {
                 )}
               </div>
             </div>
+          )}
+        </div>
+      )}
+
+      {view === "unassigned" && (
+        <div className="rounded-xl border border-gray-200 bg-white">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 className="w-5 h-5 text-gray-300 animate-spin" />
+            </div>
+          ) : unassigned.length === 0 ? (
+            <p className="text-sm text-gray-400 italic py-10 text-center">
+              All upcoming conferences have internal attendees assigned.
+            </p>
+          ) : (
+            <>
+              <div className="px-3 py-2 border-b border-gray-100 bg-amber-50/50 flex items-center gap-2">
+                <UserX className="w-4 h-4 text-amber-600" />
+                <p className="text-sm text-amber-800 font-medium">
+                  {unassigned.length} upcoming conference{unassigned.length !== 1 ? "s" : ""} with no internal attendees assigned.
+                </p>
+              </div>
+              <div className="divide-y divide-gray-100">
+                {unassigned.map(c => (
+                  <ConferenceListRow key={c.id} c={c} />
+                ))}
+              </div>
+            </>
           )}
         </div>
       )}
