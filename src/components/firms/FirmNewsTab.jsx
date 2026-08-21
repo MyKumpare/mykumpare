@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Newspaper, Plus, Trash2, Pin, PinOff, ExternalLink, Sparkles, Loader2,
   AlertTriangle, ChevronDown, ChevronUp, Edit2, Check, X, Calendar, History, Search,
-  ArrowDownWideNarrow, ArrowUpWideNarrow, FileText, CheckSquare,
+  ArrowDownWideNarrow, ArrowUpWideNarrow, FileText, CheckSquare, Tag,
 } from "lucide-react";
 import { format } from "date-fns";
 import ReactQuill from "react-quill";
@@ -191,6 +191,25 @@ export default function FirmNewsTab({ firmId, firmName }) {
   const handleTagFirms = async (item, taggedFirmIds) => {
     await base44.entities.FirmNews.update(item.id, { tagged_firm_ids: taggedFirmIds });
     queryClient.invalidateQueries({ queryKey: ["firm_news"] });
+  };
+
+  // Re-run auto-tagging on a single article (merges any newly found mentions;
+  // never removes manually-managed tags)
+  const handleAutoTag = async (item) => {
+    try {
+      const res = await base44.functions.invoke('autoTagNewsMention', { news_id: item.id });
+      const r = res?.data?.result;
+      const cCount = r?.tagged_contact_ids?.length || 0;
+      const fCount = r?.tagged_firm_ids?.length || 0;
+      if (cCount || fCount) {
+        toast({ title: "Re-tagged", description: `${cCount} contact(s) and ${fCount} firm(s) now linked.` });
+      } else {
+        toast({ title: "Re-tag complete", description: "No new mentions found in this article." });
+      }
+      queryClient.invalidateQueries({ queryKey: ["firm_news"] });
+    } catch (e) {
+      toast({ title: "Auto-tag failed", description: e.message, variant: "destructive" });
+    }
   };
 
   const toggleSelect = (id) => setSelectedIds(prev => {
@@ -451,6 +470,7 @@ export default function FirmNewsTab({ firmId, firmName }) {
               selectable={selectMode}
               selected={selectedIds.has(item.id)}
               onToggleSelect={() => toggleSelect(item.id)}
+              onAutoTag={() => handleAutoTag(item)}
             />
           ))}
         </div>
@@ -475,7 +495,7 @@ export default function FirmNewsTab({ firmId, firmName }) {
 }
 
 // ── News item card (view / expand / edit) ───────────────────────────────────
-export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, onCancelEdit, onSaveEdit, onTogglePin, onDelete, contacts = [], onTagContacts, firms = [], onTagFirms, selectable, selected, onToggleSelect }) {
+export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, onCancelEdit, onSaveEdit, onTogglePin, onDelete, contacts = [], onTagContacts, firms = [], onTagFirms, selectable, selected, onToggleSelect, onAutoTag }) {
   const alertStyle = ALERT_STYLES[item.alert_status] || ALERT_STYLES.Low;
   const statusStyle = STATUS_STYLES[item.news_status] || STATUS_STYLES.Neutral;
   const AlertIcon = alertStyle.icon;
@@ -609,6 +629,13 @@ export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, 
             className="p-1 rounded text-gray-300 hover:text-indigo-500 hover:bg-gray-100" title="Edit">
             <Edit2 className="w-3.5 h-3.5" />
           </button>
+          {onAutoTag && (
+            <button type="button" onClick={onAutoTag}
+              className="p-1 rounded text-gray-300 hover:text-emerald-500 hover:bg-gray-100"
+              title="Auto-tag mentioned contacts & firms">
+              <Tag className="w-3.5 h-3.5" />
+            </button>
+          )}
           <button type="button" onClick={onDelete}
             className="p-1 rounded text-gray-300 hover:text-red-500 hover:bg-gray-100" title="Delete">
             <Trash2 className="w-3.5 h-3.5" />

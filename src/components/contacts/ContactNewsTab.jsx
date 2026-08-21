@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Newspaper, Plus, Trash2, Sparkles, Loader2, History, Search, X,
-  ArrowDownWideNarrow, ArrowUpWideNarrow, FileText, CheckSquare,
+  ArrowDownWideNarrow, ArrowUpWideNarrow, FileText, CheckSquare, Tag,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { NewsItemCard, NewsItemForm } from "../firms/FirmNewsTab";
@@ -158,6 +158,25 @@ export default function ContactNewsTab({ contactId, contactName, firmId, firmNam
   const handleTagFirms = async (item, taggedFirmIds) => {
     await base44.entities.FirmNews.update(item.id, { tagged_firm_ids: taggedFirmIds });
     queryClient.invalidateQueries({ queryKey: ["firm_news"] });
+  };
+
+  // Re-run auto-tagging on a single article (merges any newly found mentions;
+  // never removes manually-managed tags)
+  const handleAutoTag = async (item) => {
+    try {
+      const res = await base44.functions.invoke('autoTagNewsMention', { news_id: item.id });
+      const r = res?.data?.result;
+      const cCount = r?.tagged_contact_ids?.length || 0;
+      const fCount = r?.tagged_firm_ids?.length || 0;
+      if (cCount || fCount) {
+        toast({ title: "Re-tagged", description: `${cCount} contact(s) and ${fCount} firm(s) now linked.` });
+      } else {
+        toast({ title: "Re-tag complete", description: "No new mentions found in this article." });
+      }
+      queryClient.invalidateQueries({ queryKey: ["firm_news"] });
+    } catch (e) {
+      toast({ title: "Auto-tag failed", description: e.message, variant: "destructive" });
+    }
   };
 
   const toggleSelect = (id) => setSelectedIds(prev => {
@@ -428,6 +447,7 @@ export default function ContactNewsTab({ contactId, contactName, firmId, firmNam
               selectable={selectMode}
               selected={selectedIds.has(item.id)}
               onToggleSelect={() => toggleSelect(item.id)}
+              onAutoTag={() => handleAutoTag(item)}
             />
           ))}
         </div>
