@@ -12,6 +12,8 @@ export default async function(req: Request): Promise<Response> {
     const firmId = body.firm_id || null;
     const contactId = body.contact_id || null;
     const keywords = Array.isArray(body.keywords) ? body.keywords.filter(k => k && k.trim()).map(k => k.trim()) : null;
+    const startDate = body.start_date || null; // YYYY-MM-DD
+    const endDate = body.end_date || null; // YYYY-MM-DD
     const tenantId = user.data?.linked_firm_id || null;
 
     // ── "all" mode: enqueue every firm for background historical scrubbing ──
@@ -36,7 +38,7 @@ export default async function(req: Request): Promise<Response> {
       }
 
       for (const firm of activeFirms) {
-        waitUntil(scrubOneFirmHistorical(base44, firm, batchId, null, globalKeywords));
+        waitUntil(scrubOneFirmHistorical(base44, firm, batchId, null, globalKeywords, startDate, endDate));
       }
 
       return Response.json({
@@ -44,6 +46,8 @@ export default async function(req: Request): Promise<Response> {
         total_firms: activeFirms.length,
         batch_id: batchId,
         keywords: globalKeywords || [],
+        start_date: startDate,
+        end_date: endDate,
       });
     }
 
@@ -66,9 +70,9 @@ export default async function(req: Request): Promise<Response> {
       }
 
       const batchId = `scrub_hist_${Date.now()}`;
-      waitUntil(scrubOneContactHistorical(base44, firm, contact, batchId, tenantId, keywords));
+      waitUntil(scrubOneContactHistorical(base44, firm, contact, batchId, tenantId, keywords, startDate, endDate));
 
-      return Response.json({ status: 'enqueued', batch_id: batchId });
+      return Response.json({ status: 'enqueued', batch_id: batchId, start_date: startDate, end_date: endDate });
     }
 
     // ── "single" mode: scrub one firm synchronously ──
@@ -83,23 +87,44 @@ export default async function(req: Request): Promise<Response> {
 
     const batchId = `scrub_hist_${Date.now()}`;
     // Process in the background so the function returns fast; UI polls for results
-    waitUntil(scrubOneFirmHistorical(base44, firm, batchId, tenantId, keywords));
+    waitUntil(scrubOneFirmHistorical(base44, firm, batchId, tenantId, keywords, startDate, endDate));
 
-    return Response.json({ status: 'enqueued', batch_id: batchId });
+    return Response.json({ status: 'enqueued', batch_id: batchId, start_date: startDate, end_date: endDate });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
 }
 
-// ── Time periods to search across for comprehensive historical coverage ──
-const TIME_PERIODS = [
+// ── Default time periods to search across for comprehensive historical coverage ──
+const DEFAULT_TIME_PERIODS = [
   { label: 'the past year (2025-2026)', before: null, after: null },
   { label: '2022-2024', before: null, after: null },
   { label: 'the founding era through 2021 (earliest available history)', before: null, after: null },
 ];
 
+// Build the list of time periods to search, honoring an optional user date range.
+// If both start and end are provided, a single focused period is used.
+// If only one bound is provided, an open-ended period is used.
+// If neither is provided, the default multi-period history search runs.
+function buildTimePeriods(startDate, endDate) {
+  if (!startDate && !endDate) return DEFAULT_TIME_PERIODS;
+  const fmt = (d) => {
+    try {
+      const dt = new Date(d + 'T00:00:00');
+      return dt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    } catch { return d; }
+  };
+  if (startDate && endDate) {
+    return [{ label: `the period from ${fmt(startDate)} through ${fmt(endDate)}`, before: endDate, after: startDate }];
+  }
+  if (startDate) {
+    return [{ label: `the period from ${fmt(startDate)} to the present`, before: null, after: startDate }];
+  }
+  return [{ label: `the period up to ${fmt(endDate)}`, before: endDate, after: null }];
+}
+
 // ── Scrub a single firm: search the web for historical news across multiple time periods ──
-async function scrubOneFirmHistorical(base44, firm, batchId, tenantId = null, keywords = null) {
+async function scrubOneFirmHistorical(base44, firm, batchId, tenantId = null, keywords = null, startDate = null, endDate = null) {
   try {
     // Gather context: contacts and products for this firm
     const [allContacts, allProducts] = await Promise.all([
@@ -125,8 +150,9 @@ async function scrubOneFirmHistorical(base44, firm, batchId, tenantId = null, ke
 
     // Run a search for each time period and collect all results
     const allNewsItems = [];
+    const periods = buildTimePeriods(startDate, endDate);
 
-    for (const period of TIME_PERIODS) {
+    for (const period of periods) {
       const prompt = `Search for historical news and public information about "${firm.name}", a ${firmTypes.join(' / ') || 'investment'} firm${foundedYear}${firm.website ? ` (website: ${firm.website})` : ''}.
 Focus specifically on news from ${period.label}.
 ${contactNames ? `Key contacts to look for: ${contactNames}.` : ''}
@@ -224,7 +250,7 @@ Only include real, findable articles. Do not fabricate news. If no news is found
 }
 
 // ── Scrub a single contact: search the web for historical news across multiple time periods ──
-async function scrubOneContactHistorical(base44, firm, contact, batchId, tenantId = null, keywords = null) {
+async function scrubOneContactHistorical(base44, firm, contact, batchId, tenantId = null, keywords = null, startDate = null, endDate = null) {
   try {
     const contactName = [contact.first_name, contact.last_name].filter(Boolean).join(' ');
     if (!contactName) return [];
@@ -237,8 +263,9 @@ async function scrubOneContactHistorical(base44, firm, contact, batchId, tenantI
       : '';
 
     const allNewsItems = [];
+    const periods = buildTimePeriods(startDate, endDate);
 
-    for (const period of TIME_PERIODS) {
+    for (const period of periods) {
       const prompt = `Search for historical news and public information about "${contactName}"${titleLine} at "${firm.name}", a ${firmTypes.join(' / ') || 'investment'} firm.
 Focus specifically on news from ${period.label}.${keywordLine}
 

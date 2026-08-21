@@ -16,6 +16,7 @@ import "react-quill/dist/quill.snow.css";
 import { toast } from "@/components/ui/use-toast";
 import ContactTaggerPopover from "./ContactTaggerPopover";
 import FirmTaggerPopover from "./FirmTaggerPopover";
+import HistoricalScrubDialog from "../news/HistoricalScrubDialog";
 
 const QUILL_MODULES = {
   toolbar: [
@@ -54,6 +55,7 @@ export default function FirmNewsTab({ firmId, firmName }) {
   const [keywords, setKeywords] = useState([]);
   const [keywordInput, setKeywordInput] = useState("");
   const [showKeywords, setShowKeywords] = useState(false);
+  const [showHistorical, setShowHistorical] = useState(false);
 
   // Owned news (firm_id = this firm) + tagged news (tagged_firm_ids includes this firm)
   const { data: ownedNews = [], isLoading: loadingOwned } = useQuery({
@@ -124,11 +126,17 @@ export default function FirmNewsTab({ firmId, firmName }) {
     setScrubbing(false);
   };
 
-  const handleHistoricalScrub = async () => {
+  const handleHistoricalScrub = async ({ start_date, end_date }) => {
     setHistoricalScrubbing(true);
     try {
-      await base44.functions.invoke('scrubFirmNewsHistorical', { mode: 'single', firm_id: firmId, keywords: keywords.length ? keywords : undefined });
-      toast({ title: "Historical scrub started", description: "Searching across multiple time periods — news will appear shortly." });
+      await base44.functions.invoke('scrubFirmNewsHistorical', {
+        mode: 'single', firm_id: firmId,
+        keywords: keywords.length ? keywords : undefined,
+        start_date: start_date || undefined,
+        end_date: end_date || undefined,
+      });
+      const rangeTxt = (start_date || end_date) ? ` between ${start_date || "anytime"} and ${end_date || "today"}` : " across all available history";
+      toast({ title: "Historical scrub started", description: `Searching${rangeTxt} — news will appear shortly.` });
       // Poll for results since the scrub runs in the background
       setTimeout(() => queryClient.invalidateQueries({ queryKey: ["firm_news"] }), 15000);
       setTimeout(() => queryClient.invalidateQueries({ queryKey: ["firm_news"] }), 45000);
@@ -136,6 +144,7 @@ export default function FirmNewsTab({ firmId, firmName }) {
       setTimeout(() => queryClient.invalidateQueries({ queryKey: ["firm_news"] }), 150000);
     } catch (e) {
       toast({ title: "Historical scrub failed", description: e.message, variant: "destructive" });
+      throw e;
     }
     setHistoricalScrubbing(false);
   };
@@ -227,7 +236,7 @@ export default function FirmNewsTab({ firmId, firmName }) {
             variant="ghost"
             size="sm"
             className="h-7 px-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50 gap-1 text-xs"
-            onClick={handleHistoricalScrub}
+            onClick={() => setShowHistorical(true)}
             disabled={historicalScrubbing || scrubbing}
             title="Search for historical news going back several years"
           >
@@ -345,6 +354,14 @@ export default function FirmNewsTab({ firmId, firmName }) {
           ))}
         </div>
       )}
+
+      <HistoricalScrubDialog
+        open={showHistorical}
+        onOpenChange={setShowHistorical}
+        onConfirm={handleHistoricalScrub}
+        keywords={keywords}
+        targetLabel={firmName}
+      />
     </div>
   );
 }

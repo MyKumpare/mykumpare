@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { NewsItemCard, NewsItemForm } from "../firms/FirmNewsTab";
+import HistoricalScrubDialog from "../news/HistoricalScrubDialog";
 
 // ── Contact News Tab — shows news tagged to this contact, with the same
 //    scrub / pin / edit / delete functionality as the firm news tab ──
@@ -23,6 +24,7 @@ export default function ContactNewsTab({ contactId, contactName, firmId, firmNam
   const [keywords, setKeywords] = useState([]);
   const [keywordInput, setKeywordInput] = useState("");
   const [showKeywords, setShowKeywords] = useState(false);
+  const [showHistorical, setShowHistorical] = useState(false);
 
   // Owned news (from contact's firm) + cross-firm tagged news
   const { data: ownedNews = [], isLoading: loadingOwned } = useQuery({
@@ -100,20 +102,24 @@ export default function ContactNewsTab({ contactId, contactName, firmId, firmNam
     setScrubbing(false);
   };
 
-  const handleHistoricalScrub = async () => {
+  const handleHistoricalScrub = async ({ start_date, end_date }) => {
     setHistoricalScrubbing(true);
     try {
       await base44.functions.invoke('scrubFirmNewsHistorical', {
         mode: 'contact', contact_id: contactId, firm_id: firmId,
         keywords: keywords.length ? keywords : undefined,
+        start_date: start_date || undefined,
+        end_date: end_date || undefined,
       });
-      toast({ title: "Historical scrub started", description: "Searching across multiple time periods — news will appear shortly." });
+      const rangeTxt = (start_date || end_date) ? ` between ${start_date || "anytime"} and ${end_date || "today"}` : " across all available history";
+      toast({ title: "Historical scrub started", description: `Searching${rangeTxt} — news will appear shortly.` });
       setTimeout(() => queryClient.invalidateQueries({ queryKey: ["firm_news"] }), 15000);
       setTimeout(() => queryClient.invalidateQueries({ queryKey: ["firm_news"] }), 45000);
       setTimeout(() => queryClient.invalidateQueries({ queryKey: ["firm_news"] }), 90000);
       setTimeout(() => queryClient.invalidateQueries({ queryKey: ["firm_news"] }), 150000);
     } catch (e) {
       toast({ title: "Historical scrub failed", description: e.message, variant: "destructive" });
+      throw e;
     }
     setHistoricalScrubbing(false);
   };
@@ -204,7 +210,7 @@ export default function ContactNewsTab({ contactId, contactName, firmId, firmNam
             variant="ghost"
             size="sm"
             className="h-7 px-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50 gap-1 text-xs"
-            onClick={handleHistoricalScrub}
+            onClick={() => setShowHistorical(true)}
             disabled={historicalScrubbing || scrubbing}
             title="Search for historical news going back several years"
           >
@@ -325,6 +331,14 @@ export default function ContactNewsTab({ contactId, contactName, firmId, firmNam
           ))}
         </div>
       )}
+
+      <HistoricalScrubDialog
+        open={showHistorical}
+        onOpenChange={setShowHistorical}
+        onConfirm={handleHistoricalScrub}
+        keywords={keywords}
+        targetLabel={contactName}
+      />
     </div>
   );
 }
