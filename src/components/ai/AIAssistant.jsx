@@ -1,11 +1,14 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Send, Bot, Loader2, X, History, Trash2, Plus, MessageSquare, Mic } from "lucide-react";
+import { Send, Bot, Loader2, X, History, Trash2, Plus, MessageSquare, Mic, ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { useChatHistory } from "@/hooks/useChatHistory";
 import { useVoiceSearch } from "@/hooks/useVoiceSearch";
+import { AI_AGENTS } from "./agentRegistry";
+import { useAgentOrder } from "@/hooks/useAgentOrder";
 import AIAssistantMessage from "./AIAssistantMessage";
 
 const INITIAL_GREETING = {
@@ -66,8 +69,22 @@ export default function AIAssistant() {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const { order } = useAgentOrder();
+  const byId = Object.fromEntries(AI_AGENTS.map((a) => [a.id, a]));
+  const orderedAgents = order.map((id) => byId[id]).filter(Boolean);
+
+  const handleSelectAgent = (agent) => {
+    setShowPicker(false);
+    if (agent.type === "inline") {
+      setIsOpen(true);
+    } else {
+      navigate(agent.to);
+    }
+  };
 
   const { conversations, loading: loadingConvs, createConversation, updateConversation, deleteConversation } = useChatHistory("ai_assistant");
   const [activeConversationId, setActiveConversationId] = useState(null);
@@ -533,13 +550,65 @@ export default function AIAssistant() {
 
   return (
     <>
-      {!isOpen && (
+      {!isOpen && !showPicker && (
         <button
-          onClick={() => setIsOpen(true)}
+          onClick={() => setShowPicker(true)}
           className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center"
+          title="AI Agents"
         >
           <Bot className="w-7 h-7" />
         </button>
+      )}
+
+      {showPicker && (
+        <div className="fixed bottom-6 right-6 z-50 w-80 bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white">
+            <div className="flex items-center gap-2">
+              <Bot className="w-5 h-5" />
+              <h3 className="text-sm font-semibold">AI Agents</h3>
+            </div>
+            <button
+              onClick={() => setShowPicker(false)}
+              className="text-white/80 hover:text-white transition-colors"
+              title="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="p-2 overflow-y-auto max-h-[60vh]">
+            {orderedAgents.map((agent) => {
+              const Icon = agent.icon;
+              return (
+                <button
+                  key={agent.id}
+                  onClick={() => handleSelectAgent(agent)}
+                  className="w-full flex items-start gap-3 p-3 rounded-xl hover:bg-indigo-50 transition-colors text-left group"
+                >
+                  <div className={`w-10 h-10 rounded-lg ${agent.iconBg} flex items-center justify-center flex-shrink-0`}>
+                    <Icon className={`w-5 h-5 ${agent.iconColor}`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">
+                      {agent.name}
+                    </div>
+                    <div className="text-xs text-gray-500 line-clamp-2">
+                      {agent.description}
+                    </div>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-indigo-500 mt-1 flex-shrink-0" />
+                </button>
+              );
+            })}
+          </div>
+          <div className="px-3 py-2 border-t border-gray-200 bg-gray-50">
+            <button
+              onClick={() => { setShowPicker(false); navigate("/AiAgents"); }}
+              className="w-full text-center text-xs text-indigo-600 hover:text-indigo-700 font-medium py-1"
+            >
+              Manage & reorder agents
+            </button>
+          </div>
+        </div>
       )}
 
       {isOpen && (
