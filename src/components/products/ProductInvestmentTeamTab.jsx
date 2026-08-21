@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Star, StarOff, X, UserPlus, Search, User } from "lucide-react";
+import { Plus, Star, StarOff, X, UserPlus, Search, User, Check } from "lucide-react";
 import AddContactDialog from "@/components/contacts/AddContactDialog";
 
 // Inline contact picker that proactively shows all contacts linked to the
@@ -25,39 +25,56 @@ function ContactPicker({ firmId, existingMemberIds, onAdd }) {
     [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ");
   const searchLower = search.toLowerCase().trim();
 
+  const existingSet = useMemo(() => new Set(existingMemberIds), [existingMemberIds]);
+
   const firmContacts = useMemo(
     () =>
       contacts
-        .filter((c) => !existingMemberIds.includes(c.id))
         .filter((c) => !searchLower || getFullName(c).toLowerCase().includes(searchLower))
         .sort((a, b) => (a.last_name || "").localeCompare(b.last_name || "")),
-    [contacts, existingMemberIds, searchLower]
+    [contacts, searchLower]
   );
 
-  const renderRow = (c) => (
-    <button
-      key={c.id}
-      type="button"
-      onClick={() => onAdd(c)}
-      className="w-full text-left px-2.5 py-2 rounded-md hover:bg-indigo-50 flex items-center gap-2.5 group transition-colors"
-    >
-      {c.photo_url ? (
-        <img src={c.photo_url} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
-      ) : (
-        <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-          <User className="w-3.5 h-3.5 text-indigo-400" />
+  const renderRow = (c) => {
+    const isAdded = existingSet.has(c.id);
+    return (
+      <div
+        key={c.id}
+        className={`w-full px-2.5 py-2 rounded-md flex items-center gap-2.5 transition-colors ${
+          isAdded ? "opacity-60 bg-gray-50" : "hover:bg-indigo-50 group"
+        }`}
+      >
+        {c.photo_url ? (
+          <img src={c.photo_url} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
+        ) : (
+          <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+            <User className="w-3.5 h-3.5 text-indigo-400" />
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-medium text-gray-800 truncate">
+            {getFullName(c)}
+            {c.designations?.length > 0 ? `, ${c.designations.join(", ")}` : ""}
+          </div>
+          {c.title && <div className="text-xs text-gray-400 truncate">{c.title}</div>}
         </div>
-      )}
-      <div className="min-w-0 flex-1">
-        <div className="text-sm font-medium text-gray-800 truncate">
-          {getFullName(c)}
-          {c.designations?.length > 0 ? `, ${c.designations.join(", ")}` : ""}
-        </div>
-        {c.title && <div className="text-xs text-gray-400 truncate">{c.title}</div>}
+        {isAdded ? (
+          <span className="flex items-center gap-1 text-[11px] text-green-600 font-medium flex-shrink-0">
+            <Check className="w-3.5 h-3.5" /> Added
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onAdd(c)}
+            className="p-1 -mr-1 rounded hover:bg-indigo-100 flex-shrink-0"
+            title="Add to team"
+          >
+            <Plus className="w-4 h-4 text-gray-300 group-hover:text-indigo-600" />
+          </button>
+        )}
       </div>
-      <Plus className="w-4 h-4 text-gray-300 group-hover:text-indigo-600 flex-shrink-0" />
-    </button>
-  );
+    );
+  };
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
