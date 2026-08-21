@@ -34,6 +34,14 @@ const RSVP_COLORS = {
   "Declined": "bg-rose-50 text-rose-700 border-rose-200",
 };
 
+const LOGISTICS_OPTIONS = ["Pending Payment", "Registered", "Confirmed"];
+
+const LOGISTICS_COLORS = {
+  "Pending Payment": "bg-amber-100 text-amber-800 border-amber-300",
+  "Registered": "bg-blue-100 text-blue-800 border-blue-300",
+  "Confirmed": "bg-emerald-100 text-emerald-800 border-emerald-300",
+};
+
 function fmtCurrency(n) {
   if (n == null || n === "" || isNaN(Number(n))) return "";
   return Number(n).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
@@ -57,6 +65,7 @@ export default function ConferencesTab() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [firmFilter, setFirmFilter] = useState("all");
   const [sortDir, setSortDir] = useState("asc"); // "asc" | "desc"
+  const [statusFilter, setStatusFilter] = useState("all"); // "all" | logistics status
 
   // Global web scrub state
   const [scrubTarget, setScrubTarget] = useState("all"); // "all" | firmId
@@ -103,6 +112,13 @@ export default function ConferencesTab() {
     });
     return map;
   }, [sorted]);
+
+  const LOGISTICS_FILTER_OPTIONS = ["all", ...LOGISTICS_OPTIONS];
+
+  const listFiltered = useMemo(() => {
+    if (statusFilter === "all") return sorted;
+    return sorted.filter(c => (c.logistics_status || "Pending Payment") === statusFilter);
+  }, [sorted, statusFilter]);
 
   // Upcoming conferences with no internal attendees assigned.
   const unassignedBase = useMemo(() => {
@@ -290,17 +306,36 @@ export default function ConferencesTab() {
 
       {view === "list" ? (
         <div className="rounded-xl border border-gray-200 bg-white">
+          <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-2 flex-wrap bg-gray-50/50">
+            <span className="text-[11px] font-medium text-gray-500 inline-flex items-center gap-1">
+              <ClipboardCheck className="w-3.5 h-3.5" /> Status:
+            </span>
+            <select
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value)}
+              className="h-7 text-xs rounded-md border border-gray-200 bg-white px-2 focus:outline-none focus:ring-1 focus:ring-indigo-300"
+            >
+              {LOGISTICS_FILTER_OPTIONS.map(o => (
+                <option key={o} value={o}>{o === "all" ? "All statuses" : o}</option>
+              ))}
+            </select>
+            {statusFilter !== "all" && (
+              <span className="text-[11px] text-gray-400">
+                {listFiltered.length} shown
+              </span>
+            )}
+          </div>
           {isLoading ? (
             <div className="flex items-center justify-center py-10">
               <Loader2 className="w-5 h-5 text-gray-300 animate-spin" />
             </div>
-          ) : sorted.length === 0 ? (
+          ) : listFiltered.length === 0 ? (
             <p className="text-sm text-gray-400 italic py-10 text-center">
-              No conferences yet. Run a conference scrub on a firm to populate this list.
+              No conferences{statusFilter !== "all" ? ` marked "${statusFilter}"` : ""} yet. Run a conference scrub on a firm to populate this list.
             </p>
           ) : (
             <div className="divide-y divide-gray-100">
-              {sorted.map(c => (
+              {listFiltered.map(c => (
                 <ConferenceListRow key={c.id} c={c} />
               ))}
             </div>
@@ -410,6 +445,8 @@ function ConferenceListRow({ c }) {
   const rsvp = c.rsvp_status || "Not Responded";
   const rsvpColor = RSVP_COLORS[rsvp] || RSVP_COLORS["Not Responded"];
   const sponsor = c.sponsorship_status || "Not Sponsoring";
+  const logistics = c.logistics_status || "Pending Payment";
+  const logisticsColor = LOGISTICS_COLORS[logistics] || LOGISTICS_COLORS["Pending Payment"];
   return (
     <div className="p-3 hover:bg-gray-50 transition-colors">
       <div className="flex items-start justify-between gap-3">
@@ -418,6 +455,10 @@ function ConferenceListRow({ c }) {
             <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${pColor}`}>
               <Tag className="w-2.5 h-2.5" />
               {c.participation_type}
+            </span>
+            <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${logisticsColor}`}>
+              <ClipboardCheck className="w-2.5 h-2.5" />
+              {logistics}
             </span>
             {rsvp !== "Not Responded" && (
               <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${rsvpColor}`}>

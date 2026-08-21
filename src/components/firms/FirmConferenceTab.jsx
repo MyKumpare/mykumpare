@@ -36,6 +36,14 @@ const REG_COLORS = {
   "Waitlisted": "bg-amber-50 text-amber-700 border-amber-200",
 };
 
+const LOGISTICS_OPTIONS = ["Pending Payment", "Registered", "Confirmed"];
+
+const LOGISTICS_COLORS = {
+  "Pending Payment": "bg-amber-50 text-amber-700 border-amber-200",
+  "Registered": "bg-blue-50 text-blue-700 border-blue-200",
+  "Confirmed": "bg-emerald-50 text-emerald-700 border-emerald-200",
+};
+
 const SPONSOR_OPTIONS = ["Not Sponsoring", "Considering", "Sponsoring"];
 
 const SPONSOR_COLORS = {
@@ -147,6 +155,17 @@ export default function FirmConferenceTab({ firmId, firmName }) {
     }
   };
 
+  const handleLogisticsChange = async (conf, newStatus) => {
+    try {
+      await base44.entities.FirmConference.update(conf.id, { logistics_status: newStatus });
+      queryClient.invalidateQueries({ queryKey: ["firm_conferences", firmId] });
+      queryClient.invalidateQueries({ queryKey: ["all_conferences"] });
+      toast({ title: "Status updated", description: `${conf.title}: ${newStatus}` });
+    } catch (e) {
+      toast({ title: "Update failed", description: e.message, variant: "destructive" });
+    }
+  };
+
   const handleSponsorChange = async (conf, data) => {
     try {
       await base44.entities.FirmConference.update(conf.id, data);
@@ -207,6 +226,7 @@ export default function FirmConferenceTab({ firmId, firmName }) {
               ownFirmContacts={ownFirmContacts}
               onRsvpChange={handleRsvpChange}
               onRegChange={handleRegChange}
+              onLogisticsChange={handleLogisticsChange}
               onSponsorChange={handleSponsorChange}
               onAttendeeChange={handleAttendeeChange}
               onDelete={handleDelete}
@@ -218,7 +238,7 @@ export default function FirmConferenceTab({ firmId, firmName }) {
   );
 }
 
-function ConferenceRecordCard({ conf, ownFirmContacts, onRsvpChange, onRegChange, onSponsorChange, onAttendeeChange, onDelete }) {
+function ConferenceRecordCard({ conf, ownFirmContacts, onRsvpChange, onRegChange, onLogisticsChange, onSponsorChange, onAttendeeChange, onDelete }) {
   const queryClient = useQueryClient();
   const [notesOpen, setNotesOpen] = useState(false);
   const [notesDraft, setNotesDraft] = useState(conf.internal_notes || "");
@@ -234,6 +254,8 @@ function ConferenceRecordCard({ conf, ownFirmContacts, onRsvpChange, onRegChange
   const rsvpColor = RSVP_COLORS[rsvp] || RSVP_COLORS["Not Responded"];
   const reg = conf.registration_status || "Not Registered";
   const regColor = REG_COLORS[reg] || REG_COLORS["Not Registered"];
+  const logistics = conf.logistics_status || "Pending Payment";
+  const logisticsColor = LOGISTICS_COLORS[logistics] || LOGISTICS_COLORS["Pending Payment"];
   const sponsor = conf.sponsorship_status || "Not Sponsoring";
   const sponsorColor = SPONSOR_COLORS[sponsor] || SPONSOR_COLORS["Not Sponsoring"];
 
@@ -275,6 +297,10 @@ function ConferenceRecordCard({ conf, ownFirmContacts, onRsvpChange, onRegChange
                 {reg}
               </span>
             )}
+            <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${logisticsColor}`}>
+              <ClipboardCheck className="w-2.5 h-2.5" />
+              {logistics}
+            </span>
             {conf.conference_date && (
               <span className="inline-flex items-center gap-1 text-[10px] text-gray-500">
                 <CalendarDays className="w-3 h-3" />
@@ -343,6 +369,16 @@ function ConferenceRecordCard({ conf, ownFirmContacts, onRsvpChange, onRegChange
             className="h-7 rounded-md border border-gray-200 bg-white px-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400"
           >
             {REG_OPTIONS.map(o => (
+              <option key={o} value={o}>{o}</option>
+            ))}
+          </select>
+          <label className="text-[11px] font-medium text-gray-500 ml-1">Status:</label>
+          <select
+            value={logistics}
+            onChange={e => onLogisticsChange(conf, e.target.value)}
+            className="h-7 rounded-md border border-gray-200 bg-white px-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400"
+          >
+            {LOGISTICS_OPTIONS.map(o => (
               <option key={o} value={o}>{o}</option>
             ))}
           </select>
