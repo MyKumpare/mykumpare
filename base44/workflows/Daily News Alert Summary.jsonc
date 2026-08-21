@@ -1,0 +1,44 @@
+{
+  "description": "Every morning at 8am, gathers all High-impact news alerts detected in the last 24 hours and emails a summary report to all admin users.",
+  "name": "Daily News Alert Summary",
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "daily_news_alert_summary",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "send_summary": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "sendDailyNewsAlertSummary"
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Send daily alert summary",
+            "description": "Email admins a summary of last 24h high-impact alerts"
+          }
+        }
+      }
+    ]
+  },
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "0 8 * * *",
+      "one_time_date": null,
+      "timezone": "America/New_York",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  }
+}
