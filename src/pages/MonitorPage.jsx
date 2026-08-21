@@ -14,8 +14,8 @@ import ActivityTimeline from "@/components/activity/ActivityTimeline";
 
 const TABS = [
   { key: "news", label: "News Alerts", icon: Newspaper },
-  { key: "tasks", label: "Tasks", icon: LayoutList },
   { key: "activity", label: "Activity", icon: ClipboardList },
+  { key: "tasks", label: "Tasks", icon: LayoutList },
   { key: "timeline", label: "Timeline", icon: ActivityIcon },
 ];
 
