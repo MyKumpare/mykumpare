@@ -6,42 +6,32 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Star, StarOff, X, UserPlus, Search, User } from "lucide-react";
 import AddContactDialog from "@/components/contacts/AddContactDialog";
 
-// Inline contact picker that proactively shows all firm contacts in a
-// compact, scrollable list. A search box narrows the list when needed.
+// Inline contact picker that proactively shows all contacts linked to the
+// firm in a compact, scrollable list. Search narrows within firm contacts
+// only — no global/other contacts are surfaced here.
 function ContactPicker({ firmId, existingMemberIds, onAdd }) {
   const [search, setSearch] = useState("");
 
-  const { data: contacts = [] } = useQuery({
-    queryKey: ["contacts-all"],
-    queryFn: () => base44.entities.Contact.list("last_name", 500),
+  // Fetch only this firm's contacts directly (avoids the 500-row global list
+  // cap that was hiding later-alphabet firm contacts).
+  const { data: contacts = [], isLoading } = useQuery({
+    queryKey: ["contacts-by-firm", firmId],
+    queryFn: () =>
+      base44.entities.Contact.filter({ firm_ids: firmId, deleted_at: null }, "last_name", 500),
+    enabled: !!firmId,
   });
 
   const getFullName = (c) =>
     [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ");
-
-  const activeContacts = useMemo(() => contacts.filter((c) => !c.deleted_at), [contacts]);
   const searchLower = search.toLowerCase().trim();
 
   const firmContacts = useMemo(
     () =>
-      activeContacts
-        .filter(
-          (c) => firmId && Array.isArray(c.firm_ids) && c.firm_ids.some((id) => String(id) === String(firmId))
-        )
+      contacts
         .filter((c) => !existingMemberIds.includes(c.id))
         .filter((c) => !searchLower || getFullName(c).toLowerCase().includes(searchLower))
         .sort((a, b) => (a.last_name || "").localeCompare(b.last_name || "")),
-    [activeContacts, firmId, existingMemberIds, searchLower]
-  );
-
-  const firmContactIds = useMemo(() => new Set(firmContacts.map((c) => c.id)), [firmContacts]);
-  const otherContacts = useMemo(
-    () =>
-      activeContacts
-        .filter((c) => !firmContactIds.has(c.id) && !existingMemberIds.includes(c.id))
-        .filter((c) => !!searchLower && getFullName(c).toLowerCase().includes(searchLower))
-        .sort((a, b) => (a.last_name || "").localeCompare(b.last_name || "")),
-    [activeContacts, firmContactIds, existingMemberIds, searchLower]
+    [contacts, existingMemberIds, searchLower]
   );
 
   const renderRow = (c) => (
@@ -69,9 +59,6 @@ function ContactPicker({ firmId, existingMemberIds, onAdd }) {
     </button>
   );
 
-  const hasFirmContacts = firmContacts.length > 0;
-  const hasOtherContacts = otherContacts.length > 0;
-
   return (
     <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
       {/* Search header */}
@@ -80,43 +67,29 @@ function ContactPicker({ firmId, existingMemberIds, onAdd }) {
         <input
           autoFocus
           className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
-          placeholder="Search contacts by name..."
+          placeholder="Search firm contacts by name..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        {search && (
-          <span className="text-xs text-gray-400 flex-shrink-0">
-            {firmContacts.length + otherContacts.length} match{firmContacts.length + otherContacts.length === 1 ? "" : "es"}
-          </span>
-        )}
+        <span className="text-xs text-gray-400 flex-shrink-0">
+          {isLoading ? "Loading…" : `${firmContacts.length} contact${firmContacts.length === 1 ? "" : "s"}`}
+        </span>
       </div>
 
       {/* Contact list */}
       <div className="max-h-64 overflow-y-auto p-1.5 space-y-0.5">
-        {!hasFirmContacts && !hasOtherContacts ? (
+        {!isLoading && firmContacts.length === 0 ? (
           <div className="px-3 py-6 text-sm text-gray-400 italic text-center">
-            {search ? "No matching contacts found" : "No contacts linked to this firm"}
+            {search ? "No matching firm contacts" : "No contacts linked to this firm"}
           </div>
         ) : (
           <>
-            {hasFirmContacts && (
-              <div className="space-y-0.5">
-                {firmId && (
-                  <div className="px-2.5 pt-1 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-                    Firm Contacts ({firmContacts.length})
-                  </div>
-                )}
-                {firmContacts.map(renderRow)}
+            {firmId && firmContacts.length > 0 && (
+              <div className="px-2.5 pt-1 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                Firm Contacts ({firmContacts.length})
               </div>
             )}
-            {hasOtherContacts && (
-              <div className="space-y-0.5">
-                <div className="px-2.5 pt-2 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-                  Other Contacts ({otherContacts.length})
-                </div>
-                {otherContacts.map(renderRow)}
-              </div>
-            )}
+            {firmContacts.map(renderRow)}
           </>
         )}
       </div>
