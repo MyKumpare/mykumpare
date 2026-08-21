@@ -1,6 +1,7 @@
 import React from "react";
 import AnalyticsSection from "@/components/analytics/AnalyticsSection";
 import InvitationStatsSection from "@/components/analytics/InvitationStatsSection";
+import NewsContentTagVolumeChart from "@/components/analytics/NewsContentTagVolumeChart";
 
 export default function Analytics() {
   return (
@@ -8,6 +9,7 @@ export default function Analytics() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
         <InvitationStatsSection />
         <AnalyticsSection />
+        <NewsContentTagVolumeChart />
       </div>
     </div>
   );
