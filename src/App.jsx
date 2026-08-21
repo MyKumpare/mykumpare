@@ -23,6 +23,7 @@ import MonitorPage from './pages/MonitorPage';
 import PortfolioFundingDashboard from './pages/PortfolioFundingDashboard';
 import PortfolioFundingReport from './pages/PortfolioFundingReport';
 import SearchReport from './pages/SearchReport';
+import ConferenceCalendar from './pages/ConferenceCalendar';
 
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -97,6 +98,7 @@ const AuthenticatedApp = () => {
       <Route path="/PortfolioFundingDashboard" element={<LayoutWrapper currentPageName="PortfolioFundingDashboard"><PortfolioFundingDashboard /></LayoutWrapper>} />
       <Route path="/PortfolioFundingReport" element={<LayoutWrapper currentPageName="PortfolioFundingReport"><PortfolioFundingReport /></LayoutWrapper>} />
       <Route path="/SearchReport" element={<LayoutWrapper currentPageName="SearchReport"><SearchReport /></LayoutWrapper>} />
+      <Route path="/ConferenceCalendar" element={<LayoutWrapper currentPageName="ConferenceCalendar"><ConferenceCalendar /></LayoutWrapper>} />
       <Route path="/register" element={<ExternalPartyRegister />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
