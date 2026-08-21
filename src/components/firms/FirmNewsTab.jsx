@@ -18,6 +18,8 @@ import { toast } from "@/components/ui/use-toast";
 import ContactTaggerPopover from "./ContactTaggerPopover";
 import FirmTaggerPopover from "./FirmTaggerPopover";
 import HistoricalScrubDialog from "../news/HistoricalScrubDialog";
+import NewsSummaryDialog from "../news/NewsSummaryDialog";
+import { FileText } from "lucide-react";
 
 const QUILL_MODULES = {
   toolbar: [
@@ -58,6 +60,7 @@ export default function FirmNewsTab({ firmId, firmName }) {
   const [keywordInput, setKeywordInput] = useState("");
   const [showKeywords, setShowKeywords] = useState(false);
   const [showHistorical, setShowHistorical] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
 
   // Owned news (firm_id = this firm) + tagged news (tagged_firm_ids includes this firm)
   const { data: ownedNews = [], isLoading: loadingOwned } = useQuery({
@@ -268,6 +271,17 @@ export default function FirmNewsTab({ firmId, firmName }) {
           >
             <Plus className="w-3.5 h-3.5" /> Add
           </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-violet-600 hover:text-violet-700 hover:bg-violet-50 gap-1 text-xs"
+            onClick={() => setShowSummary(true)}
+            disabled={activeNews.length === 0}
+            title="Generate a date-ranged news summary report"
+          >
+            <FileText className="w-3.5 h-3.5" /> Summary
+          </Button>
         </div>
       </div>
 
@@ -376,6 +390,13 @@ export default function FirmNewsTab({ firmId, firmName }) {
         onOpenChange={setShowHistorical}
         onConfirm={handleHistoricalScrub}
         keywords={keywords}
+        targetLabel={firmName}
+      />
+      <NewsSummaryDialog
+        open={showSummary}
+        onOpenChange={setShowSummary}
+        newsItems={activeNews}
+        targetType="firm"
         targetLabel={firmName}
       />
     </div>

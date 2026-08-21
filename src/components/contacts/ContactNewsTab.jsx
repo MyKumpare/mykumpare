@@ -11,6 +11,8 @@ import {
 import { toast } from "@/components/ui/use-toast";
 import { NewsItemCard, NewsItemForm } from "../firms/FirmNewsTab";
 import HistoricalScrubDialog from "../news/HistoricalScrubDialog";
+import NewsSummaryDialog from "../news/NewsSummaryDialog";
+import { FileText } from "lucide-react";
 
 // ── Contact News Tab — shows news tagged to this contact, with the same
 //    scrub / pin / edit / delete functionality as the firm news tab ──
@@ -27,6 +29,7 @@ export default function ContactNewsTab({ contactId, contactName, firmId, firmNam
   const [keywordInput, setKeywordInput] = useState("");
   const [showKeywords, setShowKeywords] = useState(false);
   const [showHistorical, setShowHistorical] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
 
   // Owned news (from contact's firm) + cross-firm tagged news
   const { data: ownedNews = [], isLoading: loadingOwned } = useQuery({
@@ -242,6 +245,17 @@ export default function ContactNewsTab({ contactId, contactName, firmId, firmNam
           >
             <Plus className="w-3.5 h-3.5" /> Add
           </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-violet-600 hover:text-violet-700 hover:bg-violet-50 gap-1 text-xs"
+            onClick={() => setShowSummary(true)}
+            disabled={activeNews.length === 0}
+            title="Generate a date-ranged news summary report"
+          >
+            <FileText className="w-3.5 h-3.5" /> Summary
+          </Button>
         </div>
       </div>
 
@@ -353,6 +367,13 @@ export default function ContactNewsTab({ contactId, contactName, firmId, firmNam
         onOpenChange={setShowHistorical}
         onConfirm={handleHistoricalScrub}
         keywords={keywords}
+        targetLabel={contactName}
+      />
+      <NewsSummaryDialog
+        open={showSummary}
+        onOpenChange={setShowSummary}
+        newsItems={activeNews}
+        targetType="contact"
         targetLabel={contactName}
       />
     </div>
