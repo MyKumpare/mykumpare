@@ -18,6 +18,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/lib/AuthContext";
+import { withAuditHistory } from "../shared/auditHistory";
 import {
   ComposedChart,
   Line,
@@ -141,6 +143,7 @@ function parseCsvText(text) {
 export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm", entityLabel = "Firm", onDirtyChange, saveRef }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -278,7 +281,9 @@ export default function FirmAumHistoryTab({ firmId, firmName, entityName = "Firm
           client_type_breakdown: r.client_type_breakdown || [],
         };
       });
-      await entity.update(firmId, { aum_history: cleaned });
+      const current = await entity.get(firmId);
+      const payload = withAuditHistory(current, { aum_history: cleaned }, user);
+      await entity.update(firmId, payload);
       setRows(cleaned);
       savedRowsRef.current = cleaned;
       queryClient.invalidateQueries({ queryKey: [entityName.toLowerCase() + "s"] });
