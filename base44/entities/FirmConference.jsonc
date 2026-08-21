@@ -56,6 +56,21 @@
       "default": "Unknown",
       "description": "How the firm or its contact is involved in the conference"
     },
+    "rsvp_status": {
+      "type": "string",
+      "enum": [
+        "Not Responded",
+        "Confirmed",
+        "Tentative",
+        "Declined"
+      ],
+      "default": "Not Responded",
+      "description": "Internal RSVP/attendance status for this firm's participation in the conference. Managed by the team to track whether the firm has committed to attending."
+    },
+    "internal_notes": {
+      "type": "string",
+      "description": "Internal team notes about this conference attendance record (e.g. who is going, logistics, follow-ups). Free text."
+    },
     "source_contact_name": {
       "type": "string",
       "description": "Name of the contact through whom this conference was found (if the conference relates to a contact rather than the firm directly)"

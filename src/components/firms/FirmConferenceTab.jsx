@@ -4,6 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import {
   CalendarDays, MapPin, DollarSign, ExternalLink, Trash2, Loader2, Sparkles, RefreshCw, Tag,
+  ClipboardCheck, StickyNote, ChevronDown, ChevronUp, Save,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "@/components/ui/use-toast";
@@ -14,6 +15,15 @@ const PARTICP_COLORS = {
   Speaking: "bg-purple-50 text-purple-700 border-purple-200",
   Exhibiting: "bg-emerald-50 text-emerald-700 border-emerald-200",
   Unknown: "bg-gray-50 text-gray-600 border-gray-200",
+};
+
+const RSVP_OPTIONS = ["Not Responded", "Confirmed", "Tentative", "Declined"];
+
+const RSVP_COLORS = {
+  "Not Responded": "bg-gray-50 text-gray-600 border-gray-200",
+  "Confirmed": "bg-emerald-50 text-emerald-700 border-emerald-200",
+  "Tentative": "bg-amber-50 text-amber-700 border-amber-200",
+  "Declined": "bg-rose-50 text-rose-700 border-rose-200",
 };
 
 function fmtDate(d) {
@@ -162,6 +172,17 @@ Only return real conferences you found evidence of on the web. Do not invent con
     }
   };
 
+  const handleRsvpChange = async (conf, newStatus) => {
+    try {
+      await base44.entities.FirmConference.update(conf.id, { rsvp_status: newStatus });
+      queryClient.invalidateQueries({ queryKey: ["firm_conferences", firmId] });
+      queryClient.invalidateQueries({ queryKey: ["all_conferences"] });
+      toast({ title: "RSVP updated", description: `${conf.title}: ${newStatus}` });
+    } catch (e) {
+      toast({ title: "Update failed", description: e.message, variant: "destructive" });
+    }
+  };
+
   const sorted = [...conferences].sort((a, b) => {
     const da = a.conference_date || "";
     const db = b.conference_date || "";
@@ -194,67 +215,168 @@ Only return real conferences you found evidence of on the web. Do not invent con
         </div>
       ) : (
         <div className="space-y-2">
-          {sorted.map((c) => {
-            const pColor = PARTICP_COLORS[c.participation_type] || PARTICP_COLORS.Unknown;
-            return (
-              <div key={c.id} className="rounded-xl border border-gray-100 bg-white p-3 hover:shadow-sm transition-shadow">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${pColor}`}>
-                        <Tag className="w-2.5 h-2.5" />
-                        {c.participation_type}
-                      </span>
-                      {c.conference_date && (
-                        <span className="inline-flex items-center gap-1 text-[10px] text-gray-500">
-                          <CalendarDays className="w-3 h-3" />
-                          {fmtRange(c.conference_date, c.end_date)}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm font-semibold text-gray-800">
-                      {c.url ? (
-                        <a href={c.url} target="_blank" rel="noopener noreferrer" className="hover:text-indigo-600 hover:underline inline-flex items-center gap-1">
-                          {c.title}
-                          <ExternalLink className="w-3 h-3 text-gray-400" />
-                        </a>
-                      ) : c.title}
-                    </p>
-                    {c.description && (
-                      <p className="text-xs text-gray-600 mt-1 leading-relaxed">{c.description}</p>
-                    )}
-                    <div className="flex items-center gap-4 mt-2 flex-wrap text-[11px] text-gray-500">
-                      {c.location && (
-                        <span className="inline-flex items-center gap-1">
-                          <MapPin className="w-3 h-3 text-gray-400" /> {c.location}
-                        </span>
-                      )}
-                      {c.fees && (
-                        <span className="inline-flex items-center gap-1">
-                          <DollarSign className="w-3 h-3 text-gray-400" /> {c.fees}
-                        </span>
-                      )}
-                      {c.source_contact_name && (
-                        <span className="inline-flex items-center gap-1 text-indigo-500">
-                          via {c.source_contact_name}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(c.id)}
-                    className="text-gray-300 hover:text-red-500 flex-shrink-0"
-                    title="Delete conference"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+          {sorted.map((c) => (
+            <ConferenceRecordCard
+              key={c.id}
+              conf={c}
+              onRsvpChange={handleRsvpChange}
+              onDelete={handleDelete}
+            />
+          ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function ConferenceRecordCard({ conf, onRsvpChange, onDelete }) {
+  const queryClient = useQueryClient();
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [notesDraft, setNotesDraft] = useState(conf.internal_notes || "");
+  const [savingNotes, setSavingNotes] = useState(false);
+
+  const pColor = PARTICP_COLORS[conf.participation_type] || PARTICP_COLORS.Unknown;
+  const rsvp = conf.rsvp_status || "Not Responded";
+  const rsvpColor = RSVP_COLORS[rsvp] || RSVP_COLORS["Not Responded"];
+
+  const handleSaveNotes = async () => {
+    setSavingNotes(true);
+    try {
+      await base44.entities.FirmConference.update(conf.id, { internal_notes: notesDraft });
+      queryClient.invalidateQueries({ queryKey: ["firm_conferences", conf.firm_id] });
+      queryClient.invalidateQueries({ queryKey: ["all_conferences"] });
+      toast({ title: "Notes saved" });
+    } catch (e) {
+      toast({ title: "Save failed", description: e.message, variant: "destructive" });
+    }
+    setSavingNotes(false);
+  };
+
+  return (
+    <div className="rounded-xl border border-gray-100 bg-white p-3 hover:shadow-sm transition-shadow">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap mb-1">
+            <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${pColor}`}>
+              <Tag className="w-2.5 h-2.5" />
+              {conf.participation_type}
+            </span>
+            <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${rsvpColor}`}>
+              <ClipboardCheck className="w-2.5 h-2.5" />
+              {rsvp}
+            </span>
+            {conf.conference_date && (
+              <span className="inline-flex items-center gap-1 text-[10px] text-gray-500">
+                <CalendarDays className="w-3 h-3" />
+                {fmtRange(conf.conference_date, conf.end_date)}
+              </span>
+            )}
+          </div>
+          <p className="text-sm font-semibold text-gray-800">
+            {conf.url ? (
+              <a href={conf.url} target="_blank" rel="noopener noreferrer" className="hover:text-indigo-600 hover:underline inline-flex items-center gap-1">
+                {conf.title}
+                <ExternalLink className="w-3 h-3 text-gray-400" />
+              </a>
+            ) : conf.title}
+          </p>
+          {conf.description && (
+            <p className="text-xs text-gray-600 mt-1 leading-relaxed">{conf.description}</p>
+          )}
+          <div className="flex items-center gap-4 mt-2 flex-wrap text-[11px] text-gray-500">
+            {conf.location && (
+              <span className="inline-flex items-center gap-1">
+                <MapPin className="w-3 h-3 text-gray-400" /> {conf.location}
+              </span>
+            )}
+            {conf.fees && (
+              <span className="inline-flex items-center gap-1">
+                <DollarSign className="w-3 h-3 text-gray-400" /> {conf.fees}
+              </span>
+            )}
+            {conf.source_contact_name && (
+              <span className="inline-flex items-center gap-1 text-indigo-500">
+                via {conf.source_contact_name}
+              </span>
+            )}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => onDelete(conf.id)}
+          className="text-gray-300 hover:text-red-500 flex-shrink-0"
+          title="Delete conference"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* RSVP + internal notes management */}
+      <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <label className="text-[11px] font-medium text-gray-500 inline-flex items-center gap-1">
+            <ClipboardCheck className="w-3 h-3" /> RSVP:
+          </label>
+          <select
+            value={rsvp}
+            onChange={e => onRsvpChange(conf, e.target.value)}
+            className="h-7 rounded-md border border-gray-200 bg-white px-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400"
+          >
+            {RSVP_OPTIONS.map(o => (
+              <option key={o} value={o}>{o}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => setNotesOpen(o => !o)}
+            className="ml-auto inline-flex items-center gap-1 text-[11px] text-gray-500 hover:text-indigo-600"
+          >
+            <StickyNote className="w-3 h-3" />
+            Internal notes
+            {conf.internal_notes ? <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" /> : null}
+            {notesOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          </button>
+        </div>
+
+        {notesOpen && (
+          <div className="space-y-1.5">
+            <textarea
+              value={notesDraft}
+              onChange={e => setNotesDraft(e.target.value)}
+              placeholder="Add internal notes — who is attending, logistics, follow-ups..."
+              rows={3}
+              className="w-full rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-xs leading-relaxed focus:outline-none focus:ring-1 focus:ring-indigo-400 resize-y"
+            />
+            <div className="flex items-center justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => { setNotesDraft(conf.internal_notes || ""); setNotesOpen(false); }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="h-7 text-xs gap-1"
+                onClick={handleSaveNotes}
+                disabled={savingNotes || notesDraft === (conf.internal_notes || "")}
+              >
+                {savingNotes ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                Save notes
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {!notesOpen && conf.internal_notes && (
+          <p className="text-[11px] text-gray-500 bg-gray-50 rounded-md px-2 py-1.5 leading-relaxed whitespace-pre-wrap">
+            {conf.internal_notes}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

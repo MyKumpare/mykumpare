@@ -22,6 +22,13 @@ const PARTICP_COLORS = {
   Unknown: "bg-gray-100 text-gray-700 border-gray-300",
 };
 
+const RSVP_COLORS = {
+  "Not Responded": "bg-gray-50 text-gray-600 border-gray-200",
+  "Confirmed": "bg-emerald-50 text-emerald-700 border-emerald-200",
+  "Tentative": "bg-amber-50 text-amber-700 border-amber-200",
+  "Declined": "bg-rose-50 text-rose-700 border-rose-200",
+};
+
 function fmtDate(d) {
   if (!d) return "—";
   try { return format(parseISO(d), "MMM d, yyyy"); } catch { return d; }
@@ -39,6 +46,7 @@ export default function ConferenceCalendar() {
   const [firmFilter, setFirmFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [locationFilter, setLocationFilter] = useState("");
   const [showFilters, setShowFilters] = useState(false);
 
   const { data: conferences = [], isLoading } = useQuery({
@@ -57,8 +65,10 @@ export default function ConferenceCalendar() {
   }, [conferences]);
 
   const filtered = useMemo(() => {
+    const loc = locationFilter.trim().toLowerCase();
     return conferences.filter(c => {
       if (firmFilter !== "all" && c.firm_id !== firmFilter) return false;
+      if (loc && !(c.location || "").toLowerCase().includes(loc)) return false;
       if (dateFrom) {
         const from = parseISO(dateFrom);
         const cd = c.conference_date ? parseISO(c.conference_date) : null;
@@ -71,7 +81,7 @@ export default function ConferenceCalendar() {
       }
       return true;
     });
-  }, [conferences, firmFilter, dateFrom, dateTo]);
+  }, [conferences, firmFilter, dateFrom, dateTo, locationFilter]);
 
   // Map conferences to their start date key (YYYY-MM-DD)
   const byDate = useMemo(() => {
@@ -103,12 +113,13 @@ export default function ConferenceCalendar() {
       .sort((a, b) => (a.conference_date || "").localeCompare(b.conference_date || ""));
   }, [filtered]);
 
-  const hasActiveFilters = firmFilter !== "all" || dateFrom || dateTo;
+  const hasActiveFilters = firmFilter !== "all" || dateFrom || dateTo || locationFilter.trim() !== "";
 
   const clearFilters = () => {
     setFirmFilter("all");
     setDateFrom("");
     setDateTo("");
+    setLocationFilter("");
   };
 
   return (
@@ -170,6 +181,16 @@ export default function ConferenceCalendar() {
                 value={dateTo}
                 onChange={e => setDateTo(e.target.value)}
                 className="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={locationFilter}
+                onChange={e => setLocationFilter(e.target.value)}
+                placeholder="Filter by location..."
+                className="h-8 w-44 rounded-md border border-gray-200 bg-white px-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400"
               />
             </div>
             {hasActiveFilters && (
@@ -287,6 +308,8 @@ export default function ConferenceCalendar() {
 
 function ConferenceCard({ c, compact }) {
   const pColor = PARTICP_COLORS[c.participation_type] || PARTICP_COLORS.Unknown;
+  const rsvp = c.rsvp_status || "Not Responded";
+  const rsvpColor = RSVP_COLORS[rsvp] || RSVP_COLORS["Not Responded"];
   return (
     <div className={`rounded-lg border border-gray-100 bg-white ${compact ? "p-2" : "p-2.5"} hover:shadow-sm transition-shadow`}>
       <div className="flex items-center gap-1.5 flex-wrap mb-1">
@@ -294,6 +317,11 @@ function ConferenceCard({ c, compact }) {
           <Tag className="w-2.5 h-2.5" />
           {c.participation_type}
         </span>
+        {rsvp !== "Not Responded" && (
+          <span className={`inline-flex items-center text-[9px] font-semibold px-1.5 py-0.5 rounded-full border ${rsvpColor}`}>
+            {rsvp}
+          </span>
+        )}
         {!compact && (
           <span className="text-[10px] text-gray-500">{fmtRange(c.conference_date, c.end_date)}</span>
         )}
