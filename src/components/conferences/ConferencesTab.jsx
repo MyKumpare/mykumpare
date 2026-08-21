@@ -85,9 +85,20 @@ export default function ConferencesTab() {
     const map = new Map();
     sorted.forEach(c => {
       if (!c.conference_date) return;
-      const key = c.conference_date.substring(0, 10);
-      if (!map.has(key)) map.set(key, []);
-      map.get(key).push(c);
+      const start = c.conference_date.substring(0, 10);
+      const end = (c.end_date || c.conference_date).substring(0, 10);
+      try {
+        const days = eachDayOfInterval({ start: parseISO(start), end: parseISO(end) });
+        days.forEach(day => {
+          const key = format(day, "yyyy-MM-dd");
+          if (!map.has(key)) map.set(key, []);
+          const arr = map.get(key);
+          if (!arr.find(x => x.id === c.id)) arr.push(c);
+        });
+      } catch {
+        if (!map.has(start)) map.set(start, []);
+        map.get(start).push(c);
+      }
     });
     return map;
   }, [sorted]);
