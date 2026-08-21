@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   ChevronLeft, ChevronRight, CalendarDays, MapPin, DollarSign,
-  ExternalLink, Filter, X, Building2, Tag, Loader2, Download,
+  ExternalLink, Filter, X, Building2, Tag, Loader2, Download, Award,
 } from "lucide-react";
 import { downloadConferenceTravelPdf } from "@/components/conferences/conferenceTravelPdf";
 
@@ -35,6 +35,17 @@ const REG_COLORS = {
   "Registered": "bg-emerald-50 text-emerald-700 border-emerald-200",
   "Waitlisted": "bg-amber-50 text-amber-700 border-amber-200",
 };
+
+const SPONSOR_COLORS = {
+  "Not Sponsoring": "bg-gray-50 text-gray-600 border-gray-200",
+  "Considering": "bg-amber-50 text-amber-700 border-amber-200",
+  "Sponsoring": "bg-emerald-50 text-emerald-700 border-emerald-200",
+};
+
+function fmtCurrency(n) {
+  if (n == null || n === "" || isNaN(Number(n))) return "";
+  return Number(n).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+}
 
 function fmtDate(d) {
   if (!d) return "—";
@@ -339,6 +350,8 @@ function ConferenceCard({ c, compact }) {
   const rsvpColor = RSVP_COLORS[rsvp] || RSVP_COLORS["Not Responded"];
   const reg = c.registration_status || "Not Registered";
   const regColor = REG_COLORS[reg] || REG_COLORS["Not Registered"];
+  const sponsor = c.sponsorship_status || "Not Sponsoring";
+  const sponsorColor = SPONSOR_COLORS[sponsor] || SPONSOR_COLORS["Not Sponsoring"];
   return (
     <div className={`rounded-lg border border-gray-100 bg-white ${compact ? "p-2" : "p-2.5"} hover:shadow-sm transition-shadow`}>
       <div className="flex items-center gap-1.5 flex-wrap mb-1">
@@ -354,6 +367,12 @@ function ConferenceCard({ c, compact }) {
         {reg !== "Not Registered" && (
           <span className={`inline-flex items-center text-[9px] font-semibold px-1.5 py-0.5 rounded-full border ${regColor}`}>
             {reg}
+          </span>
+        )}
+        {sponsor !== "Not Sponsoring" && (
+          <span className={`inline-flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-full border ${sponsorColor}`}>
+            <Award className="w-2.5 h-2.5" />
+            {sponsor}
           </span>
         )}
         {!compact && (
@@ -385,6 +404,13 @@ function ConferenceCard({ c, compact }) {
           </span>
         )}
       </div>
+      {sponsor !== "Not Sponsoring" && (
+        <div className="mt-1 text-[10px] text-gray-600 bg-emerald-50/60 border border-emerald-100 rounded px-1.5 py-1 leading-snug">
+          <span className="font-semibold text-emerald-700">Sponsorship:</span> {sponsor}
+          {c.sponsorship_amount != null && c.sponsorship_amount !== "" ? ` · ${fmtCurrency(c.sponsorship_amount)}` : ""}
+          {c.sponsorship_deliverables ? <> — {c.sponsorship_deliverables}</> : null}
+        </div>
+      )}
     </div>
   );
 }

@@ -77,6 +77,24 @@
       "default": "Not Registered",
       "description": "Registration status for this conference \u2014 whether the team has registered the firm to attend. Managed by the team to track registration progress."
     },
+    "sponsorship_status": {
+      "type": "string",
+      "enum": [
+        "Not Sponsoring",
+        "Considering",
+        "Sponsoring"
+      ],
+      "default": "Not Sponsoring",
+      "description": "Whether the firm is sponsoring this conference. 'Considering' means sponsorship is under discussion but not yet confirmed."
+    },
+    "sponsorship_amount": {
+      "type": "number",
+      "description": "Sponsorship amount the firm is paying (or will pay) for this conference, in dollars."
+    },
+    "sponsorship_deliverables": {
+      "type": "string",
+      "description": "What the firm receives in exchange for sponsoring (e.g. booth, logo placement, speaking slot, attendee passes). Free text."
+    },
     "internal_notes": {
       "type": "string",
       "description": "Internal team notes about this conference attendance record (e.g. who is going, logistics, follow-ups). Free text."

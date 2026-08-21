@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import {
   CalendarDays, MapPin, DollarSign, ExternalLink, Trash2, Loader2, Sparkles, RefreshCw, Tag,
-  ClipboardCheck, StickyNote, ChevronDown, ChevronUp, Save,
+  ClipboardCheck, StickyNote, ChevronDown, ChevronUp, Save, Award,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "@/components/ui/use-toast";
@@ -33,6 +33,19 @@ const REG_COLORS = {
   "Registered": "bg-emerald-50 text-emerald-700 border-emerald-200",
   "Waitlisted": "bg-amber-50 text-amber-700 border-amber-200",
 };
+
+const SPONSOR_OPTIONS = ["Not Sponsoring", "Considering", "Sponsoring"];
+
+const SPONSOR_COLORS = {
+  "Not Sponsoring": "bg-gray-50 text-gray-600 border-gray-200",
+  "Considering": "bg-amber-50 text-amber-700 border-amber-200",
+  "Sponsoring": "bg-emerald-50 text-emerald-700 border-emerald-200",
+};
+
+function fmtCurrency(n) {
+  if (n == null || n === "" || isNaN(Number(n))) return "";
+  return Number(n).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+}
 
 function fmtDate(d) {
   if (!d) return "—";
@@ -202,6 +215,17 @@ Only return real conferences you found evidence of on the web. Do not invent con
     }
   };
 
+  const handleSponsorChange = async (conf, data) => {
+    try {
+      await base44.entities.FirmConference.update(conf.id, data);
+      queryClient.invalidateQueries({ queryKey: ["firm_conferences", firmId] });
+      queryClient.invalidateQueries({ queryKey: ["all_conferences"] });
+      toast({ title: "Sponsorship updated", description: `${conf.title}` });
+    } catch (e) {
+      toast({ title: "Update failed", description: e.message, variant: "destructive" });
+    }
+  };
+
   const sorted = [...conferences].sort((a, b) => {
     const da = a.conference_date || "";
     const db = b.conference_date || "";
@@ -240,6 +264,7 @@ Only return real conferences you found evidence of on the web. Do not invent con
               conf={c}
               onRsvpChange={handleRsvpChange}
               onRegChange={handleRegChange}
+              onSponsorChange={handleSponsorChange}
               onDelete={handleDelete}
             />
           ))}
@@ -249,17 +274,24 @@ Only return real conferences you found evidence of on the web. Do not invent con
   );
 }
 
-function ConferenceRecordCard({ conf, onRsvpChange, onRegChange, onDelete }) {
+function ConferenceRecordCard({ conf, onRsvpChange, onRegChange, onSponsorChange, onDelete }) {
   const queryClient = useQueryClient();
   const [notesOpen, setNotesOpen] = useState(false);
   const [notesDraft, setNotesDraft] = useState(conf.internal_notes || "");
   const [savingNotes, setSavingNotes] = useState(false);
+  const [sponsorOpen, setSponsorOpen] = useState(false);
+  const [sponsorStatusDraft, setSponsorStatusDraft] = useState(conf.sponsorship_status || "Not Sponsoring");
+  const [sponsorAmountDraft, setSponsorAmountDraft] = useState(conf.sponsorship_amount ?? "");
+  const [sponsorDeliverablesDraft, setSponsorDeliverablesDraft] = useState(conf.sponsorship_deliverables || "");
+  const [savingSponsor, setSavingSponsor] = useState(false);
 
   const pColor = PARTICP_COLORS[conf.participation_type] || PARTICP_COLORS.Unknown;
   const rsvp = conf.rsvp_status || "Not Responded";
   const rsvpColor = RSVP_COLORS[rsvp] || RSVP_COLORS["Not Responded"];
   const reg = conf.registration_status || "Not Registered";
   const regColor = REG_COLORS[reg] || REG_COLORS["Not Registered"];
+  const sponsor = conf.sponsorship_status || "Not Sponsoring";
+  const sponsorColor = SPONSOR_COLORS[sponsor] || SPONSOR_COLORS["Not Sponsoring"];
 
   const handleSaveNotes = async () => {
     setSavingNotes(true);
@@ -283,6 +315,13 @@ function ConferenceRecordCard({ conf, onRsvpChange, onRegChange, onDelete }) {
               <Tag className="w-2.5 h-2.5" />
               {conf.participation_type}
             </span>
+            {sponsor !== "Not Sponsoring" && (
+              <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${sponsorColor}`}>
+                <Award className="w-2.5 h-2.5" />
+                {sponsor}
+                {conf.sponsorship_amount != null && conf.sponsorship_amount !== "" ? ` · ${fmtCurrency(conf.sponsorship_amount)}` : ""}
+              </span>
+            )}
             <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${rsvpColor}`}>
               <ClipboardCheck className="w-2.5 h-2.5" />
               {rsvp}
@@ -365,6 +404,16 @@ function ConferenceRecordCard({ conf, onRsvpChange, onRegChange, onDelete }) {
           </select>
           <button
             type="button"
+            onClick={() => setSponsorOpen(o => !o)}
+            className="inline-flex items-center gap-1 text-[11px] text-gray-500 hover:text-indigo-600"
+          >
+            <Award className="w-3 h-3" />
+            Sponsorship
+            {sponsor !== "Not Sponsoring" ? <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> : null}
+            {sponsorOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          </button>
+          <button
+            type="button"
             onClick={() => setNotesOpen(o => !o)}
             className="ml-auto inline-flex items-center gap-1 text-[11px] text-gray-500 hover:text-indigo-600"
           >
@@ -374,6 +423,93 @@ function ConferenceRecordCard({ conf, onRsvpChange, onRegChange, onDelete }) {
             {notesOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
           </button>
         </div>
+
+        {/* Sponsorship panel */}
+        {sponsorOpen && (
+          <div className="space-y-2 rounded-md border border-gray-100 bg-gray-50/50 p-2.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <label className="text-[11px] font-medium text-gray-500 inline-flex items-center gap-1">
+                <Award className="w-3 h-3" /> Status:
+              </label>
+              <select
+                value={sponsorStatusDraft}
+                onChange={e => setSponsorStatusDraft(e.target.value)}
+                className="h-7 rounded-md border border-gray-200 bg-white px-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400"
+              >
+                {SPONSOR_OPTIONS.map(o => (
+                  <option key={o} value={o}>{o}</option>
+                ))}
+              </select>
+              <label className="text-[11px] font-medium text-gray-500 ml-1">Amount ($):</label>
+              <input
+                type="number"
+                min="0"
+                step="any"
+                value={sponsorAmountDraft}
+                onChange={e => setSponsorAmountDraft(e.target.value === "" ? "" : Number(e.target.value))}
+                placeholder="e.g. 25000"
+                className="h-7 w-28 rounded-md border border-gray-200 bg-white px-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[11px] font-medium text-gray-500">Deliverables (what we get):</label>
+              <textarea
+                value={sponsorDeliverablesDraft}
+                onChange={e => setSponsorDeliverablesDraft(e.target.value)}
+                placeholder="e.g. Booth, logo on website, 2 speaking slots, 5 attendee passes..."
+                rows={2}
+                className="w-full rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-xs leading-relaxed focus:outline-none focus:ring-1 focus:ring-indigo-400 resize-y"
+              />
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => {
+                  setSponsorStatusDraft(conf.sponsorship_status || "Not Sponsoring");
+                  setSponsorAmountDraft(conf.sponsorship_amount ?? "");
+                  setSponsorDeliverablesDraft(conf.sponsorship_deliverables || "");
+                  setSponsorOpen(false);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="h-7 text-xs gap-1"
+                disabled={savingSponsor}
+                onClick={async () => {
+                  setSavingSponsor(true);
+                  try {
+                    await onSponsorChange(conf, {
+                      sponsorship_status: sponsorStatusDraft,
+                      sponsorship_amount: sponsorAmountDraft === "" ? null : Number(sponsorAmountDraft),
+                      sponsorship_deliverables: sponsorDeliverablesDraft,
+                    });
+                    setSponsorOpen(false);
+                  } finally {
+                    setSavingSponsor(false);
+                  }
+                }}
+              >
+                {savingSponsor ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                Save sponsorship
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Sponsorship summary (collapsed) */}
+        {!sponsorOpen && sponsor !== "Not Sponsoring" && (
+          <div className="text-[11px] text-gray-600 bg-gray-50 rounded-md px-2 py-1.5 leading-relaxed">
+            <span className="font-medium">Sponsorship:</span> {sponsor}
+            {conf.sponsorship_amount != null && conf.sponsorship_amount !== "" ? ` · ${fmtCurrency(conf.sponsorship_amount)}` : ""}
+            {conf.sponsorship_deliverables ? <> · <span className="text-gray-500">{conf.sponsorship_deliverables}</span></> : null}
+          </div>
+        )}
 
         {notesOpen && (
           <div className="space-y-1.5">
