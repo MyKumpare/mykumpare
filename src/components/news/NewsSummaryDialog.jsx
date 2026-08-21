@@ -32,7 +32,13 @@ export default function NewsSummaryDialog({ open, onOpenChange, newsItems, targe
         if (end && d > end) return false;
         return true;
       })
-      .sort((a, b) => (b.news_date || "").localeCompare(a.news_date || ""));
+      .sort((a, b) => {
+        const rank = { High: 0, Medium: 1, Low: 2 };
+        const ar = rank[a.alert_status] ?? 2;
+        const br = rank[b.alert_status] ?? 2;
+        if (ar !== br) return ar - br;
+        return (b.news_date || "").localeCompare(a.news_date || "");
+      });
   }, [newsItems, startDate, endDate]);
 
   const computeStats = (items) => {
