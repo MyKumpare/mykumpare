@@ -3,6 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Send, MessageSquare, Plus, ChevronDown, ChevronRight, Loader2, Pencil, FileDown } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { exportAgentConversationPdf } from "@/components/ai/agentReportPdf";
+import AgentProgressIndicator from "@/components/search/AgentProgressIndicator";
 
 const AGENT_NAME = "research_assistant";
 
@@ -295,13 +296,7 @@ export default function ResearchAssistantChat() {
           {messages.map((msg, idx) => (
             <MessageBubble key={idx} message={msg} />
           ))}
-          {loading && (
-            <div className="flex justify-start">
-              <div className="bg-white border border-gray-200 rounded-2xl px-4 py-2.5">
-                <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
-              </div>
-            </div>
-          )}
+          {loading && <AgentProgressIndicator messages={messages} accent="indigo" />}
           <div ref={messagesEndRef} />
         </div>
 

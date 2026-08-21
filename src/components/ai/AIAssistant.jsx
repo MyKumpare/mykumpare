@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Send, Bot, Loader2, X, History, Trash2, Plus, MessageSquare, Mic, ArrowRight, GripVertical, FileDown } from "lucide-react";
 import { exportAgentConversationPdf } from "./agentReportPdf";
+import AgentProgressIndicator from "@/components/search/AgentProgressIndicator";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -723,14 +724,11 @@ export default function AIAssistant() {
                   <AIAssistantMessage key={idx} message={message} onSelectOption={handleSelectFirmOption} onConfirmCreation={handleConfirmCreation} onCancelCreation={handleCancelCreation} isLoading={isLoading} />
                 ))}
                 {isLoading && (
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center">
-                      <Bot className="w-4 h-4" />
-                    </div>
-                    <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
-                      <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
-                    </div>
-                  </div>
+                  <AgentProgressIndicator
+                    messages={messages}
+                    accent="indigo"
+                    phases={["Understanding your request", "Analyzing your data", "Generating response"]}
+                  />
                 )}
                 <div ref={messagesEndRef} />
               </div>
