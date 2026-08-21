@@ -42,6 +42,8 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
   const [firmFilter, setFirmFilter] = useState("");
   const [contactFilter, setContactFilter] = useState("");
   const [sortBy, setSortBy] = useState("date_desc");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [showHidden, setShowHidden] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [summaryOpen, setSummaryOpen] = useState(false);
@@ -99,6 +101,12 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
         (n.source_type === "contact" && n.source_id === contactFilter)
       );
     }
+    if (dateFrom) {
+      list = list.filter(n => (n.news_date || "") >= dateFrom);
+    }
+    if (dateTo) {
+      list = list.filter(n => (n.news_date || "") <= dateTo);
+    }
     return [...list].sort((a, b) => {
       // Pinned items always on top, regardless of sort
       if (a.is_pinned && !b.is_pinned) return -1;
@@ -113,7 +121,7 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
         default: return (b.news_date || "").localeCompare(a.news_date || "");
       }
     });
-  }, [allNews, search, firmFilter, contactFilter, sortBy, showHidden]);
+  }, [allNews, search, firmFilter, contactFilter, sortBy, showHidden, dateFrom, dateTo]);
 
   const handleTogglePin = async (item) => {
     await base44.entities.FirmNews.update(item.id, { is_pinned: !item.is_pinned });
@@ -181,8 +189,8 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
     setSummaryOpen(true);
   };
 
-  const hasFilters = search || firmFilter || contactFilter;
-  const clearFilters = () => { setSearch(""); setFirmFilter(""); setContactFilter(""); };
+  const hasFilters = search || firmFilter || contactFilter || dateFrom || dateTo;
+  const clearFilters = () => { setSearch(""); setFirmFilter(""); setContactFilter(""); setDateFrom(""); setDateTo(""); };
 
   const handleExportPdf = () => {
     if (!filteredNews.length) return;
@@ -271,6 +279,19 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
                 <SelectItem value="status_neg">Status: Negative → Positive</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+              <Input type="date" value={dateFrom} max={dateTo || undefined} onChange={e => setDateFrom(e.target.value)} className="h-8 text-sm" />
+              <span className="text-[11px] text-gray-400">to</span>
+              <Input type="date" value={dateTo} min={dateFrom || undefined} onChange={e => setDateTo(e.target.value)} className="h-8 text-sm" />
+              {(dateFrom || dateTo) && (
+                <button type="button" onClick={() => { setDateFrom(""); setDateTo(""); }} className="text-gray-400 hover:text-rose-500" title="Clear date filter">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
