@@ -168,6 +168,12 @@ export default function ContactNewsTab({ contactId, contactName, firmId, firmNam
     queryClient.invalidateQueries({ queryKey: ["firm_news"] });
   };
 
+  const handleUpdateContentTags = async (item, contentTags) => {
+    await base44.entities.FirmNews.update(item.id, { content_tags: contentTags });
+    queryClient.invalidateQueries({ queryKey: ["firm_news"] });
+    queryClient.invalidateQueries({ queryKey: ["pinned_news_alerts"] });
+  };
+
   // Re-run auto-tagging on a single article (merges any newly found mentions;
   // never removes manually-managed tags)
   const handleAutoTag = async (item) => {
@@ -473,6 +479,7 @@ export default function ContactNewsTab({ contactId, contactName, firmId, firmNam
               onTagContacts={(ids) => handleTagContacts(item, ids)}
               firms={taggableFirms}
               onTagFirms={(ids) => handleTagFirms(item, ids)}
+              onUpdateContentTags={(next) => handleUpdateContentTags(item, next)}
               selectable={selectMode}
               selected={selectedIds.has(item.id)}
               onToggleSelect={() => toggleSelect(item.id)}

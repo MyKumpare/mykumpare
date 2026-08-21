@@ -21,6 +21,7 @@ import HistoricalScrubDialog from "../news/HistoricalScrubDialog";
 import NewsBulkActionBar from "../news/NewsBulkActionBar";
 import { generateNewsSelectionPdf } from "../news/newsSelectionPdf";
 import { lazyDialog } from "../common/lazyDialog";
+import NewsContentTags from "../news/NewsContentTags";
 const NewsSummaryDialog = lazyDialog(() => import("../news/NewsSummaryDialog"));
 
 const QUILL_MODULES = {
@@ -202,6 +203,12 @@ export default function FirmNewsTab({ firmId, firmName }) {
   const handleTagFirms = async (item, taggedFirmIds) => {
     await base44.entities.FirmNews.update(item.id, { tagged_firm_ids: taggedFirmIds });
     queryClient.invalidateQueries({ queryKey: ["firm_news"] });
+  };
+
+  const handleUpdateContentTags = async (item, contentTags) => {
+    await base44.entities.FirmNews.update(item.id, { content_tags: contentTags });
+    queryClient.invalidateQueries({ queryKey: ["firm_news"] });
+    queryClient.invalidateQueries({ queryKey: ["pinned_news_alerts"] });
   };
 
   // Re-run auto-tagging on a single article (merges any newly found mentions;
@@ -499,6 +506,7 @@ export default function FirmNewsTab({ firmId, firmName }) {
               onTagContacts={(ids) => handleTagContacts(item, ids)}
               firms={taggableFirms}
               onTagFirms={(ids) => handleTagFirms(item, ids)}
+              onUpdateContentTags={(next) => handleUpdateContentTags(item, next)}
               selectable={selectMode}
               selected={selectedIds.has(item.id)}
               onToggleSelect={() => toggleSelect(item.id)}
@@ -527,7 +535,7 @@ export default function FirmNewsTab({ firmId, firmName }) {
 }
 
 // ── News item card (view / expand / edit) ───────────────────────────────────
-export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, onCancelEdit, onSaveEdit, onTogglePin, onDelete, onToggleHide, contacts = [], onTagContacts, firms = [], onTagFirms, selectable, selected, onToggleSelect, onAutoTag }) {
+export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, onCancelEdit, onSaveEdit, onTogglePin, onDelete, onToggleHide, contacts = [], onTagContacts, firms = [], onTagFirms, onUpdateContentTags, selectable, selected, onToggleSelect, onAutoTag }) {
   const alertStyle = ALERT_STYLES[item.alert_status] || ALERT_STYLES.Low;
   const statusStyle = STATUS_STYLES[item.news_status] || STATUS_STYLES.Neutral;
   const AlertIcon = alertStyle.icon;
@@ -593,6 +601,11 @@ export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, 
                     <EyeOff className="w-2.5 h-2.5" /> Hidden
                   </span>
                 )}
+                {(item.content_tags || []).map(tag => (
+                  <span key={tag} className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full border border-violet-200 bg-violet-50 text-violet-700">
+                    {tag}
+                  </span>
+                ))}
               </div>
             </div>
           </div>
@@ -651,6 +664,15 @@ export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, 
                 <div className="rounded-lg bg-gray-50 border border-gray-200 p-2">
                   <p className="text-[10px] font-semibold text-gray-500 mb-1">Notes</p>
                   <div className="text-xs text-gray-700 quill-preview" dangerouslySetInnerHTML={{ __html: item.notes }} />
+                </div>
+              )}
+              {onUpdateContentTags && (
+                <div className="pt-1">
+                  <p className="text-[10px] font-semibold text-gray-400 mb-1">Content tags</p>
+                  <NewsContentTags
+                    tags={item.content_tags}
+                    onChange={onUpdateContentTags}
+                  />
                 </div>
               )}
             </div>

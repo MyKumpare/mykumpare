@@ -13,6 +13,7 @@ import { format } from "date-fns";
 import { generateNewsAlertsPdf } from "@/components/news/newsAlertsPdf";
 import { generateNewsSelectionPdf } from "@/components/news/newsSelectionPdf";
 import NewsSelectionSummaryDialog from "@/components/news/NewsSelectionSummaryDialog";
+import NewsContentTags from "@/components/news/NewsContentTags";
 
 const ALERT_STYLES = {
   High: { color: "text-red-600", bg: "bg-red-50", border: "border-red-200", icon: AlertTriangle },
@@ -128,6 +129,12 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
 
   const handleDelete = async (item) => {
     await base44.entities.FirmNews.delete(item.id);
+    queryClient.invalidateQueries({ queryKey: ["pinned_news_alerts"] });
+    queryClient.invalidateQueries({ queryKey: ["firm_news", item.firm_id] });
+  };
+
+  const handleUpdateTags = async (item, nextTags) => {
+    await base44.entities.FirmNews.update(item.id, { content_tags: nextTags });
     queryClient.invalidateQueries({ queryKey: ["pinned_news_alerts"] });
     queryClient.invalidateQueries({ queryKey: ["firm_news", item.firm_id] });
   };
@@ -396,6 +403,11 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
                           <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${statusStyle.bg} ${statusStyle.color}`}>
                             {item.news_status}
                           </span>
+                          {(item.content_tags || []).map(tag => (
+                            <span key={tag} className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full border border-violet-200 bg-violet-50 text-violet-700">
+                              {tag}
+                            </span>
+                          ))}
                         </div>
                       </div>
                       <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-2 flex-wrap">
@@ -430,6 +442,13 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
                               <div className="text-xs text-gray-700 quill-preview" dangerouslySetInnerHTML={{ __html: item.notes }} />
                             </div>
                           )}
+                          <div className="pt-1">
+                            <p className="text-[10px] font-semibold text-gray-400 mb-1">Content tags</p>
+                            <NewsContentTags
+                              tags={item.content_tags}
+                              onChange={(next) => handleUpdateTags(item, next)}
+                            />
+                          </div>
                         </div>
                       )}
                     </div>

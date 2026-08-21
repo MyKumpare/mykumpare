@@ -97,6 +97,13 @@
         "type": "string"
       }
     },
+    "content_tags": {
+      "type": "array",
+      "description": "User-assigned content tags for this news article (e.g. 'Newsletter', 'Research Paper'). Users can add custom tags beyond the defaults.",
+      "items": {
+        "type": "string"
+      }
+    },
     "scrub_batch_id": {
       "type": "string",
       "description": "ID of the scrub batch that produced this news item (for deduplication)"
