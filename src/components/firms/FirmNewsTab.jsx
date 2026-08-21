@@ -10,7 +10,7 @@ import {
   Newspaper, Plus, Trash2, Pin, PinOff, ExternalLink, Sparkles, Loader2,
   AlertTriangle, ChevronDown, ChevronUp, Edit2, Check, X, Calendar, History, Search,
   ArrowDownWideNarrow, ArrowUpWideNarrow, FileText, CheckSquare, Tag, Eye, EyeOff,
-  ClipboardCheck,
+  ClipboardCheck, MessageCircle,
 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import NewsReviewDialog from "../news/NewsReviewDialog";
@@ -30,6 +30,7 @@ import NewsContentTags from "../news/NewsContentTags";
 import NewsStatusBadges from "../news/NewsStatusBadges";
 import NewsStatusBadge from "../news/NewsStatusBadge";
 const NewsSummaryDialog = lazyDialog(() => import("../news/NewsSummaryDialog"));
+const NewsChatDialog = lazyDialog(() => import("../news/NewsChatDialog"));
 
 const QUILL_MODULES = {
   toolbar: [
@@ -74,6 +75,8 @@ export default function FirmNewsTab({ firmId, firmName }) {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [showHidden, setShowHidden] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatContext, setChatContext] = useState({ items: [], label: "" });
 
   // Owned news (firm_id = this firm) + tagged news (tagged_firm_ids includes this firm)
   const { data: ownedNews = [], isLoading: loadingOwned } = useQuery({
@@ -412,6 +415,12 @@ export default function FirmNewsTab({ firmId, firmName }) {
           onBulkTagContacts={handleBulkTagContacts}
           onBulkTagFirms={handleBulkTagFirms}
           onExportPdf={handleExportSelectedPdf}
+          onChat={() => {
+            const sel = sortedNews.filter(n => selectedIds.has(n.id));
+            if (!sel.length) return;
+            setChatContext({ items: sel, label: `${sel.length} selected article${sel.length !== 1 ? "s" : ""}` });
+            setChatOpen(true);
+          }}
         />
       )}
 
@@ -518,6 +527,7 @@ export default function FirmNewsTab({ firmId, firmName }) {
               selected={selectedIds.has(item.id)}
               onToggleSelect={() => toggleSelect(item.id)}
               onAutoTag={() => handleAutoTag(item)}
+              onChat={() => { setChatContext({ items: [item], label: "this article" }); setChatOpen(true); }}
             />
           ))}
         </div>
@@ -537,12 +547,18 @@ export default function FirmNewsTab({ firmId, firmName }) {
         targetType="firm"
         targetLabel={firmName}
       />
+      <NewsChatDialog
+        open={chatOpen}
+        onOpenChange={setChatOpen}
+        items={chatContext.items}
+        contextLabel={chatContext.label}
+      />
     </div>
   );
 }
 
 // ── News item card (view / expand / edit) ───────────────────────────────────
-export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, onCancelEdit, onSaveEdit, onTogglePin, onDelete, onToggleHide, contacts = [], onTagContacts, firms = [], onTagFirms, onUpdateContentTags, selectable, selected, onToggleSelect, onAutoTag }) {
+export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, onCancelEdit, onSaveEdit, onTogglePin, onDelete, onToggleHide, contacts = [], onTagContacts, firms = [], onTagFirms, onUpdateContentTags, selectable, selected, onToggleSelect, onAutoTag, onChat }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -744,6 +760,13 @@ export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, 
               className="p-1 rounded text-gray-300 hover:text-emerald-500 hover:bg-gray-100"
               title="Auto-tag mentioned contacts & firms">
               <Tag className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {onChat && (
+            <button type="button" onClick={onChat}
+              className="p-1 rounded text-gray-300 hover:text-indigo-500 hover:bg-gray-100"
+              title="Ask follow-up questions about this article">
+              <MessageCircle className="w-3.5 h-3.5" />
             </button>
           )}
           <button type="button" onClick={() => setReviewOpen(true)}

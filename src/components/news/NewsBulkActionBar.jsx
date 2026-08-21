@@ -1,5 +1,5 @@
 import React from "react";
-import { X, CheckSquare, UserPlus, Building2, Download } from "lucide-react";
+import { X, CheckSquare, UserPlus, Building2, Download, MessageCircle } from "lucide-react";
 import NewsBulkTagPopover from "./NewsBulkTagPopover";
 
 // ── Bulk action bar for the news tabs. Shown when multi-select mode is on.
@@ -14,6 +14,7 @@ export default function NewsBulkActionBar({
   onBulkTagContacts,
   onBulkTagFirms,
   onExportPdf,
+  onChat,
 }) {
   const contactItems = contacts.map(c => ({
     id: c.id,
@@ -40,6 +41,12 @@ export default function NewsBulkActionBar({
         className="text-xs text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
         <Download className="w-3.5 h-3.5" /> Export PDF
       </button>
+      {onChat && (
+        <button type="button" onClick={onChat} disabled={selectedCount === 0}
+          className="text-xs text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
+          <MessageCircle className="w-3.5 h-3.5" /> Chat
+        </button>
+      )}
     </div>
   );
 }

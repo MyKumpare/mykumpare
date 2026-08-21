@@ -3,11 +3,12 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, FileText, Download, Mail, Send } from "lucide-react";
+import { Loader2, FileText, Download, Mail, Send, MessageCircle } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "@/components/ui/use-toast";
 import { generateNewsSummaryPdf } from "./newsSummaryPdf";
 import { sendSummaryEmail } from "./newsSummaryEmail";
+import NewsChatDialog from "./NewsChatDialog";
 
 // Summarizes a user-selected set of news articles (no date-range filter —
 // the user already chose exactly which items to include).
@@ -17,6 +18,7 @@ export default function NewsSelectionSummaryDialog({ open, onOpenChange, items }
   const [emailOpen, setEmailOpen] = useState(false);
   const [emailTo, setEmailTo] = useState("");
   const [sending, setSending] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
 
   const sortedItems = useMemo(
     () => [...(items || [])].sort((a, b) => (b.news_date || "").localeCompare(a.news_date || "")),
@@ -219,6 +221,11 @@ Write a 3-5 sentence executive summary noting the overall alert level, the overa
             </Button>
           )}
           {report && (
+            <Button size="sm" variant="outline" onClick={() => setChatOpen(true)} className="gap-1">
+              <MessageCircle className="w-3.5 h-3.5" /> Chat
+            </Button>
+          )}
+          {report && (
             <Button size="sm" onClick={handleDownload} className="gap-1">
               <Download className="w-3.5 h-3.5" /> Download PDF
             </Button>
@@ -229,6 +236,13 @@ Write a 3-5 sentence executive summary noting the overall alert level, the overa
           </Button>
         </DialogFooter>
       </DialogContent>
+      <NewsChatDialog
+        open={chatOpen}
+        onOpenChange={setChatOpen}
+        items={report?.items || []}
+        summaryText={report?.summary}
+        contextLabel="this summary"
+      />
     </Dialog>
   );
 }

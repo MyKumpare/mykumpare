@@ -7,12 +7,13 @@ import SearchableSelect from "@/components/common/SearchableSelect";
 import {
   Newspaper, Pin, PinOff, ExternalLink, Trash2, Calendar, X,
   AlertTriangle, ChevronDown, ChevronUp, Building2, Search, Download, Eye, EyeOff,
-  CheckSquare, FileText, ClipboardCheck,
+  CheckSquare, FileText, ClipboardCheck, MessageCircle,
 } from "lucide-react";
 import { format } from "date-fns";
 import { generateNewsAlertsPdf } from "@/components/news/newsAlertsPdf";
 import { generateNewsSelectionPdf } from "@/components/news/newsSelectionPdf";
 import NewsSelectionSummaryDialog from "@/components/news/NewsSelectionSummaryDialog";
+import NewsChatDialog from "@/components/news/NewsChatDialog";
 import NewsContentTags from "@/components/news/NewsContentTags";
 import NewsStatusBadges from "@/components/news/NewsStatusBadges";
 import NewsStatusBadge from "@/components/news/NewsStatusBadge";
@@ -55,6 +56,8 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
   const [summaryOpen, setSummaryOpen] = useState(false);
   const { user } = useAuth();
   const [reviewItemId, setReviewItemId] = useState(null);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatContext, setChatContext] = useState({ items: [], label: "" });
 
   // All news alerts (pinned ones always sort to the top)
   const { data: allNews = [], isLoading } = useQuery({
@@ -390,6 +393,9 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
             <button type="button" onClick={handleBulkSummarize} className="text-xs text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1">
               <FileText className="w-3.5 h-3.5" /> Summarize
             </button>
+            <button type="button" onClick={() => { if (!selectedItems.length) return; setChatContext({ items: selectedItems, label: `${selectedItems.length} selected article${selectedItems.length !== 1 ? "s" : ""}` }); setChatOpen(true); }} className="text-xs text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1">
+              <MessageCircle className="w-3.5 h-3.5" /> Chat
+            </button>
           </div>
         )}
 
@@ -521,6 +527,11 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
                         title={item.is_hidden ? "Unhide" : "Hide from lists"}>
                         {item.is_hidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
                       </button>
+                      <button type="button" onClick={() => { setChatContext({ items: [item], label: "this article" }); setChatOpen(true); }}
+                        className="p-1 rounded text-gray-300 hover:text-indigo-500 hover:bg-gray-100"
+                        title="Ask follow-up questions about this article">
+                        <MessageCircle className="w-3.5 h-3.5" />
+                      </button>
                       <button type="button" onClick={() => setReviewItemId(item.id)}
                         className="p-1 rounded text-gray-300 hover:text-indigo-500 hover:bg-gray-100"
                         title="Review article">
@@ -556,6 +567,12 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
           const it = filteredNews.find((n) => n.id === reviewItemId);
           if (it) await handleSaveReview(it, payload);
         }}
+      />
+      <NewsChatDialog
+        open={chatOpen}
+        onOpenChange={setChatOpen}
+        items={chatContext.items}
+        contextLabel={chatContext.label}
       />
     </div>
   );
