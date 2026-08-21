@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Newspaper, Plus, Trash2, Pin, PinOff, ExternalLink, Sparkles, Loader2,
   AlertTriangle, ChevronDown, ChevronUp, Edit2, Check, X, Calendar, History, Search,
-  ArrowDownWideNarrow, ArrowUpWideNarrow, FileText, CheckSquare, Tag,
+  ArrowDownWideNarrow, ArrowUpWideNarrow, FileText, CheckSquare, Tag, Eye, EyeOff,
 } from "lucide-react";
 import { format } from "date-fns";
 import ReactQuill from "react-quill";
@@ -65,6 +65,7 @@ export default function FirmNewsTab({ firmId, firmName }) {
   const [showSummary, setShowSummary] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [showHidden, setShowHidden] = useState(false);
 
   // Owned news (firm_id = this firm) + tagged news (tagged_firm_ids includes this firm)
   const { data: ownedNews = [], isLoading: loadingOwned } = useQuery({
@@ -105,7 +106,10 @@ export default function FirmNewsTab({ firmId, firmName }) {
     [allFirms, firmId]
   );
 
-  const activeNews = useMemo(() => newsItems, [newsItems]);
+  const activeNews = useMemo(
+    () => showHidden ? newsItems : newsItems.filter(n => !n.is_hidden),
+    [newsItems, showHidden]
+  );
 
   const sortedNews = useMemo(() => {
     const filtered = alertFilter === "All"
@@ -169,6 +173,12 @@ export default function FirmNewsTab({ firmId, firmName }) {
 
   const handleTogglePin = async (item) => {
     await base44.entities.FirmNews.update(item.id, { is_pinned: !item.is_pinned });
+    queryClient.invalidateQueries({ queryKey: ["firm_news"] });
+    queryClient.invalidateQueries({ queryKey: ["pinned_news_alerts"] });
+  };
+
+  const handleToggleHide = async (item) => {
+    await base44.entities.FirmNews.update(item.id, { is_hidden: !item.is_hidden });
     queryClient.invalidateQueries({ queryKey: ["firm_news"] });
     queryClient.invalidateQueries({ queryKey: ["pinned_news_alerts"] });
   };
@@ -308,6 +318,17 @@ export default function FirmNewsTab({ firmId, firmName }) {
           >
             <CheckSquare className="w-3.5 h-3.5" />
             {selectMode ? "Done" : "Select"}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className={`h-7 px-2 gap-1 text-xs ${showHidden ? "text-gray-700 bg-gray-100 hover:bg-gray-200" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"}`}
+            onClick={() => setShowHidden(v => !v)}
+            title={showHidden ? "Hide hidden items" : "Show hidden items"}
+          >
+            {showHidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+            {showHidden ? "All" : "Hidden"}
           </Button>
           <Button
             type="button"
@@ -472,6 +493,7 @@ export default function FirmNewsTab({ firmId, firmName }) {
               onCancelEdit={() => setEditingId(null)}
               onSaveEdit={(data) => { handleUpdate(item.id, data); setEditingId(null); }}
               onTogglePin={() => handleTogglePin(item)}
+              onToggleHide={() => handleToggleHide(item)}
               onDelete={() => handleDelete(item)}
               contacts={taggableContacts}
               onTagContacts={(ids) => handleTagContacts(item, ids)}
@@ -505,7 +527,7 @@ export default function FirmNewsTab({ firmId, firmName }) {
 }
 
 // ── News item card (view / expand / edit) ───────────────────────────────────
-export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, onCancelEdit, onSaveEdit, onTogglePin, onDelete, contacts = [], onTagContacts, firms = [], onTagFirms, selectable, selected, onToggleSelect, onAutoTag }) {
+export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, onCancelEdit, onSaveEdit, onTogglePin, onDelete, onToggleHide, contacts = [], onTagContacts, firms = [], onTagFirms, selectable, selected, onToggleSelect, onAutoTag }) {
   const alertStyle = ALERT_STYLES[item.alert_status] || ALERT_STYLES.Low;
   const statusStyle = STATUS_STYLES[item.news_status] || STATUS_STYLES.Neutral;
   const AlertIcon = alertStyle.icon;
@@ -520,8 +542,10 @@ export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, 
     );
   }
 
+  const hidden = !!item.is_hidden;
+
   return (
-    <div className={`rounded-xl border ${item.is_pinned ? 'border-rose-300 bg-rose-50/30' : 'border-gray-200 bg-white'} overflow-hidden`}>
+    <div className={`rounded-xl border ${item.is_pinned ? 'border-rose-300 bg-rose-50/30' : 'border-gray-200 bg-white'} overflow-hidden ${hidden ? 'opacity-50' : ''}`}>
       <div className="flex items-start gap-2.5 px-3 py-2.5">
         {selectable && (
           <button
@@ -562,6 +586,11 @@ export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, 
                 {item.is_pinned && (
                   <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-600 flex items-center gap-0.5">
                     <Pin className="w-2.5 h-2.5" /> Pinned
+                  </span>
+                )}
+                {hidden && (
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-gray-200 text-gray-500 flex items-center gap-0.5">
+                    <EyeOff className="w-2.5 h-2.5" /> Hidden
                   </span>
                 )}
               </div>
@@ -635,6 +664,13 @@ export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, 
             title={item.is_pinned ? 'Unpin' : 'Pin to News Alerts'}>
             {item.is_pinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
           </button>
+          {onToggleHide && (
+            <button type="button" onClick={onToggleHide}
+              className={`p-1 rounded hover:bg-gray-100 ${hidden ? 'text-gray-500 hover:text-gray-700' : 'text-gray-300 hover:text-gray-500'}`}
+              title={hidden ? 'Unhide' : 'Hide from lists'}>
+              {hidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+            </button>
+          )}
           <button type="button" onClick={onEdit}
             className="p-1 rounded text-gray-300 hover:text-indigo-500 hover:bg-gray-100" title="Edit">
             <Edit2 className="w-3.5 h-3.5" />

@@ -60,6 +60,11 @@
       "default": false,
       "description": "Whether this news item is pinned in the Monitor News Alerts section"
     },
+    "is_hidden": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this news item is hidden from the default news views (Monitor, firm news tab, contact news tab). Hidden items are excluded from lists unless the user toggles 'show hidden'."
+    },
     "source_type": {
       "type": "string",
       "enum": [

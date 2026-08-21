@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import SearchableSelect from "@/components/common/SearchableSelect";
 import {
   Newspaper, Pin, PinOff, ExternalLink, Trash2, Calendar, X,
-  AlertTriangle, ChevronDown, ChevronUp, Building2, Search, Download,
+  AlertTriangle, ChevronDown, ChevronUp, Building2, Search, Download, Eye, EyeOff,
 } from "lucide-react";
 import { format } from "date-fns";
 import { generateNewsAlertsPdf } from "@/components/news/newsAlertsPdf";
@@ -38,6 +38,7 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
   const [firmFilter, setFirmFilter] = useState("");
   const [contactFilter, setContactFilter] = useState("");
   const [sortBy, setSortBy] = useState("date_desc");
+  const [showHidden, setShowHidden] = useState(false);
 
   // All news alerts (pinned ones always sort to the top)
   const { data: allNews = [], isLoading } = useQuery({
@@ -71,11 +72,11 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
     return [{ value: "", label: "All contacts" }, ...opts];
   }, [contacts]);
 
-  const totalCount = useMemo(() => allNews.filter(n => !n.deleted_at).length, [allNews]);
+  const totalCount = useMemo(() => allNews.filter(n => !n.deleted_at && !n.is_hidden).length, [allNews]);
 
   const filteredNews = useMemo(() => {
     const q = search.trim().toLowerCase();
-    let list = allNews.filter(n => !n.deleted_at);
+    let list = allNews.filter(n => !n.deleted_at && (showHidden || !n.is_hidden));
     if (q) {
       list = list.filter(n =>
         (n.headline || "").toLowerCase().includes(q) ||
@@ -106,10 +107,16 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
         default: return (b.news_date || "").localeCompare(a.news_date || "");
       }
     });
-  }, [allNews, search, firmFilter, contactFilter, sortBy]);
+  }, [allNews, search, firmFilter, contactFilter, sortBy, showHidden]);
 
   const handleTogglePin = async (item) => {
     await base44.entities.FirmNews.update(item.id, { is_pinned: !item.is_pinned });
+    queryClient.invalidateQueries({ queryKey: ["pinned_news_alerts"] });
+    queryClient.invalidateQueries({ queryKey: ["firm_news", item.firm_id] });
+  };
+
+  const handleToggleHide = async (item) => {
+    await base44.entities.FirmNews.update(item.id, { is_hidden: !item.is_hidden });
     queryClient.invalidateQueries({ queryKey: ["pinned_news_alerts"] });
     queryClient.invalidateQueries({ queryKey: ["firm_news", item.firm_id] });
   };
@@ -219,6 +226,17 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
               </button>
             </div>
           )}
+          <div className="flex items-center justify-end">
+            <button
+              type="button"
+              onClick={() => setShowHidden(v => !v)}
+              className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md ${showHidden ? "text-gray-700 bg-gray-100 hover:bg-gray-200" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"}`}
+              title={showHidden ? "Hide hidden items" : "Show hidden items"}
+            >
+              {showHidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+              {showHidden ? "Showing hidden" : "Show hidden"}
+            </button>
+          </div>
         </div>
 
         {/* Body */}
@@ -248,7 +266,7 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
               const AlertIcon = alertStyle.icon;
               const expanded = expandedId === item.id;
               return (
-                <div key={item.id} className={`rounded-xl border ${item.is_pinned ? "border-rose-200 bg-rose-50/20" : "border-gray-200 bg-white"} overflow-hidden`}>
+                <div key={item.id} className={`rounded-xl border ${item.is_pinned ? "border-rose-200 bg-rose-50/20" : "border-gray-200 bg-white"} overflow-hidden ${item.is_hidden ? "opacity-50" : ""}`}>
                   <div className="flex items-start gap-2.5 px-3 py-2.5">
                     <div className={`mt-0.5 w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${alertStyle.bg}`}>
                       <AlertIcon className={`w-3.5 h-3.5 ${alertStyle.color}`} />
@@ -268,6 +286,11 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
                           {item.is_pinned && (
                             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-600 flex items-center gap-0.5">
                               <Pin className="w-2.5 h-2.5" /> Pinned
+                            </span>
+                          )}
+                          {item.is_hidden && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-gray-200 text-gray-500 flex items-center gap-0.5">
+                              <EyeOff className="w-2.5 h-2.5" /> Hidden
                             </span>
                           )}
                           <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${alertStyle.bg} ${alertStyle.color}`}>
@@ -318,6 +341,11 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
                         className={`p-1 rounded ${item.is_pinned ? "text-rose-500 hover:bg-rose-100" : "text-gray-300 hover:text-rose-500 hover:bg-gray-100"}`}
                         title={item.is_pinned ? "Unpin" : "Pin to top"}>
                         {item.is_pinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
+                      </button>
+                      <button type="button" onClick={() => handleToggleHide(item)}
+                        className={`p-1 rounded hover:bg-gray-100 ${item.is_hidden ? "text-gray-500 hover:text-gray-700" : "text-gray-300 hover:text-gray-500"}`}
+                        title={item.is_hidden ? "Unhide" : "Hide from lists"}>
+                        {item.is_hidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
                       </button>
                       <button type="button" onClick={() => handleDelete(item)}
                         className="p-1 rounded text-gray-300 hover:text-red-500 hover:bg-gray-100" title="Delete">

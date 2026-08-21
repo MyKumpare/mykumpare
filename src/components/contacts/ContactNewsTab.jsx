@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Newspaper, Plus, Trash2, Sparkles, Loader2, History, Search, X,
-  ArrowDownWideNarrow, ArrowUpWideNarrow, FileText, CheckSquare, Tag,
+  ArrowDownWideNarrow, ArrowUpWideNarrow, FileText, CheckSquare, Tag, Eye, EyeOff,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { NewsItemCard, NewsItemForm } from "../firms/FirmNewsTab";
@@ -34,6 +34,7 @@ export default function ContactNewsTab({ contactId, contactName, firmId, firmNam
   const [showSummary, setShowSummary] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [showHidden, setShowHidden] = useState(false);
 
   // Owned news (from contact's firm) + cross-firm tagged news
   const { data: ownedNews = [], isLoading: loadingOwned } = useQuery({
@@ -55,11 +56,11 @@ export default function ContactNewsTab({ contactId, contactName, firmId, firmNam
   }, [ownedNews, taggedContactNews]);
 
   const activeNews = useMemo(
-    () => newsItems.filter(n => !n.deleted_at && (
+    () => newsItems.filter(n => !n.deleted_at && (showHidden || !n.is_hidden) && (
       (n.source_type === "contact" && n.source_id === contactId) ||
       (n.tagged_contact_ids || []).includes(contactId)
     )),
-    [newsItems, contactId]
+    [newsItems, contactId, showHidden]
   );
 
   // Fetch all contacts and firms for tagging
@@ -136,6 +137,12 @@ export default function ContactNewsTab({ contactId, contactName, firmId, firmNam
 
   const handleTogglePin = async (item) => {
     await base44.entities.FirmNews.update(item.id, { is_pinned: !item.is_pinned });
+    queryClient.invalidateQueries({ queryKey: ["firm_news"] });
+    queryClient.invalidateQueries({ queryKey: ["pinned_news_alerts"] });
+  };
+
+  const handleToggleHide = async (item) => {
+    await base44.entities.FirmNews.update(item.id, { is_hidden: !item.is_hidden });
     queryClient.invalidateQueries({ queryKey: ["firm_news"] });
     queryClient.invalidateQueries({ queryKey: ["pinned_news_alerts"] });
   };
@@ -282,6 +289,17 @@ export default function ContactNewsTab({ contactId, contactName, firmId, firmNam
           >
             <CheckSquare className="w-3.5 h-3.5" />
             {selectMode ? "Done" : "Select"}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className={`h-7 px-2 gap-1 text-xs ${showHidden ? "text-gray-700 bg-gray-100 hover:bg-gray-200" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"}`}
+            onClick={() => setShowHidden(v => !v)}
+            title={showHidden ? "Hide hidden items" : "Show hidden items"}
+          >
+            {showHidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+            {showHidden ? "All" : "Hidden"}
           </Button>
           <Button
             type="button"
@@ -449,6 +467,7 @@ export default function ContactNewsTab({ contactId, contactName, firmId, firmNam
               onCancelEdit={() => setEditingId(null)}
               onSaveEdit={(data) => { handleUpdate(item.id, data); setEditingId(null); }}
               onTogglePin={() => handleTogglePin(item)}
+              onToggleHide={() => handleToggleHide(item)}
               onDelete={() => handleDelete(item)}
               contacts={taggableContacts}
               onTagContacts={(ids) => handleTagContacts(item, ids)}
