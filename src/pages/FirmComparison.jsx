@@ -7,6 +7,7 @@ import AumGrowthChart from "@/components/shared/AumGrowthChart";
 import FirmCompareSelector from "@/components/firms/FirmCompareSelector";
 import FirmCompareProducts from "@/components/firms/FirmCompareProducts";
 import FirmCompareClientTypes from "@/components/firms/FirmCompareClientTypes";
+import ReportDateRangePicker from "@/components/reports/ReportDateRangePicker";
 
 function Placeholder() {
   return (
@@ -20,6 +21,7 @@ export default function FirmComparison() {
   const navigate = useNavigate();
   const [firmAId, setFirmAId] = useState("");
   const [firmBId, setFirmBId] = useState("");
+  const [dateRange, setDateRange] = useState({ start: "", end: "" });
 
   const { data: firms = [], isLoading: firmsLoading } = useQuery({
     queryKey: ["firms"],
@@ -32,6 +34,28 @@ export default function FirmComparison() {
 
   const firmA = firms.find((f) => f.id === firmAId);
   const firmB = firms.find((f) => f.id === firmBId);
+
+  const availableRange = useMemo(() => {
+    const dates = [];
+    for (const f of [firmA, firmB].filter(Boolean)) {
+      for (const row of f.aum_history || []) {
+        if (row.month_end_date) dates.push(row.month_end_date);
+      }
+    }
+    dates.sort();
+    return dates.length ? { oldest: dates[0], newest: dates[dates.length - 1] } : null;
+  }, [firmA, firmB]);
+
+  const filterRows = (rows) => {
+    const { start, end } = dateRange;
+    if (!start && !end) return rows || [];
+    return (rows || []).filter((r) => {
+      if (!r.month_end_date) return false;
+      if (start && r.month_end_date < start) return false;
+      if (end && r.month_end_date > end) return false;
+      return true;
+    });
+  };
 
   const productsA = useMemo(
     () => products.filter((p) => p.firm_id === firmAId && !p.deleted_at),
@@ -76,6 +100,12 @@ export default function FirmComparison() {
         />
       </div>
 
+      {(firmA || firmB) && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3">
+          <ReportDateRangePicker value={dateRange} onChange={setDateRange} availableRange={availableRange} label="Filter AUM history by month-end date" />
+        </div>
+      )}
+
       {!firmA && !firmB ? (
         <div className="text-center py-16 text-gray-400">
           <GitCompare className="w-10 h-10 mx-auto mb-2 opacity-40" />
@@ -95,12 +125,12 @@ export default function FirmComparison() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {firmA ? (
-                <AumGrowthChart rows={firmA.aum_history || []} entityLabel="Firm" name={firmA.name} />
+                <AumGrowthChart rows={filterRows(firmA.aum_history)} entityLabel="Firm" name={firmA.name} />
               ) : (
                 <Placeholder />
               )}
               {firmB ? (
-                <AumGrowthChart rows={firmB.aum_history || []} entityLabel="Firm" name={firmB.name} />
+                <AumGrowthChart rows={filterRows(firmB.aum_history)} entityLabel="Firm" name={firmB.name} />
               ) : (
                 <Placeholder />
               )}

@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import {
   Users, Building2, AlertTriangle, UserCheck, CalendarRange,
 } from "lucide-react";
 import { formatCoverageDate } from "@/lib/analystHistoryClient";
+import ReportDateRangePicker from "@/components/reports/ReportDateRangePicker";
 
 function getQuarterRange(date = new Date()) {
   const month = date.getMonth(); // 0-11
@@ -19,10 +20,10 @@ function getQuarterRange(date = new Date()) {
   return { start, end };
 }
 
-function inQuarter(dateStr, qStart, qEnd) {
-  if (!dateStr) return false;
+function inRange(dateStr, rStart, rEnd) {
+  if (!dateStr || !rStart || !rEnd) return false;
   const d = new Date(dateStr + "T00:00:00");
-  return d >= qStart && d <= qEnd;
+  return d >= rStart && d <= rEnd;
 }
 
 function StatCard({ icon: Icon, label, value, sublabel, color }) {
@@ -50,8 +51,28 @@ export default function AnalystCoverageReport() {
     queryFn: () => base44.entities.DueDiligence.list("-created_date", 500),
   });
 
-  const { start: qStart, end: qEnd } = useMemo(() => getQuarterRange(), []);
-  const quarterLabel = `Q${Math.floor(qStart.getMonth() / 3) + 1} ${qStart.getFullYear()}`;
+  const availableRange = useMemo(() => {
+    const dates = [];
+    for (const rec of records) {
+      if (rec.deleted_at) continue;
+      for (const e of rec.analyst_history || []) {
+        if (e.start_date) dates.push(e.start_date);
+        if (e.end_date) dates.push(e.end_date);
+      }
+    }
+    dates.sort();
+    return dates.length ? { oldest: dates[0], newest: dates[dates.length - 1] } : null;
+  }, [records]);
+
+  const [dateRange, setDateRange] = useState(() => {
+    const { start, end } = getQuarterRange();
+    return { start: start.toISOString().split("T")[0], end: end.toISOString().split("T")[0] };
+  });
+  const rangeStart = useMemo(() => (dateRange.start ? new Date(dateRange.start + "T00:00:00") : null), [dateRange.start]);
+  const rangeEnd = useMemo(() => (dateRange.end ? new Date(dateRange.end + "T23:59:59") : null), [dateRange.end]);
+  const quarterLabel = dateRange.start && dateRange.end
+    ? `${new Date(dateRange.start + "T00:00:00").toLocaleDateString("en-US")} – ${new Date(dateRange.end + "T00:00:00").toLocaleDateString("en-US")}`
+    : "All time";
 
   const analysis = useMemo(() => {
     const active = records.filter((r) => !r.deleted_at);
@@ -78,8 +99,8 @@ export default function AnalystCoverageReport() {
           analystFirms[entry.contact_id].firmIds.add(rec.firm_id);
           analystFirms[entry.contact_id].firmNames.add(rec.firm_name || "Unknown");
         }
-        // Inactive coverage ended within this quarter
-        if (entry.end_date && inQuarter(entry.end_date, qStart, qEnd)) {
+        // Inactive coverage ended within selected range
+        if (entry.end_date && inRange(entry.end_date, rangeStart, rangeEnd)) {
           inactiveFirms.push({
             firm_name: rec.firm_name || "—",
             product_name: rec.product_name || "—",
@@ -88,8 +109,8 @@ export default function AnalystCoverageReport() {
             end_date: entry.end_date,
           });
         }
-        // New assignment started this quarter
-        if (entry.start_date && inQuarter(entry.start_date, qStart, qEnd)) {
+        // New assignment started within selected range
+        if (entry.start_date && inRange(entry.start_date, rangeStart, rangeEnd)) {
           quarterAssignments += 1;
         }
       }
@@ -113,7 +134,7 @@ export default function AnalystCoverageReport() {
       analystFirmCounts,
       totalFirmsCovered: new Set(active.map((r) => r.firm_id).filter(Boolean)).size,
     };
-  }, [records, qStart, qEnd]);
+  }, [records, rangeStart, rangeEnd]);
 
   if (isLoading) {
     return (
@@ -135,6 +156,10 @@ export default function AnalystCoverageReport() {
           <CalendarRange className="w-3 h-3 mr-1" />
           {quarterLabel}
         </Badge>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3">
+        <ReportDateRangePicker value={dateRange} onChange={setDateRange} availableRange={availableRange} label="Filter analyst coverage by assignment start/end dates" />
       </div>
 
       {/* Stat cards */}

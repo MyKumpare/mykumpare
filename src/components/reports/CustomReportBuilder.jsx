@@ -7,12 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Save, Database, Columns3, Calculator, LayoutTemplate, Printer, X, Play, Loader2, Filter } from "lucide-react";
+import { Plus, Trash2, Save, Database, Columns3, Calculator, LayoutTemplate, Printer, X, Play, Loader2, Filter, CalendarRange } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { DATA_SOURCES, COMPUTATION_TYPES, CHART_TYPES, OUTPUT_FORMATS, FILTER_OPERATORS } from "./reportConfig";
 import { fetchReportData, applyFilters } from "./reportEngine";
 import ReportResults from "./ReportResults";
+import ReportDateRangePicker from "./ReportDateRangePicker";
 
 const EMPTY_FORM = {
   name: "",
@@ -27,6 +28,7 @@ const EMPTY_FORM = {
   sort_order: "asc",
   filters_description: "",
   filters: [],
+  date_range: { start: "", end: "" },
   output_formats: ["pdf"],
   page_orientation: "landscape",
   include_summary: true,
@@ -312,7 +314,24 @@ export default function CustomReportBuilder({ open, onClose, editingReport, pref
   const [resultsData, setResultsData] = useState(null);
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState(null);
+  const [availableRange, setAvailableRange] = useState(null);
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!form.data_source) { setAvailableRange(null); return; }
+    let active = true;
+    (async () => {
+      try {
+        const rows = await fetchReportData(form.data_source);
+        if (!active) return;
+        const dates = rows.map((r) => r.created_date).filter(Boolean).map((d) => String(d).slice(0, 10)).sort();
+        setAvailableRange(dates.length ? { oldest: dates[0], newest: dates[dates.length - 1] } : null);
+      } catch {
+        if (active) setAvailableRange(null);
+      }
+    })();
+    return () => { active = false; };
+  }, [form.data_source]);
 
   useEffect(() => {
     if (!open) return;
@@ -353,7 +372,18 @@ export default function CustomReportBuilder({ open, onClose, editingReport, pref
     setGenError(null);
     try {
       const raw = await fetchReportData(form.data_source);
-      setResultsData(applyFilters(raw, form.filters));
+      let filtered = applyFilters(raw, form.filters);
+      const { start, end } = form.date_range || {};
+      if (start || end) {
+        filtered = filtered.filter((r) => {
+          if (!r.created_date) return false;
+          const d = String(r.created_date).slice(0, 10);
+          if (start && d < start) return false;
+          if (end && d > end) return false;
+          return true;
+        });
+      }
+      setResultsData(filtered);
     } catch (err) {
       setGenError(err.message || "Failed to generate report");
     } finally {
@@ -435,6 +465,19 @@ export default function CustomReportBuilder({ open, onClose, editingReport, pref
                 <section>
                   <SectionHeader icon={Filter} title="Filters" subtitle="Scope the report to specific records (e.g. one product by ID or name)" />
                   <FilterEditor filters={form.filters} onChange={(v) => update("filters", v)} fields={fields} />
+                </section>
+              )}
+
+              {/* Date Range */}
+              {form.data_source && (
+                <section>
+                  <SectionHeader icon={CalendarRange} title="Date Range" subtitle="Filter records by their created date (earliest to latest)" />
+                  <ReportDateRangePicker
+                    value={form.date_range || { start: "", end: "" }}
+                    onChange={(v) => update("date_range", v)}
+                    availableRange={availableRange}
+                    label="Created date range"
+                  />
                 </section>
               )}
 

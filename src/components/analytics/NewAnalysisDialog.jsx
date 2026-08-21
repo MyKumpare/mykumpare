@@ -5,7 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import {
   Search, X, ChevronDown, ChevronUp, BarChart2, LayoutList, Link2, CalendarDays, RefreshCw,
-  Play, CheckCircle, Pencil, Trash2, Eye, EyeOff, Plus
+  Play, CheckCircle, Pencil, Trash2, Eye, EyeOff, Plus, CalendarClock, CalendarRange
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AnalysisResults from "./AnalysisResults.jsx";
@@ -612,6 +612,18 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
     setPeriodEnd(toMonthEnd(end));
   };
 
+  // Overall earliest/latest data across selected products' return series (YYYY-MM).
+  const availableRange = useMemo(() => {
+    const starts = [], ends = [];
+    for (const id of selectedProductIds) {
+      const series = allSeries.filter((s) => s.product_id === id);
+      const mr = series.flatMap((s) => s.monthly_returns ?? []).sort((a, b) => a.date.localeCompare(b.date));
+      if (mr.length) { starts.push(ym(mr[0].date)); ends.push(ym(mr[mr.length - 1].date)); }
+    }
+    if (!starts.length) return null;
+    return { start: starts.sort()[0], end: ends.sort()[ends.length - 1] };
+  }, [selectedProductIds, allSeries]);
+
   const saveMutation = useMutation({
     mutationFn: (data) => base44.entities.Analysis.create(data),
     onSuccess: (saved) => {
@@ -882,6 +894,39 @@ export default function NewAnalysisDialog({ open, onOpenChange, onSaved, onProdu
                     className="text-xs text-gray-400 hover:text-indigo-600 hover:underline mt-2">Clear</button>
                 )}
               </div>
+              {availableRange && (
+                <div className="rounded-lg border border-indigo-100 bg-indigo-50/60 p-3 space-y-2 mt-3">
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <CalendarClock className="w-3.5 h-3.5 text-indigo-500" />
+                      <span className="text-gray-500">Earliest data:</span>
+                      <span className="font-semibold text-gray-800">{formatMDY(availableRange.start)}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-gray-500">Latest data:</span>
+                      <span className="font-semibold text-gray-800">{formatMDY(availableRange.end)}</span>
+                      <CalendarRange className="w-3.5 h-3.5 text-indigo-500" />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button"
+                      onClick={() => { setPeriodStart(getPriorMonthEnd(availableRange.start)); setPeriodEnd(toMonthEnd(availableRange.end)); }}
+                      className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium">
+                      <CalendarRange className="w-3 h-3" /> Use full data range
+                    </button>
+                    <button type="button"
+                      onClick={() => setPeriodStart(getPriorMonthEnd(availableRange.start))}
+                      className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium">
+                      Set start to earliest
+                    </button>
+                    <button type="button"
+                      onClick={() => setPeriodEnd(toMonthEnd(availableRange.end))}
+                      className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium">
+                      Set end to latest
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="flex justify-end gap-2 pt-1">
               <button type="button" onClick={() => setStep("products")} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">Cancel</button>

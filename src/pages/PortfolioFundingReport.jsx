@@ -11,6 +11,7 @@ import {
   ArrowLeft, Download, FileText, Loader2, Wallet, TrendingUp, TrendingDown, BarChart3,
 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
+import ReportDateRangePicker from "@/components/reports/ReportDateRangePicker";
 
 const STATUS_COLORS = { Active: "#10b981", Terminated: "#ef4444" };
 
@@ -32,6 +33,7 @@ export default function PortfolioFundingReport() {
   const { user } = useAuth();
   const linkedFirmId = user?.data?.linked_firm_id;
   const [dataScope, setDataScope] = useState("my");
+  const [dateRange, setDateRange] = useState({ start: "", end: "" });
   const [exporting, setExporting] = useState(false);
   const reportRef = useRef(null);
 
@@ -40,11 +42,25 @@ export default function PortfolioFundingReport() {
     queryFn: () => base44.entities.Portfolio.list("-created_date", 5000),
   });
 
+  const availableRange = useMemo(() => {
+    const dates = portfolios.filter((p) => !p.deleted_at && p.inception_date).map((p) => p.inception_date).sort();
+    return dates.length ? { oldest: dates[0], newest: dates[dates.length - 1] } : null;
+  }, [portfolios]);
+
   const scopedPortfolios = useMemo(() => {
-    const active = portfolios.filter((p) => !p.deleted_at);
-    if (dataScope === "all" || !linkedFirmId) return active;
-    return active.filter((p) => p.tenant_id === linkedFirmId);
-  }, [portfolios, dataScope, linkedFirmId]);
+    let active = portfolios.filter((p) => !p.deleted_at);
+    if (dataScope !== "all" && linkedFirmId) active = active.filter((p) => p.tenant_id === linkedFirmId);
+    const { start, end } = dateRange;
+    if (start || end) {
+      active = active.filter((p) => {
+        if (!p.inception_date) return false;
+        if (start && p.inception_date < start) return false;
+        if (end && p.inception_date > end) return false;
+        return true;
+      });
+    }
+    return active;
+  }, [portfolios, dataScope, linkedFirmId, dateRange]);
 
   const amount = (p) => Number(p.initial_allocation_amount) || 0;
 
@@ -199,6 +215,10 @@ export default function PortfolioFundingReport() {
               All Data
             </button>
           </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3">
+          <ReportDateRangePicker value={dateRange} onChange={setDateRange} availableRange={availableRange} label="Filter portfolios by inception date" />
         </div>
 
         {/* Report body — captured for PDF export */}
