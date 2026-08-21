@@ -243,6 +243,45 @@
         }
       }
     },
+    "audit_history": {
+      "type": "array",
+      "description": "Audit log of manual changes to this firm record. Each entry records a single field change with its previous and new values, who made the change, and when. Appended automatically on save.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "field": {
+            "type": "string",
+            "description": "Name of the field that changed"
+          },
+          "previous_value": {
+            "description": "Value of the field before the change (summarized for large/array fields)"
+          },
+          "new_value": {
+            "description": "Value of the field after the change (summarized for large/array fields)"
+          },
+          "changed_by_id": {
+            "type": "string",
+            "description": "User ID of the person who made the change"
+          },
+          "changed_by_name": {
+            "type": "string",
+            "description": "Display name of the person who made the change (denormalized)"
+          },
+          "changed_date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when the change was made"
+          }
+        },
+        "required": [
+          "field",
+          "changed_date"
+        ]
+      }
+    },
     "deleted_at": {
       "type": "string",
       "format": "date-time",

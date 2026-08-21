@@ -11,6 +11,7 @@ import AIAssistant from "@/components/ai/AIAssistant";
 import { parsePhoneString } from "@/components/ai/firmEnrichment";
 import { detectDesignations } from "@/components/contacts/designationDetector";
 import { toast } from "@/components/ui/use-toast";
+import { withAuditHistory } from "@/components/shared/auditHistory";
 
 import { lazyDialog } from "@/components/common/lazyDialog";
 import SearchResults from "../components/search/SearchResults";
@@ -406,7 +407,11 @@ export default function Home() {
   });
 
   const updateProductMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Product.update(id, data),
+    mutationFn: async ({ id, data }) => {
+      const current = await base44.entities.Product.get(id);
+      const payload = withAuditHistory(current, data, user);
+      return base44.entities.Product.update(id, payload);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       setProductDialogOpen(false);
@@ -478,7 +483,11 @@ export default function Home() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Firm.update(id, data),
+    mutationFn: async ({ id, data }) => {
+      const current = await base44.entities.Firm.get(id);
+      const payload = withAuditHistory(current, data, user);
+      return base44.entities.Firm.update(id, payload);
+    },
     onSuccess: (updatedFirm) => {
       queryClient.invalidateQueries({ queryKey: ["firms"] });
       // Keep the dialog open and switch to view mode after a successful save

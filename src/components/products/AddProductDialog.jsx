@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Pencil, X, AlertTriangle } from "lucide-react";
+import { Pencil, X, AlertTriangle, History } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import ProductClassificationsTab from "./ProductClassificationsTab";
 import ProductInvestmentTeamTab from "./ProductInvestmentTeamTab";
@@ -35,6 +35,7 @@ import FundingStatusBadge from "./FundingStatusBadge";
 import { syncProductFundingStatus } from "./fundingStatusSync";
 import { base44 } from "@/api/base44Client";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
+import AuditHistoryDialog from "../shared/AuditHistoryDialog";
 
 // Map product type -> firm type(s) that can be associated
 const PRODUCT_TYPE_TO_FIRM_TYPE = {
@@ -113,6 +114,7 @@ export default function AddProductDialog({
   const [subManagerFirmIds, setSubManagerFirmIds] = useState([]);
   const [addImProductOpen, setAddImProductOpen] = useState(false);
   const [aumDirty, setAumDirty] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const aumSaveRef = useRef(null);
   const queryClient = useQueryClient();
   const nameInputRef = useRef(null);
@@ -407,6 +409,7 @@ export default function AddProductDialog({
         </DialogContent>
       </Dialog>
     )}
+    <AuditHistoryDialog open={historyOpen} onOpenChange={setHistoryOpen} record={editingProduct} entityLabel="Product" />
     <Dialog open={open} onOpenChange={(v) => { if (!v) guardedClose(); }}>
       <DialogContent
         className="sm:max-w-7xl max-h-[90vh] flex flex-col"
@@ -419,6 +422,17 @@ export default function AddProductDialog({
               {isAddMode ? "Add Product" : "Product Details"}
             </DialogTitle>
             <div className="flex items-center gap-1">
+              {!isAddMode && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 gap-1.5"
+                  onClick={() => setHistoryOpen(true)}
+                >
+                  <History className="w-3.5 h-3.5" />
+                  History
+                </Button>
+              )}
               {!isAddMode && !isEditing && (
                 <Button
                   variant="ghost"

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Send, Bot, Loader2, X, History, Trash2, Plus, MessageSquare, Mic, ArrowRight } from "lucide-react";
+import { Send, Bot, Loader2, X, History, Trash2, Plus, MessageSquare, Mic, ArrowRight, GripVertical } from "lucide-react";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { useChatHistory } from "@/hooks/useChatHistory";
 import { useVoiceSearch } from "@/hooks/useVoiceSearch";
 import { AI_AGENTS } from "./agentRegistry";
 import { useAgentOrder } from "@/hooks/useAgentOrder";
+
 import AIAssistantMessage from "./AIAssistantMessage";
 
 const INITIAL_GREETING = {
@@ -73,7 +75,7 @@ export default function AIAssistant() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { order } = useAgentOrder();
+  const { order, move } = useAgentOrder();
   const byId = Object.fromEntries(AI_AGENTS.map((a) => [a.id, a]));
   const orderedAgents = order.map((id) => byId[id]).filter(Boolean);
 
@@ -575,31 +577,70 @@ export default function AIAssistant() {
               <X className="w-5 h-5" />
             </button>
           </div>
-          <div className="p-2 overflow-y-auto max-h-[60vh]">
-            {orderedAgents.map((agent) => {
-              const Icon = agent.icon;
-              return (
-                <button
-                  key={agent.id}
-                  onClick={() => handleSelectAgent(agent)}
-                  className="w-full flex items-start gap-3 p-3 rounded-xl hover:bg-indigo-50 transition-colors text-left group"
-                >
-                  <div className={`w-10 h-10 rounded-lg ${agent.iconBg} flex items-center justify-center flex-shrink-0`}>
-                    <Icon className={`w-5 h-5 ${agent.iconColor}`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">
-                      {agent.name}
-                    </div>
-                    <div className="text-xs text-gray-500 line-clamp-2">
-                      {agent.description}
-                    </div>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-indigo-500 mt-1 flex-shrink-0" />
-                </button>
-              );
-            })}
+          <div className="px-3 py-1.5 text-[10px] text-gray-400 flex items-center gap-1">
+            <GripVertical className="w-3 h-3" />
+            Drag to reorder — your order is saved.
           </div>
+          <DragDropContext
+            onDragEnd={(res) => {
+              if (res.destination && res.destination.index !== res.source.index) {
+                move(res.source.index, res.destination.index);
+              }
+            }}
+          >
+            <Droppable droppableId="agent-picker">
+              {(provided) => (
+                <div
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                  className="p-2 overflow-y-auto max-h-[55vh]"
+                >
+                  {orderedAgents.map((agent, index) => {
+                    const Icon = agent.icon;
+                    return (
+                      <Draggable key={agent.id} draggableId={agent.id} index={index}>
+                        {(prov, snapshot) => (
+                          <div
+                            ref={prov.innerRef}
+                            {...prov.draggableProps}
+                            className={`flex items-start gap-1.5 p-2 rounded-xl transition-colors group ${
+                              snapshot.isDragging ? "bg-indigo-50 shadow-md ring-1 ring-indigo-200" : "hover:bg-indigo-50"
+                            }`}
+                          >
+                            <div
+                              {...prov.dragHandleProps}
+                              className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 pt-2 flex-shrink-0"
+                              title="Drag to reorder"
+                            >
+                              <GripVertical className="w-4 h-4" />
+                            </div>
+                            <button
+                              onClick={() => handleSelectAgent(agent)}
+                              className="flex-1 flex items-start gap-3 text-left min-w-0"
+                            >
+                              <div className={`w-10 h-10 rounded-lg ${agent.iconBg} flex items-center justify-center flex-shrink-0`}>
+                                <Icon className={`w-5 h-5 ${agent.iconColor}`} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">
+                                  {agent.name}
+                                </div>
+                                <div className="text-xs text-gray-500 line-clamp-2">
+                                  {agent.description}
+                                </div>
+                              </div>
+                              <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-indigo-500 mt-1 flex-shrink-0" />
+                            </button>
+                          </div>
+                        )}
+                      </Draggable>
+                    );
+                  })}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
           <div className="px-3 py-2 border-t border-gray-200 bg-gray-50">
             <button
               onClick={() => { setShowPicker(false); navigate("/AiAgents"); }}

@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Pencil, Plus, Upload, X, Globe, AlertTriangle, Linkedin, Loader2 } from "lucide-react";
+import { Pencil, Plus, Upload, X, Globe, AlertTriangle, Linkedin, Loader2, History } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
@@ -43,6 +43,7 @@ import LinkedinFirmMismatchDialog from "./LinkedinFirmMismatchDialog";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import ImageZoomDialog from "../common/ImageZoomDialog";
+import AuditHistoryDialog from "../shared/AuditHistoryDialog";
 
 function getCountryCodeFromCountryName(countryName) {
   if (!countryName) return "";
@@ -190,6 +191,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const [similarFirmWarning, setSimilarFirmWarning] = useState(null);
   const [firmFieldConflicts, setFirmFieldConflicts] = useState(null);
   const [logoZoomOpen, setLogoZoomOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [aumDirty, setAumDirty] = useState(false);
   const aumSaveRef = useRef(null);
   const nameInputRef = useRef(null);
@@ -925,6 +927,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
   return (
     <>
+    <AuditHistoryDialog open={historyOpen} onOpenChange={setHistoryOpen} record={editingFirm} entityLabel="Firm" />
     <Dialog open={open} onOpenChange={(v) => { if (!v) guardedClose(); }}>
       <DialogContent
         className="sm:max-w-7xl max-h-[90vh] flex flex-col"
@@ -957,17 +960,30 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                 {isAddMode ? "Add Firm" : "Edit Firm"}
               </DialogTitle>
             )}
-            {!isAddMode && !isEditing && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1.5"
-                onClick={() => setIsEditing(true)}
-              >
-                <Pencil className="w-3.5 h-3.5" />
-                Edit
-              </Button>
-            )}
+            <div className="flex items-center gap-1">
+              {!isAddMode && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 gap-1.5"
+                  onClick={() => setHistoryOpen(true)}
+                >
+                  <History className="w-3.5 h-3.5" />
+                  History
+                </Button>
+              )}
+              {!isAddMode && !isEditing && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1.5"
+                  onClick={() => setIsEditing(true)}
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  Edit
+                </Button>
+              )}
+            </div>
           </div>
         </DialogHeader>
 
