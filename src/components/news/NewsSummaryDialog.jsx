@@ -5,7 +5,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, FileText, Download, CalendarRange } from "lucide-react";
+import { Loader2, FileText, Download, CalendarRange, CalendarClock } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "@/components/ui/use-toast";
 import { generateNewsSummaryPdf } from "./newsSummaryPdf";
@@ -40,6 +40,13 @@ export default function NewsSummaryDialog({ open, onOpenChange, newsItems, targe
         return (b.news_date || "").localeCompare(a.news_date || "");
       });
   }, [newsItems, startDate, endDate]);
+
+  const { oldestDate, newestDate } = useMemo(() => {
+    const dates = (newsItems || []).map((n) => n.news_date).filter(Boolean).sort();
+    return { oldestDate: dates[0] || null, newestDate: dates[dates.length - 1] || null };
+  }, [newsItems]);
+
+  const fmt = (d) => (d ? new Date(d + "T00:00:00").toLocaleDateString("en-US") : "—");
 
   const computeStats = (items) => {
     const stats = { total: items.length, high: 0, medium: 0, low: 0, positive: 0, negative: 0, neutral: 0 };
@@ -147,6 +154,20 @@ Write a 3-5 sentence executive summary noting the overall alert level, the overa
             <CalendarRange className="w-3.5 h-3.5" />
             Choose a date range to include in the summary report.
           </div>
+          {(oldestDate || newestDate) && (
+            <div className="flex items-center justify-between gap-2 rounded-lg border border-indigo-100 bg-indigo-50/60 px-3 py-2 text-xs">
+              <div className="flex items-center gap-1.5">
+                <CalendarClock className="w-3.5 h-3.5 text-indigo-500" />
+                <span className="text-gray-500">Oldest article:</span>
+                <span className="font-semibold text-gray-800">{fmt(oldestDate)}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-gray-500">Newest article:</span>
+                <span className="font-semibold text-gray-800">{fmt(newestDate)}</span>
+                <CalendarClock className="w-3.5 h-3.5 text-indigo-500" />
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label className="text-xs font-medium text-gray-700">Start date</Label>
@@ -156,6 +177,32 @@ Write a 3-5 sentence executive summary noting the overall alert level, the overa
               <Label className="text-xs font-medium text-gray-700">End date</Label>
               <Input type="date" value={endDate} min={startDate || undefined} onChange={(e) => setEndDate(e.target.value)} className="h-9 text-sm" />
             </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => { if (oldestDate) setStartDate(oldestDate); if (newestDate) setEndDate(newestDate); }}
+              disabled={!oldestDate && !newestDate}
+              className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <CalendarRange className="w-3 h-3" /> Auto-select full range
+            </button>
+            <button
+              type="button"
+              onClick={() => oldestDate && setStartDate(oldestDate)}
+              disabled={!oldestDate}
+              className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Set start to earliest
+            </button>
+            <button
+              type="button"
+              onClick={() => newestDate && setEndDate(newestDate)}
+              disabled={!newestDate}
+              className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Set end to latest
+            </button>
           </div>
           <p className="text-xs text-gray-400">
             {itemsInRange.length} news item{itemsInRange.length !== 1 ? "s" : ""} in range.
