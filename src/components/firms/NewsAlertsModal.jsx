@@ -7,9 +7,12 @@ import SearchableSelect from "@/components/common/SearchableSelect";
 import {
   Newspaper, Pin, PinOff, ExternalLink, Trash2, Calendar, X,
   AlertTriangle, ChevronDown, ChevronUp, Building2, Search, Download, Eye, EyeOff,
+  CheckSquare, FileText,
 } from "lucide-react";
 import { format } from "date-fns";
 import { generateNewsAlertsPdf } from "@/components/news/newsAlertsPdf";
+import { generateNewsSelectionPdf } from "@/components/news/newsSelectionPdf";
+import NewsSelectionSummaryDialog from "@/components/news/NewsSelectionSummaryDialog";
 
 const ALERT_STYLES = {
   High: { color: "text-red-600", bg: "bg-red-50", border: "border-red-200", icon: AlertTriangle },
@@ -39,6 +42,8 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
   const [contactFilter, setContactFilter] = useState("");
   const [sortBy, setSortBy] = useState("date_desc");
   const [showHidden, setShowHidden] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [summaryOpen, setSummaryOpen] = useState(false);
 
   // All news alerts (pinned ones always sort to the top)
   const { data: allNews = [], isLoading } = useQuery({
@@ -125,6 +130,48 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
     await base44.entities.FirmNews.delete(item.id);
     queryClient.invalidateQueries({ queryKey: ["pinned_news_alerts"] });
     queryClient.invalidateQueries({ queryKey: ["firm_news", item.firm_id] });
+  };
+
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => setSelectedIds(new Set(filteredNews.map(n => n.id)));
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const selectedItems = useMemo(
+    () => filteredNews.filter(n => selectedIds.has(n.id)),
+    [filteredNews, selectedIds]
+  );
+
+  const handleBulkHide = async () => {
+    const ids = Array.from(selectedIds);
+    await base44.entities.FirmNews.bulkUpdate(ids.map(id => ({ id, is_hidden: true })));
+    queryClient.invalidateQueries({ queryKey: ["pinned_news_alerts"] });
+    queryClient.invalidateQueries({ queryKey: ["firm_news"] });
+    clearSelection();
+  };
+
+  const handleBulkUnhide = async () => {
+    const ids = Array.from(selectedIds);
+    await base44.entities.FirmNews.bulkUpdate(ids.map(id => ({ id, is_hidden: false })));
+    queryClient.invalidateQueries({ queryKey: ["pinned_news_alerts"] });
+    queryClient.invalidateQueries({ queryKey: ["firm_news"] });
+    clearSelection();
+  };
+
+  const handleBulkExportPdf = () => {
+    if (!selectedItems.length) return;
+    generateNewsSelectionPdf({ items: selectedItems, contacts, firms, sourceLabel: "Monitor News Alerts" });
+  };
+
+  const handleBulkSummarize = () => {
+    if (!selectedItems.length) return;
+    setSummaryOpen(true);
   };
 
   const hasFilters = search || firmFilter || contactFilter;
@@ -239,6 +286,35 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
           </div>
         </div>
 
+        {/* Bulk action bar — shown when items are selected */}
+        {selectedIds.size > 0 && (
+          <div className="flex items-center gap-2 flex-wrap px-4 py-2 border-b border-indigo-100 bg-indigo-50/80">
+            <span className="text-xs font-semibold text-indigo-700">
+              {selectedIds.size} of {filteredNews.length} selected
+            </span>
+            <button type="button" onClick={selectAll} className="text-xs text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1 disabled:opacity-40" disabled={filteredNews.length === 0}>
+              <CheckSquare className="w-3.5 h-3.5" /> Select all
+            </button>
+            <button type="button" onClick={clearSelection} className="text-xs text-gray-500 hover:text-gray-700 inline-flex items-center gap-1">
+              <X className="w-3.5 h-3.5" /> Clear
+            </button>
+            <div className="h-4 w-px bg-indigo-200" />
+            <button type="button" onClick={handleBulkHide} className="text-xs text-gray-600 hover:text-gray-800 inline-flex items-center gap-1">
+              <EyeOff className="w-3.5 h-3.5" /> Hide
+            </button>
+            <button type="button" onClick={handleBulkUnhide} className="text-xs text-gray-600 hover:text-gray-800 inline-flex items-center gap-1">
+              <Eye className="w-3.5 h-3.5" /> Unhide
+            </button>
+            <div className="h-4 w-px bg-indigo-200" />
+            <button type="button" onClick={handleBulkExportPdf} className="text-xs text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1">
+              <Download className="w-3.5 h-3.5" /> Export PDF
+            </button>
+            <button type="button" onClick={handleBulkSummarize} className="text-xs text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1">
+              <FileText className="w-3.5 h-3.5" /> Summarize
+            </button>
+          </div>
+        )}
+
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
           {isLoading ? (
@@ -268,6 +344,14 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
               return (
                 <div key={item.id} className={`rounded-xl border ${item.is_pinned ? "border-rose-200 bg-rose-50/20" : "border-gray-200 bg-white"} overflow-hidden ${item.is_hidden ? "opacity-50" : ""}`}>
                   <div className="flex items-start gap-2.5 px-3 py-2.5">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(item.id)}
+                      onChange={() => toggleSelect(item.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="mt-1 w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 flex-shrink-0 cursor-pointer"
+                      title="Select article"
+                    />
                     <div className={`mt-0.5 w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${alertStyle.bg}`}>
                       <AlertIcon className={`w-3.5 h-3.5 ${alertStyle.color}`} />
                     </div>
@@ -363,6 +447,11 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
           )}
         </div>
       </div>
+      <NewsSelectionSummaryDialog
+        open={summaryOpen}
+        onOpenChange={setSummaryOpen}
+        items={selectedItems}
+      />
     </div>
   );
 }
