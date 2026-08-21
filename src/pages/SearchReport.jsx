@@ -3,6 +3,7 @@ import { base44 } from "@/api/base44Client";
 import ReactMarkdown from "react-markdown";
 import { useNavigate } from "react-router-dom";
 import { Search, Send, Loader2, MessageSquare, Plus, ChevronDown, ChevronRight, X } from "lucide-react";
+import AgentProgressIndicator from "@/components/search/AgentProgressIndicator";
 
 const AGENT_NAME = "search_report";
 
@@ -233,13 +234,7 @@ export default function SearchReport() {
           ) : (
             <>
               {messages.map((m, i) => <MessageBubble key={i} message={m} />)}
-              {loading && messages[messages.length - 1]?.role === "user" && (
-                <div className="flex justify-start">
-                  <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-md px-4 py-3 text-sm text-gray-400 flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" /> Searching...
-                  </div>
-                </div>
-              )}
+              {loading && <AgentProgressIndicator messages={messages} />}
             </>
           )}
         </div>
