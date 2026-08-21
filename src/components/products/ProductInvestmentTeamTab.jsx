@@ -138,13 +138,22 @@ export default function ProductInvestmentTeamTab({ productId, firmId }) {
     enabled: !!productId,
   });
 
-  const { data: allContacts = [] } = useQuery({
-    queryKey: ["contacts-all"],
-    queryFn: () => base44.entities.Contact.list("last_name", 500),
-  });
-
   const team = product?.investment_team || [];
   const memberIds = team.map((m) => m.contact_id);
+
+  // Fetch only the contacts that are actually on this team (by id), so members
+  // are never hidden by the 500-row global list cap.
+  const { data: teamContacts = [] } = useQuery({
+    queryKey: ["team-contacts", memberIds],
+    queryFn: () =>
+      memberIds.length ? base44.entities.Contact.filter({ id: { $in: memberIds } }) : [],
+    enabled: memberIds.length > 0,
+  });
+  const contactMap = useMemo(() => {
+    const m = new Map();
+    teamContacts.forEach((c) => m.set(c.id, c));
+    return m;
+  }, [teamContacts]);
 
   const updateTeam = useMutation({
     mutationFn: (newTeam) =>
@@ -188,8 +197,8 @@ export default function ProductInvestmentTeamTab({ productId, firmId }) {
   // Sort: key members first, then alphabetically
   const sortedTeam = [...team].sort((a, b) => {
     if (a.is_key !== b.is_key) return a.is_key ? -1 : 1;
-    const ca = allContacts.find((c) => c.id === a.contact_id);
-    const cb = allContacts.find((c) => c.id === b.contact_id);
+    const ca = contactMap.get(a.contact_id);
+    const cb = contactMap.get(b.contact_id);
     return (ca?.last_name || "").localeCompare(cb?.last_name || "");
   });
 
@@ -209,7 +218,7 @@ export default function ProductInvestmentTeamTab({ productId, firmId }) {
       ) : (
         <div className="space-y-2">
           {sortedTeam.map((member) => {
-            const contact = allContacts.find((c) => c.id === member.contact_id);
+            const contact = contactMap.get(member.contact_id);
             if (!contact) return null;
             return (
               <div
