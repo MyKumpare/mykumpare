@@ -844,10 +844,32 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                 )}
               </div>
             </div>
-          ) : (
-            <DialogTitle>
-              {editingContact ? "Edit Contact" : "Add Contact"}
+          ) : editingContact ? (
+            <DialogTitle className="flex items-center gap-3">
+              {photoUrl && (
+                <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center overflow-hidden flex-shrink-0 border-2 border-indigo-200">
+                  <button
+                    type="button"
+                    onClick={() => setPhotoZoomOpen(true)}
+                    className="w-full h-full block cursor-zoom-in"
+                    title="Click to view full photo"
+                  >
+                    <img src={photoUrl} alt="Contact" className="w-full h-full object-cover" />
+                  </button>
+                </div>
+              )}
+              <span className="flex items-baseline gap-2 flex-wrap">
+                <span className="text-base">{formatFullName()}</span>
+                {designations?.length > 0 && (
+                  <span className="text-sm text-gray-500 font-normal">{designations.join(", ")}</span>
+                )}
+              </span>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-100 text-indigo-700">
+                Edit Contact
+              </span>
             </DialogTitle>
+          ) : (
+            <DialogTitle>Add Contact</DialogTitle>
           )}
         </DialogHeader>
 
