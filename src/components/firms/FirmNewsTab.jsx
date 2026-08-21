@@ -437,13 +437,14 @@ export default function FirmNewsTab({ firmId, firmName }) {
           firmId={firmId}
           firmName={firmName}
           onSave={async (data) => {
-            const created = await base44.entities.FirmNews.create({
-              ...data,
-              tenant_id: firmId,
-              firm_id: firmId,
-              firm_name: firmName,
-            });
-            try { await base44.functions.invoke('autoTagNewsMention', { news_id: created.id }); } catch (e) { /* tagging is best-effort */ }
+            try {
+              const res = await base44.functions.invoke('saveFirmNewsItem', { data, firm_id: firmId, firm_name: firmName });
+              if (res.data?.merged) {
+                toast({ title: "Article already exists", description: "Linked to this firm instead of creating a duplicate." });
+              }
+            } catch (e) {
+              toast({ title: "Save failed", description: e.message, variant: "destructive" });
+            }
             queryClient.invalidateQueries({ queryKey: ["firm_news"] });
             setAddingManual(false);
           }}

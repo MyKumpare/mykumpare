@@ -1,6 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { waitUntil } from 'base44:runtime';
 import { autoTagNewsItems } from '../../shared/newsAutoTag.ts';
+import { dedupCreateNews } from '../../shared/newsDedup.ts';
 
 export default async function(req: Request): Promise<Response> {
   try {
@@ -217,42 +218,11 @@ Only include real, findable articles. Do not fabricate news. If no news is found
 
     if (!allNewsItems.length) return [];
 
-    // Deduplicate against existing news for this firm (same headline + URL)
-    const existing = await base44.asServiceRole.entities.FirmNews.filter({ firm_id: firm.id }).catch(() => []);
-    const existingKeys = new Set(existing.map(n => `${(n.headline || '').toLowerCase().trim()}||${(n.article_url || '').toLowerCase().trim()}`));
-
-    // Also deduplicate within this batch (same item might appear across periods)
-    const seenInBatch = new Set();
-
     const resolvedTenant = tenantId || firm.tenant_id || firm.id;
-
-    const toCreate = allNewsItems
-      .filter(item => {
-        const key = `${(item.headline || '').toLowerCase().trim()}||${(item.article_url || '').toLowerCase().trim()}`;
-        if (existingKeys.has(key) || seenInBatch.has(key)) return false;
-        seenInBatch.add(key);
-        return true;
-      })
-      .map(item => ({
-        tenant_id: resolvedTenant,
-        firm_id: firm.id,
-        firm_name: firm.name,
-        news_date: item.date || new Date().toISOString().split('T')[0],
-        headline: item.headline || 'Untitled',
-        summary: item.summary || '',
-        alert_status: item.alert_status || 'Low',
-        news_status: item.news_status || 'Neutral',
-        article_url: item.article_url || '',
-        source_type: item.source_type || 'firm',
-        source_name: item.source_name || firm.name,
-        scrub_batch_id: batchId,
-        is_pinned: false,
-      }));
-
-    if (!toCreate.length) return [];
-
-    const created = await base44.asServiceRole.entities.FirmNews.bulkCreate(toCreate);
-    await autoTagNewsItems(base44, created, tagContext?.contacts, tagContext?.firms);
+    const { created } = await dedupCreateNews(base44, allNewsItems, {
+      firmId: firm.id, firmName: firm.name, tenantId: resolvedTenant, batchId,
+    });
+    if (created.length) await autoTagNewsItems(base44, created, tagContext?.contacts, tagContext?.firms);
     return created;
   } catch (error) {
     console.error(`scrubOneFirmHistorical error for ${firm.name}:`, error.message);
@@ -329,41 +299,12 @@ Only include real, findable articles about this specific person. Do not fabricat
 
     if (!allNewsItems.length) return [];
 
-    // Deduplicate against existing news for this firm + contact (same headline + URL)
-    const existing = await base44.asServiceRole.entities.FirmNews.filter({ firm_id: firm.id }).catch(() => []);
-    const existingKeys = new Set(existing.map(n => `${(n.headline || '').toLowerCase().trim()}||${(n.article_url || '').toLowerCase().trim()}`));
-
-    const seenInBatch = new Set();
     const resolvedTenant = tenantId || firm.tenant_id || firm.id;
-
-    const toCreate = allNewsItems
-      .filter(item => {
-        const key = `${(item.headline || '').toLowerCase().trim()}||${(item.article_url || '').toLowerCase().trim()}`;
-        if (existingKeys.has(key) || seenInBatch.has(key)) return false;
-        seenInBatch.add(key);
-        return true;
-      })
-      .map(item => ({
-        tenant_id: resolvedTenant,
-        firm_id: firm.id,
-        firm_name: firm.name,
-        news_date: item.date || new Date().toISOString().split('T')[0],
-        headline: item.headline || 'Untitled',
-        summary: item.summary || '',
-        alert_status: item.alert_status || 'Low',
-        news_status: item.news_status || 'Neutral',
-        article_url: item.article_url || '',
-        source_type: 'contact',
-        source_id: contact.id,
-        source_name: contactName,
-        scrub_batch_id: batchId,
-        is_pinned: false,
-      }));
-
-    if (!toCreate.length) return [];
-
-    const created = await base44.asServiceRole.entities.FirmNews.bulkCreate(toCreate);
-    await autoTagNewsItems(base44, created);
+    const { created } = await dedupCreateNews(base44, allNewsItems, {
+      firmId: firm.id, firmName: firm.name, contactId: contact.id, contactName: contactName,
+      tenantId: resolvedTenant, batchId,
+    });
+    if (created.length) await autoTagNewsItems(base44, created);
     return created;
   } catch (error) {
     console.error(`scrubOneContactHistorical error for ${contact.first_name} ${contact.last_name}:`, error.message);
