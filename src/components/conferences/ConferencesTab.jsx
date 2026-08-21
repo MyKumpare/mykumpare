@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import {
   CalendarDays, MapPin, DollarSign, ExternalLink, Building2, Tag,
   Loader2, LayoutList, CalendarDays as CalIcon, Award, ClipboardCheck,
+  UserX,
 } from "lucide-react";
 import ConferenceFeesChart from "@/components/conferences/ConferenceFeesChart";
 
@@ -47,9 +48,12 @@ function fmtRange(start, end) {
 }
 
 export default function ConferencesTab() {
-  const [view, setView] = useState("list"); // "list" | "calendar"
+  const [view, setView] = useState("list"); // "list" | "calendar" | "unassigned"
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
+
+  const today = new Date();
+  const todayStr = format(today, "yyyy-MM-dd");
 
   const { data: conferences = [], isLoading } = useQuery({
     queryKey: ["all_conferences"],
@@ -72,6 +76,14 @@ export default function ConferencesTab() {
     });
     return map;
   }, [sorted]);
+
+  // Upcoming conferences with no internal attendees assigned — sorted soonest first.
+  const unassigned = useMemo(() => {
+    return sorted
+      .filter(c => (c.conference_date || "") >= todayStr)
+      .filter(c => !c.internal_attendee_contact_ids || c.internal_attendee_contact_ids.length === 0)
+      .sort((a, b) => (a.conference_date || "").localeCompare(b.conference_date || ""));
+  }, [sorted, todayStr]);
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
