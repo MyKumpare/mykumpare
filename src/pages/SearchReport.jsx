@@ -111,14 +111,15 @@ export default function SearchReport() {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages, loading]);
 
-  const newConversation = async () => {
+  const newConversation = async (name) => {
     const conv = await base44.agents.createConversation({
       agent_name: AGENT_NAME,
-      metadata: { name: "New Search", description: "Data search & report" },
+      metadata: { name: name || "New Search", description: "Data search & report" },
     });
     setConversations((prev) => [conv, ...prev]);
     setActiveId(conv.id);
     setMessages(conv.messages || []);
+    return conv;
   };
 
   const selectConversation = async (id) => {
@@ -131,16 +132,23 @@ export default function SearchReport() {
 
   const send = async () => {
     if (!input.trim() || loading) return;
-    if (!activeId) { await newConversation(); }
-    const content = input.trim();
+    let convId = activeId;
+    let conv;
+    if (!convId) {
+      conv = await newConversation(input.trim().slice(0, 60) || "New Search");
+      convId = conv.id;
+    } else {
+      conv = conversations.find((c) => c.id === convId);
+    }
+    const userMsg = { role: "user", content: input.trim() };
+    setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setLoading(true);
     try {
-      const conv = await base44.agents.getConversation(activeId);
-      await base44.agents.addMessage(conv, { role: "user", content });
-      setMessages((prev) => [...prev, { role: "user", content }]);
-    } catch {
+      await base44.agents.addMessage({ ...conv, id: convId, messages: [...messages, userMsg] }, userMsg);
+    } catch (e) {
       setLoading(false);
+      setMessages((prev) => [...prev, { role: "assistant", content: `Error: ${e?.message || "Failed to send message"}` }]);
     }
   };
 
@@ -214,7 +222,7 @@ export default function SearchReport() {
                 ].map((ex) => (
                   <button
                     key={ex}
-                    onClick={() => { if (!activeId) newConversation(); setTimeout(() => setInput(ex), 200); }}
+                    onClick={() => setInput(ex)}
                     className="text-sm text-gray-600 border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50 hover:border-violet-200 transition-colors"
                   >
                     {ex}
@@ -248,7 +256,7 @@ export default function SearchReport() {
             />
             <button
               onClick={send}
-              disabled={!input.trim() || loading || !activeId}
+              disabled={!input.trim() || loading}
               className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-violet-600 text-white disabled:opacity-40 hover:bg-violet-700 transition-colors shrink-0"
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
