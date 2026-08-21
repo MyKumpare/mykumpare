@@ -1,107 +1,125 @@
-import React, { useState, useRef, useEffect } from "react";
-import ReactDOM from "react-dom";
+import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Star, StarOff, X, UserPlus, User } from "lucide-react";
+import { Plus, Star, StarOff, X, UserPlus, Search, User } from "lucide-react";
 import AddContactDialog from "@/components/contacts/AddContactDialog";
 
-// A small searchable contact picker dropdown
+// Inline contact picker that proactively shows all firm contacts in a
+// compact, scrollable list. A search box narrows the list when needed.
 function ContactPicker({ firmId, existingMemberIds, onAdd }) {
   const [search, setSearch] = useState("");
-  const [open, setOpen] = useState(false);
-  const [dropdownStyle, setDropdownStyle] = useState({});
-  const inputRef = useRef(null);
 
   const { data: contacts = [] } = useQuery({
     queryKey: ["contacts-all"],
     queryFn: () => base44.entities.Contact.list("last_name", 500),
   });
 
-  const activeContacts = contacts.filter((c) => !c.deleted_at);
+  const getFullName = (c) =>
+    [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ");
 
-  const getFullName = (c) => [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ");
-  const searchLower = search.toLowerCase();
+  const activeContacts = useMemo(() => contacts.filter((c) => !c.deleted_at), [contacts]);
+  const searchLower = search.toLowerCase().trim();
 
-  const firmContacts = activeContacts
-    .filter((c) => firmId && Array.isArray(c.firm_ids) && c.firm_ids.some((id) => String(id) === String(firmId)))
-    .filter((c) => !existingMemberIds.includes(c.id))
-    .filter((c) => !search || getFullName(c).toLowerCase().includes(searchLower))
-    .sort((a, b) => (a.last_name || "").localeCompare(b.last_name || ""));
+  const firmContacts = useMemo(
+    () =>
+      activeContacts
+        .filter(
+          (c) => firmId && Array.isArray(c.firm_ids) && c.firm_ids.some((id) => String(id) === String(firmId))
+        )
+        .filter((c) => !existingMemberIds.includes(c.id))
+        .filter((c) => !searchLower || getFullName(c).toLowerCase().includes(searchLower))
+        .sort((a, b) => (a.last_name || "").localeCompare(b.last_name || "")),
+    [activeContacts, firmId, existingMemberIds, searchLower]
+  );
 
-  const firmContactIds = new Set(firmContacts.map((c) => c.id));
-  const otherContacts = activeContacts
-    .filter((c) => !firmContactIds.has(c.id) && !existingMemberIds.includes(c.id))
-    .filter((c) => !!search && getFullName(c).toLowerCase().includes(searchLower))
-    .sort((a, b) => (a.last_name || "").localeCompare(b.last_name || ""));
+  const firmContactIds = useMemo(() => new Set(firmContacts.map((c) => c.id)), [firmContacts]);
+  const otherContacts = useMemo(
+    () =>
+      activeContacts
+        .filter((c) => !firmContactIds.has(c.id) && !existingMemberIds.includes(c.id))
+        .filter((c) => !!searchLower && getFullName(c).toLowerCase().includes(searchLower))
+        .sort((a, b) => (a.last_name || "").localeCompare(b.last_name || "")),
+    [activeContacts, firmContactIds, existingMemberIds, searchLower]
+  );
 
-  const handleOpen = () => {
-    if (inputRef.current) {
-      const rect = inputRef.current.getBoundingClientRect();
-      setDropdownStyle({
-        position: "fixed",
-        top: rect.bottom + 4,
-        left: rect.left,
-        width: rect.width,
-        zIndex: 9999,
-      });
-    }
-    setOpen(true);
-  };
-
-  const renderContact = (c) => (
+  const renderRow = (c) => (
     <button
       key={c.id}
       type="button"
-      className="w-full text-left px-3 py-2 text-sm hover:bg-indigo-50 flex flex-col"
-      onMouseDown={(e) => { e.preventDefault(); onAdd(c); setSearch(""); setOpen(false); }}
+      onClick={() => onAdd(c)}
+      className="w-full text-left px-2.5 py-2 rounded-md hover:bg-indigo-50 flex items-center gap-2.5 group transition-colors"
     >
-      <span className="font-medium text-gray-800">
-        {getFullName(c)}{c.designations?.length > 0 ? `, ${c.designations.join(", ")}` : ""}
-      </span>
-      {c.title && <span className="text-xs text-gray-400">{c.title}</span>}
+      {c.photo_url ? (
+        <img src={c.photo_url} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
+      ) : (
+        <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+          <User className="w-3.5 h-3.5 text-indigo-400" />
+        </div>
+      )}
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-medium text-gray-800 truncate">
+          {getFullName(c)}
+          {c.designations?.length > 0 ? `, ${c.designations.join(", ")}` : ""}
+        </div>
+        {c.title && <div className="text-xs text-gray-400 truncate">{c.title}</div>}
+      </div>
+      <Plus className="w-4 h-4 text-gray-300 group-hover:text-indigo-600 flex-shrink-0" />
     </button>
   );
 
-  const dropdown = open ? ReactDOM.createPortal(
-    <div style={dropdownStyle} className="rounded-md border bg-white shadow-lg max-h-56 overflow-y-auto">
-      {firmContacts.length === 0 && otherContacts.length === 0 ? (
-        <div className="px-3 py-2 text-sm text-gray-400 italic">
-          {search ? "No matching contacts found" : "No contacts linked to this firm"}
-        </div>
-      ) : (
-        <>
-          {firmContacts.length > 0 && (
-            <>
-              {firmId && <div className="px-3 py-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider bg-gray-50">Firm Contacts</div>}
-              {firmContacts.map(renderContact)}
-            </>
-          )}
-          {otherContacts.length > 0 && (
-            <>
-              <div className="px-3 py-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider bg-gray-50">Other Contacts</div>
-              {otherContacts.map(renderContact)}
-            </>
-          )}
-        </>
-      )}
-    </div>,
-    document.body
-  ) : null;
+  const hasFirmContacts = firmContacts.length > 0;
+  const hasOtherContacts = otherContacts.length > 0;
 
   return (
-    <div className="relative">
-      <input
-        ref={inputRef}
-        className="w-full h-8 px-3 text-sm rounded-md border border-input bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-        placeholder="Search contacts by name..."
-        value={search}
-        onChange={(e) => { setSearch(e.target.value); handleOpen(); }}
-        onFocus={handleOpen}
-        onBlur={() => setTimeout(() => setOpen(false), 200)}
-      />
-      {dropdown}
+    <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+      {/* Search header */}
+      <div className="flex items-center gap-2 px-2.5 py-2 border-b border-gray-100 bg-gray-50">
+        <Search className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+        <input
+          autoFocus
+          className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
+          placeholder="Search contacts by name..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        {search && (
+          <span className="text-xs text-gray-400 flex-shrink-0">
+            {firmContacts.length + otherContacts.length} match{firmContacts.length + otherContacts.length === 1 ? "" : "es"}
+          </span>
+        )}
+      </div>
+
+      {/* Contact list */}
+      <div className="max-h-64 overflow-y-auto p-1.5 space-y-0.5">
+        {!hasFirmContacts && !hasOtherContacts ? (
+          <div className="px-3 py-6 text-sm text-gray-400 italic text-center">
+            {search ? "No matching contacts found" : "No contacts linked to this firm"}
+          </div>
+        ) : (
+          <>
+            {hasFirmContacts && (
+              <div className="space-y-0.5">
+                {firmId && (
+                  <div className="px-2.5 pt-1 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                    Firm Contacts ({firmContacts.length})
+                  </div>
+                )}
+                {firmContacts.map(renderRow)}
+              </div>
+            )}
+            {hasOtherContacts && (
+              <div className="space-y-0.5">
+                <div className="px-2.5 pt-2 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                  Other Contacts ({otherContacts.length})
+                </div>
+                {otherContacts.map(renderRow)}
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
