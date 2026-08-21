@@ -35,7 +35,7 @@
         "Low"
       ],
       "default": "Low",
-      "description": "Impact-based alert level assigned by the AI scrub"
+      "description": "Impact-based alert level assigned by the AI scrub. Users can manually override this value; each manual change is recorded in status_change_history."
     },
     "news_status": {
       "type": "string",
@@ -45,7 +45,7 @@
         "Neutral"
       ],
       "default": "Neutral",
-      "description": "Sentiment of the news article"
+      "description": "Sentiment of the news article. Users can manually override this value; each manual change is recorded in status_change_history."
     },
     "article_url": {
       "type": "string",
@@ -102,6 +102,51 @@
       "description": "User-assigned content tags for this news article (e.g. 'Newsletter', 'Research Paper'). Users can add custom tags beyond the defaults.",
       "items": {
         "type": "string"
+      }
+    },
+    "status_change_history": {
+      "type": "array",
+      "description": "Audit log of manual changes to alert_status or news_status. Each entry records the field changed, previous and new values, who made the change, when, and a justification note. The last entry for a given field is used to display the 'edited by' hover indicator on the badge.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "field": {
+            "type": "string",
+            "enum": [
+              "alert_status",
+              "news_status"
+            ],
+            "description": "Which status field was changed"
+          },
+          "previous_value": {
+            "type": "string",
+            "description": "The value before this change"
+          },
+          "new_value": {
+            "type": "string",
+            "description": "The value after this change"
+          },
+          "changed_by_id": {
+            "type": "string",
+            "description": "User ID of the person who made the change"
+          },
+          "changed_by_name": {
+            "type": "string",
+            "description": "Display name of the person who made the change (denormalized)"
+          },
+          "changed_date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when the change was made"
+          },
+          "note": {
+            "type": "string",
+            "description": "Justification note provided by the user for this change"
+          }
+        }
       }
     },
     "scrub_batch_id": {

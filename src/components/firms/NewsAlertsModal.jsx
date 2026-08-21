@@ -15,6 +15,7 @@ import { generateNewsSelectionPdf } from "@/components/news/newsSelectionPdf";
 import NewsSelectionSummaryDialog from "@/components/news/NewsSelectionSummaryDialog";
 import NewsContentTags from "@/components/news/NewsContentTags";
 import NewsStatusBadges from "@/components/news/NewsStatusBadges";
+import NewsStatusBadge from "@/components/news/NewsStatusBadge";
 
 const ALERT_STYLES = {
   High: { color: "text-red-600", bg: "bg-red-50", border: "border-red-200", icon: AlertTriangle },
@@ -419,12 +420,8 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
                               <EyeOff className="w-2.5 h-2.5" /> Hidden
                             </span>
                           )}
-                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${alertStyle.bg} ${alertStyle.color}`}>
-                            {item.alert_status}
-                          </span>
-                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${statusStyle.bg} ${statusStyle.color}`}>
-                            {item.news_status}
-                          </span>
+                          <NewsStatusBadge item={item} field="alert_status" />
+                          <NewsStatusBadge item={item} field="news_status" />
                           {(item.content_tags || []).map(tag => (
                             <span key={tag} className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full border border-violet-200 bg-violet-50 text-violet-700">
                               {tag}

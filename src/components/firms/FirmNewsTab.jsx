@@ -23,6 +23,7 @@ import { generateNewsSelectionPdf } from "../news/newsSelectionPdf";
 import { lazyDialog } from "../common/lazyDialog";
 import NewsContentTags from "../news/NewsContentTags";
 import NewsStatusBadges from "../news/NewsStatusBadges";
+import NewsStatusBadge from "../news/NewsStatusBadge";
 const NewsSummaryDialog = lazyDialog(() => import("../news/NewsSummaryDialog"));
 
 const QUILL_MODULES = {
@@ -586,12 +587,8 @@ export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, 
             <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
               <span className="text-[9px] text-gray-400 font-semibold uppercase tracking-wide">Alert &amp; Status</span>
               <div className="flex items-center gap-1">
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${alertStyle.bg} ${alertStyle.color}`}>
-                  {item.alert_status}
-                </span>
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${statusStyle.bg} ${statusStyle.color}`}>
-                  {item.news_status}
-                </span>
+                <NewsStatusBadge item={item} field="alert_status" />
+                <NewsStatusBadge item={item} field="news_status" />
                 {item.is_pinned && (
                   <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-600 flex items-center gap-0.5">
                     <Pin className="w-2.5 h-2.5" /> Pinned
