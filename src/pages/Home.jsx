@@ -370,6 +370,7 @@ export default function Home() {
       base44.entities.CustomReport.subscribe(() => invalidate([["custom_reports_search"], ["custom_reports"]])),
       base44.entities.Template.subscribe(() => invalidate([["templates"]])),
       base44.entities.TemplateType.subscribe(() => invalidate([["template_types"]])),
+      base44.entities.ContactPipelineStage.subscribe(() => invalidate([["contact_pipeline_stages"]])),
     ];
     return () => subs.forEach((unsub) => unsub && unsub());
   }, [queryClient]);

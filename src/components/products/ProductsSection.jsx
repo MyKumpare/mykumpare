@@ -6,6 +6,7 @@ import SectionSearch from "@/components/common/SectionSearch";
 import SectionTypeFilter from "@/components/common/SectionTypeFilter";
 import SectionExpandCollapse from "@/components/common/SectionExpandCollapse";
 import ProductStatusBadge from "@/components/products/ProductStatusBadge";
+import ProductFundingSummary from "@/components/products/ProductFundingSummary";
 import { useViewMode } from "@/hooks/useViewMode";
 
 const PRODUCT_GROUP_TYPES = ["Investment Manager"];
@@ -153,6 +154,7 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
 
       {expanded && (
         <div className="pl-2 border-l-2 border-gray-100 space-y-4">
+          <ProductFundingSummary products={filteredProducts} firms={firms} />
           <SectionSearch value={search} onChange={setSearch} placeholder="Search by product, firm, or type..." />
           <div className="flex items-center justify-between mb-2">
             <SectionTypeFilter

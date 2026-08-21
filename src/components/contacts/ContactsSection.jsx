@@ -1,12 +1,19 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, ChevronDown, ChevronRight, User, Camera, Download } from "lucide-react";
+import { Plus, ChevronDown, ChevronRight, User, Camera, Download, Settings2 } from "lucide-react";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
 import SectionTypeFilter from "@/components/common/SectionTypeFilter";
 import SectionExpandCollapse from "@/components/common/SectionExpandCollapse";
 import ContactsSectionFilters, { filterSectionContacts } from "@/components/contacts/ContactsSectionFilters";
 import { useViewMode } from "@/hooks/useViewMode";
 import { exportContactsToCSV } from "./exportContactsCsv";
+import ContactPipelineKanban from "./ContactPipelineKanban";
+import { lazyDialog } from "@/components/common/lazyDialog";
+import { toast } from "@/components/ui/use-toast";
+
+const ContactPipelineStageEditor = lazyDialog(() => import("./ContactPipelineStageEditor"));
 
 const FIRM_TYPES = [
   "Investment Manager",
@@ -56,6 +63,19 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
   const [filterSelected, setFilterSelected] = useState({});
   const [filterDateRange, setFilterDateRange] = useState({ start: "", end: "" });
   const [typeFilter, setTypeFilter] = useState("all");
+  const [stageEditorOpen, setStageEditorOpen] = useState(false);
+  const queryClient = useQueryClient();
+
+  const { data: pipelineStages = [] } = useQuery({
+    queryKey: ["contact_pipeline_stages"],
+    queryFn: () => base44.entities.ContactPipelineStage.list("order", 500),
+  });
+
+  const handleMoveContact = (contact, newStage) => {
+    base44.entities.Contact.update(contact.id, { pipeline_stage: newStage })
+      .then(() => queryClient.invalidateQueries({ queryKey: ["contacts"] }))
+      .catch((err) => toast({ title: "Failed to move contact", description: err?.message, variant: "destructive" }));
+  };
 
   const handleToggleFilter = (fieldKey, value) => {
     setFilterSelected((prev) => {
@@ -220,6 +240,18 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
         </button>
         <div className="flex items-center gap-2">
           <ViewModeToggle value={viewMode} onChange={(m) => { setViewMode(m); setExpanded(true); }} />
+          {viewMode === "kanban" && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-gray-600 hover:text-gray-700 hover:bg-gray-100 gap-1 text-xs"
+              onClick={() => setStageEditorOpen(true)}
+              title="Manage pipeline stages"
+            >
+              <Settings2 className="w-3.5 h-3.5" />
+              Stages
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
@@ -415,38 +447,12 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
           )}
 
           {viewMode === "kanban" && (
-            <div className="flex gap-3 overflow-x-auto pb-2">
-              {FIRM_TYPES.filter((t) => grouped[t]).map((gt) => {
-                const firmGroups = grouped[gt];
-                const allContacts = firmGroups.flatMap((g) => g.contacts);
-                return (
-                  <div key={gt} className="flex-shrink-0 w-72">
-                    <div className={`flex items-center gap-2 mb-2 px-3 py-1.5 rounded-lg ${contactColor(gt)}`}>
-                      <span className="text-xs font-semibold uppercase tracking-wide truncate">{gt}</span>
-                      <span className="text-xs ml-auto">{allContacts.length}</span>
-                    </div>
-                    <div className="space-y-2">
-                      {allContacts.map((contact) => (
-                        <ContactMiniCard key={contact.id} contact={contact} />
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-              {unassignedContacts.length > 0 && (
-                <div className="flex-shrink-0 w-72">
-                  <div className="flex items-center gap-2 mb-2 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-500">
-                    <span className="text-xs font-semibold uppercase tracking-wide">No Firm</span>
-                    <span className="text-xs ml-auto">{unassignedContacts.length}</span>
-                  </div>
-                  <div className="space-y-2">
-                    {unassignedContacts.map((contact) => (
-                      <ContactMiniCard key={contact.id} contact={contact} />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+            <ContactPipelineKanban
+              contacts={filteredContacts}
+              stages={pipelineStages}
+              onMoveContact={handleMoveContact}
+              onContactClick={onContactClick}
+            />
           )}
 
           {totalContacts === 0 && (
@@ -456,6 +462,8 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
           )}
         </div>
       )}
+
+      <ContactPipelineStageEditor open={stageEditorOpen} onOpenChange={setStageEditorOpen} />
     </div>
   );
 }

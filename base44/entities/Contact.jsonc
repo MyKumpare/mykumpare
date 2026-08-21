@@ -308,6 +308,10 @@
         }
       }
     },
+    "pipeline_stage": {
+      "type": "string",
+      "description": "Current pipeline stage for the contact Kanban board (name of a ContactPipelineStage record). Empty means the contact has not been placed in the pipeline yet; it appears in the first stage column until moved."
+    },
     "notes": {
       "type": "string",
       "description": "Additional notes about the contact"
