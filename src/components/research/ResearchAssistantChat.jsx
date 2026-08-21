@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { base44 } from "@/api/base44Client";
-import { Send, MessageSquare, Plus, ChevronDown, ChevronRight, Loader2, Pencil } from "lucide-react";
+import { Send, MessageSquare, Plus, ChevronDown, ChevronRight, Loader2, Pencil, FileDown } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import { exportAgentConversationPdf } from "@/components/ai/agentReportPdf";
 
 const AGENT_NAME = "research_assistant";
 
@@ -251,6 +252,15 @@ export default function ResearchAssistantChat() {
             <h3 className="text-sm font-semibold text-gray-800 truncate">Research & Benchmarking Assistant</h3>
             <p className="text-xs text-gray-400 truncate">Compare firms, products, and benchmarks with AI-powered analysis</p>
           </div>
+          <button
+            onClick={() => exportAgentConversationPdf({ title: (conversations.find((c) => c.id === activeConversationId)?.metadata?.name) || "Research Session", agentName: "Research Assistant", messages })}
+            disabled={messages.length === 0}
+            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-violet-50 hover:bg-violet-100 text-violet-700 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+            title="Export conversation as PDF"
+          >
+            <FileDown className="w-4 h-4" />
+            Export PDF
+          </button>
         </div>
 
         {/* Messages */}

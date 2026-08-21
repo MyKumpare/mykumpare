@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Send, Bot, Loader2, X, History, Trash2, Plus, MessageSquare, Mic, ArrowRight, GripVertical } from "lucide-react";
+import { Send, Bot, Loader2, X, History, Trash2, Plus, MessageSquare, Mic, ArrowRight, GripVertical, FileDown } from "lucide-react";
+import { exportAgentConversationPdf } from "./agentReportPdf";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -663,6 +664,14 @@ export default function AIAssistant() {
               </div>
             </div>
             <div className="flex items-center gap-1">
+              <button
+                onClick={() => exportAgentConversationPdf({ title: messages.find((m) => m.role === "user")?.content?.slice(0, 60) || "MyKumpare Assistant", agentName: "MyKumpare Assistant", messages })}
+                disabled={!messages.some((m) => m.role === "user")}
+                className="p-1 rounded transition-colors text-white/80 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Export chat as PDF"
+              >
+                <FileDown className="w-4 h-4" />
+              </button>
               <button
                 onClick={() => setShowHistory((s) => !s)}
                 className={`p-1 rounded transition-colors ${showHistory ? "text-white bg-white/20" : "text-white/80 hover:text-white"}`}

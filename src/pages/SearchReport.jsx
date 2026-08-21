@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import ReactMarkdown from "react-markdown";
 import { useNavigate } from "react-router-dom";
-import { Search, Send, Loader2, MessageSquare, Plus, ChevronDown, ChevronRight, X } from "lucide-react";
+import { Search, Send, Loader2, MessageSquare, Plus, ChevronDown, ChevronRight, X, FileDown } from "lucide-react";
 import AgentProgressIndicator from "@/components/search/AgentProgressIndicator";
+import { exportAgentConversationPdf } from "@/components/ai/agentReportPdf";
 
 const AGENT_NAME = "search_report";
 
@@ -196,14 +197,25 @@ export default function SearchReport() {
         <div className="border-b border-gray-200 bg-white px-5 py-3 flex items-center gap-2">
           <Search className="w-4 h-4 text-violet-600" />
           <h1 className="text-sm font-semibold text-gray-800">Data Search & Report Agent</h1>
-          <button
-            onClick={() => navigate("/")}
-            className="ml-auto inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium transition-colors"
-            title="Close agent"
-          >
-            <X className="w-4 h-4" />
-            Close
-          </button>
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              onClick={() => exportAgentConversationPdf({ title: active?.metadata?.name || "Search Report", agentName: "Data Search & Report Agent", messages })}
+              disabled={messages.length === 0}
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-violet-50 hover:bg-violet-100 text-violet-700 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Export conversation as PDF"
+            >
+              <FileDown className="w-4 h-4" />
+              Export PDF
+            </button>
+            <button
+              onClick={() => navigate("/")}
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium transition-colors"
+              title="Close agent"
+            >
+              <X className="w-4 h-4" />
+              Close
+            </button>
+          </div>
         </div>
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-4">
