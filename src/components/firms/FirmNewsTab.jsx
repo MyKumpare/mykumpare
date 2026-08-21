@@ -22,6 +22,7 @@ import NewsBulkActionBar from "../news/NewsBulkActionBar";
 import { generateNewsSelectionPdf } from "../news/newsSelectionPdf";
 import { lazyDialog } from "../common/lazyDialog";
 import NewsContentTags from "../news/NewsContentTags";
+import NewsStatusBadges from "../news/NewsStatusBadges";
 const NewsSummaryDialog = lazyDialog(() => import("../news/NewsSummaryDialog"));
 
 const QUILL_MODULES = {
@@ -608,6 +609,9 @@ export function NewsItemCard({ item, expanded, onToggleExpand, editing, onEdit, 
                 ))}
               </div>
             </div>
+          </div>
+          <div className="mt-1">
+            <NewsStatusBadges item={item} />
           </div>
 
           {/* Date + source */}

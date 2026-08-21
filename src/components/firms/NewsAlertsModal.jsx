@@ -14,6 +14,7 @@ import { generateNewsAlertsPdf } from "@/components/news/newsAlertsPdf";
 import { generateNewsSelectionPdf } from "@/components/news/newsSelectionPdf";
 import NewsSelectionSummaryDialog from "@/components/news/NewsSelectionSummaryDialog";
 import NewsContentTags from "@/components/news/NewsContentTags";
+import NewsStatusBadges from "@/components/news/NewsStatusBadges";
 
 const ALERT_STYLES = {
   High: { color: "text-red-600", bg: "bg-red-50", border: "border-red-200", icon: AlertTriangle },
@@ -430,6 +431,9 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
                             </span>
                           ))}
                         </div>
+                      </div>
+                      <div className="mt-1">
+                        <NewsStatusBadges item={item} />
                       </div>
                       <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-2 flex-wrap">
                         <span className="flex items-center gap-0.5">
