@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Newspaper, Plus, Trash2, Pin, PinOff, ExternalLink, Sparkles, Loader2,
   AlertTriangle, ChevronDown, ChevronUp, Edit2, Check, X, Calendar, History, Search,
+  ArrowDownWideNarrow, ArrowUpWideNarrow,
 } from "lucide-react";
 import { format } from "date-fns";
 import ReactQuill from "react-quill";
@@ -52,6 +53,7 @@ export default function FirmNewsTab({ firmId, firmName }) {
   const [editingId, setEditingId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
   const [alertFilter, setAlertFilter] = useState("All");
+  const [dateSort, setDateSort] = useState("newest");
   const [keywords, setKeywords] = useState([]);
   const [keywordInput, setKeywordInput] = useState("");
   const [showKeywords, setShowKeywords] = useState(false);
@@ -105,9 +107,10 @@ export default function FirmNewsTab({ firmId, firmName }) {
     return [...filtered].sort((a, b) => {
       if (a.is_pinned && !b.is_pinned) return -1;
       if (!a.is_pinned && b.is_pinned) return 1;
-      return (b.news_date || "").localeCompare(a.news_date || "");
+      const cmp = (a.news_date || "").localeCompare(b.news_date || "");
+      return dateSort === "newest" ? -cmp : cmp;
     });
-  }, [activeNews, alertFilter]);
+  }, [activeNews, alertFilter, dateSort]);
 
   const handleScrub = async () => {
     setScrubbing(true);
@@ -206,6 +209,19 @@ export default function FirmNewsTab({ firmId, firmName }) {
                 <SelectItem value="Low">Low</SelectItem>
               </SelectContent>
             </Select>
+          )}
+          {activeNews.length > 0 && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-6 px-1.5 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 gap-1"
+              onClick={() => setDateSort(d => d === "newest" ? "oldest" : "newest")}
+              title={dateSort === "newest" ? "Newest first — click for oldest first" : "Oldest first — click for newest first"}
+            >
+              {dateSort === "newest" ? <ArrowDownWideNarrow className="w-3.5 h-3.5" /> : <ArrowUpWideNarrow className="w-3.5 h-3.5" />}
+              {dateSort === "newest" ? "Newest" : "Oldest"}
+            </Button>
           )}
         </div>
         <div className="flex items-center gap-1.5">
