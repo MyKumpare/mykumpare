@@ -3,16 +3,20 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, FileText, Download } from "lucide-react";
+import { Loader2, FileText, Download, Mail, Send } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "@/components/ui/use-toast";
 import { generateNewsSummaryPdf } from "./newsSummaryPdf";
+import { sendSummaryEmail } from "./newsSummaryEmail";
 
 // Summarizes a user-selected set of news articles (no date-range filter —
 // the user already chose exactly which items to include).
 export default function NewsSelectionSummaryDialog({ open, onOpenChange, items }) {
   const [generating, setGenerating] = useState(false);
   const [report, setReport] = useState(null);
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [emailTo, setEmailTo] = useState("");
+  const [sending, setSending] = useState(false);
 
   const sortedItems = useMemo(
     () => [...(items || [])].sort((a, b) => (b.news_date || "").localeCompare(a.news_date || "")),
@@ -103,6 +107,20 @@ Write a 3-5 sentence executive summary noting the overall alert level, the overa
     generateNewsSummaryPdf(report);
   };
 
+  const handleSendEmail = async () => {
+    if (!report || !emailTo.trim()) return;
+    setSending(true);
+    try {
+      await sendSummaryEmail(emailTo.trim(), report);
+      toast({ title: "Summary emailed", description: emailTo.trim() });
+      setEmailOpen(false);
+      setEmailTo("");
+    } catch (e) {
+      toast({ title: "Email failed", description: e.message, variant: "destructive" });
+    }
+    setSending(false);
+  };
+
   const handleClose = () => {
     setReport(null);
     onOpenChange(false);
@@ -175,8 +193,31 @@ Write a 3-5 sentence executive summary noting the overall alert level, the overa
           )}
         </div>
 
+        {report && emailOpen && (
+          <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50/50 p-2">
+            <Mail className="w-4 h-4 text-gray-400 flex-shrink-0" />
+            <input
+              type="email"
+              value={emailTo}
+              onChange={(e) => setEmailTo(e.target.value)}
+              placeholder="recipient@email.com"
+              className="flex-1 min-w-0 h-8 text-sm rounded-md border border-gray-200 bg-white px-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+            />
+            <Button size="sm" onClick={handleSendEmail} disabled={sending || !emailTo.trim()} className="gap-1 bg-indigo-600 hover:bg-indigo-700 text-white">
+              {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+              {sending ? "Sending..." : "Send"}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => { setEmailOpen(false); setEmailTo(""); }}>Cancel</Button>
+          </div>
+        )}
+
         <DialogFooter className="gap-2">
           <Button variant="outline" size="sm" onClick={handleClose}>Close</Button>
+          {report && (
+            <Button size="sm" variant="outline" onClick={() => setEmailOpen((v) => !v)} className="gap-1">
+              <Mail className="w-3.5 h-3.5" /> Email
+            </Button>
+          )}
           {report && (
             <Button size="sm" onClick={handleDownload} className="gap-1">
               <Download className="w-3.5 h-3.5" /> Download PDF
