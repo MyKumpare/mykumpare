@@ -390,8 +390,19 @@ function ActivityItem({ activity, contactId, contactName, linkedTasks, allActivi
   const [expanded, setExpanded] = useState(false);
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.ContactActivity.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["contact_activities", contactId] }),
+    mutationFn: async (id) => {
+      // Delete all follow-up tasks linked to this activity first, then the activity
+      const tasks = await base44.entities.FollowUpTask.filter({ activity_id: id });
+      if (tasks && tasks.length > 0) {
+        await Promise.all(tasks.map(task => base44.entities.FollowUpTask.delete(task.id)));
+      }
+      await base44.entities.ContactActivity.delete(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contact_activities", contactId] });
+      queryClient.invalidateQueries({ queryKey: ["follow_up_tasks", contactId] });
+      queryClient.invalidateQueries({ queryKey: ["all_tasks_for_firm"] });
+    },
   });
 
   const relinkTask = async (taskId, newActivityId, newActivityLabel) => {
