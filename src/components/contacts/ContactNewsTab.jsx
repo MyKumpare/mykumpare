@@ -11,8 +11,8 @@ import {
 import { toast } from "@/components/ui/use-toast";
 import { NewsItemCard, NewsItemForm } from "../firms/FirmNewsTab";
 import HistoricalScrubDialog from "../news/HistoricalScrubDialog";
-import NewsSummaryDialog from "../news/NewsSummaryDialog";
-import { FileText } from "lucide-react";
+import { lazyDialog } from "../common/lazyDialog";
+const NewsSummaryDialog = lazyDialog(() => import("../news/NewsSummaryDialog"));
 
 // ── Contact News Tab — shows news tagged to this contact, with the same
 //    scrub / pin / edit / delete functionality as the firm news tab ──

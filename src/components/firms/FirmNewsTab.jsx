@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Newspaper, Plus, Trash2, Pin, PinOff, ExternalLink, Sparkles, Loader2,
   AlertTriangle, ChevronDown, ChevronUp, Edit2, Check, X, Calendar, History, Search,
-  ArrowDownWideNarrow, ArrowUpWideNarrow,
+  ArrowDownWideNarrow, ArrowUpWideNarrow, FileText,
 } from "lucide-react";
 import { format } from "date-fns";
 import ReactQuill from "react-quill";
@@ -18,8 +18,8 @@ import { toast } from "@/components/ui/use-toast";
 import ContactTaggerPopover from "./ContactTaggerPopover";
 import FirmTaggerPopover from "./FirmTaggerPopover";
 import HistoricalScrubDialog from "../news/HistoricalScrubDialog";
-import NewsSummaryDialog from "../news/NewsSummaryDialog";
-import { FileText } from "lucide-react";
+import { lazyDialog } from "../common/lazyDialog";
+const NewsSummaryDialog = lazyDialog(() => import("../news/NewsSummaryDialog"));
 
 const QUILL_MODULES = {
   toolbar: [
