@@ -9,8 +9,9 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   ChevronLeft, ChevronRight, CalendarDays, MapPin, DollarSign,
-  ExternalLink, Filter, X, Building2, Tag, Loader2,
+  ExternalLink, Filter, X, Building2, Tag, Loader2, Download,
 } from "lucide-react";
+import { downloadConferenceTravelPdf } from "@/components/conferences/conferenceTravelPdf";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -141,17 +142,37 @@ export default function ConferenceCalendar() {
             All conferences found across your firms — your upcoming travel schedule at a glance.
           </p>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="gap-1.5"
-          onClick={() => setShowFilters(s => !s)}
-        >
-          <Filter className="w-3.5 h-3.5" />
-          Filters
-          {hasActiveFilters && <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => downloadConferenceTravelPdf(upcoming, {
+              filtersLabel: [
+                firmFilter !== "all" ? `Firm: ${firms.find(f => f.id === firmFilter)?.name || firmFilter}` : null,
+                dateFrom ? `From ${dateFrom}` : null,
+                dateTo ? `To ${dateTo}` : null,
+                locationFilter.trim() ? `Location: ${locationFilter.trim()}` : null,
+              ].filter(Boolean).join(" · ") || "None",
+            })}
+            disabled={upcoming.length === 0}
+          >
+            <Download className="w-3.5 h-3.5" />
+            Download PDF
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => setShowFilters(s => !s)}
+          >
+            <Filter className="w-3.5 h-3.5" />
+            Filters
+            {hasActiveFilters && <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />}
+          </Button>
+        </div>
       </div>
 
       {/* Filter bar */}
