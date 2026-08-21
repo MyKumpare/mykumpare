@@ -11,17 +11,20 @@ import ActivityLogPickerModal from "@/components/activity/ActivityLogPickerModal
 import TaskDetailModal from "@/components/activity/TaskDetailModal";
 import ActivityDetailModal from "@/components/activity/ActivityDetailModal";
 import ActivityTimeline from "@/components/activity/ActivityTimeline";
+import ConferencesTab from "@/components/conferences/ConferencesTab";
 
 const TABS = [
   { key: "news", label: "News Alerts", icon: Newspaper },
   { key: "activity", label: "Activity", icon: ClipboardList },
   { key: "tasks", label: "Tasks", icon: LayoutList },
+  { key: "conferences", label: "Conferences", icon: CalendarDays },
   { key: "timeline", label: "Timeline", icon: ActivityIcon },
 ];
 
 export default function MonitorPage() {
   const navigate = useNavigate();
-  const [tab, setTab] = useState("news");
+  const initialTab = new URLSearchParams(window.location.hash.split("?")[1] || "").get("tab") || "news";
+  const [tab, setTab] = useState(initialTab);
   const [viewingTask, setViewingTask] = useState(null);
   const [viewingActivity, setViewingActivity] = useState(null);
   const [generatingReport, setGeneratingReport] = useState(false);
@@ -133,6 +136,9 @@ export default function MonitorPage() {
           <ActivityTimeline
             onActivityClick={(activity) => setViewingActivity(activity)}
           />
+        )}
+        {tab === "conferences" && (
+          <ConferencesTab />
         )}
       </div>
 
