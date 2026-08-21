@@ -6,9 +6,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import SearchableSelect from "@/components/common/SearchableSelect";
 import {
   Newspaper, Pin, PinOff, ExternalLink, Trash2, Calendar, X,
-  AlertTriangle, ChevronDown, ChevronUp, Building2, Search,
+  AlertTriangle, ChevronDown, ChevronUp, Building2, Search, Download,
 } from "lucide-react";
 import { format } from "date-fns";
+import { generateNewsAlertsPdf } from "@/components/news/newsAlertsPdf";
 
 const ALERT_STYLES = {
   High: { color: "text-red-600", bg: "bg-red-50", border: "border-red-200", icon: AlertTriangle },
@@ -122,6 +123,17 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
   const hasFilters = search || firmFilter || contactFilter;
   const clearFilters = () => { setSearch(""); setFirmFilter(""); setContactFilter(""); };
 
+  const handleExportPdf = () => {
+    if (!filteredNews.length) return;
+    generateNewsAlertsPdf({
+      items: filteredNews,
+      filters: { search, firmFilter, contactFilter, sortBy },
+      totalCount,
+      firmLabel: firmOptions.find(o => o.value === firmFilter)?.label,
+      contactLabel: contactOptions.find(o => o.value === contactFilter)?.label,
+    });
+  };
+
   if (!inline && !open) return null;
 
   return (
@@ -141,11 +153,22 @@ export default function NewsAlertsModal({ open, onClose, onFirmClick, inline }) 
               </p>
             </div>
           </div>
-          {!inline && (
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-              <X className="w-4 h-4" />
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={handleExportPdf}
+              disabled={!filteredNews.length}
+              className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed px-2 py-1 rounded-md hover:bg-indigo-50"
+              title="Export current view as PDF"
+            >
+              <Download className="w-3.5 h-3.5" /> Export PDF
             </button>
-          )}
+            {!inline && (
+              <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Filter / sort toolbar */}
