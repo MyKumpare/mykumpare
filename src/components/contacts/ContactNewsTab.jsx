@@ -12,6 +12,7 @@ import { toast } from "@/components/ui/use-toast";
 import { NewsItemCard, NewsItemForm } from "../firms/FirmNewsTab";
 import HistoricalScrubDialog from "../news/HistoricalScrubDialog";
 import NewsBulkActionBar from "../news/NewsBulkActionBar";
+import { generateNewsSelectionPdf } from "../news/newsSelectionPdf";
 import { lazyDialog } from "../common/lazyDialog";
 const NewsSummaryDialog = lazyDialog(() => import("../news/NewsSummaryDialog"));
 
@@ -179,6 +180,13 @@ export default function ContactNewsTab({ contactId, contactName, firmId, firmNam
     }
   };
 
+  // Export the currently-selected articles (with alert levels + tags) to PDF
+  const handleExportSelectedPdf = () => {
+    const selected = sortedNews.filter(n => selectedIds.has(n.id));
+    if (!selected.length) return;
+    generateNewsSelectionPdf({ items: selected, contacts: taggableContacts, firms: taggableFirms, sourceLabel: contactName });
+  };
+
   const toggleSelect = (id) => setSelectedIds(prev => {
     const next = new Set(prev);
     if (next.has(id)) next.delete(id); else next.add(id);
@@ -342,6 +350,7 @@ export default function ContactNewsTab({ contactId, contactName, firmId, firmNam
           firms={taggableFirms}
           onBulkTagContacts={handleBulkTagContacts}
           onBulkTagFirms={handleBulkTagFirms}
+          onExportPdf={handleExportSelectedPdf}
         />
       )}
 

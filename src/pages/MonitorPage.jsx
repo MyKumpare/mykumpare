@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Radar, Newspaper, LayoutList, ClipboardList, CalendarDays, X, FileDown, Loader2 } from "lucide-react";
+import { Radar, Newspaper, LayoutList, ClipboardList, CalendarDays, X, FileDown, Loader2, Activity as ActivityIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
 import { toast } from "@/components/ui/use-toast";
@@ -10,11 +10,13 @@ import FollowUpTaskPickerModal from "@/components/activity/FollowUpTaskPickerMod
 import ActivityLogPickerModal from "@/components/activity/ActivityLogPickerModal";
 import TaskDetailModal from "@/components/activity/TaskDetailModal";
 import ActivityDetailModal from "@/components/activity/ActivityDetailModal";
+import ActivityTimeline from "@/components/activity/ActivityTimeline";
 
 const TABS = [
   { key: "news", label: "News Alerts", icon: Newspaper },
   { key: "tasks", label: "Tasks", icon: LayoutList },
   { key: "activity", label: "Activity", icon: ClipboardList },
+  { key: "timeline", label: "Timeline", icon: ActivityIcon },
 ];
 
 export default function MonitorPage() {
@@ -124,6 +126,11 @@ export default function MonitorPage() {
             open
             onClose={() => {}}
             onAddActivity={() => {}}
+            onActivityClick={(activity) => setViewingActivity(activity)}
+          />
+        )}
+        {tab === "timeline" && (
+          <ActivityTimeline
             onActivityClick={(activity) => setViewingActivity(activity)}
           />
         )}
