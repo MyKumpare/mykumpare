@@ -51,6 +51,8 @@ export default function ConferencesTab() {
   const [view, setView] = useState("list"); // "list" | "calendar" | "unassigned"
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
+  const [firmFilter, setFirmFilter] = useState("all");
+  const [sortDir, setSortDir] = useState("asc"); // "asc" | "desc"
 
   const today = new Date();
   const todayStr = format(today, "yyyy-MM-dd");
@@ -77,13 +79,28 @@ export default function ConferencesTab() {
     return map;
   }, [sorted]);
 
-  // Upcoming conferences with no internal attendees assigned — sorted soonest first.
-  const unassigned = useMemo(() => {
+  // Upcoming conferences with no internal attendees assigned.
+  const unassignedBase = useMemo(() => {
     return sorted
       .filter(c => (c.conference_date || "") >= todayStr)
-      .filter(c => !c.internal_attendee_contact_ids || c.internal_attendee_contact_ids.length === 0)
-      .sort((a, b) => (a.conference_date || "").localeCompare(b.conference_date || ""));
+      .filter(c => !c.internal_attendee_contact_ids || c.internal_attendee_contact_ids.length === 0);
   }, [sorted, todayStr]);
+
+  const firmOptions = useMemo(() => {
+    const names = new Set();
+    unassignedBase.forEach(c => { if (c.firm_name) names.add(c.firm_name); });
+    return Array.from(names).sort((a, b) => a.localeCompare(b));
+  }, [unassignedBase]);
+
+  const unassigned = useMemo(() => {
+    const list = firmFilter === "all"
+      ? unassignedBase
+      : unassignedBase.filter(c => c.firm_name === firmFilter);
+    return [...list].sort((a, b) => {
+      const cmp = (a.conference_date || "").localeCompare(b.conference_date || "");
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [unassignedBase, firmFilter, sortDir]);
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -240,6 +257,33 @@ export default function ConferencesTab() {
                 <p className="text-sm text-amber-800 font-medium">
                   {unassigned.length} upcoming conference{unassigned.length !== 1 ? "s" : ""} with no internal attendees assigned.
                 </p>
+              </div>
+              <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-3 flex-wrap bg-gray-50/50">
+                <div className="flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-gray-400" />
+                  <select
+                    value={firmFilter}
+                    onChange={e => setFirmFilter(e.target.value)}
+                    className="h-7 text-xs rounded-md border border-gray-200 bg-white px-2 py-0 focus:outline-none focus:ring-1 focus:ring-indigo-300"
+                  >
+                    <option value="all">All firms</option>
+                    {firmOptions.map(name => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <CalendarDays className="w-3.5 h-3.5 text-gray-400" />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs gap-1"
+                    onClick={() => setSortDir(d => d === "asc" ? "desc" : "asc")}
+                  >
+                    {sortDir === "asc" ? "Date ↑" : "Date ↓"}
+                  </Button>
+                </div>
               </div>
               <div className="divide-y divide-gray-100">
                 {unassigned.map(c => (
