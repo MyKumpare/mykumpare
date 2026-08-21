@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "@/components/ui/use-toast";
+import ConferenceAttendeePicker, { ConferenceAttendeeChips } from "@/components/conferences/ConferenceAttendeePicker";
 
 const PARTICP_COLORS = {
   Sponsoring: "bg-amber-50 text-amber-700 border-amber-200",
@@ -72,6 +73,17 @@ export default function FirmConferenceTab({ firmId, firmName }) {
     queryKey: ["firm_contacts_for_conferences", firmId],
     queryFn: () => base44.entities.Contact.filter({ firm_ids: firmId }, "first_name"),
     enabled: !!firmId,
+  });
+
+  // Fetch the current user's own firm (Xponance) colleagues for the internal attendees picker
+  const { data: ownFirmContacts = [] } = useQuery({
+    queryKey: ["own_firm_contacts_for_conferences"],
+    queryFn: async () => {
+      const me = await base44.auth.me();
+      const ownFirmId = me?.data?.linked_firm_id;
+      if (!ownFirmId) return [];
+      return base44.entities.Contact.filter({ firm_ids: ownFirmId }, "first_name", 500);
+    },
   });
 
   const handleScrub = async () => {
@@ -226,6 +238,16 @@ Only return real conferences you found evidence of on the web. Do not invent con
     }
   };
 
+  const handleAttendeeChange = async (conf, contactIds) => {
+    try {
+      await base44.entities.FirmConference.update(conf.id, { internal_attendee_contact_ids: contactIds });
+      queryClient.invalidateQueries({ queryKey: ["firm_conferences", firmId] });
+      queryClient.invalidateQueries({ queryKey: ["all_conferences"] });
+    } catch (e) {
+      toast({ title: "Update failed", description: e.message, variant: "destructive" });
+    }
+  };
+
   const sorted = [...conferences].sort((a, b) => {
     const da = a.conference_date || "";
     const db = b.conference_date || "";
@@ -262,9 +284,11 @@ Only return real conferences you found evidence of on the web. Do not invent con
             <ConferenceRecordCard
               key={c.id}
               conf={c}
+              ownFirmContacts={ownFirmContacts}
               onRsvpChange={handleRsvpChange}
               onRegChange={handleRegChange}
               onSponsorChange={handleSponsorChange}
+              onAttendeeChange={handleAttendeeChange}
               onDelete={handleDelete}
             />
           ))}
@@ -274,7 +298,7 @@ Only return real conferences you found evidence of on the web. Do not invent con
   );
 }
 
-function ConferenceRecordCard({ conf, onRsvpChange, onRegChange, onSponsorChange, onDelete }) {
+function ConferenceRecordCard({ conf, ownFirmContacts, onRsvpChange, onRegChange, onSponsorChange, onAttendeeChange, onDelete }) {
   const queryClient = useQueryClient();
   const [notesOpen, setNotesOpen] = useState(false);
   const [notesDraft, setNotesDraft] = useState(conf.internal_notes || "");
@@ -412,6 +436,11 @@ function ConferenceRecordCard({ conf, onRsvpChange, onRegChange, onSponsorChange
             {sponsor !== "Not Sponsoring" ? <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> : null}
             {sponsorOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
           </button>
+          <ConferenceAttendeePicker
+            contacts={ownFirmContacts || []}
+            selectedIds={conf.internal_attendee_contact_ids || []}
+            onChange={(ids) => onAttendeeChange(conf, ids)}
+          />
           <button
             type="button"
             onClick={() => setNotesOpen(o => !o)}
@@ -423,6 +452,12 @@ function ConferenceRecordCard({ conf, onRsvpChange, onRegChange, onSponsorChange
             {notesOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
           </button>
         </div>
+
+        {/* Internal attendees chips */}
+        <ConferenceAttendeeChips
+          contacts={ownFirmContacts || []}
+          selectedIds={conf.internal_attendee_contact_ids || []}
+        />
 
         {/* Sponsorship panel */}
         {sponsorOpen && (

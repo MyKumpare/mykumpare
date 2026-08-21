@@ -95,6 +95,13 @@
       "type": "string",
       "description": "What the firm receives in exchange for sponsoring (e.g. booth, logo placement, speaking slot, attendee passes). Free text."
     },
+    "internal_attendee_contact_ids": {
+      "type": "array",
+      "description": "IDs of internal colleagues (contacts from the user's own firm) who are attending this conference. Used for internal coordination of who is going to each event.",
+      "items": {
+        "type": "string"
+      }
+    },
     "internal_notes": {
       "type": "string",
       "description": "Internal team notes about this conference attendance record (e.g. who is going, logistics, follow-ups). Free text."
