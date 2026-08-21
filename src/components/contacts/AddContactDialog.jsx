@@ -845,9 +845,9 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
               </div>
             </div>
           ) : editingContact ? (
-            <DialogTitle className="flex items-center gap-3">
+            <div className="flex items-center gap-3">
               {photoUrl && (
-                <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center overflow-hidden flex-shrink-0 border-2 border-indigo-200">
+                <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center overflow-hidden flex-shrink-0 border-2 border-indigo-200">
                   <button
                     type="button"
                     onClick={() => setPhotoZoomOpen(true)}
@@ -858,16 +858,50 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                   </button>
                 </div>
               )}
-              <span className="flex items-baseline gap-2 flex-wrap">
-                <span className="text-base">{formatFullName()}</span>
-                {designations?.length > 0 && (
-                  <span className="text-sm text-gray-500 font-normal">{designations.join(", ")}</span>
+              <div className="min-w-0">
+                <DialogTitle className="text-base leading-tight flex items-center gap-2 flex-wrap">
+                  <span>
+                    {formatFullName()}
+                    {designations?.length > 0 && `, ${designations.join(", ")}`}
+                  </span>
+                  <span
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                      (contactStatus || "Active") === "Inactive"
+                        ? "bg-red-100 text-red-700"
+                        : "bg-green-100 text-green-700"
+                    }`}
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        (contactStatus || "Active") === "Inactive" ? "bg-red-500" : "bg-green-500"
+                      }`}
+                    />
+                    {contactStatus || "Active"}
+                  </span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-100 text-indigo-700">
+                    Edit Contact
+                  </span>
+                </DialogTitle>
+                {firmIds.length > 0 && (
+                  <p className="text-sm text-indigo-600 font-medium mt-0.5 truncate">
+                    {firmIds.map((id, i) => (
+                      <span key={id}>
+                        {i > 0 && ", "}
+                        {onFirmClick ? (
+                          <button
+                            type="button"
+                            className="underline hover:text-indigo-800"
+                            onClick={() => onFirmClick(firms.find(f => f.id === id))}
+                          >
+                            {getFirmName(id)}
+                          </button>
+                        ) : getFirmName(id)}
+                      </span>
+                    ))}
+                  </p>
                 )}
-              </span>
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-100 text-indigo-700">
-                Edit Contact
-              </span>
-            </DialogTitle>
+              </div>
+            </div>
           ) : (
             <DialogTitle>Add Contact</DialogTitle>
           )}
