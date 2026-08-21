@@ -26,9 +26,23 @@ function withRetry(loadFn, retries = 3) {
     // re-fetches fresh HTML and the current chunk hashes (a plain reload()
     // can still serve stale chunks from cache, which loops the same error).
     if (typeof window !== "undefined" && window.location) {
+      try {
+        // Guard against a reload loop if the chunk genuinely fails to
+        // transform (a real error): only reload once per ~10s window.
+        const last = sessionStorage.getItem("_rr_last");
+        const now = Date.now();
+        if (last && now - parseInt(last) < 10000) {
+          throw lastErr;
+        }
+        sessionStorage.setItem("_rr_last", String(now));
+      } catch { /* sessionStorage blocked — fall through to reload */ }
       const url = new URL(window.location.href);
       url.searchParams.set("_rr", Date.now());
       window.location.replace(url.toString());
+      // Return a never-resolving promise so React Suspense stays in its
+      // fallback (null) while the reload navigates, instead of throwing a
+      // TypeError that crashes the app before the reload can complete.
+      return new Promise(() => {});
     }
     throw lastErr;
   };
