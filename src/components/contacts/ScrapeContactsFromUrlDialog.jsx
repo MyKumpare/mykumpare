@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
 import { findContactDuplicates, findContactsByNormalizedName } from "@/components/contacts/contactDuplicateCheck";
+import { cleanContactNameFields } from "@/components/contacts/designationDetector";
 import { Loader2, Search, Download, Link2, ChevronDown, ChevronRight, User, ExternalLink, CheckCircle2, ArrowLeft, AlertCircle } from "lucide-react";
 
 export default function ScrapeContactsFromUrlDialog({ open, onOpenChange, firmId, firmName }) {
@@ -118,9 +119,13 @@ export default function ScrapeContactsFromUrlDialog({ open, onOpenChange, firmId
 
     for (const c of toImport) {
       try {
+        // Strip designations from name fields so "Best, CFA" → "Best" and CFA
+        // goes into the designations array. Prevents "CFA, CFA" display and
+        // ensures the duplicate check compares clean names.
+        const cleaned = cleanContactNameFields(c);
         const probeData = {
-          first_name: c.first_name || "",
-          last_name: c.last_name || "",
+          first_name: cleaned.first_name,
+          last_name: cleaned.last_name,
           email: c.email || "",
           phones: c.phones || [],
           photo_url: c.photo_url || "",
@@ -145,8 +150,8 @@ export default function ScrapeContactsFromUrlDialog({ open, onOpenChange, firmId
         }
 
         const payload = {
-          first_name: c.first_name,
-          last_name: c.last_name,
+          first_name: cleaned.first_name,
+          last_name: cleaned.last_name,
           title: c.title || "",
           photo_url: c.photo_url || "",
           bio_url: c.bio_url || "",
@@ -154,7 +159,7 @@ export default function ScrapeContactsFromUrlDialog({ open, onOpenChange, firmId
           email: c.email || "",
           linkedin_url: c.linkedin_url || "",
           phones: c.phones || [],
-          designations: c.designations || [],
+          designations: cleaned.designations,
           education: c.education || [],
           professional_experience: c.professional_experience || [],
           firm_ids: firmId ? [firmId] : [],

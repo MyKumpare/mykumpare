@@ -17,6 +17,20 @@ const MAX_SUB_PAGES = 3;
 const MAX_BIO_DRILL = 8;
 const BIO_CONCURRENCY = 4;
 
+// Designation patterns to strip from name fields (e.g. "Best, CFA" → "Best").
+const DESIGNATION_RE = /\s*,?\s*(CFA|CPA|MBA|Ph\.?D|M\.D|J\.D|LL\.M|CFP|FRM|CAIA|CMT|ChFC|PMP|ASA|FSA|EA|CIIA|CISI|FMVA|CBCP)\b\s*$/i;
+
+function stripTrailingDesignations(name: string): string {
+  if (!name) return name;
+  let cleaned = name;
+  for (let i = 0; i < 5; i++) {
+    const next = cleaned.replace(DESIGNATION_RE, '');
+    if (next === cleaned) break;
+    cleaned = next;
+  }
+  return cleaned.trim();
+}
+
 // Discover sub-pages (multiple layers) from the main page's internal links.
 // Follows links that look like team/staff/people/profile sub-pages.
 function discoverSubPages(pageText: string, baseUrl: string, visited: Set<string>): string[] {
@@ -46,11 +60,13 @@ async function extractPeopleFromPage(base44: any, pageText: string): Promise<any
       prompt: `Extract EVERY person listed on this page. Return ALL of them — do not stop after the first few.
 
 For each person, provide:
-- first_name
-- last_name
+- first_name (given name ONLY — no salutations like "Mr." and no designations like "CFA")
+- last_name (family name ONLY — no designations. "Best, CFA" → last_name "Best". Designations go in the designations field, NOT here)
 - title (their role/position)
 - photo_url (the src URL from the [IMAGE: ...] marker closest to their name)
 - bio_url (if their name is a link to an individual profile page, use that [LINK: ...] URL; otherwise leave empty)
+
+IMPORTANT: Never include professional designations (CFA, CPA, MBA, PhD, CFP, FRM, CAIA, etc.) in first_name or last_name. Put them only in the designations field.
 
 The page may be organized in sections (Executive, Investment Team, Research, Operations, etc.). Go through EVERY section and extract EVERY person. If you see 40+ people, return all 40+.
 
@@ -70,6 +86,7 @@ ${pageText.substring(0, 30000)}
                 title: { type: 'string' },
                 photo_url: { type: 'string' },
                 bio_url: { type: 'string' },
+                designations: { type: 'array', items: { type: 'string' } },
               },
             },
           },
@@ -81,6 +98,11 @@ ${pageText.substring(0, 30000)}
       p.photo_url = cleanStr(p.photo_url);
       p.bio_url = cleanStr(p.bio_url);
       p.title = cleanStr(p.title);
+      // Strip trailing designations from name fields (defensive — the prompt
+      // asks the LLM not to include them, but it sometimes does anyway).
+      p.first_name = stripTrailingDesignations(cleanStr(p.first_name));
+      p.last_name = stripTrailingDesignations(cleanStr(p.last_name));
+      if (!Array.isArray(p.designations)) p.designations = [];
     }
     return people.filter((p: any) => p.first_name || p.last_name);
   } catch {
@@ -241,7 +263,7 @@ Deno.serve(async (req) => {
       email: '',
       linkedin_url: '',
       phones: [] as any[],
-      designations: [] as string[],
+      designations: (Array.isArray(p.designations) ? p.designations.map(cleanStr).filter(Boolean) : []),
       education: [] as any[],
       professional_experience: [] as any[],
       drilled: false,
@@ -269,7 +291,9 @@ Deno.serve(async (req) => {
         if (details.email) c.email = details.email;
         if (details.linkedin_url) c.linkedin_url = details.linkedin_url;
         if (details.photo_url && !c.photo_url) c.photo_url = details.photo_url;
-        if (details.designations.length > 0) c.designations = details.designations;
+        if (details.designations.length > 0) {
+          c.designations = [...new Set([...c.designations, ...details.designations])].filter(Boolean);
+        }
         if (details.phone) {
           const parsed = parsePhone(details.phone);
           if (parsed) c.phones = [{ id: crypto.randomUUID(), ...parsed, is_default: false }];

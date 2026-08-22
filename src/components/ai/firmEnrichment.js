@@ -1,5 +1,5 @@
 import { base44 } from "@/api/base44Client";
-import { detectDesignations } from "@/components/contacts/designationDetector";
+import { detectDesignations, cleanContactNameFields } from "@/components/contacts/designationDetector";
 import { findContactDuplicates, findContactsByNormalizedName } from "@/components/contacts/contactDuplicateCheck";
 import { addressesAreExact, addressesAreSimilar } from "@/components/addressDuplicateCheck";
 import { compareScalar } from "./enrichmentValidation";
@@ -704,11 +704,13 @@ export async function createFirmFromEnrichment(enrichedData, tenantId) {
 
   for (const person of people) {
     try {
-      const fullName = `${person.first_name || ""} ${person.last_name || ""}`.trim();
-      const designations = detectDesignations(fullName, person.biography);
+      // Strip designations from name fields so "Best, CFA" → "Best" and CFA
+      // goes into the designations array. Prevents "CFA, CFA" display and
+      // ensures the duplicate check compares clean names.
+      const cleaned = cleanContactNameFields(person);
       const probeData = {
-        first_name: person.first_name || "",
-        last_name: person.last_name || "",
+        first_name: cleaned.first_name,
+        last_name: cleaned.last_name,
         email: person.email || "",
         phones: person.phone ? [parsePhoneString(person.phone)] : [],
       };
@@ -727,8 +729,8 @@ export async function createFirmFromEnrichment(enrichedData, tenantId) {
 
       const contactData = {
         tenant_id: tenantId,
-        first_name: person.first_name || "",
-        last_name: person.last_name || "",
+        first_name: cleaned.first_name,
+        last_name: cleaned.last_name,
         title: person.title || "",
         email: person.email || "",
         linkedin_url: person.linkedin_url || "",
@@ -738,7 +740,7 @@ export async function createFirmFromEnrichment(enrichedData, tenantId) {
         firm_ids: [createdFirm.id],
         employee_status: "Employee",
       };
-      if (designations.length > 0) contactData.designations = designations;
+      if (cleaned.designations.length > 0) contactData.designations = cleaned.designations;
       const parsedPhone = person.phone ? parsePhoneString(person.phone) : null;
       if (parsedPhone) contactData.phones = [parsedPhone];
       if (person.education?.length) {

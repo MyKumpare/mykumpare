@@ -56,3 +56,28 @@ export function stripDesignationFromName(name) {
   }
   return cleaned.trim();
 }
+
+/**
+ * Cleans a scraped contact's name fields by stripping embedded designations
+ * (e.g. last_name "Best, CFA" → "Best") and merging them into the designations
+ * array. Prevents "CFA, CFA" display where the designation appears both in the
+ * name and in the designations array. Returns { first_name, last_name, designations }.
+ */
+export function cleanContactNameFields(contact) {
+  const rawFirst = (contact.first_name || "").trim();
+  const rawLast = (contact.last_name || "").trim();
+  const fullName = `${rawFirst} ${rawLast}`.trim();
+
+  // Detect designations from the full name + biography
+  const detected = detectDesignations(fullName, contact.biography);
+
+  // Strip trailing designations from each name part
+  const first_name = stripDesignationFromName(rawFirst);
+  const last_name = stripDesignationFromName(rawLast);
+
+  // Merge with any designations already on the contact, deduplicated
+  const existing = Array.isArray(contact.designations) ? contact.designations : [];
+  const designations = [...new Set([...detected, ...existing])].filter(Boolean);
+
+  return { first_name: first_name || rawFirst, last_name: last_name || rawLast, designations };
+}
