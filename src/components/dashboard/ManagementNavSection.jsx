@@ -46,22 +46,9 @@ const ManagementNavSection = React.forwardRef(({ forceExpanded, sections = [] },
         </div>
       </div>
 
-      {/* Sub-items + sections — kept mounted (hidden) so child queries/refs stay alive */}
-      <div className={`ml-6 mt-1 border-l border-gray-200 pl-3 ${isExpanded ? "" : "hidden"}`}>
-        <div className="space-y-1 mb-2">
-          {sections.map((s, i) => {
-            const Icon = s.icon;
-            return (
-              <div key={s.label} className="flex items-center px-1 py-1 rounded-lg hover:bg-gray-50">
-                <button onClick={() => scrollTo(i)} className="flex items-center gap-2 group flex-1">
-                  <ChevronRight className="w-3.5 h-3.5 text-gray-300" />
-                  <Icon className={`w-4 h-4 ${s.iconColor}`} />
-                  <span className="text-sm font-medium text-gray-600 group-hover:text-gray-900">{s.label}</span>
-                </button>
-              </div>
-            );
-          })}
-        </div>
+      {/* Sections — kept mounted (hidden) so child queries/refs stay alive.
+          No sub-item list: each dashboard section already renders its own header. */}
+      <div className={`mt-2 ${isExpanded ? "" : "hidden"}`}>
         <div className="space-y-4">
           {sections.map((s, i) => (
             <div key={s.label} ref={(el) => (sectionRefs.current[i] = el)}>
