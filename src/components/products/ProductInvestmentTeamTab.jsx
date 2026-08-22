@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Star, StarOff, X, UserPlus, Search, User, Check } from "lucide-react";
 import AddContactDialog from "@/components/contacts/AddContactDialog";
+import { dedupeContacts } from "@/components/contacts/contactDedupe";
 
 // Inline contact picker that proactively shows all contacts linked to the
 // firm in a compact, scrollable list. Search narrows within firm contacts
@@ -29,7 +30,7 @@ function ContactPicker({ firmId, existingMemberIds, onAdd }) {
 
   const firmContacts = useMemo(
     () =>
-      contacts
+      dedupeContacts(contacts)
         .filter((c) => !searchLower || getFullName(c).toLowerCase().includes(searchLower))
         .sort((a, b) => (a.first_name || "").localeCompare(b.first_name || "")),
     [contacts, searchLower]
