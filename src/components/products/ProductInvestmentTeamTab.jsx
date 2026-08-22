@@ -207,6 +207,13 @@ export default function ProductInvestmentTeamTab({ productId, firmId }) {
   });
 
   const handleAdd = (contact) => {
+    // Only allow contacts that are linked to this product's firm — prevents
+    // accidentally adding a contact from a different firm.
+    if (!contact?.firm_ids?.includes(firmId)) {
+      setShowPicker(false);
+      setShowAddContact(false);
+      return;
+    }
     // Guard against adding the same contact twice (by ID or by normalized
     // name) — the picker filters them out, but this is a safety net.
     if (memberIds.includes(contact.id)) {
