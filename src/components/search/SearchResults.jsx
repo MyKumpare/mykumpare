@@ -383,11 +383,21 @@ export default function SearchResults({ query, firms, products, contacts, portfo
   // For a contact result, gather its firms
   const contactFirms = (contact) => (contact.firm_ids || []).map(id => firms.find(f => f.id === id)).filter(Boolean);
 
-  // For a product result, gather the firm and its contacts
+  // For a product result, gather the firm and the product's investment team
+  // contacts (key members first, then alphabetically by first name).
   const productFirm = (product) => firms.find(f => f.id === product.firm_id);
-  const productFirmContacts = (product) => {
-    const firm = productFirm(product);
-    return firm ? firmContacts(firm.id) : [];
+  const productTeamContacts = (product) => {
+    const team = product.investment_team || [];
+    return team
+      .map((m) => {
+        const c = contacts.find((ct) => ct.id === m.contact_id);
+        return c && !c.deleted_at ? { ...c, _isKey: m.is_key } : null;
+      })
+      .filter(Boolean)
+      .sort((a, b) => {
+        if (a._isKey !== b._isKey) return a._isKey ? -1 : 1;
+        return (a.first_name || "").localeCompare(b.first_name || "");
+      });
   };
 
   const hasAny = matchedContacts.length > 0 || matchedFirms.length > 0 || matchedProducts.length > 0 || matchedPortfolios.length > 0 || matchedAnalyses.length > 0 || matchedActivities.length > 0 || matchedTasks.length > 0 || matchedDocuments.length > 0 || matchedDueDiligences.length > 0 || matchedReports.length > 0 || matchedBenchmarks.length > 0;
@@ -488,7 +498,7 @@ export default function SearchResults({ query, firms, products, contacts, portfo
           </div>
           {matchedProducts.map((product) => {
             const firm = productFirm(product);
-            const assocContacts = productFirmContacts(product);
+            const assocContacts = productTeamContacts(product);
             return (
               <button
                 key={product.id}
