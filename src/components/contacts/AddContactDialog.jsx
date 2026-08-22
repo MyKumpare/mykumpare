@@ -99,7 +99,6 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [phones, setPhones] = useState([newPhone()]);
   const [addresses, setAddresses] = useState([newAddress()]);
   const [duplicateWarning, setDuplicateWarning] = useState(null);
-  const [systemDuplicateWarning, setSystemDuplicateWarning] = useState(null);
   const [linkedinLookupLoading, setLinkedinLookupLoading] = useState(false);
   const [linkedinPhotoLoading, setLinkedinPhotoLoading] = useState(false);
   const [similarAddressPairs, setSimilarAddressPairs] = useState(null);
@@ -386,45 +385,30 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
     if (editingContact) {
       updateMutation.mutate({ id: editingContact.id, data });
     } else {
-      // Only validate against contacts in the same firm(s) — a duplicate
-      // at an unrelated firm should not block creation here.
+      // A contact can only be created once — no duplication. Before creating,
+      // scan the whole system for exact or similar matches and categorize them
+      // by firm overlap. A match at the SAME firm is a strong duplicate signal
+      // (likely reject); a match at a DIFFERENT firm could be valid (the same
+      // person at multiple firms, or a different person who shares the name).
       const firmContactSet = new Set(firmIds);
-      const relatedContacts = allContacts.filter((c) =>
-        (c.firm_ids || []).some((fid) => firmContactSet.has(fid))
+      const exactDups = findContactDuplicates(data, allContacts);
+      const allDups = exactDups.length > 0
+        ? exactDups
+        : findContactsByNormalizedName(data, allContacts).map((d) => ({
+            contact: d.contact,
+            name: d.name,
+            email: d.email,
+            reasons: ["Same first and last name as an existing contact"],
+            score: 0.75,
+          }));
+      const sameFirmDups = allDups.filter((d) =>
+        (d.contact.firm_ids || []).some((fid) => firmContactSet.has(fid))
       );
-      const duplicates = findContactDuplicates(data, relatedContacts);
-      // Fallback: also check normalized first+last name to catch cases where
-      // suffixes/designations are embedded in the name field.
-      const normDups = findContactsByNormalizedName(data, relatedContacts);
-      const allDups = duplicates.length > 0 ? duplicates : normDups.map(d => ({
-        contact: d.contact,
-        name: d.name,
-        email: d.email,
-        reasons: ["Same first and last name as an existing contact"],
-        score: 0.75,
-      }));
-      if (allDups.length > 0) {
-        setDuplicateWarning({ data, duplicates: allDups });
-        return;
-      }
-      // System-wide check: warn if the same contact exists at a DIFFERENT firm.
-      // This doesn't block creation (the contact may legitimately work at
-      // multiple firms), but it explicitly flags the conflict first.
-      const systemDups = findContactDuplicates(data, allContacts).filter(
-        (d) => !(d.contact.firm_ids || []).some((fid) => firmContactSet.has(fid))
+      const diffFirmDups = allDups.filter((d) =>
+        !(d.contact.firm_ids || []).some((fid) => firmContactSet.has(fid))
       );
-      const systemNormDups = findContactsByNormalizedName(data, allContacts)
-        .filter((d) => !(d.contact.firm_ids || []).some((fid) => firmContactSet.has(fid)))
-        .map((d) => ({
-          contact: d.contact,
-          name: d.name,
-          email: d.email,
-          reasons: ["Same first and last name as a contact at another firm"],
-          score: 0.75,
-        }));
-      const allSystemDups = systemDups.length > 0 ? systemDups : systemNormDups;
-      if (allSystemDups.length > 0) {
-        setSystemDuplicateWarning({ data, duplicates: allSystemDups });
+      if (sameFirmDups.length > 0 || diffFirmDups.length > 0) {
+        setDuplicateWarning({ data, sameFirmDups, diffFirmDups });
         return;
       }
       createMutation.mutate(data);
@@ -570,6 +554,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
     }
   };
 
+  // Accept: create the new contact anyway despite the duplicate warning.
   const handleForceCreate = () => {
     if (duplicateWarning?.data) {
       createMutation.mutate(duplicateWarning.data);
@@ -577,10 +562,9 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
     setDuplicateWarning(null);
   };
 
-  // When launched from a picker (e.g. investment team tab), offer to use the
-  // existing duplicate contact instead of forcing a new creation.
-  const handleUseExisting = () => {
-    const existing = duplicateWarning?.duplicates?.[0]?.contact;
+  // Reject: use the existing same-firm contact instead of creating a duplicate.
+  const handleUseExisting = (existingContact) => {
+    const existing = existingContact || duplicateWarning?.sameFirmDups?.[0]?.contact;
     setDuplicateWarning(null);
     if (existing && onContactCreated) {
       onContactCreated(existing);
@@ -588,17 +572,9 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
     }
   };
 
-  // Proceed with creation despite a system-wide (different-firm) duplicate.
-  const handleSystemForceCreate = () => {
-    if (systemDuplicateWarning?.data) {
-      createMutation.mutate(systemDuplicateWarning.data);
-    }
-    setSystemDuplicateWarning(null);
-  };
-
-  // Link the current firm to the existing contact instead of creating a
-  // duplicate. A contact can legitimately be tagged with one or more firms,
-  // so we add the new firm to the existing contact's firm_ids array.
+  // Link the current firm to an existing contact at another firm instead of
+  // creating a duplicate. A contact can legitimately be tagged with one or
+  // more firms, so we add the new firm to the existing contact's firm_ids.
   const linkExistingMutation = useMutation({
     mutationFn: async ({ existingContact, newFirmId }) => {
       const existingFirmIds = existingContact.firm_ids || [];
@@ -609,7 +585,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
       queryClient.invalidateQueries({ queryKey: ["firms"] });
       toast({ title: "Linked to existing contact", description: "The firm was added to the existing contact.", variant: "default" });
-      setSystemDuplicateWarning(null);
+      setDuplicateWarning(null);
       if (onContactCreated) onContactCreated(updated);
       onOpenChange(false);
     },
@@ -619,7 +595,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
   });
 
   const handleLinkToExisting = (existingContact) => {
-    const newFirmId = currentFirmId || (systemDuplicateWarning?.data?.firm_ids || [])[0];
+    const newFirmId = currentFirmId || (duplicateWarning?.data?.firm_ids || [])[0];
     if (!newFirmId) {
       toast({ title: "No firm selected", description: "Select a firm before linking.", variant: "destructive" });
       return;
@@ -1862,102 +1838,91 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-amber-500" />
-                Potential Duplicate Contact
+                Duplicate Contact Detected
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-3 py-2">
               <p className="text-sm text-gray-600">
-                The following existing contact(s) appear to be similar to the one you're about to create. Please review before proceeding.
+                A contact can only be created once. The system found existing contact(s) that are exact or similar to the one you're about to create. Review the matches below — a match at the <strong>same firm</strong> is likely a true duplicate, while a match at another firm could be the same person (a contact can belong to multiple firms) or a different person who shares the name.
               </p>
-              <div className="space-y-2 max-h-60 overflow-y-auto">
-                {duplicateWarning.duplicates.map((dup, i) => (
-                  <div key={i} className="rounded-lg border border-amber-200 bg-amber-50 p-3">
-                    <p className="font-semibold text-sm text-gray-800">{dup.name}</p>
-                    {dup.email && <p className="text-xs text-gray-500">{dup.email}</p>}
-                    <ul className="mt-1.5 space-y-0.5">
-                      {dup.reasons.map((r, ri) => (
-                        <li key={ri} className="text-xs text-amber-700 flex items-start gap-1">
-                          <span className="text-amber-500 mt-0.5">⚠</span> {r}
-                        </li>
-                      ))}
-                    </ul>
+
+              {duplicateWarning.sameFirmDups?.length > 0 && (
+                <div className="space-y-2">
+                  <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2">
+                    <p className="text-sm font-semibold text-red-700">
+                      ⚠ Likely duplicate — same firm
+                    </p>
+                    <p className="text-xs text-red-600 mt-0.5">
+                      The same name already exists at the firm(s) you selected. This is very likely the same person — use the existing record instead of creating a duplicate.
+                    </p>
                   </div>
-                ))}
-              </div>
+                  {duplicateWarning.sameFirmDups.map((dup, i) => (
+                    <div key={`s${i}`} className="rounded-lg border border-red-200 bg-red-50/50 p-3">
+                      <p className="font-semibold text-sm text-gray-800">{dup.name}</p>
+                      {dup.email && <p className="text-xs text-gray-500">{dup.email}</p>}
+                      <ul className="mt-1.5 space-y-0.5">
+                        {dup.reasons.map((r, ri) => (
+                          <li key={ri} className="text-xs text-red-700 flex items-start gap-1">
+                            <span className="text-red-400 mt-0.5">⚠</span> {r}
+                          </li>
+                        ))}
+                      </ul>
+                      {onContactCreated && (
+                        <Button
+                          size="sm"
+                          className="mt-2 h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
+                          onClick={() => handleUseExisting(dup.contact)}
+                        >
+                          Use Existing Contact
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {duplicateWarning.diffFirmDups?.length > 0 && (
+                <div className="space-y-2">
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+                    <p className="text-sm font-semibold text-amber-700">
+                      Similar contact at another firm
+                    </p>
+                    <p className="text-xs text-amber-700 mt-0.5">
+                      This could be the same person at a different firm (link the firm to the existing contact) or a different person who shares the name.
+                    </p>
+                  </div>
+                  {duplicateWarning.diffFirmDups.map((dup, i) => (
+                    <div key={`d${i}`} className="rounded-lg border border-amber-200 bg-amber-50/50 p-3">
+                      <p className="font-semibold text-sm text-gray-800">{dup.name}</p>
+                      {dup.email && <p className="text-xs text-gray-500">{dup.email}</p>}
+                      <ul className="mt-1.5 space-y-0.5">
+                        {dup.reasons.map((r, ri) => (
+                          <li key={ri} className="text-xs text-amber-700 flex items-start gap-1">
+                            <span className="text-amber-400 mt-0.5">•</span> {r}
+                          </li>
+                        ))}
+                      </ul>
+                      <Button
+                        size="sm"
+                        className="mt-2 h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
+                        onClick={() => handleLinkToExisting(dup.contact)}
+                        disabled={linkExistingMutation.isPending}
+                      >
+                        {linkExistingMutation.isPending ? "Linking..." : "Link firm to this contact"}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDuplicateWarning(null)}>Cancel</Button>
-              {onContactCreated && duplicateWarning?.duplicates?.[0]?.contact && (
-                <Button
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
-                  onClick={handleUseExisting}
-                >
-                  Use Existing Contact
-                </Button>
-              )}
+              <Button variant="outline" onClick={() => setDuplicateWarning(null)}>Cancel (Reject)</Button>
               <Button
                 className="bg-amber-600 hover:bg-amber-700 text-white"
                 onClick={handleForceCreate}
                 disabled={createMutation.isPending}
               >
-                {createMutation.isPending ? "Creating..." : "Create Anyway"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {systemDuplicateWarning && (
-        <Dialog open={true} onOpenChange={() => setSystemDuplicateWarning(null)}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-amber-500" />
-                Similar Contact Found at Another Firm
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-3 py-2">
-              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-                <p className="text-sm font-semibold text-amber-700">
-                  A contact can be tagged with one or more firms.
-                </p>
-                <p className="text-xs text-amber-700 mt-1">
-                  A similar contact already exists in the system at another firm. Since a contact can belong to multiple firms, consider linking this firm to the existing record instead of creating a duplicate.
-                </p>
-              </div>
-              <div className="space-y-2 max-h-60 overflow-y-auto">
-                {systemDuplicateWarning.duplicates.map((dup, i) => (
-                  <div key={i} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                    <p className="font-semibold text-sm text-gray-800">{dup.name}</p>
-                    {dup.email && <p className="text-xs text-gray-500">{dup.email}</p>}
-                    <ul className="mt-1.5 space-y-0.5">
-                      {dup.reasons.map((r, ri) => (
-                        <li key={ri} className="text-xs text-gray-600 flex items-start gap-1">
-                          <span className="text-amber-500 mt-0.5">•</span> {r}
-                        </li>
-                      ))}
-                    </ul>
-                    <Button
-                      size="sm"
-                      className="mt-2 h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
-                      onClick={() => handleLinkToExisting(dup.contact)}
-                      disabled={linkExistingMutation.isPending}
-                    >
-                      {linkExistingMutation.isPending ? "Linking..." : "Link firm to this contact"}
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setSystemDuplicateWarning(null)}>Cancel</Button>
-              <Button
-                variant="ghost"
-                className="text-amber-700 hover:bg-amber-50"
-                onClick={handleSystemForceCreate}
-                disabled={createMutation.isPending}
-              >
-                {createMutation.isPending ? "Creating..." : "Create as new contact anyway"}
+                {createMutation.isPending ? "Creating..." : "Create as New Contact (Accept)"}
               </Button>
             </DialogFooter>
           </DialogContent>
