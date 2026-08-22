@@ -54,6 +54,11 @@ function ContactPicker({ firmId, existingMemberIds, existingMemberNames, onAdd }
     () =>
       dedupeContacts(contacts)
         .filter((c) => {
+          // Only show contacts that are active AND linked to this firm
+          // (verified for the selected firm). Inactive contacts are hidden
+          // and cannot be selected.
+          if (!c.firm_ids?.includes(firmId)) return false;
+          if (c.contact_status && c.contact_status !== "Active") return false;
           // Hide contacts already on the team — by ID or by normalized name
           // (catches duplicate DB records for the same person).
           if (existingSet.has(c.id)) return false;
@@ -78,9 +83,16 @@ function ContactPicker({ firmId, existingMemberIds, existingMemberNames, onAdd }
       <>
         {avatar}
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-medium text-gray-800 truncate">
+          <div className="text-sm font-medium text-gray-800 truncate flex items-center gap-1.5">
             {getFullName(c)}
             {c.designations?.length > 0 ? `, ${c.designations.join(", ")}` : ""}
+            <span
+              className="inline-flex items-center gap-0.5 text-[10px] font-medium text-green-700 bg-green-100 border border-green-200 rounded px-1 py-px flex-shrink-0"
+              title="Active & verified for this firm"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+              Active
+            </span>
           </div>
           {c.title && <div className="text-xs text-gray-400 truncate">{c.title}</div>}
         </div>
@@ -221,9 +233,10 @@ export default function ProductInvestmentTeamTab({ productId, firmId }) {
   });
 
   const handleAdd = (contact) => {
-    // Only allow contacts that are linked to this product's firm — prevents
-    // accidentally adding a contact from a different firm.
-    if (!contact?.firm_ids?.includes(firmId)) {
+    // Only allow contacts that are linked to this product's firm AND active —
+    // prevents accidentally adding a contact from a different firm or an
+    // inactive contact.
+    if (!contact?.firm_ids?.includes(firmId) || (contact.contact_status && contact.contact_status !== "Active")) {
       setShowPicker(false);
       setShowAddContact(false);
       return;
