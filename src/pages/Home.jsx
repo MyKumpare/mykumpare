@@ -41,6 +41,7 @@ import DueDiligenceNavSection from "../components/firms/DueDiligenceNavSection";
 import MonitorNavSection from "../components/activity/MonitorNavSection";
 import ReportingNavSection from "../components/reports/ReportingNavSection";
 import DashboardNavSection from "../components/dashboard/DashboardNavSection";
+import DashboardTimelineSection from "../components/dashboard/DashboardTimelineSection";
 import AnalyticsSection from "../components/analytics/AnalyticsSection";
 
 const ReportsPickerModal = lazyDialog(() => import("../components/reports/ReportsPickerModal"));
@@ -1098,6 +1099,12 @@ export default function Home() {
           onAddContact={() => setAddContactOpen(true)}
           onPhotoSearch={() => setPhotoCaptureOpen(true)}
           forceExpanded={allExpanded}
+        />
+
+        {/* Activity Timeline — chronological history across all firms */}
+        <DashboardTimelineSection
+          forceExpanded={allExpanded}
+          onActivityClick={(activity) => setViewingActivity(activity)}
         />
 
         {/* Utility section */}

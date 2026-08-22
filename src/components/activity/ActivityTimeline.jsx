@@ -37,7 +37,7 @@ function fmt(dateStr) {
 // filterable by team member (who logged it) and the engagement stage of the
 // associated contact. Switch between a flat chronological list, grouping by
 // firm, or grouping by contact.
-export default function ActivityTimeline({ onActivityClick }) {
+export default function ActivityTimeline({ onActivityClick, hideHeader = false }) {
   const [search, setSearch] = useState("");
   const [teamMember, setTeamMember] = useState("");
   const [stage, setStage] = useState("");
@@ -242,13 +242,15 @@ export default function ActivityTimeline({ onActivityClick }) {
   return (
     <div className="bg-white rounded-2xl w-full flex flex-col border border-gray-100">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-        <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-          <GitBranch className="w-4 h-4 text-amber-600" />
-          Activity Timeline
-          <span className="text-xs text-gray-400 font-normal">({filtered.length})</span>
-        </h2>
-      </div>
+      {!hideHeader && (
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+            <GitBranch className="w-4 h-4 text-amber-600" />
+            Activity Timeline
+            <span className="text-xs text-gray-400 font-normal">({filtered.length})</span>
+          </h2>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50 space-y-2">
