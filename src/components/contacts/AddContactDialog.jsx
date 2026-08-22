@@ -385,10 +385,16 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
     if (editingContact) {
       updateMutation.mutate({ id: editingContact.id, data });
     } else {
-      const duplicates = findContactDuplicates(data, allContacts);
+      // Only validate against contacts in the same firm(s) — a duplicate
+      // at an unrelated firm should not block creation here.
+      const firmContactSet = new Set(firmIds);
+      const relatedContacts = allContacts.filter((c) =>
+        (c.firm_ids || []).some((fid) => firmContactSet.has(fid))
+      );
+      const duplicates = findContactDuplicates(data, relatedContacts);
       // Fallback: also check normalized first+last name to catch cases where
       // suffixes/designations are embedded in the name field.
-      const normDups = findContactsByNormalizedName(data, allContacts);
+      const normDups = findContactsByNormalizedName(data, relatedContacts);
       const allDups = duplicates.length > 0 ? duplicates : normDups.map(d => ({
         contact: d.contact,
         name: d.name,
