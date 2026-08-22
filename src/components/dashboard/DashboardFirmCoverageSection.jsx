@@ -10,8 +10,11 @@ import {
   Building2,
   User,
   Users,
+  Printer,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import CoverageReportDialog from "./CoverageReportDialog";
 
 // Collapsible dashboard section visualizing team coverage by role and firm.
 // Highlights firms that are under-resourced or missing key analyst assignments
@@ -44,6 +47,7 @@ const STATUS = {
 export default function DashboardFirmCoverageSection({ forceExpanded, onFirmClick }) {
   const [expanded, setExpanded] = useState(false);
   const [filter, setFilter] = useState("all"); // all | gaps | covered
+  const [reportOpen, setReportOpen] = useState(false);
 
   useEffect(() => {
     if (forceExpanded !== undefined) setExpanded(forceExpanded);
@@ -201,30 +205,43 @@ export default function DashboardFirmCoverageSection({ forceExpanded, onFirmClic
 
   return (
     <div className="mb-4">
-      <button
-        type="button"
-        onClick={() => setExpanded((v) => !v)}
-        className="flex items-center gap-2 w-full mb-2 px-1 group"
-      >
-        {expanded ? (
-          <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
-        ) : (
-          <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
+      <div className="flex items-center gap-1 mb-2 px-1">
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="flex items-center gap-2 flex-1 group"
+        >
+          {expanded ? (
+            <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
+          ) : (
+            <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
+          )}
+          <ShieldCheck className="w-4 h-4 text-emerald-600" />
+          <span className="text-sm font-semibold text-gray-700 group-hover:text-gray-900">
+            Firm Coverage
+          </span>
+          <span className="text-[11px] text-gray-400 font-normal hidden sm:inline">
+            Team coverage by firm &amp; role
+          </span>
+          {gapCount > 0 && (
+            <Badge className="text-[10px] px-1.5 py-0 bg-red-100 text-red-700 border border-red-200 flex-shrink-0">
+              <AlertTriangle className="w-3 h-3 mr-0.5" />
+              {gapCount} need attention
+            </Badge>
+          )}
+        </button>
+        {firms.length > 0 && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-gray-500 hover:text-emerald-700"
+            onClick={() => setReportOpen(true)}
+            title="Print coverage report"
+          >
+            <Printer className="w-4 h-4" />
+          </Button>
         )}
-        <ShieldCheck className="w-4 h-4 text-emerald-600" />
-        <span className="text-sm font-semibold text-gray-700 group-hover:text-gray-900">
-          Firm Coverage
-        </span>
-        <span className="text-[11px] text-gray-400 font-normal hidden sm:inline">
-          Team coverage by firm &amp; role
-        </span>
-        {gapCount > 0 && (
-          <Badge className="text-[10px] px-1.5 py-0 bg-red-100 text-red-700 border border-red-200 flex-shrink-0">
-            <AlertTriangle className="w-3 h-3 mr-0.5" />
-            {gapCount} need attention
-          </Badge>
-        )}
-      </button>
+      </div>
 
       {expanded && (
         <div className="pl-2 border-l-2 border-gray-100 space-y-3">
@@ -296,6 +313,8 @@ export default function DashboardFirmCoverageSection({ forceExpanded, onFirmClic
           )}
         </div>
       )}
+
+      <CoverageReportDialog open={reportOpen} onClose={() => setReportOpen(false)} firms={firms} />
     </div>
   );
 }

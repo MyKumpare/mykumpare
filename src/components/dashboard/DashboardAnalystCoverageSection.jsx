@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 export default function DashboardAnalystCoverageSection({ forceExpanded, onFirmClick }) {
   const [expanded, setExpanded] = useState(false);
   const [roleFilter, setRoleFilter] = useState("all"); // all | primary | secondary
+  const [firmFilter, setFirmFilter] = useState("all");
 
   useEffect(() => {
     if (forceExpanded !== undefined) setExpanded(forceExpanded);
@@ -66,10 +67,24 @@ export default function DashboardAnalystCoverageSection({ forceExpanded, onFirmC
   });
   const contactMap = useMemo(() => new Map(contacts.map((c) => [c.id, c])), [contacts]);
 
-  const primaryAnalysts = analysts
+  const firmOptions = useMemo(() => {
+    const map = new Map();
+    for (const a of analysts)
+      for (const as of a.assignments) map.set(as.firm_id, as.firm_name);
+    return Array.from(map.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [analysts]);
+
+  const firmFilteredAnalysts = useMemo(() => {
+    if (firmFilter === "all") return analysts;
+    return analysts.filter((a) => a.assignments.some((as) => as.firm_id === firmFilter));
+  }, [analysts, firmFilter]);
+
+  const primaryAnalysts = firmFilteredAnalysts
     .filter((a) => a.roles.includes("primary"))
     .sort((a, b) => a.name.localeCompare(b.name));
-  const secondaryOnly = analysts
+  const secondaryOnly = firmFilteredAnalysts
     .filter((a) => !a.roles.includes("primary") && a.roles.includes("secondary"))
     .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -176,25 +191,40 @@ export default function DashboardAnalystCoverageSection({ forceExpanded, onFirmC
             </div>
           ) : (
             <>
-              <div className="flex items-center gap-1">
-                {[
-                  { key: "all", label: "All" },
-                  { key: "primary", label: "Primary" },
-                  { key: "secondary", label: "Secondary" },
-                ].map((opt) => (
-                  <button
-                    key={opt.key}
-                    type="button"
-                    onClick={() => setRoleFilter(opt.key)}
-                    className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors ${
-                      roleFilter === opt.key
-                        ? "bg-indigo-600 text-white border-indigo-600"
-                        : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-1">
+                  {[
+                    { key: "all", label: "All" },
+                    { key: "primary", label: "Primary" },
+                    { key: "secondary", label: "Secondary" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      onClick={() => setRoleFilter(opt.key)}
+                      className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors ${
+                        roleFilter === opt.key
+                          ? "bg-indigo-600 text-white border-indigo-600"
+                          : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <select
+                  value={firmFilter}
+                  onChange={(e) => setFirmFilter(e.target.value)}
+                  className="text-[11px] border border-gray-200 rounded-md px-2 py-1 bg-white text-gray-600 focus:outline-none focus:border-indigo-400 max-w-[200px] truncate"
+                  title="Filter analysts by firm coverage"
+                >
+                  <option value="all">All Firms</option>
+                  {firmOptions.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {(roleFilter === "all" || roleFilter === "primary") && primaryAnalysts.length > 0 && (
@@ -216,6 +246,18 @@ export default function DashboardAnalystCoverageSection({ forceExpanded, onFirmC
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {secondaryOnly.map(renderAnalystCard)}
                   </div>
+                </div>
+              )}
+
+              {!(
+                (roleFilter === "all" || roleFilter === "primary") && primaryAnalysts.length > 0
+              ) &&
+                !(
+                  (roleFilter === "all" || roleFilter === "secondary") &&
+                  secondaryOnly.length > 0
+                ) && (
+                <div className="text-xs text-gray-400 italic py-4 text-center">
+                  No analysts matching the selected filters
                 </div>
               )}
             </>
