@@ -244,7 +244,7 @@ export default function ProductInvestmentTeamTab({ productId, firmId }) {
                     className="text-sm font-medium text-indigo-700 hover:underline truncate text-left"
                     onClick={() => setViewingContact(contact)}
                   >
-                    {contact.first_name} {contact.last_name}
+                    {[contact.salutation, contact.first_name, contact.middle_name, contact.last_name, contact.suffix].filter(Boolean).join(" ")}
                     {member.is_key && (
                       <Badge className="ml-2 text-[10px] px-1.5 py-0 bg-amber-100 text-amber-700 border-amber-200">
                         Key
