@@ -119,18 +119,32 @@ function ContactPicker({ firmId, existingMemberIds, existingMemberNames, onAdd }
   return (
     <div className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm">
       {/* Search header */}
-      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-gray-100 bg-gray-50">
-        <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
-        <input
-          autoFocus
-          className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
-          placeholder="Search firm contacts by name..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <span className="text-xs text-gray-400 flex-shrink-0 whitespace-nowrap">
-          {isLoading ? "Loading…" : `${availableCount} available · ${firmContacts.length} total`}
-        </span>
+      <div className="px-3 py-2.5 border-b border-gray-100 bg-gray-50">
+        <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-gray-300 bg-white focus-within:border-indigo-400 focus-within:ring-1 focus-within:ring-indigo-400 transition-colors">
+          <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
+          <input
+            autoFocus
+            className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400 min-w-0"
+            placeholder="Search by name to find a member…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Escape") setSearch(""); }}
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              className="text-gray-400 hover:text-gray-600 flex-shrink-0"
+              title="Clear search"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+        <div className="mt-1.5 px-1 text-[11px] text-gray-400 flex items-center justify-between">
+          <span>{isLoading ? "Loading…" : `${availableCount} available${search ? ` · ${firmContacts.length} total` : ""}`}</span>
+          {search && <span className="italic">Press Esc to clear</span>}
+        </div>
       </div>
 
       {/* Contact list */}
