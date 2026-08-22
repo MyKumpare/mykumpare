@@ -596,6 +596,37 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
     setSystemDuplicateWarning(null);
   };
 
+  // Link the current firm to the existing contact instead of creating a
+  // duplicate. A contact can legitimately be tagged with one or more firms,
+  // so we add the new firm to the existing contact's firm_ids array.
+  const linkExistingMutation = useMutation({
+    mutationFn: async ({ existingContact, newFirmId }) => {
+      const existingFirmIds = existingContact.firm_ids || [];
+      const updated = Array.from(new Set([...existingFirmIds, newFirmId].filter(Boolean)));
+      return base44.entities.Contact.update(existingContact.id, { firm_ids: updated });
+    },
+    onSuccess: (updated) => {
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["firms"] });
+      toast({ title: "Linked to existing contact", description: "The firm was added to the existing contact.", variant: "default" });
+      setSystemDuplicateWarning(null);
+      if (onContactCreated) onContactCreated(updated);
+      onOpenChange(false);
+    },
+    onError: () => {
+      toast({ title: "Could not link contact", description: "Please try again or create a new record.", variant: "destructive" });
+    },
+  });
+
+  const handleLinkToExisting = (existingContact) => {
+    const newFirmId = currentFirmId || (systemDuplicateWarning?.data?.firm_ids || [])[0];
+    if (!newFirmId) {
+      toast({ title: "No firm selected", description: "Select a firm before linking.", variant: "destructive" });
+      return;
+    }
+    linkExistingMutation.mutate({ existingContact, newFirmId });
+  };
+
   // Handle the response from ScrapeProfileButton — update dialog state with
   // the freshly scraped data so the user can review it before saving.
   const handleScrapeComplete = (data) => {
@@ -1881,31 +1912,39 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-red-500" />
-                Duplicate Contact Detected in System
+                <AlertTriangle className="w-5 h-5 text-amber-500" />
+                Similar Contact Found at Another Firm
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-3 py-2">
-              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2">
-                <p className="text-sm font-semibold text-red-700">
-                  ⚠ Conflict: This contact already exists at another firm.
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+                <p className="text-sm font-semibold text-amber-700">
+                  A contact can be tagged with one or more firms.
                 </p>
-                <p className="text-xs text-red-600 mt-1">
-                  A contact with the same name already exists in the system, linked to a different firm. Please review before creating a duplicate record.
+                <p className="text-xs text-amber-700 mt-1">
+                  A similar contact already exists in the system at another firm. Since a contact can belong to multiple firms, consider linking this firm to the existing record instead of creating a duplicate.
                 </p>
               </div>
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {systemDuplicateWarning.duplicates.map((dup, i) => (
-                  <div key={i} className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                  <div key={i} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
                     <p className="font-semibold text-sm text-gray-800">{dup.name}</p>
                     {dup.email && <p className="text-xs text-gray-500">{dup.email}</p>}
                     <ul className="mt-1.5 space-y-0.5">
                       {dup.reasons.map((r, ri) => (
-                        <li key={ri} className="text-xs text-amber-700 flex items-start gap-1">
-                          <span className="text-amber-500 mt-0.5">⚠</span> {r}
+                        <li key={ri} className="text-xs text-gray-600 flex items-start gap-1">
+                          <span className="text-amber-500 mt-0.5">•</span> {r}
                         </li>
                       ))}
                     </ul>
+                    <Button
+                      size="sm"
+                      className="mt-2 h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
+                      onClick={() => handleLinkToExisting(dup.contact)}
+                      disabled={linkExistingMutation.isPending}
+                    >
+                      {linkExistingMutation.isPending ? "Linking..." : "Link firm to this contact"}
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -1913,11 +1952,12 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
             <DialogFooter>
               <Button variant="outline" onClick={() => setSystemDuplicateWarning(null)}>Cancel</Button>
               <Button
-                className="bg-amber-600 hover:bg-amber-700 text-white"
+                variant="ghost"
+                className="text-amber-700 hover:bg-amber-50"
                 onClick={handleSystemForceCreate}
                 disabled={createMutation.isPending}
               >
-                {createMutation.isPending ? "Creating..." : "Create Anyway"}
+                {createMutation.isPending ? "Creating..." : "Create as new contact anyway"}
               </Button>
             </DialogFooter>
           </DialogContent>
