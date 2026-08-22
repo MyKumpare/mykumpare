@@ -31,7 +31,7 @@ function ContactPicker({ firmId, existingMemberIds, onAdd }) {
     () =>
       contacts
         .filter((c) => !searchLower || getFullName(c).toLowerCase().includes(searchLower))
-        .sort((a, b) => (a.last_name || "").localeCompare(b.last_name || "")),
+        .sort((a, b) => (a.first_name || "").localeCompare(b.first_name || "")),
     [contacts, searchLower]
   );
 
@@ -194,12 +194,12 @@ export default function ProductInvestmentTeamTab({ productId, firmId }) {
 
   const isSaving = updateTeam.isPending;
 
-  // Sort: key members first, then alphabetically
+  // Sort: key members first, then alphabetically by first name
   const sortedTeam = [...team].sort((a, b) => {
     if (a.is_key !== b.is_key) return a.is_key ? -1 : 1;
     const ca = contactMap.get(a.contact_id);
     const cb = contactMap.get(b.contact_id);
-    return (ca?.last_name || "").localeCompare(cb?.last_name || "");
+    return (ca?.first_name || "").localeCompare(cb?.first_name || "");
   });
 
   return (
