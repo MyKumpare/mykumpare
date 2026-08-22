@@ -288,6 +288,38 @@ export default function DashboardFirmCoverageSection({ forceExpanded, onFirmClic
             </div>
           ) : (
             <>
+              {/* Missing-roles alert banner — consolidates every firm needing coverage */}
+              {gapCount > 0 && (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 p-2.5">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-semibold text-amber-800">
+                        {gapCount} {gapCount === 1 ? "firm has" : "firms have"} missing analyst roles
+                      </div>
+                      <ul className="mt-1 space-y-0.5">
+                        {firms
+                          .filter((f) => f.status !== "covered")
+                          .map((f) => (
+                            <li
+                              key={f.firm_id}
+                              className="text-[11px] text-amber-800 flex items-center gap-1.5"
+                            >
+                              <span className={`w-1.5 h-1.5 rounded-full ${STATUS[f.status].dot}`} />
+                              <span className="font-medium truncate">{f.firm_name}</span>
+                              <span className="text-amber-600">
+                                — {f.status === "unassigned"
+                                  ? "no analysts assigned"
+                                  : "missing primary analyst"}
+                              </span>
+                            </li>
+                          ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Coverage summary */}
               <div className="grid grid-cols-3 gap-2">
                 <div className={`rounded-lg border p-2 ${STATUS.covered.card}`}>
