@@ -42,6 +42,7 @@ import MonitorNavSection from "../components/activity/MonitorNavSection";
 import ReportingNavSection from "../components/reports/ReportingNavSection";
 import DashboardNavSection from "../components/dashboard/DashboardNavSection";
 import DashboardTimelineSection from "../components/dashboard/DashboardTimelineSection";
+import DashboardAnalystCoverageSection from "../components/dashboard/DashboardAnalystCoverageSection";
 import AnalyticsSection from "../components/analytics/AnalyticsSection";
 
 const ReportsPickerModal = lazyDialog(() => import("../components/reports/ReportsPickerModal"));
@@ -1105,6 +1106,15 @@ export default function Home() {
         <DashboardTimelineSection
           forceExpanded={allExpanded}
           onActivityClick={(activity) => setViewingActivity(activity)}
+        />
+
+        {/* Analyst Coverage — team members organized by role & covered firms */}
+        <DashboardAnalystCoverageSection
+          forceExpanded={allExpanded}
+          onFirmClick={(firmId) => {
+            const f = firms.find((x) => x.id === firmId);
+            if (f) handleEdit(f);
+          }}
         />
 
         {/* Utility section */}
