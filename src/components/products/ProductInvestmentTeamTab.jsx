@@ -7,7 +7,7 @@ import { Plus, Star, StarOff, X, UserPlus, Search, User, Check, Briefcase } from
 import AddContactDialog from "@/components/contacts/AddContactDialog";
 import { dedupeContacts } from "@/components/contacts/contactDedupe";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { CreatableSelect } from "@/components/products/CreatableSelectField";
+import InvestmentTeamRolePicker from "@/components/products/InvestmentTeamRolePicker";
 
 // Normalized name key (lowercased, salutations/suffixes/designations stripped)
 // so duplicate DB records for the same person collapse to one key.
@@ -30,25 +30,9 @@ function nameKey(c) {
   return `${first}|${last}`;
 }
 
-// Preset roles for investment team members. Users can also type custom roles
-// in the picker — custom roles are persisted via usePersistedOptions.
-const TEAM_ROLES = [
-  "Lead Analyst",
-  "Compliance Officer",
-  "Portfolio Manager",
-  "Senior Analyst",
-  "Analyst",
-  "Associate",
-  "Research Analyst",
-  "Trader",
-  "Risk Manager",
-  "CIO",
-  "Managing Director",
-  "Partner",
-];
-
-// Compact role badge that opens a popover with a creatable select, so users
-// can pick a preset role or type a new one for each team member.
+// Compact role badge that opens a popover with a DB-backed role picker, so users
+// can pick a predefined role from the shared library or add a new one for each
+// team member.
 function RolePicker({ role, onChange }) {
   const [open, setOpen] = useState(false);
   return (
@@ -67,13 +51,11 @@ function RolePicker({ role, onChange }) {
           {role || "Assign role"}
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-56 p-2" align="start">
-        <CreatableSelect
+      <PopoverContent className="w-56 p-0" align="start">
+        <InvestmentTeamRolePicker
           value={role || ""}
-          onChange={(v) => { onChange(v); setOpen(false); }}
-          options={TEAM_ROLES}
-          placeholder="Select or type a role…"
-          storageKey="investment-team-roles"
+          onChange={(v) => onChange(v)}
+          onClose={() => setOpen(false)}
         />
       </PopoverContent>
     </Popover>

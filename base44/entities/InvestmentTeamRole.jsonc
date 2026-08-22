@@ -1,0 +1,54 @@
+{
+  "name": "InvestmentTeamRole",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of a predefined investment team role (managed master list, reusable across product investment team assignments). Users pick from these in the investment team role picker; new roles typed in the picker are persisted here so they join the shared library."
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "user"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": null,
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
