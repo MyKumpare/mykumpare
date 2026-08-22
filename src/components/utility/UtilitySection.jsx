@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 // Utility section — tools for cleanup, imports, and validation
-import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search, ArrowLeft, Users, Sparkles, ScrollText, ShieldCheck, Ghost, Upload, Eraser, Tag, UserX, Briefcase, Building, Package, Activity, Newspaper } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search, ArrowLeft, Users, Sparkles, ScrollText, ShieldCheck, Ghost, Upload, Eraser, Tag, UserX, Briefcase, Building, Package, Activity, Newspaper, ArrowRightLeft } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import AddBenchmarkDialog from "./AddBenchmarkDialog";
 import DuplicateContactsReview from "@/components/contacts/DuplicateContactsReview";
+import BulkMergeContacts from "./BulkMergeContacts";
 import EnrichmentLogsView from "./EnrichmentLogsView";
 import OrphanRecordCleanup from "./OrphanRecordCleanup";
 import OrphanedContactsCleanup from "./OrphanedContactsCleanup";
@@ -195,6 +196,16 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
                 </div>
                 <span className="text-sm font-semibold text-gray-700">Contact Cleanup</span>
                 <span className="text-[11px] text-gray-400">Review & merge duplicates</span>
+              </button>
+              <button
+                onClick={() => setView("bulk-merge")}
+                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
+              >
+                <div className="w-9 h-9 rounded-full bg-rose-50 flex items-center justify-center">
+                  <ArrowRightLeft className="w-4.5 h-4.5 text-rose-600" />
+                </div>
+                <span className="text-sm font-semibold text-gray-700">Bulk Merge</span>
+                <span className="text-[11px] text-gray-400">Consolidate duplicates across all firms</span>
               </button>
               <button
                 onClick={() => setView("enrichment-logs")}
@@ -424,6 +435,11 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
                 <DuplicateContactsReview />
               )}
             </div>
+          )}
+
+          {/* Bulk merge view */}
+          {view === "bulk-merge" && (
+            <BulkMergeContacts />
           )}
 
           {/* Enrichment logs view */}
