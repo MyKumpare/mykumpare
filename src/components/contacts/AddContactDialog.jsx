@@ -556,6 +556,17 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
     setDuplicateWarning(null);
   };
 
+  // When launched from a picker (e.g. investment team tab), offer to use the
+  // existing duplicate contact instead of forcing a new creation.
+  const handleUseExisting = () => {
+    const existing = duplicateWarning?.duplicates?.[0]?.contact;
+    setDuplicateWarning(null);
+    if (existing && onContactCreated) {
+      onContactCreated(existing);
+      onOpenChange(false);
+    }
+  };
+
   // Handle the response from ScrapeProfileButton — update dialog state with
   // the freshly scraped data so the user can review it before saving.
   const handleScrapeComplete = (data) => {
@@ -1816,6 +1827,14 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setDuplicateWarning(null)}>Cancel</Button>
+              {onContactCreated && duplicateWarning?.duplicates?.[0]?.contact && (
+                <Button
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                  onClick={handleUseExisting}
+                >
+                  Use Existing Contact
+                </Button>
+              )}
               <Button
                 className="bg-amber-600 hover:bg-amber-700 text-white"
                 onClick={handleForceCreate}
