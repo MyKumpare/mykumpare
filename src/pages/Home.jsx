@@ -44,6 +44,7 @@ import DashboardNavSection from "../components/dashboard/DashboardNavSection";
 import DashboardTimelineSection from "../components/dashboard/DashboardTimelineSection";
 import DashboardAnalystCoverageSection from "../components/dashboard/DashboardAnalystCoverageSection";
 import DashboardFirmCoverageSection from "../components/dashboard/DashboardFirmCoverageSection";
+import ManagementNavSection from "../components/dashboard/ManagementNavSection";
 import AnalyticsSection from "../components/analytics/AnalyticsSection";
 
 const ReportsPickerModal = lazyDialog(() => import("../components/reports/ReportsPickerModal"));
@@ -247,6 +248,7 @@ export default function Home() {
   };
 
   const portfoliosRef = useRef(null);
+  const managementRef = useRef(null);
   const firmsRef = useRef(null);
   const productsRef = useRef(null);
   const contactsRef = useRef(null);
@@ -708,6 +710,11 @@ export default function Home() {
     { label: "Firms", icon: Building, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => setFirmPickerOpen(true) },
     { label: "Products", icon: Package, ref: null, color: "text-violet-600", activeBg: "bg-violet-50", onClick: () => setProductPickerOpen(true) },
     { label: "Contacts", icon: User, ref: null, color: "text-pink-600", activeBg: "bg-pink-50", onClick: () => setContactPickerOpen(true) },
+    { label: "Management", icon: Briefcase, ref: null, color: "text-emerald-600", activeBg: "bg-emerald-50", submenu: [
+      { label: "Activity Timeline", icon: Activity, onClick: () => managementRef.current?.scrollToSection(0) },
+      { label: "Analyst Coverage", icon: Users, onClick: () => managementRef.current?.scrollToSection(1) },
+      { label: "Firm Coverage", icon: Building, onClick: () => managementRef.current?.scrollToSection(2) },
+    ] },
     { label: "Utilities", icon: Wrench, ref: utilityRef, color: "text-gray-600", activeBg: "bg-gray-100", onClick: () => { setUtilityDefaultView(null); setUtilityModalOpen(true); }, submenu: [
       { label: "Benchmark", icon: Gauge, onClick: () => { setUtilityDefaultView("benchmark"); setUtilityModalOpen(true); } },
       { label: "Contact Cleanup", icon: Users, onClick: () => { setUtilityDefaultView("cleanup"); setUtilityModalOpen(true); } },
@@ -1103,32 +1110,55 @@ export default function Home() {
           forceExpanded={allExpanded}
         />
 
-        {/* Activity Timeline — chronological history across all firms */}
-        <DashboardTimelineSection
+        {/* Management — Activity Timeline, Analyst Coverage, Firm Coverage */}
+        <ManagementNavSection
+          ref={managementRef}
           forceExpanded={allExpanded}
-          onActivityClick={(activity) => setViewingActivity(activity)}
-        />
-
-        {/* Analyst Coverage — team members organized by role & covered firms */}
-        <DashboardAnalystCoverageSection
-          forceExpanded={allExpanded}
-          onFirmClick={(firmId) => {
-            const f = firms.find((x) => x.id === firmId);
-            if (f) handleEdit(f);
-          }}
-        />
-
-        {/* Firm Coverage — team coverage by firm & role, with gap highlighting */}
-        <DashboardFirmCoverageSection
-          forceExpanded={allExpanded}
-          onFirmClick={(firmId) => {
-            const f = firms.find((x) => x.id === firmId);
-            if (f) handleEdit(f);
-          }}
-          onProductClick={(productId) => {
-            const p = products.find((x) => x.id === productId);
-            if (p) handleEditProduct(p);
-          }}
+          sections={[
+            {
+              label: "Activity Timeline",
+              icon: Activity,
+              iconColor: "text-amber-500",
+              element: (
+                <DashboardTimelineSection
+                  forceExpanded={allExpanded}
+                  onActivityClick={(activity) => setViewingActivity(activity)}
+                />
+              ),
+            },
+            {
+              label: "Analyst Coverage",
+              icon: Users,
+              iconColor: "text-indigo-500",
+              element: (
+                <DashboardAnalystCoverageSection
+                  forceExpanded={allExpanded}
+                  onFirmClick={(firmId) => {
+                    const f = firms.find((x) => x.id === firmId);
+                    if (f) handleEdit(f);
+                  }}
+                />
+              ),
+            },
+            {
+              label: "Firm Coverage",
+              icon: Building,
+              iconColor: "text-emerald-500",
+              element: (
+                <DashboardFirmCoverageSection
+                  forceExpanded={allExpanded}
+                  onFirmClick={(firmId) => {
+                    const f = firms.find((x) => x.id === firmId);
+                    if (f) handleEdit(f);
+                  }}
+                  onProductClick={(productId) => {
+                    const p = products.find((x) => x.id === productId);
+                    if (p) handleEditProduct(p);
+                  }}
+                />
+              ),
+            },
+          ]}
         />
 
         {/* Utility section */}
