@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  Radar, ClipboardList, CalendarDays, LayoutList, Plus, ChevronRight, ChevronDown, ExternalLink, Newspaper,
+  Radar, ClipboardList, CalendarDays, LayoutList, Plus, ChevronRight, ChevronDown, ExternalLink, Newspaper, GitBranch,
 } from "lucide-react";
 
 /**
@@ -17,6 +17,7 @@ export default function MonitorNavSection({
   onOpenMonitor,
   onOpenActivity,
   onAddActivity,
+  onOpenTimeline,
   onOpenCalendar,
   onOpenTasks,
   onAddTasks,
@@ -40,6 +41,14 @@ export default function MonitorNavSection({
       addColor: "text-amber-600",
       addHoverColor: "hover:text-amber-700",
       addHoverBg: "hover:bg-amber-50",
+    },
+    {
+      label: "Timeline",
+      icon: GitBranch,
+      iconColor: "text-amber-500",
+      count: null,
+      onOpen: onOpenTimeline,
+      onAdd: null,
     },
     {
       label: "Calendar",

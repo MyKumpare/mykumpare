@@ -989,6 +989,7 @@ export default function Home() {
           onOpenMonitor={() => navigate("/Monitor")}
           onOpenActivity={() => setActivityPickerOpen(true)}
           onAddActivity={() => { setActivityLogDefaultTab("activity"); setActivityLogModalOpen(true); }}
+          onOpenTimeline={() => navigate("/Monitor?tab=timeline")}
           onOpenCalendar={() => navigate("/ActivityCalendar")}
           onOpenTasks={() => setTaskPickerOpen(true)}
           onAddTasks={() => { setActivityLogDefaultTab("task"); setActivityLogModalOpen(true); }}
