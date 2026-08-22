@@ -5,7 +5,8 @@ import { useAuth } from "@/lib/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, CheckCircle2, AlertTriangle, Loader2, Download, ArrowLeft } from "lucide-react";
+import { Upload, CheckCircle2, AlertTriangle, Loader2, Download, ArrowLeft, Copy } from "lucide-react";
+import { findContactDuplicates } from "@/components/contacts/contactDuplicateCheck";
 
 // ── Importable contact fields ──────────────────────────────────────────────
 const IMPORTABLE_FIELDS = [
@@ -143,6 +144,13 @@ export default function CsvContactImport() {
     queryFn: () => base44.entities.Firm.list(),
   });
 
+  const { data: existingContacts = [] } = useQuery({
+    queryKey: ["contacts"],
+    queryFn: () => base44.entities.Contact.list("-created_date", 5000),
+  });
+
+  const [skipDuplicates, setSkipDuplicates] = useState(true);
+
   const firmByName = useMemo(() => {
     const map = {};
     (firms || []).forEach(f => {
@@ -246,23 +254,43 @@ export default function CsvContactImport() {
         if (phone) contact.phones = [phone];
       }
 
-      valid.push({ contact, row: rowIdx + 2, firmName });
+      // Duplicate detection against existing contacts in the database, plus
+      // intra-CSV duplicates (the same person appearing twice in this upload).
+      const existingMatches = findContactDuplicates(contact, existingContacts);
+      const priorContacts = valid.map((v) => v.contact);
+      const intraMatches = findContactDuplicates(contact, priorContacts);
+      const duplicate =
+        existingMatches.length > 0 || intraMatches.length > 0
+          ? { existing: existingMatches.slice(0, 3), intra: intraMatches.length > 0 }
+          : null;
+
+      valid.push({ contact, row: rowIdx + 2, firmName, duplicate });
     });
 
     return { valid, skipped };
-  }, [csvData, mapping, user, firmByName]);
+  }, [csvData, mapping, user, firmByName, existingContacts]);
 
   const handleImport = async () => {
     setStage("importing");
     const { valid, skipped } = buildContacts();
+    const duplicatesSkipped = [];
+    const toImport = skipDuplicates
+      ? valid.filter((v) => {
+          if (v.duplicate) {
+            duplicatesSkipped.push({ row: v.row, reason: v.duplicate.existing?.[0]?.reasons?.[0] || "Duplicate of existing contact" });
+            return false;
+          }
+          return true;
+        })
+      : valid;
     let successCount = 0;
     const failed = [];
     const firmsNotFound = [];
 
     try {
       const BATCH = 100;
-      for (let i = 0; i < valid.length; i += BATCH) {
-        const batch = valid.slice(i, i + BATCH);
+      for (let i = 0; i < toImport.length; i += BATCH) {
+        const batch = toImport.slice(i, i + BATCH);
         try {
           await base44.entities.Contact.bulkCreate(batch.map(b => b.contact));
           successCount += batch.length;
@@ -272,7 +300,7 @@ export default function CsvContactImport() {
         }
       }
 
-      setResults({ total: csvData.rows.length, success: successCount, skipped, failed, firmsNotFound });
+      setResults({ total: csvData.rows.length, success: successCount, skipped, duplicatesSkipped, failed, firmsNotFound });
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
       setStage("results");
       if (successCount > 0) toast({ title: `✅ ${successCount} contact${successCount === 1 ? "" : "s"} imported` });
@@ -338,18 +366,43 @@ export default function CsvContactImport() {
   // ── Mapping stage ──
   if (stage === "mapping" && csvData) {
     const { valid, skipped } = buildContacts();
+    const duplicateCount = valid.filter(v => v.duplicate).length;
+    const duplicateRows = new Set(valid.filter(v => v.duplicate).map(v => v.row));
     const activeFields = IMPORTABLE_FIELDS.filter(f => Object.values(mapping).includes(f.key));
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold text-gray-700">Map Columns</p>
-            <p className="text-xs text-gray-400">{csvData.rows.length} rows · {valid.length} valid · {skipped.length} will skip</p>
+            <p className="text-xs text-gray-400">{csvData.rows.length} rows · {valid.length} valid · {skipped.length} will skip{duplicateCount > 0 ? ` · ${duplicateCount} duplicate${duplicateCount === 1 ? "" : "s"}` : ""}</p>
           </div>
           <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={reset}>
             <ArrowLeft className="w-3.5 h-3.5" /> Start Over
           </Button>
         </div>
+
+        {duplicateCount > 0 && (
+          <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+            <Copy className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-amber-700">
+                {duplicateCount} potential duplicate{duplicateCount === 1 ? "" : "s"} detected
+              </p>
+              <p className="text-[11px] text-amber-600 mt-0.5">
+                Rows matching existing contacts (by name, email, or phone) are highlighted below.
+              </p>
+              <label className="flex items-center gap-2 mt-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={skipDuplicates}
+                  onChange={(e) => setSkipDuplicates(e.target.checked)}
+                  className="accent-amber-600"
+                />
+                <span className="text-xs text-amber-700 font-medium">Skip duplicates during import</span>
+              </label>
+            </div>
+          </div>
+        )}
 
         <div className="rounded-lg border border-gray-200 overflow-hidden">
           <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-gray-50 text-[10px] font-semibold text-gray-500 uppercase tracking-wide">
@@ -397,8 +450,9 @@ export default function CsvContactImport() {
                     if (fk) raw[fk] = (row[i] || "").trim();
                   });
                   const missing = !raw.first_name || !raw.last_name;
+                  const isDup = duplicateRows.has(ri + 2);
                   return (
-                    <tr key={ri} className={missing ? "bg-red-50" : ri % 2 ? "bg-gray-50/50" : ""}>
+                    <tr key={ri} className={missing ? "bg-red-50" : isDup ? "bg-amber-50" : ri % 2 ? "bg-gray-50/50" : ""}>
                       {activeFields.map(f => (
                         <td key={f.key} className="px-2 py-1.5 text-gray-700 whitespace-nowrap">{raw[f.key] || <span className="text-gray-300">—</span>}</td>
                       ))}
@@ -410,9 +464,12 @@ export default function CsvContactImport() {
           </div>
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex justify-end items-center gap-3">
+          {skipDuplicates && duplicateCount > 0 && (
+            <span className="text-xs text-amber-600 font-medium">{duplicateCount} duplicate{duplicateCount === 1 ? "" : "s"} will be skipped</span>
+          )}
           <Button onClick={handleImport} disabled={valid.length === 0} className="bg-indigo-600 hover:bg-indigo-700 text-white">
-            <Upload className="w-4 h-4 mr-1" /> Import {valid.length} Contact{valid.length === 1 ? "" : "s"}
+            <Upload className="w-4 h-4 mr-1" /> Import {skipDuplicates ? valid.length - duplicateCount : valid.length} Contact{valid.length === 1 ? "" : "s"}
           </Button>
         </div>
       </div>
@@ -439,7 +496,7 @@ export default function CsvContactImport() {
           </div>
           <div>
             <p className="text-sm font-semibold text-gray-700">Import Complete</p>
-            <p className="text-xs text-gray-400">{results.success} imported · {results.skipped.length} skipped · {results.failed.length} failed · {results.total} total</p>
+            <p className="text-xs text-gray-400">{results.success} imported · {results.skipped.length} skipped · {results.duplicatesSkipped?.length || 0} duplicates skipped · {results.failed.length} failed · {results.total} total</p>
           </div>
         </div>
 
@@ -447,6 +504,21 @@ export default function CsvContactImport() {
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
             <p className="text-xs font-semibold text-amber-700 mb-1">Firms not found ({results.firmsNotFound.length})</p>
             <p className="text-xs text-amber-600">Contacts imported but not linked: {results.firmsNotFound.slice(0, 5).join(", ")}{results.firmsNotFound.length > 5 ? "..." : ""}</p>
+          </div>
+        )}
+
+        {results.duplicatesSkipped?.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold text-amber-600 uppercase tracking-wide mb-2">Duplicates Skipped ({results.duplicatesSkipped.length})</p>
+            <div className="max-h-40 overflow-y-auto rounded-lg border border-amber-200 divide-y divide-amber-100">
+              {results.duplicatesSkipped.slice(0, 20).map((s, i) => (
+                <div key={i} className="px-3 py-2 text-xs flex justify-between gap-2">
+                  <span className="text-gray-500">Row {s.row}</span>
+                  <span className="text-amber-700 truncate">{s.reason}</span>
+                </div>
+              ))}
+              {results.duplicatesSkipped.length > 20 && <div className="px-3 py-2 text-xs text-gray-400 text-center">... and {results.duplicatesSkipped.length - 20} more</div>}
+            </div>
           </div>
         )}
 
