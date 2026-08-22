@@ -7,10 +7,31 @@ import { Plus, Star, StarOff, X, UserPlus, Search, User, Check } from "lucide-re
 import AddContactDialog from "@/components/contacts/AddContactDialog";
 import { dedupeContacts } from "@/components/contacts/contactDedupe";
 
+// Normalized name key (lowercased, salutations/suffixes/designations stripped)
+// so duplicate DB records for the same person collapse to one key.
+const NAME_STOPWORDS = new Set([
+  "mr", "mrs", "ms", "miss", "dr", "prof", "hon",
+  "jr", "sr", "ii", "iii", "iv", "esq", "cfa", "cpa", "mba", "phd", "md",
+]);
+function nameKey(c) {
+  const norm = (s) =>
+    (s || "")
+      .toLowerCase()
+      .trim()
+      .replace(/[.'’\-(),]/g, " ")
+      .split(/\s+/)
+      .filter((t) => t && !NAME_STOPWORDS.has(t) && !(t.length >= 2 && t === t.toUpperCase()))
+      .join(" ")
+      .trim();
+  const first = (norm(c.first_name) || "").split(" ")[0] || "";
+  const last = norm(c.last_name) || "";
+  return `${first}|${last}`;
+}
+
 // Inline contact picker that proactively shows all contacts linked to the
 // firm in a compact, scrollable list. Search narrows within firm contacts
 // only — no global/other contacts are surfaced here.
-function ContactPicker({ firmId, existingMemberIds, onAdd }) {
+function ContactPicker({ firmId, existingMemberIds, existingMemberNames, onAdd }) {
   const [search, setSearch] = useState("");
 
   // Fetch only this firm's contacts directly (avoids the 500-row global list
@@ -27,13 +48,21 @@ function ContactPicker({ firmId, existingMemberIds, onAdd }) {
   const searchLower = search.toLowerCase().trim();
 
   const existingSet = useMemo(() => new Set(existingMemberIds), [existingMemberIds]);
+  const existingNameKeys = useMemo(() => new Set(existingMemberNames), [existingMemberNames]);
 
   const firmContacts = useMemo(
     () =>
       dedupeContacts(contacts)
-        .filter((c) => !searchLower || getFullName(c).toLowerCase().includes(searchLower))
+        .filter((c) => {
+          // Hide contacts already on the team — by ID or by normalized name
+          // (catches duplicate DB records for the same person).
+          if (existingSet.has(c.id)) return false;
+          if (existingNameKeys.has(nameKey(c))) return false;
+          if (!searchLower) return true;
+          return getFullName(c).toLowerCase().includes(searchLower);
+        })
         .sort((a, b) => (a.first_name || "").localeCompare(b.first_name || "")),
-    [contacts, searchLower]
+    [contacts, searchLower, existingSet, existingNameKeys]
   );
 
   const renderRow = (c) => {
@@ -85,7 +114,7 @@ function ContactPicker({ firmId, existingMemberIds, onAdd }) {
     );
   };
 
-  const availableCount = firmContacts.filter((c) => !existingSet.has(c.id)).length;
+  const availableCount = firmContacts.length;
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm">
@@ -142,6 +171,17 @@ export default function ProductInvestmentTeamTab({ productId, firmId }) {
   const team = product?.investment_team || [];
   const memberIds = team.map((m) => m.contact_id);
 
+  // Dedupe team entries by contact_id so the same person never appears twice,
+  // even if duplicate entries exist in the stored data.
+  const dedupedTeam = useMemo(() => {
+    const seen = new Set();
+    return team.filter((m) => {
+      if (!m.contact_id || seen.has(m.contact_id)) return false;
+      seen.add(m.contact_id);
+      return true;
+    });
+  }, [team]);
+
   // Fetch only the contacts that are actually on this team (by id), so members
   // are never hidden by the 500-row global list cap.
   const { data: teamContacts = [] } = useQuery({
@@ -167,18 +207,33 @@ export default function ProductInvestmentTeamTab({ productId, firmId }) {
   });
 
   const handleAdd = (contact) => {
-    const newTeam = [...team, { contact_id: contact.id, is_key: false }];
+    // Guard against adding the same contact twice (by ID or by normalized
+    // name) — the picker filters them out, but this is a safety net.
+    if (memberIds.includes(contact.id)) {
+      setShowPicker(false);
+      return;
+    }
+    const contactKey = nameKey(contact);
+    const teamContactNames = dedupedTeam
+      .map((m) => contactMap.get(m.contact_id))
+      .filter(Boolean)
+      .map(nameKey);
+    if (teamContactNames.includes(contactKey)) {
+      setShowPicker(false);
+      return;
+    }
+    const newTeam = [...dedupedTeam, { contact_id: contact.id, is_key: false }];
     updateTeam.mutate(newTeam);
     setShowPicker(false);
   };
 
   const handleRemove = (contactId) => {
-    updateTeam.mutate(team.filter((m) => m.contact_id !== contactId));
+    updateTeam.mutate(dedupedTeam.filter((m) => m.contact_id !== contactId));
   };
 
   const handleToggleKey = (contactId) => {
     updateTeam.mutate(
-      team.map((m) =>
+      dedupedTeam.map((m) =>
         m.contact_id === contactId ? { ...m, is_key: !m.is_key } : m
       )
     );
@@ -196,7 +251,7 @@ export default function ProductInvestmentTeamTab({ productId, firmId }) {
   const isSaving = updateTeam.isPending;
 
   // Sort: key members first, then alphabetically by first name
-  const sortedTeam = [...team].sort((a, b) => {
+  const sortedTeam = [...dedupedTeam].sort((a, b) => {
     if (a.is_key !== b.is_key) return a.is_key ? -1 : 1;
     const ca = contactMap.get(a.contact_id);
     const cb = contactMap.get(b.contact_id);
@@ -292,6 +347,10 @@ export default function ProductInvestmentTeamTab({ productId, firmId }) {
             <ContactPicker
               firmId={firmId}
               existingMemberIds={memberIds}
+              existingMemberNames={dedupedTeam
+                .map((m) => contactMap.get(m.contact_id))
+                .filter(Boolean)
+                .map(nameKey)}
               onAdd={handleAdd}
             />
             <div className="flex items-center gap-2">
