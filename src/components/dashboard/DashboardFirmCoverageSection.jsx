@@ -15,6 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import CoverageReportDialog from "./CoverageReportDialog";
+import CoverageHeatmap from "./CoverageHeatmap";
 
 // Collapsible dashboard section visualizing team coverage by role and firm.
 // Highlights firms that are under-resourced or missing key analyst assignments
@@ -277,6 +278,9 @@ export default function DashboardFirmCoverageSection({ forceExpanded, onFirmClic
                   <div className="text-lg font-bold text-red-700 mt-0.5">{counts.unassigned}</div>
                 </div>
               </div>
+
+              {/* Coverage heatmap — visual matrix of role × firm */}
+              <CoverageHeatmap firms={firms} />
 
               {/* Filter */}
               <div className="flex items-center gap-1">
