@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
+import { findContactDuplicates, findContactsByNormalizedName } from "@/components/contacts/contactDuplicateCheck";
 import { Loader2, Search, Download, Link2, ChevronDown, ChevronRight, User, ExternalLink, CheckCircle2, ArrowLeft, AlertCircle } from "lucide-react";
 
 export default function ScrapeContactsFromUrlDialog({ open, onOpenChange, firmId, firmName }) {
@@ -101,10 +102,48 @@ export default function ScrapeContactsFromUrlDialog({ open, onOpenChange, firmId
     if (toImport.length === 0) return;
 
     setImporting(true);
-    let success = 0;
+    let created = 0;
+    let linked = 0;
+    let skipped = 0;
     let failed = 0;
+
+    // Honor the duplicate-validation protocol: load existing contacts and
+    // check each scraped person against them before creating. A match is
+    // linked to this firm instead of duplicated; a near-match is skipped so
+    // the user can review it via the Duplicate Contacts tool.
+    let existingContacts = [];
+    try {
+      existingContacts = await base44.entities.Contact.list("-created_date", 5000);
+    } catch { /* proceed with empty list — creates will still work */ }
+
     for (const c of toImport) {
       try {
+        const probeData = {
+          first_name: c.first_name || "",
+          last_name: c.last_name || "",
+          email: c.email || "",
+          phones: c.phones || [],
+          photo_url: c.photo_url || "",
+        };
+        const dups = findContactDuplicates(probeData, existingContacts);
+        const normDups = dups.length > 0 ? [] : findContactsByNormalizedName(probeData, existingContacts);
+
+        if (dups.length > 0 || normDups.length > 0) {
+          const best = (dups[0]?.contact) || normDups[0]?.contact;
+          if (firmId) {
+            const existingFirmIds = best.firm_ids || [];
+            if (!existingFirmIds.includes(firmId)) {
+              await base44.entities.Contact.update(best.id, { firm_ids: [...existingFirmIds, firmId] });
+              linked++;
+            } else {
+              skipped++;
+            }
+          } else {
+            skipped++;
+          }
+          continue;
+        }
+
         const payload = {
           first_name: c.first_name,
           last_name: c.last_name,
@@ -120,20 +159,31 @@ export default function ScrapeContactsFromUrlDialog({ open, onOpenChange, firmId
           professional_experience: c.professional_experience || [],
           firm_ids: firmId ? [firmId] : [],
         };
-        await base44.entities.Contact.create(payload);
-        success++;
+        const createdContact = await base44.entities.Contact.create(payload);
+        existingContacts.push(createdContact);
+        created++;
       } catch {
         failed++;
       }
     }
     queryClient.invalidateQueries({ queryKey: ["contacts"] });
-    if (success > 0) {
+    const parts = [];
+    if (created > 0) parts.push(`${created} added`);
+    if (linked > 0) parts.push(`${linked} linked to ${firmName || "firm"}`);
+    if (skipped > 0) parts.push(`${skipped} already existed`);
+    if (failed > 0) parts.push(`${failed} failed`);
+    if (created > 0 || linked > 0) {
       toast({
         title: "✅ Contacts imported",
-        description: `${success} contact${success > 1 ? "s" : ""} added${firmName ? ` to ${firmName}` : ""}${failed > 0 ? `, ${failed} failed` : ""}.`,
+        description: parts.join(", ") + ".",
+      });
+    } else if (skipped > 0) {
+      toast({
+        title: "No new contacts",
+        description: `All ${skipped} scraped contact${skipped > 1 ? "s" : ""} already exist${skipped > 1 ? "" : "s"}${firmName ? ` and ${skipped > 1 ? "are" : "is"} already linked to ${firmName}` : ""}.`,
       });
     } else {
-      toast({ title: "Import failed", description: "Could not import any contacts. They may already exist.", variant: "destructive" });
+      toast({ title: "Import failed", description: "Could not import any contacts.", variant: "destructive" });
     }
     setImporting(false);
     reset();

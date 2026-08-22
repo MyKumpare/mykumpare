@@ -699,7 +699,7 @@ export async function createFirmFromEnrichment(enrichedData, tenantId) {
   const people = (enrichedData.people || []).filter((p) => p.first_name || p.last_name);
   let existingContacts = [];
   try {
-    existingContacts = await base44.entities.Contact.list(null, 500);
+    existingContacts = await base44.entities.Contact.list("-created_date", 5000);
   } catch {}
 
   for (const person of people) {
