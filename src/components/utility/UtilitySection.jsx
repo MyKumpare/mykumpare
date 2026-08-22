@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 // Utility section — tools for cleanup, imports, and validation
-import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search, ArrowLeft, Users, Sparkles, ScrollText, ShieldCheck, Ghost, Upload, Eraser, Tag, UserX, Briefcase, Building, Package, Activity, Newspaper, ArrowRightLeft } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search, ArrowLeft, Users, Sparkles, ScrollText, ShieldCheck, Ghost, Upload, Eraser, Tag, UserX, Briefcase, Building, Package, Activity, Newspaper,   ArrowRightLeft, ExternalLink } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -60,7 +60,7 @@ function CollapsibleGroup({ label, labelClass = "text-xs font-semibold text-indi
   );
 }
 
-export default function UtilitySection({ deletedCount, forceExpanded = false, onFirmClick, defaultView }) {
+export default function UtilitySection({ deletedCount, forceExpanded = false, onFirmClick, defaultView, onOpenExternalPortal }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
@@ -331,6 +331,16 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
                   <span className="text-[11px] text-gray-400">Manage users & settings</span>
                 </button>
               )}
+              <button
+                onClick={() => onOpenExternalPortal?.()}
+                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
+              >
+                <div className="w-9 h-9 rounded-full bg-sky-50 flex items-center justify-center">
+                  <ExternalLink className="w-4.5 h-4.5 text-sky-600" />
+                </div>
+                <span className="text-sm font-semibold text-gray-700">Ext Portal</span>
+                <span className="text-[11px] text-gray-400">External party portal</span>
+              </button>
             </div>
           )}
 

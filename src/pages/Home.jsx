@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, ClipboardCheck, FileText, Files, ShieldCheck, X, LayoutDashboard, FlaskConical, MapPin, Camera,   LayoutGrid, PieChart, Bot, ExternalLink, ChevronDown, CalendarDays, Radar, FileBarChart, Mic, Newspaper, Gauge, Users, ScrollText, Ghost, Upload, Eraser, Tag, UserX, Briefcase, Activity } from "lucide-react";
+import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, ClipboardCheck, FileText, Files, ShieldCheck, X, LayoutDashboard, FlaskConical, MapPin, Camera,   LayoutGrid, PieChart, Bot, ExternalLink, ChevronDown, CalendarDays, Radar, FileBarChart, Mic, Newspaper, Gauge, Users, ScrollText,   Ghost, Upload, Eraser, Tag, UserX, Briefcase, Activity, ArrowRightLeft } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
@@ -708,6 +708,7 @@ export default function Home() {
     { label: "Utilities", icon: Wrench, ref: utilityRef, color: "text-gray-600", activeBg: "bg-gray-100", onClick: () => { setUtilityDefaultView(null); setUtilityModalOpen(true); }, submenu: [
       { label: "Benchmark", icon: Gauge, onClick: () => { setUtilityDefaultView("benchmark"); setUtilityModalOpen(true); } },
       { label: "Contact Cleanup", icon: Users, onClick: () => { setUtilityDefaultView("cleanup"); setUtilityModalOpen(true); } },
+      { label: "Bulk Merge", icon: ArrowRightLeft, onClick: () => { setUtilityDefaultView("bulk-merge"); setUtilityModalOpen(true); } },
       { label: "Enrichment Logs", icon: ScrollText, onClick: () => { setUtilityDefaultView("enrichment-logs"); setUtilityModalOpen(true); } },
       { label: "Orphan Cleanup", icon: Ghost, onClick: () => { setUtilityDefaultView("orphans"); setUtilityModalOpen(true); } },
       { label: "Import Contacts", icon: Upload, onClick: () => { setUtilityDefaultView("import-contacts"); setUtilityModalOpen(true); } },
@@ -1101,7 +1102,7 @@ export default function Home() {
 
         {/* Utility section */}
         <div ref={utilityRef} />
-        <UtilitySection deletedCount={deletedCount} forceExpanded={allExpanded || utilityForceExpanded} onFirmClick={handleEdit} />
+        <UtilitySection deletedCount={deletedCount} forceExpanded={allExpanded || utilityForceExpanded} onFirmClick={handleEdit} onOpenExternalPortal={() => setExternalPortalOpen(true)} />
 
         <div className="h-4" />
       </div>
