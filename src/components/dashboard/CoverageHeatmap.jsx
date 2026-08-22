@@ -13,7 +13,7 @@ const cellStyle = (count) => {
   return "bg-emerald-100 text-emerald-700 border-emerald-200";
 };
 
-export default function CoverageHeatmap({ firms = [] }) {
+export default function CoverageHeatmap({ firms = [], onFirmClick }) {
   const rows = useMemo(
     () =>
       firms.map((f) => ({
@@ -61,13 +61,23 @@ export default function CoverageHeatmap({ firms = [] }) {
             {rows.map((r) => (
               <tr key={r.firm_id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
                 <td
-                  className="py-1.5 px-2 text-gray-700 truncate max-w-[240px]"
+                  className="py-1.5 px-2 truncate max-w-[240px]"
                   title={r.firm_name}
                 >
                   {r.status !== "covered" && (
                     <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500 mr-1.5 align-middle" />
                   )}
-                  {r.firm_name}
+                  {onFirmClick ? (
+                    <button
+                      type="button"
+                      onClick={() => onFirmClick(r.firm_id)}
+                      className="text-gray-700 hover:text-indigo-600 hover:underline text-left"
+                    >
+                      {r.firm_name}
+                    </button>
+                  ) : (
+                    <span className="text-gray-700">{r.firm_name}</span>
+                  )}
                 </td>
                 <td className="py-1 px-2">
                   <div

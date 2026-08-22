@@ -280,7 +280,7 @@ export default function DashboardFirmCoverageSection({ forceExpanded, onFirmClic
               </div>
 
               {/* Coverage heatmap — visual matrix of role × firm */}
-              <CoverageHeatmap firms={firms} />
+              <CoverageHeatmap firms={firms} onFirmClick={onFirmClick} />
 
               {/* Filter */}
               <div className="flex items-center gap-1">
