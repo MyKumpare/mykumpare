@@ -3,9 +3,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Star, StarOff, X, UserPlus, Search, User, Check } from "lucide-react";
+import { Plus, Star, StarOff, X, UserPlus, Search, User, Check, Briefcase } from "lucide-react";
 import AddContactDialog from "@/components/contacts/AddContactDialog";
 import { dedupeContacts } from "@/components/contacts/contactDedupe";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { CreatableSelect } from "@/components/products/CreatableSelectField";
 
 // Normalized name key (lowercased, salutations/suffixes/designations stripped)
 // so duplicate DB records for the same person collapse to one key.
@@ -26,6 +28,56 @@ function nameKey(c) {
   const first = (norm(c.first_name) || "").split(" ")[0] || "";
   const last = norm(c.last_name) || "";
   return `${first}|${last}`;
+}
+
+// Preset roles for investment team members. Users can also type custom roles
+// in the picker — custom roles are persisted via usePersistedOptions.
+const TEAM_ROLES = [
+  "Lead Analyst",
+  "Compliance Officer",
+  "Portfolio Manager",
+  "Senior Analyst",
+  "Analyst",
+  "Associate",
+  "Research Analyst",
+  "Trader",
+  "Risk Manager",
+  "CIO",
+  "Managing Director",
+  "Partner",
+];
+
+// Compact role badge that opens a popover with a creatable select, so users
+// can pick a preset role or type a new one for each team member.
+function RolePicker({ role, onChange }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={`inline-flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded-full border transition-colors ${
+            role
+              ? "bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100"
+              : "bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100"
+          }`}
+          title={role ? "Edit role" : "Assign role"}
+        >
+          <Briefcase className="w-3 h-3" />
+          {role || "Assign role"}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56 p-2" align="start">
+        <CreatableSelect
+          value={role || ""}
+          onChange={(v) => { onChange(v); setOpen(false); }}
+          options={TEAM_ROLES}
+          placeholder="Select or type a role…"
+          storageKey="investment-team-roles"
+        />
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 // Inline contact picker that proactively shows all contacts linked to the
@@ -273,6 +325,14 @@ export default function ProductInvestmentTeamTab({ productId, firmId }) {
     );
   };
 
+  const handleRoleChange = (contactId, role) => {
+    updateTeam.mutate(
+      dedupedTeam.map((m) =>
+        m.contact_id === contactId ? { ...m, role } : m
+      )
+    );
+  };
+
   const handleContactCreated = (contact) => {
     handleAdd(contact);
     setShowAddContact(false);
@@ -343,6 +403,12 @@ export default function ProductInvestmentTeamTab({ productId, firmId }) {
                   {contact.title && (
                     <div className="text-xs text-gray-400 truncate">{contact.title}</div>
                   )}
+                  <div className="mt-1">
+                    <RolePicker
+                      role={member.role || ""}
+                      onChange={(r) => handleRoleChange(member.contact_id, r)}
+                    />
+                  </div>
                 </div>
 
                 {/* Actions */}

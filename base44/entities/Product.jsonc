@@ -97,7 +97,7 @@
     },
     "investment_team": {
       "type": "array",
-      "description": "Investment team members associated with this product",
+      "description": "Investment team members associated with this product. Each member has an optional role (e.g. 'Lead Analyst', 'Compliance Officer') assignable via the investment team picker; custom roles can be added.",
       "items": {
         "type": "object",
         "properties": {
@@ -106,6 +106,10 @@
           },
           "is_key": {
             "type": "boolean"
+          },
+          "role": {
+            "type": "string",
+            "description": "Role of this team member on the product (e.g. 'Lead Analyst', 'Compliance Officer'). Free-text \u2014 users can pick from presets or add custom roles."
           }
         }
       }
