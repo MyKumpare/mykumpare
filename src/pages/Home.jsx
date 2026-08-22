@@ -1125,6 +1125,10 @@ export default function Home() {
             const f = firms.find((x) => x.id === firmId);
             if (f) handleEdit(f);
           }}
+          onProductClick={(productId) => {
+            const p = products.find((x) => x.id === productId);
+            if (p) handleEditProduct(p);
+          }}
         />
 
         {/* Utility section */}

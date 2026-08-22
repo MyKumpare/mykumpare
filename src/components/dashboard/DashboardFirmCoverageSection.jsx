@@ -45,7 +45,7 @@ const STATUS = {
   },
 };
 
-export default function DashboardFirmCoverageSection({ forceExpanded, onFirmClick }) {
+export default function DashboardFirmCoverageSection({ forceExpanded, onFirmClick, onProductClick }) {
   const [expanded, setExpanded] = useState(false);
   const [filter, setFilter] = useState("all"); // all | gaps | covered
   const [reportOpen, setReportOpen] = useState(false);
@@ -70,11 +70,13 @@ export default function DashboardFirmCoverageSection({ forceExpanded, onFirmClic
           firm_name: rec.firm_name || "—",
           primaries: {},
           secondaries: {},
+          products: {},
           ddCount: 0,
         };
       }
       const f = byFirm[rec.firm_id];
       f.ddCount++;
+      if (rec.product_id) f.products[rec.product_id] = rec.product_name || "—";
       for (const entry of rec.analyst_history || []) {
         if (entry.end_date || !entry.contact_id) continue;
         if (entry.analyst_type === "primary") {
@@ -100,6 +102,7 @@ export default function DashboardFirmCoverageSection({ forceExpanded, onFirmClic
           ...f,
           primaryNames,
           secondaryNames,
+          products: Object.entries(f.products).map(([id, name]) => ({ id, name })),
           totalAnalysts,
           status,
         };
@@ -151,6 +154,37 @@ export default function DashboardFirmCoverageSection({ forceExpanded, onFirmClic
           <Badge className={`text-[10px] px-1.5 py-0 flex-shrink-0 ${cfg.chip}`}>
             {cfg.label}
           </Badge>
+        </div>
+
+        <div className="mt-2 flex items-start gap-1.5">
+          <span className="text-[10px] font-semibold text-gray-500 uppercase w-14 pt-0.5 flex-shrink-0">
+            Product
+          </span>
+          {f.products.length > 0 ? (
+            <div className="flex flex-wrap gap-1">
+              {f.products.map((p) =>
+                onProductClick ? (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => onProductClick(p.id)}
+                    className="text-[11px] px-1.5 py-0.5 rounded bg-gray-50 text-indigo-700 hover:underline border border-gray-200 text-left"
+                  >
+                    {p.name}
+                  </button>
+                ) : (
+                  <span
+                    key={p.id}
+                    className="text-[11px] px-1.5 py-0.5 rounded bg-gray-50 text-gray-700 border border-gray-200"
+                  >
+                    {p.name}
+                  </span>
+                )
+              )}
+            </div>
+          ) : (
+            <span className="text-[11px] text-gray-400 italic">None</span>
+          )}
         </div>
 
         {f.totalAnalysts === 0 ? (
