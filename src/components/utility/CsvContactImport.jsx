@@ -22,7 +22,7 @@ const IMPORTABLE_FIELDS = [
   { key: "contact_type", label: "Contact Type (semicolon-separated)", isArray: true },
   { key: "biography", label: "Biography" },
   { key: "notes", label: "Notes" },
-  { key: "firm_name", label: "Firm Name (lookup)", virtual: true },
+  { key: "firm_name", label: "Firm Names (semicolon-separated, lookup)", virtual: true },
   { key: "phone", label: "Phone", virtual: true },
 ];
 
@@ -232,8 +232,13 @@ export default function CsvContactImport() {
       let firmName = "";
       if (raw.firm_name) {
         firmName = raw.firm_name;
-        const fid = firmByName[raw.firm_name.toLowerCase().trim()];
-        if (fid) contact.firm_ids = [fid];
+        // Multi-firm tagging: split by semicolon/pipe and look up each firm
+        // name. All matched firms are linked to the contact simultaneously.
+        const names = raw.firm_name.split(/[;|]/).map((t) => t.trim()).filter(Boolean);
+        const fids = names
+          .map((n) => firmByName[n.toLowerCase().trim()])
+          .filter(Boolean);
+        if (fids.length > 0) contact.firm_ids = [...new Set(fids)];
       }
 
       if (raw.phone) {
@@ -279,7 +284,7 @@ export default function CsvContactImport() {
 
   const downloadTemplate = () => {
     const headers = IMPORTABLE_FIELDS.map(f => f.key).join(",");
-    const sample = "John,Doe,,Mr.,,Portfolio Manager,john@example.com,https://linkedin.com/in/johndoe,Employee,Active,Investment Manager,,Notes here,Example Firm,555-123-4567";
+    const sample = "John,Doe,,Mr.,,Portfolio Manager,john@example.com,https://linkedin.com/in/johndoe,Employee,Active,Investment Manager,,Notes here,Example Firm; Partner Firm,555-123-4567";
     const blob = new Blob([headers + "\n" + sample + "\n"], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -324,7 +329,7 @@ export default function CsvContactImport() {
         <div className="text-xs text-gray-500 bg-gray-50 rounded-lg p-3 space-y-1">
           <p className="font-semibold text-gray-600">Supported fields:</p>
           <p>{IMPORTABLE_FIELDS.map(f => f.label).join(", ")}</p>
-          <p className="text-gray-400 mt-1">First Name and Last Name are required. Firm Name is matched to existing firms in your database.</p>
+          <p className="text-gray-400 mt-1">First Name and Last Name are required. Firm Names are matched to existing firms in your database — separate multiple firms with semicolons to tag a contact with several firms at once.</p>
         </div>
       </div>
     );
