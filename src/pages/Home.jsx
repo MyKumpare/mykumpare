@@ -43,6 +43,7 @@ import ReportingNavSection from "../components/reports/ReportingNavSection";
 import DashboardNavSection from "../components/dashboard/DashboardNavSection";
 import DashboardTimelineSection from "../components/dashboard/DashboardTimelineSection";
 import DashboardAnalystCoverageSection from "../components/dashboard/DashboardAnalystCoverageSection";
+import DashboardFirmCoverageSection from "../components/dashboard/DashboardFirmCoverageSection";
 import AnalyticsSection from "../components/analytics/AnalyticsSection";
 
 const ReportsPickerModal = lazyDialog(() => import("../components/reports/ReportsPickerModal"));
@@ -1110,6 +1111,15 @@ export default function Home() {
 
         {/* Analyst Coverage — team members organized by role & covered firms */}
         <DashboardAnalystCoverageSection
+          forceExpanded={allExpanded}
+          onFirmClick={(firmId) => {
+            const f = firms.find((x) => x.id === firmId);
+            if (f) handleEdit(f);
+          }}
+        />
+
+        {/* Firm Coverage — team coverage by firm & role, with gap highlighting */}
+        <DashboardFirmCoverageSection
           forceExpanded={allExpanded}
           onFirmClick={(firmId) => {
             const f = firms.find((x) => x.id === firmId);
