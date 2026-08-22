@@ -99,6 +99,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [phones, setPhones] = useState([newPhone()]);
   const [addresses, setAddresses] = useState([newAddress()]);
   const [duplicateWarning, setDuplicateWarning] = useState(null);
+  const [systemDuplicateWarning, setSystemDuplicateWarning] = useState(null);
   const [linkedinLookupLoading, setLinkedinLookupLoading] = useState(false);
   const [linkedinPhotoLoading, setLinkedinPhotoLoading] = useState(false);
   const [similarAddressPairs, setSimilarAddressPairs] = useState(null);
@@ -406,6 +407,26 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setDuplicateWarning({ data, duplicates: allDups });
         return;
       }
+      // System-wide check: warn if the same contact exists at a DIFFERENT firm.
+      // This doesn't block creation (the contact may legitimately work at
+      // multiple firms), but it explicitly flags the conflict first.
+      const systemDups = findContactDuplicates(data, allContacts).filter(
+        (d) => !(d.contact.firm_ids || []).some((fid) => firmContactSet.has(fid))
+      );
+      const systemNormDups = findContactsByNormalizedName(data, allContacts)
+        .filter((d) => !(d.contact.firm_ids || []).some((fid) => firmContactSet.has(fid)))
+        .map((d) => ({
+          contact: d.contact,
+          name: d.name,
+          email: d.email,
+          reasons: ["Same first and last name as a contact at another firm"],
+          score: 0.75,
+        }));
+      const allSystemDups = systemDups.length > 0 ? systemDups : systemNormDups;
+      if (allSystemDups.length > 0) {
+        setSystemDuplicateWarning({ data, duplicates: allSystemDups });
+        return;
+      }
       createMutation.mutate(data);
     }
   };
@@ -565,6 +586,14 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
       onContactCreated(existing);
       onOpenChange(false);
     }
+  };
+
+  // Proceed with creation despite a system-wide (different-firm) duplicate.
+  const handleSystemForceCreate = () => {
+    if (systemDuplicateWarning?.data) {
+      createMutation.mutate(systemDuplicateWarning.data);
+    }
+    setSystemDuplicateWarning(null);
   };
 
   // Handle the response from ScrapeProfileButton — update dialog state with
@@ -1838,6 +1867,54 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
               <Button
                 className="bg-amber-600 hover:bg-amber-700 text-white"
                 onClick={handleForceCreate}
+                disabled={createMutation.isPending}
+              >
+                {createMutation.isPending ? "Creating..." : "Create Anyway"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {systemDuplicateWarning && (
+        <Dialog open={true} onOpenChange={() => setSystemDuplicateWarning(null)}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-red-500" />
+                Duplicate Contact Detected in System
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2">
+                <p className="text-sm font-semibold text-red-700">
+                  ⚠ Conflict: This contact already exists at another firm.
+                </p>
+                <p className="text-xs text-red-600 mt-1">
+                  A contact with the same name already exists in the system, linked to a different firm. Please review before creating a duplicate record.
+                </p>
+              </div>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {systemDuplicateWarning.duplicates.map((dup, i) => (
+                  <div key={i} className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                    <p className="font-semibold text-sm text-gray-800">{dup.name}</p>
+                    {dup.email && <p className="text-xs text-gray-500">{dup.email}</p>}
+                    <ul className="mt-1.5 space-y-0.5">
+                      {dup.reasons.map((r, ri) => (
+                        <li key={ri} className="text-xs text-amber-700 flex items-start gap-1">
+                          <span className="text-amber-500 mt-0.5">⚠</span> {r}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setSystemDuplicateWarning(null)}>Cancel</Button>
+              <Button
+                className="bg-amber-600 hover:bg-amber-700 text-white"
+                onClick={handleSystemForceCreate}
                 disabled={createMutation.isPending}
               >
                 {createMutation.isPending ? "Creating..." : "Create Anyway"}
