@@ -26,6 +26,15 @@
       "type": "string",
       "description": "Short label of the associated activity (denormalized)"
     },
+    "board_meeting_id": {
+      "type": "string",
+      "description": "ID of the BoardMeeting this task was auto-extracted from (set by the board meeting action-item extractor). Empty for manually created tasks."
+    },
+    "is_high_priority": {
+      "type": "boolean",
+      "default": false,
+      "description": "True when this task was flagged as a high-priority follow-up during automated extraction from board meeting notes (urgent, deadline-driven, compliance-related, or explicitly marked as priority)."
+    },
     "due_date": {
       "type": "string",
       "format": "date",

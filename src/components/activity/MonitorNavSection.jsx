@@ -19,6 +19,7 @@ export default function MonitorNavSection({
   onOpenBoardMeetings,
   onOpenBoardMeetingCalendar,
   onOpenBoardMeetingAlerts,
+  onOpenBoardMeetingDashboard,
   onOpenMonitor,
   onOpenActivity,
   onAddActivity,
@@ -113,6 +114,14 @@ export default function MonitorNavSection({
       iconColor: "text-amber-500",
       count: boardMeetingAlertsCount,
       onOpen: onOpenBoardMeetingAlerts,
+      onAdd: null,
+    },
+    {
+      label: "Bd Mtg Dashboard",
+      icon: LayoutDashboard,
+      iconColor: "text-cyan-500",
+      count: null,
+      onOpen: onOpenBoardMeetingDashboard,
       onAdd: null,
     },
   ];

@@ -1,0 +1,45 @@
+{
+  "name": "Board Meeting Action Item Extractor",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "30 6 * * *",
+      "one_time_date": null,
+      "timezone": "America/New_York",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "description": "Daily automated extraction of action items from board meeting notes. For every board meeting that has minutes or review notes but has not yet been processed, runs the LLM extractor to create FollowUpTask records (flagging high-priority follow-ups) and marks the meeting as extracted so it is not reprocessed.",
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "board_meeting_action_item_extractor",
+      "version": "1",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "extract_action_items": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "extractBoardMeetingActionItems",
+            "args": {}
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Extract action items from unprocessed meeting notes",
+            "description": "Creates FollowUpTask records from board meeting minutes and flags high-priority follow-ups"
+          }
+        }
+      }
+    ]
+  }
+}

@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Calendar, MapPin, Video, Users, FileText, ScrollText, AlertTriangle,
-  CheckCircle2, Loader2, ExternalLink, Flag, Trash2, FileDown,
+  CheckCircle2, Loader2, ExternalLink, Flag, Trash2, FileDown, ListTodo,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { generateBoardMeetingPdf } from "./boardMeetingPdf";
@@ -27,6 +27,7 @@ export default function BoardMeetingCard({ meeting, firmId }) {
   const [expanded, setExpanded] = useState(false);
   const [reviewNotes, setReviewNotes] = useState(meeting.review_notes || "");
   const [savingReview, setSavingReview] = useState(false);
+  const [extracting, setExtracting] = useState(false);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["board-meetings", firmId] });
 
@@ -73,6 +74,26 @@ export default function BoardMeetingCard({ meeting, firmId }) {
   };
 
   const needsReview = meeting.needs_review && !meeting.reviewed;
+
+  const handleExtractActionItems = async () => {
+    setExtracting(true);
+    try {
+      const res = await base44.functions.invoke("extractBoardMeetingActionItems", { meeting_id: meeting.id });
+      const data = res?.data ?? res ?? {};
+      invalidate();
+      const created = data.tasks_created ?? 0;
+      const high = data.high_priority ?? 0;
+      if (created === 0) {
+        toast({ title: "No action items found", description: "The meeting notes didn't contain extractable action items." });
+      } else {
+        toast({ title: `${created} action item${created === 1 ? "" : "s"} extracted`, description: high ? `${high} flagged as high-priority.` : "Added to your task list." });
+      }
+    } catch (err) {
+      toast({ title: "Extraction failed", description: err?.message || "Please try again.", variant: "destructive" });
+    } finally {
+      setExtracting(false);
+    }
+  };
 
   return (
     <div className={`rounded-lg border p-3 ${needsReview ? "border-amber-300 bg-amber-50/40" : "border-gray-200 bg-white"}`}>
@@ -168,6 +189,10 @@ export default function BoardMeetingCard({ meeting, firmId }) {
         )}
         <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => generateBoardMeetingPdf(meeting)}>
           <FileDown className="w-3 h-3" /> PDF Summary
+        </Button>
+        <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={handleExtractActionItems} disabled={extracting || !meeting.minutes_content}>
+          {extracting ? <Loader2 className="w-3 h-3 animate-spin" /> : <ListTodo className="w-3 h-3" />}
+          {meeting.action_items_extracted ? "Re-extract Actions" : "Extract Actions"}
         </Button>
       </div>
 
