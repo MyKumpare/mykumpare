@@ -1274,8 +1274,8 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                    <TabsTrigger value="orgchart">Org Chart</TabsTrigger>
                    <TabsTrigger value="aum-history">AUM History</TabsTrigger>
                    <TabsTrigger value="news">News</TabsTrigger>
-                   <TabsTrigger value="conferences">Conferences</TabsTrigger>
                    <TabsTrigger value="board-meetings">Board Meetings</TabsTrigger>
+                   <TabsTrigger value="conferences">Conferences</TabsTrigger>
                    </>
                    )}
                    {hideProductTabs && (
@@ -1283,8 +1283,8 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                    <TabsTrigger value="orgchart">Org Chart</TabsTrigger>
                    <TabsTrigger value="activity-log">Activity Log</TabsTrigger>
                    <TabsTrigger value="news">News</TabsTrigger>
-                   <TabsTrigger value="conferences">Conferences</TabsTrigger>
                    <TabsTrigger value="board-meetings">Board Meetings</TabsTrigger>
+                   <TabsTrigger value="conferences">Conferences</TabsTrigger>
                    </>
                    )}
                    </TabsList>
