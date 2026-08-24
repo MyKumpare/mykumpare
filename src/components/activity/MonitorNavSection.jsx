@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  Radar, ClipboardList, CalendarDays, LayoutList, Plus, ChevronRight, ChevronDown, ExternalLink, Newspaper, GitBranch, ClipboardCheck, Bell,
+  Radar, ClipboardList, CalendarDays, LayoutList, Plus, ChevronRight, ChevronDown, ExternalLink, Newspaper, GitBranch, ClipboardCheck, Bell, LayoutDashboard,
 } from "lucide-react";
 
 /**

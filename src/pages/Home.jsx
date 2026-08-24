@@ -1018,6 +1018,7 @@ export default function Home() {
           onOpenBoardMeetings={() => setBoardMeetingsOpen(true)}
           onOpenBoardMeetingCalendar={() => navigate("/BoardMeetingCalendar")}
           onOpenBoardMeetingAlerts={() => navigate("/Monitor?tab=board-meeting-alerts")}
+          onOpenBoardMeetingDashboard={() => navigate("/BoardMeetingDashboard")}
           onOpenMonitor={() => navigate("/Monitor")}
           onOpenActivity={() => setActivityPickerOpen(true)}
           onAddActivity={() => { setActivityLogDefaultTab("activity"); setActivityLogModalOpen(true); }}
