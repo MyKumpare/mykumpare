@@ -349,6 +349,12 @@ export default function Home() {
   });
   const unreadBoardMeetingAlertsCount = boardMeetingAlerts.filter(a => !a.deleted_at && !a.is_dismissed && !a.is_read).length;
 
+  const { data: actionItems = [] } = useQuery({
+    queryKey: ["action_items_kanban_count"],
+    queryFn: () => base44.entities.FollowUpTask.list("-due_date", 2000),
+  });
+  const actionItemsCount = actionItems.filter(t => !t.deleted_at && t.board_meeting_id && t.status !== "Completed" && t.status !== "Cancelled").length;
+
   const { data: documents = [] } = useQuery({
     queryKey: ["firm_documents_search"],
     queryFn: () => base44.entities.FirmDocument.list("-entry_date", 1000),
@@ -1019,6 +1025,8 @@ export default function Home() {
           onOpenBoardMeetingCalendar={() => navigate("/BoardMeetingCalendar")}
           onOpenBoardMeetingAlerts={() => navigate("/Monitor?tab=board-meeting-alerts")}
           onOpenBoardMeetingDashboard={() => navigate("/BoardMeetingDashboard")}
+          onOpenActionItemsKanban={() => navigate("/ActionItemsKanban")}
+          actionItemsCount={actionItemsCount}
           onOpenMonitor={() => navigate("/Monitor")}
           onOpenActivity={() => setActivityPickerOpen(true)}
           onAddActivity={() => { setActivityLogDefaultTab("activity"); setActivityLogModalOpen(true); }}

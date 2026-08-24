@@ -27,6 +27,7 @@ import ConferenceCalendar from './pages/ConferenceCalendar';
 import DuplicateContacts from './pages/DuplicateContacts';
 import BoardMeetingCalendar from './pages/BoardMeetingCalendar';
 import BoardMeetingDashboard from './pages/BoardMeetingDashboard';
+import ActionItemsKanban from './pages/ActionItemsKanban';
 
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -105,6 +106,7 @@ const AuthenticatedApp = () => {
       <Route path="/DuplicateContacts" element={<LayoutWrapper currentPageName="DuplicateContacts"><DuplicateContacts /></LayoutWrapper>} />
       <Route path="/BoardMeetingCalendar" element={<LayoutWrapper currentPageName="BoardMeetingCalendar"><BoardMeetingCalendar /></LayoutWrapper>} />
       <Route path="/BoardMeetingDashboard" element={<LayoutWrapper currentPageName="BoardMeetingDashboard"><BoardMeetingDashboard /></LayoutWrapper>} />
+      <Route path="/ActionItemsKanban" element={<LayoutWrapper currentPageName="ActionItemsKanban"><ActionItemsKanban /></LayoutWrapper>} />
       <Route path="/register" element={<ExternalPartyRegister />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>

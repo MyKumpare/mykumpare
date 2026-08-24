@@ -59,6 +59,9 @@ const QUILL_MODULES = {
   ],
 };
 
+// Export the status list + styles so the Kanban board can reuse them.
+export { TASK_STATUSES, STATUS_STYLES, computeAggregateStatus };
+
 function fmt(dateStr) {
   if (!dateStr) return "—";
   try { return format(new Date(dateStr + "T00:00:00"), "MMM d, yyyy"); } catch { return dateStr; }
