@@ -5,9 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Calendar, MapPin, Video, Users, FileText, ScrollText, AlertTriangle,
-  CheckCircle2, Loader2, ExternalLink, Flag, Trash2,
+  CheckCircle2, Loader2, ExternalLink, Flag, Trash2, FileDown,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import { generateBoardMeetingPdf } from "./boardMeetingPdf";
 
 const FORMAT_LABEL = { "in-person": "In-Person", virtual: "Virtual", hybrid: "Hybrid", unknown: "—" };
 const SESSION_LABEL = { public_meeting: "Public Meeting", closed_session: "Closed Session", unknown: "—" };
@@ -165,6 +166,9 @@ export default function BoardMeetingCard({ meeting, firmId }) {
             {expanded ? "Hide minutes" : "View minutes"}
           </button>
         )}
+        <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => generateBoardMeetingPdf(meeting)}>
+          <FileDown className="w-3 h-3" /> PDF Summary
+        </Button>
       </div>
 
       {/* Minutes content */}

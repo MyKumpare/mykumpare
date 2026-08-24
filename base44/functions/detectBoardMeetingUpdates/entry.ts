@@ -43,6 +43,7 @@ export default async function(req: Request): Promise<Response> {
 
     let newAlerts = 0;
     let updatedAlerts = 0;
+    let mentionAlerts = 0;
     let firmsProcessed = 0;
     const errors: { firm_id: string; error: string }[] = [];
 
@@ -142,6 +143,31 @@ export default async function(req: Request): Promise<Response> {
             }
           }
         }
+
+        // Mention-flagged pass: create alerts for tracked meetings that
+        // mention portfolio entities (needs_review=true with non-empty
+        // mentions). Deduplicated so each meeting only alerts once.
+        for (const m of activeExisting) {
+          if (!m.needs_review || !m.mentions?.length) continue;
+          const sig = `${(m.title || '').trim().toLowerCase()}|${(m.meeting_date || '').slice(0, 10)}|mention_flagged|`;
+          if (dedupSigs.has(sig)) continue;
+          dedupSigs.add(sig);
+          const mentionNames = (m.mentions || []).map((x: any) => x.entity_name).filter(Boolean).join(', ');
+          await base44.asServiceRole.entities.BoardMeetingAlert.create({
+            tenant_id: effectiveTenant || undefined,
+            firm_id: firm.id,
+            firm_name: firm.name,
+            alert_type: 'mention_flagged',
+            meeting_title: m.title || 'Untitled board meeting',
+            meeting_date: m.meeting_date || '',
+            meeting_id: m.id,
+            details: `"${m.title || 'Untitled'}" mentions portfolio entit${(m.mentions || []).length === 1 ? 'y' : 'ies'}: ${mentionNames}. Review recommended.`,
+            source_url: m.source_url || '',
+            is_read: false,
+            is_dismissed: false,
+          });
+          mentionAlerts++;
+        }
         firmsProcessed++;
       } catch (e: any) {
         errors.push({ firm_id: firm.id, error: e.message || String(e) });
@@ -153,6 +179,7 @@ export default async function(req: Request): Promise<Response> {
       firms_processed: firmsProcessed,
       new_alerts: newAlerts,
       updated_alerts: updatedAlerts,
+      mention_alerts: mentionAlerts,
       errors,
     });
   } catch (error) {

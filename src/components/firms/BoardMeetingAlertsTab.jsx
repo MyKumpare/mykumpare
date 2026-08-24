@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Bell, CheckCheck, X, Loader2, CalendarPlus, CalendarClock, FileText, ExternalLink, Building2,
+  Bell, CheckCheck, X, Loader2, CalendarPlus, CalendarClock, FileText, ExternalLink, Building2, Flag,
 } from "lucide-react";
 
 const ALERT_FILTERS = [
@@ -129,20 +129,27 @@ export default function BoardMeetingAlertsTab({ onFirmClick }) {
         <div className="space-y-2">
           {filtered.map(a => {
             const isNew = a.alert_type === "new_meeting";
-            const Icon = isNew ? CalendarPlus : CalendarClock;
+            const isMention = a.alert_type === "mention_flagged";
+            const Icon = isMention ? Flag : isNew ? CalendarPlus : CalendarClock;
+            const badgeClass = isMention
+              ? "bg-rose-100 text-rose-700 border border-rose-200"
+              : isNew
+                ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                : "bg-amber-100 text-amber-700 border border-amber-200";
+            const iconBg = isMention ? "bg-rose-100 text-rose-600" : isNew ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600";
             return (
               <div
                 key={a.id}
-                className={`rounded-xl border p-3 transition-colors ${a.is_dismissed ? "border-gray-200 bg-gray-50/60 opacity-70" : a.is_read ? "border-gray-200 bg-white" : "border-amber-300 bg-amber-50/40"}`}
+                className={`rounded-xl border p-3 transition-colors ${a.is_dismissed ? "border-gray-200 bg-gray-50/60 opacity-70" : a.is_read ? "border-gray-200 bg-white" : isMention ? "border-rose-300 bg-rose-50/40" : "border-amber-300 bg-amber-50/40"}`}
               >
                 <div className="flex items-start gap-3">
-                  <div className={`mt-0.5 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${isNew ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"}`}>
+                  <div className={`mt-0.5 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${iconBg}`}>
                     <Icon className="w-4 h-4" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <Badge className={`text-[10px] ${isNew ? "bg-emerald-100 text-emerald-700 border border-emerald-200" : "bg-amber-100 text-amber-700 border border-amber-200"}`}>
-                        {isNew ? "New Meeting" : "Updated"}
+                      <Badge className={`text-[10px] ${badgeClass}`}>
+                        {isMention ? "Mention Flagged" : isNew ? "New Meeting" : "Updated"}
                       </Badge>
                       {a.field_changed && (
                         <Badge variant="outline" className="text-[10px] bg-white text-gray-600 border-gray-200">

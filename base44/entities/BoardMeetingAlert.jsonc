@@ -18,9 +18,10 @@
       "type": "string",
       "enum": [
         "new_meeting",
-        "updated_meeting"
+        "updated_meeting",
+        "mention_flagged"
       ],
-      "description": "What changed on the firm's board meeting calendar. 'new_meeting' = a board meeting was found that is not yet tracked; 'updated_meeting' = a tracked meeting had a concrete field change (date, agenda URL, or minutes URL)."
+      "description": "What changed on the firm's board meeting calendar. 'new_meeting' = a board meeting was found that is not yet tracked; 'updated_meeting' = a tracked meeting had a concrete field change (date, agenda URL, or minutes URL); 'mention_flagged' = a tracked meeting mentions one of the user's portfolio entities (our firm, investment manager, or sub-manager), flagged for follow-up review."
     },
     "meeting_title": {
       "type": "string",
@@ -33,11 +34,11 @@
     },
     "meeting_id": {
       "type": "string",
-      "description": "ID of the existing BoardMeeting record, when alert_type is 'updated_meeting'. Empty for 'new_meeting' (the meeting is not yet saved)."
+      "description": "ID of the existing BoardMeeting record, when alert_type is 'updated_meeting' or 'mention_flagged'. Empty for 'new_meeting' (the meeting is not yet saved)."
     },
     "field_changed": {
       "type": "string",
-      "description": "For 'updated_meeting' alerts: which field changed (e.g. 'meeting_date', 'agenda_url', 'minutes_url'). Empty for 'new_meeting'."
+      "description": "For 'updated_meeting' alerts: which field changed (e.g. 'meeting_date', 'agenda_url', 'minutes_url'). Empty for other alert types."
     },
     "previous_value": {
       "type": "string",
