@@ -343,6 +343,12 @@ export default function Home() {
   });
   const upcomingBoardMeetingsCount = boardMeetings.filter(b => !b.deleted_at && (b.meeting_date || "9999") >= new Date().toISOString().slice(0, 10)).length;
 
+  const { data: boardMeetingAlerts = [] } = useQuery({
+    queryKey: ["board-meeting-alerts"],
+    queryFn: () => base44.entities.BoardMeetingAlert.list("-created_date", 500),
+  });
+  const unreadBoardMeetingAlertsCount = boardMeetingAlerts.filter(a => !a.deleted_at && !a.is_dismissed && !a.is_read).length;
+
   const { data: documents = [] } = useQuery({
     queryKey: ["firm_documents_search"],
     queryFn: () => base44.entities.FirmDocument.list("-entry_date", 1000),
@@ -1008,8 +1014,10 @@ export default function Home() {
           tasksCount={followUpTasks.filter(t => !t.deleted_at).length}
           newsCount={pinnedNewsCount}
           boardMeetingsCount={upcomingBoardMeetingsCount}
+          boardMeetingAlertsCount={unreadBoardMeetingAlertsCount}
           onOpenBoardMeetings={() => setBoardMeetingsOpen(true)}
           onOpenBoardMeetingCalendar={() => navigate("/BoardMeetingCalendar")}
+          onOpenBoardMeetingAlerts={() => navigate("/Monitor?tab=board-meeting-alerts")}
           onOpenMonitor={() => navigate("/Monitor")}
           onOpenActivity={() => setActivityPickerOpen(true)}
           onAddActivity={() => { setActivityLogDefaultTab("activity"); setActivityLogModalOpen(true); }}

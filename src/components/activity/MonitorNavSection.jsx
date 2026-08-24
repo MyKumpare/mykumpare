@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  Radar, ClipboardList, CalendarDays, LayoutList, Plus, ChevronRight, ChevronDown, ExternalLink, Newspaper, GitBranch, ClipboardCheck,
+  Radar, ClipboardList, CalendarDays, LayoutList, Plus, ChevronRight, ChevronDown, ExternalLink, Newspaper, GitBranch, ClipboardCheck, Bell,
 } from "lucide-react";
 
 /**
@@ -15,8 +15,10 @@ export default function MonitorNavSection({
   tasksCount,
   newsCount,
   boardMeetingsCount,
+  boardMeetingAlertsCount,
   onOpenBoardMeetings,
   onOpenBoardMeetingCalendar,
+  onOpenBoardMeetingAlerts,
   onOpenMonitor,
   onOpenActivity,
   onAddActivity,
@@ -103,6 +105,14 @@ export default function MonitorNavSection({
       iconColor: "text-cyan-500",
       count: null,
       onOpen: onOpenBoardMeetingCalendar,
+      onAdd: null,
+    },
+    {
+      label: "Bd Mtg Alerts",
+      icon: Bell,
+      iconColor: "text-amber-500",
+      count: boardMeetingAlertsCount,
+      onOpen: onOpenBoardMeetingAlerts,
       onAdd: null,
     },
   ];

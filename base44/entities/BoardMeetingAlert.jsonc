@@ -1,0 +1,176 @@
+{
+  "name": "BoardMeetingAlert",
+  "type": "object",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "ID of the firm (tenant) that owns this alert record. Set on creation to the creator's linked_firm_id; drives tenant isolation via RLS."
+    },
+    "firm_id": {
+      "type": "string",
+      "description": "ID of the firm whose board meeting calendar triggered this alert."
+    },
+    "firm_name": {
+      "type": "string",
+      "description": "Name of the firm (denormalized for display)."
+    },
+    "alert_type": {
+      "type": "string",
+      "enum": [
+        "new_meeting",
+        "updated_meeting"
+      ],
+      "description": "What changed on the firm's board meeting calendar. 'new_meeting' = a board meeting was found that is not yet tracked; 'updated_meeting' = a tracked meeting had a concrete field change (date, agenda URL, or minutes URL)."
+    },
+    "meeting_title": {
+      "type": "string",
+      "description": "Title of the board meeting that triggered the alert."
+    },
+    "meeting_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of the board meeting that triggered the alert (YYYY-MM-DD)."
+    },
+    "meeting_id": {
+      "type": "string",
+      "description": "ID of the existing BoardMeeting record, when alert_type is 'updated_meeting'. Empty for 'new_meeting' (the meeting is not yet saved)."
+    },
+    "field_changed": {
+      "type": "string",
+      "description": "For 'updated_meeting' alerts: which field changed (e.g. 'meeting_date', 'agenda_url', 'minutes_url'). Empty for 'new_meeting'."
+    },
+    "previous_value": {
+      "type": "string",
+      "description": "For 'updated_meeting' alerts: the field's previous value (stringified)."
+    },
+    "new_value": {
+      "type": "string",
+      "description": "For 'updated_meeting' alerts: the field's new value (stringified)."
+    },
+    "details": {
+      "type": "string",
+      "description": "Human-readable summary of what changed, shown in the Monitor alert card."
+    },
+    "source_url": {
+      "type": "string",
+      "description": "URL where the meeting was found during scraping."
+    },
+    "is_read": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the user has marked this alert as read."
+    },
+    "is_dismissed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the user has dismissed this alert (hides it from the default alert view)."
+    },
+    "deleted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when this alert was soft-deleted."
+    }
+  },
+  "required": [
+    "firm_id",
+    "firm_name",
+    "alert_type",
+    "meeting_title"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_edit": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_delete": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

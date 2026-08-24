@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   ChevronLeft, ChevronRight, CalendarDays, MapPin, Filter, X,
   Building2, Loader2, Flag, AlertTriangle, ClipboardCheck, Users,
-  CheckCircle2, LayoutList, Calendar as CalIcon,
+  CheckCircle2, LayoutList, Calendar as CalIcon, LayoutDashboard,
 } from "lucide-react";
 import BoardMeetingCard from "@/components/firms/BoardMeetingCard";
 
@@ -43,7 +43,9 @@ export default function BoardMeetingCalendar() {
   const [statusFilter, setStatusFilter] = useState("upcoming");
   const [search, setSearch] = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  const [view, setView] = useState("calendar"); // calendar | summary
+  const [view, setView] = useState("dashboard"); // dashboard | calendar | summary
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   const { data: meetings = [], isLoading } = useQuery({
     queryKey: ["board-meetings-calendar"],
@@ -78,9 +80,11 @@ export default function BoardMeetingCalendar() {
           const hay = [m.title, m.location, ...(m.meeting_topics || []), ...(m.mentions || []).map(x => x.entity_name)].join(" ").toLowerCase();
           if (!hay.includes(q)) return false;
         }
+        if (dateFrom) { const d = (m.meeting_date || "").slice(0, 10); if (!d || d < dateFrom) return false; }
+        if (dateTo) { const d = (m.meeting_date || "").slice(0, 10); if (!d || d > dateTo) return false; }
         return true;
       });
-  }, [meetings, firmFilter, statusFilter, search, today]);
+  }, [meetings, firmFilter, statusFilter, search, today, dateFrom, dateTo]);
 
   // Map meetings to their start-date key (YYYY-MM-DD)
   const byDate = useMemo(() => {
@@ -164,8 +168,8 @@ export default function BoardMeetingCalendar() {
     [filtered]
   );
 
-  const hasActiveFilters = firmFilter !== "all" || statusFilter !== "upcoming" || search.trim() !== "";
-  const clearFilters = () => { setFirmFilter("all"); setStatusFilter("upcoming"); setSearch(""); };
+  const hasActiveFilters = firmFilter !== "all" || statusFilter !== "upcoming" || search.trim() !== "" || dateFrom !== "" || dateTo !== "";
+  const clearFilters = () => { setFirmFilter("all"); setStatusFilter("upcoming"); setSearch(""); setDateFrom(""); setDateTo(""); };
 
   const ENTITY_LABEL = { our_firm: "your firm", investment_manager: "investment manager", sub_manager: "sub-manager" };
 
@@ -185,6 +189,13 @@ export default function BoardMeetingCalendar() {
         <div className="flex items-center gap-2">
           {/* View toggle */}
           <div className="inline-flex rounded-md border border-gray-200 bg-white overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setView("dashboard")}
+              className={`flex items-center gap-1 px-2.5 py-1.5 text-xs ${view === "dashboard" ? "bg-cyan-600 text-white" : "text-gray-600 hover:bg-gray-50"}`}
+            >
+              <LayoutDashboard className="w-3.5 h-3.5" /> Dashboard
+            </button>
             <button
               type="button"
               onClick={() => setView("calendar")}
@@ -247,10 +258,74 @@ export default function BoardMeetingCalendar() {
                 className="h-8 w-56 rounded-md border border-gray-200 bg-white px-2 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-400"
               />
             </div>
+            <div className="flex items-center gap-1">
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={e => setDateFrom(e.target.value)}
+                className="h-8 rounded-md border border-gray-200 bg-white px-2 text-xs text-gray-600 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+                title="From date"
+              />
+              <span className="text-xs text-gray-400">to</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={e => setDateTo(e.target.value)}
+                className="h-8 rounded-md border border-gray-200 bg-white px-2 text-xs text-gray-600 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+                title="To date"
+              />
+            </div>
             {hasActiveFilters && (
               <Button type="button" variant="ghost" size="sm" className="h-8 text-xs gap-1" onClick={clearFilters}>
                 <X className="w-3 h-3" /> Clear
               </Button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Dashboard view — high-level overview with stat cards + grid */}
+      {view === "dashboard" && (
+        <div className="space-y-4">
+          {/* Stat cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { label: "Total Meetings", value: filtered.length, icon: CalendarDays, color: "text-cyan-600", bg: "bg-cyan-50" },
+              { label: "Upcoming", value: filtered.filter(m => deriveStatus(m, today) === "upcoming").length, icon: CalendarDays, color: "text-emerald-600", bg: "bg-emerald-50" },
+              { label: "Completed", value: filtered.filter(m => deriveStatus(m, today) === "completed").length, icon: CheckCircle2, color: "text-gray-600", bg: "bg-gray-100" },
+              { label: "Needs Review", value: filtered.filter(m => m.needs_review && !m.reviewed).length, icon: Flag, color: "text-amber-600", bg: "bg-amber-50" },
+            ].map(s => {
+              const I = s.icon;
+              return (
+                <div key={s.label} className="rounded-xl border border-gray-200 bg-white p-3 flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${s.bg}`}>
+                    <I className={`w-5 h-5 ${s.color}`} />
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-gray-800 leading-none">{s.value}</div>
+                    <div className="text-[11px] text-gray-500 mt-0.5">{s.label}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* All meetings grid */}
+          <div className="rounded-xl border border-gray-200 bg-white p-3">
+            <h2 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-1.5">
+              <CalendarDays className="w-4 h-4 text-cyan-500" />
+              All Board Meetings ({filtered.length})
+            </h2>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-10"><Loader2 className="w-5 h-5 text-gray-300 animate-spin" /></div>
+            ) : filtered.length === 0 ? (
+              <p className="text-xs text-gray-400 italic py-6 text-center">No board meetings match the current filters.</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                {filtered.map(m => (
+                  <BoardMeetingCard key={m.id} meeting={m} firmId={m.firm_id} />
+                ))}
+              </div>
             )}
           </div>
         </div>

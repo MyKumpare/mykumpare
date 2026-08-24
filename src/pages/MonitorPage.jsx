@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Radar, Newspaper, LayoutList, ClipboardList, CalendarDays, X, FileDown, Loader2, Activity as ActivityIcon } from "lucide-react";
+import {   Radar, Newspaper, LayoutList, ClipboardList, CalendarDays, X, FileDown, Loader2, Activity as ActivityIcon, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
 import { toast } from "@/components/ui/use-toast";
@@ -12,12 +12,14 @@ import TaskDetailModal from "@/components/activity/TaskDetailModal";
 import ActivityDetailModal from "@/components/activity/ActivityDetailModal";
 import ActivityTimeline from "@/components/activity/ActivityTimeline";
 import ConferencesTab from "@/components/conferences/ConferencesTab";
+import BoardMeetingAlertsTab from "@/components/firms/BoardMeetingAlertsTab";
 
 const TABS = [
   { key: "news", label: "News Alerts", icon: Newspaper },
   { key: "activity", label: "Activity", icon: ClipboardList },
   { key: "tasks", label: "Tasks", icon: LayoutList },
   { key: "conferences", label: "Conferences", icon: CalendarDays },
+  { key: "board-meeting-alerts", label: "Bd Mtg Alerts", icon: Bell },
   { key: "timeline", label: "Timeline", icon: ActivityIcon },
 ];
 
@@ -139,6 +141,9 @@ export default function MonitorPage() {
         )}
         {tab === "conferences" && (
           <ConferencesTab />
+        )}
+        {tab === "board-meeting-alerts" && (
+          <BoardMeetingAlertsTab onFirmClick={() => navigate("/")} />
         )}
       </div>
 

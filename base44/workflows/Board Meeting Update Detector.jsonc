@@ -1,0 +1,45 @@
+{
+  "name": "Board Meeting Update Detector",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "0 6 * * *",
+      "one_time_date": null,
+      "timezone": "America/New_York",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "description": "Daily automated re-scrape of every tracked firm's board meeting calendar. Compares freshly-scraped meetings against existing BoardMeeting records and creates BoardMeetingAlert records for newly-detected meetings and for concrete field changes (date, agenda URL, minutes URL) so the user is alerted in the Monitor section whenever a portfolio firm updates its board meeting calendar.",
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "board_meeting_update_detector",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "detect_updates": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "detectBoardMeetingUpdates",
+            "args": {}
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Detect board meeting calendar updates",
+            "description": "Re-scrapes tracked firms and creates alerts for new/changed board meetings"
+          }
+        }
+      }
+    ]
+  }
+}
