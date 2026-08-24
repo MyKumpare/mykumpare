@@ -1009,6 +1009,7 @@ export default function Home() {
           newsCount={pinnedNewsCount}
           boardMeetingsCount={upcomingBoardMeetingsCount}
           onOpenBoardMeetings={() => setBoardMeetingsOpen(true)}
+          onOpenBoardMeetingCalendar={() => navigate("/BoardMeetingCalendar")}
           onOpenMonitor={() => navigate("/Monitor")}
           onOpenActivity={() => setActivityPickerOpen(true)}
           onAddActivity={() => { setActivityLogDefaultTab("activity"); setActivityLogModalOpen(true); }}

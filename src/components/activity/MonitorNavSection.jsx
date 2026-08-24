@@ -16,6 +16,7 @@ export default function MonitorNavSection({
   newsCount,
   boardMeetingsCount,
   onOpenBoardMeetings,
+  onOpenBoardMeetingCalendar,
   onOpenMonitor,
   onOpenActivity,
   onAddActivity,
@@ -94,6 +95,14 @@ export default function MonitorNavSection({
       iconColor: "text-cyan-500",
       count: boardMeetingsCount,
       onOpen: onOpenBoardMeetings,
+      onAdd: null,
+    },
+    {
+      label: "Board Mtg Calendar",
+      icon: CalendarDays,
+      iconColor: "text-cyan-500",
+      count: null,
+      onOpen: onOpenBoardMeetingCalendar,
       onAdd: null,
     },
   ];

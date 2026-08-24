@@ -25,6 +25,7 @@ import PortfolioFundingReport from './pages/PortfolioFundingReport';
 import SearchReport from './pages/SearchReport';
 import ConferenceCalendar from './pages/ConferenceCalendar';
 import DuplicateContacts from './pages/DuplicateContacts';
+import BoardMeetingCalendar from './pages/BoardMeetingCalendar';
 
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -101,6 +102,7 @@ const AuthenticatedApp = () => {
       <Route path="/SearchReport" element={<LayoutWrapper currentPageName="SearchReport"><SearchReport /></LayoutWrapper>} />
       <Route path="/ConferenceCalendar" element={<LayoutWrapper currentPageName="ConferenceCalendar"><ConferenceCalendar /></LayoutWrapper>} />
       <Route path="/DuplicateContacts" element={<LayoutWrapper currentPageName="DuplicateContacts"><DuplicateContacts /></LayoutWrapper>} />
+      <Route path="/BoardMeetingCalendar" element={<LayoutWrapper currentPageName="BoardMeetingCalendar"><BoardMeetingCalendar /></LayoutWrapper>} />
       <Route path="/register" element={<ExternalPartyRegister />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
