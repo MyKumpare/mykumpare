@@ -1,0 +1,45 @@
+{
+  "name": "Board Meeting Reminders",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "0 6 * * *",
+      "one_time_date": null,
+      "timezone": "America/New_York",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "description": "Daily 2-day-ahead reminder for every upcoming board meeting. Finds board meetings scheduled exactly 2 days from today, creates an 'upcoming_reminder' BoardMeetingAlert in the Monitor section, and emails a digest to the app admin so the user is notified ahead of each meeting.",
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "board_meeting_reminders",
+      "version": "1",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "send_reminders": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "sendBoardMeetingReminders",
+            "args": {}
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Send 2-day-ahead board meeting reminders",
+            "description": "Creates upcoming_reminder alerts and emails a digest for meetings in 2 days"
+          }
+        }
+      }
+    ]
+  }
+}

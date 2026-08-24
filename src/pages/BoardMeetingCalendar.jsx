@@ -11,9 +11,10 @@ import { Badge } from "@/components/ui/badge";
 import {
   ChevronLeft, ChevronRight, CalendarDays, MapPin, Filter, X,
   Building2, Loader2, Flag, AlertTriangle, ClipboardCheck, Users,
-  CheckCircle2, LayoutList, Calendar as CalIcon, LayoutDashboard,
+  CheckCircle2, LayoutList, Calendar as CalIcon, LayoutDashboard, FileDown,
 } from "lucide-react";
 import BoardMeetingCard from "@/components/firms/BoardMeetingCard";
+import { generateBoardMeetingCalendarPdf } from "@/components/firms/boardMeetingCalendarPdf";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -171,6 +172,20 @@ export default function BoardMeetingCalendar() {
   const hasActiveFilters = firmFilter !== "all" || statusFilter !== "upcoming" || search.trim() !== "" || dateFrom !== "" || dateTo !== "";
   const clearFilters = () => { setFirmFilter("all"); setStatusFilter("upcoming"); setSearch(""); setDateFrom(""); setDateTo(""); };
 
+  const handleExportPdf = () => {
+    const enriched = filtered.map(m => ({ ...m, _status: deriveStatus(m, today) }));
+    generateBoardMeetingCalendarPdf(enriched, {
+      filters: {
+        firm: firmFilter,
+        firmName: firms.find(f => f.id === firmFilter)?.name || "",
+        status: statusFilter,
+        search: search.trim(),
+        dateFrom,
+        dateTo,
+      },
+    });
+  };
+
   const ENTITY_LABEL = { our_firm: "your firm", investment_manager: "investment manager", sub_manager: "sub-manager" };
 
   return (
@@ -215,6 +230,10 @@ export default function BoardMeetingCalendar() {
             <Filter className="w-3.5 h-3.5" />
             Filters
             {hasActiveFilters && <span className="w-1.5 h-1.5 rounded-full bg-cyan-500" />}
+          </Button>
+          <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={handleExportPdf} disabled={filtered.length === 0}>
+            <FileDown className="w-3.5 h-3.5" />
+            Export PDF
           </Button>
         </div>
       </div>
