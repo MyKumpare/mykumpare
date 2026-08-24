@@ -1,0 +1,192 @@
+import React, { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/lib/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Loader2, Globe, Calendar, MapPin, Video, Users, FileText, ScrollText,
+  AlertTriangle, CheckCircle2, Filter, ArrowUpDown, Plus, RefreshCw,
+} from "lucide-react";
+import BoardMeetingCard from "./BoardMeetingCard";
+import { toast } from "@/components/ui/use-toast";
+
+// "Board Meeting" tab inside the firm form. Scrapes the firm's website for
+// board meetings, lists them with filter/sort, and lets the user fetch
+// minutes per meeting. Meetings mentioning the user's own firm or any
+// investment manager / sub-manager in its portfolios are flagged for review.
+export default function FirmBoardMeetingTab({ firmId, firmName, firmWebsite }) {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const [scraping, setScraping] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("all"); // all | upcoming | completed | needs_review
+  const [sortBy, setSortBy] = useState("date_desc"); // date_desc | date_asc | topic
+  const [topicSearch, setTopicSearch] = useState("");
+
+  const { data: meetings = [], isLoading } = useQuery({
+    queryKey: ["board-meetings", firmId],
+    queryFn: () => base44.entities.BoardMeeting.filter({ firm_id: firmId }, "-meeting_date", 500),
+    enabled: !!firmId,
+  });
+
+  const activeMeetings = useMemo(() => meetings.filter((m) => !m.deleted_at), [meetings]);
+
+  const visible = useMemo(() => {
+    let list = [...activeMeetings];
+    if (statusFilter === "upcoming") list = list.filter((m) => m.status === "upcoming");
+    else if (statusFilter === "completed") list = list.filter((m) => m.status === "completed");
+    else if (statusFilter === "needs_review") list = list.filter((m) => m.needs_review && !m.reviewed);
+
+    if (topicSearch.trim()) {
+      const q = topicSearch.toLowerCase();
+      list = list.filter((m) =>
+        (m.title || "").toLowerCase().includes(q) ||
+        (m.meeting_topics || []).some((t) => (t || "").toLowerCase().includes(q)) ||
+        (m.location || "").toLowerCase().includes(q)
+      );
+    }
+
+    list.sort((a, b) => {
+      if (sortBy === "date_asc") return (a.meeting_date || "9999").localeCompare(b.meeting_date || "9999");
+      if (sortBy === "date_desc") return (b.meeting_date || "0").localeCompare(a.meeting_date || "0");
+      // topic: alphabetical by title
+      return (a.title || "").localeCompare(b.title || "");
+    });
+    return list;
+  }, [activeMeetings, statusFilter, sortBy, topicSearch]);
+
+  const counts = useMemo(() => ({
+    upcoming: activeMeetings.filter((m) => m.status === "upcoming").length,
+    completed: activeMeetings.filter((m) => m.status === "completed").length,
+    needs_review: activeMeetings.filter((m) => m.needs_review && !m.reviewed).length,
+  }), [activeMeetings]);
+
+  const handleScrape = async () => {
+    setScraping(true);
+    try {
+      const res = await base44.functions.invoke("scrapeBoardMeetings", { firm_id: firmId });
+      const data = res?.data ?? res ?? {};
+      const found = data.meetings || [];
+      if (found.length === 0) {
+        toast({ title: "No board meetings found", description: "The scrape didn't find any board meetings on the firm's website." });
+      } else {
+        const batchId = crypto.randomUUID();
+        const records = found.map((m) => ({
+          ...m,
+          tenant_id: user?.linked_firm_id,
+          firm_id: firmId,
+          firm_name: firmName,
+          scrub_batch_id: batchId,
+        }));
+        await base44.entities.BoardMeeting.bulkCreate(records);
+        queryClient.invalidateQueries({ queryKey: ["board-meetings", firmId] });
+        const reviewCount = found.filter((m) => m.needs_review).length;
+        toast({
+          title: `Found ${found.length} board meeting${found.length === 1 ? "" : "s"}`,
+          description: reviewCount > 0 ? `${reviewCount} mention${reviewCount === 1 ? "" : "s"} of your portfolio flagged for review.` : undefined,
+        });
+      }
+    } catch (err) {
+      toast({ title: "Scrape failed", description: err?.message || "Could not scrape board meetings.", variant: "destructive" });
+    } finally {
+      setScraping(false);
+    }
+  };
+
+  if (!firmId) {
+    return (
+      <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
+        Save the firm first to scrape board meetings
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          type="button"
+          size="sm"
+          onClick={handleScrape}
+          disabled={scraping || !firmWebsite}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5"
+          title={!firmWebsite ? "Add a website to the firm first" : "Scrape the firm's website for board meetings"}
+        >
+          {scraping ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Globe className="w-3.5 h-3.5" />}
+          {scraping ? "Scraping…" : "Scrape Board Meetings"}
+        </Button>
+        {!firmWebsite && (
+          <span className="text-xs text-amber-600 flex items-center gap-1">
+            <AlertTriangle className="w-3 h-3" /> Add a website to the firm to enable scraping
+          </span>
+        )}
+
+        <div className="flex items-center gap-1 ml-auto">
+          <Filter className="w-3.5 h-3.5 text-gray-400" />
+          {[
+            { key: "all", label: `All (${activeMeetings.length})` },
+            { key: "upcoming", label: `Upcoming (${counts.upcoming})` },
+            { key: "completed", label: `Completed (${counts.completed})` },
+            { key: "needs_review", label: `Needs Review (${counts.needs_review})` },
+          ].map((opt) => (
+            <button
+              key={opt.key}
+              type="button"
+              onClick={() => setStatusFilter(opt.key)}
+              className={`text-[11px] px-2 py-1 rounded-full border transition-colors ${
+                statusFilter === opt.key
+                  ? "bg-indigo-600 text-white border-indigo-600"
+                  : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Sort + topic search */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-[180px]">
+          <Input
+            placeholder="Search by topic, title, or location…"
+            value={topicSearch}
+            onChange={(e) => setTopicSearch(e.target.value)}
+            className="h-8 text-sm"
+          />
+        </div>
+        <div className="flex items-center gap-1">
+          <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="text-xs border border-gray-200 rounded-md h-8 px-2 bg-white"
+          >
+            <option value="date_desc">Newest first</option>
+            <option value="date_asc">Oldest first</option>
+            <option value="topic">Topic (A–Z)</option>
+          </select>
+        </div>
+      </div>
+
+      {/* List */}
+      {isLoading ? (
+        <div className="text-sm text-gray-400 italic py-4 text-center">Loading…</div>
+      ) : visible.length === 0 ? (
+        <div className="text-sm text-gray-400 italic py-6 text-center border border-dashed border-gray-200 rounded-xl">
+          {activeMeetings.length === 0
+            ? "No board meetings yet. Click \"Scrape Board Meetings\" to search the firm's website."
+            : "No meetings match the current filter."}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {visible.map((m) => (
+            <BoardMeetingCard key={m.id} meeting={m} firmId={firmId} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

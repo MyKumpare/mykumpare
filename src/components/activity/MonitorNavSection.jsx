@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  Radar, ClipboardList, CalendarDays, LayoutList, Plus, ChevronRight, ChevronDown, ExternalLink, Newspaper, GitBranch,
+  Radar, ClipboardList, CalendarDays, LayoutList, Plus, ChevronRight, ChevronDown, ExternalLink, Newspaper, GitBranch, ClipboardCheck,
 } from "lucide-react";
 
 /**
@@ -14,6 +14,8 @@ export default function MonitorNavSection({
   activitiesCount,
   tasksCount,
   newsCount,
+  boardMeetingsCount,
+  onOpenBoardMeetings,
   onOpenMonitor,
   onOpenActivity,
   onAddActivity,
@@ -86,6 +88,14 @@ export default function MonitorNavSection({
       onOpen: onOpenConferences,
       onAdd: null,
     },
+    {
+      label: "Board Meetings",
+      icon: ClipboardCheck,
+      iconColor: "text-cyan-500",
+      count: boardMeetingsCount,
+      onOpen: onOpenBoardMeetings,
+      onAdd: null,
+    },
   ];
 
   return (
@@ -106,7 +116,7 @@ export default function MonitorNavSection({
           <button onClick={onOpenMonitor} className="flex items-center gap-2 group">
             <Radar className="w-4 h-4 text-rose-600" />
             <span className="text-sm font-semibold text-gray-700 group-hover:text-gray-900">Monitor</span>
-            <span className="text-xs text-gray-400 font-normal">({(activitiesCount ?? 0) + (tasksCount ?? 0)})</span>
+            <span className="text-xs text-gray-400 font-normal">({(activitiesCount ?? 0) + (tasksCount ?? 0) + (boardMeetingsCount ?? 0)})</span>
           </button>
         </div>
         <div className="flex items-center gap-2">

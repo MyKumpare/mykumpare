@@ -65,6 +65,7 @@ const ActivityDetailModal = lazyDialog(() => import("../components/activity/Acti
 const FollowUpTaskPickerModal = lazyDialog(() => import("../components/activity/FollowUpTaskPickerModal"));
 const TaskDetailModal = lazyDialog(() => import("../components/activity/TaskDetailModal"));
 const NewsAlertsModal = lazyDialog(() => import("../components/firms/NewsAlertsModal"));
+const BoardMeetingsModal = lazyDialog(() => import("../components/firms/BoardMeetingsModal"));
 const UserProfileDialog = lazyDialog(() => import("../components/user/UserProfileDialog"));
 const ExternalPortalPickerModal = lazyDialog(() => import("../components/external/ExternalPortalPickerModal"));
 import { useFirmOwner } from "@/components/admin/useFirmOwner";
@@ -126,6 +127,7 @@ export default function Home() {
   const [activityLogModalOpen, setActivityLogModalOpen] = useState(false);
   const [activityLogDefaultTab, setActivityLogDefaultTab] = useState("activity");
   const [newsAlertsOpen, setNewsAlertsOpen] = useState(false);
+  const [boardMeetingsOpen, setBoardMeetingsOpen] = useState(false);
   const [portfolioPickerOpen, setPortfolioPickerOpen] = useState(false);
   const [firmPickerOpen, setFirmPickerOpen] = useState(false);
   const [dueDiligencePickerOpen, setDueDiligencePickerOpen] = useState(false);
@@ -335,6 +337,12 @@ export default function Home() {
   });
   const pinnedNewsCount = pinnedNews.filter(n => !n.deleted_at && n.is_pinned).length;
 
+  const { data: boardMeetings = [] } = useQuery({
+    queryKey: ["board-meetings-all"],
+    queryFn: () => base44.entities.BoardMeeting.list("-meeting_date", 1000),
+  });
+  const upcomingBoardMeetingsCount = boardMeetings.filter(b => !b.deleted_at && (b.meeting_date || "9999") >= new Date().toISOString().slice(0, 10)).length;
+
   const { data: documents = [] } = useQuery({
     queryKey: ["firm_documents_search"],
     queryFn: () => base44.entities.FirmDocument.list("-entry_date", 1000),
@@ -374,6 +382,7 @@ export default function Home() {
       base44.entities.DueDiligence.subscribe(() => invalidate([["due-diligence-search"], ["due-diligence-all"]])),
       base44.entities.Questionnaire.subscribe(() => invalidate([["questionnaires"], ["picker_count", "Questionnaire"]])),
       base44.entities.CustomReport.subscribe(() => invalidate([["custom_reports_search"], ["custom_reports"]])),
+      base44.entities.BoardMeeting.subscribe(() => invalidate([["board-meetings-all"]])),
       base44.entities.Template.subscribe(() => invalidate([["templates"]])),
       base44.entities.TemplateType.subscribe(() => invalidate([["template_types"]])),
       base44.entities.ContactPipelineStage.subscribe(() => invalidate([["contact_pipeline_stages"]])),
@@ -698,6 +707,7 @@ export default function Home() {
       { label: "Templates", icon: FileText, onClick: () => setTemplatesPickerOpen(true) },
     ] },
     { label: "Monitor", icon: Radar, ref: null, color: "text-rose-600", activeBg: "bg-rose-50", onClick: () => navigate("/Monitor") },
+    { label: "Board Mtgs", icon: ClipboardCheck, ref: null, color: "text-cyan-600", activeBg: "bg-cyan-50", onClick: () => setBoardMeetingsOpen(true) },
     { label: "Report", icon: FileBarChart, ref: null, color: "text-cyan-600", activeBg: "bg-cyan-50", onClick: () => setAnalyticsLaunchOpen(true), submenu: [
       { label: "Analytics", icon: LineChart, onClick: () => setAnalyticsLaunchOpen(true) },
       { label: "Reports", icon: FileText, onClick: () => setReportsPickerOpen(true) },
@@ -997,6 +1007,8 @@ export default function Home() {
           activitiesCount={activities.filter(a => !a.deleted_at).length}
           tasksCount={followUpTasks.filter(t => !t.deleted_at).length}
           newsCount={pinnedNewsCount}
+          boardMeetingsCount={upcomingBoardMeetingsCount}
+          onOpenBoardMeetings={() => setBoardMeetingsOpen(true)}
           onOpenMonitor={() => navigate("/Monitor")}
           onOpenActivity={() => setActivityPickerOpen(true)}
           onAddActivity={() => { setActivityLogDefaultTab("activity"); setActivityLogModalOpen(true); }}
@@ -1602,6 +1614,14 @@ export default function Home() {
           const firm = firms.find(f => f.id === firmId);
           if (firm) handleEdit(firm);
         }}
+      />
+
+      {/* Board Meetings — upcoming meetings across all firms */}
+      <BoardMeetingsModal
+        open={boardMeetingsOpen}
+        onClose={() => setBoardMeetingsOpen(false)}
+        firms={firms}
+        onFirmClick={(firm) => handleEdit(firm)}
       />
     </div>
   );

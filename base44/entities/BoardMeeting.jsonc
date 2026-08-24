@@ -1,0 +1,255 @@
+{
+  "name": "BoardMeeting",
+  "type": "object",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "ID of the firm (tenant) that owns this board meeting record. Set on creation to the creator's linked_firm_id; drives tenant isolation via RLS."
+    },
+    "firm_id": {
+      "type": "string",
+      "description": "ID of the firm whose board meetings are tracked."
+    },
+    "firm_name": {
+      "type": "string",
+      "description": "Name of the firm (denormalized for display)."
+    },
+    "title": {
+      "type": "string",
+      "description": "Title or name of the board meeting."
+    },
+    "meeting_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Start date of the meeting (YYYY-MM-DD)."
+    },
+    "end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "End date of the meeting (YYYY-MM-DD), if known."
+    },
+    "location": {
+      "type": "string",
+      "description": "Location of the meeting (city, address, or venue)."
+    },
+    "meeting_format": {
+      "type": "string",
+      "enum": [
+        "in-person",
+        "virtual",
+        "hybrid",
+        "unknown"
+      ],
+      "default": "unknown",
+      "description": "Whether the meeting is held in-person, virtually, or as a hybrid."
+    },
+    "meeting_topics": {
+      "type": "array",
+      "description": "Topics discussed or scheduled for the meeting.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "session_type": {
+      "type": "string",
+      "enum": [
+        "public_meeting",
+        "closed_session",
+        "unknown"
+      ],
+      "default": "unknown",
+      "description": "Whether the meeting is a public meeting or a closed session."
+    },
+    "agenda_url": {
+      "type": "string",
+      "description": "URL to the meeting agenda document (found during scraping)."
+    },
+    "agenda_file_url": {
+      "type": "string",
+      "description": "Uploaded agenda file URL (user-attached)."
+    },
+    "minutes_url": {
+      "type": "string",
+      "description": "URL to the meeting minutes document (found during scraping)."
+    },
+    "minutes_file_url": {
+      "type": "string",
+      "description": "Uploaded minutes file URL (user-attached)."
+    },
+    "minutes_content": {
+      "type": "string",
+      "description": "Scraped text content of the meeting minutes, retrieved on demand by the 'Get Minutes' action."
+    },
+    "source_url": {
+      "type": "string",
+      "description": "URL of the page where this meeting was found during scraping."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "upcoming",
+        "completed"
+      ],
+      "default": "upcoming",
+      "description": "Meeting status derived from the meeting date vs today. 'upcoming' when the meeting date is today or later; 'completed' when it is in the past."
+    },
+    "mentions": {
+      "type": "array",
+      "description": "Entities from the user's own firm portfolio that are mentioned in this meeting. Each entry flags a mention of the user's firm (Xponance) or any investment manager / sub-manager in its portfolios, with context describing what the meeting says about that entity. Triggers needs_review when non-empty.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "entity_name": {
+            "type": "string",
+            "description": "Name of the mentioned entity"
+          },
+          "entity_type": {
+            "type": "string",
+            "enum": [
+              "our_firm",
+              "investment_manager",
+              "sub_manager",
+              "other"
+            ],
+            "description": "Relationship of the mentioned entity to the user's portfolio"
+          },
+          "entity_id": {
+            "type": "string",
+            "description": "ID of the mentioned entity (firm or product), if known"
+          },
+          "context": {
+            "type": "string",
+            "description": "Short description of what the meeting says about this entity"
+          }
+        }
+      }
+    },
+    "needs_review": {
+      "type": "boolean",
+      "default": false,
+      "description": "True when a portfolio entity is mentioned in this meeting, flagging the user to review it."
+    },
+    "reviewed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the user has reviewed this meeting (dismisses the review flag)."
+    },
+    "review_notes": {
+      "type": "string",
+      "description": "User notes recorded while reviewing this meeting."
+    },
+    "scrub_batch_id": {
+      "type": "string",
+      "description": "ID of the scrape batch that produced this meeting (for deduplication)."
+    },
+    "deleted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when this board meeting record was soft-deleted."
+    }
+  },
+  "required": [
+    "firm_id",
+    "firm_name",
+    "title"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_edit": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_delete": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

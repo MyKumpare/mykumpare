@@ -29,6 +29,7 @@ import FirmPortfoliosTab from "./FirmPortfoliosTab";
 import FirmActivityLogTab from "./FirmActivityLogTab";
 import FirmNewsTab from "./FirmNewsTab";
 import FirmConferenceTab from "./FirmConferenceTab";
+import FirmBoardMeetingTab from "./FirmBoardMeetingTab";
 import FirmDocumentsTab from "./FirmDocumentsTab";
 import FirmDueDiligenceTab from "./FirmDueDiligenceTab";
 import LegalComplianceTab from "./LegalComplianceTab";
@@ -1274,6 +1275,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                    <TabsTrigger value="aum-history">AUM History</TabsTrigger>
                    <TabsTrigger value="news">News</TabsTrigger>
                    <TabsTrigger value="conferences">Conferences</TabsTrigger>
+                   <TabsTrigger value="board-meetings">Board Meetings</TabsTrigger>
                    </>
                    )}
                    {hideProductTabs && (
@@ -1282,9 +1284,10 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                    <TabsTrigger value="activity-log">Activity Log</TabsTrigger>
                    <TabsTrigger value="news">News</TabsTrigger>
                    <TabsTrigger value="conferences">Conferences</TabsTrigger>
+                   <TabsTrigger value="board-meetings">Board Meetings</TabsTrigger>
                    </>
                    )}
-             </TabsList>
+                   </TabsList>
 
             <TabsContent value="contacts" className="space-y-3">
               {editingFirm ? (
@@ -1563,6 +1566,16 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               ) : (
                 <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
                   Save the firm first to scrub conferences
+                </div>
+              )}
+              </TabsContent>
+
+              <TabsContent value="board-meetings" className="space-y-3">
+              {editingFirm ? (
+                <FirmBoardMeetingTab firmId={editingFirm.id} firmName={editingFirm.name} firmWebsite={editingFirm.website} />
+              ) : (
+                <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
+                  Save the firm first to scrape board meetings
                 </div>
               )}
               </TabsContent>
