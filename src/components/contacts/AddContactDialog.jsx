@@ -55,7 +55,7 @@ function newAddress() {
   return { id: crypto.randomUUID(), is_primary: false, country: "", state: "", city: "", postal_code: "", address_line1: "", address_line2: "" };
 }
 
-export default function AddContactDialog({ open, onOpenChange, editingContact, currentFirmId, firms: firmsProp = [], viewMode: initialViewMode = false, initialPhotoUrl = null, onNavigateToOwnership, onContactCreated, onProductClick, onFirmClick, onContactClick }) {
+export default function AddContactDialog({ open, onOpenChange, editingContact, currentFirmId, firms: firmsProp = [], viewMode: initialViewMode = false, initialPhotoUrl = null, initialData = null, onNavigateToOwnership, onContactCreated, onProductClick, onFirmClick, onContactClick }) {
   const [viewMode, setViewMode] = useState(initialViewMode);
   const [activeTab, setActiveTab] = useState("info");
   const [highlightChatId, setHighlightChatId] = useState(null);
@@ -181,13 +181,31 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setProfessionalExperience([]);
         setPhones([newPhone()]);
         setAddresses([newAddress()]);
+        // Apply pre-filled data from the paste / business-card flow
+        if (initialData) {
+          if (initialData.photo_url) setPhotoUrl(initialData.photo_url);
+          if (initialData.salutation) setSalutation(initialData.salutation);
+          if (initialData.first_name) setFirstName(initialData.first_name);
+          if (initialData.middle_name) setMiddleName(initialData.middle_name);
+          if (initialData.last_name) setLastName(initialData.last_name);
+          if (initialData.suffix) setSuffix(initialData.suffix);
+          if (initialData.title) setTitle(initialData.title);
+          if (Array.isArray(initialData.designations)) setDesignations(initialData.designations);
+          if (initialData.email) setEmail(initialData.email);
+          if (initialData.linkedin_url) setLinkedinUrl(initialData.linkedin_url);
+          if (initialData.biography) setBiography(initialData.biography);
+          if (initialData.notes) setNotes(initialData.notes);
+          if (Array.isArray(initialData.phones) && initialData.phones.length) setPhones(initialData.phones);
+          if (Array.isArray(initialData.addresses) && initialData.addresses.length) setAddresses(initialData.addresses);
+          if (Array.isArray(initialData.firm_ids) && initialData.firm_ids.length) setFirmIds(initialData.firm_ids);
+        }
       }
       setFirmSearch("");
       setShowFirmPicker(false);
       setShowQuickAddFirm(false);
       setViewMode(initialViewMode);
       }
-      }, [open, editingContact, currentFirmId, initialViewMode, initialPhotoUrl]);
+      }, [open, editingContact, currentFirmId, initialViewMode, initialPhotoUrl, initialData]);
 
       // Default contact type from the initial firm (for new contacts with a pre-selected firm).
       // Runs once per dialog open, after firms have loaded.

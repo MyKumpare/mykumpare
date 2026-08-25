@@ -24,6 +24,7 @@ const AddProductDialog = lazyDialog(() => import("../components/products/AddProd
 const StatsListModal = lazyDialog(() => import("../components/stats/StatsListModal"));
 const ContactsListModal = lazyDialog(() => import("../components/contacts/ContactsListModal"));
 const AddContactDialog = lazyDialog(() => import("../components/contacts/AddContactDialog"));
+const PasteContactDialog = lazyDialog(() => import("../components/contacts/PasteContactDialog"));
 const PhotoCaptureModal = lazyDialog(() => import("../components/contacts/PhotoCaptureModal"));
 const AddPortfolioDialog = lazyDialog(() => import("../components/portfolios/AddPortfolioDialog"));
 const AddDueDiligenceDialog = lazyDialog(() => import("../components/firms/AddDueDiligenceDialog"));
@@ -150,6 +151,8 @@ export default function Home() {
   const [externalPortalOpen, setExternalPortalOpen] = useState(false);
   const [photoCaptureOpen, setPhotoCaptureOpen] = useState(false);
   const [addContactPhotoUrl, setAddContactPhotoUrl] = useState(null);
+  const [pasteContactOpen, setPasteContactOpen] = useState(false);
+  const [pasteInitialData, setPasteInitialData] = useState(null);
 
   // Voice search — routes spoken commands to app search, photo search, or map search.
   const handleVoiceResult = (transcript) => {
@@ -1136,6 +1139,7 @@ export default function Home() {
           onContactClick={(contact) => setViewingContact(contact)}
           onFirmClick={(firm) => handleEdit(firm, false, false)}
           onAddContact={() => setAddContactOpen(true)}
+          onPasteContact={() => setPasteContactOpen(true)}
           onPhotoSearch={() => setPhotoCaptureOpen(true)}
           forceExpanded={allExpanded}
         />
@@ -1334,12 +1338,23 @@ export default function Home() {
       />
 
       <AddContactDialog
-        open={addContactOpen || !!addContactPhotoUrl}
-        onOpenChange={(open) => { if (!open) { setAddContactOpen(false); setAddContactPhotoUrl(null); } }}
+        open={addContactOpen || !!addContactPhotoUrl || !!pasteInitialData}
+        onOpenChange={(open) => { if (!open) { setAddContactOpen(false); setAddContactPhotoUrl(null); setPasteInitialData(null); } }}
         editingContact={null}
         currentFirmId={null}
         firms={firms}
         initialPhotoUrl={addContactPhotoUrl}
+        initialData={pasteInitialData}
+      />
+
+      <PasteContactDialog
+        open={pasteContactOpen}
+        onClose={() => setPasteContactOpen(false)}
+        firms={firms}
+        onReady={(initialData) => {
+          setPasteInitialData(initialData);
+          setPasteContactOpen(false);
+        }}
       />
 
       <PhotoCaptureModal

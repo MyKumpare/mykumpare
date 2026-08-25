@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, ChevronDown, ChevronRight, User, Camera, Download, Settings2 } from "lucide-react";
+import { Plus, ChevronDown, ChevronRight, User, Camera, Download, Settings2, ClipboardPaste } from "lucide-react";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
 import SectionTypeFilter from "@/components/common/SectionTypeFilter";
 import SectionExpandCollapse from "@/components/common/SectionExpandCollapse";
@@ -54,7 +54,7 @@ function ContactAvatar({ contact }) {
   );
 }
 
-export default function ContactsSection({ contacts, firms, products, portfolios, onContactClick, onAddContact, onPhotoSearch, onFirmClick, forceExpanded }) {
+export default function ContactsSection({ contacts, firms, products, portfolios, onContactClick, onAddContact, onPasteContact, onPhotoSearch, onFirmClick, forceExpanded }) {
   const [expanded, setExpanded] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState({});
   const [expandedFirms, setExpandedFirms] = useState({});
@@ -270,6 +270,16 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
           >
             <Download className="w-3.5 h-3.5" />
             Export
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs"
+            onClick={onPasteContact}
+            title="Add contact from pasted text or a business card photo"
+          >
+            <ClipboardPaste className="w-3.5 h-3.5" />
+            Paste / Card
           </Button>
           <Button
             variant="ghost"
