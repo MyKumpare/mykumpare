@@ -30,6 +30,7 @@ import ContactProductsTab from "./ContactProductsTab";
 import ContactNewsTab from "./ContactNewsTab";
 import ScrapeProfileButton from "./ScrapeProfileButton";
 import ContactRolePicker from "./ContactRolePicker";
+import ContactInvestmentTeamRolePicker from "./ContactInvestmentTeamRolePicker";
 import ContactDepartmentPicker from "./ContactDepartmentPicker";
 import ContactTypePicker, { defaultContactTypesFromFirm } from "./ContactTypePicker";
 import { findContactDuplicates, findContactsByNormalizedName } from "./contactDuplicateCheck";
@@ -84,6 +85,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [contactType, setContactType] = useState([]);
   const [contactRoles, setContactRoles] = useState([]);
   const [contactFirmRoles, setContactFirmRoles] = useState([]);
+  const [investmentTeamRoles, setInvestmentTeamRoles] = useState([]);
   const [gender, setGender] = useState("Undetermined");
   const [ethnicity, setEthnicity] = useState([]);
   const [veteranStatus, setVeteranStatus] = useState("Undetermined");
@@ -135,6 +137,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setContactType(Array.isArray(editingContact.contact_type) ? editingContact.contact_type : (editingContact.contact_type ? [editingContact.contact_type] : []));
         setContactRoles(editingContact.contact_roles || []);
         setContactFirmRoles(editingContact.contact_firm_roles || []);
+        setInvestmentTeamRoles(editingContact.investment_team_roles || []);
         setGender(editingContact.gender || "Undetermined");
         setEthnicity(editingContact.ethnicity || []);
         setVeteranStatus(editingContact.veteran_status || "Undetermined");
@@ -168,6 +171,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setContactType([]);
         setContactRoles([]);
         setContactFirmRoles([]);
+        setInvestmentTeamRoles([]);
         setGender("Undetermined");
         setEthnicity([]);
         setVeteranStatus("Undetermined");
@@ -198,6 +202,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
           if (Array.isArray(initialData.phones) && initialData.phones.length) setPhones(initialData.phones);
           if (Array.isArray(initialData.addresses) && initialData.addresses.length) setAddresses(initialData.addresses);
           if (Array.isArray(initialData.firm_ids) && initialData.firm_ids.length) setFirmIds(initialData.firm_ids);
+          if (Array.isArray(initialData.investment_team_roles)) setInvestmentTeamRoles(initialData.investment_team_roles);
         }
       }
       setFirmSearch("");
@@ -386,6 +391,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
       contact_type: contactType,
       contact_roles: contactRoles,
       contact_firm_roles: contactFirmRoles,
+      investment_team_roles: investmentTeamRoles,
       gender,
       ethnicity,
       veteran_status: veteranStatus,
@@ -811,6 +817,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
         JSON.stringify(designations) !== JSON.stringify(e.designations || []) ||
         JSON.stringify(contactRoles) !== JSON.stringify(e.contact_roles || []) ||
         JSON.stringify(contactFirmRoles) !== JSON.stringify(e.contact_firm_roles || []) ||
+        JSON.stringify(investmentTeamRoles) !== JSON.stringify(e.investment_team_roles || []) ||
         JSON.stringify([...firmIds].sort()) !== JSON.stringify([...(e.firm_ids || [])].sort()) ||
         JSON.stringify(education) !== JSON.stringify(e.education || []) ||
         JSON.stringify(professionalExperience) !== JSON.stringify(e.professional_experience || []) ||
@@ -1565,6 +1572,16 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                   <ContactDepartmentPicker value={contactFirmRoles} onChange={setContactFirmRoles} viewMode={viewMode} />
                 </div>
               )}
+
+              {/* Investment Team Role — from the shared InvestmentTeamRole library */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Investment Team Role</Label>
+                <ContactInvestmentTeamRolePicker
+                  value={investmentTeamRoles}
+                  onChange={setInvestmentTeamRoles}
+                  viewMode={viewMode}
+                />
+              </div>
 
               {/* Contact Role — searchable multi-select (always available) */}
               <div className="space-y-1.5">

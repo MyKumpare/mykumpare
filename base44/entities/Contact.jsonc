@@ -116,6 +116,13 @@
         "type": "string"
       }
     },
+    "investment_team_roles": {
+      "type": "array",
+      "description": "Investment team role(s) the contact holds (e.g. Managing Partner, Analyst, General Counsel), drawn from the shared InvestmentTeamRole library. Assigned during contact creation to track team composition across the firm portfolio.",
+      "items": {
+        "type": "string"
+      }
+    },
     "gender": {
       "type": "string",
       "enum": [
