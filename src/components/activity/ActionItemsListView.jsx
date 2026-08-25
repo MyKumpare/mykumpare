@@ -3,8 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
-  Search, X, Flame, CalendarClock, Building2, AlertTriangle, ListFilter, KanbanSquare,
+  Search, X, Flame, CalendarClock, Building2, AlertTriangle, ListFilter, KanbanSquare, ArrowDownWideNarrow,
 } from "lucide-react";
+import {
+  Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
+} from "@/components/ui/select";
 import { format, differenceInCalendarDays } from "date-fns";
 import { navigateToFirm, navigateToBoardMeeting } from "./actionItemNav";
 
@@ -36,6 +39,7 @@ export default function ActionItemsListView({ tasks, meetings, onOpenTask }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all"); // "all" | status key
   const [highPriorityOnly, setHighPriorityOnly] = useState(false);
+  const [sortBy, setSortBy] = useState("priority"); // "priority" | "due" | "status"
 
   const meetingById = useMemo(() => {
     const m = {};
@@ -45,7 +49,7 @@ export default function ActionItemsListView({ tasks, meetings, onOpenTask }) {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return (tasks || []).filter(t => {
+    const result = (tasks || []).filter(t => {
       if (statusFilter !== "all" && t.status !== statusFilter) return false;
       if (highPriorityOnly && !t.is_high_priority) return false;
       if (q) {
@@ -54,7 +58,25 @@ export default function ActionItemsListView({ tasks, meetings, onOpenTask }) {
       }
       return true;
     });
-  }, [tasks, search, statusFilter, highPriorityOnly]);
+    const statusRank = { "Not Started": 0, "In-process": 1, "Completed": 2, "Cancelled": 3 };
+    return [...result].sort((a, b) => {
+      if (sortBy === "priority") {
+        if (a.is_high_priority !== b.is_high_priority) return b.is_high_priority ? 1 : -1;
+        const ad = a.due_date || "9999-12-31";
+        const bd = b.due_date || "9999-12-31";
+        return ad.localeCompare(bd);
+      }
+      if (sortBy === "due") {
+        const ad = a.due_date || "9999-12-31";
+        const bd = b.due_date || "9999-12-31";
+        return ad.localeCompare(bd);
+      }
+      if (sortBy === "status") {
+        return (statusRank[a.status] ?? 9) - (statusRank[b.status] ?? 9);
+      }
+      return 0;
+    });
+  }, [tasks, search, statusFilter, highPriorityOnly, sortBy]);
 
   const counts = useMemo(() => {
     const c = { all: (tasks || []).length };
@@ -92,9 +114,22 @@ export default function ActionItemsListView({ tasks, meetings, onOpenTask }) {
         >
           <Flame className="w-3.5 h-3.5" /> High priority
         </Button>
-        {(statusFilter !== "all" || highPriorityOnly || search) && (
+        <div className="flex items-center gap-1">
+          <ArrowDownWideNarrow className="w-3.5 h-3.5 text-gray-400" />
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="h-8 text-xs w-[170px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="priority">Priority (high first)</SelectItem>
+              <SelectItem value="due">Due date (soonest)</SelectItem>
+              <SelectItem value="status">Status</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {(statusFilter !== "all" || highPriorityOnly || search || sortBy !== "priority") && (
           <Button variant="ghost" size="sm" className="h-8 text-xs"
-            onClick={() => { setStatusFilter("all"); setHighPriorityOnly(false); setSearch(""); }}>
+            onClick={() => { setStatusFilter("all"); setHighPriorityOnly(false); setSearch(""); setSortBy("priority"); }}>
             <ListFilter className="w-3.5 h-3.5" /> Clear
           </Button>
         )}
