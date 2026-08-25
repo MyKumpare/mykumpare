@@ -4,10 +4,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import {
   FileText, Pencil, Trash2, ExternalLink, CalendarDays, CalendarClock,
-  HelpCircle, CalendarPlus, FileDown, Paperclip,
+  HelpCircle, CalendarPlus, FileDown, Paperclip, PackageCheck, StickyNote,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
-import { progressStyle } from "./rfpRfiProgress";
+import { progressStyle, decisionStyle, productMatchStyle } from "./rfpRfiProgress";
 
 const TYPE_STYLES = {
   RFP: "bg-primary/15 text-primary border-primary/30",
@@ -75,6 +75,15 @@ export default function FirmRfpRfiCard({ record, onEdit }) {
         <Badge variant="outline" className={`text-[10px] ${progressStyle(record.progress_status)}`}>
           {record.progress_status || "Draft"}
         </Badge>
+        <Badge variant="outline" className={`text-[10px] ${decisionStyle(record.decision_status)}`}>
+          {record.decision_status || "Needs Review"}
+        </Badge>
+        {record.product_match_status && record.product_match_status !== "Not Checked" && (
+          <Badge variant="outline" className={`text-[10px] gap-1 ${productMatchStyle(record.product_match_status)}`}>
+            <PackageCheck className="w-2.5 h-2.5" />
+            {record.product_match_status}
+          </Badge>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
@@ -100,6 +109,28 @@ export default function FirmRfpRfiCard({ record, onEdit }) {
         <p className="text-xs text-gray-600 leading-relaxed bg-gray-50 rounded-lg p-2.5 border border-gray-100">
           {record.summary}
         </p>
+      )}
+
+      {record.matched_product_names?.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {record.matched_product_names.map((n) => (
+            <span key={n} className="inline-flex items-center gap-1 text-[11px] bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-md px-2 py-0.5">
+              <PackageCheck className="w-3 h-3" /> {n}
+            </span>
+          ))}
+        </div>
+      )}
+      {record.product_match_summary && (
+        <p className="text-[11px] text-gray-500 leading-relaxed bg-gray-50 rounded-md p-2 border border-gray-100">
+          {record.product_match_summary}
+        </p>
+      )}
+
+      {record.notes && (
+        <div className="flex items-start gap-1.5 text-xs text-gray-600 bg-amber-50/60 rounded-lg p-2.5 border border-amber-100">
+          <StickyNote className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+          <p className="leading-relaxed whitespace-pre-wrap line-clamp-4">{record.notes}</p>
+        </div>
       )}
 
       <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-gray-100">

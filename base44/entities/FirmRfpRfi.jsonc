@@ -92,6 +92,54 @@
       "default": "Draft",
       "description": "Workflow progress of this RFP/RFI through the response cycle. 'Draft' = not yet started; 'Submitted' = response sent in; 'Under Review' = awaiting the firm's decision; 'Awarded' / 'Not Awarded' = decision received; 'Cancelled' = no longer being pursued. The terminal states (Awarded, Not Awarded, Cancelled) are treated as 'completed' and can be hidden from the active views."
     },
+    "decision_status": {
+      "type": "string",
+      "enum": [
+        "Needs Review",
+        "Submitted",
+        "Passed"
+      ],
+      "default": "Needs Review",
+      "description": "Internal go/no-go decision tag for this opportunity. 'Needs Review' = the team has not yet decided whether to pursue; 'Submitted' = the team decided to (or did) submit a proposal; 'Passed' = the team decided to pass on this opportunity."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Internal team notes for this RFP/RFI \u2014 feedback, meeting summaries, strategy updates, or context captured directly on the item."
+    },
+    "product_match_status": {
+      "type": "string",
+      "enum": [
+        "Not Checked",
+        "Match",
+        "Near Match",
+        "No Match"
+      ],
+      "default": "Not Checked",
+      "description": "Result of matching this RFP/RFI against the user's own firm's (Xponance) products. 'Match' = a product clearly fits the opportunity; 'Near Match' = a product is a close but imperfect fit; 'No Match' = no offered product fits; 'Not Checked' = the match has not been run yet."
+    },
+    "matched_product_ids": {
+      "type": "array",
+      "description": "IDs of the user's own firm's products that match (or nearly match) this RFP/RFI, identified by the product-match check.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "matched_product_names": {
+      "type": "array",
+      "description": "Names of the matched products (denormalized for display).",
+      "items": {
+        "type": "string"
+      }
+    },
+    "product_match_summary": {
+      "type": "string",
+      "description": "AI-generated explanation of the product match \u2014 which products fit and why, or why none fit."
+    },
+    "product_match_checked_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the product match was last run (ISO-8601)."
+    },
     "scrub_batch_id": {
       "type": "string",
       "description": "ID of the scrape batch that produced this record (for deduplication)."

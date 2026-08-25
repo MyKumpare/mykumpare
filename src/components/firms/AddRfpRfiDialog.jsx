@@ -7,13 +7,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Upload, X, FileDown } from "lucide-react";
+import { Loader2, Upload, X, FileDown, Sparkles, PackageCheck } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
-import { PROGRESS_OPTIONS } from "./rfpRfiProgress";
+import { PROGRESS_OPTIONS, DECISION_OPTIONS, decisionStyle, productMatchStyle } from "./rfpRfiProgress";
 
 const TYPE_OPTIONS = ["RFP", "RFI", "Unknown"];
 
@@ -30,6 +31,11 @@ function emptyRecord() {
     source_url: "",
     file_url: "",
     file_name: "",
+    notes: "",
+    decision_status: "Needs Review",
+    product_match_status: "Not Checked",
+    matched_product_names: [],
+    product_match_summary: "",
   };
 }
 
@@ -38,6 +44,7 @@ export default function AddRfpRfiDialog({ open, onClose, firmId, firmName, editi
   const [form, setForm] = useState(emptyRecord());
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [checkingMatch, setCheckingMatch] = useState(false);
 
   const isEdit = !!editingRecord;
 
@@ -70,6 +77,28 @@ export default function AddRfpRfiDialog({ open, onClose, firmId, firmName, editi
   const removeFile = () => {
     set("file_url", "");
     set("file_name", "");
+  };
+
+  const handleCheckMatch = async () => {
+    if (!isEdit || !editingRecord?.id) {
+      toast({ title: "Save the record first", description: "Product match can only be checked on a saved RFP/RFI.", variant: "destructive" });
+      return;
+    }
+    setCheckingMatch(true);
+    try {
+      const res = await base44.functions.invoke("matchRfpRfiToProducts", { record_id: editingRecord.id });
+      const data = res?.data || res;
+      set("product_match_status", data.product_match_status || "Not Checked");
+      set("matched_product_names", data.matched_product_names || []);
+      set("product_match_summary", data.product_match_summary || "");
+      queryClient.invalidateQueries({ queryKey: ["firm-rfp-rfi", firmId] });
+      queryClient.invalidateQueries({ queryKey: ["rfp-rfi-dashboard"] });
+      toast({ title: "Product match checked", description: data.product_match_status || "" });
+    } catch (err) {
+      toast({ title: "Match check failed", description: err?.message || "Could not check product match.", variant: "destructive" });
+    } finally {
+      setCheckingMatch(false);
+    }
   };
 
   const handleSave = async () => {
@@ -145,6 +174,15 @@ export default function AddRfpRfiDialog({ open, onClose, firmId, firmName, editi
               </Select>
             </div>
             <div className="space-y-1.5">
+              <Label>Decision</Label>
+              <Select value={form.decision_status || "Needs Review"} onValueChange={(v) => set("decision_status", v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {DECISION_OPTIONS.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
               <Label>Posting date</Label>
               <Input type="date" value={form.posting_date} onChange={(e) => set("posting_date", e.target.value)} />
             </div>
@@ -172,6 +210,54 @@ export default function AddRfpRfiDialog({ open, onClose, firmId, firmName, editi
           <div className="space-y-1.5">
             <Label>Summary</Label>
             <Textarea value={form.summary} onChange={(e) => set("summary", e.target.value)} placeholder="Short summary of the RFP/RFI…" className="min-h-20" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Internal notes</Label>
+            <Textarea value={form.notes} onChange={(e) => set("notes", e.target.value)} placeholder="Team feedback, meeting summaries, strategy updates…" className="min-h-20" />
+          </div>
+
+          {/* Product match — check this RFP/RFI against Xponance's offered products */}
+          <div className="rounded-lg border border-gray-200 bg-gray-50/60 p-3 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5">
+                <PackageCheck className="w-4 h-4 text-primary" />
+                <span className="text-sm font-medium text-gray-700">Product Match</span>
+                {form.product_match_status && form.product_match_status !== "Not Checked" && (
+                  <Badge variant="outline" className={`text-[10px] ${productMatchStyle(form.product_match_status)}`}>
+                    {form.product_match_status}
+                  </Badge>
+                )}
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleCheckMatch}
+                disabled={checkingMatch || !isEdit}
+                className="h-7 text-xs gap-1"
+              >
+                {checkingMatch ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                {checkingMatch ? "Checking…" : "Check match"}
+              </Button>
+            </div>
+            {!isEdit && (
+              <p className="text-[11px] text-gray-400 italic">Save the record first, then check which of your products fit this opportunity.</p>
+            )}
+            {form.matched_product_names?.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {form.matched_product_names.map((n) => (
+                  <span key={n} className="inline-flex items-center gap-1 text-[11px] bg-white border border-gray-200 rounded-md px-2 py-0.5 text-gray-700">
+                    <PackageCheck className="w-3 h-3 text-emerald-600" /> {n}
+                  </span>
+                ))}
+              </div>
+            )}
+            {form.product_match_summary && (
+              <p className="text-[11px] text-gray-600 leading-relaxed bg-white rounded-md p-2 border border-gray-100">
+                {form.product_match_summary}
+              </p>
+            )}
           </div>
 
           <div className="space-y-1.5">

@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Loader2, Filter, ArrowUpDown, FileSearch, LayoutDashboard, Building2,
-  Clock, CheckCircle2, FolderOpen,
+  Clock, CheckCircle2, FolderOpen, FileDown,
 } from "lucide-react";
 import FirmRfpRfiCard from "@/components/firms/FirmRfpRfiCard";
 import RfpRfiByFirmTypeChart from "@/components/firms/RfpRfiByFirmTypeChart";
+import { generateRfpRfiDashboardPdf } from "@/components/firms/rfpRfiDashboardPdf";
+import { toast } from "@/components/ui/use-toast";
 
 const FIRM_TYPE_ORDER = [
   "Investment Manager",
@@ -28,6 +30,7 @@ export default function RfpRfiDashboard() {
   const [statusFilter, setStatusFilter] = useState("Open");
   const [sortBy, setSortBy] = useState("due_asc");
   const [search, setSearch] = useState("");
+  const [decisionFilter, setDecisionFilter] = useState("all");
 
   const { data: records = [], isLoading } = useQuery({
     queryKey: ["rfp-rfi-dashboard"],
@@ -80,9 +83,16 @@ export default function RfpRfiDashboard() {
     ];
   }, [active, firmTypeMap]);
 
+  const decisionCounts = useMemo(() => ({
+    "Needs Review": active.filter((r) => (r.decision_status || "Needs Review") === "Needs Review").length,
+    "Submitted": active.filter((r) => r.decision_status === "Submitted").length,
+    "Passed": active.filter((r) => r.decision_status === "Passed").length,
+  }), [active]);
+
   const visible = useMemo(() => {
     let list = [...active];
     if (statusFilter !== "all") list = list.filter((r) => r.status === statusFilter);
+    if (decisionFilter !== "all") list = list.filter((r) => (r.decision_status || "Needs Review") === decisionFilter);
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter((r) =>
@@ -99,7 +109,24 @@ export default function RfpRfiDashboard() {
       return (a.title || "").localeCompare(b.title || "");
     });
     return list;
-  }, [active, statusFilter, sortBy, search]);
+  }, [active, statusFilter, decisionFilter, sortBy, search]);
+
+  const handleExportPdf = () => {
+    if (!visible.length) {
+      toast({ title: "Nothing to export", description: "No records match the current filter.", variant: "destructive" });
+      return;
+    }
+    try {
+      generateRfpRfiDashboardPdf({
+        items: visible,
+        filters: { statusFilter, decisionFilter, search, sortBy },
+        totalCount: active.length,
+      });
+      toast({ title: "PDF exported", description: `${visible.length} records exported.` });
+    } catch (err) {
+      toast({ title: "Export failed", description: err?.message || "Could not generate PDF.", variant: "destructive" });
+    }
+  };
 
   const stats = [
     { label: "Total", value: active.length, icon: FolderOpen, color: "text-gray-700", bg: "bg-gray-100" },
@@ -153,10 +180,11 @@ export default function RfpRfiDashboard() {
           <RfpRfiByFirmTypeChart data={chartData} />
         </div>
 
-        {/* Toolbar: status filter */}
+        {/* Toolbar: status filter + decision filter */}
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1">
             <Filter className="w-3.5 h-3.5 text-gray-400" />
+            <span className="text-[10px] text-gray-400 mr-0.5">Status:</span>
             {[
               { key: "all", label: `All (${active.length})` },
               { key: "Open", label: `Open (${counts.Open})` },
@@ -170,6 +198,28 @@ export default function RfpRfiDashboard() {
                 className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors ${
                   statusFilter === opt.key
                     ? "bg-primary text-white border-primary"
+                    : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] text-gray-400 mr-0.5">Decision:</span>
+            {[
+              { key: "all", label: "All" },
+              { key: "Needs Review", label: `Needs Review (${decisionCounts["Needs Review"]})` },
+              { key: "Submitted", label: `Submitted (${decisionCounts["Submitted"]})` },
+              { key: "Passed", label: `Passed (${decisionCounts["Passed"]})` },
+            ].map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => setDecisionFilter(opt.key)}
+                className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors ${
+                  decisionFilter === opt.key
+                    ? "bg-gray-800 text-white border-gray-800"
                     : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
                 }`}
               >
@@ -202,6 +252,16 @@ export default function RfpRfiDashboard() {
               <option value="title">Title (A–Z)</option>
             </select>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportPdf}
+            disabled={!visible.length}
+            className="h-8 gap-1.5 text-xs shrink-0"
+          >
+            <FileDown className="w-3.5 h-3.5" />
+            Export PDF
+          </Button>
         </div>
 
         {/* List */}
