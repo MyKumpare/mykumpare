@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,14 @@ export default function BoardMeetingCard({ meeting, firmId }) {
   const [extracting, setExtracting] = useState(false);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["board-meetings", firmId] });
+
+  // Fetch the action items (FollowUpTask records) extracted from this meeting
+  // so the user can see them directly in the card after running "Extract Actions".
+  const { data: actionItems = [] } = useQuery({
+    queryKey: ["board-meeting-action-items", meeting.id],
+    queryFn: () => base44.entities.FollowUpTask.filter({ board_meeting_id: meeting.id }, "-created_date", 100),
+    enabled: !!meeting.id,
+  });
 
   const handleGetMinutes = async () => {
     setFetchingMinutes(true);
@@ -86,7 +94,7 @@ export default function BoardMeetingCard({ meeting, firmId }) {
       if (created === 0) {
         toast({ title: "No action items found", description: "The meeting notes didn't contain extractable action items." });
       } else {
-        toast({ title: `${created} action item${created === 1 ? "" : "s"} extracted`, description: high ? `${high} flagged as high-priority.` : "Added to your task list." });
+        toast({ title: `${created} action item${created === 1 ? "" : "s"} extracted`, description: high ? `${high} flagged as high-priority. See them below.` : "See them below in this card." });
       }
     } catch (err) {
       toast({ title: "Extraction failed", description: err?.message || "Please try again.", variant: "destructive" });
@@ -195,6 +203,30 @@ export default function BoardMeetingCard({ meeting, firmId }) {
           {meeting.action_items_extracted ? "Re-extract Actions" : "Extract Actions"}
         </Button>
       </div>
+
+      {/* Extracted action items */}
+      {actionItems.length > 0 && (
+        <div className="mt-2 rounded-md border border-indigo-200 bg-indigo-50/40 p-2">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-indigo-800 mb-1.5">
+            <ListTodo className="w-3.5 h-3.5" />
+            Extracted Action Items ({actionItems.length})
+          </div>
+          <ul className="space-y-1">
+            {actionItems.map((item) => (
+              <li key={item.id} className="text-[11px] text-gray-700 flex items-start gap-1.5">
+                <span className={`mt-0.5 flex-shrink-0 ${item.is_high_priority ? "text-red-500" : "text-gray-400"}`}>
+                  {item.is_high_priority ? <Flag className="w-3 h-3" /> : <span className="w-3 h-3 inline-block rounded-full border border-gray-300" />}
+                </span>
+                <span className="flex-1">
+                  <span dangerouslySetInnerHTML={{ __html: item.task_description || "Untitled task" }} />
+                  {item.due_date && <span className="text-gray-500 ml-1">— due {fmtDate(item.due_date)}</span>}
+                  {item.assigned_to_contact_name && <span className="text-gray-500 ml-1">— {item.assigned_to_contact_name}</span>}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Minutes content */}
       {meeting.minutes_content && expanded && (
