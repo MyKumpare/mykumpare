@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { LogOut, Building, User as UserIcon, Search, Check, ExternalLink } from "lucide-react";
+import { LogOut, Building, User as UserIcon, Search, Check, ExternalLink, Briefcase } from "lucide-react";
 
 export default function UserProfileDialog({
   open,
@@ -25,6 +25,7 @@ export default function UserProfileDialog({
   const [selectedFirmId, setSelectedFirmId] = useState("");
   const [selectedContactId, setSelectedContactId] = useState("");
   const [selectedRoles, setSelectedRoles] = useState([]);
+  const [isManagement, setIsManagement] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -39,6 +40,7 @@ export default function UserProfileDialog({
         ? user.roles
         : user?.role ? [user.role] : [];
       setSelectedRoles(base);
+      setIsManagement(!!user?.is_management);
     }
   }, [open, user]);
 
@@ -79,7 +81,8 @@ export default function UserProfileDialog({
   const hasChanges =
     (user?.linked_firm_id || "") !== (selectedFirmId || "") ||
     (user?.linked_contact_id || "") !== (selectedContactId || "") ||
-    !rolesEqual(selectedRoles, originalRoles);
+    !rolesEqual(selectedRoles, originalRoles) ||
+    !!user?.is_management !== !!isManagement;
 
   const handleSave = async () => {
     setSaving(true);
@@ -88,6 +91,7 @@ export default function UserProfileDialog({
         linked_firm_id: selectedFirmId || null,
         linked_contact_id: selectedContactId || null,
         roles: selectedRoles.length > 0 ? selectedRoles : null,
+        is_management: isManagement,
       });
     } finally {
       setSaving(false);
@@ -150,6 +154,30 @@ export default function UserProfileDialog({
             })}
           </div>
         </div>
+
+        {/* Management access — gated to admins or current management users */}
+        {(user?.role === "admin" || user?.is_management) && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-1.5 text-sm font-medium">
+              <Briefcase className="w-4 h-4 text-emerald-600" /> Management Access
+            </div>
+            <p className="text-xs text-gray-500">
+              Management users can view the Management section (Activity Timeline, Analyst Coverage, Firm Coverage).
+            </p>
+            <button
+              type="button"
+              onClick={() => setIsManagement((v) => !v)}
+              className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+                isManagement
+                  ? "bg-emerald-600 border-emerald-600 text-white"
+                  : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              {isManagement && <Check className="w-3.5 h-3.5 inline mr-1 -mt-0.5" />}
+              {isManagement ? "Management" : "Not Management"}
+            </button>
+          </div>
+        )}
 
         {/* Affiliated firm */}
         <div className="space-y-2">

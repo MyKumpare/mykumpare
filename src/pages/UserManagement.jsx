@@ -303,6 +303,14 @@ export default function UserManagement() {
                       >
                         Delete
                       </button>
+                      <button
+                        type="button"
+                        title="Management access (view Management section)"
+                        onClick={() => updateMutation.mutate({ id: u.id, data: { is_management: !u.is_management } })}
+                        className={`h-7 px-2 rounded-md text-[11px] border ${u.is_management ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-white border-gray-200 text-gray-400"}`}
+                      >
+                        Mgmt
+                      </button>
                     </div>
 
                     <div className="hidden md:block text-[11px] text-gray-400 w-28 text-right">{fmtDate(u.created_date)}</div>
