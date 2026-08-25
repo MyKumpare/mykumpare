@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Loader2, Upload, X, FileDown } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import { PROGRESS_OPTIONS } from "./rfpRfiProgress";
 
 const TYPE_OPTIONS = ["RFP", "RFI", "Unknown"];
 
