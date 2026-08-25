@@ -35,7 +35,7 @@ import FirmDocumentsTab from "./FirmDocumentsTab";
 import FirmDueDiligenceTab from "./FirmDueDiligenceTab";
 import LegalComplianceTab from "./LegalComplianceTab";
 import FirmSourcingTab from "./FirmSourcingTab";
-import { GEOGRAPHIC_REGIONS } from "./geographicRegions";
+import { GEOGRAPHIC_REGIONS, deriveGeographicRegionFromAddresses } from "./geographicRegions";
 import EnrichmentApprovalDialog from "./EnrichmentApprovalDialog";
 import ExperienceOptionMatchDialog from "../contacts/ExperienceOptionMatchDialog";
 import SimilarAddressDialog from "../SimilarAddressDialog";
@@ -281,6 +281,18 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
       setTimeout(() => nameInputRef.current?.focus(), 50);
     }
   }, [isEditing]);
+
+  // Auto-populate the geographic region from the firm's addresses whenever
+  // addresses change (manual entry or website auto-fill). Only overrides
+  // when the region is still unset ("Undefined" / empty) so a manual
+  // selection is preserved.
+  useEffect(() => {
+    if (!activelyEditing) return;
+    const derived = deriveGeographicRegionFromAddresses(addresses);
+    if (derived && (!geographicRegion || geographicRegion === "Undefined")) {
+      setGeographicRegion(derived);
+    }
+  }, [addresses, activelyEditing, geographicRegion]);
 
   const handleLogoUpload = async (e) => {
     const file = e.target.files?.[0];
