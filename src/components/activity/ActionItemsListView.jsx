@@ -137,8 +137,8 @@ export default function ActionItemsListView({ tasks, meetings, onOpenTask }) {
         <div className="flex-1 overflow-y-auto space-y-2 pr-1">
           {filtered.map(t => {
             const meeting = t.board_meeting_id ? meetingById[t.board_meeting_id] : null;
-            const firmId = t.originator_firm_id || t.assigned_to_firm_id;
-            const firmName = t.assigned_to_firm_name || t.originator_firm_name || "";
+            const firmId = t.originator_firm_id || t.assigned_to_firm_id || meeting?.firm_id;
+            const firmName = t.assigned_to_firm_name || t.originator_firm_name || meeting?.firm_name || "";
             const statusOpt = STATUS_OPTIONS.find(s => s.key === t.status) || STATUS_OPTIONS[0];
             return (
               <div
