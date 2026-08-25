@@ -13,6 +13,7 @@ import { format, differenceInCalendarDays } from "date-fns";
 import { toast } from "@/components/ui/use-toast";
 import TaskDetailModal from "@/components/activity/TaskDetailModal";
 import ActionItemsListView from "@/components/activity/ActionItemsListView";
+import ActionItemsSummary from "@/components/activity/ActionItemsSummary";
 import { navigateToFirm, navigateToBoardMeeting } from "./actionItemNav";
 
 // Column definitions: key = stored FollowUpTask.status value, label = friendly name.
@@ -176,6 +177,10 @@ export default function ActionItemsKanbanBoard() {
           ? "Drag cards across stages to update status. High-priority follow-ups are highlighted so you can move them first."
           : "Filter action items by status, then click a firm or board meeting to jump straight to it."}
       </p>
+
+      {!loadingTasks && actionItems.length > 0 && (
+        <ActionItemsSummary tasks={actionItems} />
+      )}
 
       {/* Filters — only shown in kanban view (list view has its own filter bar) */}
       {viewMode === "kanban" && (
