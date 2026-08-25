@@ -8,7 +8,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
 import {
-  Building2, UserCheck, Users, AlertTriangle, Filter, ClipboardList, FileDown, Loader2,
+  Building2, UserCheck, Users, AlertTriangle, Filter, ClipboardList, FileDown, Loader2, Scale,
 } from "lucide-react";
 import { generateWeeklyCoverageReportPdf } from "@/components/coverage/weeklyCoverageReportPdf";
 
@@ -108,6 +108,32 @@ export default function CoverageManagement() {
     }
     return Array.from(map.values()).sort((a, b) => (b.primary + b.secondary) - (a.primary + a.secondary));
   }, [filteredDD]);
+
+  // Workload data: total unique firms each analyst is currently covering
+  // (union of primary + secondary firm sets), sorted by workload descending.
+  const workloadData = useMemo(() => {
+    return analysts
+      .map((a) => {
+        const allFirms = new Set([...a.primaryFirms, ...a.secondaryFirms]);
+        return {
+          name: a.name,
+          firms: allFirms.size,
+          primary: a.primaryFirms.size,
+          secondary: a.secondaryFirms.size,
+        };
+      })
+      .sort((a, b) => b.firms - a.firms);
+  }, [analysts]);
+
+  const workloadStats = useMemo(() => {
+    if (workloadData.length === 0) return null;
+    const counts = workloadData.map((d) => d.firms);
+    return {
+      max: Math.max(...counts),
+      min: Math.min(...counts),
+      avg: (counts.reduce((s, c) => s + c, 0) / counts.length).toFixed(1),
+    };
+  }, [workloadData]);
 
   // Under Due Diligence breakdown by current stage (only meaningful when the
   // Under Due Diligence filter is active, but computed from the filtered set).
@@ -230,6 +256,40 @@ export default function CoverageManagement() {
         <StatCard icon={UserCheck} label="Primary Analysts" value={primaryAnalystCount} color="bg-blue-600" />
         <StatCard icon={Users} label="Secondary Analysts" value={secondaryAnalystCount} color="bg-violet-600" />
       </div>
+
+      {/* Analyst workload chart — total firms per analyst */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm font-medium text-gray-700 flex items-center gap-2">
+            <Scale className="w-4 h-4 text-emerald-500" /> Analyst Workload — Firms Covered
+            <span className="text-xs text-gray-400 font-normal">(total unique firms per analyst)</span>
+            {workloadStats && (
+              <span className="text-xs text-gray-400 font-normal ml-auto">
+                Avg {workloadStats.avg} · Max {workloadStats.max} · Min {workloadStats.min}
+              </span>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {workloadData.length === 0 ? (
+            <p className="text-xs text-gray-400 italic py-8 text-center">No analyst assignments to display.</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={Math.max(300, workloadData.length * 36)}>
+              <BarChart data={workloadData} layout="vertical" margin={{ left: 10, right: 30 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={120} />
+                <Tooltip
+                  contentStyle={{ fontSize: 12 }}
+                  formatter={(value, name) => [`${value} ${name === "firms" ? "firms" : name}`, name === "firms" ? "Total Firms" : name]}
+                />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Bar dataKey="firms" name="Total Firms" fill="#10b981" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Analyst comparison chart */}
       <Card>
