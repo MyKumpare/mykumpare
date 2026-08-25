@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 // Utility section — tools for cleanup, imports, and validation
-import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search, ArrowLeft, Users, Sparkles, ScrollText, ShieldCheck, Ghost, Upload, Eraser, Tag, UserX, Briefcase, Building, Package, Activity, Newspaper,   ArrowRightLeft, ExternalLink } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search, ArrowLeft, Users, Sparkles, ScrollText, ShieldCheck, Ghost, Upload, Eraser, Tag, UserX, Briefcase, Building, Package, Activity, Newspaper,   ArrowRightLeft, ExternalLink, ClipboardCheck } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -12,6 +12,7 @@ import BulkMergeContacts from "./BulkMergeContacts";
 import EnrichmentLogsView from "./EnrichmentLogsView";
 import OrphanRecordCleanup from "./OrphanRecordCleanup";
 import OrphanedContactsCleanup from "./OrphanedContactsCleanup";
+import DueDiligenceCleanup from "./DueDiligenceCleanup";
 import CsvContactImport from "./CsvContactImport";
 import CsvFirmImport from "./CsvFirmImport";
 import CsvProductImport from "./CsvProductImport";
@@ -288,6 +289,16 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
                 <span className="text-[11px] text-gray-400">Merge duplicate experience options</span>
               </button>
               <button
+                onClick={() => setView("dd-cleanup")}
+                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
+              >
+                <div className="w-9 h-9 rounded-full bg-rose-50 flex items-center justify-center">
+                  <ClipboardCheck className="w-4.5 h-4.5 text-rose-600" />
+                </div>
+                <span className="text-sm font-semibold text-gray-700">DD Integrity Cleanup</span>
+                <span className="text-[11px] text-gray-400">Remove orphaned & duplicate DD</span>
+              </button>
+              <button
                 onClick={() => setView("orphaned-contacts")}
                 className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
               >
@@ -460,6 +471,11 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
           {/* Orphan record cleanup view */}
           {view === "orphans" && (
             <OrphanRecordCleanup />
+          )}
+
+          {/* Due diligence integrity cleanup view */}
+          {view === "dd-cleanup" && (
+            <DueDiligenceCleanup />
           )}
 
           {/* CSV contact import view */}
