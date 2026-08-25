@@ -34,6 +34,7 @@ import FirmRfpRfiTab from "./FirmRfpRfiTab";
 import FirmDocumentsTab from "./FirmDocumentsTab";
 import FirmDueDiligenceTab from "./FirmDueDiligenceTab";
 import LegalComplianceTab from "./LegalComplianceTab";
+import FirmSourcingTab from "./FirmSourcingTab";
 import EnrichmentApprovalDialog from "./EnrichmentApprovalDialog";
 import ExperienceOptionMatchDialog from "../contacts/ExperienceOptionMatchDialog";
 import SimilarAddressDialog from "../SimilarAddressDialog";
@@ -198,6 +199,10 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const [aumDirty, setAumDirty] = useState(false);
   const aumSaveRef = useRef(null);
   const nameInputRef = useRef(null);
+  const [sourcingSources, setSourcingSources] = useState([]);
+  const [sourcingDate, setSourcingDate] = useState("");
+  const [sourcingContactName, setSourcingContactName] = useState("");
+  const [sourcingNotes, setSourcingNotes] = useState("");
 
   const { data: allContacts = [] } = useQuery({
     queryKey: ["contacts"],
@@ -233,6 +238,10 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
           ? [...editingFirm.phones].sort((a, b) => (b.is_default ? 1 : 0) - (a.is_default ? 1 : 0))
           : []);
         setPendingContacts([]);
+        setSourcingSources(editingFirm.sourcing_sources || []);
+        setSourcingDate(editingFirm.sourcing_date || "");
+        setSourcingContactName(editingFirm.sourcing_contact_name || "");
+        setSourcingNotes(editingFirm.sourcing_notes || "");
         setIsEditing(false);
       } else {
         setFirmTypes(preselectedType ? [preselectedType] : []);
@@ -248,6 +257,10 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         setShowEnrichment(false);
         setEnrichmentLoading(false);
         setPendingContacts([]);
+        setSourcingSources([]);
+        setSourcingDate("");
+        setSourcingContactName("");
+        setSourcingNotes("");
         setIsEditing(true);
       }
     }
@@ -403,7 +416,11 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
       yearFounded !== (editingFirm.year_founded ? String(editingFirm.year_founded) : "") ||
       description !== (editingFirm.description || "") ||
       JSON.stringify(addresses) !== JSON.stringify(editingFirm.addresses || []) ||
-      JSON.stringify(phones) !== JSON.stringify(editingFirm.phones || [])
+      JSON.stringify(phones) !== JSON.stringify(editingFirm.phones || []) ||
+      JSON.stringify(sourcingSources) !== JSON.stringify(editingFirm.sourcing_sources || []) ||
+      sourcingDate !== (editingFirm.sourcing_date || "") ||
+      sourcingContactName !== (editingFirm.sourcing_contact_name || "") ||
+      sourcingNotes !== (editingFirm.sourcing_notes || "")
     : false;
 
   // In add mode, any entered data counts as unsaved changes.
@@ -413,7 +430,8 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         linkedinUrl || yearFounded || description ||
         addresses.some(a => a.address_line1 || a.city || a.state || a.postal_code) ||
         phones.some(p => p.area_code || p.number_mid || p.number_last) ||
-        pendingContacts.length > 0);
+        pendingContacts.length > 0 ||
+        sourcingSources.length > 0 || sourcingDate || sourcingContactName || sourcingNotes);
 
   const phonesValid = phones.length === 0 || phones.every(p => {
     // Only validate phones that have some number content — empty/partial

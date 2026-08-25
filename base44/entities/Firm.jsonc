@@ -251,6 +251,26 @@
         }
       }
     },
+    "sourcing_sources": {
+      "type": "array",
+      "description": "Source(s) of the manager idea \u2014 how/where this firm was identified as a potential investment manager. Multi-select from a predefined list (e.g. Consultant Recommendation, Conference/Event, Network/Referral).",
+      "items": {
+        "type": "string"
+      }
+    },
+    "sourcing_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the firm was first sourced as a manager idea (YYYY-MM-DD)."
+    },
+    "sourcing_contact_name": {
+      "type": "string",
+      "description": "Name of the contact person associated with the sourcing of this firm (free text)."
+    },
+    "sourcing_notes": {
+      "type": "string",
+      "description": "Rich-text notes (HTML) about the sourcing of this firm \u2014 context, rationale, referral details, etc."
+    },
     "audit_history": {
       "type": "array",
       "description": "Audit log of manual changes to this firm record. Each entry records a single field change with its previous and new values, who made the change, and when. Appended automatically on save.",
