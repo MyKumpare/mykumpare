@@ -30,7 +30,6 @@ import FirmActivityLogTab from "./FirmActivityLogTab";
 import FirmNewsTab from "./FirmNewsTab";
 import FirmConferenceTab from "./FirmConferenceTab";
 import FirmBoardMeetingTab from "./FirmBoardMeetingTab";
-import FirmRfpRfiTab from "./FirmRfpRfiTab";
 import FirmDocumentsTab from "./FirmDocumentsTab";
 import FirmDueDiligenceTab from "./FirmDueDiligenceTab";
 import LegalComplianceTab from "./LegalComplianceTab";
@@ -1276,7 +1275,6 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                    <TabsTrigger value="aum-history">AUM History</TabsTrigger>
                    <TabsTrigger value="news">News</TabsTrigger>
                    <TabsTrigger value="board-meetings">Board Meetings</TabsTrigger>
-                   <TabsTrigger value="rfp-rfi">RFP / RFI</TabsTrigger>
                    <TabsTrigger value="conferences">Conferences</TabsTrigger>
                    </>
                    )}
@@ -1286,7 +1284,6 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                    <TabsTrigger value="activity-log">Activity Log</TabsTrigger>
                    <TabsTrigger value="news">News</TabsTrigger>
                    <TabsTrigger value="board-meetings">Board Meetings</TabsTrigger>
-                   <TabsTrigger value="rfp-rfi">RFP / RFI</TabsTrigger>
                    <TabsTrigger value="conferences">Conferences</TabsTrigger>
                    </>
                    )}
@@ -1579,16 +1576,6 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               ) : (
                 <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
                   Save the firm first to scrape board meetings
-                </div>
-              )}
-              </TabsContent>
-
-              <TabsContent value="rfp-rfi" className="space-y-3">
-              {editingFirm ? (
-                <FirmRfpRfiTab firmId={editingFirm.id} firmName={editingFirm.name} firmWebsite={editingFirm.website} />
-              ) : (
-                <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
-                  Save the firm first to scrub RFPs/RFIs
                 </div>
               )}
               </TabsContent>
