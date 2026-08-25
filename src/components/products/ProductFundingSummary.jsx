@@ -1,6 +1,8 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useRef } from "react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import FundingStatusBadge from "@/components/products/FundingStatusBadge";
-import { Package, TrendingUp, TrendingDown, Building2 } from "lucide-react";
+import ProductStatusBadge from "@/components/products/ProductStatusBadge";
+import { Package, TrendingUp, TrendingDown, Building2, ChevronRight } from "lucide-react";
 
 const FIRM_TYPES = [
   "Investment Manager",
@@ -22,12 +24,109 @@ const getFirmTypes = (f) =>
   f.firm_types?.length ? f.firm_types : f.firm_type ? [f.firm_type] : [];
 
 /**
+ * Interactive product-count trigger. Hovering or clicking the "X products"
+ * text opens a popover listing the firm's products; each product is clickable
+ * to open the product form.
+ */
+function FirmProductCount({ firmId, productsByFirm, onProductClick }) {
+  const [open, setOpen] = useState(false);
+  const closeTimer = useRef(null);
+
+  const firmProducts = (productsByFirm[firmId] || []).slice().sort((a, b) =>
+    (a.name || "").localeCompare(b.name || "")
+  );
+  const count = firmProducts.length;
+
+  const cancelClose = () => {
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  };
+
+  const handleMouseEnter = () => {
+    cancelClose();
+    setOpen(true);
+  };
+
+  const handleMouseLeave = () => {
+    cancelClose();
+    closeTimer.current = setTimeout(() => setOpen(false), 200);
+  };
+
+  const handleProductClick = (product) => {
+    setOpen(false);
+    if (onProductClick) onProductClick(product);
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          onClick={() => setOpen((v) => !v)}
+          className="text-[11px] text-gray-500 hover:text-violet-700 hover:underline cursor-pointer font-medium transition-colors"
+        >
+          {count} product{count !== 1 ? "s" : ""}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        sideOffset={4}
+        className="w-64 p-0"
+        onMouseEnter={cancelClose}
+        onMouseLeave={handleMouseLeave}
+      >
+        <div className="px-3 py-2 border-b border-gray-100">
+          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
+            {count} Product{count !== 1 ? "s" : ""}
+          </p>
+        </div>
+        <div className="max-h-56 overflow-y-auto py-1">
+          {firmProducts.length === 0 ? (
+            <p className="px-3 py-2 text-xs text-gray-400 italic">No products</p>
+          ) : (
+            firmProducts.map((product) => (
+              <button
+                key={product.id}
+                onClick={() => handleProductClick(product)}
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-violet-50 transition-colors group"
+              >
+                <Package className="w-3.5 h-3.5 text-gray-300 group-hover:text-violet-400 flex-shrink-0" />
+                <span className="text-xs text-gray-700 group-hover:text-violet-700 font-medium truncate flex-1">
+                  {product.name}
+                </span>
+                <ProductStatusBadge status={product.product_status} className="flex-shrink-0" />
+                <ChevronRight className="w-3 h-3 text-gray-300 group-hover:text-violet-400 flex-shrink-0" />
+              </button>
+            ))
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+/**
  * Funding-health summary for the Product Dashboard. Shows total active funding,
  * current status counts, a breakdown of funding by firm type, and per-firm
  * detail cards so overall health is visible at a glance.
  */
-export default function ProductFundingSummary({ products, firms }) {
+export default function ProductFundingSummary({ products, firms, onProductClick }) {
   const firmMap = useMemo(() => Object.fromEntries(firms.map((f) => [f.id, f])), [firms]);
+
+  const productsByFirm = useMemo(() => {
+    const byFirm = {};
+    for (const p of products) {
+      const fid = p.firm_id;
+      if (!fid) continue;
+      if (!byFirm[fid]) byFirm[fid] = [];
+      byFirm[fid].push(p);
+    }
+    return byFirm;
+  }, [products]);
 
   const firmMetrics = useMemo(() => {
     const byFirm = {};
@@ -143,7 +242,11 @@ export default function ProductFundingSummary({ products, firms }) {
                 <FundingStatusBadge status={r.status} />
               </div>
               <div className="flex items-center gap-3 text-[11px] text-gray-500">
-                <span>{r.total} product{r.total !== 1 ? "s" : ""}</span>
+                <FirmProductCount
+                  firmId={r.firm_id}
+                  productsByFirm={productsByFirm}
+                  onProductClick={onProductClick}
+                />
                 <span className="text-emerald-700 font-medium">{r.funded} funded</span>
                 {r.terminated > 0 && <span className="text-red-600 font-medium">{r.terminated} terminated</span>}
               </div>

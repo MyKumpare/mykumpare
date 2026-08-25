@@ -155,7 +155,7 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
 
       {expanded && (
         <div className="pl-2 border-l-2 border-gray-100 space-y-4">
-          <ProductFundingSummary products={filteredProducts} firms={firms} />
+          <ProductFundingSummary products={filteredProducts} firms={firms} onProductClick={onProductClick} />
           <ProductAlignmentHeatmap />
           <SectionSearch value={search} onChange={setSearch} placeholder="Search by product, firm, or type..." />
           <div className="flex items-center justify-between mb-2">
