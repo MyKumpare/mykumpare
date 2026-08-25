@@ -217,15 +217,39 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
   // Re-run duplicate validation + accepted-fields initialization whenever the
   // enriched data changes (including when background LinkedIn lookups update it).
   const initValidation = (data) => {
-    const { items } = validateEnrichment(data, existingFirm || {}, existingContacts);
-    const smap = {};
-    const initial = {};
-    for (const it of items) {
-      smap[it.key] = it.status;
-      initial[it.key] = it.status !== "exact";
+    try {
+      const { items } = validateEnrichment(data, existingFirm || {}, existingContacts);
+      const smap = {};
+      const initial = {};
+      for (const it of items) {
+        smap[it.key] = it.status;
+        initial[it.key] = it.status !== "exact";
+      }
+      setStatusMap(smap);
+      setAcceptedFields(initial);
+    } catch (err) {
+      // If validation crashes (e.g. a bad payload from the web scrape),
+      // don't let it blank the panel — mark everything as "new" so the
+      // user can still review and apply the data manually.
+      console.error("Enrichment validation error:", err);
+      const smap = {};
+      const initial = {};
+      const fallback = (obj, prefix) => {
+        if (!obj) return;
+        Object.keys(obj).forEach((_, i) => {
+          smap[`${prefix}_${i}`] = "new";
+          initial[`${prefix}_${i}`] = true;
+        });
+      };
+      fallback(data?.addresses, "address");
+      fallback(data?.phones, "phone");
+      fallback(data?.people, "person");
+      for (const f of ["logo_url","description","website","email","linkedin_url","year_founded","firm_types"]) {
+        if (data?.[f] != null && data[f] !== "") { smap[f] = "new"; initial[f] = true; }
+      }
+      setStatusMap(smap);
+      setAcceptedFields(initial);
     }
-    setStatusMap(smap);
-    setAcceptedFields(initial);
   };
 
   const handleFetch = async () => {
@@ -237,13 +261,20 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
       const data = await enrichFirmFromWeb(firmName, website);
 
       // Persist a log entry so the user can review enrichment results later.
-      const { items: validationItems } = validateEnrichment(data, existingFirm || {}, existingContacts);
-      logEnrichmentAttempt({
-        firmName,
-        websiteUrl: website || data.website || "",
-        status: "success",
-        validationItems,
-      });
+      let validationItems = [];
+      try {
+        ({ items: validationItems } = validateEnrichment(data, existingFirm || {}, existingContacts));
+      } catch (e) {
+        console.error("Enrichment log validation error:", e);
+      }
+      try {
+        logEnrichmentAttempt({
+          firmName,
+          websiteUrl: website || data.website || "",
+          status: "success",
+          validationItems,
+        });
+      } catch { /* logging is non-fatal */ }
 
       // Show the review panel immediately — the website scrape already found
       // most LinkedIn URLs from the HTML. The slower web-search fallback for
