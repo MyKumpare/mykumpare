@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  Radar, ClipboardList, CalendarDays, LayoutList, Plus, ChevronRight, ChevronDown, ExternalLink, Newspaper, GitBranch, ClipboardCheck, Bell, LayoutDashboard, KanbanSquare,
+  Radar, ClipboardList, CalendarDays, LayoutList, Plus, ChevronRight, ChevronDown, ExternalLink, Newspaper, GitBranch, ClipboardCheck, Bell, LayoutDashboard, KanbanSquare, FileSearch,
 } from "lucide-react";
 
 /**
@@ -22,6 +22,7 @@ export default function MonitorNavSection({
   onOpenBoardMeetingAlerts,
   onOpenBoardMeetingDashboard,
   onOpenActionItemsKanban,
+  onOpenRfpRfiDashboard,
   onOpenMonitor,
   onOpenActivity,
   onAddActivity,
@@ -132,6 +133,14 @@ export default function MonitorNavSection({
       iconColor: "text-indigo-500",
       count: actionItemsCount,
       onOpen: onOpenActionItemsKanban,
+      onAdd: null,
+    },
+    {
+      label: "RFP/RFI Dashboard",
+      icon: FileSearch,
+      iconColor: "text-rose-500",
+      count: null,
+      onOpen: onOpenRfpRfiDashboard,
       onAdd: null,
     },
   ];
