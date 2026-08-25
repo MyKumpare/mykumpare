@@ -123,6 +123,13 @@
         "type": "string"
       }
     },
+    "tags": {
+      "type": "array",
+      "description": "User-assigned tags for labeling contacts by role or category (e.g. Investor, Board Member, Advisor), drawn from the shared ContactTag library. Used to quickly filter and group contacts on the main contact list.",
+      "items": {
+        "type": "string"
+      }
+    },
     "gender": {
       "type": "string",
       "enum": [

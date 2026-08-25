@@ -76,6 +76,7 @@ const FIELD_GROUPS = [
       { key: "contact_role", label: "Priority" },
       { key: "contact_roles", label: "Contact Role", isArray: true },
       { key: "contact_firm_roles", label: "Contact Department", isArray: true },
+      { key: "tags", label: "Tags", isArray: true },
       { key: "employee_status", label: "Employee Status" },
     ],
   },
@@ -226,8 +227,9 @@ export function filterSectionContacts(contacts, text, selected, firmMap, contact
       const expText = (c.professional_experience || []).map(e =>
         [e.company_name, e.title].filter(Boolean).join(" ")
       ).join(" ");
+      const tagsText = (c.tags || []).join(" ");
       const haystack = [name, c.title || "", c.email || "", (Array.isArray(c.contact_type) ? c.contact_type.join(" ") : c.contact_type || ""),
-        designations, firmNames, eduText, expText].join(" ").toLowerCase();
+        designations, firmNames, eduText, expText, tagsText].join(" ").toLowerCase();
       // AND logic: every keyword must appear somewhere in the haystack so
       // "tina williams" matches "Tina Byles Williams" (words need not be adjacent).
       if (!keywords.every((kw) => haystack.includes(kw))) return false;
