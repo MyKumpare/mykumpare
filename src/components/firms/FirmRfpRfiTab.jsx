@@ -5,11 +5,12 @@ import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Loader2, Globe, AlertTriangle, Filter, ArrowUpDown, Plus, FileSearch,
+  Loader2, Globe, AlertTriangle, Filter, ArrowUpDown, Plus, FileSearch, EyeOff,
 } from "lucide-react";
 import FirmRfpRfiCard from "./FirmRfpRfiCard";
 import AddRfpRfiDialog from "./AddRfpRfiDialog";
 import { toast } from "@/components/ui/use-toast";
+import { TERMINAL_PROGRESS } from "./rfpRfiProgress";
 
 // "RFP/RFI Search" tab inside the firm form. Scrubs the firm's website for any
 // Request for Proposal (RFP) or Request for Information (RFI) postings, lists
@@ -21,6 +22,7 @@ export default function FirmRfpRfiTab({ firmId, firmName, firmWebsite }) {
   const [statusFilter, setStatusFilter] = useState("all"); // all | Open | Closed
   const [sortBy, setSortBy] = useState("due_asc"); // due_asc | due_desc | posted_desc | title
   const [search, setSearch] = useState("");
+  const [hideCompleted, setHideCompleted] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState(null);
 
@@ -35,6 +37,7 @@ export default function FirmRfpRfiTab({ firmId, firmName, firmWebsite }) {
   const visible = useMemo(() => {
     let list = [...active];
     if (statusFilter !== "all") list = list.filter((r) => r.status === statusFilter);
+    if (hideCompleted) list = list.filter((r) => !TERMINAL_PROGRESS.includes(r.progress_status));
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter((r) =>
@@ -76,6 +79,8 @@ export default function FirmRfpRfiTab({ firmId, firmName, firmWebsite }) {
         }));
         await base44.entities.FirmRfpRfi.bulkCreate(toCreate);
         queryClient.invalidateQueries({ queryKey: ["firm-rfp-rfi", firmId] });
+        queryClient.invalidateQueries({ queryKey: ["rfp-rfi-dashboard"] });
+        queryClient.invalidateQueries({ queryKey: ["rfp-rfi-due-this-week"] });
         toast({ title: `Found ${found.length} RFP/RFI${found.length === 1 ? "" : "s"}` });
       }
     } catch (err) {
@@ -154,6 +159,16 @@ export default function FirmRfpRfiTab({ firmId, firmName, firmWebsite }) {
             </button>
           ))}
         </div>
+        <label className="flex items-center gap-1.5 text-[11px] text-gray-600 cursor-pointer select-none ml-1">
+          <input
+            type="checkbox"
+            checked={hideCompleted}
+            onChange={(e) => setHideCompleted(e.target.checked)}
+            className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary"
+          />
+          <EyeOff className="w-3 h-3 text-gray-400" />
+          Hide completed
+        </label>
       </div>
 
       {/* Sort + search */}

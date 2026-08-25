@@ -101,6 +101,8 @@ export default function AddRfpRfiDialog({ open, onClose, firmId, firmName, editi
         toast({ title: "RFP/RFI added" });
       }
       queryClient.invalidateQueries({ queryKey: ["firm-rfp-rfi", firmId] });
+      queryClient.invalidateQueries({ queryKey: ["rfp-rfi-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["rfp-rfi-due-this-week"] });
       onClose();
     } catch (err) {
       toast({ title: "Save failed", description: err?.message || "Could not save.", variant: "destructive" });
@@ -129,6 +131,15 @@ export default function AddRfpRfiDialog({ open, onClose, firmId, firmName, editi
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {TYPE_OPTIONS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Progress</Label>
+              <Select value={form.progress_status || "Draft"} onValueChange={(v) => set("progress_status", v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PROGRESS_OPTIONS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

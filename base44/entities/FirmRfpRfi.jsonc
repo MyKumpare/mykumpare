@@ -79,6 +79,19 @@
       "default": "Unknown",
       "description": "Status derived from the due date vs today. 'Open' when due_date is today or later; 'Closed' when due_date is in the past; 'Unknown' when no due date."
     },
+    "progress_status": {
+      "type": "string",
+      "enum": [
+        "Draft",
+        "Submitted",
+        "Under Review",
+        "Awarded",
+        "Not Awarded",
+        "Cancelled"
+      ],
+      "default": "Draft",
+      "description": "Workflow progress of this RFP/RFI through the response cycle. 'Draft' = not yet started; 'Submitted' = response sent in; 'Under Review' = awaiting the firm's decision; 'Awarded' / 'Not Awarded' = decision received; 'Cancelled' = no longer being pursued. The terminal states (Awarded, Not Awarded, Cancelled) are treated as 'completed' and can be hidden from the active views."
+    },
     "scrub_batch_id": {
       "type": "string",
       "description": "ID of the scrape batch that produced this record (for deduplication)."

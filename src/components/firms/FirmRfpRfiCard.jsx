@@ -7,6 +7,7 @@ import {
   HelpCircle, CalendarPlus, FileDown, Paperclip,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import { progressStyle } from "./rfpRfiProgress";
 
 const TYPE_STYLES = {
   RFP: "bg-primary/15 text-primary border-primary/30",
@@ -37,6 +38,8 @@ export default function FirmRfpRfiCard({ record, onEdit }) {
     try {
       await base44.entities.FirmRfpRfi.delete(record.id);
       queryClient.invalidateQueries({ queryKey: ["firm-rfp-rfi", record.firm_id] });
+      queryClient.invalidateQueries({ queryKey: ["rfp-rfi-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["rfp-rfi-due-this-week"] });
       toast({ title: "RFP/RFI deleted" });
     } catch (err) {
       toast({ title: "Delete failed", description: err?.message || "Could not delete.", variant: "destructive" });
@@ -69,6 +72,9 @@ export default function FirmRfpRfiCard({ record, onEdit }) {
       <div className="flex flex-wrap items-center gap-1.5">
         <Badge variant="outline" className={`text-[10px] ${typeStyle}`}>{record.rfp_type}</Badge>
         <Badge variant="outline" className={`text-[10px] ${statusStyle}`}>{record.status}</Badge>
+        <Badge variant="outline" className={`text-[10px] ${progressStyle(record.progress_status)}`}>
+          {record.progress_status || "Draft"}
+        </Badge>
       </div>
 
       <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
