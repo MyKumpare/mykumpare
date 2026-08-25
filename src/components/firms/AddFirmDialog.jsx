@@ -600,6 +600,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   };
 
   const handleApplyEnrichment = async (selected, skipExpReview = false) => {
+   try {
     const applied = [];
     // Enriched firm fields are applied to local form state only and committed
     // to the DB when the user clicks Save Changes (via the update mutation).
@@ -803,6 +804,11 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     } else {
       toast({ title: "No new information", description: "All fields are already populated." });
     }
+   } catch (err) {
+     console.error("Enrichment apply error:", err);
+     setShowEnrichment(false);
+     toast({ title: "⚠️ Could not apply enrichment", description: "Some fields may not have been applied. Please review the form and try again.", variant: "destructive" });
+   }
   };
 
   const handleConfirmEnrichmentContacts = async (confirmData) => {
