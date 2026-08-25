@@ -47,7 +47,7 @@ import DashboardAnalystCoverageSection from "../components/dashboard/DashboardAn
 import DashboardFirmCoverageSection from "../components/dashboard/DashboardFirmCoverageSection";
 import ManagementNavSection from "../components/dashboard/ManagementNavSection";
 import AnalyticsSection from "../components/analytics/AnalyticsSection";
-import RfpRfiDueThisWeek from "../components/firms/RfpRfiDueThisWeek";
+
 
 const ReportsPickerModal = lazyDialog(() => import("../components/reports/ReportsPickerModal"));
 const DocumentsDashboardModal = lazyDialog(() => import("../components/firms/DocumentsDashboardModal"));
@@ -1001,9 +1001,6 @@ export default function Home() {
         )}
         {/* Dashboard section — link to Overview dashboard page */}
         <DashboardNavSection onOpenDashboard={() => navigate("/Overview")} />
-
-        {/* RFP/RFI due this week — at-a-glance summary of upcoming submissions across all firms */}
-        <RfpRfiDueThisWeek onOpenAll={() => navigate("/Monitor?tab=rfp-rfi")} />
 
         {/* Due Diligence section — with Documents, Forms, Templates nested as sub-items */}
         <div ref={formsRef} />

@@ -14,6 +14,7 @@ import ActivityTimeline from "@/components/activity/ActivityTimeline";
 import ConferencesTab from "@/components/conferences/ConferencesTab";
 import BoardMeetingAlertsTab from "@/components/firms/BoardMeetingAlertsTab";
 import RfpRfiDashboard from "@/pages/RfpRfiDashboard";
+import RfpRfiDueThisWeek from "@/components/firms/RfpRfiDueThisWeek";
 import { FileSearch } from "lucide-react";
 
 const TABS = [
@@ -95,6 +96,9 @@ export default function MonitorPage() {
 
       {/* Tabs + content */}
       <div className="max-w-7xl xl:max-w-[1400px] mx-auto px-4 sm:px-6 pt-4 pb-12">
+        <div className="mb-4">
+          <RfpRfiDueThisWeek onOpenAll={() => setTab("rfp-rfi")} />
+        </div>
         <div className="flex gap-1 border-b border-gray-200 mb-4 overflow-x-auto">
           {TABS.map((t) => {
             const Icon = t.icon;
