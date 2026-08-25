@@ -272,6 +272,7 @@ export default function BoardMeetingCard({ meeting, firmId, onFirmClick }) {
         onClose={() => setShowPdfSummary(false)}
         meeting={meeting}
         onTagged={invalidate}
+        onFirmClick={onFirmClick}
       />
 
       {/* Extracted action items */}

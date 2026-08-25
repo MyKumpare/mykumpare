@@ -7,7 +7,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Loader2, FileDown, Sparkles, Building, CheckCircle2, AlertCircle, RefreshCw,
+  Loader2, FileDown, Sparkles, Building, CheckCircle2, AlertCircle, RefreshCw, ExternalLink,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { generateBoardMeetingPdf } from "./boardMeetingPdf";
@@ -36,7 +36,7 @@ function matchDetectedFirms(detectedNames, allFirms, excludeFirmId) {
 
 // Dialog that generates an AI executive summary of the board meeting minutes,
 // auto-tags mentioned firms, and lets the user download a PDF summary.
-export default function BoardMeetingPdfSummaryDialog({ open, onClose, meeting, onTagged }) {
+export default function BoardMeetingPdfSummaryDialog({ open, onClose, meeting, onTagged, onFirmClick }) {
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState(null);
@@ -263,7 +263,19 @@ If a category has no items, return an empty array. Be specific and factual.`;
                         ) : (
                           <span className="w-3.5 h-3.5 flex-shrink-0 rounded-full border border-gray-300" />
                         )}
-                        <span className="text-gray-700">{name}</span>
+                        {matched && onFirmClick ? (
+                          <button
+                            type="button"
+                            onClick={() => onFirmClick({ id: matched.id, name: matched.name })}
+                            className="text-indigo-600 hover:underline inline-flex items-center gap-0.5 font-medium"
+                            title={`Open ${matched.name} and its Board Meeting tab`}
+                          >
+                            {name}
+                            <ExternalLink className="w-2.5 h-2.5" />
+                          </button>
+                        ) : (
+                          <span className="text-gray-700">{name}</span>
+                        )}
                         {matched && (
                           <Badge className="text-[10px] bg-indigo-100 text-indigo-700 border border-indigo-200 ml-1">
                             In System
