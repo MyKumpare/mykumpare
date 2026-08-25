@@ -1,16 +1,31 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { ChevronDown, ChevronRight, UserCheck, Building2, User } from "lucide-react";
+import { ChevronDown, ChevronRight, UserCheck, Building2, User, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { GEOGRAPHIC_REGIONS } from "@/components/firms/geographicRegions";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
+} from "recharts";
+
+const REGION_COLORS = {
+  "North America": "#6366f1",
+  "Europe": "#10b981",
+  "Asia-Pacific": "#f59e0b",
+  "Latin America": "#ec4899",
+  "Middle East & Africa": "#8b5cf6",
+  "Global": "#06b6d4",
+};
 
 // Collapsible dashboard section showing every analyst (team member) organized
 // by their role (Primary / Secondary) and the firms they are currently covering,
 // derived from active DueDiligence analyst_history entries (no end_date).
+// Includes a geographic region filter and a region-based heatmap of covered firms.
 export default function DashboardAnalystCoverageSection({ forceExpanded, onFirmClick }) {
   const [expanded, setExpanded] = useState(false);
   const [roleFilter, setRoleFilter] = useState("all"); // all | primary | secondary
   const [firmFilter, setFirmFilter] = useState("all");
+  const [regionFilter, setRegionFilter] = useState("all");
 
   useEffect(() => {
     if (forceExpanded !== undefined) setExpanded(forceExpanded);
@@ -20,6 +35,21 @@ export default function DashboardAnalystCoverageSection({ forceExpanded, onFirmC
     queryKey: ["due-diligence-all"],
     queryFn: () => base44.entities.DueDiligence.list("-created_date", 500),
   });
+
+  const { data: firms = [] } = useQuery({
+    queryKey: ["firms"],
+    queryFn: () => base44.entities.Firm.list("-created_date", 5000),
+  });
+
+  // Map firm_id → geographic_region for region-based filtering and heatmap.
+  const firmRegionMap = useMemo(() => {
+    const map = new Map();
+    for (const f of firms) {
+      if (f.deleted_at) continue;
+      map.set(f.id, f.geographic_region || "");
+    }
+    return map;
+  }, [firms]);
 
   // Aggregate active analyst assignments from analyst_history (entries with no
   // end_date are currently active). Each analyst gets their covered firms.
@@ -44,6 +74,7 @@ export default function DashboardAnalystCoverageSection({ forceExpanded, onFirmC
         a.assignments.push({
           firm_id: rec.firm_id,
           firm_name: rec.firm_name || "—",
+          firm_region: firmRegionMap.get(rec.firm_id) || "",
           product_name: rec.product_name || "—",
           dd_status: rec.status || "Pipeline",
           role: entry.analyst_type,
@@ -56,7 +87,7 @@ export default function DashboardAnalystCoverageSection({ forceExpanded, onFirmC
       firmCount: a.firmSet.size,
       assignments: a.assignments.sort((x, y) => x.firm_name.localeCompare(y.firm_name)),
     }));
-  }, [ddRecords]);
+  }, [ddRecords, firmRegionMap]);
 
   // Fetch analyst contacts for photos / titles.
   const analystIds = analysts.map((a) => a.id);
@@ -76,10 +107,47 @@ export default function DashboardAnalystCoverageSection({ forceExpanded, onFirmC
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [analysts]);
 
+  // Region heatmap: count of covered firms per geographic region (across all
+  // analysts, before the region filter is applied — so the heatmap always
+  // shows the full picture). A firm is counted once per region even if
+  // multiple analysts cover it.
+  const regionHeatmapData = useMemo(() => {
+    const counts = {};
+    for (const region of GEOGRAPHIC_REGIONS) counts[region] = 0;
+    const seenFirmRegions = new Set();
+    for (const a of analysts) {
+      for (const as of a.assignments) {
+        const key = `${as.firm_id}:${as.firm_region}`;
+        if (seenFirmRegions.has(key)) continue;
+        seenFirmRegions.add(key);
+        if (as.firm_region && counts[as.firm_region] !== undefined) {
+          counts[as.firm_region]++;
+        }
+      }
+    }
+    return GEOGRAPHIC_REGIONS
+      .map((region) => ({ region, firms: counts[region] }))
+      .filter((d) => d.firms > 0);
+  }, [analysts]);
+
+  // Apply region filter to each analyst's assignments (and drop analysts with
+  // no matching assignments when a region filter is active).
+  const regionFilteredAnalysts = useMemo(() => {
+    if (regionFilter === "all") return analysts;
+    return analysts
+      .map((a) => ({
+        ...a,
+        assignments: a.assignments.filter((as) => as.firm_region === regionFilter),
+        firmSet: new Set(a.assignments.filter((as) => as.firm_region === regionFilter).map((as) => as.firm_id)),
+      }))
+      .filter((a) => a.assignments.length > 0)
+      .map((a) => ({ ...a, firmCount: a.firmSet.size }));
+  }, [analysts, regionFilter]);
+
   const firmFilteredAnalysts = useMemo(() => {
-    if (firmFilter === "all") return analysts;
-    return analysts.filter((a) => a.assignments.some((as) => as.firm_id === firmFilter));
-  }, [analysts, firmFilter]);
+    if (firmFilter === "all") return regionFilteredAnalysts;
+    return regionFilteredAnalysts.filter((a) => a.assignments.some((as) => as.firm_id === firmFilter));
+  }, [regionFilteredAnalysts, firmFilter]);
 
   const primaryAnalysts = firmFilteredAnalysts
     .filter((a) => a.roles.includes("primary"))
@@ -140,6 +208,14 @@ export default function DashboardAnalystCoverageSection({ forceExpanded, onFirmC
               ) : (
                 <span className="text-gray-700 truncate">{f.firm_name}</span>
               )}
+              {f.firm_region && (
+                <span
+                  className="text-[9px] px-1 rounded flex-shrink-0"
+                  style={{ backgroundColor: (REGION_COLORS[f.firm_region] || "#9ca3af") + "20", color: REGION_COLORS[f.firm_region] || "#6b7280" }}
+                >
+                  {f.firm_region}
+                </span>
+              )}
               <span className="text-gray-300">·</span>
               <span className="text-gray-400 truncate flex-1 min-w-0">{f.product_name}</span>
               {hasBothRoles && (
@@ -191,6 +267,29 @@ export default function DashboardAnalystCoverageSection({ forceExpanded, onFirmC
             </div>
           ) : (
             <>
+              {/* Region heatmap */}
+              {regionHeatmapData.length > 0 && (
+                <div className="rounded-lg border border-gray-200 bg-white p-3">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <MapPin className="w-3.5 h-3.5 text-indigo-500" />
+                    <span className="text-xs font-semibold text-gray-700">Covered Firms by Geographic Region</span>
+                  </div>
+                  <ResponsiveContainer width="100%" height={Math.max(60, regionHeatmapData.length * 28)}>
+                    <BarChart data={regionHeatmapData} layout="vertical" margin={{ left: 10, right: 30 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                      <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
+                      <YAxis type="category" dataKey="region" tick={{ fontSize: 10 }} width={120} />
+                      <Tooltip contentStyle={{ fontSize: 12 }} formatter={(v) => [`${v} firms`, "Covered Firms"]} />
+                      <Bar dataKey="firms" name="Covered Firms" radius={[0, 4, 4, 0]}>
+                        {regionHeatmapData.map((d) => (
+                          <Cell key={d.region} fill={REGION_COLORS[d.region] || "#6366f1"} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
               <div className="flex items-center gap-2 flex-wrap">
                 <div className="flex items-center gap-1">
                   {[
@@ -212,6 +311,17 @@ export default function DashboardAnalystCoverageSection({ forceExpanded, onFirmC
                     </button>
                   ))}
                 </div>
+                <select
+                  value={regionFilter}
+                  onChange={(e) => setRegionFilter(e.target.value)}
+                  className="text-[11px] border border-gray-200 rounded-md px-2 py-1 bg-white text-gray-600 focus:outline-none focus:border-indigo-400 max-w-[180px] truncate"
+                  title="Filter analysts by firm geographic region"
+                >
+                  <option value="all">All Regions</option>
+                  {GEOGRAPHIC_REGIONS.map((r) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
                 <select
                   value={firmFilter}
                   onChange={(e) => setFirmFilter(e.target.value)}

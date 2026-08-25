@@ -63,6 +63,18 @@
       "type": "integer",
       "description": "Year the firm was founded"
     },
+    "geographic_region": {
+      "type": "string",
+      "enum": [
+        "North America",
+        "Europe",
+        "Asia-Pacific",
+        "Latin America",
+        "Middle East & Africa",
+        "Global"
+      ],
+      "description": "Primary geographic region in which the firm operates. Used by the analyst coverage dashboard for region-based filtering and heatmap visualization."
+    },
     "description": {
       "type": "string",
       "description": "Description of the firm"

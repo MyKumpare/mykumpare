@@ -8,9 +8,10 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
 import {
-  Building2, UserCheck, Users, AlertTriangle, Filter, ClipboardList, FileDown, Loader2, Scale,
+  Building2, UserCheck, Users, AlertTriangle, Filter, ClipboardList, FileDown, Loader2, Scale, Gauge,
 } from "lucide-react";
 import { generateWeeklyCoverageReportPdf } from "@/components/coverage/weeklyCoverageReportPdf";
+import { DEFAULT_ANALYST_CAPACITY_TARGET } from "@/components/firms/geographicRegions";
 
 const LIFECYCLE_STYLES = {
   Pipeline: "bg-blue-50 text-blue-700 border-blue-200",
@@ -46,6 +47,7 @@ export default function CoverageManagement() {
   const [secondaryFilter, setSecondaryFilter] = useState("all");
   const [lifecycleFilter, setLifecycleFilter] = useState("all"); // all | Pipeline | Under Due Diligence | Approved | Funded | Rejected
   const [downloadingReport, setDownloadingReport] = useState(false);
+  const [capacityTarget, setCapacityTarget] = useState(DEFAULT_ANALYST_CAPACITY_TARGET);
 
   const handleDownloadReport = () => {
     setDownloadingReport(true);
@@ -287,6 +289,83 @@ export default function CoverageManagement() {
                 <Bar dataKey="firms" name="Total Firms" fill="#10b981" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Analyst capacity indicator — workload vs target */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm font-medium text-gray-700 flex items-center gap-2">
+            <Gauge className="w-4 h-4 text-rose-500" /> Analyst Capacity
+            <span className="text-xs text-gray-400 font-normal">(workload vs target — red bars exceed capacity)</span>
+            <div className="flex items-center gap-1.5 ml-auto">
+              <label className="text-xs text-gray-500 font-normal">Target:</label>
+              <input
+                type="number"
+                min={1}
+                value={capacityTarget}
+                onChange={(e) => setCapacityTarget(Math.max(1, parseInt(e.target.value) || 1))}
+                className="w-16 text-xs border border-gray-200 rounded-md px-2 py-1 text-gray-700 focus:outline-none focus:border-indigo-400"
+                title="Target firm count per analyst"
+              />
+              <span className="text-xs text-gray-400">firms</span>
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {workloadData.length === 0 ? (
+            <p className="text-xs text-gray-400 italic py-6 text-center">No analyst assignments to display.</p>
+          ) : (
+            <>
+              <div className="flex items-center gap-3 mb-3 text-xs">
+                <span className="inline-flex items-center gap-1">
+                  <span className="w-3 h-3 rounded bg-emerald-400" /> Within capacity
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <span className="w-3 h-3 rounded bg-amber-400" /> Near capacity (≥80%)
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <span className="w-3 h-3 rounded bg-red-500" /> Over capacity
+                </span>
+                <span className="ml-auto text-gray-500">
+                  {workloadData.filter((d) => d.firms > capacityTarget).length} of {workloadData.length} analysts over capacity
+                </span>
+              </div>
+              <div className="space-y-2">
+                {workloadData.map((d) => {
+                  const pct = capacityTarget > 0 ? Math.min(100, (d.firms / capacityTarget) * 100) : 100;
+                  const overCapacity = d.firms > capacityTarget;
+                  const nearCapacity = d.firms >= capacityTarget * 0.8 && !overCapacity;
+                  const barColor = overCapacity ? "bg-red-500" : nearCapacity ? "bg-amber-400" : "bg-emerald-400";
+                  return (
+                    <div key={d.name} className="flex items-center gap-2">
+                      <div className="w-28 flex-shrink-0 truncate text-xs font-medium text-gray-700" title={d.name}>{d.name}</div>
+                      <div className="flex-1 h-6 rounded-full bg-gray-100 overflow-hidden relative">
+                        <div
+                          className={`h-full rounded-full transition-all ${barColor}`}
+                          style={{ width: `${pct}%` }}
+                        />
+                        {/* Target marker line */}
+                        <div
+                          className="absolute top-0 bottom-0 w-0.5 bg-gray-400"
+                          style={{ left: "100%", transform: "translateX(-100%)", display: pct >= 100 ? "none" : undefined }}
+                        />
+                      </div>
+                      <div className="w-20 flex-shrink-0 text-right">
+                        <span className={`text-xs font-bold ${overCapacity ? "text-red-600" : "text-gray-700"}`}>
+                          {d.firms}
+                        </span>
+                        <span className="text-xs text-gray-400"> / {capacityTarget}</span>
+                      </div>
+                      {overCapacity && (
+                        <Badge className="bg-red-100 text-red-700 border-red-200 text-[9px] flex-shrink-0">Over</Badge>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

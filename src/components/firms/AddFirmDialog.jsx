@@ -35,6 +35,7 @@ import FirmDocumentsTab from "./FirmDocumentsTab";
 import FirmDueDiligenceTab from "./FirmDueDiligenceTab";
 import LegalComplianceTab from "./LegalComplianceTab";
 import FirmSourcingTab from "./FirmSourcingTab";
+import { GEOGRAPHIC_REGIONS } from "./geographicRegions";
 import EnrichmentApprovalDialog from "./EnrichmentApprovalDialog";
 import ExperienceOptionMatchDialog from "../contacts/ExperienceOptionMatchDialog";
 import SimilarAddressDialog from "../SimilarAddressDialog";
@@ -203,6 +204,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const [sourcingDate, setSourcingDate] = useState("");
   const [sourcingContactName, setSourcingContactName] = useState("");
   const [sourcingNotes, setSourcingNotes] = useState("");
+  const [geographicRegion, setGeographicRegion] = useState("");
 
   const { data: allContacts = [] } = useQuery({
     queryKey: ["contacts"],
@@ -242,6 +244,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         setSourcingDate(editingFirm.sourcing_date || "");
         setSourcingContactName(editingFirm.sourcing_contact_name || "");
         setSourcingNotes(editingFirm.sourcing_notes || "");
+        setGeographicRegion(editingFirm.geographic_region || "");
         setIsEditing(false);
       } else {
         setFirmTypes(preselectedType ? [preselectedType] : []);
@@ -261,6 +264,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         setSourcingDate("");
         setSourcingContactName("");
         setSourcingNotes("");
+        setGeographicRegion("");
         setIsEditing(true);
       }
     }
@@ -420,7 +424,8 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
       JSON.stringify(sourcingSources) !== JSON.stringify(editingFirm.sourcing_sources || []) ||
       sourcingDate !== (editingFirm.sourcing_date || "") ||
       sourcingContactName !== (editingFirm.sourcing_contact_name || "") ||
-      sourcingNotes !== (editingFirm.sourcing_notes || "")
+      sourcingNotes !== (editingFirm.sourcing_notes || "") ||
+      geographicRegion !== (editingFirm.geographic_region || "")
     : false;
 
   // In add mode, any entered data counts as unsaved changes.
@@ -536,7 +541,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   };
 
   const performSubmit = (addrs) => {
-    onSubmit({ firm_type: firmTypes[0] || "", firm_types: firmTypes, name: firmName.trim(), logo_url: logoUrl, website, email, linkedin_url: linkedinUrl, year_founded: yearFounded ? parseInt(yearFounded) : null, description, addresses: addrs, phones, pending_contacts: pendingContacts.length > 0 ? pendingContacts : undefined });
+    onSubmit({ firm_type: firmTypes[0] || "", firm_types: firmTypes, name: firmName.trim(), logo_url: logoUrl, website, email, linkedin_url: linkedinUrl, year_founded: yearFounded ? parseInt(yearFounded) : null, description, addresses: addrs, phones, pending_contacts: pendingContacts.length > 0 ? pendingContacts : undefined, sourcing_sources: sourcingSources, sourcing_date: sourcingDate || null, sourcing_contact_name: sourcingContactName, sourcing_notes: sourcingNotes, geographic_region: geographicRegion || null });
     // Also save AUM history (including client type breakdown) if it has unsaved changes
     if (aumSaveRef.current && aumDirty) {
       aumSaveRef.current();
@@ -943,6 +948,11 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     setDescription(editingFirm.description || "");
     setAddresses([...(editingFirm.addresses || [])].sort((a, b) => (b.is_headquarters ? 1 : 0) - (a.is_headquarters ? 1 : 0)));
     setPhones([...(editingFirm.phones || [])].sort((a, b) => (b.is_default ? 1 : 0) - (a.is_default ? 1 : 0)));
+    setSourcingSources(editingFirm.sourcing_sources || []);
+    setSourcingDate(editingFirm.sourcing_date || "");
+    setSourcingContactName(editingFirm.sourcing_contact_name || "");
+    setSourcingNotes(editingFirm.sourcing_notes || "");
+    setGeographicRegion(editingFirm.geographic_region || "");
     setIsEditing(false);
   };
 
@@ -1252,6 +1262,27 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                 )}
               </div>
 
+              {/* Geographic Region */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Geographic Region</Label>
+                {!activelyEditing ? (
+                  <div className="h-9 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-700">
+                    {geographicRegion || <span className="text-gray-400">—</span>}
+                  </div>
+                ) : (
+                  <Select value={geographicRegion} onValueChange={setGeographicRegion}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Select region..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {GEOGRAPHIC_REGIONS.map((region) => (
+                        <SelectItem key={region} value={region}>{region}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
               {/* Description */}
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-gray-700">Description</Label>
@@ -1296,6 +1327,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                    <TabsTrigger value="board-meetings">Board Meetings</TabsTrigger>
                    <TabsTrigger value="rfp-rfi">RFP/RFI Search</TabsTrigger>
                    <TabsTrigger value="conferences">Conferences</TabsTrigger>
+                   <TabsTrigger value="sourcing">Sourcing</TabsTrigger>
                    </>
                    )}
                    {hideProductTabs && (
@@ -1306,6 +1338,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                    <TabsTrigger value="board-meetings">Board Meetings</TabsTrigger>
                    <TabsTrigger value="rfp-rfi">RFP/RFI Search</TabsTrigger>
                    <TabsTrigger value="conferences">Conferences</TabsTrigger>
+                   <TabsTrigger value="sourcing">Sourcing</TabsTrigger>
                    </>
                    )}
                    </TabsList>
@@ -1655,6 +1688,20 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                   Save the firm first to add AUM history
                 </div>
               )}
+              </TabsContent>
+
+              <TabsContent value="sourcing" className="space-y-3">
+                <FirmSourcingTab
+                  sources={sourcingSources}
+                  onSourcesChange={setSourcingSources}
+                  date={sourcingDate}
+                  onDateChange={setSourcingDate}
+                  contactName={sourcingContactName}
+                  onContactNameChange={setSourcingContactName}
+                  notes={sourcingNotes}
+                  onNotesChange={setSourcingNotes}
+                  isEditing={activelyEditing}
+                />
               </TabsContent>
 
               </Tabs>
