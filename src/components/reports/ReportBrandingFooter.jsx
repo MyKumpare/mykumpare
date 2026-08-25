@@ -1,8 +1,10 @@
 import React from "react";
-import { MYKUMPARE_LOGO_SRC, MYKUMPARE_BRAND } from "./reportBranding";
+import { MYKUMPARE_LOGO_SRC, MYKUMPARE_BRAND, MYKUMPARE_NAVY } from "./reportBranding";
 
 /**
  * "Powered by MyKumpare" footer badge for online + printed reports.
+ * Brand lockup: the MyKumpare mark (rounded square logo) + the "MyKumpare"
+ * wordmark in brand navy.
  * - Online: renders as a subtle footer row at the bottom of the report content.
  * - Print: a global @media print rule in index.css pins it to the lower-left of
  *   every printed page (class `mykumpare-brand-footer`).
@@ -19,7 +21,9 @@ export default function ReportBrandingFooter({ className = "", showBorder = true
       />
       <span className="text-[11px] text-gray-500 leading-none">
         Powered by{" "}
-        <span className="font-bold text-indigo-600">{MYKUMPARE_BRAND}</span>
+        <span className="font-bold tracking-tight" style={{ color: MYKUMPARE_NAVY }}>
+          {MYKUMPARE_BRAND}
+        </span>
       </span>
     </div>
   );
