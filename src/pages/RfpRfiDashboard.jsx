@@ -42,6 +42,18 @@ export default function RfpRfiDashboard({ inline = false }) {
     queryFn: () => base44.entities.Firm.list("-created_date", 2000),
   });
 
+  // The generating firm (the user's own firm) — its logo + name appear in the
+  // branded PDF header alongside the MyKumpare mark.
+  const { data: ownFirm } = useQuery({
+    queryKey: ["own-firm-for-rfp-pdf"],
+    queryFn: async () => {
+      const me = await base44.auth.me().catch(() => null);
+      const fid = me?.linked_firm_id || me?.data?.linked_firm_id;
+      if (!fid) return null;
+      return base44.entities.Firm.get(fid).catch(() => null);
+    },
+  });
+
   const firmTypeMap = useMemo(() => {
     const map = new Map();
     (firms || []).forEach((f) => {
@@ -111,20 +123,26 @@ export default function RfpRfiDashboard({ inline = false }) {
     return list;
   }, [active, statusFilter, decisionFilter, sortBy, search]);
 
-  const handleExportPdf = () => {
+  const [exporting, setExporting] = useState(false);
+  const handleExportPdf = async () => {
     if (!visible.length) {
       toast({ title: "Nothing to export", description: "No records match the current filter.", variant: "destructive" });
       return;
     }
+    setExporting(true);
     try {
-      generateRfpRfiDashboardPdf({
+      await generateRfpRfiDashboardPdf({
         items: visible,
         filters: { statusFilter, decisionFilter, search, sortBy },
         totalCount: active.length,
+        firmName: ownFirm?.name,
+        firmLogoUrl: ownFirm?.logo_url,
       });
       toast({ title: "PDF exported", description: `${visible.length} records exported.` });
     } catch (err) {
       toast({ title: "Export failed", description: err?.message || "Could not generate PDF.", variant: "destructive" });
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -258,11 +276,11 @@ export default function RfpRfiDashboard({ inline = false }) {
             variant="outline"
             size="sm"
             onClick={handleExportPdf}
-            disabled={!visible.length}
+            disabled={!visible.length || exporting}
             className="h-8 gap-1.5 text-xs shrink-0"
           >
-            <FileDown className="w-3.5 h-3.5" />
-            Export PDF
+            {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileDown className="w-3.5 h-3.5" />}
+            {exporting ? "Exporting…" : "Export PDF"}
           </Button>
         </div>
 

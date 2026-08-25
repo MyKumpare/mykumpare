@@ -1,10 +1,14 @@
 import { jsPDF } from "jspdf";
-import { drawMyKumpareBranding } from "@/components/reports/reportBranding";
+import {
+  drawMyKumpareBranding, drawReportHeader, drawHeaderBand,
+  preloadMyKumpareLogo, rasterizeImage,
+} from "@/components/reports/reportBranding";
 
 // Exports the current (filtered/sorted) RFP/RFI dashboard view to a branded
-// PDF. Captures the active filter context, a stats strip, and every visible
-// opportunity with its type, status, progress, decision, due date, product
-// match, and notes. Uses the shared MyKumpare header/footer branding.
+// PDF. Every page carries the MyKumpare + generating-firm logo header band and
+// the "Powered by MyKumpare" footer. Captures the active filter context, a
+// stats strip, and every visible opportunity with its type, status, progress,
+// decision, due date, product match, and notes.
 
 const INK = [31, 41, 55];
 const MUTED = [120, 128, 140];
@@ -27,37 +31,30 @@ function daysAway(d) {
   return Math.round((due - today) / 86400000);
 }
 
-export function generateRfpRfiDashboardPdf({ items, filters = {}, totalCount }) {
+export async function generateRfpRfiDashboardPdf({ items, filters = {}, totalCount, firmName, firmLogoUrl }) {
+  // Preload both logos before drawing so the header band can embed them.
+  await preloadMyKumpareLogo();
+  const firmLogoDataUrl = await rasterizeImage(firmLogoUrl);
+
   const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "letter" });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const margin = 40;
-  let y = margin;
+  const headerOpts = { margin, firmName, firmLogoDataUrl };
+
+  let y = drawReportHeader(doc, {
+    ...headerOpts,
+    title: "RFP / RFI Dashboard",
+    subtitle: `Generated ${new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}`,
+  });
 
   const ensure = (need) => {
-    if (y + need > pageH - 50) {
-      drawMyKumpareBranding(doc);
+    if (y + need > pageH - 56) {
+      drawMyKumpareBranding(doc, { margin });
       doc.addPage();
-      y = margin;
+      y = drawHeaderBand(doc, headerOpts);
     }
   };
-
-  // ── Header band ──
-  doc.setFillColor(...PRIMARY);
-  doc.rect(0, 0, pageW, 6, "F");
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(18);
-  doc.setTextColor(...INK);
-  doc.text("RFP / RFI Dashboard", margin, y + 6);
-  y += 22;
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8.5);
-  doc.setTextColor(...MUTED);
-  const stamp = new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
-  doc.text(`Generated ${stamp}`, margin, y);
-  y += 12;
 
   // ── Filter context ──
   const filterParts = [];
@@ -215,8 +212,8 @@ export function generateRfpRfiDashboardPdf({ items, filters = {}, totalCount }) 
   });
 
   // ── Branding footer on all pages ──
-  drawMyKumpareBranding(doc);
+  drawMyKumpareBranding(doc, { margin });
 
-  const stamp2 = new Date().toISOString().slice(0, 10);
-  doc.save(`RFP-RFI-Dashboard-${stamp2}.pdf`);
+  const stamp = new Date().toISOString().slice(0, 10);
+  doc.save(`RFP-RFI-Dashboard-${stamp}.pdf`);
 }

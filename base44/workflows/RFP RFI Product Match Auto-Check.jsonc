@@ -1,0 +1,41 @@
+{
+  "name": "RFP/RFI Product Match Auto-Check",
+  "description": "When a new RFP/RFI record is created (manually or via website scraping), automatically compares it against the generating firm's own product catalog and flags whether any product is a Match, Near Match, or No Match.",
+  "trigger": {
+    "config": {
+      "trigger_type": "entity",
+      "entity_name": "FirmRfpRfi",
+      "events": [
+        "create"
+      ]
+    },
+    "condition": "${ .trigger.data.tenant_id != null and .trigger.data.tenant_id != \"\" and (.trigger.data.product_match_status // \"Not Checked\") == \"Not Checked\" }"
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "rfp_rfi_product_match_auto_check",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "match_products": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "matchRfpRfiToProducts",
+            "args": {
+              "record_id": "${ .trigger.entity_id }",
+              "firm_id": "${ .trigger.data.tenant_id }"
+            }
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Match RFP/RFI against products",
+            "description": "Flags Match / Near Match / No Match"
+          }
+        }
+      }
+    ]
+  }
+}

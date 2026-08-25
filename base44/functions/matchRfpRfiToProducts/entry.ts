@@ -14,19 +14,23 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 export default async function(req: Request): Promise<Response> {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
-
     const body = await req.json().catch(() => ({}));
     const recordId = body.record_id;
     if (!recordId) return Response.json({ error: 'record_id is required' }, { status: 400 });
 
-    // Load the RFP/RFI record (service role so any tenant user can check their own records).
+    // Load the RFP/RFI record (service role so any tenant user / workflow can check records).
     const record = await base44.asServiceRole.entities.FirmRfpRfi.get(recordId).catch(() => null);
     if (!record) return Response.json({ error: 'RFP/RFI record not found' }, { status: 404 });
 
     // Determine the firm whose products to match against (the user's own firm).
-    const targetFirmId = body.firm_id || (user as any).data?.linked_firm_id || (user as any).linked_firm_id || '';
+    // When invoked from a workflow (no user session), firm_id is passed in the
+    // payload — typically the record's tenant_id. When invoked from the UI,
+    // fall back to the calling user's linked_firm_id.
+    let targetFirmId = body.firm_id || '';
+    if (!targetFirmId) {
+      const user = await base44.auth.me().catch(() => null);
+      targetFirmId = (user as any)?.data?.linked_firm_id || (user as any)?.linked_firm_id || '';
+    }
     if (!targetFirmId) {
       return Response.json({ error: 'No firm linked to your account — cannot determine which products to match against.' }, { status: 400 });
     }
