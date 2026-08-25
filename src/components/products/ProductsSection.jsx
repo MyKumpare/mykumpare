@@ -207,7 +207,7 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
                             ) : null}
                             <button
                               onClick={() => onFirmClick && onFirmClick(firm)}
-                              className="text-xs font-semibold text-gray-500 uppercase tracking-wide hover:text-indigo-600 hover:underline cursor-pointer text-left"
+                              className="text-xs font-semibold text-gray-500 uppercase tracking-wide hover:text-primary hover:underline cursor-pointer text-left"
                             >
                               {firm.name}
                             </button>

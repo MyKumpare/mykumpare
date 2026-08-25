@@ -954,7 +954,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                 </div>
                 <div className="min-w-0">
                   <DialogTitle className="text-base font-semibold leading-tight">Firm Details</DialogTitle>
-                  {firmName && <p className="text-sm text-indigo-600 font-medium mt-0.5 truncate">{firmName}</p>}
+                  {firmName && <p className="text-sm text-primary font-medium mt-0.5 truncate">{firmName}</p>}
                 </div>
               </div>
             ) : (
@@ -978,7 +978,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1.5"
+                  className="text-primary hover:text-indigo-700 hover:bg-indigo-50 gap-1.5"
                   onClick={() => setIsEditing(true)}
                 >
                   <Pencil className="w-3.5 h-3.5" />
@@ -1069,7 +1069,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                           checked={firmTypes.includes(type)}
                           onChange={() => setFirmTypes([type])}
                           disabled={preselectedType === type && !editingFirm}
-                          className="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500 cursor-pointer"
+                          className="w-4 h-4 text-primary border-gray-300 focus:ring-indigo-500 cursor-pointer"
                         />
                         <span className="text-sm text-gray-700">{type}</span>
                       </label>
@@ -1093,7 +1093,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs"
+                      className="h-7 px-2 text-primary hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs"
                       onClick={() => setShowEnrichment(true)}
                     >
                       <Globe className="w-3.5 h-3.5" /> Auto-fill from Web
@@ -1143,7 +1143,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                 <Label className="text-sm font-medium text-gray-700">Website</Label>
                 {!activelyEditing ? (
                   <div className="h-9 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-600">
-                    {website ? <a href={website} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">{website}</a> : <span className="text-gray-400">—</span>}
+                    {website ? <a href={website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{website}</a> : <span className="text-gray-400">—</span>}
                   </div>
                 ) : (
                   <>
@@ -1163,7 +1163,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                 <Label className="text-sm font-medium text-gray-700">Email</Label>
                 {!activelyEditing ? (
                   <div className="h-9 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-600">
-                    {email ? <a href={`mailto:${email}`} className="text-indigo-600 hover:underline">{email}</a> : <span className="text-gray-400">—</span>}
+                    {email ? <a href={`mailto:${email}`} className="text-primary hover:underline">{email}</a> : <span className="text-gray-400">—</span>}
                   </div>
                 ) : (
                   <>
@@ -1183,7 +1183,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                 <Label className="text-sm font-medium text-gray-700">LinkedIn</Label>
                 {!activelyEditing ? (
                   <div className="h-9 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-600">
-                    {linkedinUrl ? <a href={linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">View LinkedIn</a> : <span className="text-gray-400">—</span>}
+                    {linkedinUrl ? <a href={linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">View LinkedIn</a> : <span className="text-gray-400">—</span>}
                   </div>
                 ) : (
                   <div className="space-y-1.5">
@@ -1305,7 +1305,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs ml-auto"
+                  className="h-7 px-2 text-primary hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs ml-auto"
                   onClick={() => { if (!activelyEditing) setIsEditing(true); handleAddAddress(); }}
                 >
                   <Plus className="w-3.5 h-3.5" />
@@ -1359,7 +1359,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs ml-auto"
+                    className="h-7 px-2 text-primary hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs ml-auto"
                     onClick={() => { if (!activelyEditing) setIsEditing(true); handleAddPhone(); }}
                   >
                     <Plus className="w-3.5 h-3.5" />
@@ -1649,7 +1649,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                   onClick={handleSubmit}
                   disabled={!isValid || !hasChanges}
                   title={!isValid ? "Firm name and type are required" : !hasChanges ? "Make a change to enable saving" : undefined}
-                  className={`text-white transition-all ${hasChanges && isValid ? "bg-indigo-600 hover:bg-indigo-700 shadow-md" : "bg-indigo-300"}`}
+                  className={`text-white transition-all ${hasChanges && isValid ? "bg-primary hover:bg-primary/90 shadow-md" : "bg-indigo-300"}`}
                 >
                   Save Changes
                 </Button>
@@ -1657,7 +1657,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
             ) : isAddMode ? (
               <>
                 <Button variant="outline" onClick={guardedClose}>Cancel</Button>
-                <Button onClick={() => handleSubmit()} disabled={!isValid} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                <Button onClick={() => handleSubmit()} disabled={!isValid} className="bg-primary hover:bg-primary/90 text-white">
                   Add Firm
                 </Button>
               </>

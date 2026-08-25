@@ -557,7 +557,7 @@ export default function AIAssistant() {
       {!isOpen && !showPicker && (
         <button
           onClick={() => setShowPicker(true)}
-          className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center"
+          className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-primary hover:bg-primary/90 text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center"
           title="AI Agents"
         >
           <Bot className="w-7 h-7" />
@@ -566,7 +566,7 @@ export default function AIAssistant() {
 
       {showPicker && (
         <div className="fixed bottom-6 right-6 z-50 w-80 bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white">
+          <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-primary to-primary/80 text-white">
             <div className="flex items-center gap-2">
               <Bot className="w-5 h-5" />
               <h3 className="text-sm font-semibold">AI Agents</h3>
@@ -606,7 +606,7 @@ export default function AIAssistant() {
                             ref={prov.innerRef}
                             {...prov.draggableProps}
                             className={`flex items-start gap-1.5 p-2 rounded-xl transition-colors group ${
-                              snapshot.isDragging ? "bg-indigo-50 shadow-md ring-1 ring-indigo-200" : "hover:bg-indigo-50"
+                              snapshot.isDragging ? "bg-primary/10 shadow-md ring-1 ring-primary/30" : "hover:bg-primary/10"
                             }`}
                           >
                             <div
@@ -624,14 +624,14 @@ export default function AIAssistant() {
                                 <Icon className={`w-5 h-5 ${agent.iconColor}`} />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className="text-sm font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">
+                                <div className="text-sm font-semibold text-gray-900 group-hover:text-primary transition-colors">
                                   {agent.name}
                                 </div>
                                 <div className="text-xs text-gray-500 line-clamp-2">
                                   {agent.description}
                                 </div>
                               </div>
-                              <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-indigo-500 mt-1 flex-shrink-0" />
+                              <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-primary mt-1 flex-shrink-0" />
                             </button>
                           </div>
                         )}
@@ -646,7 +646,7 @@ export default function AIAssistant() {
           <div className="px-3 py-2 border-t border-gray-200 bg-gray-50">
             <button
               onClick={() => { setShowPicker(false); navigate("/AiAgents"); }}
-              className="w-full text-center text-xs text-indigo-600 hover:text-indigo-700 font-medium py-1"
+              className="w-full text-center text-xs text-primary hover:text-primary font-medium py-1"
             >
               Manage & reorder agents
             </button>
@@ -656,12 +656,12 @@ export default function AIAssistant() {
 
       {isOpen && (
         <div className="fixed bottom-6 right-6 z-50 w-96 max-h-[600px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white">
+          <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-primary to-primary/80 text-white">
             <div className="flex items-center gap-2">
               <Bot className="w-5 h-5" />
               <div>
                 <h3 className="text-sm font-semibold">MyKumpare Assistant</h3>
-                <p className="text-[10px] text-indigo-200">Tables · Charts · Analytics</p>
+                <p className="text-[10px] text-primary-foreground/70">Tables · Charts · Analytics</p>
               </div>
             </div>
             <div className="flex items-center gap-1">
@@ -693,7 +693,7 @@ export default function AIAssistant() {
             <div className="flex-1 flex flex-col bg-gray-50 overflow-hidden">
               <div className="p-3 border-b border-gray-200 bg-white flex items-center justify-between">
                 <span className="text-xs font-semibold text-gray-700">Chat History</span>
-                <button onClick={handleNewChat} className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700 font-medium">
+                <button onClick={handleNewChat} className="flex items-center gap-1 text-xs text-primary hover:text-primary font-medium">
                   <Plus className="w-3.5 h-3.5" /> New Chat
                 </button>
               </div>
@@ -704,7 +704,7 @@ export default function AIAssistant() {
                   <div className="text-center py-4 text-gray-400 text-xs">No saved chats yet</div>
                 ) : (
                   conversations.map((conv) => (
-                    <div key={conv.id} className={`group flex items-center gap-1 px-2 py-2 rounded-lg text-xs ${conv.id === activeConversationId ? "bg-indigo-50 text-indigo-700" : "text-gray-600 hover:bg-gray-100"}`}>
+                    <div key={conv.id} className={`group flex items-center gap-1 px-2 py-2 rounded-lg text-xs ${conv.id === activeConversationId ? "bg-primary/10 text-primary" : "text-gray-600 hover:bg-gray-100"}`}>
                       <button onClick={() => loadConversation(conv)} className="flex-1 text-left truncate">
                         <MessageSquare className="w-3 h-3 inline mr-1.5 opacity-50" />
                         {conv.title || "Untitled"}
@@ -740,7 +740,7 @@ export default function AIAssistant() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     placeholder="Ask me anything... (try 'show all firms' or 'chart of tasks by status')"
-                    className="flex-1 h-10 px-3 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="flex-1 h-10 px-3 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
                     disabled={isLoading}
                   />
                   <Button
@@ -749,7 +749,7 @@ export default function AIAssistant() {
                     variant="ghost"
                     onClick={handleMicClick}
                     disabled={isLoading || !voiceSupported}
-                    className={`h-10 w-10 rounded-xl border border-gray-300 ${voiceListening ? "text-red-500 border-red-300 animate-pulse" : "text-indigo-600 hover:bg-indigo-50"}`}
+                    className={`h-10 w-10 rounded-xl border border-gray-300 ${voiceListening ? "text-red-500 border-red-300 animate-pulse" : "text-primary hover:bg-primary/10"}`}
                     title={voiceListening ? "Stop listening" : "Speak to the assistant"}
                   >
                     <Mic className="w-4 h-4" />
@@ -757,7 +757,7 @@ export default function AIAssistant() {
                   <Button
                     type="submit"
                     size="icon"
-                    className="h-10 w-10 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white"
+                    className="h-10 w-10 rounded-xl bg-primary hover:bg-primary/90 text-white"
                     disabled={isLoading || !input.trim()}
                   >
                     {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}

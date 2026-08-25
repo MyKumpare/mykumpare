@@ -911,7 +911,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                   </span>
                 </DialogTitle>
                 {firmIds.length > 0 && (
-                  <p className="text-sm text-indigo-600 font-medium mt-0.5 truncate">
+                  <p className="text-sm text-primary font-medium mt-0.5 truncate">
                     {firmIds.map((id, i) => (
                       <span key={id}>
                         {i > 0 && ", "}
@@ -990,7 +990,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                   </span>
                 </DialogTitle>
                 {firmIds.length > 0 && (
-                  <p className="text-sm text-indigo-600 font-medium mt-0.5 truncate">
+                  <p className="text-sm text-primary font-medium mt-0.5 truncate">
                     {firmIds.map((id, i) => (
                       <span key={id}>
                         {i > 0 && ", "}
@@ -1082,7 +1082,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                   <div>
                     <label className="cursor-pointer">
                       <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
-                      <div className="flex items-center gap-1.5 text-sm text-indigo-600 hover:text-indigo-800 font-medium border border-indigo-200 rounded-md px-3 py-1.5 hover:bg-indigo-50 transition-colors">
+                      <div className="flex items-center gap-1.5 text-sm text-primary hover:text-indigo-800 font-medium border border-indigo-200 rounded-md px-3 py-1.5 hover:bg-indigo-50 transition-colors">
                         <Upload className="w-3.5 h-3.5" />
                         {uploadingPhoto ? "Uploading..." : photoUrl ? "Change Photo" : "Upload Photo"}
                       </div>
@@ -1180,7 +1180,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                 <Label className="text-sm font-medium text-gray-700">Email</Label>
                 {viewMode ? (
                   <div className="text-sm px-1">
-                    {email ? <a href={`mailto:${email}`} className="text-indigo-600 hover:underline">{email}</a> : <span className="text-gray-400 italic">—</span>}
+                    {email ? <a href={`mailto:${email}`} className="text-primary hover:underline">{email}</a> : <span className="text-gray-400 italic">—</span>}
                   </div>
                 ) : (
                   <Input type="email" placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="h-9" />
@@ -1194,7 +1194,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                 </div>
                 {viewMode ? (
                   <div className="text-sm px-1">
-                    {linkedinUrl ? <a href={linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">View LinkedIn</a> : <span className="text-gray-400 italic">—</span>}
+                    {linkedinUrl ? <a href={linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">View LinkedIn</a> : <span className="text-gray-400 italic">—</span>}
                   </div>
                 ) : (
                   <div className="flex gap-1.5">
@@ -1283,7 +1283,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                   {viewMode && firmIds.length === 0 && <span className="text-sm text-gray-400 italic px-1">—</span>}
                 </div>
                 {!viewMode && (!showFirmPicker ? (
-                  <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1 text-indigo-600 border-indigo-200 hover:bg-indigo-50" onClick={() => setShowFirmPicker(true)}>
+                  <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1 text-primary border-indigo-200 hover:bg-indigo-50" onClick={() => setShowFirmPicker(true)}>
                     <Plus className="w-3 h-3" /> Add Firm
                   </Button>
                 ) : (
@@ -1308,7 +1308,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                     ) : (
                       <div className="border-t px-2 py-1.5 flex items-center justify-between">
                         <button type="button" onClick={() => setShowFirmPicker(false)} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
-                        <button type="button" onClick={() => setShowQuickAddFirm(true)} className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-0.5">
+                        <button type="button" onClick={() => setShowQuickAddFirm(true)} className="text-xs text-primary hover:text-indigo-800 font-medium flex items-center gap-0.5">
                           <Plus className="w-3 h-3" /> Add New Firm
                         </button>
                       </div>
@@ -1351,7 +1351,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                           <span className="text-xs text-green-600 font-medium">Added</span>
                         ) : (
                           <Button type="button" size="sm" variant="outline"
-                            className="h-7 text-xs text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                            className="h-7 text-xs text-primary border-indigo-200 hover:bg-indigo-50"
                             onClick={() => setPhones(prev => {
                               const hasEmpty = prev.some(ph => !ph.number_mid && !ph.number_last);
                               const newEntry = { ...p, id: crypto.randomUUID(), is_default: false };
@@ -1396,7 +1396,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                   )}
                 </Droppable>
               </DragDropContext>
-              <Button type="button" variant="outline" size="sm" className="w-full h-8 text-xs gap-1 text-indigo-600 border-indigo-200 hover:bg-indigo-50" onClick={() => { if (viewMode) setViewMode(false); addPhone(); }}>
+              <Button type="button" variant="outline" size="sm" className="w-full h-8 text-xs gap-1 text-primary border-indigo-200 hover:bg-indigo-50" onClick={() => { if (viewMode) setViewMode(false); addPhone(); }}>
                 <Plus className="w-3.5 h-3.5" /> Add Phone
               </Button>
             </TabsContent>
@@ -1424,7 +1424,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                           <span className="text-xs text-green-600 font-medium">Added</span>
                         ) : (
                           <Button type="button" size="sm" variant="outline"
-                            className="h-7 text-xs text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                            className="h-7 text-xs text-primary border-indigo-200 hover:bg-indigo-50"
                             onClick={() => setAddresses(prev => {
                               const hasEmpty = prev.some(ad => !ad.address_line1 && !ad.city);
                               const newEntry = { ...a, id: crypto.randomUUID(), is_primary: false, _firmName: undefined };
@@ -1469,7 +1469,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                   )}
                 </Droppable>
               </DragDropContext>
-              <Button type="button" variant="outline" size="sm" className="w-full h-8 text-xs gap-1 text-indigo-600 border-indigo-200 hover:bg-indigo-50" onClick={() => { if (viewMode) setViewMode(false); addAddress(); }}>
+              <Button type="button" variant="outline" size="sm" className="w-full h-8 text-xs gap-1 text-primary border-indigo-200 hover:bg-indigo-50" onClick={() => { if (viewMode) setViewMode(false); addAddress(); }}>
                 <Plus className="w-3.5 h-3.5" /> Add Address
               </Button>
             </TabsContent>
@@ -1553,8 +1553,8 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                       <button key={status} type="button"
                         onClick={() => setEmployeeStatus(employeeStatus === status ? "" : status)}
                         className={`px-4 py-1.5 rounded-full text-xs font-medium border transition-colors ${employeeStatus === status
-                          ? status === "Employee" ? "bg-indigo-600 text-white border-indigo-600" : "bg-amber-600 text-white border-amber-600"
-                          : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-indigo-600"}`}>
+                          ? status === "Employee" ? "bg-primary text-white border-indigo-600" : "bg-amber-600 text-white border-amber-600"
+                          : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-primary"}`}>
                         {status}
                       </button>
                     ))}
@@ -1579,8 +1579,8 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                       <button key={role} type="button"
                         onClick={() => setContactRole(contactRole === role ? "" : role)}
                         className={`px-4 py-1.5 rounded-full text-xs font-medium border transition-colors ${contactRole === role
-                          ? role === "Primary" ? "bg-indigo-600 text-white border-indigo-600" : "bg-gray-600 text-white border-gray-600"
-                          : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-indigo-600"}`}>
+                          ? role === "Primary" ? "bg-primary text-white border-indigo-600" : "bg-gray-600 text-white border-gray-600"
+                          : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-primary"}`}>
                         {role}
                       </button>
                     ))}
@@ -1646,8 +1646,8 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                       {["Undetermined", "Male", "Female"].map(g => (
                         <button key={g} type="button" onClick={() => setGender(g)}
                           className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${gender === g
-                            ? g === "Undetermined" ? "bg-red-500 text-white border-red-500" : "bg-indigo-600 text-white border-indigo-600"
-                            : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-indigo-600"}`}>
+                            ? g === "Undetermined" ? "bg-red-500 text-white border-red-500" : "bg-primary text-white border-indigo-600"
+                            : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-primary"}`}>
                           {g}
                         </button>
                       ))}
@@ -1663,7 +1663,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                   ) : (
                     <div className="flex flex-wrap gap-2">
                       <button type="button"
-                        className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${ethnicity.length === 0 ? "bg-red-500 text-white border-red-500" : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-indigo-600"}`}
+                        className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${ethnicity.length === 0 ? "bg-red-500 text-white border-red-500" : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-primary"}`}
                         onClick={() => setEthnicity([])}>
                         Undetermined
                       </button>
@@ -1672,7 +1672,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                         return (
                           <button key={e} type="button"
                             onClick={() => setEthnicity(selected ? ethnicity.filter(x => x !== e) : [...ethnicity, e])}
-                            className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${selected ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-indigo-600"}`}>
+                            className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${selected ? "bg-primary text-white border-indigo-600" : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-primary"}`}>
                             {e}
                           </button>
                         );
@@ -1691,8 +1691,8 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                       {["Undetermined", "Veteran Owned", "Non-Veteran Owned"].map(v => (
                         <button key={v} type="button" onClick={() => setVeteranStatus(v)}
                           className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${veteranStatus === v
-                            ? v === "Undetermined" ? "bg-red-500 text-white border-red-500" : "bg-indigo-600 text-white border-indigo-600"
-                            : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-indigo-600"}`}>
+                            ? v === "Undetermined" ? "bg-red-500 text-white border-red-500" : "bg-primary text-white border-indigo-600"
+                            : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-primary"}`}>
                           {v}
                         </button>
                       ))}
@@ -1710,8 +1710,8 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                       {["Undetermined", "Disabled", "Non-Disabled"].map(d => (
                         <button key={d} type="button" onClick={() => setDisabilityStatus(d)}
                           className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${disabilityStatus === d
-                            ? d === "Undetermined" ? "bg-red-500 text-white border-red-500" : "bg-indigo-600 text-white border-indigo-600"
-                            : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-indigo-600"}`}>
+                            ? d === "Undetermined" ? "bg-red-500 text-white border-red-500" : "bg-primary text-white border-indigo-600"
+                            : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-primary"}`}>
                           {d}
                         </button>
                       ))}
@@ -1732,7 +1732,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                       <div key={firmId} className="p-2.5 space-y-1.5">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-semibold text-indigo-700">{firmName}</span>
-                          <span className="text-sm font-bold text-indigo-600">{latest.percentage?.toFixed(2)}%</span>
+                          <span className="text-sm font-bold text-primary">{latest.percentage?.toFixed(2)}%</span>
                         </div>
                         <div className="space-y-0.5">
                           {history.map((h, i) => (
@@ -1741,7 +1741,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                                 <button
                                   type="button"
                                   onClick={() => { onOpenChange(false); onNavigateToOwnership(firmId, h.ownershipId); }}
-                                  className="text-indigo-600 hover:underline font-medium"
+                                  className="text-primary hover:underline font-medium"
                                 >
                                   {new Date(h.effective_date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
                                 </button>
@@ -1883,13 +1883,13 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
               )}
               {!confirmDeleteContact && (
                 <>
-                  <Button variant="outline" size="sm" className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                  <Button variant="outline" size="sm" className="text-primary border-indigo-200 hover:bg-indigo-50"
                     onClick={() => setPortalInviteOpen(true)}>
                     <Mail className="w-4 h-4 mr-1" /> Invite to Portal
                   </Button>
                   <div className="flex-1" />
                   <Button variant="outline" onClick={guardedClose}>Close</Button>
-                  <Button className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => setViewMode(false)}>
+                  <Button className="bg-primary hover:bg-primary/90 text-white" onClick={() => setViewMode(false)}>
                     <Pencil className="w-4 h-4 mr-1" /> Edit
                   </Button>
                 </>
@@ -1898,7 +1898,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
           ) : (
             <>
               <Button variant="outline" onClick={() => { setShowUndeterminedWarning(false); editingContact ? setViewMode(true) : guardedClose(); }}>Cancel</Button>
-              <Button onClick={handleSubmit} disabled={!isValid} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+              <Button onClick={handleSubmit} disabled={!isValid} className="bg-primary hover:bg-primary/90 text-white">
                 {editingContact ? "Save Changes" : "Add Contact"}
               </Button>
             </>
@@ -1944,7 +1944,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                       {onContactCreated && (
                         <Button
                           size="sm"
-                          className="mt-2 h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
+                          className="mt-2 h-7 text-xs bg-primary hover:bg-primary/90 text-white"
                           onClick={() => handleUseExisting(dup.contact)}
                         >
                           Use Existing Contact
@@ -1978,7 +1978,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                       </ul>
                       <Button
                         size="sm"
-                        className="mt-2 h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
+                        className="mt-2 h-7 text-xs bg-primary hover:bg-primary/90 text-white"
                         onClick={() => handleLinkToExisting(dup.contact)}
                         disabled={linkExistingMutation.isPending}
                       >

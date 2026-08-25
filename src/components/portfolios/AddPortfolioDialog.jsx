@@ -78,7 +78,7 @@ function SearchableSelect({ options, value, onChange, placeholder, onAddNew, add
               className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center gap-2"
               onClick={() => { onChange(opt.value); setOpen(false); setSearch(""); }}
             >
-              <Check className={cn("w-3.5 h-3.5 shrink-0", value === opt.value ? "opacity-100 text-indigo-600" : "opacity-0")} />
+              <Check className={cn("w-3.5 h-3.5 shrink-0", value === opt.value ? "opacity-100 text-primary" : "opacity-0")} />
               {opt.label}
             </button>
           ))}
@@ -87,7 +87,7 @@ function SearchableSelect({ options, value, onChange, placeholder, onAddNew, add
           <div className="border-t p-1">
             <button
               type="button"
-              className="w-full text-left px-3 py-1.5 text-sm text-indigo-600 hover:bg-indigo-50 flex items-center gap-1.5 rounded"
+              className="w-full text-left px-3 py-1.5 text-sm text-primary hover:bg-indigo-50 flex items-center gap-1.5 rounded"
               onClick={() => { setOpen(false); setSearch(""); onAddNew(); }}
             >
               <Plus className="w-3.5 h-3.5" />
@@ -201,7 +201,7 @@ function ProductMultiSelect({ options, value = [], onChange, onAddNew, momIncept
                   className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center gap-2"
                   onClick={() => toggle(opt)}
                 >
-                  <div className={cn("w-3.5 h-3.5 rounded border shrink-0 flex items-center justify-center", selected ? "bg-indigo-600 border-indigo-600" : "border-gray-300")}>
+                  <div className={cn("w-3.5 h-3.5 rounded border shrink-0 flex items-center justify-center", selected ? "bg-primary border-indigo-600" : "border-gray-300")}>
                     {selected && <Check className="w-2.5 h-2.5 text-white" />}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -216,7 +216,7 @@ function ProductMultiSelect({ options, value = [], onChange, onAddNew, momIncept
             <div className="border-t p-1">
               <button
                 type="button"
-                className="w-full text-left px-3 py-1.5 text-sm text-indigo-600 hover:bg-indigo-50 flex items-center gap-1.5 rounded"
+                className="w-full text-left px-3 py-1.5 text-sm text-primary hover:bg-indigo-50 flex items-center gap-1.5 rounded"
                 onClick={() => { setOpen(false); setSearch(""); onAddNew(); }}
               >
                 <Plus className="w-3.5 h-3.5" />
@@ -793,7 +793,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                   </div>
                   <div className="min-w-0">
                     <DialogTitle className="text-base font-semibold leading-tight">Portfolio Details</DialogTitle>
-                    <p className="text-sm text-indigo-600 font-medium mt-0.5 truncate">{portfolioName}</p>
+                    <p className="text-sm text-primary font-medium mt-0.5 truncate">{portfolioName}</p>
                   </div>
                 </div>
               ) : (
@@ -806,7 +806,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1.5"
+                    className="text-primary hover:text-indigo-700 hover:bg-indigo-50 gap-1.5"
                     onClick={() => setReportOpen(true)}
                   >
                     <FileText className="w-3.5 h-3.5" />
@@ -815,7 +815,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1.5"
+                    className="text-primary hover:text-indigo-700 hover:bg-indigo-50 gap-1.5"
                     onClick={() => setIsEditing(true)}
                   >
                     <Pencil className="w-3.5 h-3.5" />
@@ -848,7 +848,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                       const firm = firms.find((f) => f.id === allocatorId);
                       if (firm && onFirmClick) { onOpenChange(false); onFirmClick(firm); }
                     }}
-                    className="w-full text-left text-sm text-indigo-600 hover:text-indigo-700 px-3 py-2 rounded-md border bg-gray-50 hover:bg-indigo-50 transition-colors"
+                    className="w-full text-left text-sm text-primary hover:text-indigo-700 px-3 py-2 rounded-md border bg-gray-50 hover:bg-indigo-50 transition-colors"
                   >
                     {viewAllocatorName || <span className="text-gray-400">—</span>}
                   </button>
@@ -897,7 +897,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                         const firm = firms.find((f) => f.id === advisorFirmId);
                         if (firm && onFirmClick) { onOpenChange(false); onFirmClick(firm); }
                       }}
-                      className="w-full text-left text-sm text-indigo-600 hover:text-indigo-700 px-3 py-2 rounded-md border bg-gray-50 hover:bg-indigo-50 transition-colors"
+                      className="w-full text-left text-sm text-primary hover:text-indigo-700 px-3 py-2 rounded-md border bg-gray-50 hover:bg-indigo-50 transition-colors"
                     >
                       {viewAdvisorFirmName || <span className="text-gray-400">—</span>}
                     </button>
@@ -960,7 +960,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                           }}
                           className="w-full text-left px-3 py-2 rounded-md border bg-gray-50 hover:bg-indigo-50 transition-colors text-sm"
                         >
-                          <span className="font-medium text-indigo-600 hover:text-indigo-700">{sm.product_name}</span>
+                          <span className="font-medium text-primary hover:text-indigo-700">{sm.product_name}</span>
                           {sm.firm_name && <span className="text-gray-400 ml-1">· {sm.firm_name}</span>}
                           {sm.inception_date && <span className="text-gray-400 ml-1">· {format(parseISO(sm.inception_date), "MM/dd/yyyy")}</span>}
                           {sm.termination_date && <span className="text-gray-400 ml-1">· Term: {format(parseISO(sm.termination_date), "MM/dd/yyyy")}</span>}
@@ -1103,8 +1103,8 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                         className={cn(
                           "flex-1 h-9 rounded-md border text-sm font-medium transition-colors",
                           advisorProductType === t
-                            ? "bg-indigo-600 border-indigo-600 text-white"
-                            : "border-gray-200 text-gray-600 hover:border-indigo-300 hover:text-indigo-600"
+                            ? "bg-primary border-indigo-600 text-white"
+                            : "border-gray-200 text-gray-600 hover:border-indigo-300 hover:text-primary"
                         )}
                       >
                         {t === "Investment Manager Product" ? "Investment Manager" : "Multi-Manager"}
@@ -1303,7 +1303,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                   <Button
                     onClick={handleSave}
                     disabled={!isValid || updateMutation.isPending}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                    className="bg-primary hover:bg-primary/90 text-white"
                   >
                     Save Changes
                   </Button>
@@ -1314,7 +1314,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                   <Button
                     onClick={handleSave}
                     disabled={!isValid || createMutation.isPending}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                    className="bg-primary hover:bg-primary/90 text-white"
                   >
                     Save Portfolio
                   </Button>

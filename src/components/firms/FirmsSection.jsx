@@ -131,7 +131,7 @@ export default function FirmsSection({
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs"
+            className="h-7 px-2 text-primary hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs"
             onClick={onAddFirm}
           >
             <Plus className="w-3.5 h-3.5" />

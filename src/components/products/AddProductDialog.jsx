@@ -437,7 +437,7 @@ export default function AddProductDialog({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1.5"
+                  className="text-primary hover:text-indigo-700 hover:bg-indigo-50 gap-1.5"
                   onClick={() => setIsEditing(true)}
                 >
                   <Pencil className="w-3.5 h-3.5" />
@@ -868,7 +868,7 @@ export default function AddProductDialog({
                 <Button
                   onClick={handleSubmit}
                   disabled={!isValid || !hasChanges || isSaving}
-                  className={`text-white transition-all ${hasChanges && isValid ? "bg-indigo-600 hover:bg-indigo-700 shadow-md" : "bg-indigo-300"}`}
+                  className={`text-white transition-all ${hasChanges && isValid ? "bg-primary hover:bg-primary/90 shadow-md" : "bg-indigo-300"}`}
                 >
                   {isSaving ? "Saving..." : "Save Changes"}
                 </Button>
@@ -879,7 +879,7 @@ export default function AddProductDialog({
                 <Button
                   onClick={handleSubmit}
                   disabled={!isValid}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                  className="bg-primary hover:bg-primary/90 text-white"
                 >
                   Add Product
                 </Button>
