@@ -3,6 +3,7 @@ import { format, parseISO } from "date-fns";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
+import { MYKUMPARE_LOGO_SRC, MYKUMPARE_BRAND, MYKUMPARE_NAVY } from "@/components/reports/reportBranding";
 
 function formatCurrencyFull(v) {
   if (v == null) return "—";
@@ -244,8 +245,8 @@ const PortfolioPdfSummary = forwardRef(function PortfolioPdfSummary({ portfolio 
       {/* Footer */}
       <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: "8px", marginTop: "16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <img src="/icon.svg" alt="MyKumpare" style={{ width: "16px", height: "16px", borderRadius: "4px" }} />
-          <span style={{ fontSize: "9px", color: "#6b7280" }}>Powered by <span style={{ fontWeight: 700, color: "#4f46e5" }}>MyKumpare</span></span>
+          <img src={MYKUMPARE_LOGO_SRC} alt={MYKUMPARE_BRAND} style={{ width: "16px", height: "16px", borderRadius: "4px", objectFit: "contain" }} crossOrigin="anonymous" />
+          <span style={{ fontSize: "9px", color: "#6b7280" }}>Powered by <span style={{ fontWeight: 700, color: MYKUMPARE_NAVY }}>{MYKUMPARE_BRAND}</span></span>
         </div>
         <p style={{ fontSize: "9px", color: "#9ca3af", textAlign: "right" }}>
           {portfolio.portfolio_name} — Generated {format(new Date(), "MM/dd/yyyy h:mm a")}
