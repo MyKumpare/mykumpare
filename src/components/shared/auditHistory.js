@@ -10,11 +10,13 @@ function isEmpty(v) {
 }
 
 // Keep stored values small so the audit array never bloats the record.
-// Scalars are stored as-is; arrays/objects are summarized to a capped JSON string.
+// Always returns a string — the audit_history.new_value / previous_value
+// schema fields are typed as string, so null/number/boolean/object must be
+// stringified to pass entity validation.
 function summarizeValue(v) {
-  if (v == null) return null;
+  if (v == null) return "";
   if (typeof v === "string") return v.length > 300 ? v.slice(0, 300) + "…" : v;
-  if (typeof v === "number" || typeof v === "boolean") return v;
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
   try {
     const s = JSON.stringify(v);
     return s.length > 300 ? s.slice(0, 300) + "…" : s;
@@ -60,11 +62,21 @@ export function buildAuditEntries(currentRecord, newData, user) {
 
 // Wraps an update payload: returns newData with audit_history appended when
 // there are real changes, or newData unchanged when nothing actually changed.
+// Ensures existing audit entries (which may predate the string-only fix) pass
+// entity validation by coercing any null/non-string previous_value/new_value to strings.
+function sanitizeEntry(e) {
+  return {
+    ...e,
+    previous_value: e.previous_value == null ? "" : String(e.previous_value),
+    new_value: e.new_value == null ? "" : String(e.new_value),
+  };
+}
+
 export function withAuditHistory(currentRecord, newData, user) {
   const entries = buildAuditEntries(currentRecord, newData, user);
-  if (entries.length === 0) return newData;
   const existing = Array.isArray(currentRecord?.audit_history)
-    ? currentRecord.audit_history
+    ? currentRecord.audit_history.map(sanitizeEntry)
     : [];
+  if (entries.length === 0 && existing.length === 0) return newData;
   return { ...newData, audit_history: [...existing, ...entries] };
 }
