@@ -32,6 +32,7 @@ function emptyTemplate() {
     default_meeting_format: "unknown",
     default_session_type: "unknown",
     agenda_sections: [],
+    prep_checklist: [],
     notes_template: "",
   };
 }
@@ -42,6 +43,7 @@ function TemplateForm({ initial, onSave, onCancel, saving }) {
     ...initial,
     default_topics: initial?.default_topics || [],
     agenda_sections: initial?.agenda_sections || [],
+    prep_checklist: initial?.prep_checklist || [],
   }));
   const [topicInput, setTopicInput] = useState("");
 
@@ -59,6 +61,10 @@ function TemplateForm({ initial, onSave, onCancel, saving }) {
   const updateSection = (id, k, v) => set("agenda_sections", t.agenda_sections.map((s) => (s.id === id ? { ...s, [k]: v } : s)));
   const removeSection = (id) => set("agenda_sections", t.agenda_sections.filter((s) => s.id !== id));
 
+  const addChecklistItem = () => set("prep_checklist", [...t.prep_checklist, { id: crypto.randomUUID(), description: "", is_high_priority: false }]);
+  const updateChecklistItem = (id, k, v) => set("prep_checklist", t.prep_checklist.map((c) => (c.id === id ? { ...c, [k]: v } : c)));
+  const removeChecklistItem = (id) => set("prep_checklist", t.prep_checklist.filter((c) => c.id !== id));
+
   const submit = () => {
     if (!t.name.trim()) {
       toast({ title: "Name is required", variant: "destructive" });
@@ -67,6 +73,7 @@ function TemplateForm({ initial, onSave, onCancel, saving }) {
     onSave({
       ...t,
       agenda_sections: t.agenda_sections.filter((s) => s.title.trim()),
+      prep_checklist: t.prep_checklist.filter((c) => c.description.trim()),
     });
   };
 
@@ -145,6 +152,32 @@ function TemplateForm({ initial, onSave, onCancel, saving }) {
                 <button type="button" onClick={() => removeSection(s.id)} className="text-gray-300 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
               </div>
               <input value={s.description || ""} onChange={(e) => updateSection(s.id, "description", e.target.value)} placeholder="Guidance / description (optional)" className="mt-1 w-full h-8 rounded border border-gray-200 px-2 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-cyan-400" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-medium text-gray-600">Prep checklist (action items)</label>
+          <Button type="button" variant="ghost" size="sm" className="h-7 text-xs gap-1 text-emerald-600" onClick={addChecklistItem}><Plus className="w-3.5 h-3.5" /> Add item</Button>
+        </div>
+        <p className="text-[10px] text-gray-400 mt-0.5">These become action items on meetings created from this template, so you don't set up recurring prep tasks manually.</p>
+        <div className="mt-1 space-y-2">
+          {t.prep_checklist.length === 0 && (
+            <div className="text-xs text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-md">No prep items. Add one to auto-create action items on new meetings.</div>
+          )}
+          {t.prep_checklist.map((c, i) => (
+            <div key={c.id} className="rounded-md border border-gray-200 p-2 bg-gray-50">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-gray-400 font-semibold">{i + 1}</span>
+                <input value={c.description} onChange={(e) => updateChecklistItem(c.id, "description", e.target.value)} placeholder="Action item (e.g. Send agenda to board 1 week prior)" className="flex-1 h-8 rounded border border-gray-200 px-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-cyan-400" />
+                <label className="flex items-center gap-1 text-[10px] text-gray-500 whitespace-nowrap cursor-pointer">
+                  <input type="checkbox" checked={!!c.is_high_priority} onChange={(e) => updateChecklistItem(c.id, "is_high_priority", e.target.checked)} className="w-3.5 h-3.5" />
+                  High-pri
+                </label>
+                <button type="button" onClick={() => removeChecklistItem(c.id)} className="text-gray-300 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
+              </div>
             </div>
           ))}
         </div>
@@ -256,6 +289,9 @@ export default function BoardMeetingTemplateLibrary({ open, onClose }) {
                           )}
                           {t.default_topics?.length > 0 && (
                             <Badge variant="outline" className="text-[10px] bg-gray-50 text-gray-600 border-gray-200">{t.default_topics.length} topics</Badge>
+                          )}
+                          {t.prep_checklist?.length > 0 && (
+                            <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200">{t.prep_checklist.length} prep items</Badge>
                           )}
                         </div>
                         {t.description && <div className="text-xs text-gray-500 mt-0.5">{t.description}</div>}

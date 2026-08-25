@@ -9,6 +9,7 @@ import {
   ListTodo, AlertTriangle, Clock, Loader2, Filter, X, LayoutDashboard, Library,
 } from "lucide-react";
 import BoardMeetingHeatmap from "@/components/firms/BoardMeetingHeatmap";
+import BoardMeetingPrepProgress from "@/components/firms/BoardMeetingPrepProgress";
 import BoardMeetingTemplateLibrary from "@/components/firms/BoardMeetingTemplateLibrary";
 
 function fmtDate(d) {
@@ -143,6 +144,9 @@ export default function BoardMeetingDashboard() {
 
       {/* Heatmap */}
       <BoardMeetingHeatmap meetings={meetings} tasks={tasks} />
+
+      {/* Per-firm prep progress */}
+      <BoardMeetingPrepProgress meetings={meetings} tasks={tasks} />
 
       {/* Filter bar */}
       {showFilters && (

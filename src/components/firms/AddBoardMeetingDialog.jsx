@@ -107,11 +107,29 @@ export default function AddBoardMeetingDialog({ open, onClose, firmId, firmName 
         notes_template: tpl?.notes_template || undefined,
         status: "upcoming",
       };
-      await base44.entities.BoardMeeting.create(record);
+      const created = await base44.entities.BoardMeeting.create(record);
+      // Spawn prep checklist action items from the template onto the new meeting
+      const checklistItems = (tpl?.prep_checklist || []).filter((c) => c.description?.trim());
+      if (checklistItems.length) {
+        const taskRecords = checklistItems.map((c) => ({
+          originator_contact_id: "board-meeting-template",
+          originator_contact_name: "Board Meeting Template",
+          due_date: meetingDate,
+          task_description: c.description.trim(),
+          status: "Not Started",
+          is_high_priority: !!c.is_high_priority,
+          board_meeting_id: created.id,
+          assigned_to_firm_id: firmId,
+          assigned_to_firm_name: firmName,
+          activity_label: title.trim(),
+        }));
+        await base44.entities.FollowUpTask.bulkCreate(taskRecords);
+      }
       queryClient.invalidateQueries({ queryKey: ["board-meetings", firmId] });
       queryClient.invalidateQueries({ queryKey: ["board-meetings-dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["board-meetings-all"] });
-      toast({ title: "Board meeting created", description: tpl ? `Applied template: ${tpl.name}` : undefined });
+      queryClient.invalidateQueries({ queryKey: ["board-meeting-action-tasks"] });
+      toast({ title: "Board meeting created", description: tpl ? `Applied template: ${tpl.name}${checklistItems.length ? ` · ${checklistItems.length} prep action item${checklistItems.length === 1 ? "" : "s"} created` : ""}` : undefined });
       reset();
       onClose();
     } catch (err) {

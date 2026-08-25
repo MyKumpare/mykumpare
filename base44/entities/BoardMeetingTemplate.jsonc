@@ -62,6 +62,27 @@
         }
       }
     },
+    "prep_checklist": {
+      "type": "array",
+      "description": "Standard prep checklist of action items applied to a meeting created from this template. Each item is turned into a FollowUpTask tied to the new meeting, saving manual setup of recurring prep tasks.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "description": "Action item description / memo"
+          },
+          "is_high_priority": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether this prep item is flagged as high-priority by default when spawned on a new meeting."
+          }
+        }
+      }
+    },
     "notes_template": {
       "type": "string",
       "description": "Note-taking format template (rich text HTML) applied to meetings created from this template, ensuring consistent note-taking structure."
