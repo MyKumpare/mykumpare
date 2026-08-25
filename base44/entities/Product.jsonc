@@ -30,6 +30,15 @@
       "type": "string",
       "description": "Name of the associated firm (denormalized)"
     },
+    "product_availability_status": {
+      "type": "string",
+      "enum": [
+        "Active",
+        "Closed"
+      ],
+      "default": "Active",
+      "description": "Availability status of the product \u2014 whether the product is currently open for investment (Active) or closed to new investment (Closed). Distinct from product_status (the internal review decision) and funding_status (the portfolio funding lifecycle)."
+    },
     "product_status": {
       "type": "string",
       "enum": [
@@ -55,6 +64,23 @@
       "type": "boolean",
       "default": false,
       "description": "True when a user has manually overridden funding_status. While true, the auto-sync (DD completion / portfolio state) skips this product so the manual value sticks. Clearing the field resets to auto."
+    },
+    "inception_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Inception date of the product (YYYY-MM-DD). Captured during the paste-and-scrub flow or entered manually."
+    },
+    "evestment_universe": {
+      "type": "string",
+      "description": "eVestment Universe classification for this product (the eVestment database category/strategy universe the product belongs to). Validated against the EVestmentUniverse master list to prevent duplicates; near matches are surfaced for merge/reject decisions."
+    },
+    "default_benchmark_id": {
+      "type": "string",
+      "description": "ID of the product's default (primary) benchmark. Validated against the Benchmark master list during the paste-and-scrub flow to prevent duplicates."
+    },
+    "default_benchmark_name": {
+      "type": "string",
+      "description": "Name of the product's default (primary) benchmark (denormalized for display)."
     },
     "asset_class": {
       "type": "string",

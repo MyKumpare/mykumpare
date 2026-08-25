@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Package, Trash2, X } from "lucide-react";
+import { Plus, Package, Trash2, X, ClipboardPaste } from "lucide-react";
 import AddProductDialog from "@/components/products/AddProductDialog";
+import PasteProductsDialog from "@/components/products/PasteProductsDialog";
 import ProductStatusBadge from "@/components/products/ProductStatusBadge";
 import FundingStatusBadge from "@/components/products/FundingStatusBadge";
 import { syncProductFundingStatus, logFundingStatusChange } from "@/components/products/fundingStatusSync";
@@ -36,6 +37,7 @@ export default function FirmProductsTab({ firmId, firmName, firms = [] }) {
   const [productType, setProductType] = useState("");
   const [editingProduct, setEditingProduct] = useState(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showPasteDialog, setShowPasteDialog] = useState(false);
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ["products", firmId],
@@ -116,7 +118,16 @@ export default function FirmProductsTab({ firmId, firmName, firms = [] }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-1.5">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs"
+          onClick={() => setShowPasteDialog(true)}
+        >
+          <ClipboardPaste className="w-3.5 h-3.5" /> Paste Products
+        </Button>
         <Button
           type="button"
           variant="ghost"
@@ -209,6 +220,14 @@ export default function FirmProductsTab({ firmId, firmName, firms = [] }) {
           )}
         </div>
       )}
+
+      <PasteProductsDialog
+        open={showPasteDialog}
+        onClose={() => setShowPasteDialog(false)}
+        firmId={firmId}
+        firmName={firmName}
+        existingProducts={products}
+      />
 
       <AddProductDialog
         open={showEditDialog}

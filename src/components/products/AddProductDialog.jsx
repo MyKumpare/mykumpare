@@ -27,6 +27,8 @@ import ProductReturnsTab from "./ProductReturnsTab";
 import ProductAumHistoryTab from "./ProductAumHistoryTab";
 import ProductAnalyticsTab from "./ProductAnalyticsTab";
 import ProductThirdPartyTab from "./ProductThirdPartyTab";
+import EVestmentUniversePicker from "./EVestmentUniversePicker";
+import DefaultBenchmarkPicker from "./DefaultBenchmarkPicker";
 import ProductDueDiligenceTab from "./ProductDueDiligenceTab";
 import ConstituentProductMultiSelect from "./ConstituentProductMultiSelect";
 import SubManagerFirmMultiSelect from "./SubManagerFirmMultiSelect";
@@ -47,6 +49,7 @@ const PRODUCT_TYPE_TO_FIRM_TYPE = {
 const PRODUCT_TYPES = ["Investment Manager Product", "Multi-Manager Product"];
 
 const PRODUCT_STATUSES = ["Not Reviewed", "On-Hold", "Rejected", "Approved", "Removed"];
+const AVAILABILITY_STATUSES = ["Active", "Closed"];
 
 const PRODUCT_STATUS_STYLES = {
   "Not Reviewed": "bg-gray-100 text-gray-700",
@@ -107,6 +110,10 @@ export default function AddProductDialog({
   const [productName, setProductName] = useState("");
   const [description, setDescription] = useState("");
   const [productStatus, setProductStatus] = useState("Not Reviewed");
+  const [productAvailabilityStatus, setProductAvailabilityStatus] = useState("Active");
+  const [inceptionDate, setInceptionDate] = useState("");
+  const [evestmentUniverse, setEvestmentUniverse] = useState("");
+  const [defaultBenchmark, setDefaultBenchmark] = useState({ id: "", name: "" });
   const [fundingStatus, setFundingStatus] = useState("");
   const [fundingStatusManual, setFundingStatusManual] = useState(false);
   const [classifications, setClassifications] = useState(EMPTY_CLASSIFICATIONS);
@@ -139,8 +146,12 @@ export default function AddProductDialog({
         name: editingProduct.name,
         description: editingProduct.description || "",
         product_status: editingProduct.product_status || "Not Reviewed",
+        product_availability_status: editingProduct.product_availability_status || "Active",
         funding_status: editingProduct.funding_status || "",
         funding_status_manual: !!editingProduct.funding_status_manual,
+        inception_date: editingProduct.inception_date || "",
+        evestment_universe: editingProduct.evestment_universe || "",
+        default_benchmark: { id: editingProduct.default_benchmark_id || "", name: editingProduct.default_benchmark_name || "" },
         classifications: classificationsFromProduct(editingProduct),
         descriptions: {
           investment_edge: editingProduct.inv_desc_edge || "",
@@ -177,8 +188,12 @@ export default function AddProductDialog({
       setProductName(snapshot.name);
       setDescription(snapshot.description);
       setProductStatus(snapshot.product_status);
+      setProductAvailabilityStatus(snapshot.product_availability_status);
       setFundingStatus(snapshot.funding_status);
       setFundingStatusManual(snapshot.funding_status_manual);
+      setInceptionDate(snapshot.inception_date);
+      setEvestmentUniverse(snapshot.evestment_universe);
+      setDefaultBenchmark(snapshot.default_benchmark);
       setClassifications(snapshot.classifications);
       setInvestmentDescriptions(snapshot.descriptions);
       setConstituentProductIds(snapshot.constituent_product_ids);
@@ -192,8 +207,12 @@ export default function AddProductDialog({
       setProductName("");
       setDescription("");
       setProductStatus("Not Reviewed");
+      setProductAvailabilityStatus("Active");
       setFundingStatus("");
       setFundingStatusManual(false);
+      setInceptionDate("");
+      setEvestmentUniverse("");
+      setDefaultBenchmark({ id: "", name: "" });
       setClassifications(EMPTY_CLASSIFICATIONS);
       setInvestmentDescriptions({});
       setConstituentProductIds([]);
@@ -282,6 +301,10 @@ export default function AddProductDialog({
       firmId !== originalSnapshotRef.current.firm_id ||
       description !== originalSnapshotRef.current.description ||
       productStatus !== (originalSnapshotRef.current.product_status || "Not Reviewed") ||
+      (productAvailabilityStatus || "Active") !== (originalSnapshotRef.current.product_availability_status || "Active") ||
+      (inceptionDate || "") !== (originalSnapshotRef.current.inception_date || "") ||
+      (evestmentUniverse || "") !== (originalSnapshotRef.current.evestment_universe || "") ||
+      (defaultBenchmark?.id || "") !== (originalSnapshotRef.current.default_benchmark?.id || "") ||
       (fundingStatus || "") !== (originalSnapshotRef.current.funding_status || "") ||
       fundingStatusManual !== originalSnapshotRef.current.funding_status_manual ||
       JSON.stringify(constituentProductIds) !== JSON.stringify(originalSnapshotRef.current.constituent_product_ids || []) ||
@@ -299,6 +322,10 @@ export default function AddProductDialog({
   const hasUnsavedChanges = hasChanges || (isAddMode && !!(
     productName.trim() || productType || firmId || description ||
     productStatus !== "Not Reviewed" ||
+    productAvailabilityStatus !== "Active" ||
+    inceptionDate ||
+    evestmentUniverse ||
+    defaultBenchmark?.id || defaultBenchmark?.name ||
     fundingStatus ||
     JSON.stringify(classifications) !== JSON.stringify(EMPTY_CLASSIFICATIONS) ||
     Object.keys(investmentDescriptions).length > 0 ||
@@ -333,8 +360,13 @@ export default function AddProductDialog({
       name: isAddMode ? titleCaseProductName(productName.trim()) : productName.trim(),
       description,
       product_status: productStatus,
+      product_availability_status: productAvailabilityStatus || "Active",
       funding_status: fundingStatus || undefined,
       funding_status_manual: fundingStatusManual || undefined,
+      inception_date: inceptionDate || undefined,
+      evestment_universe: evestmentUniverse || undefined,
+      default_benchmark_id: defaultBenchmark?.id || undefined,
+      default_benchmark_name: defaultBenchmark?.name || undefined,
       ...classifications,
       inv_desc_edge: investmentDescriptions.investment_edge || "",
       inv_desc_philosophy: investmentDescriptions.investment_philosophy || "",
@@ -366,8 +398,12 @@ export default function AddProductDialog({
     setProductName("");
     setDescription("");
     setProductStatus("Not Reviewed");
+    setProductAvailabilityStatus("Active");
     setFundingStatus("");
     setFundingStatusManual(false);
+    setInceptionDate("");
+    setEvestmentUniverse("");
+    setDefaultBenchmark({ id: "", name: "" });
     setClassifications(EMPTY_CLASSIFICATIONS);
     setConstituentProductIds([]);
     setSubManagerFirmIds([]);
@@ -389,8 +425,12 @@ export default function AddProductDialog({
     setProductName(snap.name);
     setDescription(snap.description);
     setProductStatus(snap.product_status);
+    setProductAvailabilityStatus(snap.product_availability_status);
     setFundingStatus(snap.funding_status);
     setFundingStatusManual(snap.funding_status_manual);
+    setInceptionDate(snap.inception_date);
+    setEvestmentUniverse(snap.evestment_universe);
+    setDefaultBenchmark(snap.default_benchmark);
     setClassifications(snap.classifications);
     setInvestmentDescriptions(snap.descriptions);
     setConstituentProductIds(snap.constituent_product_ids);
@@ -641,6 +681,33 @@ export default function AddProductDialog({
                 )}
               </div>
 
+              {/* Product Availability Status */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Product Availability Status</Label>
+                {!activelyEditing ? (
+                  <div className="h-9 px-3 flex items-center rounded-md border bg-gray-50">
+                    {productAvailabilityStatus ? (
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${productAvailabilityStatus === "Active" ? "bg-emerald-100 text-emerald-700" : "bg-gray-200 text-gray-700"}`}>
+                        {productAvailabilityStatus}
+                      </span>
+                    ) : (
+                      <span className="text-sm text-gray-400">—</span>
+                    )}
+                  </div>
+                ) : (
+                  <Select value={productAvailabilityStatus} onValueChange={setProductAvailabilityStatus}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Select availability status..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {AVAILABILITY_STATUSES.map((s) => (
+                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
               {/* Product Status */}
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-gray-700">Product Status</Label>
@@ -709,6 +776,44 @@ export default function AddProductDialog({
                     </p>
                   </>
                 )}
+              </div>
+
+              {/* Inception Date */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Inception Date</Label>
+                {!activelyEditing ? (
+                  <div className="h-9 px-3 flex items-center rounded-md border bg-gray-50 text-sm text-gray-700">
+                    {inceptionDate || <span className="text-gray-400">—</span>}
+                  </div>
+                ) : (
+                  <Input
+                    type="date"
+                    value={inceptionDate}
+                    onChange={(e) => setInceptionDate(e.target.value)}
+                    className="h-9"
+                  />
+                )}
+              </div>
+
+              {/* eVestment Universe */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">eVestment Universe</Label>
+                <EVestmentUniversePicker
+                  value={evestmentUniverse}
+                  onChange={setEvestmentUniverse}
+                  isEditing={activelyEditing}
+                />
+              </div>
+
+              {/* Default Benchmark */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Default Benchmark</Label>
+                <DefaultBenchmarkPicker
+                  value={defaultBenchmark}
+                  onChange={setDefaultBenchmark}
+                  isEditing={activelyEditing}
+                  assetClass={classifications.asset_class}
+                />
               </div>
 
               {/* Constituent IM Products (Multi-Manager Product only) */}
