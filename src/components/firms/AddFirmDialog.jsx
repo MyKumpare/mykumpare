@@ -48,6 +48,7 @@ import LinkedinFirmMismatchDialog from "./LinkedinFirmMismatchDialog";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import ImageZoomDialog from "../common/ImageZoomDialog";
+import ErrorBoundary from "../common/ErrorBoundary";
 import AuditHistoryDialog from "../shared/AuditHistoryDialog";
 
 function getCountryCodeFromCountryName(countryName) {
@@ -1032,21 +1033,39 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
         <div className="overflow-y-auto flex-1 pr-1 space-y-5 py-2">
 
-          {/* Enrichment Panel */}
+          {/* Enrichment Panel — wrapped in an error boundary so a bad payload
+              or validation crash can't blank the whole dialog/app. */}
           {activelyEditing && showEnrichment && firmName.trim() && (
-            <FirmEnrichmentPanel
-              firmName={firmName.trim()}
-              website={website}
-              onApply={handleApplyEnrichment}
-              onClose={() => setShowEnrichment(false)}
-              onLoadingChange={setEnrichmentLoading}
-              existingFirm={editingFirm || {
-                name: firmName, logo_url: logoUrl, description, website, email,
-                linkedin_url: linkedinUrl, year_founded: yearFounded ? parseInt(yearFounded) : null,
-                firm_types: firmTypes, addresses, phones,
-              }}
-              existingContacts={editingFirm ? allContacts.filter((c) => (c.firm_ids || []).includes(editingFirm.id)) : allContacts}
-            />
+            <ErrorBoundary
+              title="Auto-fill error"
+              fallback={(err, retry) => (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <X className="w-4 h-4 text-red-500" />
+                    <p className="text-sm font-medium text-red-600">Auto-fill failed</p>
+                  </div>
+                  <p className="text-xs text-gray-600">{err?.message || "An unexpected error occurred while processing the web data."}</p>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={retry} className="h-8 text-xs">Try again</Button>
+                    <Button size="sm" variant="ghost" onClick={() => setShowEnrichment(false)} className="h-8 text-xs text-gray-500">Close</Button>
+                  </div>
+                </div>
+              )}
+            >
+              <FirmEnrichmentPanel
+                firmName={firmName.trim()}
+                website={website}
+                onApply={handleApplyEnrichment}
+                onClose={() => setShowEnrichment(false)}
+                onLoadingChange={setEnrichmentLoading}
+                existingFirm={editingFirm || {
+                  name: firmName, logo_url: logoUrl, description, website, email,
+                  linkedin_url: linkedinUrl, year_founded: yearFounded ? parseInt(yearFounded) : null,
+                  firm_types: firmTypes, addresses, phones,
+                }}
+                existingContacts={editingFirm ? allContacts.filter((c) => (c.firm_ids || []).includes(editingFirm.id)) : allContacts}
+              />
+            </ErrorBoundary>
           )}
 
           {/* Logo + Firm Name row */}

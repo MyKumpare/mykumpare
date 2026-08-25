@@ -311,12 +311,30 @@ export async function enrichFirmFromWeb(firmName, websiteUrl) {
   data.linkedin_url = cleanStr(data.linkedin_url) || '';
   data.website = cleanStr(data.website) || '';
   data.description = cleanStr(data.description) || '';
+  // Clean address fields — the LLM sometimes returns the literal string
+  // "null" for missing address fields (postal_code, address_line1, etc.).
+  // Without this cleanup, "null" is stored as a real value and rendered
+  // on the review panel / saved to the firm record.
+  for (const addr of data.addresses || []) {
+    if (addr) {
+      addr.address_line1 = cleanStr(addr.address_line1) || '';
+      addr.address_line2 = cleanStr(addr.address_line2) || '';
+      addr.city = cleanStr(addr.city) || '';
+      addr.state = cleanStr(addr.state) || '';
+      addr.postal_code = cleanStr(addr.postal_code) || '';
+      addr.country = cleanStr(addr.country) || '';
+    }
+  }
   for (const person of data.people || []) {
     person.photo_url = cleanStr(person.photo_url) || '';
     person.email = cleanStr(person.email) || '';
     person.linkedin_url = cleanStr(person.linkedin_url) || '';
     person.biography = cleanStr(person.biography) || '';
     person.bio_url = cleanStr(person.bio_url) || '';
+    person.phone = cleanStr(person.phone) || '';
+    person.title = cleanStr(person.title) || '';
+    person.first_name = cleanStr(person.first_name) || '';
+    person.last_name = cleanStr(person.last_name) || '';
   }
 
   normalizeAddresses(data);
