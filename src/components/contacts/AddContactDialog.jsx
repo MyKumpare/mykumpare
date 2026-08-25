@@ -32,6 +32,7 @@ import ScrapeProfileButton from "./ScrapeProfileButton";
 import ContactRolePicker from "./ContactRolePicker";
 import ContactInvestmentTeamRolePicker from "./ContactInvestmentTeamRolePicker";
 import ContactTagsField from "./ContactTagsField";
+import ContactTagChips from "./ContactTagChips";
 import ContactDepartmentPicker from "./ContactDepartmentPicker";
 import ContactTypePicker, { defaultContactTypesFromFirm } from "./ContactTypePicker";
 import { findContactDuplicates, findContactsByNormalizedName } from "./contactDuplicateCheck";
@@ -945,11 +946,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                         {r}
                       </span>
                     ))}
-                    {tags.map((t) => (
-                      <span key={`tag-${t}`} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-pink-50 text-pink-700 border border-pink-100">
-                        <Tag className="w-2.5 h-2.5" /> {t}
-                      </span>
-                    ))}
+                    <ContactTagChips tags={tags} />
                   </div>
                 )}
               </div>

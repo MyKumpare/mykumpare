@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, ChevronDown, ChevronRight, User, Camera, Download, Settings2, ClipboardPaste } from "lucide-react";
+import { Plus, ChevronDown, ChevronRight, User, Camera, Download, Settings2, ClipboardPaste, CheckSquare, Check } from "lucide-react";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
 import SectionTypeFilter from "@/components/common/SectionTypeFilter";
 import SectionExpandCollapse from "@/components/common/SectionExpandCollapse";
@@ -12,6 +12,9 @@ import { exportContactsToCSV } from "./exportContactsCsv";
 import ContactPipelineKanban from "./ContactPipelineKanban";
 import { lazyDialog } from "@/components/common/lazyDialog";
 import { toast } from "@/components/ui/use-toast";
+import ContactTagChips from "./ContactTagChips";
+import ContactsBulkActionsBar from "./ContactsBulkActionsBar";
+import BulkTagDialog from "./BulkTagDialog";
 
 const ContactPipelineStageEditor = lazyDialog(() => import("./ContactPipelineStageEditor"));
 
@@ -64,6 +67,10 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
   const [filterDateRange, setFilterDateRange] = useState({ start: "", end: "" });
   const [typeFilter, setTypeFilter] = useState("all");
   const [stageEditorOpen, setStageEditorOpen] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [bulkTagOpen, setBulkTagOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: pipelineStages = [] } = useQuery({
@@ -87,6 +94,77 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
     });
   };
   const handleClearFilters = () => { setFilterText(""); setFilterSelected({}); setFilterDateRange({ start: "", end: "" }); };
+
+  const toggleSelectMode = () => {
+    setSelectMode((v) => {
+      if (v) setSelectedIds(new Set());
+      return !v;
+    });
+  };
+  const toggleSelectContact = (id) => {
+    setSelectedIds((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  };
+  const clearSelection = () => { setSelectedIds(new Set()); setSelectMode(false); };
+
+  const handleBulkApplyTags = async (tagsToAdd) => {
+    if (!tagsToAdd.length || selectedIds.size === 0) { setBulkTagOpen(false); return; }
+    setBulkBusy("tag");
+    try {
+      const ids = Array.from(selectedIds);
+      const updates = ids.map((id) => {
+        const c = contacts.find((x) => x.id === id);
+        const existing = c?.tags || [];
+        const merged = Array.from(new Set([...existing, ...tagsToAdd]));
+        return { id, tags: merged };
+      });
+      await base44.entities.Contact.bulkUpdate(updates);
+      await queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      toast({ title: `✅ Tags added to ${ids.length} contact${ids.length === 1 ? "" : "s"}` });
+      setBulkTagOpen(false);
+      clearSelection();
+    } catch (err) {
+      toast({ title: "Bulk tag failed", description: err?.message || "Could not update tags.", variant: "destructive" });
+    } finally {
+      setBulkBusy(null);
+    }
+  };
+
+  const handleBulkSetActive = async (status) => {
+    setBulkBusy(status === "Active" ? "active" : "inactive");
+    try {
+      const ids = Array.from(selectedIds);
+      await base44.entities.Contact.bulkUpdate(ids.map((id) => ({ id, contact_status: status })));
+      await queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      toast({ title: `✅ ${ids.length} contact${ids.length === 1 ? "" : "s"} set ${status}` });
+      clearSelection();
+    } catch (err) {
+      toast({ title: "Update failed", description: err?.message, variant: "destructive" });
+    } finally {
+      setBulkBusy(null);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    setBulkBusy("delete");
+    try {
+      const ids = Array.from(selectedIds);
+      const now = new Date().toISOString();
+      await base44.entities.Contact.bulkUpdate(ids.map((id) => ({ id, deleted_at: now })));
+      await queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      await queryClient.invalidateQueries({ queryKey: ["deletedContacts"] });
+      toast({ title: `✅ ${ids.length} contact${ids.length === 1 ? "" : "s"} deleted` });
+      clearSelection();
+    } catch (err) {
+      toast({ title: "Delete failed", description: err?.message, variant: "destructive" });
+    } finally {
+      setBulkBusy(null);
+    }
+  };
 
   useEffect(() => {
     if (forceExpanded !== undefined) setExpanded(forceExpanded);
@@ -200,12 +278,18 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
   const contactColor = (gt) => GROUP_COLORS[gt] || "bg-gray-100 text-gray-700";
 
   function ContactMiniCard({ contact }) {
+    const isSel = selectedIds.has(contact.id);
     return (
       <button
-        onClick={() => onContactClick(contact)}
-        className="text-left p-3 rounded-xl border border-gray-100 bg-white hover:bg-pink-50 hover:border-pink-200 transition-colors w-full"
+        onClick={() => selectMode ? toggleSelectContact(contact.id) : onContactClick(contact)}
+        className={`text-left p-3 rounded-xl border transition-colors w-full ${selectMode ? (isSel ? "border-pink-400 bg-pink-50" : "border-gray-100 bg-white hover:bg-pink-50") : "border-gray-100 bg-white hover:bg-pink-50 hover:border-pink-200"}`}
       >
         <div className="flex items-center gap-2.5 mb-1">
+          {selectMode && (
+            <span className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center ${isSel ? "bg-pink-600 border-pink-600" : "border-gray-300 bg-white"}`}>
+              {isSel && <Check className="w-3 h-3 text-white" />}
+            </span>
+          )}
           <ContactAvatar contact={contact} />
           <span className="text-sm font-medium text-gray-800 truncate">{formatContactName(contact)}</span>
           {contact.contact_status === "Active" ? (
@@ -215,6 +299,7 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
           ) : null}
         </div>
         {contact.title && <p className="text-xs text-gray-400 truncate pl-8">{contact.title}</p>}
+        <div className="pl-8 pt-1"><ContactTagChips tags={contact.tags} max={4} /></div>
       </button>
     );
   }
@@ -239,6 +324,16 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
           <span className="text-xs text-gray-400 font-normal">({totalAllContacts})</span>
         </button>
         <div className="flex items-center gap-2">
+          <Button
+            variant={selectMode ? "default" : "ghost"}
+            size="sm"
+            className={`h-7 px-2 gap-1 text-xs ${selectMode ? "bg-pink-600 text-white hover:bg-pink-700" : "text-gray-600 hover:text-gray-700 hover:bg-gray-100"}`}
+            onClick={toggleSelectMode}
+            title="Select multiple contacts for bulk actions"
+          >
+            <CheckSquare className="w-3.5 h-3.5" />
+            {selectMode ? "Done" : "Select"}
+          </Button>
           <ViewModeToggle value={viewMode} onChange={(m) => { setViewMode(m); setExpanded(true); }} />
           {viewMode === "kanban" && (
             <Button
@@ -308,6 +403,24 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
             dateRange={filterDateRange}
             onDateRangeChange={setFilterDateRange}
           />
+          {selectMode && selectedIds.size > 0 && (
+            <ContactsBulkActionsBar
+              selectedCount={selectedIds.size}
+              onClear={clearSelection}
+              onSetActive={() => handleBulkSetActive("Active")}
+              onSetInactive={() => handleBulkSetActive("Inactive")}
+              onTag={() => setBulkTagOpen(true)}
+              onDelete={handleBulkDelete}
+              busy={bulkBusy}
+            />
+          )}
+          {selectMode && (
+            <div className="text-xs text-gray-500 px-1">
+              {selectedIds.size > 0
+                ? `${selectedIds.size} selected — tap contacts to add or remove them.`
+                : "Tap contacts to select them for bulk actions."}
+            </div>
+          )}
           {viewMode === "list" && (
             <div className="flex items-center justify-between mb-2">
               <SectionTypeFilter
@@ -376,23 +489,34 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
                          {/* Contacts list */}
                          {isFirmExpanded && (
                          <div className="space-y-1">
-                           {firmContacts.map((contact) => (
+                           {firmContacts.map((contact) => {
+                             const isSel = selectedIds.has(contact.id);
+                             return (
                              <button
                                key={contact.id}
-                               onClick={() => onContactClick(contact)}
-                               className="w-full text-left px-3 py-2 rounded-lg border border-gray-100 bg-white hover:bg-pink-50 hover:border-pink-200 transition-colors flex items-center gap-2.5 group"
+                               onClick={() => selectMode ? toggleSelectContact(contact.id) : onContactClick(contact)}
+                               className={`w-full text-left px-3 py-2 rounded-lg border transition-colors flex items-center gap-2.5 group ${selectMode ? (isSel ? "border-pink-400 bg-pink-50" : "border-gray-100 bg-white hover:bg-pink-50") : "border-gray-100 bg-white hover:bg-pink-50 hover:border-pink-200"}`}
                              >
+                               {selectMode && (
+                                 <span className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center ${isSel ? "bg-pink-600 border-pink-600" : "border-gray-300 bg-white"}`}>
+                                   {isSel && <Check className="w-3 h-3 text-white" />}
+                                 </span>
+                               )}
                                <ContactAvatar contact={contact} />
-                               <span className="text-sm text-gray-800 group-hover:text-pink-700 font-medium truncate">
-                                 {formatContactName(contact)}
-                               </span>
+                               <div className="min-w-0 flex-1">
+                                 <span className="text-sm text-gray-800 group-hover:text-pink-700 font-medium truncate block">
+                                   {formatContactName(contact)}
+                                 </span>
+                                 <ContactTagChips tags={contact.tags} max={3} />
+                               </div>
                                {contact.title && (
                                  <span className="ml-auto text-xs text-gray-400 flex-shrink-0 truncate max-w-[160px]">
                                    {contact.title}
                                  </span>
                                )}
                              </button>
-                           ))}
+                             );
+                           })}
                          </div>
                          )}
                        </div>
@@ -423,23 +547,34 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
               </button>
               {expandedGroups["__unassigned__"] !== false && (
                 <div className="space-y-1 pl-1">
-                  {unassignedContacts.map((contact) => (
+                  {unassignedContacts.map((contact) => {
+                    const isSel = selectedIds.has(contact.id);
+                    return (
                     <button
                       key={contact.id}
-                      onClick={() => onContactClick(contact)}
-                      className="w-full text-left px-3 py-2 rounded-lg border border-gray-100 bg-white hover:bg-pink-50 hover:border-pink-200 transition-colors flex items-center gap-2.5 group"
+                      onClick={() => selectMode ? toggleSelectContact(contact.id) : onContactClick(contact)}
+                      className={`w-full text-left px-3 py-2 rounded-lg border transition-colors flex items-center gap-2.5 group ${selectMode ? (isSel ? "border-pink-400 bg-pink-50" : "border-gray-100 bg-white hover:bg-pink-50") : "border-gray-100 bg-white hover:bg-pink-50 hover:border-pink-200"}`}
                     >
+                      {selectMode && (
+                        <span className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center ${isSel ? "bg-pink-600 border-pink-600" : "border-gray-300 bg-white"}`}>
+                          {isSel && <Check className="w-3 h-3 text-white" />}
+                        </span>
+                      )}
                       <ContactAvatar contact={contact} />
-                      <span className="text-sm text-gray-800 group-hover:text-pink-700 font-medium truncate">
-                        {formatContactName(contact)}
-                      </span>
+                      <div className="min-w-0 flex-1">
+                        <span className="text-sm text-gray-800 group-hover:text-pink-700 font-medium truncate block">
+                          {formatContactName(contact)}
+                        </span>
+                        <ContactTagChips tags={contact.tags} max={3} />
+                      </div>
                       {contact.title && (
                         <span className="ml-auto text-xs text-gray-400 flex-shrink-0 truncate max-w-[160px]">
                           {contact.title}
                         </span>
                       )}
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -474,6 +609,7 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
       )}
 
       <ContactPipelineStageEditor open={stageEditorOpen} onOpenChange={setStageEditorOpen} />
+      <BulkTagDialog open={bulkTagOpen} onOpenChange={setBulkTagOpen} selectedCount={selectedIds.size} onApply={handleBulkApplyTags} />
     </div>
   );
 }
