@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {   Radar, Newspaper, LayoutList, ClipboardList, CalendarDays, X, FileDown, Loader2, Activity as ActivityIcon, Bell } from "lucide-react";
+import {   Radar, Newspaper, LayoutList, ClipboardList, CalendarDays, X, FileDown, Loader2, Activity as ActivityIcon, Bell, UserCheck, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
 import { toast } from "@/components/ui/use-toast";
@@ -15,6 +15,8 @@ import ConferencesTab from "@/components/conferences/ConferencesTab";
 import BoardMeetingAlertsTab from "@/components/firms/BoardMeetingAlertsTab";
 import RfpRfiDashboard from "@/pages/RfpRfiDashboard";
 import RfpRfiDueThisWeek from "@/components/firms/RfpRfiDueThisWeek";
+import CoverageTracker from "@/pages/CoverageTracker";
+import CoverageManagement from "@/pages/CoverageManagement";
 import { FileSearch } from "lucide-react";
 
 const TABS = [
@@ -23,6 +25,8 @@ const TABS = [
   { key: "tasks", label: "Tasks", icon: LayoutList },
   { key: "conferences", label: "Conferences", icon: CalendarDays },
   { key: "board-meeting-alerts", label: "Bd Mtg Alerts", icon: Bell },
+  { key: "coverage", label: "My Coverage", icon: UserCheck },
+  { key: "coverage-mgmt", label: "Coverage Mgmt", icon: Users },
   { key: "timeline", label: "Timeline", icon: ActivityIcon },
   { key: "rfp-rfi", label: "RFP/RFI", icon: FileSearch },
 ];
@@ -151,6 +155,12 @@ export default function MonitorPage() {
         )}
         {tab === "board-meeting-alerts" && (
           <BoardMeetingAlertsTab onFirmClick={() => navigate("/")} />
+        )}
+        {tab === "coverage" && (
+          <CoverageTracker />
+        )}
+        {tab === "coverage-mgmt" && (
+          <CoverageManagement />
         )}
         {tab === "rfp-rfi" && (
           <RfpRfiDashboard inline />
