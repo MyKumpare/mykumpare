@@ -127,6 +127,23 @@ export default function BoardMeetingCard({ meeting, firmId, onFirmClick }) {
                 <CheckCircle2 className="w-3 h-3 mr-0.5" /> Reviewed
               </Badge>
             )}
+            {actionItems.length > 0 && (() => {
+              const pending = actionItems.filter((a) => a.status !== "Completed" && a.status !== "Cancelled");
+              const done = actionItems.length - pending.length;
+              return (
+                <Badge
+                  className={`text-[10px] border ${
+                    pending.length > 0
+                      ? "bg-orange-100 text-orange-700 border-orange-200"
+                      : "bg-emerald-100 text-emerald-700 border-emerald-200"
+                  }`}
+                  title={`${pending.length} pending, ${done} completed`}
+                >
+                  <ListTodo className="w-3 h-3 mr-0.5" />
+                  {pending.length > 0 ? `${pending.length} pending` : `${done} done`}
+                </Badge>
+              );
+            })()}
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-500">
             <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {fmtDate(meeting.meeting_date)}{meeting.end_date ? ` – ${fmtDate(meeting.end_date)}` : ""}</span>

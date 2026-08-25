@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Loader2, Globe, Calendar, MapPin, Video, Users, FileText, ScrollText,
-  AlertTriangle, CheckCircle2, Filter, ArrowUpDown, Plus, RefreshCw, Library, CalendarClock, Building,
+  AlertTriangle, CheckCircle2, Filter, ArrowUpDown, Plus, RefreshCw, Library, CalendarClock, Building, LayoutGrid,
 } from "lucide-react";
 import BoardMeetingCard from "./BoardMeetingCard";
+import BoardMeetingTimeline from "./BoardMeetingTimeline";
 import AddBoardMeetingDialog from "./AddBoardMeetingDialog";
 import BoardMeetingTemplateLibrary from "./BoardMeetingTemplateLibrary";
 import { toast } from "@/components/ui/use-toast";
@@ -33,6 +34,8 @@ export default function FirmBoardMeetingTab({ firmId, firmName, firmWebsite, onF
   const [topicSearch, setTopicSearch] = useState("");
   const [showAddMeeting, setShowAddMeeting] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [viewMode, setViewMode] = useState("cards"); // cards | timeline
+  const [openMeetingId, setOpenMeetingId] = useState(null);
 
   const { data: meetings = [], isLoading } = useQuery({
     queryKey: ["board-meetings", firmId],
@@ -171,6 +174,29 @@ export default function FirmBoardMeetingTab({ firmId, firmName, firmWebsite, onF
         )}
 
         <div className="flex items-center gap-1 ml-auto">
+          {/* View toggle: Cards vs Timeline */}
+          <div className="flex items-center rounded-md border border-gray-200 overflow-hidden mr-1">
+            <button
+              type="button"
+              onClick={() => setViewMode("cards")}
+              className={`text-[11px] px-2 py-1 flex items-center gap-1 transition-colors ${
+                viewMode === "cards" ? "bg-indigo-600 text-white" : "bg-white text-gray-500 hover:bg-gray-50"
+              }`}
+              title="Card view"
+            >
+              <LayoutGrid className="w-3 h-3" /> Cards
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("timeline")}
+              className={`text-[11px] px-2 py-1 flex items-center gap-1 transition-colors ${
+                viewMode === "timeline" ? "bg-indigo-600 text-white" : "bg-white text-gray-500 hover:bg-gray-50"
+              }`}
+              title="Chronological timeline view"
+            >
+              <CalendarClock className="w-3 h-3" /> Timeline
+            </button>
+          </div>
           <Filter className="w-3.5 h-3.5 text-gray-400" />
           {[
             { key: "all", label: `All (${activeMeetings.length})` },
@@ -227,6 +253,12 @@ export default function FirmBoardMeetingTab({ firmId, firmName, firmWebsite, onF
             ? "No board meetings yet. Click \"Scrape Board Meetings\" to search the firm's website."
             : "No meetings match the current filter."}
         </div>
+      ) : viewMode === "timeline" ? (
+        <BoardMeetingTimeline
+          meetings={visible}
+          firmId={firmId}
+          onOpenMeeting={(m) => setOpenMeetingId(m.id)}
+        />
       ) : (
         <div className="space-y-2">
           {visible.map((m) => (
@@ -234,6 +266,19 @@ export default function FirmBoardMeetingTab({ firmId, firmName, firmWebsite, onF
           ))}
         </div>
       )}
+
+      {/* When a meeting is clicked in timeline view, render it as a single expanded card */}
+      {openMeetingId && viewMode === "timeline" && (() => {
+        const m = activeMeetings.find((x) => x.id === openMeetingId);
+        if (!m) return null;
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setOpenMeetingId(null)}>
+            <div className="max-w-2xl w-full max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+              <BoardMeetingCard meeting={m} firmId={firmId} onFirmClick={onFirmClick} />
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Meetings from other firms where THIS firm was mentioned */}
       {mentionedIn.length > 0 && (
