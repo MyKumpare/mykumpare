@@ -740,7 +740,6 @@ export default function Home() {
       { label: "Activity Timeline", icon: Activity, onClick: () => managementRef.current?.scrollToSection(0) },
       { label: "Analyst Coverage", icon: Users, onClick: () => managementRef.current?.scrollToSection(1) },
       { label: "Firm Coverage", icon: Building, onClick: () => managementRef.current?.scrollToSection(2) },
-      { label: "Coverage Overview", icon: ClipboardList, onClick: () => navigate("/Monitor?tab=coverage-mgmt") },
     ] }] : []),
     { label: "Utilities", icon: Wrench, ref: utilityRef, color: "text-gray-600", activeBg: "bg-gray-100", onClick: () => { setUtilityDefaultView(null); setUtilityModalOpen(true); }, submenu: [
       { label: "Benchmark", icon: Gauge, onClick: () => { setUtilityDefaultView("benchmark"); setUtilityModalOpen(true); } },
