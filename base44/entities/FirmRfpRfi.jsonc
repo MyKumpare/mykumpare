@@ -1,0 +1,193 @@
+{
+  "name": "FirmRfpRfi",
+  "type": "object",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "ID of the firm (tenant) that owns this RFP/RFI record. Set on creation to the creator's linked_firm_id; drives tenant isolation via RLS."
+    },
+    "firm_id": {
+      "type": "string",
+      "description": "ID of the firm whose website was scrubbed for this RFP/RFI posting."
+    },
+    "firm_name": {
+      "type": "string",
+      "description": "Name of the firm (denormalized for display)."
+    },
+    "title": {
+      "type": "string",
+      "description": "Title or name of the RFP/RFI posting."
+    },
+    "rfp_type": {
+      "type": "string",
+      "enum": [
+        "RFP",
+        "RFI",
+        "Unknown"
+      ],
+      "default": "Unknown",
+      "description": "Whether this posting is a Request for Proposal (RFP) or Request for Information (RFI)."
+    },
+    "posting_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the RFP/RFI was posted (YYYY-MM-DD)."
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Start date of the RFP/RFI \u2014 when it opens (YYYY-MM-DD)."
+    },
+    "questions_start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Start date for submitting questions about the RFP/RFI (YYYY-MM-DD)."
+    },
+    "questions_end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "End date for submitting questions about the RFP/RFI (YYYY-MM-DD)."
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Submission due date of the RFP/RFI (YYYY-MM-DD)."
+    },
+    "summary": {
+      "type": "string",
+      "description": "AI-generated summary of the RFP/RFI posting found during the website scrub."
+    },
+    "source_url": {
+      "type": "string",
+      "description": "URL where the RFP/RFI was found during scraping."
+    },
+    "file_url": {
+      "type": "string",
+      "description": "URL of an attached file (the RFP/RFI document). Populated from the scrape when a downloadable document URL is available, or via manual upload."
+    },
+    "file_name": {
+      "type": "string",
+      "description": "Display name of the attached file."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Open",
+        "Closed",
+        "Unknown"
+      ],
+      "default": "Unknown",
+      "description": "Status derived from the due date vs today. 'Open' when due_date is today or later; 'Closed' when due_date is in the past; 'Unknown' when no due date."
+    },
+    "scrub_batch_id": {
+      "type": "string",
+      "description": "ID of the scrape batch that produced this record (for deduplication)."
+    },
+    "deleted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when this record was soft-deleted."
+    }
+  },
+  "required": [
+    "firm_id",
+    "firm_name",
+    "title"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_edit": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_delete": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
