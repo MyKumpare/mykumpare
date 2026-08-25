@@ -24,7 +24,7 @@ function fmtDate(d) {
 // board meetings, lists them with filter/sort, and lets the user fetch
 // minutes per meeting. Meetings mentioning the user's own firm or any
 // investment manager / sub-manager in its portfolios are flagged for review.
-export default function FirmBoardMeetingTab({ firmId, firmName, firmWebsite }) {
+export default function FirmBoardMeetingTab({ firmId, firmName, firmWebsite, onFirmClick }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [scraping, setScraping] = useState(false);
@@ -230,7 +230,7 @@ export default function FirmBoardMeetingTab({ firmId, firmName, firmWebsite }) {
       ) : (
         <div className="space-y-2">
           {visible.map((m) => (
-            <BoardMeetingCard key={m.id} meeting={m} firmId={firmId} />
+            <BoardMeetingCard key={m.id} meeting={m} firmId={firmId} onFirmClick={onFirmClick} />
           ))}
         </div>
       )}

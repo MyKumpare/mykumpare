@@ -1672,7 +1672,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
               <TabsContent value="board-meetings" className="space-y-3">
               {editingFirm ? (
-                <FirmBoardMeetingTab firmId={editingFirm.id} firmName={editingFirm.name} firmWebsite={editingFirm.website} />
+                <FirmBoardMeetingTab firmId={editingFirm.id} firmName={editingFirm.name} firmWebsite={editingFirm.website} onFirmClick={onFirmClick} />
               ) : (
                 <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
                   Save the firm first to scrape board meetings

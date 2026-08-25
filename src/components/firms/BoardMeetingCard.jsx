@@ -22,7 +22,7 @@ function fmtDate(d) {
 
 // Single board meeting card: shows all scraped fields, a "Get Minutes" action
 // that scrapes the minutes on demand, mention flags, and a review toggle.
-export default function BoardMeetingCard({ meeting, firmId }) {
+export default function BoardMeetingCard({ meeting, firmId, onFirmClick }) {
   const queryClient = useQueryClient();
   const [fetchingMinutes, setFetchingMinutes] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -30,6 +30,7 @@ export default function BoardMeetingCard({ meeting, firmId }) {
   const [savingReview, setSavingReview] = useState(false);
   const [extracting, setExtracting] = useState(false);
   const [showTagFirm, setShowTagFirm] = useState(false);
+  const [showMentions, setShowMentions] = useState(false);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["board-meetings", firmId] });
 
@@ -153,22 +154,7 @@ export default function BoardMeetingCard({ meeting, firmId }) {
         </div>
       )}
 
-      {/* Mentions flag */}
-      {meeting.mentions?.length > 0 && (
-        <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-2">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-800">
-            <AlertTriangle className="w-3.5 h-3.5" /> Firms mentioned in this meeting
-          </div>
-          <ul className="mt-1 space-y-1">
-            {meeting.mentions.map((mt) => (
-              <li key={mt.id} className="text-[11px] text-amber-800 flex items-start gap-1">
-                <span className="font-medium">{mt.entity_name}</span>
-                {mt.context && <span className="text-amber-700">— {mt.context}</span>}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {/* Mentions — toggleable panel triggered by the icon in the actions row */}
 
       {/* Links + actions */}
       <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -206,7 +192,53 @@ export default function BoardMeetingCard({ meeting, firmId }) {
         <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => setShowTagFirm(true)}>
           <Tag className="w-3 h-3" /> Tag Firm
         </Button>
+        {meeting.mentions?.length > 0 && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className={`h-7 text-xs gap-1 ${showMentions ? "bg-amber-50 border-amber-300 text-amber-700" : ""}`}
+            onClick={() => setShowMentions((v) => !v)}
+            title="View firms mentioned in this meeting"
+          >
+            <Users className="w-3 h-3" /> Mentioned Firms
+            <span className="ml-0.5 inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-amber-500 text-white text-[10px] font-semibold">
+              {meeting.mentions.length}
+            </span>
+          </Button>
+        )}
       </div>
+
+      {/* Mentioned firms panel — firms with an entity_id are hyperlinks to that firm */}
+      {meeting.mentions?.length > 0 && showMentions && (
+        <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-2">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-800 mb-1.5">
+            <AlertTriangle className="w-3.5 h-3.5" /> Firms mentioned in this meeting
+          </div>
+          <ul className="space-y-1">
+            {meeting.mentions.map((mt) => {
+              const inSystem = !!mt.entity_id && onFirmClick;
+              return (
+                <li key={mt.id} className="text-[11px] text-amber-800 flex items-start gap-1">
+                  {inSystem ? (
+                    <button
+                      type="button"
+                      onClick={() => onFirmClick({ id: mt.entity_id, name: mt.entity_name })}
+                      className="font-medium text-indigo-600 hover:underline inline-flex items-center gap-0.5"
+                    >
+                      {mt.entity_name}
+                      <ExternalLink className="w-2.5 h-2.5" />
+                    </button>
+                  ) : (
+                    <span className="font-medium">{mt.entity_name}</span>
+                  )}
+                  {mt.context && <span className="text-amber-700">— {mt.context}</span>}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
 
       {/* Tag mentioned firm dialog */}
       <TagMentionedFirmDialog
