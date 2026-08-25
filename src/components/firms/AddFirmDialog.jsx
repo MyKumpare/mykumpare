@@ -244,7 +244,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         setSourcingDate(editingFirm.sourcing_date || "");
         setSourcingContactName(editingFirm.sourcing_contact_name || "");
         setSourcingNotes(editingFirm.sourcing_notes || "");
-        setGeographicRegion(editingFirm.geographic_region || "");
+        setGeographicRegion(editingFirm.geographic_region || "Undefined");
         setIsEditing(false);
       } else {
         setFirmTypes(preselectedType ? [preselectedType] : []);
@@ -264,7 +264,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         setSourcingDate("");
         setSourcingContactName("");
         setSourcingNotes("");
-        setGeographicRegion("");
+        setGeographicRegion("Undefined");
         setIsEditing(true);
       }
     }
@@ -541,7 +541,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   };
 
   const performSubmit = (addrs) => {
-    onSubmit({ firm_type: firmTypes[0] || "", firm_types: firmTypes, name: firmName.trim(), logo_url: logoUrl, website, email, linkedin_url: linkedinUrl, year_founded: yearFounded ? parseInt(yearFounded) : null, description, addresses: addrs, phones, pending_contacts: pendingContacts.length > 0 ? pendingContacts : undefined, sourcing_sources: sourcingSources, sourcing_date: sourcingDate || null, sourcing_contact_name: sourcingContactName, sourcing_notes: sourcingNotes, geographic_region: geographicRegion || null });
+    onSubmit({ firm_type: firmTypes[0] || "", firm_types: firmTypes, name: firmName.trim(), logo_url: logoUrl, website, email, linkedin_url: linkedinUrl, year_founded: yearFounded ? parseInt(yearFounded) : null, description, addresses: addrs, phones, pending_contacts: pendingContacts.length > 0 ? pendingContacts : undefined, sourcing_sources: sourcingSources, sourcing_date: sourcingDate || null, sourcing_contact_name: sourcingContactName, sourcing_notes: sourcingNotes, geographic_region: geographicRegion || "Undefined" });
     // Also save AUM history (including client type breakdown) if it has unsaved changes
     if (aumSaveRef.current && aumDirty) {
       aumSaveRef.current();

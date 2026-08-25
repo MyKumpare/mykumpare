@@ -1,6 +1,7 @@
 // Geographic region options for firms. Used by the firm form (region picker)
 // and the analyst coverage dashboard (region filter + heatmap).
 export const GEOGRAPHIC_REGIONS = [
+  "Undefined",
   "North America",
   "Europe",
   "Asia-Pacific",

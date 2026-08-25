@@ -66,6 +66,7 @@
     "geographic_region": {
       "type": "string",
       "enum": [
+        "Undefined",
         "North America",
         "Europe",
         "Asia-Pacific",
@@ -73,7 +74,8 @@
         "Middle East & Africa",
         "Global"
       ],
-      "description": "Primary geographic region in which the firm operates. Used by the analyst coverage dashboard for region-based filtering and heatmap visualization."
+      "default": "Undefined",
+      "description": "Primary geographic region in which the firm operates. Used by the analyst coverage dashboard for region-based filtering and heatmap visualization. Defaults to 'Undefined' until a user sets a region."
     },
     "description": {
       "type": "string",
