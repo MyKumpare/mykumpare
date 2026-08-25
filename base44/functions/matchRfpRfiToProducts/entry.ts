@@ -70,14 +70,26 @@ export default async function(req: Request): Promise<Response> {
     ].filter(Boolean).join('\n');
 
     const prompt =
-      `You are an investment-product matching assistant. An investment manager (Xponance) has received an RFP/RFI opportunity and wants to know which of its own products could be proposed in response.\n\n` +
+      `You are an investment-product matching assistant. An investment manager (Xponance) has received an RFP/RFI opportunity and wants to know which of its own products could be proposed in response, and how well each product's features align with the opportunity's specific requirements.\n\n` +
       `OPPORTUNITY:\n${opportunityText}\n\n` +
       `Xponance's offered products (catalog):\n${JSON.stringify(catalog)}\n\n` +
-      `Determine whether any of Xponance's products fit this opportunity.\n` +
-      `- "Match" = at least one product clearly fits the opportunity's asset class, geography, style, and mandate.\n` +
-      `- "Near Match" = at least one product is a close but imperfect fit (e.g. right asset class but wrong geography/style, or adjacent strategy).\n` +
-      `- "No Match" = no offered product fits the opportunity at all.\n\n` +
-      `Return the match_status, the matched_product_ids (only ids from the catalog above), matched_product_names (the names of those products), and a concise summary explaining which products fit and why (or why none fit). If multiple products fit, list all of them.`;
+      `Step 1 — Identify the KEY REQUIREMENTS of this opportunity (asset class, geography, investment style, market cap, mandate size, vehicle/structure, ESG or diversification requirements, or any other criteria stated or implied in the opportunity).\n` +
+      `Step 2 — For each product in the catalog that is a plausible fit (Match or Near Match), score how well that product's features align with EACH key requirement:\n` +
+      `  - "Strong" = the product clearly satisfies this requirement.\n` +
+      `  - "Partial" = the product partially satisfies this requirement (close but imperfect).\n` +
+      `  - "Gap" = the product does not satisfy this requirement.\n` +
+      `Step 3 — Determine the overall result:\n` +
+      `  - "Match" = at least one product clearly fits the opportunity overall.\n` +
+      `  - "Near Match" = at least one product is a close but imperfect fit overall.\n` +
+      `  - "No Match" = no offered product fits the opportunity at all.\n\n` +
+      `Return:\n` +
+      `- match_status: "Match" | "Near Match" | "No Match"\n` +
+      `- matched_product_ids: only ids from the catalog above (the plausible-fit products; empty array for No Match)\n` +
+      `- matched_product_names: the names of those products\n` +
+      `- summary: a concise explanation of which products fit and why (or why none fit)\n` +
+      `- alignment: an array with one entry per plausible-fit product (empty array for No Match). Each entry has:\n` +
+      `    { product_id, product_name, overall_fit: "Strong"|"Partial"|"Gap", criteria: [ { requirement, alignment: "Strong"|"Partial"|"Gap", note } ] }\n` +
+      `  The criteria array must cover the key requirements from Step 1. The note is a short phrase explaining the alignment (e.g. "Emerging markets equity, matches EM mandate" or "Large-cap only, opportunity seeks small-cap").`;
 
     const res = await base44.integrations.Core.InvokeLLM({
       prompt,
@@ -88,6 +100,30 @@ export default async function(req: Request): Promise<Response> {
           matched_product_ids: { type: 'array', items: { type: 'string' } },
           matched_product_names: { type: 'array', items: { type: 'string' } },
           summary: { type: 'string' },
+          alignment: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                product_id: { type: 'string' },
+                product_name: { type: 'string' },
+                overall_fit: { type: 'string', enum: ['Strong', 'Partial', 'Gap'] },
+                criteria: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      requirement: { type: 'string' },
+                      alignment: { type: 'string', enum: ['Strong', 'Partial', 'Gap'] },
+                      note: { type: 'string' },
+                    },
+                    required: ['requirement', 'alignment'],
+                  },
+                },
+              },
+              required: ['product_id', 'overall_fit'],
+            },
+          },
         },
       },
     });
@@ -100,11 +136,32 @@ export default async function(req: Request): Promise<Response> {
     const matchedIds = (result.matched_product_ids || []).filter((id: any) => validIds.has(id));
     const matchedNames = (result.matched_product_names || []).filter((n: any) => typeof n === 'string' && n);
 
+    // Normalize the structured alignment breakdown. Only keep entries whose
+    // product_id exists in the catalog (LLMs sometimes hallucinate ids).
+    const rawAlignment = Array.isArray(result.alignment) ? result.alignment : [];
+    const productAlignment = rawAlignment
+      .filter((a: any) => a && validIds.has(a.product_id))
+      .map((a: any) => ({
+        product_id: a.product_id,
+        product_name: typeof a.product_name === 'string' ? a.product_name : (activeProducts.find((p: any) => p.id === a.product_id)?.name || ''),
+        overall_fit: ['Strong', 'Partial', 'Gap'].includes(a.overall_fit) ? a.overall_fit : 'Gap',
+        criteria: Array.isArray(a.criteria)
+          ? a.criteria
+              .filter((c: any) => c && c.requirement)
+              .map((c: any) => ({
+                requirement: String(c.requirement),
+                alignment: ['Strong', 'Partial', 'Gap'].includes(c.alignment) ? c.alignment : 'Gap',
+                note: typeof c.note === 'string' ? c.note : '',
+              }))
+          : [],
+      }));
+
     const updatePayload = {
       product_match_status: matchStatus,
       matched_product_ids: matchedIds,
       matched_product_names: matchedNames,
       product_match_summary: result.summary || '',
+      product_alignment: productAlignment,
       product_match_checked_at: new Date().toISOString(),
     };
 

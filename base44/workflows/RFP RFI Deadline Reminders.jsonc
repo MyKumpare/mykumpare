@@ -1,0 +1,45 @@
+{
+  "name": "RFP/RFI Deadline Reminders",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "0 6 * * *",
+      "one_time_date": null,
+      "timezone": "America/New_York",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "description": "Daily 48-hour deadline alert for RFP/RFI records. Finds open, active proposals due today or tomorrow, emails a digest to the app admins, and stamps each record so it is alerted only once.",
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "rfp_rfi_deadline_reminders",
+      "version": "1",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "send_reminders": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "sendRfpRfiDeadlineReminders",
+            "args": {}
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Send 48-hour RFP/RFI deadline alerts",
+            "description": "Emails admins about proposals due within 48 hours and stamps each record to deduplicate"
+          }
+        }
+      }
+    ]
+  }
+}

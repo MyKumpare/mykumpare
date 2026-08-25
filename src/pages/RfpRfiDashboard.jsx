@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Loader2, Filter, ArrowUpDown, FileSearch, LayoutDashboard, Building2,
-  Clock, CheckCircle2, FolderOpen, FileDown,
+  Clock, CheckCircle2, FolderOpen, FileDown, AlertTriangle,
 } from "lucide-react";
 import FirmRfpRfiCard from "@/components/firms/FirmRfpRfiCard";
 import RfpRfiByFirmTypeChart from "@/components/firms/RfpRfiByFirmTypeChart";
@@ -146,9 +146,22 @@ export default function RfpRfiDashboard({ inline = false }) {
     }
   };
 
+  const dueSoonCount = useMemo(() => {
+    const today = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
+    today.setHours(0, 0, 0, 0);
+    return active.filter((r) => {
+      if (!r.due_date || r.status !== "Open") return false;
+      const due = new Date(r.due_date + "T00:00:00");
+      due.setHours(0, 0, 0, 0);
+      const days = Math.round((due - today) / (1000 * 60 * 60 * 24));
+      return days === 0 || days === 1;
+    }).length;
+  }, [active]);
+
   const stats = [
     { label: "Total", value: active.length, icon: FolderOpen, color: "text-gray-700", bg: "bg-gray-100" },
     { label: "Open", value: counts.Open, icon: Clock, color: "text-emerald-700", bg: "bg-emerald-100" },
+    { label: "Due ≤48h", value: dueSoonCount, icon: AlertTriangle, color: "text-orange-700", bg: "bg-orange-100" },
     { label: "Closed", value: counts.Closed, icon: CheckCircle2, color: "text-red-700", bg: "bg-red-100" },
   ];
 
@@ -171,7 +184,7 @@ export default function RfpRfiDashboard({ inline = false }) {
 
       <div className={inline ? "space-y-4" : "max-w-6xl mx-auto px-4 pt-4 space-y-4"}>
         {/* Stat cards */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {stats.map((s) => {
             const Icon = s.icon;
             return (

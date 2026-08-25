@@ -4,12 +4,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import {
   FileText, Pencil, Trash2, ExternalLink, CalendarDays, CalendarClock,
-  HelpCircle, CalendarPlus, FileDown, Paperclip, PackageCheck, StickyNote, History,
+  HelpCircle, CalendarPlus, FileDown, Paperclip, PackageCheck, StickyNote, History, GitCompare, Clock,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "@/components/ui/use-toast";
 import { progressStyle, decisionStyle, productMatchStyle } from "./rfpRfiProgress";
 import RfpRfiVersionHistoryDialog from "./RfpRfiVersionHistoryDialog";
+import RfpRfiAlignmentDialog from "./RfpRfiAlignmentDialog";
 
 const TYPE_STYLES = {
   RFP: "bg-primary/15 text-primary border-primary/30",
@@ -32,9 +33,25 @@ function fmt(d) {
   }
 }
 
+// True when the due date is today or tomorrow (within the 48-hour alert window).
+function isDueWithin48h(dueDate) {
+  if (!dueDate) return false;
+  try {
+    const today = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
+    today.setHours(0, 0, 0, 0);
+    const due = new Date(dueDate + "T00:00:00");
+    due.setHours(0, 0, 0, 0);
+    const days = Math.round((due - today) / (1000 * 60 * 60 * 24));
+    return days === 0 || days === 1;
+  } catch {
+    return false;
+  }
+}
+
 export default function FirmRfpRfiCard({ record, onEdit }) {
   const queryClient = useQueryClient();
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [compareOpen, setCompareOpen] = useState(false);
 
   const handleDelete = async () => {
     if (!confirm("Delete this RFP/RFI record?")) return;
@@ -63,6 +80,14 @@ export default function FirmRfpRfiCard({ record, onEdit }) {
           <h4 className="font-semibold text-sm text-gray-800 truncate">{record.title}</h4>
         </div>
         <div className="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={() => setCompareOpen(true)}
+            className="p-1 rounded hover:bg-gray-100 text-primary"
+            title="Compare product alignment"
+          >
+            <GitCompare className="w-3.5 h-3.5" />
+          </button>
           <button
             type="button"
             onClick={() => setHistoryOpen(true)}
@@ -96,6 +121,12 @@ export default function FirmRfpRfiCard({ record, onEdit }) {
           <Badge variant="outline" className={`text-[10px] gap-1 ${productMatchStyle(record.product_match_status)}`}>
             <PackageCheck className="w-2.5 h-2.5" />
             {record.product_match_status}
+          </Badge>
+        )}
+        {isDueWithin48h(record.due_date) && record.status === "Open" && (
+          <Badge variant="outline" className="text-[10px] gap-1 bg-orange-100 text-orange-700 border-orange-200">
+            <Clock className="w-2.5 h-2.5" />
+            Due ≤48h
           </Badge>
         )}
       </div>
@@ -169,6 +200,11 @@ export default function FirmRfpRfiCard({ record, onEdit }) {
       <RfpRfiVersionHistoryDialog
         open={historyOpen}
         onClose={() => setHistoryOpen(false)}
+        record={record}
+      />
+      <RfpRfiAlignmentDialog
+        open={compareOpen}
+        onClose={() => setCompareOpen(false)}
         record={record}
       />
     </div>

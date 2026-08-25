@@ -135,10 +135,75 @@
       "type": "string",
       "description": "AI-generated explanation of the product match \u2014 which products fit and why, or why none fit."
     },
+    "product_alignment": {
+      "type": "array",
+      "description": "Detailed feature-by-feature alignment breakdown produced by the product-match check. One entry per plausible-fit product, scoring how well that product's features satisfy each key requirement of the opportunity (Strong / Partial / Gap). Powers the 'Compare Alignment' view in the RFP/RFI dashboard. Empty when no product fits (No Match) or the match has not been run.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "description": "ID of the candidate product."
+          },
+          "product_name": {
+            "type": "string",
+            "description": "Name of the candidate product (denormalized)."
+          },
+          "overall_fit": {
+            "type": "string",
+            "enum": [
+              "Strong",
+              "Partial",
+              "Gap"
+            ],
+            "description": "Overall alignment of this product with the opportunity. 'Strong' = clearly fits; 'Partial' = close but imperfect; 'Gap' = does not fit."
+          },
+          "criteria": {
+            "type": "array",
+            "description": "Per-requirement alignment scores. Each entry pairs a key requirement of the opportunity (e.g. asset class, geography, style, mandate size, vehicle) with a strength and a short note.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "requirement": {
+                  "type": "string",
+                  "description": "The key requirement being scored (e.g. 'Asset Class', 'Geography', 'Investment Style')."
+                },
+                "alignment": {
+                  "type": "string",
+                  "enum": [
+                    "Strong",
+                    "Partial",
+                    "Gap"
+                  ],
+                  "description": "How well this product satisfies this requirement."
+                },
+                "note": {
+                  "type": "string",
+                  "description": "Short explanation of the alignment (e.g. 'Emerging markets equity, matches EM mandate')."
+                }
+              },
+              "required": [
+                "requirement",
+                "alignment"
+              ]
+            }
+          }
+        },
+        "required": [
+          "product_id",
+          "overall_fit"
+        ]
+      }
+    },
     "product_match_checked_at": {
       "type": "string",
       "format": "date-time",
       "description": "Timestamp when the product match was last run (ISO-8601)."
+    },
+    "deadline_alert_sent_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the 48-hour deadline alert email was last sent for this record (set by the 'RFP/RFI Deadline Reminders' workflow). Used to deduplicate alerts so the team is notified once per record as its deadline enters the 48-hour window."
     },
     "version_history": {
       "type": "array",
