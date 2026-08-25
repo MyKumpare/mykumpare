@@ -395,7 +395,7 @@ export default function Home() {
       base44.entities.FirmDocument.subscribe(() => invalidate([["firm_documents_search"]])),
       base44.entities.Analysis.subscribe(() => invalidate([["analyses"]])),
       base44.entities.Benchmark.subscribe(() => invalidate([["benchmarks"]])),
-      base44.entities.DueDiligence.subscribe(() => invalidate([["due-diligence-search"], ["due-diligence-all"]])),
+      base44.entities.DueDiligence.subscribe(() => invalidate([["due-diligence-search"], ["due-diligence-all"], ["picker_count", "DueDiligence"]])),
       base44.entities.Questionnaire.subscribe(() => invalidate([["questionnaires"], ["picker_count", "Questionnaire"]])),
       base44.entities.CustomReport.subscribe(() => invalidate([["custom_reports_search"], ["custom_reports"]])),
       base44.entities.BoardMeeting.subscribe(() => invalidate([["board-meetings-all"]])),

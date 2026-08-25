@@ -772,8 +772,11 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
         due_diligence_id: editingRecord.id,
       });
       queryClient.invalidateQueries({ queryKey: ["due-diligence"] });
+      queryClient.invalidateQueries({ queryKey: ["due-diligence-all"] });
+      queryClient.invalidateQueries({ queryKey: ["picker_count", "DueDiligence"] });
       queryClient.invalidateQueries({ queryKey: ["dd-stage-note-versions"] });
       queryClient.invalidateQueries({ queryKey: ["dd-notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
       setShowDeleteConfirm(false);
       onOpenChange(false);
       if (onDelete) onDelete(editingRecord.id);
