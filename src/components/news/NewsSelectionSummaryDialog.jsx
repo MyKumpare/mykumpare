@@ -9,6 +9,7 @@ import { toast } from "@/components/ui/use-toast";
 import { generateNewsSummaryPdf } from "./newsSummaryPdf";
 import { sendSummaryEmail } from "./newsSummaryEmail";
 import NewsChatDialog from "./NewsChatDialog";
+import ReportBrandingFooter from "@/components/reports/ReportBrandingFooter";
 
 // Summarizes a user-selected set of news articles (no date-range filter —
 // the user already chose exactly which items to include).
@@ -193,6 +194,7 @@ Write a 3-5 sentence executive summary noting the overall alert level, the overa
               </div>
             </div>
           )}
+          <ReportBrandingFooter />
         </div>
 
         {report && emailOpen && (

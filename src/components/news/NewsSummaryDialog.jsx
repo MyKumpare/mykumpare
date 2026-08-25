@@ -11,6 +11,7 @@ import { toast } from "@/components/ui/use-toast";
 import { generateNewsSummaryPdf } from "./newsSummaryPdf";
 import { sendSummaryEmail } from "./newsSummaryEmail";
 import NewsChatDialog from "./NewsChatDialog";
+import ReportBrandingFooter from "@/components/reports/ReportBrandingFooter";
 
 // Shared news summary dialog for a firm or contact.
 // props: open, onOpenChange, newsItems (active, non-deleted), targetType ("firm"|"contact"), targetLabel
@@ -258,6 +259,7 @@ Write a 3-5 sentence executive summary noting the overall alert level, the overa
               </div>
             </div>
           )}
+          <ReportBrandingFooter />
         </div>
 
         {report && emailOpen && (

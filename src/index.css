@@ -202,4 +202,21 @@ textarea {
     page-break-before: auto;
     break-before: auto;
   }
+
+  /* "Powered by MyKumpare" badge — pinned to the lower-left of every printed page */
+  .mykumpare-brand-footer,
+  .mykumpare-brand-footer * {
+    visibility: visible !important;
+  }
+
+  .mykumpare-brand-footer {
+    position: fixed !important;
+    bottom: 6mm !important;
+    left: 10mm !important;
+    top: auto !important;
+    width: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+  }
 }

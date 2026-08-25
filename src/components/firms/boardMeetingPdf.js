@@ -1,4 +1,5 @@
 import { jsPDF } from "jspdf";
+import { drawMyKumpareBranding } from "../reports/reportBranding";
 
 const FORMAT_LABEL = { "in-person": "In-Person", virtual: "Virtual", hybrid: "Hybrid", unknown: "—" };
 const SESSION_LABEL = { public_meeting: "Public Meeting", closed_session: "Closed Session", unknown: "—" };
@@ -207,10 +208,11 @@ export function generateBoardMeetingPdf(meeting) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     doc.setTextColor(148, 163, 184);
-    doc.text(`Board Meeting Summary — ${meeting.firm_name || ""}`, margin, pageH - 20);
+    doc.text(`Board Meeting Summary — ${meeting.firm_name || ""}`, margin, pageH - 36);
     doc.text(`Page ${i} of ${pageCount}`, pageW - margin, pageH - 20, { align: "right" });
   }
 
+  drawMyKumpareBranding(doc, { margin: 48 });
   const safeName = (meeting.title || "board-meeting").replace(/[^a-z0-9]+/gi, "-").toLowerCase();
   doc.save(`${safeName}.pdf`);
 }

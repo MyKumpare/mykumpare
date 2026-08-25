@@ -1,4 +1,5 @@
 import { jsPDF } from "jspdf";
+import { drawMyKumpareBranding } from "../reports/reportBranding";
 
 const T = {
   margin: 48,
@@ -182,6 +183,7 @@ export function exportAgentConversationPdf({ title, agentName, messages }) {
     doc.text(`${i} / ${pages}`, pageW - T.margin, pageH - 20, { align: "right" });
   }
 
+  drawMyKumpareBranding(doc, { margin: T.margin });
   const safe = (title || "agent-report").replace(/[^a-z0-9]+/gi, "-").toLowerCase().replace(/^-|-$/g, "");
   doc.save(`${safe || "agent-report"}.pdf`);
 }

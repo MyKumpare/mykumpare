@@ -1,4 +1,5 @@
 import { jsPDF } from "jspdf";
+import { drawMyKumpareBranding } from "../reports/reportBranding";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Reusable News PDF Template
@@ -173,12 +174,12 @@ export function createNewsPdfDoc(overrides = {}) {
       doc.setFontSize(theme.tinySize);
       doc.setFont(theme.fontFamily, "normal");
       doc.setTextColor(theme.footer[0], theme.footer[1], theme.footer[2]);
-      if (contextLine) doc.text(contextLine, margin, pageH - 24);
-      doc.text(`Page ${i} of ${pageCount}`, pageW - margin, pageH - 24, { align: "right" });
+      if (contextLine) doc.text(contextLine, margin, pageH - 40);
+      doc.text(`Page ${i} of ${pageCount}`, pageW - margin, pageH - 40, { align: "right" });
     }
   };
 
-  const save = (filename) => doc.save(filename);
+  const save = (filename) => { drawMyKumpareBranding(doc, { margin }); doc.save(filename); };
 
   return {
     doc, theme, pageW, pageH, margin, contentW,

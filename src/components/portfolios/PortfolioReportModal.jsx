@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { format, parseISO, parse } from "date-fns";
 import { Download, Search, FileText, TrendingUp, DollarSign, Loader2 } from "lucide-react";
 import PortfolioPdfSummary from "./PortfolioPdfSummary";
+import ReportBrandingFooter from "@/components/reports/ReportBrandingFooter";
 
 function buildLevelOptions(portfolio) {
   const opts = [{ value: "all", label: "All Levels", refId: "" }];
@@ -405,6 +406,8 @@ export default function PortfolioReportModal({ portfolio, open, onOpenChange }) 
         <p className="text-xs text-gray-400">
           {results.length} record{results.length !== 1 ? "s" : ""} found
         </p>
+
+        <ReportBrandingFooter />
 
         <DialogFooter className="gap-2 pt-2 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)}>

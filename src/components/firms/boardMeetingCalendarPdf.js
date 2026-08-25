@@ -1,4 +1,5 @@
 import { jsPDF } from "jspdf";
+import { drawMyKumpareBranding } from "../reports/reportBranding";
 
 function fmtDate(d) {
   if (!d) return "—";
@@ -152,9 +153,10 @@ export function generateBoardMeetingCalendarPdf(meetings, { filters } = {}) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7);
     doc.setTextColor(148, 163, 184);
-    doc.text("Board Meeting Calendar Report", margin, pageH - 16);
+    doc.text("Board Meeting Calendar Report", margin, pageH - 34);
     doc.text(`Page ${i} of ${pageCount}`, pageW - margin, pageH - 16, { align: "right" });
   }
 
+  drawMyKumpareBranding(doc, { margin: 40 });
   doc.save(`board-meeting-calendar-${new Date().toISOString().slice(0, 10)}.pdf`);
 }

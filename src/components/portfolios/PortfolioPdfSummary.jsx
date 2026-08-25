@@ -242,9 +242,13 @@ const PortfolioPdfSummary = forwardRef(function PortfolioPdfSummary({ portfolio 
       </div>
 
       {/* Footer */}
-      <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: "8px", marginTop: "16px" }}>
-        <p style={{ fontSize: "9px", color: "#9ca3af", textAlign: "center" }}>
-          MyKumpare Portfolio Report — {portfolio.portfolio_name} — Generated {format(new Date(), "MM/dd/yyyy h:mm a")}
+      <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: "8px", marginTop: "16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <img src="/icon.svg" alt="MyKumpare" style={{ width: "16px", height: "16px", borderRadius: "4px" }} />
+          <span style={{ fontSize: "9px", color: "#6b7280" }}>Powered by <span style={{ fontWeight: 700, color: "#4f46e5" }}>MyKumpare</span></span>
+        </div>
+        <p style={{ fontSize: "9px", color: "#9ca3af", textAlign: "right" }}>
+          {portfolio.portfolio_name} — Generated {format(new Date(), "MM/dd/yyyy h:mm a")}
         </p>
       </div>
     </div>

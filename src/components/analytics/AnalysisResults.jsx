@@ -6,6 +6,8 @@ import { MultiProductResults, SingleProductResult } from "./MultiProductResults"
 import ReportDownloadModal from "./ReportDownloadModal";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import ReportBrandingFooter from "@/components/reports/ReportBrandingFooter";
+import { drawMyKumpareBranding } from "@/components/reports/reportBranding";
 
 function defaultChartType(pr) {
   if (pr.isRolling) return "line";
@@ -127,6 +129,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
         pdf.setFontSize(8); pdf.setTextColor(150,150,150);
         pdf.text(`Page ${i+2} of ${totalPages}`, pgW - margin, pgH - 12, { align: 'right' });
       });
+      drawMyKumpareBranding(pdf, { margin: 28 });
       pdf.save(`${analysis?.name || 'Analysis'}-Results.pdf`);
     } catch (error) { console.error('PDF generation failed:', error); }
     finally { document.body.style.cursor = 'default'; }
@@ -249,6 +252,7 @@ export default function AnalysisResults({ analysis, products, benchmarks, return
           ))
         )}
       </div>
+      <ReportBrandingFooter />
     </div>
   );
 }

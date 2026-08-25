@@ -9,6 +9,7 @@ import {
 import { DATA_SOURCES } from "./reportConfig";
 import { buildTableRows, sortData, runComputations, generateCSV, downloadCSV } from "./reportEngine";
 import { useFirmOwner } from "@/components/admin/useFirmOwner";
+import ReportBrandingFooter from "@/components/reports/ReportBrandingFooter";
 
 const CHART_COLORS = ["#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#ef4444", "#6366f1", "#14b8a6"];
 
@@ -308,6 +309,8 @@ export default function ReportResults({ config, data, onBack }) {
           <ReportTable rows={tableRows} fields={config.selected_fields} dataSourceKey={config.data_source} />
         </div>
       )}
+
+      <ReportBrandingFooter />
     </div>
   );
 }

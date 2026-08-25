@@ -1,5 +1,6 @@
 import { jsPDF } from "jspdf";
 import { format, parseISO } from "date-fns";
+import { drawMyKumpareBranding } from "../reports/reportBranding";
 
 function safe(v) {
   return v || "";
@@ -112,5 +113,6 @@ export function downloadConferenceTravelPdf(conferences, { filtersLabel } = {}) 
     doc.text(`Page ${p} of ${pageCount}`, pageW - margin - 60, pageH - 16);
   }
 
+  drawMyKumpareBranding(doc, { margin });
   doc.save(`conference-travel-schedule-${format(new Date(), "yyyy-MM-dd")}.pdf`);
 }
