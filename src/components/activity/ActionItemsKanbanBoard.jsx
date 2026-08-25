@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
@@ -6,11 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  KanbanSquare, Search, X, Flame, CalendarClock, Building2, AlertTriangle, Filter,
+  KanbanSquare, Search, X, Flame, CalendarClock, Building2, AlertTriangle, Filter, List, LayoutGrid,
 } from "lucide-react";
 import { format, differenceInCalendarDays } from "date-fns";
 import { toast } from "@/components/ui/use-toast";
 import TaskDetailModal from "@/components/activity/TaskDetailModal";
+import ActionItemsListView from "@/components/activity/ActionItemsListView";
+import { navigateToFirm, navigateToBoardMeeting } from "./actionItemNav";
 
 // Column definitions: key = stored FollowUpTask.status value, label = friendly name.
 const COLUMNS = [
@@ -32,12 +35,14 @@ function dueColor(dueDate) {
 }
 
 export default function ActionItemsKanbanBoard() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [firmFilter, setFirmFilter] = useState("all");
   const [highPriorityOnly, setHighPriorityOnly] = useState(false);
   const [showCancelled, setShowCancelled] = useState(true);
   const [openTaskId, setOpenTaskId] = useState(null);
+  const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "list"
 
   const { data: allTasks = [], isLoading: loadingTasks } = useQuery({
     queryKey: ["action_items_kanban_tasks"],
@@ -145,9 +150,31 @@ export default function ActionItemsKanbanBoard() {
             <Flame className="w-3 h-3" /> {highPriorityCount} high-priority open
           </span>
         )}
+        <div className="ml-auto inline-flex items-center rounded-md border border-gray-200 bg-white p-0.5">
+          <button
+            onClick={() => setViewMode("kanban")}
+            className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded transition-colors ${
+              viewMode === "kanban" ? "bg-indigo-600 text-white" : "text-gray-600 hover:bg-gray-50"
+            }`}
+            title="Kanban board view"
+          >
+            <LayoutGrid className="w-3.5 h-3.5" /> Board
+          </button>
+          <button
+            onClick={() => setViewMode("list")}
+            className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded transition-colors ${
+              viewMode === "list" ? "bg-indigo-600 text-white" : "text-gray-600 hover:bg-gray-50"
+            }`}
+            title="Filterable list view"
+          >
+            <List className="w-3.5 h-3.5" /> List
+          </button>
+        </div>
       </div>
       <p className="text-xs text-gray-500 mb-3">
-        Drag cards across stages to update status. High-priority follow-ups are highlighted so you can move them first.
+        {viewMode === "kanban"
+          ? "Drag cards across stages to update status. High-priority follow-ups are highlighted so you can move them first."
+          : "Filter action items by status, then click a firm or board meeting to jump straight to it."}
       </p>
 
       {/* Filters */}
@@ -201,7 +228,7 @@ export default function ActionItemsKanbanBoard() {
         )}
       </div>
 
-      {/* Board */}
+      {/* Board / List */}
       {loadingTasks ? (
         <div className="flex-1 flex items-center justify-center text-sm text-gray-400">Loading action items…</div>
       ) : actionItems.length === 0 ? (
@@ -214,6 +241,12 @@ export default function ActionItemsKanbanBoard() {
             </p>
           </div>
         </div>
+      ) : viewMode === "list" ? (
+        <ActionItemsListView
+          tasks={filtered}
+          meetings={meetings}
+          onOpenTask={setOpenTaskId}
+        />
       ) : (
         <DragDropContext onDragEnd={onDragEnd}>
           <div className="flex gap-3 overflow-x-auto pb-3 flex-1 min-h-0">
@@ -267,10 +300,17 @@ export default function ActionItemsKanbanBoard() {
                                   <p className="text-[10px] text-gray-400 mt-1 truncate">{t.activity_label}</p>
                                 )}
                                 <div className="flex items-center justify-between gap-1 mt-2 flex-wrap">
-                                  <span className="inline-flex items-center gap-1 text-[10px] text-gray-500">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigateToFirm(navigate, t.originator_firm_id || t.assigned_to_firm_id);
+                                    }}
+                                    className="inline-flex items-center gap-1 text-[10px] text-gray-600 hover:text-indigo-600 hover:underline"
+                                    title="Open firm profile"
+                                  >
                                     <Building2 className="w-3 h-3" />
                                     {t.assigned_to_firm_name || t.originator_firm_name || "—"}
-                                  </span>
+                                  </button>
                                   {t.due_date && (
                                     <span className={`inline-flex items-center gap-1 text-[10px] ${dueColor(t.due_date)}`}>
                                       <CalendarClock className="w-3 h-3" />
@@ -278,6 +318,19 @@ export default function ActionItemsKanbanBoard() {
                                     </span>
                                   )}
                                 </div>
+                                {t.board_meeting_id && meetingById[t.board_meeting_id] && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigateToBoardMeeting(navigate, meetingById[t.board_meeting_id].firm_id);
+                                    }}
+                                    className="mt-1 inline-flex items-center gap-1 text-[10px] text-gray-500 hover:text-indigo-600 hover:underline"
+                                    title="Open board meeting"
+                                  >
+                                    <KanbanSquare className="w-3 h-3" />
+                                    {meetingById[t.board_meeting_id].title}
+                                  </button>
+                                )}
                                 {t.is_high_priority && (
                                   <div className="mt-1.5 inline-flex items-center gap-1 text-[9px] font-semibold text-red-600 bg-red-50 border border-red-200 rounded px-1.5 py-0.5">
                                     <AlertTriangle className="w-2.5 h-2.5" /> HIGH PRIORITY

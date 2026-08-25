@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, ClipboardCheck, FileText, Files, ShieldCheck, X, LayoutDashboard, FlaskConical, MapPin, Camera,   LayoutGrid, PieChart, Bot, ExternalLink, ChevronDown, CalendarDays, Radar, FileBarChart, Mic, Newspaper, Gauge, Users, ScrollText,   Ghost, Upload, Eraser, Tag, UserX, Briefcase, Activity, ArrowRightLeft, UserCheck, Globe } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import AIAssistant from "@/components/ai/AIAssistant";
@@ -89,6 +89,7 @@ function formatContactName(c) {
 export default function Home() {
   const { isAuthenticated, user, navigateToLogin, logout, updateUser } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const firmOwner = useFirmOwner();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingFirm, setEditingFirm] = useState(null);
@@ -104,6 +105,7 @@ export default function Home() {
   const [searchFocused, setSearchFocused] = useState(false);
   const [ownershipNavTarget, setOwnershipNavTarget] = useState(null); // { firmId, ownershipId }
   const [documentsNavTarget, setDocumentsNavTarget] = useState(null); // firmId to open at Documents tab
+  const [boardMeetingNavTarget, setBoardMeetingNavTarget] = useState(null); // firmId to open at Board Meetings tab
 
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -377,6 +379,26 @@ export default function Home() {
     enabled: searchFocused,
   });
 
+  // Handle cross-page navigation requests (e.g. from the Action Items board):
+  // location.state.openFirmId opens that firm's profile, and location.state.initialTab
+  // opens it at a specific tab (e.g. "board-meetings").
+  useEffect(() => {
+    const navState = location.state;
+    if (!navState || !navState.openFirmId) return;
+    const firm = firms.find(f => f.id === navState.openFirmId && !f.deleted_at);
+    if (!firm) return;
+    setEditingFirm(firm);
+    setPreselectedType(null);
+    setOwnershipNavTarget(null);
+    setDocumentsNavTarget(null);
+    setBoardMeetingNavTarget(navState.initialTab === "board-meetings" ? firm.id : null);
+    setReturnToProduct(false);
+    setReturnToContactFromFirm(false);
+    setDialogOpen(true);
+    // Clear the state so a refresh or back-navigation doesn't re-trigger.
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.state, firms, navigate]);
+
   const deletedCount = deletedFirms.length + deletedProducts.length + deletedContacts.length + deletedPortfolios.length;
 
   // Realtime sync: keep every signed-in client in sync so an update made by one
@@ -564,6 +586,7 @@ export default function Home() {
     setPreselectedType(null);
     setOwnershipNavTarget(null);
     setDocumentsNavTarget(null);
+    setBoardMeetingNavTarget(null);
     setReturnToProduct(fromProduct);
     setReturnToContactFromFirm(fromContact);
     if (fromProduct) setProductDialogOpen(false);
@@ -1285,6 +1308,7 @@ export default function Home() {
             setPreselectedType(null);
             setOwnershipNavTarget(null);
             setDocumentsNavTarget(null);
+            setBoardMeetingNavTarget(null);
             if (returnToProduct) {
               setReturnToProduct(false);
               setProductDialogOpen(true);
@@ -1300,7 +1324,7 @@ export default function Home() {
         editingFirm={editingFirm}
         preselectedType={preselectedType}
         existingFirms={firms}
-        defaultTab={ownershipNavTarget ? "ownership" : documentsNavTarget ? "documents" : undefined}
+        defaultTab={ownershipNavTarget ? "ownership" : documentsNavTarget ? "documents" : boardMeetingNavTarget ? "board-meetings" : undefined}
         defaultOwnershipId={ownershipNavTarget?.ownershipId}
       />
 
