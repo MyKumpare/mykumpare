@@ -927,6 +927,31 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                     ))}
                   </p>
                 )}
+                {/* Role & tag chips — visible at a glance in view mode */}
+                {(investmentTeamRoles.length > 0 || tags.length > 0 || contactRoles.length > 0 || contactFirmRoles.length > 0) && (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {investmentTeamRoles.map((r) => (
+                      <span key={`itr-${r}`} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
+                        <Briefcase className="w-2.5 h-2.5" /> {r}
+                      </span>
+                    ))}
+                    {contactRoles.map((r) => (
+                      <span key={`cr-${r}`} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-violet-50 text-violet-700 border border-violet-100">
+                        {r}
+                      </span>
+                    ))}
+                    {contactFirmRoles.map((r) => (
+                      <span key={`cfr-${r}`} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                        {r}
+                      </span>
+                    ))}
+                    {tags.map((t) => (
+                      <span key={`tag-${t}`} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-pink-50 text-pink-700 border border-pink-100">
+                        <Tag className="w-2.5 h-2.5" /> {t}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           ) : editingContact ? (
