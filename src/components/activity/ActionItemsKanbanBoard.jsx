@@ -177,7 +177,8 @@ export default function ActionItemsKanbanBoard() {
           : "Filter action items by status, then click a firm or board meeting to jump straight to it."}
       </p>
 
-      {/* Filters */}
+      {/* Filters — only shown in kanban view (list view has its own filter bar) */}
+      {viewMode === "kanban" && (
       <div className="flex flex-wrap items-center gap-2 mb-3">
         <div className="relative flex-1 min-w-[180px] max-w-xs">
           <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
@@ -227,6 +228,7 @@ export default function ActionItemsKanbanBoard() {
           </Button>
         )}
       </div>
+      )}
 
       {/* Board / List */}
       {loadingTasks ? (
@@ -301,15 +303,19 @@ export default function ActionItemsKanbanBoard() {
                                 )}
                                 <div className="flex items-center justify-between gap-1 mt-2 flex-wrap">
                                   <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      navigateToFirm(navigate, t.originator_firm_id || t.assigned_to_firm_id);
-                                    }}
-                                    className="inline-flex items-center gap-1 text-[10px] text-gray-600 hover:text-indigo-600 hover:underline"
-                                    title="Open firm profile"
+                                   onClick={(e) => {
+                                     e.stopPropagation();
+                                     const m = t.board_meeting_id ? meetingById[t.board_meeting_id] : null;
+                                     navigateToFirm(navigate, t.originator_firm_id || t.assigned_to_firm_id || m?.firm_id);
+                                   }}
+                                   className="inline-flex items-center gap-1 text-[10px] text-gray-600 hover:text-indigo-600 hover:underline"
+                                   title="Open firm profile"
                                   >
-                                    <Building2 className="w-3 h-3" />
-                                    {t.assigned_to_firm_name || t.originator_firm_name || "—"}
+                                   <Building2 className="w-3 h-3" />
+                                   {(() => {
+                                     const m = t.board_meeting_id ? meetingById[t.board_meeting_id] : null;
+                                     return t.assigned_to_firm_name || t.originator_firm_name || m?.firm_name || "—";
+                                   })()}
                                   </button>
                                   {t.due_date && (
                                     <span className={`inline-flex items-center gap-1 text-[10px] ${dueColor(t.due_date)}`}>
