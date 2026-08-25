@@ -140,6 +140,57 @@
       "format": "date-time",
       "description": "Timestamp when the product match was last run (ISO-8601)."
     },
+    "version_history": {
+      "type": "array",
+      "description": "Version history log tracking updates and previous drafts of this RFP/RFI. Each entry records a single field change with its previous and new values, who made the change, when, and an optional note. File attachment changes are tracked so previous proposal drafts remain visible in the history.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "version_number": {
+            "type": "integer",
+            "description": "Sequential version number for this change (1-based, increments per change)."
+          },
+          "field": {
+            "type": "string",
+            "description": "Name of the field that changed."
+          },
+          "field_label": {
+            "type": "string",
+            "description": "Human-readable label for the changed field."
+          },
+          "previous_value": {
+            "description": "Value of the field before the change (summarized for large/array fields)."
+          },
+          "new_value": {
+            "description": "Value of the field after the change (summarized for large/array fields)."
+          },
+          "changed_by_id": {
+            "type": "string",
+            "description": "User ID of the person who made the change."
+          },
+          "changed_by_name": {
+            "type": "string",
+            "description": "Display name of the person who made the change (denormalized)."
+          },
+          "changed_date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when the change was made (ISO-8601)."
+          },
+          "note": {
+            "type": "string",
+            "description": "Optional note describing the change."
+          }
+        },
+        "required": [
+          "field",
+          "changed_date"
+        ]
+      }
+    },
     "scrub_batch_id": {
       "type": "string",
       "description": "ID of the scrape batch that produced this record (for deduplication)."

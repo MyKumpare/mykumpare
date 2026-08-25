@@ -4,10 +4,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import {
   FileText, Pencil, Trash2, ExternalLink, CalendarDays, CalendarClock,
-  HelpCircle, CalendarPlus, FileDown, Paperclip, PackageCheck, StickyNote,
+  HelpCircle, CalendarPlus, FileDown, Paperclip, PackageCheck, StickyNote, History,
 } from "lucide-react";
+import { useState } from "react";
 import { toast } from "@/components/ui/use-toast";
 import { progressStyle, decisionStyle, productMatchStyle } from "./rfpRfiProgress";
+import RfpRfiVersionHistoryDialog from "./RfpRfiVersionHistoryDialog";
 
 const TYPE_STYLES = {
   RFP: "bg-primary/15 text-primary border-primary/30",
@@ -32,6 +34,7 @@ function fmt(d) {
 
 export default function FirmRfpRfiCard({ record, onEdit }) {
   const queryClient = useQueryClient();
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const handleDelete = async () => {
     if (!confirm("Delete this RFP/RFI record?")) return;
@@ -60,6 +63,17 @@ export default function FirmRfpRfiCard({ record, onEdit }) {
           <h4 className="font-semibold text-sm text-gray-800 truncate">{record.title}</h4>
         </div>
         <div className="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={() => setHistoryOpen(true)}
+            className="p-1 rounded hover:bg-gray-100 text-gray-500 relative"
+            title="Version history"
+          >
+            <History className="w-3.5 h-3.5" />
+            {(record.version_history?.length > 0) && (
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary border border-white" />
+            )}
+          </button>
           <button type="button" onClick={() => onEdit(record)} className="p-1 rounded hover:bg-gray-100 text-gray-500" title="Edit">
             <Pencil className="w-3.5 h-3.5" />
           </button>
@@ -151,6 +165,12 @@ export default function FirmRfpRfiCard({ record, onEdit }) {
           <span className="text-xs text-gray-400 italic">No link or file attached</span>
         )}
       </div>
+
+      <RfpRfiVersionHistoryDialog
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        record={record}
+      />
     </div>
   );
 }

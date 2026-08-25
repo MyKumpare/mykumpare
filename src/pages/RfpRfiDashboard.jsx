@@ -26,7 +26,7 @@ const FIRM_TYPE_ORDER = [
  * status filter (Open / Closed / All) and a chart of open proposals by firm
  * type so the user can spot where the most active opportunities are.
  */
-export default function RfpRfiDashboard() {
+export default function RfpRfiDashboard({ inline = false }) {
   const [statusFilter, setStatusFilter] = useState("Open");
   const [sortBy, setSortBy] = useState("due_asc");
   const [search, setSearch] = useState("");
@@ -135,8 +135,9 @@ export default function RfpRfiDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-10">
-      {/* Header */}
+    <div className={inline ? "pb-6" : "min-h-screen bg-gray-50 pb-10"}>
+      {/* Header — hidden when rendered inline inside the Monitor page */}
+      {!inline && (
       <div className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-2">
           <Button variant="ghost" size="sm" onClick={() => window.history.back()} className="gap-1 text-gray-600">
@@ -148,8 +149,9 @@ export default function RfpRfiDashboard() {
           </div>
         </div>
       </div>
+      )}
 
-      <div className="max-w-6xl mx-auto px-4 pt-4 space-y-4">
+      <div className={inline ? "space-y-4" : "max-w-6xl mx-auto px-4 pt-4 space-y-4"}>
         {/* Stat cards */}
         <div className="grid grid-cols-3 gap-2">
           {stats.map((s) => {

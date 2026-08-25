@@ -15,6 +15,7 @@ import {
 import { Loader2, Upload, X, FileDown, Sparkles, PackageCheck } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { PROGRESS_OPTIONS, DECISION_OPTIONS, decisionStyle, productMatchStyle } from "./rfpRfiProgress";
+import { buildVersionEntries, appendVersionHistory } from "./rfpRfiVersionHistory";
 
 const TYPE_OPTIONS = ["RFP", "RFI", "Unknown"];
 
@@ -119,8 +120,15 @@ export default function AddRfpRfiDialog({ open, onClose, firmId, firmName, editi
       };
 
       if (isEdit) {
+        const baseVersion = (editingRecord.version_history || []).reduce(
+          (max, e) => Math.max(max, e.version_number || 0), 0
+        );
+        const newEntries = buildVersionEntries(editingRecord, form, user, baseVersion);
+        if (newEntries.length) {
+          payload.version_history = appendVersionHistory(editingRecord.version_history, newEntries);
+        }
         await base44.entities.FirmRfpRfi.update(editingRecord.id, payload);
-        toast({ title: "RFP/RFI updated" });
+        toast({ title: "RFP/RFI updated", description: newEntries.length ? `${newEntries.length} change${newEntries.length === 1 ? "" : "s"} recorded in version history.` : "" });
       } else {
         await base44.entities.FirmRfpRfi.create({
           ...payload,

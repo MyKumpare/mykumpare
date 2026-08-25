@@ -1033,7 +1033,7 @@ export default function Home() {
           onOpenBoardMeetingAlerts={() => navigate("/Monitor?tab=board-meeting-alerts")}
           onOpenBoardMeetingDashboard={() => navigate("/BoardMeetingDashboard")}
           onOpenActionItemsKanban={() => navigate("/ActionItemsKanban")}
-          onOpenRfpRfiDashboard={() => navigate("/RfpRfiDashboard")}
+          onOpenRfpRfiDashboard={() => navigate("/Monitor?tab=rfp-rfi")}
           actionItemsCount={actionItemsCount}
           onOpenMonitor={() => navigate("/Monitor")}
           onOpenActivity={() => setActivityPickerOpen(true)}

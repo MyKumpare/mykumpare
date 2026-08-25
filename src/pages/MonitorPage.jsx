@@ -13,6 +13,8 @@ import ActivityDetailModal from "@/components/activity/ActivityDetailModal";
 import ActivityTimeline from "@/components/activity/ActivityTimeline";
 import ConferencesTab from "@/components/conferences/ConferencesTab";
 import BoardMeetingAlertsTab from "@/components/firms/BoardMeetingAlertsTab";
+import RfpRfiDashboard from "@/pages/RfpRfiDashboard";
+import { FileSearch } from "lucide-react";
 
 const TABS = [
   { key: "news", label: "News Alerts", icon: Newspaper },
@@ -21,6 +23,7 @@ const TABS = [
   { key: "conferences", label: "Conferences", icon: CalendarDays },
   { key: "board-meeting-alerts", label: "Bd Mtg Alerts", icon: Bell },
   { key: "timeline", label: "Timeline", icon: ActivityIcon },
+  { key: "rfp-rfi", label: "RFP/RFI", icon: FileSearch },
 ];
 
 export default function MonitorPage() {
@@ -144,6 +147,9 @@ export default function MonitorPage() {
         )}
         {tab === "board-meeting-alerts" && (
           <BoardMeetingAlertsTab onFirmClick={() => navigate("/")} />
+        )}
+        {tab === "rfp-rfi" && (
+          <RfpRfiDashboard inline />
         )}
       </div>
 
