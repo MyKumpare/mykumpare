@@ -18,9 +18,10 @@
         "questionnaire_sent",
         "questionnaire_submitted",
         "questionnaire_completed",
-        "external_chat"
+        "external_chat",
+        "coverage_assignment"
       ],
-      "description": "Type of notification. 'external_chat' is a chat message from an external firm user to the primary analyst."
+      "description": "Type of notification. 'external_chat' is a chat message from an external firm user to the primary analyst. 'coverage_assignment' is an alert to an analyst when they are newly assigned as primary or secondary analyst on a due diligence record (or a new firm is added to their coverage)."
     },
     "title": {
       "type": "string",
@@ -63,6 +64,14 @@
     "external_chat_id": {
       "type": "string",
       "description": "ID of the related ExternalChat record (for external_chat notifications)"
+    },
+    "coverage_role": {
+      "type": "string",
+      "enum": [
+        "primary",
+        "secondary"
+      ],
+      "description": "For 'coverage_assignment' notifications: whether the analyst was assigned as primary or secondary analyst."
     },
     "status": {
       "type": "string",

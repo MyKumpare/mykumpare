@@ -8,8 +8,9 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
 import {
-  Building2, UserCheck, Users, AlertTriangle, Filter, ClipboardList,
+  Building2, UserCheck, Users, AlertTriangle, Filter, ClipboardList, FileDown, Loader2,
 } from "lucide-react";
+import { generateWeeklyCoverageReportPdf } from "@/components/coverage/weeklyCoverageReportPdf";
 
 const LIFECYCLE_STYLES = {
   Pipeline: "bg-blue-50 text-blue-700 border-blue-200",
@@ -39,11 +40,23 @@ function StatCard({ icon: Icon, label, value, color }) {
 
 export default function CoverageManagement() {
   const navigate = useNavigate();
-  const { isLoading, ddRecords, firms, analysts, uncoveredFirms } = useCoverageData();
+  const { isLoading, ddRecords, firms, analysts, uncoveredFirms, contacts } = useCoverageData();
   const [firmFilter, setFirmFilter] = useState("all");
   const [primaryFilter, setPrimaryFilter] = useState("all");
   const [secondaryFilter, setSecondaryFilter] = useState("all");
   const [lifecycleFilter, setLifecycleFilter] = useState("all"); // all | Pipeline | Under Due Diligence | Approved | Funded | Rejected
+  const [downloadingReport, setDownloadingReport] = useState(false);
+
+  const handleDownloadReport = () => {
+    setDownloadingReport(true);
+    try {
+      generateWeeklyCoverageReportPdf({ analysts, uncoveredFirms, firms, ddRecords, contacts: contacts || [] });
+    } catch (e) {
+      console.error("Failed to generate coverage report", e);
+    } finally {
+      setDownloadingReport(false);
+    }
+  };
 
   // Options for the filter dropdowns.
   const firmOptions = useMemo(
@@ -132,6 +145,20 @@ export default function CoverageManagement() {
         <Badge variant="outline" className="text-xs border-emerald-200 bg-emerald-50 text-emerald-700">
           Management View
         </Badge>
+        <Button
+          variant="outline"
+          size="sm"
+          className="ml-auto gap-1.5"
+          onClick={handleDownloadReport}
+          disabled={downloadingReport || isLoading}
+        >
+          {downloadingReport ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <FileDown className="w-3.5 h-3.5" />
+          )}
+          {downloadingReport ? "Generating…" : "Weekly Report"}
+        </Button>
       </div>
 
       {/* Filter bar */}

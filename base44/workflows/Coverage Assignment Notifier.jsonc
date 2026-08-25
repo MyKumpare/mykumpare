@@ -1,0 +1,50 @@
+{
+  "name": "Coverage Assignment Notifier",
+  "description": "Notifies an analyst (via in-app DdNotification) whenever they are newly assigned as primary or secondary analyst on a Due Diligence record, or their coverage assignment changes. Fires on DueDiligence create and update when analyst fields change.",
+  "trigger": {
+    "config": {
+      "trigger_type": "entity",
+      "entity_name": "DueDiligence",
+      "events": [
+        "create",
+        "update"
+      ]
+    },
+    "condition": "${ (.trigger.data.deleted_at // \"\") == \"\" and (.trigger.event_type == \"create\" or any((.trigger.changed_fields // [])[]; . == \"primary_analyst_contact_id\" or . == \"secondary_analyst_contact_id\" or . == \"analyst_history\")) }"
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "coverage_assignment_notifier",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "sync_notifications": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "syncCoverageNotifications",
+            "args": {
+              "due_diligence_id": "${ .trigger.entity_id }",
+              "event_type": "${ .trigger.event_type }",
+              "primary_analyst_contact_id": "${ (.trigger.data.primary_analyst_contact_id // \"\") }",
+              "primary_analyst_name": "${ (.trigger.data.primary_analyst_name // \"\") }",
+              "secondary_analyst_contact_id": "${ (.trigger.data.secondary_analyst_contact_id // \"\") }",
+              "secondary_analyst_name": "${ (.trigger.data.secondary_analyst_name // \"\") }",
+              "firm_name": "${ (.trigger.data.firm_name // \"\") }",
+              "product_name": "${ (.trigger.data.product_name // \"\") }",
+              "old_primary_analyst_contact_id": "${ ((.trigger.old_data // {}).primary_analyst_contact_id // \"\") }",
+              "old_secondary_analyst_contact_id": "${ ((.trigger.old_data // {}).secondary_analyst_contact_id // \"\") }"
+            }
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Sync coverage notifications",
+            "description": "Create in-app alerts for newly assigned analysts"
+          }
+        }
+      }
+    ]
+  }
+}

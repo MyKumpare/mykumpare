@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import {
   UserCheck, Building2, AlertTriangle, Users, ChevronRight, ChevronDown, User,
 } from "lucide-react";
+import CoverageAlertsPanel from "@/components/coverage/CoverageAlertsPanel";
 
 const LIFECYCLE_STYLES = {
   Pipeline: "bg-blue-50 text-blue-700 border-blue-200",
@@ -122,6 +123,9 @@ export default function CoverageTracker() {
         <StatCard icon={Users} label="My Active Assignments" value={myAssignments.length} color="bg-emerald-600" />
         <StatCard icon={AlertTriangle} label="Firms With No Coverage" value={uncoveredFirms.length} color="bg-amber-500" />
       </div>
+
+      {/* Coverage assignment alerts */}
+      <CoverageAlertsPanel contactId={myContactId} />
 
       {/* My covered firms */}
       <Card>
