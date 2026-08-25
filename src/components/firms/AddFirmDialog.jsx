@@ -981,9 +981,15 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     <Dialog open={open} onOpenChange={(v) => { if (!v) guardedClose(); }}>
       <DialogContent
         className="sm:max-w-7xl max-h-[90vh] flex flex-col"
+        onPointerDownOutside={(e) => {
+          if (enrichmentLoading) e.preventDefault();
+          const t = e.target;
+          if (t?.closest?.("[data-toast-viewport]") || (t && !t.isConnected)) e.preventDefault();
+        }}
         onInteractOutside={(e) => {
           if (enrichmentLoading) e.preventDefault();
-          if (e.target?.closest?.("[data-toast-viewport]")) e.preventDefault();
+          const t = e.target;
+          if (t?.closest?.("[data-toast-viewport]") || (t && !t.isConnected)) e.preventDefault();
         }}
         onEscapeKeyDown={(e) => { if (enrichmentLoading) e.preventDefault(); }}
       >
