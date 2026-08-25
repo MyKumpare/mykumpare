@@ -26,6 +26,7 @@ import ProductInvestmentDescriptionTab from "./ProductInvestmentDescriptionTab";
 import ProductReturnsTab from "./ProductReturnsTab";
 import ProductAumHistoryTab from "./ProductAumHistoryTab";
 import ProductAnalyticsTab from "./ProductAnalyticsTab";
+import ProductThirdPartyTab from "./ProductThirdPartyTab";
 import ProductDueDiligenceTab from "./ProductDueDiligenceTab";
 import ConstituentProductMultiSelect from "./ConstituentProductMultiSelect";
 import SubManagerFirmMultiSelect from "./SubManagerFirmMultiSelect";
@@ -112,6 +113,7 @@ export default function AddProductDialog({
   const [investmentDescriptions, setInvestmentDescriptions] = useState({});
   const [constituentProductIds, setConstituentProductIds] = useState([]);
   const [subManagerFirmIds, setSubManagerFirmIds] = useState([]);
+  const [thirdPartyIds, setThirdPartyIds] = useState({ evestment_id: "", custodian_id: "", aapryl_id: "", xponance_internal_id: "" });
   const [addImProductOpen, setAddImProductOpen] = useState(false);
   const [aumDirty, setAumDirty] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -162,6 +164,12 @@ export default function AddProductDialog({
         },
         constituent_product_ids: editingProduct.constituent_product_ids || [],
         sub_manager_firm_ids: editingProduct.sub_manager_firm_ids || [],
+        third_party_ids: {
+          evestment_id: editingProduct.evestment_id || "",
+          custodian_id: editingProduct.custodian_id || "",
+          aapryl_id: editingProduct.aapryl_id || "",
+          xponance_internal_id: editingProduct.xponance_internal_id || "",
+        },
       };
       originalSnapshotRef.current = snapshot;
       setProductType(snapshot.product_type);
@@ -175,6 +183,7 @@ export default function AddProductDialog({
       setInvestmentDescriptions(snapshot.descriptions);
       setConstituentProductIds(snapshot.constituent_product_ids);
       setSubManagerFirmIds(snapshot.sub_manager_firm_ids);
+      setThirdPartyIds(snapshot.third_party_ids);
       setIsEditing(false);
     } else {
       originalSnapshotRef.current = null;
@@ -189,6 +198,7 @@ export default function AddProductDialog({
       setInvestmentDescriptions({});
       setConstituentProductIds([]);
       setSubManagerFirmIds([]);
+      setThirdPartyIds({ evestment_id: "", custodian_id: "", aapryl_id: "", xponance_internal_id: "" });
       setIsEditing(true);
     }
   }, [open]);
@@ -276,6 +286,7 @@ export default function AddProductDialog({
       fundingStatusManual !== originalSnapshotRef.current.funding_status_manual ||
       JSON.stringify(constituentProductIds) !== JSON.stringify(originalSnapshotRef.current.constituent_product_ids || []) ||
       JSON.stringify(subManagerFirmIds) !== JSON.stringify(originalSnapshotRef.current.sub_manager_firm_ids || []) ||
+      JSON.stringify(thirdPartyIds) !== JSON.stringify(originalSnapshotRef.current.third_party_ids || {}) ||
       JSON.stringify(classifications) !== JSON.stringify(originalSnapshotRef.current.classifications) ||
       JSON.stringify(investmentDescriptions.product_biases ?? {}) !== JSON.stringify(originalDescriptions.product_biases ?? {}) ||
       JSON.stringify(investmentDescriptions.benchmarks ?? []) !== JSON.stringify(originalDescriptions.benchmarks ?? []) ||
@@ -292,7 +303,8 @@ export default function AddProductDialog({
     JSON.stringify(classifications) !== JSON.stringify(EMPTY_CLASSIFICATIONS) ||
     Object.keys(investmentDescriptions).length > 0 ||
     constituentProductIds.length > 0 ||
-    subManagerFirmIds.length > 0
+    subManagerFirmIds.length > 0 ||
+    Object.values(thirdPartyIds).some((val) => val.trim() !== "")
   ));
 
   const matchingProducts =
@@ -344,6 +356,10 @@ export default function AddProductDialog({
       inv_desc_product_biases: investmentDescriptions.product_biases || {},
       constituent_product_ids: productType === "Multi-Manager Product" ? constituentProductIds : [],
       sub_manager_firm_ids: productType === "Multi-Manager Product" ? subManagerFirmIds : [],
+      evestment_id: thirdPartyIds.evestment_id || "",
+      custodian_id: thirdPartyIds.custodian_id || "",
+      aapryl_id: thirdPartyIds.aapryl_id || "",
+      xponance_internal_id: thirdPartyIds.xponance_internal_id || "",
     });
     setProductType("");
     setFirmId("");
@@ -355,6 +371,7 @@ export default function AddProductDialog({
     setClassifications(EMPTY_CLASSIFICATIONS);
     setConstituentProductIds([]);
     setSubManagerFirmIds([]);
+    setThirdPartyIds({ evestment_id: "", custodian_id: "", aapryl_id: "", xponance_internal_id: "" });
   };
 
   const handleClose = () => {
@@ -378,6 +395,7 @@ export default function AddProductDialog({
     setInvestmentDescriptions(snap.descriptions);
     setConstituentProductIds(snap.constituent_product_ids);
     setSubManagerFirmIds(snap.sub_manager_firm_ids);
+    setThirdPartyIds(snap.third_party_ids);
     setIsEditing(false);
   };
 
@@ -497,6 +515,7 @@ export default function AddProductDialog({
               <TabsTrigger value="team" disabled={isAddMode}>Investment Team</TabsTrigger>
               <TabsTrigger value="aum-history" disabled={isAddMode}>AUM History</TabsTrigger>
               <TabsTrigger value="returns" disabled={isAddMode}>Returns</TabsTrigger>
+              <TabsTrigger value="third-party" disabled={isAddMode}>3rd Party</TabsTrigger>
               <TabsTrigger value="analytics" disabled={isAddMode}>Analytics</TabsTrigger>
             </TabsList>
 
@@ -838,6 +857,15 @@ export default function AddProductDialog({
                   isEditing={activelyEditing}
                 />
               )}
+            </TabsContent>
+
+            {/* ── 3rd Party Tab ── */}
+            <TabsContent value="third-party">
+              <ProductThirdPartyTab
+                values={thirdPartyIds}
+                onChange={setThirdPartyIds}
+                isEditing={activelyEditing}
+              />
             </TabsContent>
 
             {/* ── Analytics Tab ── */}

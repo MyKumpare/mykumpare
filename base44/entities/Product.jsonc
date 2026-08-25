@@ -95,6 +95,22 @@
         "type": "string"
       }
     },
+    "evestment_id": {
+      "type": "string",
+      "description": "eVestment database identifier for this product (external third-party reference)."
+    },
+    "custodian_id": {
+      "type": "string",
+      "description": "Custodian identifier for this product (external third-party reference)."
+    },
+    "aapryl_id": {
+      "type": "string",
+      "description": "Aapryl platform identifier for this product (external third-party reference)."
+    },
+    "xponance_internal_id": {
+      "type": "string",
+      "description": "Xponance internal identifier for this product (internal tracking reference)."
+    },
     "investment_team": {
       "type": "array",
       "description": "Investment team members associated with this product. Each member has an optional role (e.g. 'Lead Analyst', 'Compliance Officer') assignable via the investment team picker; custom roles can be added.",
