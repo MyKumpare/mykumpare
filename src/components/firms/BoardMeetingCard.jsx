@@ -5,10 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Calendar, MapPin, Video, Users, FileText, ScrollText, AlertTriangle,
-  CheckCircle2, Loader2, ExternalLink, Flag, Trash2, FileDown, ListTodo,
+  CheckCircle2, Loader2, ExternalLink, Flag, Trash2, FileDown, ListTodo, Tag,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { generateBoardMeetingPdf } from "./boardMeetingPdf";
+import TagMentionedFirmDialog from "./TagMentionedFirmDialog";
 
 const FORMAT_LABEL = { "in-person": "In-Person", virtual: "Virtual", hybrid: "Hybrid", unknown: "—" };
 const SESSION_LABEL = { public_meeting: "Public Meeting", closed_session: "Closed Session", unknown: "—" };
@@ -28,6 +29,7 @@ export default function BoardMeetingCard({ meeting, firmId }) {
   const [reviewNotes, setReviewNotes] = useState(meeting.review_notes || "");
   const [savingReview, setSavingReview] = useState(false);
   const [extracting, setExtracting] = useState(false);
+  const [showTagFirm, setShowTagFirm] = useState(false);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["board-meetings", firmId] });
 
@@ -155,14 +157,13 @@ export default function BoardMeetingCard({ meeting, firmId }) {
       {meeting.mentions?.length > 0 && (
         <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-2">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-800">
-            <AlertTriangle className="w-3.5 h-3.5" /> Portfolio mentions detected
+            <AlertTriangle className="w-3.5 h-3.5" /> Firms mentioned in this meeting
           </div>
           <ul className="mt-1 space-y-1">
             {meeting.mentions.map((mt) => (
-              <li key={mt.id} className="text-[11px] text-amber-800">
+              <li key={mt.id} className="text-[11px] text-amber-800 flex items-start gap-1">
                 <span className="font-medium">{mt.entity_name}</span>
-                <span className="text-amber-600"> ({mt.entity_type === "our_firm" ? "your firm" : mt.entity_type === "investment_manager" ? "investment manager" : mt.entity_type === "sub_manager" ? "sub-manager" : "other"})</span>
-                {mt.context && <span className="text-amber-700"> — {mt.context}</span>}
+                {mt.context && <span className="text-amber-700">— {mt.context}</span>}
               </li>
             ))}
           </ul>
@@ -202,7 +203,18 @@ export default function BoardMeetingCard({ meeting, firmId }) {
           {extracting ? <Loader2 className="w-3 h-3 animate-spin" /> : <ListTodo className="w-3 h-3" />}
           {meeting.action_items_extracted ? "Re-extract Actions" : "Extract Actions"}
         </Button>
+        <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => setShowTagFirm(true)}>
+          <Tag className="w-3 h-3" /> Tag Firm
+        </Button>
       </div>
+
+      {/* Tag mentioned firm dialog */}
+      <TagMentionedFirmDialog
+        open={showTagFirm}
+        onClose={() => setShowTagFirm(false)}
+        meeting={meeting}
+        onTagged={invalidate}
+      />
 
       {/* Extracted action items */}
       {actionItems.length > 0 && (

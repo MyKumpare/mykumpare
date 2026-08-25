@@ -7,12 +7,18 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Loader2, Globe, Calendar, MapPin, Video, Users, FileText, ScrollText,
-  AlertTriangle, CheckCircle2, Filter, ArrowUpDown, Plus, RefreshCw, Library, CalendarClock,
+  AlertTriangle, CheckCircle2, Filter, ArrowUpDown, Plus, RefreshCw, Library, CalendarClock, Building,
 } from "lucide-react";
 import BoardMeetingCard from "./BoardMeetingCard";
 import AddBoardMeetingDialog from "./AddBoardMeetingDialog";
 import BoardMeetingTemplateLibrary from "./BoardMeetingTemplateLibrary";
 import { toast } from "@/components/ui/use-toast";
+
+function fmtDate(d) {
+  if (!d) return "—";
+  const dt = new Date(d + "T00:00:00");
+  return isNaN(dt.getTime()) ? d : dt.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+}
 
 // "Board Meeting" tab inside the firm form. Scrapes the firm's website for
 // board meetings, lists them with filter/sort, and lets the user fetch
@@ -31,6 +37,23 @@ export default function FirmBoardMeetingTab({ firmId, firmName, firmWebsite }) {
   const { data: meetings = [], isLoading } = useQuery({
     queryKey: ["board-meetings", firmId],
     queryFn: () => base44.entities.BoardMeeting.filter({ firm_id: firmId }, "-meeting_date", 500),
+    enabled: !!firmId,
+  });
+
+  // Meetings from OTHER firms where this firm is tagged as mentioned.
+  // Shown in a separate section so the firm can see when/why they were
+  // discussed in another entity's board meetings (funding, redemptions, etc.).
+  const { data: mentionedIn = [] } = useQuery({
+    queryKey: ["board-meetings-mentioned", firmId],
+    queryFn: async () => {
+      // Fetch recent meetings across all firms, then filter client-side
+      // for those where this firm appears in the mentions array.
+      const all = await base44.entities.BoardMeeting.list("-meeting_date", 500);
+      return all.filter(
+        (m) => !m.deleted_at && m.firm_id !== firmId &&
+          (m.mentions || []).some((mt) => mt.entity_id === firmId)
+      );
+    },
     enabled: !!firmId,
   });
 
@@ -209,6 +232,51 @@ export default function FirmBoardMeetingTab({ firmId, firmName, firmWebsite }) {
           {visible.map((m) => (
             <BoardMeetingCard key={m.id} meeting={m} firmId={firmId} />
           ))}
+        </div>
+      )}
+
+      {/* Meetings from other firms where THIS firm was mentioned */}
+      {mentionedIn.length > 0 && (
+        <div className="mt-4 pt-3 border-t border-gray-200">
+          <div className="flex items-center gap-1.5 mb-2">
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+            <h4 className="text-sm font-semibold text-gray-700">
+              Mentioned in Other Firms' Meetings ({mentionedIn.length})
+            </h4>
+          </div>
+          <div className="space-y-2">
+            {mentionedIn.map((m) => {
+              const mention = (m.mentions || []).find((mt) => mt.entity_id === firmId);
+              return (
+                <div key={m.id} className="rounded-lg border border-amber-200 bg-amber-50/40 p-3">
+                  <div className="flex items-start gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-semibold text-gray-800 truncate">{m.title || "Untitled"}</span>
+                        <Badge variant="outline" className={`text-[10px] ${m.status === "upcoming" ? "bg-indigo-50 text-indigo-700 border-indigo-200" : "bg-gray-100 text-gray-600 border-gray-200"}`}>
+                          {m.status === "upcoming" ? "Upcoming" : "Completed"}
+                        </Badge>
+                        {mention?.context && (
+                          <Badge className="text-[10px] bg-amber-100 text-amber-700 border border-amber-200">
+                            {mention.context}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-500">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" /> {fmtDate(m.meeting_date)}{m.end_date ? ` – ${fmtDate(m.end_date)}` : ""}
+                        </span>
+                        <span className="flex items-center gap-1 font-medium text-gray-600">
+                          <Building className="w-3 h-3" /> {m.firm_name || "Unknown firm"}
+                        </span>
+                        {m.location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {m.location}</span>}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
