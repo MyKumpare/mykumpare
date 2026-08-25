@@ -1003,7 +1003,7 @@ export default function Home() {
         <DashboardNavSection onOpenDashboard={() => navigate("/Overview")} />
 
         {/* RFP/RFI due this week — at-a-glance summary of upcoming submissions across all firms */}
-        <RfpRfiDueThisWeek onOpenAll={() => navigate("/RfpRfiDashboard")} />
+        <RfpRfiDueThisWeek onOpenAll={() => navigate("/Monitor?tab=rfp-rfi")} />
 
         {/* Due Diligence section — with Documents, Forms, Templates nested as sub-items */}
         <div ref={formsRef} />
