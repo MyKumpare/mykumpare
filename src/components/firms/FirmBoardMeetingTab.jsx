@@ -7,9 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Loader2, Globe, Calendar, MapPin, Video, Users, FileText, ScrollText,
-  AlertTriangle, CheckCircle2, Filter, ArrowUpDown, Plus, RefreshCw,
+  AlertTriangle, CheckCircle2, Filter, ArrowUpDown, Plus, RefreshCw, Library, CalendarClock,
 } from "lucide-react";
 import BoardMeetingCard from "./BoardMeetingCard";
+import AddBoardMeetingDialog from "./AddBoardMeetingDialog";
+import BoardMeetingTemplateLibrary from "./BoardMeetingTemplateLibrary";
 import { toast } from "@/components/ui/use-toast";
 
 // "Board Meeting" tab inside the firm form. Scrapes the firm's website for
@@ -23,6 +25,8 @@ export default function FirmBoardMeetingTab({ firmId, firmName, firmWebsite }) {
   const [statusFilter, setStatusFilter] = useState("all"); // all | upcoming | completed | needs_review
   const [sortBy, setSortBy] = useState("date_desc"); // date_desc | date_asc | topic
   const [topicSearch, setTopicSearch] = useState("");
+  const [showAddMeeting, setShowAddMeeting] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
 
   const { data: meetings = [], isLoading } = useQuery({
     queryKey: ["board-meetings", firmId],
@@ -117,6 +121,26 @@ export default function FirmBoardMeetingTab({ firmId, firmName, firmWebsite }) {
           {scraping ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Globe className="w-3.5 h-3.5" />}
           {scraping ? "Scraping…" : "Scrape Board Meetings"}
         </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => setShowAddMeeting(true)}
+          className="gap-1.5"
+          title="Manually add a board meeting (optionally from a template)"
+        >
+          <CalendarClock className="w-3.5 h-3.5" /> Add Meeting
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => setShowTemplates(true)}
+          className="gap-1.5"
+          title="Manage board meeting templates"
+        >
+          <Library className="w-3.5 h-3.5" /> Templates
+        </Button>
         {!firmWebsite && (
           <span className="text-xs text-amber-600 flex items-center gap-1">
             <AlertTriangle className="w-3 h-3" /> Add a website to the firm to enable scraping
@@ -187,6 +211,9 @@ export default function FirmBoardMeetingTab({ firmId, firmName, firmWebsite }) {
           ))}
         </div>
       )}
+
+      <AddBoardMeetingDialog open={showAddMeeting} onClose={() => setShowAddMeeting(false)} firmId={firmId} firmName={firmName} />
+      <BoardMeetingTemplateLibrary open={showTemplates} onClose={() => setShowTemplates(false)} />
     </div>
   );
 }

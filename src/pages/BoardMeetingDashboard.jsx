@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   CalendarDays, Building2, Flag, FileText, CheckCircle2,
-  ListTodo, AlertTriangle, Clock, Loader2, Filter, X, LayoutDashboard,
+  ListTodo, AlertTriangle, Clock, Loader2, Filter, X, LayoutDashboard, Library,
 } from "lucide-react";
+import BoardMeetingHeatmap from "@/components/firms/BoardMeetingHeatmap";
+import BoardMeetingTemplateLibrary from "@/components/firms/BoardMeetingTemplateLibrary";
 
 function fmtDate(d) {
   if (!d) return "—";
@@ -26,6 +28,7 @@ export default function BoardMeetingDashboard() {
   const [statusFilter, setStatusFilter] = useState("upcoming");
   const [search, setSearch] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
 
   const { data: meetings = [], isLoading } = useQuery({
     queryKey: ["board-meetings-dashboard"],
@@ -118,9 +121,14 @@ export default function BoardMeetingDashboard() {
             Track deadlines and prep status across all portfolio firms — manage prep time, agendas, and follow-up action items.
           </p>
         </div>
-        <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => setShowFilters(s => !s)}>
-          <Filter className="w-3.5 h-3.5" /> Filters {hasActiveFilters && <span className="w-1.5 h-1.5 rounded-full bg-cyan-500" />}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => setShowTemplates(true)}>
+            <Library className="w-3.5 h-3.5" /> Templates
+          </Button>
+          <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => setShowFilters(s => !s)}>
+            <Filter className="w-3.5 h-3.5" /> Filters {hasActiveFilters && <span className="w-1.5 h-1.5 rounded-full bg-cyan-500" />}
+          </Button>
+        </div>
       </div>
 
       {/* Stat cards */}
@@ -132,6 +140,9 @@ export default function BoardMeetingDashboard() {
         <StatCard label="Flagged review" value={stats.flagged} icon={Flag} color="text-amber-600" bg="bg-amber-50" />
         <StatCard label="High-pri actions" value={stats.highPriority} icon={AlertTriangle} color="text-red-600" bg="bg-red-50" />
       </div>
+
+      {/* Heatmap */}
+      <BoardMeetingHeatmap meetings={meetings} tasks={tasks} />
 
       {/* Filter bar */}
       {showFilters && (
@@ -242,6 +253,8 @@ export default function BoardMeetingDashboard() {
           </div>
         </div>
       )}
+
+      <BoardMeetingTemplateLibrary open={showTemplates} onClose={() => setShowTemplates(false)} />
     </div>
   );
 }

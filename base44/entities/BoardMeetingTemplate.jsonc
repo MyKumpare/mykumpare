@@ -1,0 +1,114 @@
+{
+  "name": "BoardMeetingTemplate",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the board meeting template (e.g. 'Quarterly Board Review', 'Annual Governance Meeting')."
+    },
+    "description": {
+      "type": "string",
+      "description": "Short description of when to use this template."
+    },
+    "default_title": {
+      "type": "string",
+      "description": "Default meeting title applied when a new meeting is created from this template."
+    },
+    "default_topics": {
+      "type": "array",
+      "description": "Default topics pre-loaded onto a meeting created from this template.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "default_meeting_format": {
+      "type": "string",
+      "enum": [
+        "in-person",
+        "virtual",
+        "hybrid",
+        "unknown"
+      ],
+      "default": "unknown",
+      "description": "Default meeting format applied when a meeting is created from this template."
+    },
+    "default_session_type": {
+      "type": "string",
+      "enum": [
+        "public_meeting",
+        "closed_session",
+        "unknown"
+      ],
+      "default": "unknown",
+      "description": "Default session type applied when a meeting is created from this template."
+    },
+    "agenda_sections": {
+      "type": "array",
+      "description": "Ordered agenda sections that define the consistent agenda structure for meetings created from this template. Each section has a title and optional guidance description.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string",
+            "description": "Title of the agenda section"
+          },
+          "description": {
+            "type": "string",
+            "description": "Guidance / description for this agenda section"
+          }
+        }
+      }
+    },
+    "notes_template": {
+      "type": "string",
+      "description": "Note-taking format template (rich text HTML) applied to meetings created from this template, ensuring consistent note-taking structure."
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "user"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": null,
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

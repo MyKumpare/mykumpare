@@ -84,6 +84,42 @@
       "type": "string",
       "description": "URL of the page where this meeting was found during scraping."
     },
+    "applied_template_id": {
+      "type": "string",
+      "description": "ID of the BoardMeetingTemplate applied to this meeting when it was created manually. Empty for scraped meetings."
+    },
+    "applied_template_name": {
+      "type": "string",
+      "description": "Name of the applied template (denormalized for display)."
+    },
+    "agenda_sections": {
+      "type": "array",
+      "description": "Agenda sections applied from a board meeting template, carried into the meeting so note-taking follows a consistent structure. Each section can hold notes filled in during the meeting.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string",
+            "description": "Title of the agenda section"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description / guidance for this agenda section"
+          },
+          "notes": {
+            "type": "string",
+            "description": "Notes recorded for this agenda section during the meeting (rich text HTML)"
+          }
+        }
+      }
+    },
+    "notes_template": {
+      "type": "string",
+      "description": "Note-taking format template (rich text HTML) applied from a board meeting template, giving the meeting a consistent notes structure."
+    },
     "status": {
       "type": "string",
       "enum": [
