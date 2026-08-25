@@ -8,8 +8,8 @@ import {
   CheckCircle2, Loader2, ExternalLink, Flag, Trash2, FileDown, ListTodo, Tag,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
-import { generateBoardMeetingPdf } from "./boardMeetingPdf";
 import TagMentionedFirmDialog from "./TagMentionedFirmDialog";
+import BoardMeetingPdfSummaryDialog from "./BoardMeetingPdfSummaryDialog";
 
 const FORMAT_LABEL = { "in-person": "In-Person", virtual: "Virtual", hybrid: "Hybrid", unknown: "—" };
 const SESSION_LABEL = { public_meeting: "Public Meeting", closed_session: "Closed Session", unknown: "—" };
@@ -31,6 +31,7 @@ export default function BoardMeetingCard({ meeting, firmId, onFirmClick }) {
   const [extracting, setExtracting] = useState(false);
   const [showTagFirm, setShowTagFirm] = useState(false);
   const [showMentions, setShowMentions] = useState(false);
+  const [showPdfSummary, setShowPdfSummary] = useState(false);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["board-meetings", firmId] });
 
@@ -182,7 +183,7 @@ export default function BoardMeetingCard({ meeting, firmId, onFirmClick }) {
             {expanded ? "Hide minutes" : "View minutes"}
           </button>
         )}
-        <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => generateBoardMeetingPdf(meeting)}>
+        <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => setShowPdfSummary(true)}>
           <FileDown className="w-3 h-3" /> PDF Summary
         </Button>
         <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={handleExtractActionItems} disabled={extracting || !meeting.minutes_content}>
@@ -244,6 +245,14 @@ export default function BoardMeetingCard({ meeting, firmId, onFirmClick }) {
       <TagMentionedFirmDialog
         open={showTagFirm}
         onClose={() => setShowTagFirm(false)}
+        meeting={meeting}
+        onTagged={invalidate}
+      />
+
+      {/* PDF Summary dialog — AI executive summary + auto-tag + PDF download */}
+      <BoardMeetingPdfSummaryDialog
+        open={showPdfSummary}
+        onClose={() => setShowPdfSummary(false)}
         meeting={meeting}
         onTagged={invalidate}
       />

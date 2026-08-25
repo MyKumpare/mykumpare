@@ -10,10 +10,12 @@ function fmtDate(d) {
   return isNaN(dt.getTime()) ? d : dt.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 }
 
-// Generates a clean, printable PDF summary of a single board meeting,
-// including all details, topics, flagged portfolio mentions, required
-// actions, review notes, minutes content, and links.
-export function generateBoardMeetingPdf(meeting) {
+// Generates a clean, printable PDF summary of a single board meeting.
+// When `opts.summary` is provided (from the AI executive summary dialog),
+// the PDF includes the executive summary sections (discussions, decisions,
+// tabled items, future agenda) and the list of impacted/mentioned firms.
+export function generateBoardMeetingPdf(meeting, opts = {}) {
+  const { summary, detectedFirmNames = [], matchedFirms = [] } = opts;
   const doc = new jsPDF({ unit: "pt", format: "letter" });
   const margin = 48;
   const pageW = doc.internal.pageSize.getWidth();
@@ -84,28 +86,150 @@ export function generateBoardMeetingPdf(meeting) {
     y += tLines.length * 13 + 10;
   }
 
-  // Flagged portfolio mentions
-  if (meeting.mentions?.length) {
-    ensureSpace(20);
+  // ── Executive Summary (AI-generated) ──
+  if (summary) {
+    // Discussions
+    if (summary.discussions) {
+      ensureSpace(24);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.setTextColor(30, 41, 59);
+      doc.text("Executive Summary — Discussions", margin, y);
+      y += 16;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(51, 65, 85);
+      const dLines = doc.splitTextToSize(summary.discussions, contentW);
+      dLines.forEach((line) => {
+        ensureSpace(13);
+        doc.text(line, margin, y);
+        y += 13;
+      });
+      y += 10;
+    }
+
+    // Decisions
+    if (summary.decisions?.length) {
+      ensureSpace(24);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.setTextColor(30, 41, 59);
+      doc.text("Decisions Made", margin, y);
+      y += 16;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      for (const d of summary.decisions) {
+        const lines = doc.splitTextToSize(`•  ${d}`, contentW - 12);
+        ensureSpace(lines.length * 13 + 2);
+        doc.setTextColor(51, 65, 85);
+        doc.text(lines, margin + 12, y);
+        y += lines.length * 13 + 2;
+      }
+      y += 10;
+    }
+
+    // Tabled Items
+    if (summary.tabled_items?.length) {
+      ensureSpace(24);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.setTextColor(30, 41, 59);
+      doc.text("Items Tabled", margin, y);
+      y += 16;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      for (const t of summary.tabled_items) {
+        const lines = doc.splitTextToSize(`•  ${t}`, contentW - 12);
+        ensureSpace(lines.length * 13 + 2);
+        doc.setTextColor(51, 65, 85);
+        doc.text(lines, margin + 12, y);
+        y += lines.length * 13 + 2;
+      }
+      y += 10;
+    }
+
+    // Future Agenda
+    if (summary.future_agenda?.length) {
+      ensureSpace(24);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.setTextColor(30, 41, 59);
+      doc.text("Future Agenda", margin, y);
+      y += 16;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      for (const f of summary.future_agenda) {
+        const lines = doc.splitTextToSize(`•  ${f}`, contentW - 12);
+        ensureSpace(lines.length * 13 + 2);
+        doc.setTextColor(51, 65, 85);
+        doc.text(lines, margin + 12, y);
+        y += lines.length * 13 + 2;
+      }
+      y += 10;
+    }
+  }
+
+  // ── Impacted / Mentioned Firms ──
+  // Show the AI-detected firms from the minutes, noting which are in the system.
+  const allMentionNames = new Set([
+    ...(detectedFirmNames || []),
+    ...(meeting.mentions || []).map((m) => m.entity_name),
+  ]);
+  if (allMentionNames.size > 0) {
+    ensureSpace(24);
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-    doc.setTextColor(180, 83, 9);
-    doc.text("Flagged Portfolio Mentions", margin, y);
+    doc.setFontSize(13);
+    doc.setTextColor(67, 56, 202);
+    doc.text("Impacted / Mentioned Firms", margin, y);
     y += 16;
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
-    for (const mt of meeting.mentions) {
-      const typeLabel = mt.entity_type === "our_firm" ? "your firm"
-        : mt.entity_type === "investment_manager" ? "investment manager"
-        : mt.entity_type === "sub_manager" ? "sub-manager" : "other";
-      const line = `• ${mt.entity_name || "Unknown"} (${typeLabel})${mt.context ? ` — ${mt.context}` : ""}`;
-      const lines = doc.splitTextToSize(line, contentW - 12);
-      ensureSpace(lines.length * 13 + 2);
-      doc.setTextColor(120, 53, 15);
-      doc.text(lines, margin + 12, y);
-      y += lines.length * 13 + 2;
+
+    // Firms in the system (auto-tagged or manually tagged)
+    const systemMentions = (meeting.mentions || []).filter((m) => m.entity_id);
+    if (systemMentions.length > 0) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(100, 116, 139);
+      doc.text("Firms in your system:", margin, y);
+      y += 13;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      for (const mt of systemMentions) {
+        const line = `•  ${mt.entity_name}${mt.context ? ` — ${mt.context}` : ""}`;
+        const lines = doc.splitTextToSize(line, contentW - 12);
+        ensureSpace(lines.length * 13 + 2);
+        doc.setTextColor(51, 65, 85);
+        doc.text(lines, margin + 12, y);
+        y += lines.length * 13 + 2;
+      }
     }
-    y += 8;
+
+    // Other detected firms not in the system
+    const systemNames = new Set(
+      systemMentions.map((m) => (m.entity_name || "").toLowerCase())
+    );
+    const otherNames = [...allMentionNames].filter(
+      (n) => !systemNames.has(n.toLowerCase())
+    );
+    if (otherNames.length > 0) {
+      if (systemMentions.length > 0) y += 6;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(100, 116, 139);
+      doc.text("Other firms mentioned:", margin, y);
+      y += 13;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      for (const name of otherNames) {
+        const lines = doc.splitTextToSize(`•  ${name}`, contentW - 12);
+        ensureSpace(lines.length * 13 + 2);
+        doc.setTextColor(51, 65, 85);
+        doc.text(lines, margin + 12, y);
+        y += lines.length * 13 + 2;
+      }
+    }
+    y += 10;
   }
 
   // Required actions
@@ -159,13 +283,13 @@ export function generateBoardMeetingPdf(meeting) {
     y += 8;
   }
 
-  // Minutes content
+  // Minutes content (full text, for reference)
   if (meeting.minutes_content) {
     ensureSpace(20);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
     doc.setTextColor(30, 41, 59);
-    doc.text("Minutes", margin, y);
+    doc.text("Full Minutes", margin, y);
     y += 16;
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
