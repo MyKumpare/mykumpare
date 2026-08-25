@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, ClipboardCheck, FileText, Files, ShieldCheck, X, LayoutDashboard, FlaskConical, MapPin, Camera,   LayoutGrid, PieChart, Bot, ExternalLink, ChevronDown, CalendarDays, Radar, FileBarChart, Mic, Newspaper, Gauge, Users, ScrollText,   Ghost, Upload, Eraser, Tag, UserX, Briefcase, Activity, ArrowRightLeft } from "lucide-react";
+import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, ClipboardCheck, FileText, Files, ShieldCheck, X, LayoutDashboard, FlaskConical, MapPin, Camera,   LayoutGrid, PieChart, Bot, ExternalLink, ChevronDown, CalendarDays, Radar, FileBarChart, Mic, Newspaper, Gauge, Users, ScrollText,   Ghost, Upload, Eraser, Tag, UserX, Briefcase, Activity, ArrowRightLeft, UserCheck } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
@@ -714,6 +714,7 @@ export default function Home() {
 
   const mobileNavItems = [
     { label: "Dashboard", icon: LayoutDashboard, ref: null, color: "text-indigo-300", activeBg: "bg-indigo-50", onClick: () => navigate("/Overview") },
+    { label: "Coverage", icon: UserCheck, ref: null, color: "text-emerald-600", activeBg: "bg-emerald-50", onClick: () => navigate("/CoverageTracker") },
     { label: "AI Agents", icon: Bot, ref: null, color: "text-violet-300", activeBg: "bg-violet-50", onClick: () => navigate("/AiAgents") },
     { label: "Due Diligence", icon: ShieldCheck, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => setDueDiligencePickerOpen(true), submenu: [
       { label: "DD Board", icon: LayoutGrid, onClick: () => navigate("/DueDiligenceKanban") },
@@ -740,6 +741,7 @@ export default function Home() {
       { label: "Activity Timeline", icon: Activity, onClick: () => managementRef.current?.scrollToSection(0) },
       { label: "Analyst Coverage", icon: Users, onClick: () => managementRef.current?.scrollToSection(1) },
       { label: "Firm Coverage", icon: Building, onClick: () => managementRef.current?.scrollToSection(2) },
+      { label: "Coverage Overview", icon: ClipboardList, onClick: () => navigate("/CoverageManagement") },
     ] }] : []),
     { label: "Utilities", icon: Wrench, ref: utilityRef, color: "text-gray-600", activeBg: "bg-gray-100", onClick: () => { setUtilityDefaultView(null); setUtilityModalOpen(true); }, submenu: [
       { label: "Benchmark", icon: Gauge, onClick: () => { setUtilityDefaultView("benchmark"); setUtilityModalOpen(true); } },
