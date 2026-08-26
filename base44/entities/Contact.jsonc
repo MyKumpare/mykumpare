@@ -106,6 +106,15 @@
       ],
       "description": "The contact's decision-making role within the firm \u2014 classifies whether this person is a primary decision maker, board member, key influencer, or secondary contact. Used by the contact network dashboard to highlight key nodes and by contact lists to surface decision makers at a glance."
     },
+    "influence_level": {
+      "type": "string",
+      "enum": [
+        "High",
+        "Medium",
+        "Low"
+      ],
+      "description": "The contact's influence level \u2014 a user-assigned rating of how much sway this person holds in investment decisions. High, Medium, or Low. Used alongside decision_role to prioritize relationship management effort."
+    },
     "contact_type": {
       "type": "array",
       "description": "Classification type(s) of the contact (multi-select, defaults from associated firm type)",

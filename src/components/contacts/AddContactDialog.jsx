@@ -93,6 +93,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [contactStatus, setContactStatus] = useState("Active");
   const [contactRole, setContactRole] = useState("");
   const [decisionRole, setDecisionRole] = useState("");
+  const [influenceLevel, setInfluenceLevel] = useState("");
   const [contactType, setContactType] = useState([]);
   const [contactRoles, setContactRoles] = useState([]);
   const [contactFirmRoles, setContactFirmRoles] = useState([]);
@@ -148,6 +149,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setContactStatus(editingContact.contact_status || "Active");
         setContactRole(editingContact.contact_role || "");
         setDecisionRole(editingContact.decision_role || "");
+        setInfluenceLevel(editingContact.influence_level || "");
         setContactType(Array.isArray(editingContact.contact_type) ? editingContact.contact_type : (editingContact.contact_type ? [editingContact.contact_type] : []));
         setContactRoles(editingContact.contact_roles || []);
         setContactFirmRoles(editingContact.contact_firm_roles || []);
@@ -185,6 +187,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setContactStatus("Active");
         setContactRole("");
         setDecisionRole("");
+        setInfluenceLevel("");
         setContactType([]);
         setContactRoles([]);
         setContactFirmRoles([]);
@@ -409,6 +412,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
       contact_status: contactStatus,
       contact_role: contactRole,
       decision_role: decisionRole,
+      influence_level: influenceLevel,
       contact_type: contactType,
       contact_roles: contactRoles,
       contact_firm_roles: contactFirmRoles,
@@ -867,6 +871,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
         contactStatus !== (e.contact_status || "Active") ||
         contactRole !== (e.contact_role || "") ||
         decisionRole !== (e.decision_role || "") ||
+        influenceLevel !== (e.influence_level || "") ||
         JSON.stringify(contactType) !== JSON.stringify(Array.isArray(e.contact_type) ? e.contact_type : (e.contact_type ? [e.contact_type] : [])) ||
         gender !== (e.gender || "Undetermined") ||
         veteranStatus !== (e.veteran_status || "Undetermined") ||
@@ -1702,6 +1707,43 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-gray-700">Decision Role</Label>
                 <ContactDecisionRolePicker value={decisionRole} onChange={setDecisionRole} viewMode={viewMode} />
+              </div>
+
+              {/* Influence Level — High / Medium / Low */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Influence Level</Label>
+                {viewMode ? (
+                  <div className="text-sm px-1">
+                    {influenceLevel ? (
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                        influenceLevel === "High" ? "bg-red-100 text-red-700"
+                        : influenceLevel === "Medium" ? "bg-amber-100 text-amber-700"
+                        : "bg-gray-100 text-gray-600"
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          influenceLevel === "High" ? "bg-red-500"
+                          : influenceLevel === "Medium" ? "bg-amber-500"
+                          : "bg-gray-400"
+                        }`} />
+                        {influenceLevel}
+                      </span>
+                    ) : <span className="text-gray-400 italic">—</span>}
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    {["High", "Medium", "Low"].map(level => (
+                      <button key={level} type="button"
+                        onClick={() => setInfluenceLevel(influenceLevel === level ? "" : level)}
+                        className={`px-4 py-1.5 rounded-full text-xs font-medium border transition-colors ${influenceLevel === level
+                          ? level === "High" ? "bg-red-600 text-white border-red-600"
+                          : level === "Medium" ? "bg-amber-500 text-white border-amber-500"
+                          : "bg-gray-500 text-white border-gray-500"
+                          : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-primary"}`}>
+                        {level}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Contact Type */}
