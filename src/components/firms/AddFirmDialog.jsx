@@ -35,6 +35,7 @@ import FirmDocumentsTab from "./FirmDocumentsTab";
 import FirmDueDiligenceTab from "./FirmDueDiligenceTab";
 import LegalComplianceTab from "./LegalComplianceTab";
 import FirmSourcingTab from "./FirmSourcingTab";
+import FirmContactPhotoGallery from "./FirmContactPhotoGallery";
 import { GEOGRAPHIC_REGIONS, deriveGeographicRegionFromAddresses } from "./geographicRegions";
 import EnrichmentApprovalDialog from "./EnrichmentApprovalDialog";
 import ExperienceOptionMatchDialog from "../contacts/ExperienceOptionMatchDialog";
@@ -1353,6 +1354,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
              {/* Single 3-column tab grid — wraps to max 3 per row */}
              <TabsList className="grid w-full mt-0 grid-cols-3 h-auto">
                <TabsTrigger value="contacts">Contacts</TabsTrigger>
+               <TabsTrigger value="photo-gallery">Photo Gallery</TabsTrigger>
                <TabsTrigger value="addresses">Addresses</TabsTrigger>
                <TabsTrigger value="phones">Phones</TabsTrigger>
                  {!hideProductTabs && (
@@ -1395,6 +1397,19 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               ) : (
                 <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
                   Save the firm first to add contacts
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="photo-gallery" className="space-y-3">
+              {editingFirm ? (
+                <FirmContactPhotoGallery
+                  firmId={editingFirm.id}
+                  onContactClick={onContactClick ? (c) => { handleClose(); onContactClick(c); } : undefined}
+                />
+              ) : (
+                <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
+                  Save the firm first to view the photo gallery
                 </div>
               )}
             </TabsContent>
