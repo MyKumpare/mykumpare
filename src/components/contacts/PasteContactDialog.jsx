@@ -13,7 +13,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  ClipboardPaste, Image as ImageIcon, Upload, Loader2, Building2,
+  ClipboardPaste, Image as ImageIcon, Upload, Camera, Loader2, Building2,
   CheckCircle2, AlertTriangle, Plus, ArrowRight,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
@@ -83,7 +83,9 @@ export default function PasteContactDialog({ open, onClose, onReady, firms: firm
   const [creatingFirm, setCreatingFirm] = useState(false);
   const [newFirmId, setNewFirmId] = useState(null);
   const [firmSearch, setFirmSearch] = useState("");
+  const [autoParsing, setAutoParsing] = useState(false);
   const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
 
   const { data: liveFirms = [] } = useQuery({
     queryKey: ["firms"],
@@ -150,14 +152,42 @@ export default function PasteContactDialog({ open, onClose, onReady, firms: firm
   const handlePhotoUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Reset so selecting the same file again still fires onChange
+    e.target.value = "";
     setUploading(true);
+    let uploadedUrl = "";
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      setPhotoUrl(file_url);
+      uploadedUrl = file_url;
+      setPhotoUrl(uploadedUrl);
     } catch (err) {
       toast({ title: "Upload failed", description: err?.message, variant: "destructive" });
+      return;
     } finally {
       setUploading(false);
+    }
+    // Auto-extract contact details from the business card immediately after upload
+    if (uploadedUrl) {
+      setAutoParsing(true);
+      try {
+        const prompt = `You are extracting contact information from a business card image. Read the card carefully and extract only what is visible — do not fabricate. Return a JSON object with: salutation, first_name, middle_name, last_name, suffix, title, designations (array of professional credentials such as CFA, CPA, MBA, PhD), email, phone (full phone string as printed), linkedin_url, firm_name (the company/organization), website, and address (object with address_line1, address_line2, city, state, postal_code, country). Leave any field empty/null if not present on the card.`;
+        const res = await base44.integrations.Core.InvokeLLM({
+          prompt,
+          response_json_schema: EXTRACT_SCHEMA,
+          file_urls: [uploadedUrl],
+        });
+        const data = { ...emptyParsed(), ...(res || {}) };
+        if (!data.address || typeof data.address !== "object") data.address = emptyParsed().address;
+        setParsed(data);
+        setResolvedFirmId(null);
+        setNewFirmId(null);
+        setFirmType("");
+        toast({ title: "✅ Card scanned", description: "Review the extracted fields and resolve the firm." });
+      } catch (err) {
+        toast({ title: "Extraction failed", description: err?.message || "Could not read the card.", variant: "destructive" });
+      } finally {
+        setAutoParsing(false);
+      }
     }
   };
 
@@ -259,23 +289,46 @@ export default function PasteContactDialog({ open, onClose, onReady, firms: firm
                   <p className="text-[11px] text-gray-400">The system will parse this into the contact fields, then check for an existing firm and duplicates.</p>
                 </TabsContent>
                 <TabsContent value="photo" className="space-y-2 mt-3">
-                  <Label className="text-xs font-medium text-gray-600">Upload a business card photo</Label>
-                  <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoUpload} />
+                  <Label className="text-xs font-medium text-gray-600">Take a photo or upload a business card</Label>
+                  {/* cameraInput opens the device camera directly (capture=environment); fileInput picks from gallery */}
+                  <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoUpload} />
+                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
                   {photoUrl ? (
-                    <div className="flex items-center gap-3">
-                      <img src={photoUrl} alt="Business card" className="w-32 h-20 object-cover rounded-md border border-gray-200" />
-                      <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
-                        {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />} Replace
-                      </Button>
-                      <Button type="button" variant="ghost" size="sm" className="text-red-500" onClick={() => setPhotoUrl("")}>Remove</Button>
+                    <div className="space-y-2">
+                      <img src={photoUrl} alt="Business card" className="w-full max-h-48 object-contain rounded-md border border-gray-200 bg-gray-50" />
+                      <div className="flex items-center gap-2">
+                        <Button type="button" variant="outline" size="sm" onClick={() => cameraInputRef.current?.click()} disabled={uploading || autoParsing}>
+                          <Camera className="w-3.5 h-3.5" /> Retake
+                        </Button>
+                        <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploading || autoParsing}>
+                          <Upload className="w-3.5 h-3.5" /> Replace
+                        </Button>
+                        <Button type="button" variant="ghost" size="sm" className="text-red-500 ml-auto" onClick={() => setPhotoUrl("")} disabled={uploading || autoParsing}>Remove</Button>
+                      </div>
                     </div>
                   ) : (
-                    <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}
-                      className="w-full border-2 border-dashed border-gray-200 rounded-lg py-8 flex flex-col items-center gap-2 text-gray-400 hover:border-indigo-300 hover:text-indigo-600 transition-colors">
-                      {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
-                      <span className="text-sm font-medium">Click to upload a business card photo</span>
-                      <span className="text-xs">JPG, PNG up to ~10MB</span>
-                    </button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button type="button" onClick={() => cameraInputRef.current?.click()} disabled={uploading || autoParsing}
+                        className="border-2 border-indigo-200 bg-indigo-50/50 rounded-lg py-6 flex flex-col items-center gap-1.5 text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50 transition-colors disabled:opacity-50">
+                        {uploading || autoParsing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5" />}
+                        <span className="text-sm font-medium">Take Photo</span>
+                        <span className="text-[11px] text-gray-400">Opens camera</span>
+                      </button>
+                      <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading || autoParsing}
+                        className="border-2 border-dashed border-gray-200 rounded-lg py-6 flex flex-col items-center gap-1.5 text-gray-500 hover:border-indigo-300 hover:text-indigo-600 transition-colors disabled:opacity-50">
+                        {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
+                        <span className="text-sm font-medium">Upload Image</span>
+                        <span className="text-[11px] text-gray-400">From gallery</span>
+                      </button>
+                    </div>
+                  )}
+                  {autoParsing && (
+                    <div className="flex items-center gap-2 text-xs text-indigo-600 bg-indigo-50 rounded-md px-3 py-2">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" /> Reading the business card…
+                    </div>
+                  )}
+                  {!autoParsing && !photoUrl && (
+                    <p className="text-[11px] text-gray-400">After capturing the card, the system automatically extracts the contact name, company, and details for your review.</p>
                   )}
                 </TabsContent>
               </Tabs>
