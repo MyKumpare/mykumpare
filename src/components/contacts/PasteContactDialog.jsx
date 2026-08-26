@@ -260,7 +260,7 @@ export default function PasteContactDialog({ open, onClose, onReady, firms: firm
                 </TabsContent>
                 <TabsContent value="photo" className="space-y-2 mt-3">
                   <Label className="text-xs font-medium text-gray-600">Upload a business card photo</Label>
-                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+                  <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoUpload} />
                   {photoUrl ? (
                     <div className="flex items-center gap-3">
                       <img src={photoUrl} alt="Business card" className="w-32 h-20 object-cover rounded-md border border-gray-200" />
