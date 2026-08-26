@@ -12,6 +12,7 @@ import TaskDetailModal from "@/components/activity/TaskDetailModal";
 import ActivityDetailModal from "@/components/activity/ActivityDetailModal";
 import ActivityTimeline from "@/components/activity/ActivityTimeline";
 import ConferencesTab from "@/components/conferences/ConferencesTab";
+import BoardMeetingsModal from "@/components/firms/BoardMeetingsModal";
 import BoardMeetingAlertsTab from "@/components/firms/BoardMeetingAlertsTab";
 import RfpRfiDashboard from "@/pages/RfpRfiDashboard";
 import RfpRfiDueThisWeek from "@/components/firms/RfpRfiDueThisWeek";
@@ -24,6 +25,7 @@ const TABS = [
   { key: "activity", label: "Activity", icon: ClipboardList },
   { key: "tasks", label: "Tasks", icon: LayoutList },
   { key: "conferences", label: "Conferences", icon: CalendarDays },
+  { key: "board-meetings", label: "Board Meetings", icon: ClipboardCheck },
   { key: "board-meeting-alerts", label: "Bd Mtg Alerts", icon: Bell },
   { key: "coverage", label: "My Coverage", icon: UserCheck },
   { key: "coverage-mgmt", label: "Coverage Mgmt", icon: Users },
@@ -152,6 +154,9 @@ export default function MonitorPage() {
         )}
         {tab === "conferences" && (
           <ConferencesTab />
+        )}
+        {tab === "board-meetings" && (
+          <BoardMeetingsModal inline open onClose={() => {}} onFirmClick={() => navigate("/")} />
         )}
         {tab === "board-meeting-alerts" && (
           <BoardMeetingAlertsTab onFirmClick={() => navigate("/")} />

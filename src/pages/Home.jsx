@@ -68,7 +68,6 @@ const ActivityDetailModal = lazyDialog(() => import("../components/activity/Acti
 const FollowUpTaskPickerModal = lazyDialog(() => import("../components/activity/FollowUpTaskPickerModal"));
 const TaskDetailModal = lazyDialog(() => import("../components/activity/TaskDetailModal"));
 const NewsAlertsModal = lazyDialog(() => import("../components/firms/NewsAlertsModal"));
-const BoardMeetingsModal = lazyDialog(() => import("../components/firms/BoardMeetingsModal"));
 const UserProfileDialog = lazyDialog(() => import("../components/user/UserProfileDialog"));
 const ExternalPortalPickerModal = lazyDialog(() => import("../components/external/ExternalPortalPickerModal"));
 import { useFirmOwner } from "@/components/admin/useFirmOwner";
@@ -132,7 +131,6 @@ export default function Home() {
   const [activityLogModalOpen, setActivityLogModalOpen] = useState(false);
   const [activityLogDefaultTab, setActivityLogDefaultTab] = useState("activity");
   const [newsAlertsOpen, setNewsAlertsOpen] = useState(false);
-  const [boardMeetingsOpen, setBoardMeetingsOpen] = useState(false);
   const [portfolioPickerOpen, setPortfolioPickerOpen] = useState(false);
   const [firmPickerOpen, setFirmPickerOpen] = useState(false);
   const [dueDiligencePickerOpen, setDueDiligencePickerOpen] = useState(false);
@@ -747,7 +745,6 @@ export default function Home() {
       { label: "Templates", icon: FileText, onClick: () => setTemplatesPickerOpen(true) },
     ] },
     { label: "Monitor", icon: Radar, ref: null, color: "text-rose-600", activeBg: "bg-rose-50", onClick: () => navigate("/Monitor") },
-    { label: "Board Mtgs", icon: ClipboardCheck, ref: null, color: "text-cyan-600", activeBg: "bg-cyan-50", onClick: () => setBoardMeetingsOpen(true) },
     { label: "Report", icon: FileBarChart, ref: null, color: "text-cyan-600", activeBg: "bg-cyan-50", onClick: () => setAnalyticsLaunchOpen(true), submenu: [
       { label: "Analytics", icon: LineChart, onClick: () => setAnalyticsLaunchOpen(true) },
       { label: "Reports", icon: FileText, onClick: () => setReportsPickerOpen(true) },
@@ -1059,7 +1056,7 @@ export default function Home() {
           newsCount={pinnedNewsCount}
           boardMeetingsCount={upcomingBoardMeetingsCount}
           boardMeetingAlertsCount={unreadBoardMeetingAlertsCount}
-          onOpenBoardMeetings={() => setBoardMeetingsOpen(true)}
+          onOpenBoardMeetings={() => navigate("/Monitor?tab=board-meetings")}
           onOpenBoardMeetingCalendar={() => navigate("/BoardMeetingCalendar")}
           onOpenBoardMeetingAlerts={() => navigate("/Monitor?tab=board-meeting-alerts")}
           onOpenBoardMeetingDashboard={() => navigate("/BoardMeetingDashboard")}
@@ -1653,13 +1650,6 @@ export default function Home() {
         }}
       />
 
-      {/* Board Meetings — upcoming meetings across all firms */}
-      <BoardMeetingsModal
-        open={boardMeetingsOpen}
-        onClose={() => setBoardMeetingsOpen(false)}
-        firms={firms}
-        onFirmClick={(firm) => handleEdit(firm)}
-      />
     </div>
   );
 }
