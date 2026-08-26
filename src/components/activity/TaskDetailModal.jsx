@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   X, LayoutList, Calendar, User, Building2, Clock, AlertCircle, CheckCircle2, XCircle,
-  Paperclip, Link2, FileText, Edit2, Check, Plus, ChevronDown, ChevronUp, UserPlus, Trash2, Upload
+  Paperclip, Link2, FileText, Edit2, Check, Plus, ChevronDown, ChevronUp, UserPlus, Trash2, Upload,
+  Flame, TrendingUp, TrendingDown, Minus
 } from "lucide-react";
 import { format } from "date-fns";
 import ReactQuill from "react-quill";
@@ -768,6 +769,8 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
       setEditDueDate(task.due_date || "");
       setEditDesc(task.task_description || "");
       setEditNotes(task.notes || "");
+      setEditPriority(task.priority || (task.is_high_priority ? "High" : ""));
+      setEditImpact(task.board_meeting_impact || "");
       setEditAttachments(task.attachments || []);
       
       // Initialize assignments from task.assignments array, or convert from old assigned_firms_contacts format
@@ -819,6 +822,8 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
   const [editDueDate, setEditDueDate] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [editNotes, setEditNotes] = useState("");
+  const [editPriority, setEditPriority] = useState("");
+  const [editImpact, setEditImpact] = useState("");
   const [editAssignments, setEditAssignments] = useState([]);
   const [editAttachments, setEditAttachments] = useState([]);
 
@@ -908,6 +913,9 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
       due_date: editDueDate,
       task_description: editDesc,
       notes: editNotes,
+      priority: editPriority || undefined,
+      is_high_priority: editPriority === "High" ? true : (editPriority ? false : task.is_high_priority),
+      board_meeting_impact: editImpact || undefined,
       assignments: editAssignments,
       assigned_firms_contacts: assignedFirmsContacts.length ? assignedFirmsContacts : undefined,
       assigned_to_contact_id: primaryContact?.contact_id || undefined,
@@ -976,6 +984,27 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
                 {task.completion_date && (
                   <span className="text-xs text-green-600 flex items-center gap-1 bg-green-50 px-2 py-0.5 rounded-full">
                     <CheckCircle2 className="w-3 h-3" /> Completed {fmt(task.completion_date)}
+                  </span>
+                )}
+                {(task.priority || task.is_high_priority) && (
+                  <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                    (task.priority === "Medium") ? "bg-amber-100 text-amber-700"
+                    : (task.priority === "Low") ? "bg-gray-100 text-gray-600"
+                    : "bg-red-100 text-red-700"
+                  }`}>
+                    <Flame className="w-3 h-3" /> Priority: {task.priority || "High"}
+                  </span>
+                )}
+                {task.board_meeting_impact && (
+                  <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                    task.board_meeting_impact === "Positive" ? "bg-green-100 text-green-700"
+                    : task.board_meeting_impact === "Negative" ? "bg-red-100 text-red-700"
+                    : "bg-gray-100 text-gray-600"
+                  }`}>
+                    {task.board_meeting_impact === "Positive" ? <TrendingUp className="w-3 h-3" />
+                      : task.board_meeting_impact === "Negative" ? <TrendingDown className="w-3 h-3" />
+                      : <Minus className="w-3 h-3" />}
+                    Impact: {task.board_meeting_impact}
                   </span>
                 )}
               </div>
@@ -1101,6 +1130,32 @@ export default function TaskDetailModal({ open, task: initialTask, onClose, onTa
                 <div className="space-y-1">
                   <Label className="text-xs font-medium text-gray-700">Due Date</Label>
                   <Input type="date" value={editDueDate} onChange={e => setEditDueDate(e.target.value)} className="h-8 text-sm" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-xs font-medium text-gray-700 flex items-center gap-1">
+                    <Flame className="w-3 h-3 text-red-500" /> Priority
+                  </Label>
+                  <Select value={editPriority} onValueChange={setEditPriority}>
+                    <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Not set" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="High">High</SelectItem>
+                      <SelectItem value="Medium">Medium</SelectItem>
+                      <SelectItem value="Low">Low</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs font-medium text-gray-700">Board Meeting Impact</Label>
+                  <Select value={editImpact} onValueChange={setEditImpact}>
+                    <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Not set" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Positive">Positive</SelectItem>
+                      <SelectItem value="Negative">Negative</SelectItem>
+                      <SelectItem value="Neutral">Neutral</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div className="space-y-1">

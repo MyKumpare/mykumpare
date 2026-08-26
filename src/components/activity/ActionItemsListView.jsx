@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
-  Search, X, Flame, CalendarClock, Building2, AlertTriangle, ListFilter, KanbanSquare, ArrowDownWideNarrow,
+  Search, X, Flame, CalendarClock, Building2, AlertTriangle, ListFilter, KanbanSquare, ArrowDownWideNarrow, TrendingUp, TrendingDown, Minus, Signal,
 } from "lucide-react";
 import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
@@ -17,6 +17,20 @@ const STATUS_OPTIONS = [
   { key: "Completed",  label: "Completed",    chip: "bg-green-100 text-green-700", dot: "bg-green-500" },
   { key: "Cancelled",  label: "Cancelled",     chip: "bg-red-100 text-red-700",     dot: "bg-red-400" },
 ];
+
+const PRIORITY_META = {
+  High:   { icon: Flame,       chip: "bg-red-100 text-red-700",     dot: "bg-red-500" },
+  Medium: { icon: Signal,       chip: "bg-amber-100 text-amber-700", dot: "bg-amber-500" },
+  Low:    { icon: Minus,       chip: "bg-gray-100 text-gray-600",   dot: "bg-gray-400" },
+};
+const PRIORITY_RANK = { High: 0, Medium: 1, Low: 2 };
+
+const IMPACT_META = {
+  Positive: { icon: TrendingUp,   chip: "bg-green-100 text-green-700",   dot: "bg-green-500" },
+  Negative: { icon: TrendingDown, chip: "bg-red-100 text-red-700",       dot: "bg-red-500" },
+  Neutral:  { icon: Minus,        chip: "bg-gray-100 text-gray-600",     dot: "bg-gray-400" },
+};
+const IMPACT_RANK = { Negative: 0, Positive: 1, Neutral: 2 };
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
@@ -59,9 +73,20 @@ export default function ActionItemsListView({ tasks, meetings, onOpenTask }) {
       return true;
     });
     const statusRank = { "Not Started": 0, "In-process": 1, "Completed": 2, "Cancelled": 3 };
+    const pr = (t) => t.priority || (t.is_high_priority ? "High" : "");
     return [...result].sort((a, b) => {
       if (sortBy === "priority") {
-        if (a.is_high_priority !== b.is_high_priority) return b.is_high_priority ? 1 : -1;
+        const ar = PRIORITY_RANK[pr(a)] ?? 9;
+        const br = PRIORITY_RANK[pr(b)] ?? 9;
+        if (ar !== br) return ar - br;
+        const ad = a.due_date || "9999-12-31";
+        const bd = b.due_date || "9999-12-31";
+        return ad.localeCompare(bd);
+      }
+      if (sortBy === "impact") {
+        const ar = IMPACT_RANK[a.board_meeting_impact] ?? 9;
+        const br = IMPACT_RANK[b.board_meeting_impact] ?? 9;
+        if (ar !== br) return ar - br;
         const ad = a.due_date || "9999-12-31";
         const bd = b.due_date || "9999-12-31";
         return ad.localeCompare(bd);
@@ -122,6 +147,7 @@ export default function ActionItemsListView({ tasks, meetings, onOpenTask }) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="priority">Priority (high first)</SelectItem>
+              <SelectItem value="impact">Board meeting impact</SelectItem>
               <SelectItem value="due">Due date (soonest)</SelectItem>
               <SelectItem value="status">Status</SelectItem>
             </SelectContent>
@@ -175,6 +201,9 @@ export default function ActionItemsListView({ tasks, meetings, onOpenTask }) {
             const firmId = t.originator_firm_id || t.assigned_to_firm_id || meeting?.firm_id;
             const firmName = t.assigned_to_firm_name || t.originator_firm_name || meeting?.firm_name || "";
             const statusOpt = STATUS_OPTIONS.find(s => s.key === t.status) || STATUS_OPTIONS[0];
+            const priorityKey = t.priority || (t.is_high_priority ? "High" : "");
+            const priorityMeta = priorityKey ? PRIORITY_META[priorityKey] : null;
+            const impactMeta = t.board_meeting_impact ? IMPACT_META[t.board_meeting_impact] : null;
             return (
               <div
                 key={t.id}
@@ -190,10 +219,22 @@ export default function ActionItemsListView({ tasks, meetings, onOpenTask }) {
                   <p className="text-sm font-medium text-gray-800 line-clamp-3 flex-1">
                     {stripHtml(t.task_description) || "(no description)"}
                   </p>
-                  <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${statusOpt.chip}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${statusOpt.dot}`} />
-                    {statusOpt.label}
-                  </span>
+                  <div className="flex items-center gap-1 flex-shrink-0 flex-wrap justify-end">
+                    <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusOpt.chip}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${statusOpt.dot}`} />
+                      {statusOpt.label}
+                    </span>
+                    {priorityMeta && (() => { const PI = priorityMeta.icon; return (
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${priorityMeta.chip}`}>
+                        <PI className="w-3 h-3" /> {priorityKey}
+                      </span>
+                    ); })()}
+                    {impactMeta && (() => { const II = impactMeta.icon; return (
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${impactMeta.chip}`}>
+                        <II className="w-3 h-3" /> {t.board_meeting_impact}
+                      </span>
+                    ); })()}
+                  </div>
                 </div>
 
                 {t.activity_label && (

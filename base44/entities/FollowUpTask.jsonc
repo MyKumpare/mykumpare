@@ -35,6 +35,24 @@
       "default": false,
       "description": "True when this task was flagged as a high-priority follow-up during automated extraction from board meeting notes (urgent, deadline-driven, compliance-related, or explicitly marked as priority)."
     },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "High",
+        "Medium",
+        "Low"
+      ],
+      "description": "User-assigned priority level for this task. 'High' aligns with the auto-extracted is_high_priority flag; 'Medium' and 'Low' let users grade non-urgent items. Empty means no explicit priority has been set yet."
+    },
+    "board_meeting_impact": {
+      "type": "string",
+      "enum": [
+        "Positive",
+        "Negative",
+        "Neutral"
+      ],
+      "description": "Assessed impact of the board meeting action item on the user's portfolio \u2014 whether the action/item reflects a positive, negative, or neutral development. Set manually by the team to flag items that need attention based on their directional impact."
+    },
     "due_date": {
       "type": "string",
       "format": "date",
