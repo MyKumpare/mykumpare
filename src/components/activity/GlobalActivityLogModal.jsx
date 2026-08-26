@@ -8,6 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ActivityTypePicker from "./ActivityTypePicker";
 import SubjectPicker from "./SubjectPicker";
+import MeetingRecapTemplatePicker from "./MeetingRecapTemplatePicker";
+import { lazyDialog } from "@/components/common/lazyDialog";
+const MeetingRecapTemplateManager = lazyDialog(() => import("@/components/activity/MeetingRecapTemplateManager"));
 import { useAutoOriginator } from "./useAutoOriginator";
 import OriginatorPicker, { FirmPickerDropdown } from "./OriginatorPicker";
 import {
@@ -430,6 +433,7 @@ function ActivityLogForm({ onSaved, onCancel, allFirms, allContacts, onFirmClick
   const [tasks, setTasks] = useState([]);
   const [savedActivity, setSavedActivity] = useState(null); // { id, type, date } once the activity has been persisted
   const [savingTasks, setSavingTasks] = useState(false);
+  const [tplManagerOpen, setTplManagerOpen] = useState(false);
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.ContactActivity.create(data),
@@ -561,7 +565,17 @@ function ActivityLogForm({ onSaved, onCancel, allFirms, allContacts, onFirmClick
       </div>
 
       <div className="space-y-1">
-        <Label className="text-xs font-medium text-gray-700">Notes</Label>
+        <div className="flex items-center justify-between">
+          <Label className="text-xs font-medium text-gray-700">Notes</Label>
+          <MeetingRecapTemplatePicker
+            activityType={activityType}
+            contactName={originator.contactName}
+            firmName={originator.firmName}
+            activityDate={activityDate}
+            onInsert={(content) => setNotes(content)}
+            onManage={() => setTplManagerOpen(true)}
+          />
+        </div>
         <Textarea placeholder="Activity details..." value={notes} onChange={e => setNotes(e.target.value)} className="min-h-16 text-sm" />
       </div>
 
@@ -636,6 +650,8 @@ function ActivityLogForm({ onSaved, onCancel, allFirms, allContacts, onFirmClick
           </Button>
         )}
       </div>
+
+      <MeetingRecapTemplateManager open={tplManagerOpen} onClose={() => setTplManagerOpen(false)} />
     </div>
   );
 }

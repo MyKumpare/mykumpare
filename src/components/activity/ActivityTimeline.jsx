@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import {
   Search, X, Calendar, ChevronRight, ChevronDown, Tag, Building2, User, GitBranch, ClipboardList, List, Layers,
+  Phone, Mail, Users, FileText, MoreHorizontal,
 } from "lucide-react";
 import { format } from "date-fns";
 import SearchableSelect from "@/components/common/SearchableSelect";
@@ -28,6 +29,24 @@ const GROUP_MODES = [
   { key: "contact", label: "By Contact", icon: User },
 ];
 
+// Quick-toggle type filter pills — click to filter to a single type, click
+// again to clear. Each pill shows a live count of that type in the current data.
+const TYPE_FILTERS = [
+  { key: "Meeting", label: "Meetings", icon: Users, color: "green" },
+  { key: "Call", label: "Calls", icon: Phone, color: "blue" },
+  { key: "Email", label: "Emails", icon: Mail, color: "purple" },
+  { key: "Note", label: "Notes", icon: FileText, color: "yellow" },
+  { key: "Other", label: "Other", icon: MoreHorizontal, color: "gray" },
+];
+
+const TYPE_PILL_STYLES = {
+  green: { active: "bg-green-600 text-white border-green-600", idle: "bg-green-50 text-green-700 border-green-200 hover:bg-green-100" },
+  blue: { active: "bg-blue-600 text-white border-blue-600", idle: "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100" },
+  purple: { active: "bg-purple-600 text-white border-purple-600", idle: "bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100" },
+  yellow: { active: "bg-yellow-500 text-white border-yellow-500", idle: "bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100" },
+  gray: { active: "bg-gray-600 text-white border-gray-600", idle: "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100" },
+};
+
 function fmt(dateStr) {
   if (!dateStr) return "—";
   try { return format(new Date(dateStr + "T00:00:00"), "MMM d, yyyy"); } catch { return dateStr; }
@@ -41,6 +60,7 @@ export default function ActivityTimeline({ onActivityClick, hideHeader = false }
   const [search, setSearch] = useState("");
   const [teamMember, setTeamMember] = useState("");
   const [stage, setStage] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
   const [groupBy, setGroupBy] = useState("all");
   const [collapsedGroups, setCollapsedGroups] = useState({});
 
@@ -115,6 +135,7 @@ export default function ActivityTimeline({ onActivityClick, hideHeader = false }
       const contact = contactMap[a.contact_id];
       if (teamMember && a.created_by_id !== teamMember) return false;
       if (stage && (contact?.pipeline_stage || "") !== stage) return false;
+      if (typeFilter && a.activity_type !== typeFilter) return false;
       if (q) {
         const contactName = contact ? [contact.first_name, contact.last_name].filter(Boolean).join(" ") : "";
         const firmNames = (a.associated_firms_contacts || []).map(e => e.firm_name || "").join(" ");
@@ -123,7 +144,7 @@ export default function ActivityTimeline({ onActivityClick, hideHeader = false }
       }
       return true;
     });
-  }, [activities, search, teamMember, stage, contactMap]);
+  }, [activities, search, teamMember, stage, typeFilter, contactMap]);
 
   // Build groups based on the selected grouping mode.
   // - "all": one group per date (chronological timeline)
@@ -168,8 +189,19 @@ export default function ActivityTimeline({ onActivityClick, hideHeader = false }
     return byDate();
   }, [filtered, groupBy, firmNameFor, contactNameFor]);
 
-  const hasFilters = search || teamMember || stage;
-  const clearFilters = () => { setSearch(""); setTeamMember(""); setStage(""); };
+  const hasFilters = search || teamMember || stage || typeFilter;
+  const clearFilters = () => { setSearch(""); setTeamMember(""); setStage(""); setTypeFilter(""); };
+
+  // Live counts per activity type (from the full dataset, before type filtering,
+  // so the pills always show the true total available for each type).
+  const typeCounts = useMemo(() => {
+    const counts = {};
+    activities.forEach(a => {
+      const t = a.activity_type || "Other";
+      counts[t] = (counts[t] || 0) + 1;
+    });
+    return counts;
+  }, [activities]);
   const toggleGroup = (key) => setCollapsedGroups(prev => ({ ...prev, [key]: !prev[key] }));
 
   const renderActivity = (activity) => {
@@ -269,6 +301,31 @@ export default function ActivityTimeline({ onActivityClick, hideHeader = false }
             </button>
           )}
         </div>
+
+        {/* Quick-toggle type filter pills */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {TYPE_FILTERS.map(tf => {
+            const Icon = tf.icon;
+            const active = typeFilter === tf.key;
+            const count = typeCounts[tf.key] || 0;
+            const styles = TYPE_PILL_STYLES[tf.color];
+            return (
+              <button
+                key={tf.key}
+                type="button"
+                onClick={() => setTypeFilter(active ? "" : tf.key)}
+                className={`inline-flex items-center gap-1 px-2.5 h-7 rounded-full text-xs font-medium border transition-colors ${
+                  active ? styles.active : styles.idle
+                } ${count === 0 && !active ? "opacity-40" : ""}`}
+              >
+                <Icon className="w-3 h-3" />
+                {tf.label}
+                {count > 0 && <span className={`text-[10px] ${active ? "text-white/80" : "text-gray-400"}`}>({count})</span>}
+              </button>
+            );
+          })}
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <SearchableSelect
             value={teamMember}

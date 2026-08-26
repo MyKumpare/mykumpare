@@ -1,0 +1,82 @@
+{
+  "name": "MeetingRecapTemplate",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the recap template (e.g. 'Discovery Call Recap', 'Quarterly Review Meeting')."
+    },
+    "description": {
+      "type": "string",
+      "description": "Short description of when to use this template."
+    },
+    "applicable_types": {
+      "type": "array",
+      "description": "Activity types this template is designed for. Empty means the template applies to all activity types.",
+      "items": {
+        "type": "string",
+        "enum": [
+          "Call",
+          "Email",
+          "Meeting",
+          "Note",
+          "Other"
+        ]
+      }
+    },
+    "template_content": {
+      "type": "string",
+      "description": "The recap template body \u2014 plain text with optional placeholders like {{contact_name}}, {{firm_name}}, {{date}} that are auto-filled when the template is applied to a new activity."
+    },
+    "is_default": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this template is the default for its applicable activity types. The default is auto-selected when a matching activity type is chosen."
+    }
+  },
+  "required": [
+    "name",
+    "template_content"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "user"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": null,
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
