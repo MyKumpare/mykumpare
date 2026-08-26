@@ -54,6 +54,7 @@ import ContactUpcomingTasksPanel from "./ContactUpcomingTasksPanel";
 import { downloadVCard } from "./vCardExport";
 import ContactInfluenceScore from "./ContactInfluenceScore";
 import ContactQuickActions from "./ContactQuickActions";
+import QuickActivityLogFab from "./QuickActivityLogFab";
 
 const SALUTATIONS = ["Mr.", "Ms.", "Mrs.", "Dr.", "Prof.", "Hon."];
 const SUFFIXES = ["Jr.", "Sr.", "II", "III", "IV", "Esq.", "CFA", "CPA", "MBA", "PhD", "MD"];
@@ -2076,6 +2077,14 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
             </>
           )}
         </DialogFooter>
+      {/* Quick activity log floating action button — view mode only */}
+      {viewMode && editingContact && (
+        <QuickActivityLogFab
+          contact={editingContact}
+          firms={firms}
+          onSaved={() => queryClient.invalidateQueries({ queryKey: ["contacts"] })}
+        />
+      )}
       </DialogContent>
 
       {duplicateWarning && (
