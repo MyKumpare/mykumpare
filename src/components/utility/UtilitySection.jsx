@@ -21,6 +21,11 @@ import FirmTypeValidation from "./FirmTypeValidation";
 import ExperienceOptionCleanup from "./ExperienceOptionCleanup";
 import ImportJobsDashboard from "./ImportJobsDashboard";
 import NewsScrubSettings from "./NewsScrubSettings";
+import DashboardTimelineSection from "@/components/dashboard/DashboardTimelineSection";
+import StaleContactRemindersPanel from "@/components/contacts/StaleContactRemindersPanel";
+import DashboardAnalystCoverageSection from "@/components/dashboard/DashboardAnalystCoverageSection";
+import DashboardFirmCoverageSection from "@/components/dashboard/DashboardFirmCoverageSection";
+import { TrendingUp, Network, Bell, ArrowRight } from "lucide-react";
 
 function BenchmarkItem({ b, onClick }) {
   return (
@@ -61,10 +66,11 @@ function CollapsibleGroup({ label, labelClass = "text-xs font-semibold text-indi
   );
 }
 
-export default function UtilitySection({ deletedCount, forceExpanded = false, onFirmClick, defaultView, onOpenExternalPortal }) {
+export default function UtilitySection({ deletedCount, forceExpanded = false, onFirmClick, defaultView, onOpenExternalPortal, onActivityClick, onContactClick, onProductClick, firms = [], products = [], activeContacts = [] }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  const isManagement = user?.is_management;
   const [expanded, setExpanded] = useState(false);
   // 'menu' = selection screen, 'benchmark' = benchmark list + search, 'cleanup' = contact cleanup, 'orphans' = orphan record cleanup
   const [view, setView] = useState(defaultView || "menu");
@@ -352,6 +358,75 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
                 <span className="text-sm font-semibold text-gray-700">Ext Portal</span>
                 <span className="text-[11px] text-gray-400">External party portal</span>
               </button>
+
+              {/* Management tools — management users only */}
+              {isManagement && (
+                <div className="col-span-2 mt-2 pt-3 border-t border-gray-200">
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2 px-1">Management</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => setView("mgmt-timeline")}
+                      className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
+                    >
+                      <div className="w-9 h-9 rounded-full bg-amber-50 flex items-center justify-center">
+                        <Activity className="w-5 h-5 text-amber-600" />
+                      </div>
+                      <span className="text-sm font-semibold text-gray-700">Activity Timeline</span>
+                      <span className="text-[11px] text-gray-400">Recent interactions across all contacts</span>
+                    </button>
+                    <button
+                      onClick={() => setView("mgmt-stale-reminders")}
+                      className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
+                    >
+                      <div className="w-9 h-9 rounded-full bg-rose-50 flex items-center justify-center">
+                        <Bell className="w-5 h-5 text-rose-600" />
+                      </div>
+                      <span className="text-sm font-semibold text-gray-700">Stale Contact Reminders</span>
+                      <span className="text-[11px] text-gray-400">Contacts needing outreach</span>
+                    </button>
+                    <button
+                      onClick={() => navigate("/WeeklyInteractionReport")}
+                      className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
+                    >
+                      <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center">
+                        <TrendingUp className="w-5 h-5 text-emerald-600" />
+                      </div>
+                      <span className="text-sm font-semibold text-gray-700">Weekly Interaction Report</span>
+                      <span className="text-[11px] text-gray-400">Engagement snapshot for top-tier contacts</span>
+                    </button>
+                    <button
+                      onClick={() => navigate("/RelationshipNetworkMap")}
+                      className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
+                    >
+                      <div className="w-9 h-9 rounded-full bg-indigo-50 flex items-center justify-center">
+                        <Network className="w-5 h-5 text-indigo-600" />
+                      </div>
+                      <span className="text-sm font-semibold text-gray-700">Relationship Network Map</span>
+                      <span className="text-[11px] text-gray-400">Visualize contact relationships</span>
+                    </button>
+                    <button
+                      onClick={() => setView("mgmt-analyst-coverage")}
+                      className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
+                    >
+                      <div className="w-9 h-9 rounded-full bg-indigo-50 flex items-center justify-center">
+                        <Users className="w-5 h-5 text-indigo-600" />
+                      </div>
+                      <span className="text-sm font-semibold text-gray-700">Analyst Coverage</span>
+                      <span className="text-[11px] text-gray-400">Analyst workload & assignments</span>
+                    </button>
+                    <button
+                      onClick={() => setView("mgmt-firm-coverage")}
+                      className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
+                    >
+                      <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center">
+                        <Building className="w-5 h-5 text-emerald-600" />
+                      </div>
+                      <span className="text-sm font-semibold text-gray-700">Firm Coverage</span>
+                      <span className="text-[11px] text-gray-400">Firm & product coverage overview</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -521,6 +596,51 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
           {/* News scrub settings (admin) */}
           {view === "news-scrub-settings" && (
             <NewsScrubSettings />
+          )}
+
+          {/* Management: Activity Timeline */}
+          {view === "mgmt-timeline" && (
+            <DashboardTimelineSection
+              forceExpanded={forceExpanded}
+              onActivityClick={onActivityClick}
+            />
+          )}
+
+          {/* Management: Stale Contact Reminders */}
+          {view === "mgmt-stale-reminders" && (
+            <StaleContactRemindersPanel
+              forceExpanded={forceExpanded}
+              onContactClick={(contactId) => {
+                const c = activeContacts.find((x) => x.id === contactId);
+                if (c) onContactClick?.(c);
+              }}
+            />
+          )}
+
+          {/* Management: Analyst Coverage */}
+          {view === "mgmt-analyst-coverage" && (
+            <DashboardAnalystCoverageSection
+              forceExpanded={forceExpanded}
+              onFirmClick={(firmId) => {
+                const f = firms.find((x) => x.id === firmId);
+                if (f) onFirmClick?.(f);
+              }}
+            />
+          )}
+
+          {/* Management: Firm Coverage */}
+          {view === "mgmt-firm-coverage" && (
+            <DashboardFirmCoverageSection
+              forceExpanded={forceExpanded}
+              onFirmClick={(firmId) => {
+                const f = firms.find((x) => x.id === firmId);
+                if (f) onFirmClick?.(f);
+              }}
+              onProductClick={(productId) => {
+                const p = products.find((x) => x.id === productId);
+                if (p) onProductClick?.(p);
+              }}
+            />
           )}
         </div>
       )}

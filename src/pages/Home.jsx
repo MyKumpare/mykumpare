@@ -767,11 +767,6 @@ export default function Home() {
       { label: "Network Map", icon: Share2, onClick: () => navigate("/ContactNetwork") },
       { label: "Relationship Map", icon: Network, onClick: () => navigate("/RelationshipNetworkMap") },
     ] },
-    ...(user?.is_management ? [{ label: "Management", icon: Briefcase, ref: null, color: "text-emerald-600", activeBg: "bg-emerald-50", submenu: [
-      { label: "Activity Timeline", icon: Activity, onClick: () => managementRef.current?.scrollToSection(0) },
-      { label: "Analyst Coverage", icon: Users, onClick: () => managementRef.current?.scrollToSection(1) },
-      { label: "Firm Coverage", icon: Building, onClick: () => managementRef.current?.scrollToSection(2) },
-    ] }] : []),
     { label: "Utilities", icon: Wrench, ref: utilityRef, color: "text-gray-600", activeBg: "bg-gray-100", onClick: () => { setUtilityDefaultView(null); setUtilityModalOpen(true); }, submenu: [
       { label: "Benchmark", icon: Gauge, onClick: () => { setUtilityDefaultView("benchmark"); setUtilityModalOpen(true); } },
       { label: "Contact Cleanup", icon: Users, onClick: () => { setUtilityDefaultView("cleanup"); setUtilityModalOpen(true); } },
@@ -791,6 +786,14 @@ export default function Home() {
         { label: "Admin", icon: ShieldCheck, onClick: () => navigate("/UserManagement") },
       ] : []),
       { label: "Ext Portal", icon: ExternalLink, onClick: () => setExternalPortalOpen(true) },
+      ...(user?.is_management ? [
+        { label: "Activity Timeline", icon: Activity, onClick: () => { setUtilityDefaultView("mgmt-timeline"); setUtilityModalOpen(true); } },
+        { label: "Stale Contact Reminders", icon: Bell, onClick: () => { setUtilityDefaultView("mgmt-stale-reminders"); setUtilityModalOpen(true); } },
+        { label: "Weekly Interaction Report", icon: TrendingUp, onClick: () => navigate("/WeeklyInteractionReport") },
+        { label: "Relationship Network Map", icon: Network, onClick: () => navigate("/RelationshipNetworkMap") },
+        { label: "Analyst Coverage", icon: Users, onClick: () => { setUtilityDefaultView("mgmt-analyst-coverage"); setUtilityModalOpen(true); } },
+        { label: "Firm Coverage", icon: Building, onClick: () => { setUtilityDefaultView("mgmt-firm-coverage"); setUtilityModalOpen(true); } },
+      ] : []),
     ] },
   ];
 
@@ -1177,118 +1180,20 @@ export default function Home() {
           forceExpanded={allExpanded}
         />
 
-        {/* Management — Activity Timeline, Analyst Coverage, Firm Coverage (management users only) */}
-        {user?.is_management && (
-        <ManagementNavSection
-          ref={managementRef}
-          forceExpanded={allExpanded}
-          sections={[
-            {
-              label: "Activity Timeline",
-              icon: Activity,
-              iconColor: "text-amber-500",
-              element: (
-                <DashboardTimelineSection
-                  forceExpanded={allExpanded}
-                  onActivityClick={(activity) => setViewingActivity(activity)}
-                />
-              ),
-            },
-            {
-              label: "Stale Contact Reminders",
-              icon: Bell,
-              iconColor: "text-rose-500",
-              element: (
-                <StaleContactRemindersPanel
-                  forceExpanded={allExpanded}
-                  onContactClick={(contactId) => {
-                    const c = activeContacts.find((x) => x.id === contactId);
-                    if (c) setViewingContact(c);
-                  }}
-                />
-              ),
-            },
-            {
-              label: "Weekly Interaction Report",
-              icon: TrendingUp,
-              iconColor: "text-emerald-500",
-              element: (
-                <button
-                  type="button"
-                  onClick={() => navigate("/WeeklyInteractionReport")}
-                  className="w-full flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50/40 hover:bg-emerald-50 px-4 py-3 text-left transition-colors group"
-                >
-                  <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                    <TrendingUp className="w-4 h-4 text-emerald-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-gray-800">Weekly Interaction Report</div>
-                    <div className="text-[11px] text-gray-500">Engagement snapshot for top-tier contacts — who you've reached and where the gaps are</div>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-emerald-500 group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
-                </button>
-              ),
-            },
-            {
-              label: "Relationship Network Map",
-              icon: Network,
-              iconColor: "text-indigo-500",
-              element: (
-                <button
-                  type="button"
-                  onClick={() => navigate("/RelationshipNetworkMap")}
-                  className="w-full flex items-center gap-3 rounded-xl border border-indigo-200 bg-indigo-50/40 hover:bg-indigo-50 px-4 py-3 text-left transition-colors group"
-                >
-                  <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                    <Network className="w-4 h-4 text-indigo-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-gray-800">Relationship Network Map</div>
-                    <div className="text-[11px] text-gray-500">Visualize the relationships you've defined between your contacts</div>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-indigo-500 group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
-                </button>
-              ),
-            },
-            {
-              label: "Analyst Coverage",
-              icon: Users,
-              iconColor: "text-indigo-500",
-              element: (
-                <DashboardAnalystCoverageSection
-                  forceExpanded={allExpanded}
-                  onFirmClick={(firmId) => {
-                    const f = firms.find((x) => x.id === firmId);
-                    if (f) handleEdit(f);
-                  }}
-                />
-              ),
-            },
-            {
-              label: "Firm Coverage",
-              icon: Building,
-              iconColor: "text-emerald-500",
-              element: (
-                <DashboardFirmCoverageSection
-                  forceExpanded={allExpanded}
-                  onFirmClick={(firmId) => {
-                    const f = firms.find((x) => x.id === firmId);
-                    if (f) handleEdit(f);
-                  }}
-                  onProductClick={(productId) => {
-                    const p = products.find((x) => x.id === productId);
-                    if (p) handleEditProduct(p);
-                  }}
-                />
-              ),
-            },
-          ]}
-        />
-        )}
-
-        {/* Utility section */}
+        {/* Utility section — now includes Management tools (Activity Timeline, Coverage, etc.) */}
         <div ref={utilityRef} />
-        <UtilitySection deletedCount={deletedCount} forceExpanded={allExpanded || utilityForceExpanded} onFirmClick={handleEdit} onOpenExternalPortal={() => setExternalPortalOpen(true)} />
+        <UtilitySection
+          deletedCount={deletedCount}
+          forceExpanded={allExpanded || utilityForceExpanded}
+          onFirmClick={handleEdit}
+          onOpenExternalPortal={() => setExternalPortalOpen(true)}
+          onActivityClick={(activity) => setViewingActivity(activity)}
+          onContactClick={(contact) => setViewingContact(contact)}
+          onProductClick={(product) => handleEditProduct(product)}
+          firms={activeFirms}
+          products={activeProducts}
+          activeContacts={activeContacts}
+        />
 
         <div className="h-4" />
       </div>
@@ -1718,6 +1623,12 @@ export default function Home() {
         deletedCount={deletedCount}
         onFirmClick={handleEdit}
         defaultView={utilityDefaultView}
+        onActivityClick={(activity) => setViewingActivity(activity)}
+        onContactClick={(contact) => setViewingContact(contact)}
+        onProductClick={(product) => handleEditProduct(product)}
+        firms={activeFirms}
+        products={activeProducts}
+        activeContacts={activeContacts}
       />
 
       {/* Full-size photo viewer — opened by voice "search by photo <name>" */}
