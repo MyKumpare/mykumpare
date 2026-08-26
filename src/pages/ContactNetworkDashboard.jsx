@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import ContactStrengthGraph from "@/components/network/ContactStrengthGraph";
 import BoardMembershipDensity from "@/components/network/BoardMembershipDensity";
+import FirmContactClusterMap from "@/components/network/FirmContactClusterMap";
 import { generateContactNetworkReportPdf } from "@/components/network/contactNetworkReportPdf";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -227,6 +228,13 @@ export default function ContactNetworkDashboard() {
             >
               <Building2 className="w-4 h-4 mr-1" /> Board Density
             </Button>
+            <Button
+              variant={view === "cluster" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setView("cluster")}
+            >
+              <Network className="w-4 h-4 mr-1" /> Cluster Map
+            </Button>
           </div>
           <Button
             variant="outline"
@@ -336,6 +344,15 @@ export default function ContactNetworkDashboard() {
           <div className="relative border border-gray-200 rounded-xl bg-white shadow-sm overflow-hidden" style={{ height: "calc(100vh - 360px)", minHeight: "450px" }}>
             {view === "boards" ? (
               <BoardMembershipDensity />
+            ) : view === "cluster" ? (
+              <FirmContactClusterMap
+                highlightId={selectedId}
+                onNodeClick={(node) => {
+                  if (node.type === "contact") {
+                    handleNodeClick(node);
+                  }
+                }}
+              />
             ) : isLoading || isFetching ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
                 <Loader2 className="w-6 h-6 text-primary animate-spin" />
