@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload, TrendingUp, Tag, GraduationCap, Briefcase, Activity, Package, AlertTriangle, Linkedin, Loader2, ClipboardCheck, Image as ImageIcon, Bell, MessageSquare, Mail, Clock, Newspaper, Download } from "lucide-react";
+import { X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload, TrendingUp, Tag, GraduationCap, Briefcase, Activity, Package, AlertTriangle, Linkedin, Loader2, ClipboardCheck, Image as ImageIcon, Bell, MessageSquare, Mail, Clock, Newspaper, Download, Users } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
@@ -21,6 +21,7 @@ import ContactPhoneForm from "./ContactPhoneForm";
 import ContactAddressForm from "./ContactAddressForm";
 import ContactEducationTab from "./ContactEducationTab";
 import ContactProfessionalExperienceTab from "./ContactProfessionalExperienceTab";
+import ContactBoardMembershipTab from "./ContactBoardMembershipTab";
 import ContactActivitiesTab from "./ContactActivitiesTab";
 import ContactTimeline from "./ContactTimeline";
 import ContactDueDiligenceTab from "./ContactDueDiligenceTab";
@@ -105,6 +106,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [showQuickAddFirm, setShowQuickAddFirm] = useState(false);
   const [education, setEducation] = useState([]);
   const [professionalExperience, setProfessionalExperience] = useState([]);
+  const [boardMemberships, setBoardMemberships] = useState([]);
   const [phones, setPhones] = useState([newPhone()]);
   const [addresses, setAddresses] = useState([newAddress()]);
   const [duplicateWarning, setDuplicateWarning] = useState(null);
@@ -156,6 +158,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setFirmIds(editingContact.firm_ids || []);
         setEducation(editingContact.education || []);
         setProfessionalExperience(editingContact.professional_experience || []);
+        setBoardMemberships(editingContact.board_memberships || []);
         setPhones(editingContact.phones?.length > 0
           ? [...editingContact.phones].sort((a, b) => (b.is_default ? 1 : 0) - (a.is_default ? 1 : 0))
           : [newPhone()]);
@@ -192,6 +195,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setFirmIds(currentFirmId ? [currentFirmId] : []);
         setEducation([]);
         setProfessionalExperience([]);
+        setBoardMemberships([]);
         setPhones([newPhone()]);
         setAddresses([newAddress()]);
         // Apply pre-filled data from the paste / business-card flow
@@ -412,6 +416,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
       notes: notes.trim(),
       education: ed,
       professional_experience: ex,
+      board_memberships: boardMemberships,
       firm_ids: firmIds,
       phones: ph,
       addresses: addrs,
@@ -487,15 +492,16 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
     setExtracting(type);
     try {
       const isEdu = type === "education";
+      const isBoard = type === "board_memberships";
       const res = await base44.integrations.Core.InvokeLLM({
-        prompt: `You are extracting structured ${isEdu ? "education history" : "professional experience"} from a person's biography. Only include facts that are explicitly stated. Do not fabricate.
+        prompt: `You are extracting structured ${isEdu ? "education history" : isBoard ? "board memberships" : "professional experience"} from a person's biography. Only include facts that are explicitly stated. Do not fabricate.
 
 Biography:
 """
 ${biography.trim().substring(0, 8000)}
 """
 
-Return a JSON object. For education, each item: institution, degree, area_of_specialization, graduation_year (string), majors (array of strings). Only include schools/universities the person attended as a student. For professional experience, each item: company_name, title, start_year (string), end_year (string, empty if it is the person's current employer). Include ALL employers mentioned in the biography, including the person's current employer (leave end_year empty for current roles). Order entries from most recent to oldest.`,
+Return a JSON object. For education, each item: institution, degree, area_of_specialization, graduation_year (string), majors (array of strings). Only include schools/universities the person attended as a student. For professional experience, each item: company_name, title, start_year (string), end_year (string, empty if it is the person's current employer). Include ALL employers mentioned in the biography, including the person's current employer (leave end_year empty for current roles). Order entries from most recent to oldest. For board memberships, each item: organization_name, role (e.g. "Board Member", "Trustee", "Chairman"), start_year (string), end_year (string, empty if current). Only include EXTERNAL board positions on outside organizations, not internal committees at their own firm. Look for phrases like "serves on the board of", "trustee of", "board member of".`,
         response_json_schema: isEdu
           ? {
               type: "object",
@@ -510,6 +516,24 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                       area_of_specialization: { type: "string" },
                       graduation_year: { type: "string" },
                       majors: { type: "array", items: { type: "string" } },
+                    },
+                  },
+                },
+              },
+            }
+          : isBoard
+          ? {
+              type: "object",
+              properties: {
+                board_memberships: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      organization_name: { type: "string" },
+                      role: { type: "string" },
+                      start_year: { type: "string" },
+                      end_year: { type: "string" },
                     },
                   },
                 },
@@ -533,7 +557,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
               },
             },
       });
-      const raw = isEdu ? res?.education : res?.professional_experience;
+      const raw = isEdu ? res?.education : isBoard ? res?.board_memberships : res?.professional_experience;
       const items = (Array.isArray(raw) ? raw : []).map((x) => ({
         ...x,
         id: crypto.randomUUID(),
@@ -558,6 +582,12 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
           setEducation(combined);
           toast({ title: `✅ ${items.length} record${items.length === 1 ? "" : "s"} extracted`, description: "Added from biography." });
         }
+      } else if (isBoard) {
+        const combined = [...boardMemberships, ...items].sort(
+          (a, b) => (parseInt(b.start_year) || 0) - (parseInt(a.start_year) || 0)
+        );
+        setBoardMemberships(combined);
+        toast({ title: `✅ ${items.length} record${items.length === 1 ? "" : "s"} extracted`, description: "Added from biography." });
       } else {
         // Experience: route through the company/title match review first.
         setPendingExperienceExtract(items);
@@ -670,6 +700,15 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
         .filter((e) => { const k = expKey(e); if (existingKeys.has(k)) return false; existingKeys.add(k); return true; })
         .map((e) => ({ ...e, id: crypto.randomUUID() }));
       if (newExp.length > 0) setProfessionalExperience([...(professionalExperience || []), ...newExp]);
+    }
+    if (Array.isArray(ext.board_memberships) && ext.board_memberships.length > 0) {
+      const boardKey = (m) => `${(m.organization_name || "").toLowerCase()}|${(m.role || "").toLowerCase()}`;
+      const existingBoardKeys = new Set((boardMemberships || []).map(boardKey));
+      const newBoards = ext.board_memberships
+        .filter((m) => m && m.organization_name)
+        .filter((m) => { const k = boardKey(m); if (existingBoardKeys.has(k)) return false; existingBoardKeys.add(k); return true; })
+        .map((m) => ({ ...m, id: crypto.randomUUID() }));
+      if (newBoards.length > 0) setBoardMemberships([...(boardMemberships || []), ...newBoards]);
     }
     // Refresh the query cache so the list reflects the backend update.
     queryClient.invalidateQueries({ queryKey: ["contacts"] });
@@ -833,13 +872,14 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
         JSON.stringify([...firmIds].sort()) !== JSON.stringify([...(e.firm_ids || [])].sort()) ||
         JSON.stringify(education) !== JSON.stringify(e.education || []) ||
         JSON.stringify(professionalExperience) !== JSON.stringify(e.professional_experience || []) ||
+        JSON.stringify(boardMemberships) !== JSON.stringify(e.board_memberships || []) ||
         JSON.stringify(phones) !== JSON.stringify(e.phones || []) ||
         JSON.stringify(addresses) !== JSON.stringify(e.addresses || [])
       );
     }
     return !!(firstName.trim() || lastName.trim() || email.trim() || title.trim() ||
       biography.trim() || notes.trim() || photoUrl || linkedinUrl.trim() ||
-      firmIds.length > 0 || education.length > 0 || professionalExperience.length > 0 ||
+      firmIds.length > 0 || education.length > 0 || professionalExperience.length > 0 || boardMemberships.length > 0 ||
       phones.some(p => p.area_code || p.number_mid || p.number_last) ||
       addresses.some(a => a.address_line1 || a.city || a.state));
   })();
@@ -1051,6 +1091,9 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                 </TabsTrigger>
                 <TabsTrigger value="experience" className="flex items-center gap-1.5">
                   <Briefcase className="w-3.5 h-3.5" /> Experience
+                </TabsTrigger>
+                <TabsTrigger value="board" className="flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5" /> Board
                 </TabsTrigger>
                 <TabsTrigger value="classification" className="flex items-center gap-1.5">
                   <Tag className="w-3.5 h-3.5" /> Classifications
@@ -1542,6 +1585,18 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                 biography={biography}
                 onExtractFromBio={handleExtractFromBio}
                 extracting={extracting === "experience"}
+              />
+            </TabsContent>
+
+            {/* ── BOARD MEMBERSHIP TAB ── */}
+            <TabsContent value="board" className="mt-0">
+              <ContactBoardMembershipTab
+                memberships={boardMemberships}
+                onChange={setBoardMemberships}
+                viewMode={viewMode}
+                biography={biography}
+                onExtractFromBio={handleExtractFromBio}
+                extracting={extracting === "board_memberships"}
               />
             </TabsContent>
 

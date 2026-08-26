@@ -4,6 +4,7 @@ import {
   normalizeName, isStubBio, discoverPeoplePage, discoverBioUrlByPattern,
   extractPeopleFromPage, extractBiographyFromPage,
 } from '../../shared/contactBioScrape.ts';
+import { extractBoardMembershipsFromBio, mergeBoardMemberships } from '../../shared/boardMembershipExtract.ts';
 
 /**
  * Targeted enrichment: fetches the firm's people page, extracts all personnel,
@@ -103,6 +104,17 @@ Deno.serve(async (req) => {
             if (bio && bio.length > 60) {
               updateData.biography = bio;
               updatedFields.push('Biography');
+              // Extract board memberships from the newly fetched biography.
+              try {
+                const boards = await extractBoardMembershipsFromBio(base44, fullName, bio);
+                if (boards.length > 0) {
+                  const merged = mergeBoardMemberships(contact.board_memberships || [], boards);
+                  if (merged.length > (contact.board_memberships || []).length) {
+                    updateData.board_memberships = merged;
+                    updatedFields.push('Board Memberships');
+                  }
+                }
+              } catch { /* non-fatal */ }
             }
           }
         }

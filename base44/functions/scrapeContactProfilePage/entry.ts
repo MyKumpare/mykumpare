@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { fetchPage, cleanStr, parsePhone } from '../../shared/enrichmentUtils.ts';
+import { extractBoardMembershipsFromBio, mergeBoardMemberships } from '../../shared/boardMembershipExtract.ts';
 
 export default async function(req: Request): Promise<Response> {
   try {
@@ -46,6 +47,7 @@ EXTRACT THESE FIELDS:
 6. designations: any professional designations/certifications (e.g. "CFA", "CFP", "CPA", "MBA", "PhD", "Chartered Financial Analyst"). Return as an array of strings.
 7. education: every school/college/university the person attended as a student, with institution, degree, area_of_specialization, majors (array), graduation_year. Only include institutions they attended as a student, NOT firms where they worked.
 8. professional_experience: every employer/company mentioned INCLUDING their current firm, with company_name, title, start_year, end_year (leave end_year empty if current employer). Order from most recent to oldest.
+9. board_memberships: every external board, trustee, or governance position mentioned (roles on boards of OUTSIDE organizations, not internal committees at their own firm). Each item: organization_name, role (e.g. "Board Member", "Trustee", "Chairman"), start_year, end_year (empty if current). Look for phrases like "serves on the board of", "trustee of", "board member of".
 
 --- PAGE CONTENT ---
 ${pageText.substring(0, 20000)}
@@ -81,6 +83,18 @@ Return a JSON object with all fields above. Leave fields empty or return empty a
               properties: {
                 company_name: { type: 'string' },
                 title: { type: 'string' },
+                start_year: { type: 'string' },
+                end_year: { type: 'string' },
+              },
+            },
+          },
+          board_memberships: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                organization_name: { type: 'string' },
+                role: { type: 'string' },
                 start_year: { type: 'string' },
                 end_year: { type: 'string' },
               },
@@ -156,6 +170,14 @@ Return a JSON object with all fields above. Leave fields empty or return empty a
         updatedFields.push('Experience');
       }
     }
+    if (Array.isArray(res?.board_memberships) && res.board_memberships.length > 0) {
+      const existingBoards = contact.board_memberships || [];
+      const merged = mergeBoardMemberships(existingBoards, res.board_memberships);
+      if (merged.length > existingBoards.length) {
+        updateData.board_memberships = merged;
+        updatedFields.push('Board Memberships');
+      }
+    }
 
     // Update the contact
     await base44.entities.Contact.update(contact_id, updateData);
@@ -173,6 +195,7 @@ Return a JSON object with all fields above. Leave fields empty or return empty a
         designations: res?.designations || [],
         education: res?.education || [],
         professional_experience: res?.professional_experience || [],
+        board_memberships: res?.board_memberships || [],
       },
     });
   } catch (error) {

@@ -4,6 +4,8 @@
 // or links contacts discovered on the website. Designed to run inside a
 // backend function under the service role, so it takes a `svc` client.
 
+import { extractBoardMembershipsFromBio, mergeBoardMemberships } from './boardMembershipExtract.ts';
+
 const PLACEHOLDER_VALUES = ['null', 'undefined', 'n/a', 'na', 'none', 'not provided', 'not available', 'unknown', '-'];
 
 function cleanStr(v: any): string {
@@ -213,6 +215,18 @@ export async function applyFirmEnrichment(
           .filter((e: any) => e && (e.company_name || e.title))
           .map((e: any) => ({ ...e, id: crypto.randomUUID() }));
         if (exp.length > 0) contactData.professional_experience = exp;
+      }
+      // Board memberships: use extracted board_memberships if present, otherwise
+      // extract from the biography via LLM.
+      let boardMemberships = Array.isArray(person.board_memberships) ? person.board_memberships : [];
+      if (boardMemberships.length === 0 && person.biography && person.biography.length > 60) {
+        try {
+          const fullName = `${person.first_name || ''} ${person.last_name || ''}`.trim();
+          boardMemberships = await extractBoardMembershipsFromBio(svc, fullName, person.biography);
+        } catch { /* non-fatal */ }
+      }
+      if (boardMemberships.length > 0) {
+        contactData.board_memberships = boardMemberships.map((m: any) => ({ ...m, id: crypto.randomUUID() }));
       }
       const created = await svc.entities.Contact.create(contactData);
       existingContacts.push(created);

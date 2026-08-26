@@ -4,6 +4,7 @@ import {
   normalizeName, isStubBio, discoverPeoplePage, discoverBioUrlByPattern,
   extractPeopleFromPage, extractBiographyFromPage,
 } from '../../shared/contactBioScrape.ts';
+import { extractBoardMembershipsFromBio, mergeBoardMemberships } from '../../shared/boardMembershipExtract.ts';
 
 /**
  * Scrapes a single contact's biography. Tries the related firm's website
@@ -114,6 +115,20 @@ CRITICAL: Return the COMPLETE biography text VERBATIM — do not summarize, para
     if (foundBioUrl && !contact.bio_url) {
       updateData.bio_url = foundBioUrl;
     }
+
+    // Extract board memberships from the newly found biography.
+    if (foundBio && foundBio.length > 60) {
+      try {
+        const boards = await extractBoardMembershipsFromBio(base44, fullName, foundBio);
+        if (boards.length > 0) {
+          const merged = mergeBoardMemberships(contact.board_memberships || [], boards);
+          if (merged.length > (contact.board_memberships || []).length) {
+            updateData.board_memberships = merged;
+          }
+        }
+      } catch { /* non-fatal */ }
+    }
+
     if (Object.keys(updateData).length > 0) {
       await base44.entities.Contact.update(contact_id, updateData);
     }

@@ -244,6 +244,34 @@
         }
       }
     },
+    "board_memberships": {
+      "type": "array",
+      "description": "Board memberships and trustee positions held by the contact, extracted from their biography/professional experience during the auto-fill website enrichment process. Each entry records the organization, the role held (e.g. Board Member, Trustee, Chairman), and the start/end years.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "organization_name": {
+            "type": "string",
+            "description": "Name of the organization whose board the contact serves/served on"
+          },
+          "role": {
+            "type": "string",
+            "description": "Role on the board (e.g. Board Member, Trustee, Chairman, Director)"
+          },
+          "start_year": {
+            "type": "string",
+            "description": "Year the contact joined the board"
+          },
+          "end_year": {
+            "type": "string",
+            "description": "Year the contact left the board (empty if current)"
+          }
+        }
+      }
+    },
     "firm_ids": {
       "type": "array",
       "description": "IDs of the associated firms",
