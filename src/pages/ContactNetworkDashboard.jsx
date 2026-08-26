@@ -3,11 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import {
   Share2, Loader2, Star, Crown, Users, Lightbulb, UserCheck,
-  Filter, ArrowRight, Trophy, Network, ZoomIn, Search, X, Building2, FileDown,
+  Filter, ArrowRight, Trophy, Network, ZoomIn, Search, X, Building2, FileDown, Grid3x3,
 } from "lucide-react";
 import ContactStrengthGraph from "@/components/network/ContactStrengthGraph";
 import BoardMembershipDensity from "@/components/network/BoardMembershipDensity";
 import FirmContactClusterMap from "@/components/network/FirmContactClusterMap";
+import BoardMembershipHeatmap from "@/components/network/BoardMembershipHeatmap";
 import { generateContactNetworkReportPdf } from "@/components/network/contactNetworkReportPdf";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -235,6 +236,13 @@ export default function ContactNetworkDashboard() {
             >
               <Network className="w-4 h-4 mr-1" /> Cluster Map
             </Button>
+            <Button
+              variant={view === "heatmap" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setView("heatmap")}
+            >
+              <Grid3x3 className="w-4 h-4 mr-1" /> Heatmap
+            </Button>
           </div>
           <Button
             variant="outline"
@@ -353,6 +361,8 @@ export default function ContactNetworkDashboard() {
                   }
                 }}
               />
+            ) : view === "heatmap" ? (
+              <BoardMembershipHeatmap />
             ) : isLoading || isFetching ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
                 <Loader2 className="w-6 h-6 text-primary animate-spin" />
@@ -411,7 +421,7 @@ export default function ContactNetworkDashboard() {
             )}
 
             {/* Help hint */}
-            {view !== "boards" && (
+            {view !== "boards" && view !== "heatmap" && (
               <div className="absolute top-3 right-3 text-xs text-gray-400 bg-white/80 px-2 py-1 rounded-md border border-gray-200">
                 {selectedId ? "Click another node to find path" : "Click a node to start"}
               </div>
