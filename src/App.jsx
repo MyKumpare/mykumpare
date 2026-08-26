@@ -36,6 +36,7 @@ import ContactNetworkDashboard from './pages/ContactNetworkDashboard';
 import ContactInfluenceDashboard from './pages/ContactInfluenceDashboard';
 import ActivityTimelinePage from './pages/ActivityTimelinePage';
 import WeeklyInteractionReport from './pages/WeeklyInteractionReport';
+import RelationshipNetworkMap from './pages/RelationshipNetworkMap';
 
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -123,6 +124,7 @@ const AuthenticatedApp = () => {
       <Route path="/ContactInfluenceDashboard" element={<LayoutWrapper currentPageName="ContactInfluenceDashboard"><ContactInfluenceDashboard /></LayoutWrapper>} />
       <Route path="/ActivityTimeline" element={<LayoutWrapper currentPageName="ActivityTimeline"><ActivityTimelinePage /></LayoutWrapper>} />
       <Route path="/WeeklyInteractionReport" element={<LayoutWrapper currentPageName="WeeklyInteractionReport"><WeeklyInteractionReport /></LayoutWrapper>} />
+      <Route path="/RelationshipNetworkMap" element={<LayoutWrapper currentPageName="RelationshipNetworkMap"><RelationshipNetworkMap /></LayoutWrapper>} />
       <Route path="/register" element={<ExternalPartyRegister />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>

@@ -9,6 +9,17 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/use-toast";
 import { Clock, Save, RotateCw } from "lucide-react";
 
+// Contact tiers mapped to the Contact entity's decision_role field. Each tier
+// can have its own custom day threshold so alerts stay relevant to the tier's
+// importance — decision makers get a shorter window, general contacts longer.
+const REMINDER_TIERS = [
+  { key: "Primary Decision Maker", label: "Primary Decision Makers", hint: "Shortest window — never lose touch with top decision makers", defaultDays: 21 },
+  { key: "Board Member", label: "Board Members", hint: "Keep board relationships current", defaultDays: 30 },
+  { key: "Key Influencer", label: "Key Influencers", hint: "Maintain influence with key voices", defaultDays: 45 },
+  { key: "Secondary Contact", label: "Secondary Contacts", hint: "Check in periodically", defaultDays: 60 },
+  { key: "Other", label: "Other Contacts", hint: "Longest window — general rolodex", defaultDays: 90 },
+];
+
 // Settings dialog for the stale-contact reminder system. Lets the admin
 // adjust the number of days without interaction before a contact is flagged
 // (default 30), enable/disable the daily check, and set the run time.
@@ -17,6 +28,7 @@ export default function ContactReminderSettingsDialog({ open, onClose }) {
   const [days, setDays] = useState(30);
   const [enabled, setEnabled] = useState(true);
   const [time, setTime] = useState("07:00");
+  const [tierThresholds, setTierThresholds] = useState({});
   const [loaded, setLoaded] = useState(false);
 
   // Load existing settings (or defaults) when the dialog opens.
@@ -34,9 +46,10 @@ export default function ContactReminderSettingsDialog({ open, onClose }) {
       setDays(settings.days_threshold ?? 30);
       setEnabled(settings.schedule_enabled ?? true);
       setTime(settings.schedule_time || "07:00");
+      setTierThresholds(settings.tier_thresholds || {});
       setLoaded(true);
     } else if (open && !isLoading && !settings) {
-      setDays(30); setEnabled(true); setTime("07:00"); setLoaded(true);
+      setDays(30); setEnabled(true); setTime("07:00"); setTierThresholds({}); setLoaded(true);
     }
   }, [open, settings, isLoading]);
 
@@ -46,6 +59,7 @@ export default function ContactReminderSettingsDialog({ open, onClose }) {
         days_threshold: Math.max(1, parseInt(days, 10) || 30),
         schedule_enabled: enabled,
         schedule_time: time || "07:00",
+        tier_thresholds: tierThresholds,
       };
       if (settings?.id) {
         return base44.entities.ContactReminderSettings.update(settings.id, payload);
@@ -101,6 +115,40 @@ export default function ContactReminderSettingsDialog({ open, onClose }) {
               <p className="text-[11px] text-gray-400">
                 Contacts with no recorded interaction in the last {days || 30} days will be flagged and emailed to you.
               </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Per-tier day limits</Label>
+              <p className="text-[11px] text-gray-400 -mt-1">
+                Set custom thresholds for each contact tier. Leave blank to use the default ({days || 30} days).
+              </p>
+              <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
+                {REMINDER_TIERS.map((tier) => (
+                  <div key={tier.key} className="flex items-center gap-2 rounded-lg border border-gray-200 px-2.5 py-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-medium text-gray-700">{tier.label}</div>
+                      <div className="text-[10px] text-gray-400 truncate">{tier.hint}</div>
+                    </div>
+                    <Input
+                      type="number"
+                      min={1}
+                      placeholder={String(tier.defaultDays)}
+                      value={tierThresholds[tier.key] ?? ""}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setTierThresholds((prev) => {
+                          const next = { ...prev };
+                          if (v === "") delete next[tier.key];
+                          else next[tier.key] = Math.max(1, parseInt(v, 10) || 1);
+                          return next;
+                        });
+                      }}
+                      className="w-20 h-7 text-xs text-center"
+                    />
+                    <span className="text-[10px] text-gray-400 w-8">days</span>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2.5">

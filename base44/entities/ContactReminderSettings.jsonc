@@ -5,7 +5,34 @@
     "days_threshold": {
       "type": "integer",
       "default": 30,
-      "description": "Number of days without a recorded interaction after which a contact is flagged as stale and an alert is generated. Users can adjust this value to control how quickly reminders fire."
+      "description": "Default number of days without a recorded interaction after which a contact is flagged as stale and an alert is generated. Used as the fallback when no tier-specific threshold is set for a contact's decision_role."
+    },
+    "tier_thresholds": {
+      "type": "object",
+      "description": "Per-tier custom day thresholds keyed by the contact's decision_role (e.g. 'Primary Decision Maker', 'Board Member', 'Key Influencer', 'Secondary Contact', 'Other'). Each value overrides the default days_threshold for contacts in that tier. Keys with no value or not present fall back to days_threshold. Set custom day limits for each group so alerts stay relevant to each tier's importance.",
+      "properties": {
+        "Primary Decision Maker": {
+          "type": "integer",
+          "description": "Days without interaction before a Primary Decision Maker is flagged. Shorter window \u2014 never lose touch with top decision makers."
+        },
+        "Board Member": {
+          "type": "integer",
+          "description": "Days without interaction before a Board Member is flagged."
+        },
+        "Key Influencer": {
+          "type": "integer",
+          "description": "Days without interaction before a Key Influencer is flagged."
+        },
+        "Secondary Contact": {
+          "type": "integer",
+          "description": "Days without interaction before a Secondary Contact is flagged."
+        },
+        "Other": {
+          "type": "integer",
+          "description": "Days without interaction before any other contact (no specific decision role) is flagged. Longest window \u2014 general rolodex."
+        }
+      },
+      "default": {}
     },
     "schedule_enabled": {
       "type": "boolean",

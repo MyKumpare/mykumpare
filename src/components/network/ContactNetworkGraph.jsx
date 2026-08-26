@@ -244,8 +244,8 @@ export default function ContactNetworkGraph({ nodes, edges, onNodeClick, highlig
               y1={s.y}
               x2={t.x}
               y2={t.y}
-              stroke={dim ? "#e5e7eb" : "#cbd5e1"}
-              strokeWidth={dim ? 1 : 1.5}
+              stroke={dim ? "#e5e7eb" : (e.color || "#cbd5e1")}
+              strokeWidth={dim ? 1 : (e.width || 1.5)}
               opacity={dim ? 0.3 : 0.7}
             />
           );

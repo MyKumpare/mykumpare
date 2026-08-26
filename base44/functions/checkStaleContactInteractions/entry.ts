@@ -36,10 +36,23 @@ export default async function(req: Request): Promise<Response> {
       return Response.json({ skipped: "schedule disabled", settings_id: settings.id });
     }
 
-    const thresholdDays: number = Number(settings.days_threshold) || 30;
+    const defaultThresholdDays: number = Number(settings.days_threshold) || 30;
+    const tierThresholds: Record<string, number> = (settings as any).tier_thresholds || {};
     const now = new Date();
-    const thresholdMs = thresholdDays * 24 * 60 * 60 * 1000;
+
+    // Determine the earliest cutoff across all tiers so we fetch enough
+    // activity history to cover every contact (the longest tier window).
+    const allTierDays = [defaultThresholdDays, ...Object.values(tierThresholds).map((d) => Number(d) || defaultThresholdDays)];
+    const maxThresholdDays = Math.max(...allTierDays);
+    const thresholdMs = maxThresholdDays * 24 * 60 * 60 * 1000;
     const cutoffDate = new Date(now.getTime() - thresholdMs);
+
+    // Per-contact threshold: use the tier-specific value if set, else the default.
+    const thresholdForContact = (contact: any): number => {
+      const tier = contact.decision_role;
+      if (tier && tierThresholds[tier] != null) return Number(tierThresholds[tier]) || defaultThresholdDays;
+      return defaultThresholdDays;
+    };
 
     // ── Build contact_id → latest activity_date map ────────────────────
     // Fetch activities newest-first in batches; stop once we pass the
@@ -93,6 +106,7 @@ export default async function(req: Request): Promise<Response> {
       firm_name: string;
       last_interaction_date: string;
       days_since: number;
+      threshold_days: number;
     };
     const staleContacts: StaleInfo[] = [];
     const contactLatest = new Map<string, { date: string; days: number }>();
@@ -111,9 +125,10 @@ export default async function(req: Request): Promise<Response> {
         daysSince = Math.floor((now.getTime() - created.getTime()) / (24 * 60 * 60 * 1000));
       }
 
-      contactLatest.set(c.id, { date: lastDateStr || "", days: daysSince });
+      const contactThreshold = thresholdForContact(c);
+      contactLatest.set(c.id, { date: lastDateStr || "", days: daysSince, threshold: contactThreshold });
 
-      if (daysSince >= thresholdDays) {
+      if (daysSince >= contactThreshold) {
         const fid = c.firm_ids?.[0] || "";
         const fullName = [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix]
           .filter(Boolean).join(" ").trim() || c.first_name || "Unknown";
@@ -124,6 +139,7 @@ export default async function(req: Request): Promise<Response> {
           firm_name: firmNameById.get(fid) || "",
           last_interaction_date: lastDateStr || "",
           days_since: daysSince,
+          threshold_days: contactThreshold,
         });
       }
     }
@@ -154,7 +170,7 @@ export default async function(req: Request): Promise<Response> {
           firm_name: s.firm_name,
           last_interaction_date: s.last_interaction_date,
           days_since_last_interaction: s.days_since,
-          threshold_days: thresholdDays,
+          threshold_days: s.threshold_days,
           status: "pending",
           alert_sent_at: new Date().toISOString(),
         });
@@ -215,7 +231,7 @@ export default async function(req: Request): Promise<Response> {
         const body = [
           `<h2 style="margin:0 0 8px;color:#111827;">Stale Contact Reminders</h2>`,
           `<p style="margin:0 0 4px;color:#6b7280;font-size:13px;">${dateStr}</p>`,
-          `<p style="margin:8px 0 12px;color:#374151;">${newlyFlagged.length} contact${newlyFlagged.length === 1 ? "" : "s"} have not had a recorded interaction in over ${thresholdDays} days:</p>`,
+          `<p style="margin:8px 0 12px;color:#374151;">${newlyFlagged.length} contact${newlyFlagged.length === 1 ? "" : "s"} have not had a recorded interaction within their tier threshold (default ${defaultThresholdDays} days):</p>`,
           `<table style="width:100%;border-collapse:collapse;">${rows}</table>`,
           `<p style="margin:16px 0 0;color:#9ca3af;font-size:11px;">Review and log new interactions in MyKumpare to clear these reminders.</p>`,
         ].join("");
@@ -242,7 +258,8 @@ export default async function(req: Request): Promise<Response> {
     });
 
     return Response.json({
-      threshold_days: thresholdDays,
+      threshold_days: defaultThresholdDays,
+      tier_thresholds: tierThresholds,
       total_contacts: activeContacts.length,
       stale_contacts: staleContacts.length,
       newly_flagged: newlyFlagged.length,
