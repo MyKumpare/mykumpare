@@ -105,7 +105,7 @@ export default function Home() {
   const [searchFocused, setSearchFocused] = useState(false);
   const [ownershipNavTarget, setOwnershipNavTarget] = useState(null); // { firmId, ownershipId }
   const [documentsNavTarget, setDocumentsNavTarget] = useState(null); // firmId to open at Documents tab
-  const [boardMeetingNavTarget, setBoardMeetingNavTarget] = useState(null); // firmId to open at Board Meetings tab
+  const [boardMeetingNavTarget, setBoardMeetingNavTarget] = useState(null); // { firmId, meetingId } to open at Board Meetings tab (optionally a specific meeting)
 
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
