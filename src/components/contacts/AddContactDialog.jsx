@@ -49,6 +49,7 @@ import ImageZoomDialog from "../common/ImageZoomDialog";
 import ExperienceOptionMatchDialog from "./ExperienceOptionMatchDialog";
 import ContactUpcomingTasksPanel from "./ContactUpcomingTasksPanel";
 import { downloadVCard } from "./vCardExport";
+import ContactInfluenceScore from "./ContactInfluenceScore";
 
 const SALUTATIONS = ["Mr.", "Ms.", "Mrs.", "Dr.", "Prof.", "Hon."];
 const SUFFIXES = ["Jr.", "Sr.", "II", "III", "IV", "Esq.", "CFA", "CPA", "MBA", "PhD", "MD"];
@@ -950,6 +951,15 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                       </span>
                     ))}
                     <ContactTagChips tags={tags} />
+                  </div>
+                )}
+                {editingContact && (
+                  <div className="mt-1">
+                    <ContactInfluenceScore
+                      contactId={editingContact.id}
+                      firmIds={firmIds}
+                      firms={firms}
+                    />
                   </div>
                 )}
               </div>
