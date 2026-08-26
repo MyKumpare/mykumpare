@@ -1,0 +1,45 @@
+{
+  "name": "Stale Contact Interaction Reminders",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "0 7 * * *",
+      "one_time_date": null,
+      "timezone": "America/New_York",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "description": "Daily check that flags contacts with no recorded interaction in over the configured number of days (default 30). Creates reminder records and emails a summary of newly-stale contacts to admins.",
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "stale_contact_interaction_reminders",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "check_stale": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "checkStaleContactInteractions",
+            "args": {}
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Check for stale contacts",
+            "description": "Flags contacts exceeding the interaction threshold and emails a summary"
+          }
+        }
+      }
+    ]
+  }
+}

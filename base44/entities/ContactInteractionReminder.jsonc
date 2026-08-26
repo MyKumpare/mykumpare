@@ -1,0 +1,106 @@
+{
+  "name": "ContactInteractionReminder",
+  "type": "object",
+  "properties": {
+    "contact_id": {
+      "type": "string",
+      "description": "ID of the contact flagged as stale (no recorded interaction within the threshold window)."
+    },
+    "contact_name": {
+      "type": "string",
+      "description": "Full name of the stale contact (denormalized for display)."
+    },
+    "firm_id": {
+      "type": "string",
+      "description": "ID of the contact's primary firm (denormalized for filtering)."
+    },
+    "firm_name": {
+      "type": "string",
+      "description": "Name of the contact's primary firm (denormalized for display)."
+    },
+    "last_interaction_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of the most recent recorded interaction with this contact (YYYY-MM-DD). Empty when the contact has no recorded interactions at all."
+    },
+    "days_since_last_interaction": {
+      "type": "integer",
+      "description": "Number of days since the last recorded interaction (computed at run time). For contacts with no interactions, this is the number of days since the contact was created."
+    },
+    "threshold_days": {
+      "type": "integer",
+      "description": "The days_threshold value from ContactReminderSettings that was in effect when this reminder was generated (denormalized so historical reminders remain accurate if the threshold later changes)."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "dismissed",
+        "resolved"
+      ],
+      "default": "pending",
+      "description": "Lifecycle state of the reminder. 'pending' = newly flagged and awaiting action; 'dismissed' = user acknowledged and chose to ignore this round; 'resolved' = a new interaction was logged, clearing the stale flag."
+    },
+    "alert_sent_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the email alert was sent for this reminder (set once on creation; not re-sent on subsequent runs)."
+    },
+    "dismissed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the user dismissed this reminder."
+    },
+    "resolved_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when this reminder was auto-resolved (a new interaction was logged for the contact)."
+    }
+  },
+  "required": [
+    "contact_id",
+    "contact_name",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "user"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": null,
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "created_by_id": "{{user.id}}"
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "created_by_id": "{{user.id}}"
+        }
+      ]
+    }
+  }
+}

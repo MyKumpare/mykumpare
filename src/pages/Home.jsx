@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, ClipboardCheck, FileText, Files, ShieldCheck, X, LayoutDashboard, FlaskConical, MapPin, Camera,   LayoutGrid, PieChart, Bot, ExternalLink, ChevronDown, CalendarDays, Radar, FileBarChart, Mic, Newspaper, Gauge, Users, ScrollText,   Ghost, Upload, Eraser, Tag, UserX, Briefcase, Activity, ArrowRightLeft, UserCheck,   Globe, Share2 } from "lucide-react";
+import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, ClipboardCheck, FileText, Files, ShieldCheck, X, LayoutDashboard, FlaskConical, MapPin, Camera,   LayoutGrid, PieChart, Bot, ExternalLink, ChevronDown, CalendarDays, Radar, FileBarChart, Mic, Newspaper, Gauge, Users, ScrollText,   Ghost, Upload, Eraser, Tag, UserX, Briefcase, Activity, ArrowRightLeft, UserCheck,   Globe, Share2, Bell } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
@@ -43,6 +43,7 @@ import MonitorNavSection from "../components/activity/MonitorNavSection";
 import ReportingNavSection from "../components/reports/ReportingNavSection";
 import DashboardNavSection from "../components/dashboard/DashboardNavSection";
 import DashboardTimelineSection from "../components/dashboard/DashboardTimelineSection";
+import StaleContactRemindersPanel from "../components/contacts/StaleContactRemindersPanel";
 import DashboardAnalystCoverageSection from "../components/dashboard/DashboardAnalystCoverageSection";
 import DashboardFirmCoverageSection from "../components/dashboard/DashboardFirmCoverageSection";
 import ManagementNavSection from "../components/dashboard/ManagementNavSection";
@@ -1189,6 +1190,20 @@ export default function Home() {
                 <DashboardTimelineSection
                   forceExpanded={allExpanded}
                   onActivityClick={(activity) => setViewingActivity(activity)}
+                />
+              ),
+            },
+            {
+              label: "Stale Contact Reminders",
+              icon: Bell,
+              iconColor: "text-rose-500",
+              element: (
+                <StaleContactRemindersPanel
+                  forceExpanded={allExpanded}
+                  onContactClick={(contactId) => {
+                    const c = activeContacts.find((x) => x.id === contactId);
+                    if (c) setViewingContact(c);
+                  }}
                 />
               ),
             },

@@ -1,0 +1,52 @@
+{
+  "name": "ContactReminderSettings",
+  "type": "object",
+  "properties": {
+    "days_threshold": {
+      "type": "integer",
+      "default": 30,
+      "description": "Number of days without a recorded interaction after which a contact is flagged as stale and an alert is generated. Users can adjust this value to control how quickly reminders fire."
+    },
+    "schedule_enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether the daily stale-contact reminder check is enabled. When false, the scheduled workflow skips the check."
+    },
+    "schedule_time": {
+      "type": "string",
+      "description": "Time of day to run the daily stale-contact check, in 24-hour HH:MM format (e.g. '07:00'). Defaults to '07:00'.",
+      "default": "07:00"
+    },
+    "last_run_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of the last completed stale-contact check run (set by the backend function)."
+    },
+    "last_alert_count": {
+      "type": "integer",
+      "default": 0,
+      "description": "Number of stale contacts found in the last run (denormalized for display)."
+    }
+  },
+  "required": [
+    "days_threshold"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": null,
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
