@@ -254,9 +254,9 @@ export default function ActionItemsListView({ tasks, meetings, onOpenTask }) {
                   )}
                   {meeting && (
                     <button
-                      onClick={(e) => { e.stopPropagation(); navigateToBoardMeeting(navigate, meeting.firm_id); }}
+                      onClick={(e) => { e.stopPropagation(); navigateToBoardMeeting(navigate, meeting.firm_id, meeting.id); }}
                       className="inline-flex items-center gap-1 text-gray-600 hover:text-indigo-600 hover:underline"
-                      title="Open board meeting"
+                      title="Open board meeting record"
                     >
                       <KanbanSquare className="w-3 h-3" />
                       {meeting.title}

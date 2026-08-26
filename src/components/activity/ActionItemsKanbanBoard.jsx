@@ -333,10 +333,10 @@ export default function ActionItemsKanbanBoard() {
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      navigateToBoardMeeting(navigate, meetingById[t.board_meeting_id].firm_id);
+                                      navigateToBoardMeeting(navigate, meetingById[t.board_meeting_id].firm_id, t.board_meeting_id);
                                     }}
                                     className="mt-1 inline-flex items-center gap-1 text-[10px] text-gray-500 hover:text-indigo-600 hover:underline"
-                                    title="Open board meeting"
+                                    title="Open board meeting record"
                                   >
                                     <KanbanSquare className="w-3 h-3" />
                                     {meetingById[t.board_meeting_id].title}

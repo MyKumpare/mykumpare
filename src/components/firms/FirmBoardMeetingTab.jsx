@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -25,7 +25,7 @@ function fmtDate(d) {
 // board meetings, lists them with filter/sort, and lets the user fetch
 // minutes per meeting. Meetings mentioning the user's own firm or any
 // investment manager / sub-manager in its portfolios are flagged for review.
-export default function FirmBoardMeetingTab({ firmId, firmName, firmWebsite, onFirmClick }) {
+export default function FirmBoardMeetingTab({ firmId, firmName, firmWebsite, onFirmClick, initialOpenMeetingId }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [scraping, setScraping] = useState(false);
@@ -36,6 +36,16 @@ export default function FirmBoardMeetingTab({ firmId, firmName, firmWebsite, onF
   const [showTemplates, setShowTemplates] = useState(false);
   const [viewMode, setViewMode] = useState("cards"); // cards | timeline
   const [openMeetingId, setOpenMeetingId] = useState(null);
+
+  // When opened from a cross-page navigation (e.g. Action Items board) with a
+  // specific meeting to read, switch to timeline view and auto-open that meeting
+  // as a focused overlay card so the user can read its full details immediately.
+  useEffect(() => {
+    if (initialOpenMeetingId) {
+      setViewMode("timeline");
+      setOpenMeetingId(initialOpenMeetingId);
+    }
+  }, [initialOpenMeetingId]);
 
   const { data: meetings = [], isLoading } = useQuery({
     queryKey: ["board-meetings", firmId],

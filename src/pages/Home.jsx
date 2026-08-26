@@ -391,7 +391,7 @@ export default function Home() {
     setPreselectedType(null);
     setOwnershipNavTarget(null);
     setDocumentsNavTarget(null);
-    setBoardMeetingNavTarget(navState.initialTab === "board-meetings" ? firm.id : null);
+    setBoardMeetingNavTarget(navState.initialTab === "board-meetings" ? { firmId: firm.id, meetingId: navState.openMeetingId || null } : null);
     setReturnToProduct(false);
     setReturnToContactFromFirm(false);
     setDialogOpen(true);
@@ -1326,6 +1326,7 @@ export default function Home() {
         existingFirms={firms}
         defaultTab={ownershipNavTarget ? "ownership" : documentsNavTarget ? "documents" : boardMeetingNavTarget ? "board-meetings" : undefined}
         defaultOwnershipId={ownershipNavTarget?.ownershipId}
+        defaultBoardMeetingId={boardMeetingNavTarget?.meetingId}
       />
 
       <DeleteConfirmDialog

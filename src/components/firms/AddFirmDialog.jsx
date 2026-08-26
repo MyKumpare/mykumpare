@@ -171,7 +171,7 @@ const newAddress = () => ({
   address_line2: "",
 });
 
-export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, editingFirm, preselectedType, existingFirms = [], defaultTab, defaultOwnershipId, onProductClick, onPortfolioClick, onFirmClick, onContactClick }) {
+export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, editingFirm, preselectedType, existingFirms = [], defaultTab, defaultOwnershipId, defaultBoardMeetingId, onProductClick, onPortfolioClick, onFirmClick, onContactClick }) {
   const [isEditing, setIsEditing] = useState(false);
   const [firmTypes, setFirmTypes] = useState([]);
   const [firmName, setFirmName] = useState("");
@@ -1672,7 +1672,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
               <TabsContent value="board-meetings" className="space-y-3">
               {editingFirm ? (
-                <FirmBoardMeetingTab firmId={editingFirm.id} firmName={editingFirm.name} firmWebsite={editingFirm.website} onFirmClick={onFirmClick} />
+                <FirmBoardMeetingTab firmId={editingFirm.id} firmName={editingFirm.name} firmWebsite={editingFirm.website} onFirmClick={onFirmClick} initialOpenMeetingId={defaultBoardMeetingId} />
               ) : (
                 <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
                   Save the firm first to scrape board meetings
