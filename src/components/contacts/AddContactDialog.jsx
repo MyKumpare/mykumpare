@@ -959,6 +959,8 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                       contactId={editingContact.id}
                       firmIds={firmIds}
                       firms={firms}
+                      onFirmClick={onFirmClick}
+                      onProductClick={onProductClick}
                     />
                   </div>
                 )}
