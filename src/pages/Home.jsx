@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, ClipboardCheck, FileText, Files, ShieldCheck, X, LayoutDashboard, FlaskConical, MapPin, Camera,   LayoutGrid, PieChart, Bot, ExternalLink, ChevronDown, CalendarDays, Radar, FileBarChart, Mic, Newspaper, Gauge, Users, ScrollText,   Ghost, Upload, Eraser, Tag, UserX, Briefcase, Activity, ArrowRightLeft, UserCheck, Globe } from "lucide-react";
+import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, ClipboardCheck, FileText, Files, ShieldCheck, X, LayoutDashboard, FlaskConical, MapPin, Camera,   LayoutGrid, PieChart, Bot, ExternalLink, ChevronDown, CalendarDays, Radar, FileBarChart, Mic, Newspaper, Gauge, Users, ScrollText,   Ghost, Upload, Eraser, Tag, UserX, Briefcase, Activity, ArrowRightLeft, UserCheck,   Globe, Share2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
@@ -761,7 +761,10 @@ export default function Home() {
       { label: "Geographic Map", icon: Globe, onClick: () => navigate("/FirmGeographicMap") },
     ] },
     { label: "Products", icon: Package, ref: null, color: "text-violet-600", activeBg: "bg-violet-50", onClick: () => setProductPickerOpen(true) },
-    { label: "Contacts", icon: User, ref: null, color: "text-pink-600", activeBg: "bg-pink-50", onClick: () => setContactPickerOpen(true) },
+    { label: "Contacts", icon: User, ref: null, color: "text-pink-600", activeBg: "bg-pink-50", onClick: () => setContactPickerOpen(true), submenu: [
+      { label: "Contact Picker", icon: User, onClick: () => setContactPickerOpen(true) },
+      { label: "Network Map", icon: Share2, onClick: () => navigate("/ContactNetwork") },
+    ] },
     ...(user?.is_management ? [{ label: "Management", icon: Briefcase, ref: null, color: "text-emerald-600", activeBg: "bg-emerald-50", submenu: [
       { label: "Activity Timeline", icon: Activity, onClick: () => managementRef.current?.scrollToSection(0) },
       { label: "Analyst Coverage", icon: Users, onClick: () => managementRef.current?.scrollToSection(1) },

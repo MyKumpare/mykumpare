@@ -30,6 +30,7 @@ import BoardMeetingDashboard from './pages/BoardMeetingDashboard';
 import ActionItemsKanban from './pages/ActionItemsKanban';
 import ActionItemsDashboard from './pages/ActionItemsDashboard';
 import FirmGeographicMap from './pages/FirmGeographicMap';
+import ContactNetwork from './pages/ContactNetwork';
 
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -111,6 +112,7 @@ const AuthenticatedApp = () => {
       <Route path="/ActionItemsKanban" element={<LayoutWrapper currentPageName="ActionItemsKanban"><ActionItemsKanban /></LayoutWrapper>} />
       <Route path="/ActionItemsDashboard" element={<LayoutWrapper currentPageName="ActionItemsDashboard"><ActionItemsDashboard /></LayoutWrapper>} />
       <Route path="/FirmGeographicMap" element={<LayoutWrapper currentPageName="FirmGeographicMap"><FirmGeographicMap /></LayoutWrapper>} />
+      <Route path="/ContactNetwork" element={<LayoutWrapper currentPageName="ContactNetwork"><ContactNetwork /></LayoutWrapper>} />
       <Route path="/register" element={<ExternalPartyRegister />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
