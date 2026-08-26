@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  KanbanSquare, Search, X, Flame, CalendarClock, Building2, AlertTriangle, Filter, List, LayoutGrid,
+  KanbanSquare, Search, X, Flame, CalendarClock, Building2, AlertTriangle, Filter, List, LayoutGrid, BarChart3,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { format, differenceInCalendarDays } from "date-fns";
 import { toast } from "@/components/ui/use-toast";
 import TaskDetailModal from "@/components/activity/TaskDetailModal";
@@ -151,7 +152,14 @@ export default function ActionItemsKanbanBoard() {
             <Flame className="w-3 h-3" /> {highPriorityCount} high-priority open
           </span>
         )}
-        <div className="ml-auto inline-flex items-center rounded-md border border-gray-200 bg-white p-0.5">
+        <Link
+          to="/ActionItemsDashboard"
+          className="ml-auto inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-md border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
+          title="Open the Action Items summary dashboard"
+        >
+          <BarChart3 className="w-3.5 h-3.5" /> Dashboard
+        </Link>
+        <div className="inline-flex items-center rounded-md border border-gray-200 bg-white p-0.5">
           <button
             onClick={() => setViewMode("kanban")}
             className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded transition-colors ${

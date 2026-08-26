@@ -28,6 +28,7 @@ import DuplicateContacts from './pages/DuplicateContacts';
 import BoardMeetingCalendar from './pages/BoardMeetingCalendar';
 import BoardMeetingDashboard from './pages/BoardMeetingDashboard';
 import ActionItemsKanban from './pages/ActionItemsKanban';
+import ActionItemsDashboard from './pages/ActionItemsDashboard';
 import FirmGeographicMap from './pages/FirmGeographicMap';
 
 
@@ -108,6 +109,7 @@ const AuthenticatedApp = () => {
       <Route path="/BoardMeetingCalendar" element={<LayoutWrapper currentPageName="BoardMeetingCalendar"><BoardMeetingCalendar /></LayoutWrapper>} />
       <Route path="/BoardMeetingDashboard" element={<LayoutWrapper currentPageName="BoardMeetingDashboard"><BoardMeetingDashboard /></LayoutWrapper>} />
       <Route path="/ActionItemsKanban" element={<LayoutWrapper currentPageName="ActionItemsKanban"><ActionItemsKanban /></LayoutWrapper>} />
+      <Route path="/ActionItemsDashboard" element={<LayoutWrapper currentPageName="ActionItemsDashboard"><ActionItemsDashboard /></LayoutWrapper>} />
       <Route path="/FirmGeographicMap" element={<LayoutWrapper currentPageName="FirmGeographicMap"><FirmGeographicMap /></LayoutWrapper>} />
       <Route path="/register" element={<ExternalPartyRegister />} />
       <Route path="*" element={<PageNotFound />} />
