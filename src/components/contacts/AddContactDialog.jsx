@@ -30,6 +30,7 @@ import ContactProductsTab from "./ContactProductsTab";
 import ContactNewsTab from "./ContactNewsTab";
 import ScrapeProfileButton from "./ScrapeProfileButton";
 import ScrapeBiographyButton from "./ScrapeBiographyButton";
+import ScrapePhotoButton from "./ScrapePhotoButton";
 import ContactRolePicker from "./ContactRolePicker";
 import ContactInvestmentTeamRolePicker from "./ContactInvestmentTeamRolePicker";
 import ContactTagsField from "./ContactTagsField";
@@ -1080,16 +1081,25 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                       <User className="w-7 h-7 text-indigo-400" />
                     )}
                   </div>
-                  <div>
-                    <label className="cursor-pointer">
-                      <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
-                      <div className="flex items-center gap-1.5 text-sm text-primary hover:text-indigo-800 font-medium border border-indigo-200 rounded-md px-3 py-1.5 hover:bg-indigo-50 transition-colors">
-                        <Upload className="w-3.5 h-3.5" />
-                        {uploadingPhoto ? "Uploading..." : photoUrl ? "Change Photo" : "Upload Photo"}
-                      </div>
-                    </label>
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <label className="cursor-pointer">
+                        <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+                        <div className="flex items-center gap-1.5 text-sm text-primary hover:text-indigo-800 font-medium border border-indigo-200 rounded-md px-3 py-1.5 hover:bg-indigo-50 transition-colors">
+                          <Upload className="w-3.5 h-3.5" />
+                          {uploadingPhoto ? "Uploading..." : photoUrl ? "Change Photo" : "Upload Photo"}
+                        </div>
+                      </label>
+                      {editingContact && (
+                        <ScrapePhotoButton
+                          contactId={editingContact.id}
+                          hasPhoto={!!photoUrl}
+                          onPhotoScraped={(data) => { if (data.photo_url) setPhotoUrl(data.photo_url); }}
+                        />
+                      )}
+                    </div>
                     {photoUrl && (
-                      <button type="button" onClick={() => setPhotoUrl("")} className="mt-1 text-xs text-red-500 hover:text-red-700 ml-1">
+                      <button type="button" onClick={() => setPhotoUrl("")} className="text-xs text-red-500 hover:text-red-700">
                         Remove
                       </button>
                     )}
