@@ -3,10 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import {
   Share2, Loader2, Star, Crown, Users, Lightbulb, UserCheck,
-  Filter, ArrowRight, Trophy, Network, ZoomIn, Search, X, Building2,
+  Filter, ArrowRight, Trophy, Network, ZoomIn, Search, X, Building2, FileDown,
 } from "lucide-react";
 import ContactStrengthGraph from "@/components/network/ContactStrengthGraph";
 import BoardMembershipDensity from "@/components/network/BoardMembershipDensity";
+import { generateContactNetworkReportPdf } from "@/components/network/contactNetworkReportPdf";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DecisionRoleBadge, DECISION_ROLES } from "@/components/contacts/ContactDecisionRolePicker";
@@ -35,6 +36,7 @@ export default function ContactNetworkDashboard() {
   const [pathTargetId, setPathTargetId] = useState(null);
   const [resetKey, setResetKey] = useState(0);
   const [view, setView] = useState("graph"); // graph | list | boards
+  const [exporting, setExporting] = useState(false);
 
   const { data: networkData, isLoading, isFetching } = useQuery({
     queryKey: ["contactNetwork"],
@@ -59,6 +61,18 @@ export default function ContactNetworkDashboard() {
     enabled: !!selectedId && !!pathTargetId,
     staleTime: 60_000,
   });
+
+  const handleExportPdf = useCallback(async () => {
+    if (!networkData || exporting) return;
+    setExporting(true);
+    try {
+      await generateContactNetworkReportPdf(networkData);
+    } catch (err) {
+      console.error("Failed to export network report:", err);
+    } finally {
+      setExporting(false);
+    }
+  }, [networkData, exporting]);
 
   // Filter nodes and edges
   const { filteredNodes, filteredEdges, filteredKeyNodes, stats } = useMemo(() => {
@@ -214,6 +228,19 @@ export default function ContactNetworkDashboard() {
               <Building2 className="w-4 h-4 mr-1" /> Board Density
             </Button>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportPdf}
+            disabled={exporting || !networkData}
+          >
+            {exporting ? (
+              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+            ) : (
+              <FileDown className="w-4 h-4 mr-1" />
+            )}
+            {exporting ? "Exporting…" : "Export PDF"}
+          </Button>
           <Button
             variant="outline"
             size="sm"
