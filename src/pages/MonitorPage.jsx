@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {   Radar, Newspaper, LayoutList, ClipboardList, CalendarDays, X, FileDown, Loader2, Activity as ActivityIcon, Bell, UserCheck, Users } from "lucide-react";
+import {   Radar, Newspaper, LayoutList, ClipboardList, ClipboardCheck, CalendarDays, X, FileDown, Loader2, Activity as ActivityIcon, Bell, UserCheck, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
 import { toast } from "@/components/ui/use-toast";
