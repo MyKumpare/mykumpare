@@ -29,6 +29,7 @@ import ContactChatTab from "./ContactChatTab";
 import ContactProductsTab from "./ContactProductsTab";
 import ContactNewsTab from "./ContactNewsTab";
 import ScrapeProfileButton from "./ScrapeProfileButton";
+import ScrapeBiographyButton from "./ScrapeBiographyButton";
 import ContactRolePicker from "./ContactRolePicker";
 import ContactInvestmentTeamRolePicker from "./ContactInvestmentTeamRolePicker";
 import ContactTagsField from "./ContactTagsField";
@@ -1229,7 +1230,18 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
 
               {/* Biography */}
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-gray-700">Biography</Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium text-gray-700">Biography</Label>
+                  {editingContact && (
+                    <ScrapeBiographyButton
+                      contactId={editingContact.id}
+                      onBiographyScraped={(data) => {
+                        if (data.biography) setBiography(data.biography);
+                        if (data.bio_url) setBioUrl(data.bio_url);
+                      }}
+                    />
+                  )}
+                </div>
                 {viewMode ? (
                   <div className="text-sm text-gray-900 px-1 whitespace-pre-wrap">{biography || <span className="text-gray-400 italic">—</span>}</div>
                 ) : (
