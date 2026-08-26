@@ -33,6 +33,7 @@ import FirmGeographicMap from './pages/FirmGeographicMap';
 import ContactNetwork from './pages/ContactNetwork';
 import DegreesOfSeparation from './pages/DegreesOfSeparation';
 import ContactNetworkDashboard from './pages/ContactNetworkDashboard';
+import ContactInfluenceDashboard from './pages/ContactInfluenceDashboard';
 
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -117,6 +118,7 @@ const AuthenticatedApp = () => {
       <Route path="/ContactNetwork" element={<LayoutWrapper currentPageName="ContactNetwork"><ContactNetwork /></LayoutWrapper>} />
       <Route path="/DegreesOfSeparation" element={<LayoutWrapper currentPageName="DegreesOfSeparation"><DegreesOfSeparation /></LayoutWrapper>} />
       <Route path="/ContactNetworkDashboard" element={<LayoutWrapper currentPageName="ContactNetworkDashboard"><ContactNetworkDashboard /></LayoutWrapper>} />
+      <Route path="/ContactInfluenceDashboard" element={<LayoutWrapper currentPageName="ContactInfluenceDashboard"><ContactInfluenceDashboard /></LayoutWrapper>} />
       <Route path="/register" element={<ExternalPartyRegister />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
