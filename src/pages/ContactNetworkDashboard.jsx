@@ -3,9 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import {
   Share2, Loader2, Star, Crown, Users, Lightbulb, UserCheck,
-  Filter, ArrowRight, Trophy, Network, ZoomIn, Search, X,
+  Filter, ArrowRight, Trophy, Network, ZoomIn, Search, X, Building2,
 } from "lucide-react";
 import ContactStrengthGraph from "@/components/network/ContactStrengthGraph";
+import BoardMembershipDensity from "@/components/network/BoardMembershipDensity";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DecisionRoleBadge, DECISION_ROLES } from "@/components/contacts/ContactDecisionRolePicker";
@@ -33,7 +34,7 @@ export default function ContactNetworkDashboard() {
   const [selectedId, setSelectedId] = useState(null);
   const [pathTargetId, setPathTargetId] = useState(null);
   const [resetKey, setResetKey] = useState(0);
-  const [view, setView] = useState("graph"); // graph | list
+  const [view, setView] = useState("graph"); // graph | list | boards
 
   const { data: networkData, isLoading, isFetching } = useQuery({
     queryKey: ["contactNetwork"],
@@ -205,6 +206,13 @@ export default function ContactNetworkDashboard() {
             >
               <Trophy className="w-4 h-4 mr-1" /> Key Nodes
             </Button>
+            <Button
+              variant={view === "boards" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setView("boards")}
+            >
+              <Building2 className="w-4 h-4 mr-1" /> Board Density
+            </Button>
           </div>
           <Button
             variant="outline"
@@ -299,7 +307,9 @@ export default function ContactNetworkDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4">
           {/* Main graph / list */}
           <div className="relative border border-gray-200 rounded-xl bg-white shadow-sm overflow-hidden" style={{ height: "calc(100vh - 360px)", minHeight: "450px" }}>
-            {isLoading || isFetching ? (
+            {view === "boards" ? (
+              <BoardMembershipDensity />
+            ) : isLoading || isFetching ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
                 <Loader2 className="w-6 h-6 text-primary animate-spin" />
                 <p className="text-sm text-gray-500">Computing network…</p>
@@ -357,9 +367,11 @@ export default function ContactNetworkDashboard() {
             )}
 
             {/* Help hint */}
-            <div className="absolute top-3 right-3 text-xs text-gray-400 bg-white/80 px-2 py-1 rounded-md border border-gray-200">
-              {selectedId ? "Click another node to find path" : "Click a node to start"}
-            </div>
+            {view !== "boards" && (
+              <div className="absolute top-3 right-3 text-xs text-gray-400 bg-white/80 px-2 py-1 rounded-md border border-gray-200">
+                {selectedId ? "Click another node to find path" : "Click a node to start"}
+              </div>
+            )}
           </div>
 
           {/* Side panel: Key Nodes + Path */}
