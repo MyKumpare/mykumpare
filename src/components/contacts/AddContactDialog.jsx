@@ -33,6 +33,7 @@ import ScrapeProfileButton from "./ScrapeProfileButton";
 import ScrapeBiographyButton from "./ScrapeBiographyButton";
 import ScrapePhotoButton from "./ScrapePhotoButton";
 import ContactRolePicker from "./ContactRolePicker";
+import ContactDecisionRolePicker, { DecisionRoleBadge } from "./ContactDecisionRolePicker";
 import ContactInvestmentTeamRolePicker from "./ContactInvestmentTeamRolePicker";
 import ContactTagsField from "./ContactTagsField";
 import ContactTagChips from "./ContactTagChips";
@@ -89,6 +90,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [employeeStatus, setEmployeeStatus] = useState("Employee");
   const [contactStatus, setContactStatus] = useState("Active");
   const [contactRole, setContactRole] = useState("");
+  const [decisionRole, setDecisionRole] = useState("");
   const [contactType, setContactType] = useState([]);
   const [contactRoles, setContactRoles] = useState([]);
   const [contactFirmRoles, setContactFirmRoles] = useState([]);
@@ -143,6 +145,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setEmployeeStatus(editingContact.employee_status || "");
         setContactStatus(editingContact.contact_status || "Active");
         setContactRole(editingContact.contact_role || "");
+        setDecisionRole(editingContact.decision_role || "");
         setContactType(Array.isArray(editingContact.contact_type) ? editingContact.contact_type : (editingContact.contact_type ? [editingContact.contact_type] : []));
         setContactRoles(editingContact.contact_roles || []);
         setContactFirmRoles(editingContact.contact_firm_roles || []);
@@ -179,6 +182,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setEmployeeStatus("Employee");
         setContactStatus("Active");
         setContactRole("");
+        setDecisionRole("");
         setContactType([]);
         setContactRoles([]);
         setContactFirmRoles([]);
@@ -402,6 +406,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
       employee_status: employeeStatus,
       contact_status: contactStatus,
       contact_role: contactRole,
+      decision_role: decisionRole,
       contact_type: contactType,
       contact_roles: contactRoles,
       contact_firm_roles: contactFirmRoles,
@@ -859,6 +864,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
         employeeStatus !== (e.employee_status || "") ||
         contactStatus !== (e.contact_status || "Active") ||
         contactRole !== (e.contact_role || "") ||
+        decisionRole !== (e.decision_role || "") ||
         JSON.stringify(contactType) !== JSON.stringify(Array.isArray(e.contact_type) ? e.contact_type : (e.contact_type ? [e.contact_type] : [])) ||
         gender !== (e.gender || "Undetermined") ||
         veteranStatus !== (e.veteran_status || "Undetermined") ||
@@ -1676,6 +1682,12 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                     ))}
                   </div>
                 )}
+              </div>
+
+              {/* Decision Role — primary decision maker, board member, etc. */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Decision Role</Label>
+                <ContactDecisionRolePicker value={decisionRole} onChange={setDecisionRole} viewMode={viewMode} />
               </div>
 
               {/* Contact Type */}

@@ -95,6 +95,17 @@
       ],
       "description": "Whether this is a primary or secondary contact"
     },
+    "decision_role": {
+      "type": "string",
+      "enum": [
+        "Primary Decision Maker",
+        "Board Member",
+        "Key Influencer",
+        "Secondary Contact",
+        "Other"
+      ],
+      "description": "The contact's decision-making role within the firm \u2014 classifies whether this person is a primary decision maker, board member, key influencer, or secondary contact. Used by the contact network dashboard to highlight key nodes and by contact lists to surface decision makers at a glance."
+    },
     "contact_type": {
       "type": "array",
       "description": "Classification type(s) of the contact (multi-select, defaults from associated firm type)",
@@ -352,7 +363,7 @@
     },
     "pipeline_stage": {
       "type": "string",
-      "description": "Current pipeline stage for the contact Kanban board (name of a ContactPipelineStage record). Empty means the contact has not been placed in the pipeline yet; it appears in the first stage column until moved."
+      "description": "Current pipeline stage for the contact Kanban board (name of a ContactPipelineStage record). Empty means that the contact has not been placed in the pipeline yet; it appears in the first stage column until moved."
     },
     "notes": {
       "type": "string",
