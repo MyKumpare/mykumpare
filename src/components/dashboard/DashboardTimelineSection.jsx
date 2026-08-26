@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { ChevronDown, ChevronRight, GitBranch } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ChevronDown, ChevronRight, GitBranch, ExternalLink } from "lucide-react";
 import ActivityTimeline from "@/components/activity/ActivityTimeline";
 
 // Collapsible dashboard section that embeds the centralized Activity Timeline
@@ -7,6 +8,7 @@ import ActivityTimeline from "@/components/activity/ActivityTimeline";
 // firms without leaving the main dashboard. Respects the global expand/collapse
 // toggle like the other dashboard sections.
 export default function DashboardTimelineSection({ forceExpanded, onActivityClick }) {
+  const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
@@ -32,6 +34,15 @@ export default function DashboardTimelineSection({ forceExpanded, onActivityClic
         <span className="text-[11px] text-gray-400 font-normal hidden sm:inline">
           Chronological history across all firms
         </span>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); navigate("/ActivityTimeline"); }}
+          className="ml-auto flex items-center gap-1 text-[11px] text-amber-600 hover:text-amber-800 font-medium"
+          title="Open full-page timeline"
+        >
+          <ExternalLink className="w-3 h-3" />
+          <span className="hidden sm:inline">Full page</span>
+        </button>
       </button>
       {expanded && (
         <div className="pl-2 border-l-2 border-gray-100">
