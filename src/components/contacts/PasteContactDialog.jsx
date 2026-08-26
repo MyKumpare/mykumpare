@@ -14,8 +14,9 @@ import {
 } from "@/components/ui/select";
 import {
   ClipboardPaste, Image as ImageIcon, Upload, Camera, Loader2, Building2,
-  CheckCircle2, AlertTriangle, Plus, ArrowRight,
+  CheckCircle2, AlertTriangle, Plus, ArrowRight, FileText,
 } from "lucide-react";
+import { parseVCardText } from "./vCardParser";
 import { toast } from "@/components/ui/use-toast";
 import { findFirmNameDuplicates } from "@/components/firms/firmNameDuplicateCheck";
 import { parsePhoneString } from "@/components/ai/firmEnrichment";
@@ -86,6 +87,8 @@ export default function PasteContactDialog({ open, onClose, onReady, firms: firm
   const [autoParsing, setAutoParsing] = useState(false);
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
+  const vcardInputRef = useRef(null);
+  const [vcardName, setVcardName] = useState("");
 
   const { data: liveFirms = [] } = useQuery({
     queryKey: ["firms"],
@@ -98,6 +101,7 @@ export default function PasteContactDialog({ open, onClose, onReady, firms: firm
       setMode("text");
       setRawText("");
       setPhotoUrl("");
+      setVcardName("");
       setParsed(null);
       setFirmType("");
       setResolvedFirmId(null);
@@ -127,15 +131,28 @@ export default function PasteContactDialog({ open, onClose, onReady, firms: firm
       toast({ title: "No photo", description: "Upload a business card photo first.", variant: "destructive" });
       return;
     }
+    if (mode === "vcard" && !vcardName) {
+      toast({ title: "No vCard", description: "Upload a .vcf file first.", variant: "destructive" });
+      return;
+    }
     setParsing(true);
     try {
       const prompt = mode === "text"
         ? `You are extracting contact information from the text below (it may be an email signature, a directory listing, or a business card transcription). Extract only what is explicitly present — do not fabricate. Return a JSON object with: salutation, first_name, middle_name, last_name, suffix, title, designations (array of professional credentials such as CFA, CPA, MBA, PhD), email, phone (full phone string as written), linkedin_url, firm_name (the company/organization), website, and address (object with address_line1, address_line2, city, state, postal_code, country). Leave any field empty/null if not present.\n\nText:\n"""\n${rawText.trim().substring(0, 6000)}\n"""`
         : `You are extracting contact information from a business card image. Read the card and extract only what is visible — do not fabricate. Return a JSON object with: salutation, first_name, middle_name, last_name, suffix, title, designations (array of professional credentials such as CFA, CPA, MBA, PhD), email, phone (full phone string as printed), linkedin_url, firm_name (the company/organization), website, and address (object with address_line1, address_line2, city, state, postal_code, country). Leave any field empty/null if not present on the card.`;
-      const args = { prompt, response_json_schema: EXTRACT_SCHEMA };
-      if (mode === "photo") args.file_urls = [photoUrl];
-      const res = await base44.integrations.Core.InvokeLLM(args);
-      const data = { ...emptyParsed(), ...(res || {}) };
+      let data;
+      if (mode === "vcard") {
+        // vCard is structured data — parse client-side, no LLM needed
+        const file = vcardInputRef.current?.files?.[0];
+        if (!file) { toast({ title: "No vCard file", variant: "destructive" }); return; }
+        const text = await file.text();
+        data = { ...emptyParsed(), ...parseVCardText(text) };
+      } else {
+        const args = { prompt, response_json_schema: EXTRACT_SCHEMA };
+        if (mode === "photo") args.file_urls = [photoUrl];
+        const res = await base44.integrations.Core.InvokeLLM(args);
+        data = { ...emptyParsed(), ...(res || {}) };
+      }
       if (!data.address || typeof data.address !== "object") data.address = emptyParsed().address;
       setParsed(data);
       setResolvedFirmId(null);
@@ -273,9 +290,10 @@ export default function PasteContactDialog({ open, onClose, onReady, firms: firm
           {!parsed ? (
             <>
               <Tabs value={mode} onValueChange={setMode}>
-                <TabsList className="grid grid-cols-2 w-full">
+                <TabsList className="grid grid-cols-3 w-full">
                   <TabsTrigger value="text" className="gap-1.5"><ClipboardPaste className="w-3.5 h-3.5" /> Paste Text</TabsTrigger>
                   <TabsTrigger value="photo" className="gap-1.5"><ImageIcon className="w-3.5 h-3.5" /> Business Card</TabsTrigger>
+                  <TabsTrigger value="vcard" className="gap-1.5"><FileText className="w-3.5 h-3.5" /> vCard</TabsTrigger>
                 </TabsList>
                 <TabsContent value="text" className="space-y-2 mt-3">
                   <Label className="text-xs font-medium text-gray-600">Paste contact information</Label>
@@ -330,6 +348,45 @@ export default function PasteContactDialog({ open, onClose, onReady, firms: firm
                   {!autoParsing && !photoUrl && (
                     <p className="text-[11px] text-gray-400">After capturing the card, the system automatically extracts the contact name, company, and details for your review.</p>
                   )}
+                </TabsContent>
+                <TabsContent value="vcard" className="space-y-2 mt-3">
+                  <Label className="text-xs font-medium text-gray-600">Upload a vCard (.vcf) file</Label>
+                  <input ref={vcardInputRef} type="file" accept=".vcf,text/vcard,text/x-vcard" className="hidden" onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    e.target.value = "";
+                    setVcardName(file.name);
+                    setParsing(true);
+                    try {
+                      const text = await file.text();
+                      const data = { ...emptyParsed(), ...parseVCardText(text) };
+                      if (!data.address || typeof data.address !== "object") data.address = emptyParsed().address;
+                      setParsed(data);
+                      setResolvedFirmId(null);
+                      setNewFirmId(null);
+                      setFirmType("");
+                      toast({ title: "✅ vCard imported", description: "Review the extracted fields and resolve the firm." });
+                    } catch (err) {
+                      toast({ title: "vCard parse failed", description: err?.message || "Could not read the vCard file.", variant: "destructive" });
+                    } finally {
+                      setParsing(false);
+                    }
+                  }} />
+                  {vcardName ? (
+                    <div className="flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50/50 px-3 py-2.5">
+                      <FileText className="w-4 h-4 text-indigo-600 flex-shrink-0" />
+                      <span className="text-sm text-gray-700 truncate flex-1">{vcardName}</span>
+                      <Button type="button" variant="ghost" size="sm" className="text-red-500 h-7 text-xs" onClick={() => { setVcardName(""); setParsed(null); }}>Remove</Button>
+                    </div>
+                  ) : (
+                    <button type="button" onClick={() => vcardInputRef.current?.click()} disabled={parsing}
+                      className="w-full border-2 border-dashed border-gray-200 rounded-lg py-8 flex flex-col items-center gap-1.5 text-gray-500 hover:border-indigo-300 hover:text-indigo-600 transition-colors disabled:opacity-50">
+                      {parsing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
+                      <span className="text-sm font-medium">Upload vCard</span>
+                      <span className="text-[11px] text-gray-400">.vcf file from your device</span>
+                    </button>
+                  )}
+                  <p className="text-[11px] text-gray-400">The vCard is parsed instantly — name, company, phone, email, and address are extracted for your review.</p>
                 </TabsContent>
               </Tabs>
 
