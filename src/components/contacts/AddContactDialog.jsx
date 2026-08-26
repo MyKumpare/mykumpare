@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload, TrendingUp, Tag, GraduationCap, Briefcase, Activity, Package, AlertTriangle, Linkedin, Loader2, ClipboardCheck, Image as ImageIcon, Bell, MessageSquare, Mail, Clock, Newspaper } from "lucide-react";
+import { X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload, TrendingUp, Tag, GraduationCap, Briefcase, Activity, Package, AlertTriangle, Linkedin, Loader2, ClipboardCheck, Image as ImageIcon, Bell, MessageSquare, Mail, Clock, Newspaper, Download } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
@@ -48,6 +48,7 @@ import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import ImageZoomDialog from "../common/ImageZoomDialog";
 import ExperienceOptionMatchDialog from "./ExperienceOptionMatchDialog";
 import ContactUpcomingTasksPanel from "./ContactUpcomingTasksPanel";
+import { downloadVCard } from "./vCardExport";
 
 const SALUTATIONS = ["Mr.", "Ms.", "Mrs.", "Dr.", "Prof.", "Hon."];
 const SUFFIXES = ["Jr.", "Sr.", "II", "III", "IV", "Esq.", "CFA", "CPA", "MBA", "PhD", "MD"];
@@ -1908,6 +1909,12 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                   <Button variant="outline" size="sm" className="text-primary border-indigo-200 hover:bg-indigo-50"
                     onClick={() => setPortalInviteOpen(true)}>
                     <Mail className="w-4 h-4 mr-1" /> Invite to Portal
+                  </Button>
+                  <Button variant="outline" size="sm" className="text-primary border-indigo-200 hover:bg-indigo-50"
+                    onClick={() => downloadVCard(editingContact, firms)}
+                    title="Download vCard (.vcf) to add to your phone contacts"
+                  >
+                    <Download className="w-4 h-4 mr-1" /> vCard
                   </Button>
                   <div className="flex-1" />
                   <Button variant="outline" onClick={guardedClose}>Close</Button>
