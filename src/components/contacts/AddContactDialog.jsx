@@ -23,6 +23,7 @@ import ContactEducationTab from "./ContactEducationTab";
 import ContactProfessionalExperienceTab from "./ContactProfessionalExperienceTab";
 import ContactBoardMembershipTab from "./ContactBoardMembershipTab";
 import ContactActivitiesTab from "./ContactActivitiesTab";
+import ContactRelationshipsTab from "./ContactRelationshipsTab";
 import ContactTimeline from "./ContactTimeline";
 import ContactDueDiligenceTab from "./ContactDueDiligenceTab";
 import ContactNotificationsTab from "./ContactNotificationsTab";
@@ -1123,6 +1124,9 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                 <TabsTrigger value="activities" className="flex items-center gap-1.5">
                   <Activity className="w-3.5 h-3.5" /> Activities
                 </TabsTrigger>
+                <TabsTrigger value="relationships" className="flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5" /> Relationships
+                </TabsTrigger>
                 <TabsTrigger value="timeline" className="flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5" /> Timeline
                 </TabsTrigger>
@@ -1900,6 +1904,14 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                 contactName={[firstName, lastName].filter(Boolean).join(" ")}
                 contactFirmId={firmIds?.[0]}
                 contactFirmName={firmIds?.[0] ? firms?.find?.(f => f.id === firmIds[0])?.name : undefined}
+              />
+            </TabsContent>
+            {/* ── RELATIONSHIPS TAB ── */}
+            <TabsContent value="relationships" className="mt-0">
+              <ContactRelationshipsTab
+                contactId={editingContact?.id}
+                contactName={[firstName, lastName].filter(Boolean).join(" ")}
+                onContactClick={onContactClick ? (contact) => { onOpenChange(false); onContactClick(contact); } : undefined}
               />
             </TabsContent>
             {/* ── TIMELINE TAB ── */}

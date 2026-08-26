@@ -1,0 +1,88 @@
+{
+  "name": "ContactRelationship",
+  "type": "object",
+  "properties": {
+    "contact_a_id": {
+      "type": "string",
+      "description": "ID of the first contact in the relationship."
+    },
+    "contact_a_name": {
+      "type": "string",
+      "description": "Full name of the first contact (denormalized for display)."
+    },
+    "contact_b_id": {
+      "type": "string",
+      "description": "ID of the second contact in the relationship."
+    },
+    "contact_b_name": {
+      "type": "string",
+      "description": "Full name of the second contact (denormalized for display)."
+    },
+    "relationship_type": {
+      "type": "string",
+      "enum": [
+        "Mentor",
+        "Mentee",
+        "Former Colleague",
+        "Client",
+        "Service Provider",
+        "Business Partner",
+        "Referral Source",
+        "Friend",
+        "Family Member",
+        "Other"
+      ],
+      "description": "The nature of the relationship between the two contacts (e.g. Mentor, Former Colleague, Client). Stored once per pair; the relationship is bidirectional."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Optional free-text notes describing the relationship context."
+    }
+  },
+  "required": [
+    "contact_a_id",
+    "contact_b_id",
+    "relationship_type"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "user"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": null,
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

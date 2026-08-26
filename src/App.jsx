@@ -35,6 +35,7 @@ import DegreesOfSeparation from './pages/DegreesOfSeparation';
 import ContactNetworkDashboard from './pages/ContactNetworkDashboard';
 import ContactInfluenceDashboard from './pages/ContactInfluenceDashboard';
 import ActivityTimelinePage from './pages/ActivityTimelinePage';
+import WeeklyInteractionReport from './pages/WeeklyInteractionReport';
 
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -121,6 +122,7 @@ const AuthenticatedApp = () => {
       <Route path="/ContactNetworkDashboard" element={<LayoutWrapper currentPageName="ContactNetworkDashboard"><ContactNetworkDashboard /></LayoutWrapper>} />
       <Route path="/ContactInfluenceDashboard" element={<LayoutWrapper currentPageName="ContactInfluenceDashboard"><ContactInfluenceDashboard /></LayoutWrapper>} />
       <Route path="/ActivityTimeline" element={<LayoutWrapper currentPageName="ActivityTimeline"><ActivityTimelinePage /></LayoutWrapper>} />
+      <Route path="/WeeklyInteractionReport" element={<LayoutWrapper currentPageName="WeeklyInteractionReport"><WeeklyInteractionReport /></LayoutWrapper>} />
       <Route path="/register" element={<ExternalPartyRegister />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>

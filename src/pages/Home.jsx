@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, ClipboardCheck, FileText, Files, ShieldCheck, X, LayoutDashboard, FlaskConical, MapPin, Camera,   LayoutGrid, PieChart, Bot, ExternalLink, ChevronDown, CalendarDays, Radar, FileBarChart, Mic, Newspaper, Gauge, Users, ScrollText,   Ghost, Upload, Eraser, Tag, UserX, Briefcase, Activity, ArrowRightLeft, UserCheck,   Globe, Share2, Bell } from "lucide-react";
+import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, ClipboardCheck, FileText, Files, ShieldCheck, X, LayoutDashboard, FlaskConical, MapPin, Camera,   LayoutGrid, PieChart, Bot, ExternalLink, ChevronDown, CalendarDays, Radar, FileBarChart, Mic, Newspaper, Gauge, Users, ScrollText,   Ghost, Upload, Eraser, Tag, UserX, Briefcase, Activity, ArrowRightLeft, UserCheck,   Globe, Share2, Bell, TrendingUp, ArrowRight } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
@@ -1205,6 +1205,27 @@ export default function Home() {
                     if (c) setViewingContact(c);
                   }}
                 />
+              ),
+            },
+            {
+              label: "Weekly Interaction Report",
+              icon: TrendingUp,
+              iconColor: "text-emerald-500",
+              element: (
+                <button
+                  type="button"
+                  onClick={() => navigate("/WeeklyInteractionReport")}
+                  className="w-full flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50/40 hover:bg-emerald-50 px-4 py-3 text-left transition-colors group"
+                >
+                  <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                    <TrendingUp className="w-4 h-4 text-emerald-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-gray-800">Weekly Interaction Report</div>
+                    <div className="text-[11px] text-gray-500">Engagement snapshot for top-tier contacts — who you've reached and where the gaps are</div>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-emerald-500 group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
+                </button>
               ),
             },
             {
