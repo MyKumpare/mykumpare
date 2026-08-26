@@ -52,6 +52,7 @@ import ExperienceOptionMatchDialog from "./ExperienceOptionMatchDialog";
 import ContactUpcomingTasksPanel from "./ContactUpcomingTasksPanel";
 import { downloadVCard } from "./vCardExport";
 import ContactInfluenceScore from "./ContactInfluenceScore";
+import ContactQuickActions from "./ContactQuickActions";
 
 const SALUTATIONS = ["Mr.", "Ms.", "Mrs.", "Dr.", "Prof.", "Hon."];
 const SUFFIXES = ["Jr.", "Sr.", "II", "III", "IV", "Esq.", "CFA", "CPA", "MBA", "PhD", "MD"];
@@ -1009,6 +1010,15 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                       onProductClick={onProductClick}
                     />
                   </div>
+                )}
+                {editingContact && viewMode && (
+                  <ContactQuickActions
+                    contact={editingContact}
+                    onEdited={(updated) => {
+                      // Refresh the contact list so the header chips update
+                      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+                    }}
+                  />
                 )}
               </div>
             </div>

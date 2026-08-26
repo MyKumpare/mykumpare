@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DecisionRoleBadge } from "@/components/contacts/ContactDecisionRolePicker";
+import InfluenceTrendChart from "@/components/network/InfluenceTrendChart";
 
 const TIERS = [
   { min: 16, label: "Key Influencer", classes: "bg-amber-50 text-amber-700 border-amber-200", star: "text-amber-500", ring: "ring-amber-300" },
@@ -319,6 +320,17 @@ export default function ContactInfluenceDashboard() {
             ))}
           </div>
         )}
+
+        {/* Influence trend chart */}
+        <div className="mb-4">
+          <InfluenceTrendChart
+            contacts={contacts}
+            firms={firms}
+            boardMeetings={boardMeetings}
+            products={products}
+            isLoading={isLoading}
+          />
+        </div>
 
         {/* Ranking table */}
         <div className="border border-gray-200 rounded-xl bg-white shadow-sm overflow-hidden">
