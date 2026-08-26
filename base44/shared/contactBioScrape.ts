@@ -147,10 +147,18 @@ export async function extractBiographyFromPage(base44: any, personName: string, 
   if (!pageText || pageText.length < 50) return '';
   try {
     const res = await base44.integrations.Core.InvokeLLM({
-      prompt: `Extract the COMPLETE biography of "${personName}" from their profile page. Copy the biography VERBATIM — do not summarize or paraphrase. Include every paragraph. If no biography is found, return an empty string.
+      prompt: `Extract the COMPLETE biography of "${personName}" from their profile page below.
+
+CRITICAL INSTRUCTIONS:
+- Copy the ENTIRE biography VERBATIM — do not summarize, paraphrase, or shorten.
+- Include EVERY paragraph from the first sentence to the last sentence of the bio.
+- Do NOT stop partway through. The biography must end with a complete sentence, not mid-sentence.
+- If the bio is long (multiple paragraphs), include ALL of them.
+- Do not include navigation, headers, footers, or other page chrome — only the biography text.
+- If no biography is found, return an empty string.
 
 --- PAGE CONTENT ---
-${pageText.substring(0, 20000)}
+${pageText.substring(0, 50000)}
 --- END ---`,
       response_json_schema: { type: 'object', properties: { biography: { type: 'string' } } },
     });

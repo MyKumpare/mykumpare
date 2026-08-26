@@ -77,7 +77,9 @@ export default async function(req: Request): Promise<Response> {
       sourcesTried.push('General web search');
       try {
         const res = await base44.integrations.Core.InvokeLLM({
-          prompt: `Find the professional biography of "${fullName}"${firmIds.length > 0 ? ' (an investment professional)' : ''}. Search the web for their biography on their firm's website, LinkedIn, or other professional sources. Return the COMPLETE biography text verbatim — do not summarize or paraphrase. If you find a biography, include every paragraph. If no biography can be found, return an empty string.`,
+          prompt: `Find the professional biography of "${fullName}"${firmIds.length > 0 ? ' (an investment professional)' : ''}. Search the web for their biography on their firm's website, LinkedIn, or other professional sources.
+
+CRITICAL: Return the COMPLETE biography text VERBATIM — do not summarize, paraphrase, or shorten. Include EVERY paragraph from start to finish. The biography must end with a complete sentence — do NOT truncate mid-sentence. If the biography is long, include all of it. If no biography can be found, return an empty string.`,
           add_context_from_internet: true,
           model: 'gemini_3_flash',
           response_json_schema: {
