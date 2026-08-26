@@ -94,7 +94,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [contactStatus, setContactStatus] = useState("Active");
   const [contactRole, setContactRole] = useState("");
   const [decisionRole, setDecisionRole] = useState("");
-  const [influenceLevel, setInfluenceLevel] = useState("");
+  const [influenceLevel, setInfluenceLevel] = useState("Undetermined");
   const [contactType, setContactType] = useState([]);
   const [contactRoles, setContactRoles] = useState([]);
   const [contactFirmRoles, setContactFirmRoles] = useState([]);
@@ -150,7 +150,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setContactStatus(editingContact.contact_status || "Active");
         setContactRole(editingContact.contact_role || "");
         setDecisionRole(editingContact.decision_role || "");
-        setInfluenceLevel(editingContact.influence_level || "");
+        setInfluenceLevel(editingContact.influence_level || "Undetermined");
         setContactType(Array.isArray(editingContact.contact_type) ? editingContact.contact_type : (editingContact.contact_type ? [editingContact.contact_type] : []));
         setContactRoles(editingContact.contact_roles || []);
         setContactFirmRoles(editingContact.contact_firm_roles || []);
@@ -1710,20 +1710,22 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                 <ContactDecisionRolePicker value={decisionRole} onChange={setDecisionRole} viewMode={viewMode} />
               </div>
 
-              {/* Influence Level — High / Medium / Low */}
+              {/* Influence Level — Decision Maker / Influencer / Follower / Undetermined */}
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-gray-700">Influence Level</Label>
                 {viewMode ? (
                   <div className="text-sm px-1">
                     {influenceLevel ? (
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                        influenceLevel === "High" ? "bg-red-100 text-red-700"
-                        : influenceLevel === "Medium" ? "bg-amber-100 text-amber-700"
+                        influenceLevel === "Decision Maker" ? "bg-red-100 text-red-700"
+                        : influenceLevel === "Influencer" ? "bg-amber-100 text-amber-700"
+                        : influenceLevel === "Follower" ? "bg-blue-100 text-blue-700"
                         : "bg-gray-100 text-gray-600"
                       }`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${
-                          influenceLevel === "High" ? "bg-red-500"
-                          : influenceLevel === "Medium" ? "bg-amber-500"
+                          influenceLevel === "Decision Maker" ? "bg-red-500"
+                          : influenceLevel === "Influencer" ? "bg-amber-500"
+                          : influenceLevel === "Follower" ? "bg-blue-500"
                           : "bg-gray-400"
                         }`} />
                         {influenceLevel}
@@ -1731,19 +1733,17 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                     ) : <span className="text-gray-400 italic">—</span>}
                   </div>
                 ) : (
-                  <div className="flex gap-2">
-                    {["High", "Medium", "Low"].map(level => (
-                      <button key={level} type="button"
-                        onClick={() => setInfluenceLevel(influenceLevel === level ? "" : level)}
-                        className={`px-4 py-1.5 rounded-full text-xs font-medium border transition-colors ${influenceLevel === level
-                          ? level === "High" ? "bg-red-600 text-white border-red-600"
-                          : level === "Medium" ? "bg-amber-500 text-white border-amber-500"
-                          : "bg-gray-500 text-white border-gray-500"
-                          : "bg-white text-gray-600 border-gray-300 hover:border-indigo-300 hover:text-primary"}`}>
-                        {level}
-                      </button>
-                    ))}
-                  </div>
+                  <Select value={influenceLevel} onValueChange={(v) => setInfluenceLevel(v)}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select influence level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Decision Maker">Decision Maker</SelectItem>
+                      <SelectItem value="Influencer">Influencer</SelectItem>
+                      <SelectItem value="Follower">Follower</SelectItem>
+                      <SelectItem value="Undetermined">Undetermined</SelectItem>
+                    </SelectContent>
+                  </Select>
                 )}
               </div>
 

@@ -109,11 +109,13 @@
     "influence_level": {
       "type": "string",
       "enum": [
-        "High",
-        "Medium",
-        "Low"
+        "Decision Maker",
+        "Influencer",
+        "Follower",
+        "Undetermined"
       ],
-      "description": "The contact's influence level \u2014 a user-assigned rating of how much sway this person holds in investment decisions. High, Medium, or Low. Used alongside decision_role to prioritize relationship management effort."
+      "default": "Undetermined",
+      "description": "The contact's influence level \u2014 a user-assigned rating of how much sway this person holds in investment decisions. 'Decision Maker' = final say on investment decisions; 'Influencer' = shapes decisions without final authority; 'Follower' = minimal direct influence; 'Undetermined' = not yet assessed (default for new contacts). Used alongside decision_role to prioritize relationship management effort."
     },
     "contact_type": {
       "type": "array",
