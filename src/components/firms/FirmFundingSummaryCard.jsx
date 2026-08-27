@@ -1,8 +1,11 @@
 import React, { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { base44 } from "@/api/base44Client";
-import { Wallet, TrendingUp, Package, Loader2, Download } from "lucide-react";
+import { Wallet, TrendingUp, Package, Loader2, Download, BarChart3 } from "lucide-react";
 import FundingStatusBadge from "@/components/products/FundingStatusBadge";
+
+const PRODUCT_BAR_COLORS = ["#6366f1", "#8b5cf6", "#3b82f6", "#10b981", "#f59e0b", "#ec4899", "#14b8a6", "#f97316"];
 
 /**
  * Summary card displayed at the top of the firm profile page.
@@ -46,6 +49,19 @@ export default function FirmFundingSummaryCard({ firmId, firmName }) {
     }
     return { totalFunding: total, fundedProductCount: count, fundedProducts: funded, latestDate: latest };
   }, [products]);
+
+  // Bar chart data — each product's latest AUM, sorted descending so the
+  // largest products appear at the top of the horizontal bar chart.
+  const chartData = useMemo(
+    () =>
+      [...fundedProducts]
+        .sort((a, b) => b.aum - a.aum)
+        .map((p) => ({
+          name: p.name.length > 22 ? p.name.slice(0, 20) + "…" : p.name,
+          aum: p.aum,
+        })),
+    [fundedProducts]
+  );
 
   if (isLoading) {
     return (
@@ -124,6 +140,39 @@ export default function FirmFundingSummaryCard({ firmId, firmName }) {
               +{fundedProducts.length - 6} more
             </span>
           )}
+        </div>
+      )}
+      {fundedProducts.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-indigo-100/80">
+          <div className="flex items-center gap-1.5 mb-2">
+            <BarChart3 className="w-3.5 h-3.5 text-indigo-600" />
+            <span className="text-xs font-semibold text-gray-600">Product AUM Growth</span>
+            <span className="ml-auto text-[11px] text-gray-400">Latest month-end AUM per product</span>
+          </div>
+          <ResponsiveContainer width="100%" height={Math.max(140, fundedProducts.length * 38)}>
+            <BarChart data={chartData} layout="vertical" margin={{ top: 0, right: 12, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#eef2ff" horizontal={false} />
+              <XAxis type="number" tick={{ fontSize: 10, fill: "#6b7280" }} axisLine={false} tickLine={false} tickFormatter={formatCompactCurrency} />
+              <YAxis
+                type="category"
+                dataKey="name"
+                tick={{ fontSize: 10, fill: "#374151" }}
+                axisLine={false}
+                tickLine={false}
+                width={130}
+              />
+              <Tooltip
+                cursor={{ fill: "#f5f3ff" }}
+                contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "12px" }}
+                formatter={(v) => [formatCurrency(v), "AUM"]}
+              />
+              <Bar dataKey="aum" name="AUM" radius={[0, 6, 6, 0]} barSize={18}>
+                {chartData.map((entry, i) => (
+                  <Cell key={i} fill={PRODUCT_BAR_COLORS[i % PRODUCT_BAR_COLORS.length]} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       )}
     </div>
