@@ -20,12 +20,20 @@
         "Process Template",
         "Scoring Matrix"
       ],
-      "description": "Whether this template is a process template (a staged workflow / due diligence process) or a scoring matrix (an evaluation scorecard used to rate managers). 'Process Template' = defines stages, sub-stages, and documentation checklists that structure a review workflow; 'Scoring Matrix' = defines weighted scoring criteria used to quantitatively evaluate and compare managers."
+      "description": "Whether this template is a process template (a staged workflow / due diligence process) or a scoring matrix (an evaluation scorecard used to rate managers)."
     },
     "create_date": {
       "type": "string",
       "format": "date",
       "description": "Date the template was created (auto-set to today, user-editable). Stored as YYYY-MM-DD."
+    },
+    "sample_file_url": {
+      "type": "string",
+      "description": "URL of an attached sample document showing how to use this template (optional). Supports PDF, Word, Excel, etc."
+    },
+    "sample_file_name": {
+      "type": "string",
+      "description": "Display name of the attached sample file (denormalized)."
     },
     "stages": {
       "type": "array",
@@ -41,7 +49,6 @@
           },
           "sub_stages": {
             "type": "array",
-            "description": "Ordered sub-stages within this stage",
             "items": {
               "type": "object",
               "properties": {
@@ -59,7 +66,7 @@
     },
     "documentation_checklist": {
       "type": "array",
-      "description": "Documentation checklist items defined in the template. Each item has an id and a name. When a due diligence is created from this template, these items are copied as the starting checklist for the user to attach documents, complete, and add notes.",
+      "description": "Documentation checklist items defined in the template.",
       "items": {
         "type": "object",
         "properties": {
@@ -74,7 +81,34 @@
     },
     "approval_process_logic": {
       "type": "array",
-      "description": "Approval process logic steps defined in the template. Each step references a due diligence stage (and optionally a sub-stage) to determine the workflow. When a due diligence is created from this template, these steps are copied as the starting approval process for the user to execute.",
+      "description": "Approval process logic steps defined in the template.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "stage_id": {
+            "type": "string"
+          },
+          "stage_name": {
+            "type": "string"
+          },
+          "sub_stage_id": {
+            "type": "string"
+          },
+          "sub_stage_name": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "scoring_blocks": {
+      "type": "array",
+      "description": "Weighted scoring blocks for Scoring Matrix templates. Each block groups related criteria and has a percentage weight. The sum of all block weights should equal 100.",
       "items": {
         "type": "object",
         "properties": {
@@ -83,23 +117,52 @@
           },
           "name": {
             "type": "string",
-            "description": "Name/description of the approval process step"
+            "description": "Block name (e.g. 'Foundation', 'Making the Edge')"
           },
-          "stage_id": {
-            "type": "string",
-            "description": "ID of the referenced due diligence stage"
+          "weight": {
+            "type": "number",
+            "description": "Percentage weight of this block (0-100)"
           },
-          "stage_name": {
-            "type": "string",
-            "description": "Name of the referenced stage (denormalized for display)"
-          },
-          "sub_stage_id": {
-            "type": "string",
-            "description": "ID of the referenced sub-stage (optional, for finer-grained workflow)"
-          },
-          "sub_stage_name": {
-            "type": "string",
-            "description": "Name of the referenced sub-stage (denormalized for display)"
+          "criteria": {
+            "type": "array",
+            "description": "Scoring criteria within this block",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "number": {
+                  "type": "integer",
+                  "description": "Sequential criterion number"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Criterion name (e.g. 'Mandate & universe')"
+                },
+                "category": {
+                  "type": "string",
+                  "description": "Sub-category label (e.g. 'Investment research')"
+                },
+                "descriptors": {
+                  "type": "array",
+                  "description": "Level descriptors (1-5) for this criterion",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "level": {
+                        "type": "integer",
+                        "description": "Score level (1-5)"
+                      },
+                      "text": {
+                        "type": "string",
+                        "description": "Descriptor text for this level"
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
