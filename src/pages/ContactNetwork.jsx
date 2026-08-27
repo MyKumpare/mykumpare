@@ -4,6 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Share2, Loader2, Building, User, Filter, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
 import ContactNetworkGraph from "@/components/network/ContactNetworkGraph";
 import ContactNetworkBulkEditList from "@/components/network/ContactNetworkBulkEditList";
+import ContactNetworkSidebar from "@/components/network/ContactNetworkSidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { List, Share2 as GraphIcon } from "lucide-react";
@@ -31,6 +32,7 @@ export default function ContactNetwork() {
   const [selectedId, setSelectedId] = useState(null);
   const [resetKey, setResetKey] = useState(0);
   const [view, setView] = useState("graph"); // graph | list
+  const [highlightFirmId, setHighlightFirmId] = useState(null);
 
   const { data: firms = [], isFetching: firmsLoading } = useQuery({
     queryKey: ["firms"],
@@ -43,12 +45,73 @@ export default function ContactNetwork() {
   });
 
   // Build the graph: only contacts with >= minConnections firms, filtered by firm type and search.
+  // When highlightFirmId is set, show only that firm + its Final Decision Makers.
   const { nodes, edges, stats } = useMemo(() => {
     const activeFirms = firms.filter((f) => !f.deleted_at);
     const activeContacts = contacts.filter((c) => !c.deleted_at && c.firm_ids?.length);
 
     const firmMap = new Map(activeFirms.map((f) => [f.id, f]));
 
+    // ── Highlight mode: isolate one firm + its Final Decision Makers ──
+    if (highlightFirmId) {
+      const firm = firmMap.get(highlightFirmId);
+      if (firm) {
+        const fdmContacts = activeContacts.filter(
+          (c) =>
+            (c.firm_ids || []).includes(highlightFirmId) &&
+            c.influence_level === "Final Decision Maker"
+        );
+
+        const firmNode = {
+          id: `firm-${firm.id}`,
+          label: firm.name,
+          type: "firm",
+          color: FIRM_TYPE_COLORS["Investment Manager"] || "#6366f1",
+          radius: 20,
+          degree: fdmContacts.length,
+          _entity: firm,
+          _entityType: "firm",
+        };
+
+        const contactNodes = fdmContacts.map((c) => {
+          const initials = [c.first_name?.[0], c.last_name?.[0]].filter(Boolean).join("").toUpperCase();
+          return {
+            id: `contact-${c.id}`,
+            label: formatContactName(c),
+            sublabel: c.title,
+            type: "contact",
+            color: "#dc2626",
+            radius: 14,
+            image: c.photo_url,
+            initials,
+            degree: 1,
+            _entity: c,
+            _entityType: "contact",
+            _isFdm: true,
+          };
+        });
+
+        const allEdges = contactNodes.map((cn) => ({
+          source: cn.id,
+          target: `firm-${firm.id}`,
+          color: "#f59e0b",
+          width: 2,
+        }));
+
+        return {
+          nodes: [firmNode, ...contactNodes],
+          edges: allEdges,
+          stats: {
+            firmCount: 1,
+            contactCount: contactNodes.length,
+            edgeCount: allEdges.length,
+            multiFirmContacts: 0,
+          },
+        };
+      }
+    }
+
+    // ── Normal mode ──
     // Filter firms by type
     const firmIdSet = new Set(
       firmTypeFilter === "All"
@@ -149,7 +212,7 @@ export default function ContactNetwork() {
         multiFirmContacts: relevantContacts.filter((c) => c._visibleFirmIds.length >= 3).length,
       },
     };
-  }, [firms, contacts, minConnections, firmTypeFilter, search, resetKey]);
+  }, [firms, contacts, minConnections, firmTypeFilter, search, resetKey, highlightFirmId]);
 
   const handleNodeClick = (node) => {
     setSelectedId(node.id);
@@ -268,70 +331,91 @@ export default function ContactNetwork() {
           </span>
         </div>
 
-        {/* Graph canvas */}
-        <div className="relative border border-gray-200 rounded-xl bg-white shadow-sm overflow-hidden" style={{ height: "calc(100vh - 280px)", minHeight: "500px" }}>
-          {firmsLoading || contactsLoading ? (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
-            </div>
-          ) : view === "list" ? (
-            <ContactNetworkBulkEditList
+        {/* Sidebar + Graph canvas */}
+        <div className="flex gap-4">
+          {view === "graph" && (
+            <ContactNetworkSidebar
               firms={firms}
               contacts={contacts}
-              search={search}
-              firmTypeFilter={firmTypeFilter}
-            />
-          ) : nodes.length === 0 ? (
-            <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
-              No contacts match the current filters. Try lowering the minimum connections.
-            </div>
-          ) : (
-            <ContactNetworkGraph
-              key={resetKey}
-              nodes={nodes}
-              edges={edges}
-              onNodeClick={handleNodeClick}
-              highlightId={selectedId}
+              highlightFirmId={highlightFirmId}
+              onHighlightFirm={setHighlightFirmId}
             />
           )}
 
-          {/* Selected node info card */}
-          {view === "graph" && selectedNode && (
-            <div className="absolute bottom-3 left-3 max-w-xs bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-10">
-              <div className="flex items-start gap-3">
-                {selectedNode.image ? (
-                  <img src={selectedNode.image} alt={selectedNode.label} className="w-12 h-12 rounded-full object-cover border border-gray-200" />
-                ) : (
-                  <div
-                    className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold"
-                    style={{ background: selectedNode.color }}
-                  >
-                    {selectedNode.initials || <Building className="w-6 h-6" />}
-                  </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-sm text-gray-800 truncate">{selectedNode.label}</p>
-                  {selectedNode.sublabel && <p className="text-xs text-gray-500 truncate">{selectedNode.sublabel}</p>}
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {selectedNode.type === "firm" ? "Firm" : "Contact"} · {selectedNode.degree} connection{selectedNode.degree !== 1 ? "s" : ""}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setSelectedId(null)}
-                  className="text-gray-400 hover:text-gray-600 text-sm"
-                >
-                  ✕
-                </button>
+          <div className="relative flex-1 border border-gray-200 rounded-xl bg-white shadow-sm overflow-hidden" style={{ height: "calc(100vh - 280px)", minHeight: "500px" }}>
+            {firmsLoading || contactsLoading ? (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
               </div>
-            </div>
-          )}
+            ) : view === "list" ? (
+              <ContactNetworkBulkEditList
+                firms={firms}
+                contacts={contacts}
+                search={search}
+                firmTypeFilter={firmTypeFilter}
+              />
+            ) : nodes.length === 0 ? (
+              <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
+                {highlightFirmId
+                  ? "No Final Decision Makers found for this firm."
+                  : "No contacts match the current filters. Try lowering the minimum connections."}
+              </div>
+            ) : (
+              <ContactNetworkGraph
+                key={resetKey}
+                nodes={nodes}
+                edges={edges}
+                onNodeClick={handleNodeClick}
+                highlightId={selectedId}
+              />
+            )}
 
-          {/* Help hint */}
-          {view === "graph" && (
-            <div className="absolute top-3 right-3 text-xs text-gray-400 bg-white/80 px-2 py-1 rounded-md border border-gray-200">
-              Drag nodes · Scroll to zoom · Hover to highlight
-            </div>
-          )}
+            {/* Selected node info card */}
+            {view === "graph" && selectedNode && (
+              <div className="absolute bottom-3 left-3 max-w-xs bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-10">
+                <div className="flex items-start gap-3">
+                  {selectedNode.image ? (
+                    <img src={selectedNode.image} alt={selectedNode.label} className="w-12 h-12 rounded-full object-cover border border-gray-200" />
+                  ) : (
+                    <div
+                      className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold"
+                      style={{ background: selectedNode.color }}
+                    >
+                      {selectedNode.initials || <Building className="w-6 h-6" />}
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-sm text-gray-800 truncate">{selectedNode.label}</p>
+                    {selectedNode.sublabel && <p className="text-xs text-gray-500 truncate">{selectedNode.sublabel}</p>}
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {selectedNode.type === "firm" ? "Firm" : "Contact"} · {selectedNode.degree} connection{selectedNode.degree !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setSelectedId(null)}
+                    className="text-gray-400 hover:text-gray-600 text-sm"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Help hint */}
+            {view === "graph" && (
+              <div className="absolute top-3 right-3 text-xs text-gray-400 bg-white/80 px-2 py-1 rounded-md border border-gray-200">
+                Drag nodes · Scroll to zoom · Hover to highlight
+              </div>
+            )}
+
+            {/* FDM highlight badge */}
+            {view === "graph" && highlightFirmId && (
+              <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-100 text-amber-800 text-xs font-medium border border-amber-200 z-10">
+                <span className="w-2 h-2 rounded-full bg-red-500" />
+                Final Decision Makers only
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

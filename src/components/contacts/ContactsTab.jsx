@@ -15,6 +15,7 @@ import ContactsTabFilters, { filterContacts } from "./ContactsTabFilters";
 import MergeDuplicateContactsDialog from "./MergeDuplicateContactsDialog";
 import EmployeeStatusChart from "./EmployeeStatusChart";
 import ContactsBulkActionsBar from "./ContactsBulkActionsBar";
+import ContactsBulkAssignFirmDialog from "./ContactsBulkAssignFirmDialog";
 import ContactCompletenessBadge, { getMissingEssentialFields } from "./ContactCompletenessBadge";
 import { useDuplicateReviews } from "./useDuplicateReviews";
 import { isExactMatchGroup } from "./contactDuplicateCheck";
@@ -35,6 +36,7 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
   const [bulkBusy, setBulkBusy] = useState(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [scrapeOpen, setScrapeOpen] = useState(false);
+  const [assignFirmOpen, setAssignFirmOpen] = useState(false);
 
   const handleToggleFilter = (fieldKey, value) => {
     setFilterSelected((prev) => {
@@ -310,6 +312,70 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
     }
   };
 
+  const handleBulkInfluence = async (level) => {
+    const targets = selectedArray;
+    if (targets.length === 0) return;
+    setBulkBusy("influence");
+    try {
+      await base44.entities.Contact.bulkUpdate(
+        targets.map((c) => ({ id: c.id, influence_level: level }))
+      );
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      toast({
+        title: "✅ Influence level updated",
+        description: `${targets.length} contact${targets.length > 1 ? "s" : ""} set to "${level}".`,
+      });
+      setSelectedIds(new Set());
+    } catch (error) {
+      toast({
+        title: "Update failed",
+        description: error.message || "Could not update influence levels.",
+        variant: "destructive",
+      });
+    } finally {
+      setBulkBusy(null);
+    }
+  };
+
+  const handleBulkAssignFirm = async (firm) => {
+    const targets = selectedArray;
+    if (targets.length === 0) return;
+    setBulkBusy("assignFirm");
+    try {
+      const updates = targets
+        .map((c) => {
+          const firmIds = c.firm_ids || [];
+          if (firmIds.includes(firm.id)) return null;
+          return { id: c.id, firm_ids: [...firmIds, firm.id] };
+        })
+        .filter(Boolean);
+
+      if (updates.length === 0) {
+        toast({
+          title: "No changes needed",
+          description: "All selected contacts are already linked to this firm.",
+        });
+      } else {
+        await base44.entities.Contact.bulkUpdate(updates);
+        queryClient.invalidateQueries({ queryKey: ["contacts"] });
+        toast({
+          title: "✅ Firm assigned",
+          description: `${updates.length} contact${updates.length > 1 ? "s" : ""} linked to ${firm.name}.`,
+        });
+      }
+      setSelectedIds(new Set());
+      setAssignFirmOpen(false);
+    } catch (error) {
+      toast({
+        title: "Assignment failed",
+        description: error.message || "Could not assign firm.",
+        variant: "destructive",
+      });
+    } finally {
+      setBulkBusy(null);
+    }
+  };
+
   const handleBulkDelete = async () => {
     const targets = selectedArray;
     if (targets.length === 0) return;
@@ -540,6 +606,8 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
         onClear={() => setSelectedIds(new Set())}
         onSetActive={() => handleBulkStatus("Active")}
         onSetInactive={() => handleBulkStatus("Inactive")}
+        onBulkInfluence={handleBulkInfluence}
+        onBulkAssignFirm={() => setAssignFirmOpen(true)}
         onDelete={() => setBulkDeleteOpen(true)}
         busy={bulkBusy}
       />
@@ -728,6 +796,15 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
         onOpenChange={setScrapeOpen}
         firmId={firmId}
         firmName={firmName}
+      />
+
+      <ContactsBulkAssignFirmDialog
+        open={assignFirmOpen}
+        onOpenChange={setAssignFirmOpen}
+        firms={firms}
+        selectedCount={selectedIds.size}
+        onAssign={handleBulkAssignFirm}
+        busy={bulkBusy === "assignFirm"}
       />
     </div>
   );
