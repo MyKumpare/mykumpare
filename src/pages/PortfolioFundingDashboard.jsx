@@ -5,10 +5,11 @@ import { Link } from "react-router-dom";
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  LineChart, Line,
 } from "recharts";
 import {
   Briefcase, ArrowLeft, TrendingUp, TrendingDown, Wallet,
-  PieChart as PieIcon, Building2, Loader2,
+  PieChart as PieIcon, Building2, Loader2, Activity,
 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import FundingStatusBadge from "@/components/products/FundingStatusBadge";
@@ -194,6 +195,33 @@ export default function PortfolioFundingDashboard() {
   const comparisonTotalTerminated = firmFundingComparison.reduce((s, e) => s + e.terminatedAllocation, 0);
   const comparisonGrandTotal = comparisonTotalActive + comparisonTotalTerminated;
 
+  // Month-over-month total capital flows across all tracked firms.
+  // Aggregates net_asset_flows (and assets gained/loss) from every firm's aum_history
+  // by month_end_date, sorted chronologically for the trend line chart.
+  const capitalFlowsTrend = useMemo(() => {
+    const monthMap = new Map();
+    for (const f of firms) {
+      if (f.deleted_at) continue;
+      if (dataScope === "my" && linkedFirmId && f.tenant_id !== linkedFirmId) continue;
+      const history = f.aum_history || [];
+      for (const h of history) {
+        if (!h.month_end_date) continue;
+        const key = h.month_end_date;
+        const existing = monthMap.get(key) || { date: key, netFlow: 0, gained: 0, loss: 0 };
+        existing.netFlow += Number(h.net_asset_flows) || 0;
+        existing.gained += Number(h.assets_gained) || 0;
+        existing.loss += Number(h.assets_loss) || 0;
+        monthMap.set(key, existing);
+      }
+    }
+    return Array.from(monthMap.values())
+      .sort((a, b) => new Date(a.date) - new Date(b.date))
+      .map((d) => ({
+        ...d,
+        label: new Date(d.date).toLocaleDateString("en-US", { month: "short", year: "2-digit" }),
+      }));
+  }, [firms, dataScope, linkedFirmId]);
+
   const loading = portfoliosLoading || productsLoading;
 
   return (
@@ -245,6 +273,103 @@ export default function PortfolioFundingDashboard() {
           <SummaryCard label="Terminated Portfolios" value={totalTerminatedPortfolios} icon={TrendingDown} color="bg-red-500" loading={loading} />
           <SummaryCard label="Funded Products" value={fundedProducts} icon={TrendingUp} color="bg-indigo-500" loading={loading} />
           <SummaryCard label="Terminated Products" value={terminatedProducts} icon={TrendingDown} color="bg-amber-500" loading={loading} />
+        </div>
+
+        {/* Month-over-month capital flows trend */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Activity className="w-5 h-5 text-indigo-600" />
+            <h2 className="text-sm font-semibold text-gray-800">Month-over-Month Capital Flows Trend</h2>
+            <span className="ml-auto text-xs text-gray-400">{capitalFlowsTrend.length} month{capitalFlowsTrend.length !== 1 ? "s" : ""}</span>
+          </div>
+          {loading ? (
+            <div className="h-72 flex items-center justify-center text-gray-400 text-sm">Loading...</div>
+          ) : capitalFlowsTrend.length === 0 ? (
+            <div className="h-72 flex items-center justify-center text-gray-400 text-sm">No capital flow history available</div>
+          ) : (
+            <>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={capitalFlowsTrend} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 11, fill: "#6b7280" }}
+                    axisLine={false}
+                    tickLine={false}
+                    minTickGap={20}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: "#6b7280" }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={formatCompactCurrency}
+                    width={70}
+                  />
+                  <Tooltip
+                    contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "12px" }}
+                    formatter={(v, name) => [formatCurrency(v), name]}
+                    labelFormatter={(label) => `Month: ${label}`}
+                  />
+                  <Legend
+                    iconType="line"
+                    wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="netFlow"
+                    name="Net Capital Flow"
+                    stroke="#6366f1"
+                    strokeWidth={2.5}
+                    dot={{ r: 3, fill: "#6366f1" }}
+                    activeDot={{ r: 5 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="gained"
+                    name="Assets Gained"
+                    stroke="#10b981"
+                    strokeWidth={1.5}
+                    dot={false}
+                    strokeDasharray="4 4"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="loss"
+                    name="Assets Loss"
+                    stroke="#ef4444"
+                    strokeWidth={1.5}
+                    dot={false}
+                    strokeDasharray="4 4"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                {(() => {
+                  const totalNet = capitalFlowsTrend.reduce((s, d) => s + d.netFlow, 0);
+                  const totalGained = capitalFlowsTrend.reduce((s, d) => s + d.gained, 0);
+                  const totalLoss = capitalFlowsTrend.reduce((s, d) => s + d.loss, 0);
+                  return (
+                    <>
+                      <div className="rounded-lg border border-gray-200 p-2.5 text-center">
+                        <span className="text-[11px] font-medium text-gray-500 block mb-0.5">Total Net Flow</span>
+                        <span className={`text-sm font-bold ${totalNet >= 0 ? "text-indigo-700" : "text-red-600"}`}>
+                          {formatCurrency(totalNet)}
+                        </span>
+                      </div>
+                      <div className="rounded-lg border border-gray-200 p-2.5 text-center">
+                        <span className="text-[11px] font-medium text-gray-500 block mb-0.5">Total Gained</span>
+                        <span className="text-sm font-bold text-emerald-700">{formatCurrency(totalGained)}</span>
+                      </div>
+                      <div className="rounded-lg border border-gray-200 p-2.5 text-center">
+                        <span className="text-[11px] font-medium text-gray-500 block mb-0.5">Total Loss</span>
+                        <span className="text-sm font-bold text-red-600">{formatCurrency(totalLoss)}</span>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Capital allocation by firm type */}

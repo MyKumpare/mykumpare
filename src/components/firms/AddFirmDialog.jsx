@@ -35,6 +35,7 @@ import FirmDocumentsTab from "./FirmDocumentsTab";
 import FirmDueDiligenceTab from "./FirmDueDiligenceTab";
 import LegalComplianceTab from "./LegalComplianceTab";
 import FirmSourcingTab from "./FirmSourcingTab";
+import FirmFundingSummaryCard from "./FirmFundingSummaryCard";
 import FirmContactPhotoGallery from "./FirmContactPhotoGallery";
 import FirmContactRelationshipMap from "./FirmContactRelationshipMap";
 import { GEOGRAPHIC_REGIONS, deriveGeographicRegionFromAddresses } from "./geographicRegions";
@@ -1349,6 +1350,11 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               </div>
               </div>
               </div>
+
+          {/* Funding summary card — total funding amount based on linked products */}
+          {editingFirm && !hideProductTabs && (
+            <FirmFundingSummaryCard firmId={editingFirm.id} firmName={editingFirm.name} />
+          )}
 
           {/* Contacts, Addresses, Phones & Ownership Tabs */}
            <Tabs defaultValue={defaultTab || "contacts"} className="w-full">
