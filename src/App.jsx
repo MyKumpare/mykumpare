@@ -38,6 +38,7 @@ import ActivityTimelinePage from './pages/ActivityTimelinePage';
 import WeeklyInteractionReport from './pages/WeeklyInteractionReport';
 import RelationshipNetworkMap from './pages/RelationshipNetworkMap';
 import InfluenceLevelDashboard from './pages/InfluenceLevelDashboard';
+import ScoringActivityCalendar from './pages/ScoringActivityCalendar';
 
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -127,6 +128,7 @@ const AuthenticatedApp = () => {
       <Route path="/WeeklyInteractionReport" element={<LayoutWrapper currentPageName="WeeklyInteractionReport"><WeeklyInteractionReport /></LayoutWrapper>} />
       <Route path="/RelationshipNetworkMap" element={<LayoutWrapper currentPageName="RelationshipNetworkMap"><RelationshipNetworkMap /></LayoutWrapper>} />
       <Route path="/InfluenceLevelDashboard" element={<LayoutWrapper currentPageName="InfluenceLevelDashboard"><InfluenceLevelDashboard /></LayoutWrapper>} />
+      <Route path="/ScoringActivityCalendar" element={<LayoutWrapper currentPageName="ScoringActivityCalendar"><ScoringActivityCalendar /></LayoutWrapper>} />
       <Route path="/register" element={<ExternalPartyRegister />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>

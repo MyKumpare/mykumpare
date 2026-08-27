@@ -19,6 +19,7 @@ import ScoringMatrixHistoryTab from "@/components/templates/ScoringMatrixHistory
 import RescoreConfirmDialog from "@/components/templates/RescoreConfirmDialog";
 import ClosedScoringEditWarning from "@/components/templates/ClosedScoringEditWarning";
 import { exportScoringMatrixComparisonPdf } from "@/components/templates/scoringMatrixComparisonPdf";
+import { createScoringNotification } from "@/components/templates/scoringNotificationHelper";
 
 const SCORE_COLORS = {
   1: "bg-red-100 text-red-700 border-red-300",
@@ -128,6 +129,8 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
   const isSecondaryAnalyst = currentUser?.linked_contact_id === score.secondary_analyst_contact_id;
 
   const updateCriterion = (blockId, critId, updates) => {
+    const block = blocks.find((b) => b.id === blockId);
+    const crit = block?.criteria?.find((c) => c.id === critId);
     const newBlocks = blocks.map((b) => {
       if (b.id !== blockId) return b;
       return {
@@ -136,6 +139,23 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
       };
     });
     updateMutation.mutate({ scoring_blocks: newBlocks });
+
+    // Create a notification when a score value (not notes) is changed
+    const scoreFields = ["primary_score", "secondary_score", "team_score", "ic_score", "final_score", "adjusted_primary_score"];
+    const changedScoreField = scoreFields.find((f) => updates[f] !== undefined);
+    if (changedScoreField && crit) {
+      const phaseLabel = changedScoreField === "primary_score" ? "Primary"
+        : changedScoreField === "secondary_score" ? "Secondary"
+        : changedScoreField === "team_score" ? "Team Review"
+        : changedScoreField === "ic_score" ? "IC Review"
+        : changedScoreField === "adjusted_primary_score" ? "Adjusted Primary"
+        : "Final";
+      createScoringNotification(score, "score_updated", currentUser, {
+        phase: phaseLabel,
+        criterionName: crit.name || `#${crit.number}`,
+        description: `${phaseLabel} score updated for "${crit.name || `#${crit.number}`}" on ${score.product_name}`,
+      }).catch(() => {});
+    }
   };
 
   const updateAllCriteria = (updates) => {
@@ -153,6 +173,7 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
       status: score.secondary_scoring_enabled ? "secondary_scoring" : "team_review",
       team_review_status: score.secondary_scoring_enabled ? "not_started" : "not_started"
     });
+    createScoringNotification(score, "phase_finalized", currentUser, { phase: "Primary" }).catch(() => {});
     toast({ title: "Primary scores finalized" });
   };
 
@@ -182,6 +203,7 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
       adjusted_primary_finalized: true,
       status: "ic_review"
     });
+    createScoringNotification(score, "phase_finalized", currentUser, { phase: "Team Review" }).catch(() => {});
     toast({ title: "Team review completed — adjusted primary scores finalized" });
   };
 
@@ -195,6 +217,7 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
       is_closed: true
     });
     setEditReopened(false);
+    createScoringNotification(score, "scoring_completed", currentUser, { phase: "Final" }).catch(() => {});
     toast({ title: "Scoring matrix finalized", description: `Scoring closed on ${todayStr}. Use "Start Re-Scoring" to create a new version.` });
   };
 
@@ -209,6 +232,7 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
     });
     setEditReopened(true);
     setShowClosedWarning(false);
+    createScoringNotification(score, "scoring_reopened", currentUser, { phase: "IC Review" }).catch(() => {});
     toast({ title: "Scoring reopened", description: "The closed scoring is now editable. Re-finalize to close it again.", variant: "destructive" });
   };
 

@@ -739,6 +739,7 @@ export default function Home() {
     { label: "Due Diligence", icon: ShieldCheck, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => setDueDiligencePickerOpen(true), submenu: [
       { label: "DD Board", icon: LayoutGrid, onClick: () => navigate("/DueDiligenceKanban") },
       { label: "DD Stats", icon: PieChart, onClick: () => navigate("/DueDiligenceDashboard") },
+      { label: "Scoring Calendar", icon: CalendarDays, onClick: () => navigate("/ScoringActivityCalendar") },
       { label: "Documents", icon: Files, onClick: () => setDocumentsPickerOpen(true) },
       { label: "Forms", icon: ClipboardCheck, onClick: () => setQuestionnairePickerOpen(true) },
       { label: "Templates", icon: FileText, onClick: () => setTemplatesPickerOpen(true) },

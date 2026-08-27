@@ -1,0 +1,155 @@
+{
+  "name": "ScoringNotification",
+  "type": "object",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "ID of the firm (tenant) that owns this notification. Set on creation to the creator's linked_firm_id; drives tenant isolation via RLS."
+    },
+    "score_id": {
+      "type": "string",
+      "description": "ID of the ScoringMatrixScore record this notification relates to."
+    },
+    "product_id": {
+      "type": "string",
+      "description": "ID of the product being scored (denormalized for quick lookup)."
+    },
+    "product_name": {
+      "type": "string",
+      "description": "Name of the product being scored (denormalized for display)."
+    },
+    "firm_id": {
+      "type": "string",
+      "description": "ID of the firm being scored (denormalized)."
+    },
+    "firm_name": {
+      "type": "string",
+      "description": "Name of the firm being scored (denormalized for display)."
+    },
+    "template_id": {
+      "type": "string",
+      "description": "ID of the scoring matrix template (denormalized)."
+    },
+    "template_name": {
+      "type": "string",
+      "description": "Name of the scoring matrix template (denormalized for display)."
+    },
+    "due_diligence_id": {
+      "type": "string",
+      "description": "ID of the associated DueDiligence record (denormalized)."
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "scoring_started",
+        "score_updated",
+        "phase_finalized",
+        "scoring_completed",
+        "scoring_reopened"
+      ],
+      "description": "The type of scoring event that triggered this notification. 'scoring_started' = a new scoring evaluation was initiated; 'score_updated' = an analyst changed a score value; 'phase_finalized' = a review phase (primary, team, IC) was completed; 'scoring_completed' = the entire scoring matrix was finalized; 'scoring_reopened' = a closed scoring was reopened for editing."
+    },
+    "phase": {
+      "type": "string",
+      "description": "Which review phase the event relates to (e.g. 'Primary', 'Secondary', 'Team Review', 'IC Review', 'Final'). Empty for events that are not phase-specific."
+    },
+    "event_description": {
+      "type": "string",
+      "description": "Human-readable summary of the event, shown in the notification list."
+    },
+    "criterion_name": {
+      "type": "string",
+      "description": "For 'score_updated' events: the name of the criterion whose score was changed. Empty for other event types."
+    },
+    "triggered_by_id": {
+      "type": "string",
+      "description": "ID of the user/contact who triggered the event (the analyst who made the change)."
+    },
+    "triggered_by_name": {
+      "type": "string",
+      "description": "Display name of the person who triggered the event (denormalized)."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "unread",
+        "read",
+        "dismissed"
+      ],
+      "default": "unread",
+      "description": "Read state of the notification. 'unread' = new and not yet acknowledged; 'read' = user has viewed it; 'dismissed' = user explicitly dismissed it (hidden from default view)."
+    }
+  },
+  "required": [
+    "score_id",
+    "event_type"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

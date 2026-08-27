@@ -19,13 +19,15 @@ import RfpRfiDueThisWeek from "@/components/firms/RfpRfiDueThisWeek";
 import CoverageTracker from "@/pages/CoverageTracker";
 import CoverageManagement from "@/pages/CoverageManagement";
 import StaleContactRemindersPanel from "@/components/contacts/StaleContactRemindersPanel";
-import { FileSearch, BellRing } from "lucide-react";
+import ScoringAlertsTab from "@/components/templates/ScoringAlertsTab";
+import { FileSearch, BellRing, ClipboardCheck as ScoringIcon } from "lucide-react";
 
 const TABS = [
   { key: "news", label: "News Alerts", icon: Newspaper },
   { key: "activity", label: "Activity", icon: ClipboardList },
   { key: "tasks", label: "Tasks", icon: LayoutList },
   { key: "stale-contacts", label: "Stale Contacts", icon: BellRing },
+  { key: "scoring-alerts", label: "Scoring Alerts", icon: ScoringIcon },
   { key: "conferences", label: "Conferences", icon: CalendarDays },
   { key: "board-meetings", label: "Board Meetings", icon: ClipboardCheck },
   { key: "board-meeting-alerts", label: "Bd Mtg Alerts", icon: Bell },
@@ -152,6 +154,11 @@ export default function MonitorPage() {
         {tab === "stale-contacts" && (
           <div className="rounded-xl border border-gray-200 bg-white p-4">
             <StaleContactRemindersPanel onContactClick={() => navigate("/")} />
+          </div>
+        )}
+        {tab === "scoring-alerts" && (
+          <div className="rounded-xl border border-gray-200 bg-white p-4">
+            <ScoringAlertsTab onProductClick={() => navigate("/")} />
           </div>
         )}
         {tab === "timeline" && (

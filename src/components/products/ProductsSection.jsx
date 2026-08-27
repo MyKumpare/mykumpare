@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, ChevronDown, ChevronRight, Package } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, ChevronDown, ChevronRight, Package, ClipboardCheck, X } from "lucide-react";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
 import SectionSearch from "@/components/common/SectionSearch";
 import SectionTypeFilter from "@/components/common/SectionTypeFilter";
@@ -9,6 +10,8 @@ import ProductStatusBadge from "@/components/products/ProductStatusBadge";
 import ProductFundingSummary from "@/components/products/ProductFundingSummary";
 import ProductAlignmentHeatmap from "@/components/products/ProductAlignmentHeatmap";
 import { useViewMode } from "@/hooks/useViewMode";
+import { useAuth } from "@/lib/AuthContext";
+import BulkScoringDialog from "@/components/templates/BulkScoringDialog";
 
 const PRODUCT_GROUP_TYPES = ["Investment Manager"];
 
@@ -17,12 +20,16 @@ const GROUP_COLORS = {
 };
 
 export default function ProductsSection({ products, firms, onProductClick, onAddProduct, onFirmClick, forceExpanded }) {
+  const { user: currentUser } = useAuth();
   const [expanded, setExpanded] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState({});
   const [expandedFirms, setExpandedFirms] = useState({});
   const [viewMode, setViewMode] = useViewMode("products");
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [showBulkScoring, setShowBulkScoring] = useState(false);
 
   useEffect(() => {
     if (forceExpanded !== undefined) setExpanded(forceExpanded);
@@ -30,6 +37,29 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
 
   const toggleGroup = (type) =>
     setExpandedGroups((prev) => ({ ...prev, [type]: !prev[type] }));
+
+  const toggleSelect = (productId) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(productId)) next.delete(productId);
+      else next.add(productId);
+      return next;
+    });
+  };
+
+  const selectAllVisible = () => {
+    const allIds = new Set(filteredProducts.map((p) => p.id));
+    setSelectedIds(allIds);
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    clearSelection();
+  };
 
   const toggleFirm = (firmId) =>
     setExpandedFirms((prev) => ({ ...prev, [firmId]: !prev[firmId] }));
@@ -47,6 +77,8 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
       return name.includes(searchLower) || assetClass.includes(searchLower) || firm.includes(searchLower);
     });
   }, [products, searchLower, firmMap]);
+
+  const selectedProducts = filteredProducts.filter((p) => selectedIds.has(p.id));
 
   // Group products by firm type, then sort firms asc, products asc
   const grouped = PRODUCT_GROUP_TYPES.reduce((acc, groupType) => {
@@ -99,9 +131,22 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
   function ProductMiniCard({ product }) {
     const firm = firmMap[product.firm_id];
     return (
-      <div className="relative p-3 rounded-xl border border-gray-100 bg-white hover:bg-violet-50 hover:border-violet-200 transition-colors w-full">
+      <div className={`relative p-3 rounded-xl border bg-white transition-colors w-full ${
+        selectMode && selectedIds.has(product.id)
+          ? "border-indigo-300 bg-indigo-50/50"
+          : "border-gray-100 hover:bg-violet-50 hover:border-violet-200"
+      }`}>
+        {selectMode && (
+          <div className="absolute top-2 right-2 z-10">
+            <Checkbox
+              checked={selectedIds.has(product.id)}
+              onCheckedChange={() => toggleSelect(product.id)}
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        )}
         <button
-          onClick={() => onProductClick(product)}
+          onClick={() => selectMode ? toggleSelect(product.id) : onProductClick(product)}
           className="text-left w-full"
         >
           <div className="flex items-center gap-2 mb-1">
@@ -141,17 +186,78 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
         </button>
         <div className="flex items-center gap-2">
           <ViewModeToggle value={viewMode} onChange={(m) => { setViewMode(m); setExpanded(true); }} />
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2 text-violet-600 hover:text-violet-700 hover:bg-violet-50 gap-1 text-xs"
-            onClick={onAddProduct}
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Add Product
-          </Button>
+          {selectMode ? (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 gap-1 text-xs"
+                onClick={exitSelectMode}
+              >
+                <X className="w-3.5 h-3.5" />
+                Cancel
+              </Button>
+              {selectedIds.size > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 gap-1 text-xs"
+                  onClick={clearSelection}
+                >
+                  Clear ({selectedIds.size})
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 gap-1 text-xs"
+                onClick={selectAllVisible}
+              >
+                Select All
+              </Button>
+              <Button
+                size="sm"
+                className="h-7 px-3 text-xs gap-1"
+                disabled={selectedIds.size === 0}
+                onClick={() => setShowBulkScoring(true)}
+              >
+                <ClipboardCheck className="w-3.5 h-3.5" />
+                Score Selected ({selectedIds.size})
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs"
+                onClick={() => { setSelectMode(true); setExpanded(true); }}
+              >
+                <ClipboardCheck className="w-3.5 h-3.5" />
+                Select
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-violet-600 hover:text-violet-700 hover:bg-violet-50 gap-1 text-xs"
+                onClick={onAddProduct}
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add Product
+              </Button>
+            </>
+          )}
         </div>
       </div>
+
+      {selectMode && (
+        <div className="mb-2 px-3 py-2 rounded-lg bg-indigo-50 border border-indigo-200 flex items-center gap-2">
+          <ClipboardCheck className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+          <span className="text-xs text-indigo-700 font-medium">
+            {selectedIds.size} product{selectedIds.size === 1 ? "" : "s"} selected — check products below, then click "Score Selected" to initiate scoring for all at once.
+          </span>
+        </div>
+      )}
 
       {expanded && (
         <div className="pl-2 border-l-2 border-gray-100 space-y-4">
@@ -231,12 +337,20 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
                                   key={product.id}
                                   className="w-full text-left px-3 py-2 rounded-lg border border-gray-100 bg-white hover:bg-violet-50 hover:border-violet-200 transition-colors flex items-center gap-2 group"
                                 >
+                                  {selectMode && (
+                                    <Checkbox
+                                      checked={selectedIds.has(product.id)}
+                                      onCheckedChange={() => toggleSelect(product.id)}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="flex-shrink-0"
+                                    />
+                                  )}
                                   <button
-                                    onClick={() => onProductClick(product)}
+                                    onClick={() => selectMode ? toggleSelect(product.id) : onProductClick(product)}
                                     className="flex items-center gap-2 min-w-0 flex-1 text-left"
                                   >
                                     <Package className="w-3.5 h-3.5 text-gray-300 group-hover:text-violet-400 flex-shrink-0" />
-                                    <span className="text-sm text-gray-800 group-hover:text-violet-700 font-medium truncate">
+                                    <span className={`text-sm font-medium truncate ${selectedIds.has(product.id) ? "text-indigo-700" : "text-gray-800 group-hover:text-violet-700"}`}>
                                       {product.name}
                                     </span>
                                   </button>
@@ -298,6 +412,19 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
             </div>
           )}
         </div>
+      )}
+
+      {showBulkScoring && (
+        <BulkScoringDialog
+          open={showBulkScoring}
+          onClose={() => setShowBulkScoring(false)}
+          selectedProducts={selectedProducts}
+          currentUser={currentUser}
+          onCompleted={() => {
+            exitSelectMode();
+            setShowBulkScoring(false);
+          }}
+        />
       )}
 
     </div>
