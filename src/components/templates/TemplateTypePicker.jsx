@@ -83,7 +83,7 @@ export default function TemplateTypePicker({ value, onChange, placeholder = "Sel
   return (
     <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setSearch(""); setNewType(""); setDuplicateMatch(null); } }}>
       <PopoverTrigger asChild>
-        <Button variant="outline" role="combobox" className="w-full justify-between font-normal" onClick={() => setOpen(!open)}>
+        <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
           {value || placeholder}
           <ChevronDown className="w-4 h-4 opacity-50 flex-shrink-0" />
         </Button>
