@@ -18,7 +18,7 @@ const SCORE_COLORS_HEX = {
  * @param {array}  opts.blocks - scoring_blocks array
  * @param {object} opts.showFlags - { showSecondary, showTeam, showAdjustedPrimary, showIC, showFinal }
  */
-export async function exportScoringMatrixComparisonPdf({ score, blocks, showFlags }) {
+export async function exportScoringMatrixComparisonPdf({ score, blocks, showFlags, benchmark }) {
   // Ensure logo is loaded for branding
   await preloadMyKumpareLogo();
 
@@ -27,6 +27,7 @@ export async function exportScoringMatrixComparisonPdf({ score, blocks, showFlag
   const pageH = doc.internal.pageSize.getHeight();
   const margin = 36;
   const { showSecondary, showTeam, showAdjustedPrimary, showIC, showFinal } = showFlags;
+  const hasBenchmark = benchmark && benchmark.total_sample_size > 0 && Object.keys(benchmark.criteria || {}).length > 0;
 
   // ── Header ──
   let y = drawReportHeader(doc, {

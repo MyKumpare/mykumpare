@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { ChevronDown, ChevronRight, TrendingUp, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { ChevronDown, ChevronRight, TrendingUp, AlertTriangle, CheckCircle2, BarChart3, ArrowUp, ArrowDown, Minus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const SCORE_COLORS = {
@@ -14,8 +14,9 @@ const SCORE_COLORS = {
  * Enhanced comparison table showing Primary, Team, IC, and Final scores side-by-side.
  * Team and IC cells are shaded green/red based on their deviation from the Final score.
  */
-export default function ScoringMatrixComparisonTable({ blocks, showSecondary, showTeam, showAdjustedPrimary, showIC, showFinal }) {
+export default function ScoringMatrixComparisonTable({ blocks, showSecondary, showTeam, showAdjustedPrimary, showIC, showFinal, benchmark }) {
   const [expandedBlocks, setExpandedBlocks] = useState({});
+  const hasBenchmark = benchmark && benchmark.total_sample_size > 0 && Object.keys(benchmark.criteria || {}).length > 0;
 
   const allCriteria = useMemo(() => {
     const list = [];
@@ -45,6 +46,35 @@ export default function ScoringMatrixComparisonTable({ blocks, showSecondary, sh
   const formatScore = (score) => {
     if (score == null) return <span className="text-gray-300">—</span>;
     return <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold border ${SCORE_COLORS[score] || "border-gray-200"}`}>{score}</span>;
+  };
+
+  // Format benchmark average score with comparison to the firm's final score
+  const formatBenchmarkCell = (critId, finalScore) => {
+    if (!hasBenchmark) return <span className="text-gray-300">—</span>;
+    const bench = benchmark.criteria[critId];
+    if (!bench || bench.avg_score == null) return <span className="text-gray-300 text-[10px]">N/A</span>;
+    const avg = bench.avg_score;
+    const diff = finalScore != null ? Math.round((finalScore - avg) * 100) / 100 : null;
+    const roundedAvg = Math.round(avg * 10) / 10;
+    const scoreColor = SCORE_COLORS[Math.round(avg)] || "border-gray-200";
+    return (
+      <div className="flex flex-col items-center gap-0.5">
+        <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold border ${scoreColor}`} style={{ borderStyle: "dashed" }}>
+          {roundedAvg}
+        </span>
+        {diff != null && diff !== 0 && (
+          <span className="text-[10px] font-medium flex items-center gap-0.5" style={{ color: diff > 0 ? "#166534" : "#991b1b" }}>
+            {diff > 0 ? <ArrowUp className="w-2.5 h-2.5" /> : <ArrowDown className="w-2.5 h-2.5" />}
+            {diff > 0 ? "+" : ""}{diff}
+          </span>
+        )}
+        {diff === 0 && (
+          <span className="text-[10px] font-medium flex items-center gap-0.5 text-gray-400">
+            <Minus className="w-2.5 h-2.5" />0
+          </span>
+        )}
+      </div>
+    );
   };
 
   const formatScoreWithDeviation = (score, finalScore) => {
@@ -122,6 +152,42 @@ export default function ScoringMatrixComparisonTable({ blocks, showSecondary, sh
         </div>
       </div>
 
+      {/* Benchmark info banner */}
+      {hasBenchmark && (
+        <div className="border border-indigo-200 rounded-lg p-3 bg-indigo-50">
+          <div className="flex items-start gap-2">
+            <BarChart3 className="w-4 h-4 text-indigo-600 mt-0.5 shrink-0" />
+            <div className="flex-1">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <span className="text-xs font-semibold text-indigo-900">
+                  Peer Benchmark — {benchmark.similarity_basis}
+                </span>
+                <div className="flex items-center gap-3 text-[11px] text-indigo-700">
+                  <span>{benchmark.total_sample_size} scored evaluations</span>
+                  <span>·</span>
+                  <span>{benchmark.similar_firm_count} similar firms</span>
+                </div>
+              </div>
+              <p className="text-[11px] text-indigo-600 mt-0.5">
+                Dashed-circle values show the average historic final score from similar investment managers.
+                Arrows indicate how this firm's final score compares against the peer average.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      {benchmark && !hasBenchmark && benchmark.message && (
+        <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+          <div className="flex items-start gap-2">
+            <BarChart3 className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
+            <div>
+              <span className="text-xs font-medium text-gray-600">Peer Benchmark unavailable</span>
+              <p className="text-[11px] text-gray-500 mt-0.5">{benchmark.message}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Legend */}
       <div className="flex items-center gap-4 text-xs text-gray-500 bg-gray-50 rounded-lg p-2 px-3">
         <span className="font-medium">Deviation from Final:</span>
@@ -151,6 +217,7 @@ export default function ScoringMatrixComparisonTable({ blocks, showSecondary, sh
               {showAdjustedPrimary && <th className="text-center p-2 font-medium text-gray-600">Adj. Primary</th>}
               {showIC && <th className="text-center p-2 font-medium text-gray-600">IC</th>}
               {showFinal && <th className="text-center p-2 font-medium text-gray-600 bg-blue-50">Final</th>}
+              {hasBenchmark && <th className="text-center p-2 font-medium text-gray-600 bg-indigo-50">Peer Avg</th>}
               <th className="text-center p-2 font-medium text-gray-600">Status</th>
             </tr>
           </thead>
@@ -161,7 +228,7 @@ export default function ScoringMatrixComparisonTable({ blocks, showSecondary, sh
                   className="bg-gray-100 cursor-pointer hover:bg-gray-200"
                   onClick={() => toggleBlock(block.id)}
                 >
-                  <td colSpan={showFinal ? (showSecondary ? 8 : 7) : showIC ? (showSecondary ? 7 : 6) : 3} className="p-2 font-semibold text-gray-700">
+                  <td colSpan={3 + (showSecondary?1:0) + (showTeam?1:0) + (showAdjustedPrimary?1:0) + (showIC?1:0) + (showFinal?1:0) + (hasBenchmark?1:0)} className="p-2 font-semibold text-gray-700">
                     <div className="flex items-center gap-1.5">
                       {expandedBlocks[block.id] ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                       {block.name} <span className="text-gray-400 font-normal">({block.weight}%)</span>
@@ -217,6 +284,11 @@ export default function ScoringMatrixComparisonTable({ blocks, showSecondary, sh
                       {showFinal && (
                         <td className="p-2 text-center bg-blue-50/50">
                           {formatScore(crit.final_score)}
+                        </td>
+                      )}
+                      {hasBenchmark && (
+                        <td className="p-2 text-center bg-indigo-50/40">
+                          {formatBenchmarkCell(crit.id, crit.final_score)}
                         </td>
                       )}
                       <td className="p-2 text-center">

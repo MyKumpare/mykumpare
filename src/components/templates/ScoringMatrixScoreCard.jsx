@@ -107,6 +107,17 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
     enabled: !!scoreId
   });
 
+  // Fetch peer benchmark (average historic final scores from similar investment managers)
+  const { data: benchmark, isLoading: isLoadingBenchmark } = useQuery({
+    queryKey: ["benchmarkScores", score?.product_id, score?.template_id],
+    queryFn: () => base44.functions.invoke("getBenchmarkScores", {
+      product_id: score.product_id,
+      template_id: score.template_id,
+      firm_id: score.firm_id
+    }),
+    enabled: !!score?.product_id && !!score?.template_id && activeTab === "comparison"
+  });
+
   const updateMutation = useMutation({
     mutationFn: (data) => base44.entities.ScoringMatrixScore.update(scoreId, data),
     onSuccess: () => {
@@ -657,7 +668,7 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
               )}
             </Button>
           </div>
-          <ScoringMatrixComparisonTable blocks={blocks} showSecondary={showSecondary} showTeam={showTeam} showAdjustedPrimary={showAdjustedPrimary} showIC={showIC} showFinal={showFinal} />
+          <ScoringMatrixComparisonTable blocks={blocks} showSecondary={showSecondary} showTeam={showTeam} showAdjustedPrimary={showAdjustedPrimary} showIC={showIC} showFinal={showFinal} benchmark={benchmark} />
         </div>
       )}
 
