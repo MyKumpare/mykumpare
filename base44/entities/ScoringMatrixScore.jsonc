@@ -164,6 +164,19 @@
                 "final_notes": {
                   "type": "string",
                   "description": "Primary analyst's notes justifying the final score."
+                },
+                "bonus_penalty_active": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Whether the analyst has activated the bonus/penalty adjustment for this criterion during review. Copied from the template's bonus_penalty_enabled at scoring initialization; the analyst toggles it on when they decide an adjustment is warranted."
+                },
+                "bonus_penalty_value": {
+                  "type": "number",
+                  "description": "The bonus/penalty adjustment value applied to this criterion's final score. Positive for a bonus, negative for a penalty. Must fall within the range defined on the template criterion (bonus_penalty_range). Added to the final score before computing the weighted total (clamped to the 1-5 scale)."
+                },
+                "bonus_penalty_notes": {
+                  "type": "string",
+                  "description": "Analyst's justification for the bonus/penalty adjustment, explaining why the adjustment was needed and how it reflects the manager's performance on this criterion."
                 }
               }
             }

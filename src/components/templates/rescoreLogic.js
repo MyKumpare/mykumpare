@@ -41,7 +41,10 @@ export async function createRescoreFromPrior(priorScore, existingScores = []) {
       ic_notes: "",
       ic_status: "pending",
       final_score: null,
-      final_notes: ""
+      final_notes: "",
+      bonus_penalty_active: false,
+      bonus_penalty_value: 0,
+      bonus_penalty_notes: ""
     }))
   }));
 

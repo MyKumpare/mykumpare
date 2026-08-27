@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Check, X, CheckCircle2, Circle, ChevronDown, ChevronRight, Sparkles, Loader2, FileText, Download, Brain, History, GitBranch, Lock, Calendar, AlertTriangle } from "lucide-react";
+import { Check, X, CheckCircle2, Circle, ChevronDown, ChevronRight, Sparkles, Loader2, FileText, Download, Brain, History, GitBranch, Lock, Calendar, AlertTriangle, PlusCircle, MinusCircle, Info, ToggleLeft, ToggleRight } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend, Tooltip
@@ -43,6 +43,97 @@ function ScoreCell({ score, onChange, disabled, placeholder = "—" }) {
         ))}
       </SelectContent>
     </Select>
+  );
+}
+
+function BonusPenaltyCell({ criterion, templateCriteria, isPrimaryAnalyst, isClosed, onUpdate }) {
+  const [showGuidance, setShowGuidance] = useState(false);
+  const templateCrit = templateCriteria?.[criterion.id];
+
+  if (!templateCrit?.bonus_penalty_enabled) return null;
+
+  const range = templateCrit.bonus_penalty_range || { min: -1, max: 1 };
+  const isActive = criterion.bonus_penalty_active;
+  const value = criterion.bonus_penalty_value;
+  const guidance = templateCrit.bonus_penalty_guidance || "";
+
+  const clampValue = (v) => {
+    if (v == null || isNaN(v)) return 0;
+    return Math.max(range.min, Math.min(range.max, v));
+  };
+
+  const handleToggle = () => {
+    if (isClosed || !isPrimaryAnalyst) return;
+    onUpdate({ bonus_penalty_active: !isActive, bonus_penalty_value: !isActive ? 0 : criterion.bonus_penalty_value });
+  };
+
+  const handleValueChange = (v) => {
+    const clamped = clampValue(parseFloat(v));
+    onUpdate({ bonus_penalty_value: clamped });
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-0.5">
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={handleToggle}
+          disabled={isClosed || !isPrimaryAnalyst}
+          className={`p-0.5 rounded text-xs ${isActive ? "text-indigo-600 bg-indigo-50 border border-indigo-200" : "text-gray-400 border border-gray-200"} ${(isClosed || !isPrimaryAnalyst) ? "opacity-50 cursor-not-allowed" : "hover:bg-indigo-100"}`}
+          title={isActive ? "Deactivate bonus/penalty" : "Activate bonus/penalty"}
+        >
+          {isActive ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
+        </button>
+        {isActive && (
+          <div className="flex items-center gap-0.5">
+            <button
+              type="button"
+              onClick={() => handleValueChange((value || 0) - 0.5)}
+              disabled={isClosed || !isPrimaryAnalyst}
+              className="p-0.5 rounded hover:bg-red-100 text-red-500 disabled:opacity-30"
+              title="Decrease"
+            >
+              <MinusCircle className="w-3.5 h-3.5" />
+            </button>
+            <Input
+              type="number"
+              step="0.5"
+              value={value ?? 0}
+              onChange={(e) => handleValueChange(e.target.value)}
+              disabled={isClosed || !isPrimaryAnalyst}
+              className="h-7 w-14 text-xs text-center"
+            />
+            <button
+              type="button"
+              onClick={() => handleValueChange((value || 0) + 0.5)}
+              disabled={isClosed || !isPrimaryAnalyst}
+              className="p-0.5 rounded hover:bg-green-100 text-green-500 disabled:opacity-30"
+              title="Increase"
+            >
+              <PlusCircle className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={() => setShowGuidance(!showGuidance)}
+          className="p-0.5 text-gray-400 hover:text-indigo-600"
+          title="Show guidance"
+        >
+          <Info className="w-3.5 h-3.5" />
+        </button>
+      </div>
+      {showGuidance && guidance && (
+        <div className="text-[10px] text-indigo-700 bg-indigo-50 border border-indigo-100 rounded p-1.5 max-w-[200px] mt-0.5">
+          {guidance}
+        </div>
+      )}
+      {isActive && (
+        <div className="text-[10px] font-medium mt-0.5" style={{ color: (value || 0) > 0 ? "#166534" : (value || 0) < 0 ? "#991b1b" : "#6b7280" }}>
+          {(value || 0) > 0 ? "+" : ""}{value || 0}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -128,6 +219,17 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
   });
 
   const toggleBlock = (id) => setExpandedBlocks((p) => ({ ...p, [id]: !p[id] }));
+
+  // Build a lookup of template criteria (by id) to access bonus/penalty config
+  const templateCriteria = useMemo(() => {
+    const map = {};
+    (template?.scoring_blocks || []).forEach((block) => {
+      (block.criteria || []).forEach((c) => {
+        map[c.id] = c;
+      });
+    });
+    return map;
+  }, [template]);
 
   // Whether the scoring is closed (finalized + is_closed) and not yet reopened for editing
   const isClosed = score?.is_closed === true && !editReopened;
@@ -335,15 +437,19 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
     });
   };
 
-  // Compute weighted totals
+  // Compute weighted totals, applying bonus/penalty adjustments to the final score
   const computeTotals = (scoreField) => {
     let total = 0;
     let totalWeight = 0;
     blocks.forEach((block) => {
       const blockWeight = (block.weight || 0) / 100;
       (block.criteria || []).forEach((crit) => {
-        const s = crit[scoreField];
+        let s = crit[scoreField];
         if (s != null) {
+          // Apply bonus/penalty adjustment only to the final score column
+          if (scoreField === "final_score" && crit.bonus_penalty_active && crit.bonus_penalty_value) {
+            s = Math.max(1, Math.min(5, s + crit.bonus_penalty_value));
+          }
           total += s * blockWeight;
           totalWeight += blockWeight;
         }
@@ -485,6 +591,7 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
                   {showIC && <th className="text-center p-2 font-medium text-gray-600">IC Rec.</th>}
                   {showIC && <th className="text-center p-2 font-medium text-gray-600">Δ</th>}
                   {showFinal && <th className="text-center p-2 font-medium text-gray-600">Final</th>}
+                  {showFinal && <th className="text-center p-2 font-medium text-gray-600">Bonus/Penalty</th>}
                   <th className="text-left p-2 font-medium text-gray-600 min-w-[150px]">Notes</th>
                 </tr>
               </thead>
@@ -492,7 +599,7 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
                 {blocks.map((block) => (
                   <React.Fragment key={block.id}>
                     <tr className="bg-gray-100 cursor-pointer hover:bg-gray-200" onClick={() => toggleBlock(block.id)}>
-                      <td colSpan={showFinal ? 11 : showIC ? 9 : showAdjustedPrimary ? 7 : showTeam ? 5 : showSecondary ? 4 : 3} className="p-2 font-semibold text-gray-700">
+                      <td colSpan={showFinal ? 12 : showIC ? 9 : showAdjustedPrimary ? 7 : showTeam ? 5 : showSecondary ? 4 : 3} className="p-2 font-semibold text-gray-700">
                         <div className="flex items-center gap-1.5">
                           {expandedBlocks[block.id] ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                           {block.name} <span className="text-gray-400 font-normal">({block.weight}%)</span>
@@ -605,6 +712,18 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
                             )}
                           </td>
                         )}
+                        {/* Bonus / Penalty adjustment */}
+                        {showFinal && (
+                          <td className="p-2 text-center">
+                            <BonusPenaltyCell
+                              criterion={crit}
+                              templateCriteria={templateCriteria}
+                              isPrimaryAnalyst={isPrimaryAnalyst}
+                              isClosed={isClosed}
+                              onUpdate={(updates) => updateCriterion(block.id, crit.id, updates)}
+                            />
+                          </td>
+                        )}
                         {/* Notes */}
                         <td className="p-2">
                           <NotesCell
@@ -633,6 +752,13 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
                   {showIC && <td className="p-2 text-center">{computeTotals("ic_score")}</td>}
                   {showIC && <td></td>}
                   {showFinal && <td className="p-2 text-center">{computeTotals("final_score")}</td>}
+                  {showFinal && <td className="p-2 text-center text-xs text-gray-500">{(() => {
+                    let adj = 0, count = 0;
+                    blocks.forEach(b => b.criteria?.forEach(c => {
+                      if (c.bonus_penalty_active && c.bonus_penalty_value) { adj += c.bonus_penalty_value; count++; }
+                    }));
+                    return count > 0 ? `${adj > 0 ? "+" : ""}${adj.toFixed(1)} (${count})` : "—";
+                  })()}</td>}
                   <td></td>
                 </tr>
               </tfoot>

@@ -160,6 +160,29 @@
                       }
                     }
                   }
+                },
+                "bonus_penalty_enabled": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Whether this criterion supports an optional bonus/penalty adjustment that analysts can activate during scoring review. When enabled, the analyst can apply a numeric adjustment within the configured range on top of the criterion's final score."
+                },
+                "bonus_penalty_range": {
+                  "type": "object",
+                  "description": "The allowed range for the bonus/penalty adjustment on this criterion. The analyst's adjustment value must fall within [min, max]. Min is typically negative (penalty) and max is positive (bonus).",
+                  "properties": {
+                    "min": {
+                      "type": "number",
+                      "description": "Minimum adjustment value (e.g. -1 for a 1-point penalty)."
+                    },
+                    "max": {
+                      "type": "number",
+                      "description": "Maximum adjustment value (e.g. +1 for a 1-point bonus)."
+                    }
+                  }
+                },
+                "bonus_penalty_guidance": {
+                  "type": "string",
+                  "description": "Instructions for the analyst on how and when to apply the bonus/penalty adjustment, and how it factors into the total score. Shown alongside the adjustment control during scoring review."
                 }
               }
             }

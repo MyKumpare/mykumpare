@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, GripVertical, ChevronDown, ChevronRight, Sparkles, Loader2 } from "lucide-react";
+import { Plus, Trash2, GripVertical, ChevronDown, ChevronRight, Sparkles, Loader2, ToggleLeft, ToggleRight } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "@/components/ui/use-toast";
 
@@ -59,7 +59,10 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange }) {
       number: (block?.criteria?.length || 0) + 1,
       name: "New Criterion",
       category: "",
-      descriptors: [1, 2, 3, 4, 5].map((level) => ({ level, text: "" }))
+      descriptors: [1, 2, 3, 4, 5].map((level) => ({ level, text: "" })),
+      bonus_penalty_enabled: false,
+      bonus_penalty_range: { min: -1, max: 1 },
+      bonus_penalty_guidance: ""
     };
     onChange(blocks.map((b) => (b.id === blockId ? { ...b, criteria: [...(b.criteria || []), newCrit] } : b)));
   };
@@ -295,6 +298,61 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange }) {
                         />
                       </div>
                     ))}
+                  </div>
+
+                  {/* Bonus / Penalty configuration */}
+                  <div className="pl-8 border-t border-gray-100 pt-2 mt-1">
+                    <button
+                      type="button"
+                      onClick={() => updateCriterion(block.id, crit.id, "bonus_penalty_enabled", !crit.bonus_penalty_enabled)}
+                      className="flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-gray-800"
+                    >
+                      {crit.bonus_penalty_enabled ? (
+                        <ToggleRight className="w-4 h-4 text-indigo-600" />
+                      ) : (
+                        <ToggleLeft className="w-4 h-4 text-gray-400" />
+                      )}
+                      Bonus / Penalty Adjustment
+                    </button>
+                    {crit.bonus_penalty_enabled && (
+                      <div className="mt-1.5 space-y-1.5 bg-indigo-50/30 border border-indigo-100 rounded-md p-2">
+                        <div className="flex items-center gap-2 text-xs">
+                          <Label className="text-xs text-gray-600 whitespace-nowrap">Range:</Label>
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="number"
+                              step="0.5"
+                              value={crit.bonus_penalty_range?.min ?? -1}
+                              onChange={(e) => updateCriterion(block.id, crit.id, "bonus_penalty_range", {
+                                ...crit.bonus_penalty_range,
+                                min: parseFloat(e.target.value) || 0
+                              })}
+                              className="h-7 w-16 text-xs text-center"
+                              placeholder="min"
+                            />
+                            <span className="text-gray-400">to</span>
+                            <Input
+                              type="number"
+                              step="0.5"
+                              value={crit.bonus_penalty_range?.max ?? 1}
+                              onChange={(e) => updateCriterion(block.id, crit.id, "bonus_penalty_range", {
+                                ...crit.bonus_penalty_range,
+                                max: parseFloat(e.target.value) || 0
+                              })}
+                              className="h-7 w-16 text-xs text-center"
+                              placeholder="max"
+                            />
+                          </div>
+                          <span className="text-gray-400 text-[10px]">(negative = penalty, positive = bonus)</span>
+                        </div>
+                        <Textarea
+                          value={crit.bonus_penalty_guidance || ""}
+                          onChange={(e) => updateCriterion(block.id, crit.id, "bonus_penalty_guidance", e.target.value)}
+                          className="text-xs min-h-[40px]"
+                          placeholder="Guidance for the analyst: when to apply the bonus/penalty and how it factors into the total score (e.g. 'Apply a +0.5 bonus for exceptional ESG integration beyond the score level; apply a -0.5 penalty if the manager lacks documented process. The adjustment is added to the final score before computing the weighted total.')"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
