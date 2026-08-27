@@ -16,9 +16,10 @@ import QuestionnaireUploadSection from "./QuestionnaireUploadSection";
 import QuestionBankPickerModal from "./QuestionBankPickerModal";
 import ScoringMatrixDocumentAnalyzer from "./ScoringMatrixDocumentAnalyzer";
 import ScoringMatrixTemplateEditor from "./ScoringMatrixTemplateEditor";
+import ScoringMatrixTestModeDialog from "./ScoringMatrixTestModeDialog";
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "@/components/ui/use-toast";
-import { Upload, X, FileText } from "lucide-react";
+import { Upload, X, FileText, FlaskConical } from "lucide-react";
 
 let _qbId = 0;
 const nextQbId = () => `tstage_${Date.now()}_${++_qbId}`;
@@ -82,6 +83,7 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
   const [sampleFileUrl, setSampleFileUrl] = useState("");
   const [sampleFileName, setSampleFileName] = useState("");
   const [questionBankOpen, setQuestionBankOpen] = useState(false);
+  const [testModeOpen, setTestModeOpen] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -252,6 +254,18 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
                 }}
               />
               <ScoringMatrixTemplateEditor blocks={scoringBlocks} onChange={setScoringBlocks} />
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs text-cyan-700 border-cyan-300 hover:bg-cyan-50"
+                  onClick={() => setTestModeOpen(true)}
+                  disabled={scoringBlocks.length === 0}
+                >
+                  <FlaskConical className="w-3.5 h-3.5" /> Test Matrix
+                </Button>
+              </div>
               <div className="space-y-1.5">
                 <Label>Sample Document (optional)</Label>
                 <p className="text-xs text-gray-500">Attach a sample showing how to use this scoring matrix.</p>
@@ -318,6 +332,14 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
           }
         }}
       />
+
+      {testModeOpen && (
+        <ScoringMatrixTestModeDialog
+          open={testModeOpen}
+          onOpenChange={setTestModeOpen}
+          template={{ name: name || "Test Template", scoring_blocks: scoringBlocks }}
+        />
+      )}
     </Dialog>
   );
 }
