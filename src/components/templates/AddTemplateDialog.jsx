@@ -5,6 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Library } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import DatePicker from "@/components/ui/date-picker";
@@ -28,6 +29,7 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
   const { user } = useAuth();
   const [name, setName] = useState("");
   const [templateType, setTemplateType] = useState(defaultTemplateType || "");
+  const [templateCategory, setTemplateCategory] = useState("Process Template");
   const [createDate, setCreateDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [stages, setStages] = useState([]);
   const [docChecklist, setDocChecklist] = useState([]);
@@ -38,12 +40,14 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
       if (editTemplate) {
         setName(editTemplate.name || "");
         setTemplateType(editTemplate.template_type || "");
+        setTemplateCategory(editTemplate.template_category || "Process Template");
         setCreateDate(editTemplate.create_date || format(new Date(), "yyyy-MM-dd"));
         setStages(Array.isArray(editTemplate.stages) ? editTemplate.stages.map((s) => ({ ...s })) : []);
         setDocChecklist(Array.isArray(editTemplate.documentation_checklist) ? editTemplate.documentation_checklist.map((it) => ({ ...it })) : []);
       } else {
         setName("");
         setTemplateType(defaultTemplateType || "");
+        setTemplateCategory("Process Template");
         setCreateDate(format(new Date(), "yyyy-MM-dd"));
         setStages([]);
         setDocChecklist([]);
@@ -103,6 +107,7 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
     const payload = {
       name: name.trim(),
       template_type: templateType || undefined,
+      template_category: templateCategory,
       create_date: createDate,
       stages: payloadStages,
       documentation_checklist: payloadDocChecklist,
@@ -138,6 +143,18 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
           <div className="space-y-1.5">
             <Label>Template Type</Label>
             <TemplateTypePicker value={templateType} onChange={setTemplateType} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Template Category</Label>
+            <Select value={templateCategory} onValueChange={setTemplateCategory}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select category..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Process Template">Process Template</SelectItem>
+                <SelectItem value="Scoring Matrix">Scoring Matrix</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1.5">
             <Label>Create Date</Label>

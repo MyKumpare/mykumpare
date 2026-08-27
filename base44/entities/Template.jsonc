@@ -14,6 +14,14 @@
       "type": "string",
       "description": "Type category of the template (managed via TemplateType master list)"
     },
+    "template_category": {
+      "type": "string",
+      "enum": [
+        "Process Template",
+        "Scoring Matrix"
+      ],
+      "description": "Whether this template is a process template (a staged workflow / due diligence process) or a scoring matrix (an evaluation scorecard used to rate managers). 'Process Template' = defines stages, sub-stages, and documentation checklists that structure a review workflow; 'Scoring Matrix' = defines weighted scoring criteria used to quantitatively evaluate and compare managers."
+    },
     "create_date": {
       "type": "string",
       "format": "date",
