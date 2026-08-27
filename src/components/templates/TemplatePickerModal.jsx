@@ -129,33 +129,35 @@ export default function TemplatePickerModal({ open, onClose }) {
               />
             </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="flex items-center gap-1 text-xs text-gray-500">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 text-xs text-gray-500 flex-shrink-0">
                 <Filter className="w-3.5 h-3.5" />
                 Type:
               </div>
-              <button
-                onClick={() => setTypeFilter("all")}
-                className={`px-2 py-0.5 rounded-md text-xs font-medium transition-colors ${typeFilter === "all" ? "bg-indigo-100 text-indigo-700" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
-              >
-                All
-              </button>
-              {types.map((t) => (
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 flex-1 min-w-0">
                 <button
-                  key={t.id}
-                  onClick={() => setTypeFilter(t.name)}
-                  className={`px-2 py-0.5 rounded-md text-xs font-medium transition-colors ${typeFilter === t.name ? "bg-indigo-100 text-indigo-700" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+                  onClick={() => setTypeFilter("all")}
+                  className={`px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors border ${typeFilter === "all" ? "bg-[#e8eef8] text-[#3b5998] border-[#3b5998]" : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"}`}
                 >
-                  {t.name}
+                  All
                 </button>
-              ))}
-              <div className="ml-auto flex items-center gap-1 text-xs text-gray-500">
+                {types.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => setTypeFilter(t.name)}
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors border ${typeFilter === t.name ? "bg-[#e8eef8] text-[#3b5998] border-[#3b5998]" : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"}`}
+                  >
+                    {t.name}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-1 text-xs text-gray-500 flex-shrink-0">
                 <ArrowDownUp className="w-3.5 h-3.5" />
                 <span>Sort:</span>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="px-2 py-0.5 rounded-md border border-gray-200 bg-white text-xs text-gray-700 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                  className="px-2 py-0.5 rounded-md border border-gray-200 bg-white text-xs text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#3b5998]"
                 >
                   <option value="name_asc">Name (A–Z)</option>
                   <option value="name_desc">Name (Z–A)</option>
@@ -193,9 +195,9 @@ export default function TemplatePickerModal({ open, onClose }) {
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
                       {t.template_type && (
-                        <Badge variant="secondary" className="text-xs">
+                        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[#e8eef8] text-gray-800 whitespace-nowrap">
                           {t.template_type}
-                        </Badge>
+                        </span>
                       )}
                       {t.create_date && (
                         <span className="text-[11px] text-gray-400">{fmtDate(t.create_date)}</span>
