@@ -1710,41 +1710,44 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                 <ContactDecisionRolePicker value={decisionRole} onChange={setDecisionRole} viewMode={viewMode} />
               </div>
 
-              {/* Influence Level — Decision Maker / Influencer / Follower / Undetermined */}
+              {/* Influence Level — Final Decision Maker / Decision Maker / Influencer / Follower / Undetermined */}
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-gray-700">Influence Level</Label>
-                {viewMode ? (
-                  <div className="text-sm px-1">
-                    {influenceLevel ? (
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                        influenceLevel === "Decision Maker" ? "bg-red-100 text-red-700"
-                        : influenceLevel === "Influencer" ? "bg-amber-100 text-amber-700"
-                        : influenceLevel === "Follower" ? "bg-blue-100 text-blue-700"
-                        : "bg-gray-100 text-gray-600"
-                      }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${
-                          influenceLevel === "Decision Maker" ? "bg-red-500"
-                          : influenceLevel === "Influencer" ? "bg-amber-500"
-                          : influenceLevel === "Follower" ? "bg-blue-500"
-                          : "bg-gray-400"
-                        }`} />
-                        {influenceLevel}
-                      </span>
-                    ) : <span className="text-gray-400 italic">—</span>}
-                  </div>
-                ) : (
-                  <Select value={influenceLevel} onValueChange={(v) => setInfluenceLevel(v)}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select influence level" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Decision Maker">Decision Maker</SelectItem>
-                      <SelectItem value="Influencer">Influencer</SelectItem>
-                      <SelectItem value="Follower">Follower</SelectItem>
-                      <SelectItem value="Undetermined">Undetermined</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
+              <Label className="text-sm font-medium text-gray-700">Influence Level</Label>
+              {viewMode ? (
+                <div className="text-sm px-1">
+                  {influenceLevel ? (
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                      influenceLevel === "Final Decision Maker" ? "bg-purple-100 text-purple-700"
+                      : influenceLevel === "Decision Maker" ? "bg-red-100 text-red-700"
+                      : influenceLevel === "Influencer" ? "bg-amber-100 text-amber-700"
+                      : influenceLevel === "Follower" ? "bg-blue-100 text-blue-700"
+                      : "bg-gray-100 text-gray-600"
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        influenceLevel === "Final Decision Maker" ? "bg-purple-500"
+                        : influenceLevel === "Decision Maker" ? "bg-red-500"
+                        : influenceLevel === "Influencer" ? "bg-amber-500"
+                        : influenceLevel === "Follower" ? "bg-blue-500"
+                        : "bg-gray-400"
+                      }`} />
+                      {influenceLevel}
+                    </span>
+                  ) : <span className="text-gray-400 italic">—</span>}
+                </div>
+              ) : (
+                <Select value={influenceLevel} onValueChange={(v) => setInfluenceLevel(v)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select influence level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Final Decision Maker">Final Decision Maker</SelectItem>
+                    <SelectItem value="Decision Maker">Decision Maker</SelectItem>
+                    <SelectItem value="Influencer">Influencer</SelectItem>
+                    <SelectItem value="Follower">Follower</SelectItem>
+                    <SelectItem value="Undetermined">Undetermined</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
               </div>
 
               {/* Contact Type */}
