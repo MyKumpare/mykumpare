@@ -1,0 +1,329 @@
+{
+  "name": "ScoringMatrixScore",
+  "type": "object",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "ID of the firm (tenant) that owns this score record. Set on creation to the creator's linked_firm_id; drives tenant isolation via RLS."
+    },
+    "due_diligence_id": {
+      "type": "string",
+      "description": "ID of the DueDiligence record this scoring matrix is associated with."
+    },
+    "product_id": {
+      "type": "string",
+      "description": "ID of the product being scored (denormalized from DueDiligence for quick lookup)."
+    },
+    "product_name": {
+      "type": "string",
+      "description": "Name of the product being scored (denormalized)."
+    },
+    "firm_id": {
+      "type": "string",
+      "description": "ID of the firm being scored (denormalized)."
+    },
+    "firm_name": {
+      "type": "string",
+      "description": "Name of the firm being scored (denormalized)."
+    },
+    "template_id": {
+      "type": "string",
+      "description": "ID of the Template (scoring matrix) that defines the structure being scored."
+    },
+    "template_name": {
+      "type": "string",
+      "description": "Name of the scoring matrix template (denormalized)."
+    },
+    "primary_analyst_contact_id": {
+      "type": "string",
+      "description": "ID of the primary analyst who owns this scorecard."
+    },
+    "primary_analyst_name": {
+      "type": "string",
+      "description": "Name of the primary analyst (denormalized)."
+    },
+    "secondary_analyst_contact_id": {
+      "type": "string",
+      "description": "ID of the secondary analyst (optional, set if primary analyst enables secondary scoring)."
+    },
+    "secondary_analyst_name": {
+      "type": "string",
+      "description": "Name of the secondary analyst (denormalized)."
+    },
+    "secondary_scoring_enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the primary analyst has enabled secondary analyst scoring. When true, the secondary analyst is notified and can submit their own scores."
+    },
+    "secondary_scoring_status": {
+      "type": "string",
+      "enum": [
+        "not_requested",
+        "pending",
+        "completed"
+      ],
+      "default": "not_requested",
+      "description": "Status of the secondary analyst's scoring. 'not_requested' = secondary scoring not enabled; 'pending' = secondary analyst notified but hasn't scored; 'completed' = secondary analyst has submitted scores."
+    },
+    "scoring_blocks": {
+      "type": "array",
+      "description": "Scoring data for each block in the matrix. Each block contains criteria with scores from primary, team, IC, and final columns, plus notes.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "weight": {
+            "type": "number"
+          },
+          "criteria": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "number": {
+                  "type": "integer"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "category": {
+                  "type": "string"
+                },
+                "primary_score": {
+                  "type": "integer",
+                  "description": "Primary analyst's score (1-5). Null if not yet scored."
+                },
+                "primary_notes": {
+                  "type": "string",
+                  "description": "Primary analyst's notes justifying the score."
+                },
+                "secondary_score": {
+                  "type": "integer",
+                  "description": "Secondary analyst's score (1-5). Null if not yet scored or not enabled."
+                },
+                "secondary_notes": {
+                  "type": "string",
+                  "description": "Secondary analyst's notes justifying the score."
+                },
+                "team_score": {
+                  "type": "integer",
+                  "description": "Team's recommended score during team review. Starts as a copy of primary_score; team members adjust. Null if team review not done."
+                },
+                "team_notes": {
+                  "type": "string",
+                  "description": "Team's notes justifying their recommended score."
+                },
+                "team_status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "accepted",
+                    "rejected"
+                  ],
+                  "default": "pending",
+                  "description": "Primary analyst's decision on the team's recommended score. 'pending' = not yet reviewed; 'accepted' = team score adopted; 'rejected' = primary score kept."
+                },
+                "adjusted_primary_score": {
+                  "type": "integer",
+                  "description": "Primary analyst's adjusted score after reviewing team recommendations. Equals primary_score if team changes rejected, or team_score if accepted. Can also be a new value if primary analyst chooses to adjust."
+                },
+                "adjusted_primary_notes": {
+                  "type": "string",
+                  "description": "Primary analyst's notes justifying the adjusted score."
+                },
+                "ic_score": {
+                  "type": "integer",
+                  "description": "Investment Committee's recommended score. Starts as a copy of the final primary score; IC members adjust. Null if IC review not done."
+                },
+                "ic_notes": {
+                  "type": "string",
+                  "description": "Investment Committee's notes justifying their recommended score."
+                },
+                "ic_status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "accepted",
+                    "rejected"
+                  ],
+                  "default": "pending",
+                  "description": "Primary analyst's decision on the IC's recommended score."
+                },
+                "final_score": {
+                  "type": "integer",
+                  "description": "Final score after all reviews. Equals adjusted_primary_score if IC changes rejected, or ic_score if accepted, or a new value the primary analyst sets based on both."
+                },
+                "final_notes": {
+                  "type": "string",
+                  "description": "Primary analyst's notes justifying the final score."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "primary_score_finalized": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the primary analyst has finalized their initial scores (enabling team review)."
+    },
+    "team_review_status": {
+      "type": "string",
+      "enum": [
+        "not_started",
+        "in_progress",
+        "completed"
+      ],
+      "default": "not_started",
+      "description": "Status of the team review phase."
+    },
+    "adjusted_primary_finalized": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the primary analyst has finalized the adjusted primary scores (enabling IC review)."
+    },
+    "ic_review_status": {
+      "type": "string",
+      "enum": [
+        "not_started",
+        "in_progress",
+        "completed"
+      ],
+      "default": "not_started",
+      "description": "Status of the Investment Committee review phase."
+    },
+    "final_score_finalized": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the final scores have been finalized by the primary analyst."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "primary_scoring",
+        "secondary_scoring",
+        "team_review",
+        "ic_review",
+        "finalized"
+      ],
+      "default": "draft",
+      "description": "Overall workflow status of the scoring matrix. 'draft' = just created; 'primary_scoring' = primary analyst entering scores; 'secondary_scoring' = secondary analyst scoring; 'team_review' = team review phase; 'ic_review' = IC review phase; 'finalized' = complete."
+    },
+    "created_by_id": {
+      "type": "string",
+      "description": "ID of the user who created this score record (auto-set by platform)."
+    }
+  },
+  "required": [
+    "due_diligence_id",
+    "template_id",
+    "product_id",
+    "firm_id"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_edit": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_delete": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

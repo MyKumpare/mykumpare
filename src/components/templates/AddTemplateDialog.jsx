@@ -14,11 +14,56 @@ import TemplateStagesSection from "./TemplateStagesSection";
 import DocumentationChecklistSection from "./DocumentationChecklistSection";
 import QuestionnaireUploadSection from "./QuestionnaireUploadSection";
 import QuestionBankPickerModal from "./QuestionBankPickerModal";
+import ScoringMatrixDocumentAnalyzer from "./ScoringMatrixDocumentAnalyzer";
+import ScoringMatrixTemplateEditor from "./ScoringMatrixTemplateEditor";
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "@/components/ui/use-toast";
+import { Upload, X, FileText } from "lucide-react";
 
 let _qbId = 0;
 const nextQbId = () => `tstage_${Date.now()}_${++_qbId}`;
+
+function SampleFileUpload({ fileUrl, fileName, onUpload, onClear }) {
+  const [uploading, setUploading] = useState(false);
+  const handleUpload = async (file) => {
+    if (!file) return;
+    setUploading(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      onUpload(file_url, file.name);
+    } catch (err) {
+      toast({ title: "Upload failed", description: err?.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+  if (fileUrl) {
+    return (
+      <div className="flex items-center gap-2 border border-gray-200 rounded-md p-2 bg-gray-50">
+        <FileText className="w-4 h-4 text-gray-400" />
+        <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-cyan-600 hover:underline truncate flex-1">
+          {fileName || "Sample document"}
+        </a>
+        <button type="button" onClick={onClear} className="p-1 rounded hover:bg-red-100 text-red-500">
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    );
+  }
+  return (
+    <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-3 cursor-pointer hover:border-cyan-400 hover:bg-cyan-50/50 transition-colors">
+      {uploading ? (
+        <span className="text-xs text-gray-500">Uploading...</span>
+      ) : (
+        <>
+          <Upload className="w-4 h-4 text-gray-400 mb-1" />
+          <span className="text-xs text-gray-500">Upload sample document</span>
+        </>
+      )}
+      <input type="file" className="hidden" accept=".pdf,.doc,.docx,.txt,.xlsx,.xls" onChange={(e) => handleUpload(e.target.files?.[0])} />
+    </label>
+  );
+}
 
 /**
  * Dialog for creating a new Template.
@@ -33,6 +78,9 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
   const [createDate, setCreateDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [stages, setStages] = useState([]);
   const [docChecklist, setDocChecklist] = useState([]);
+  const [scoringBlocks, setScoringBlocks] = useState([]);
+  const [sampleFileUrl, setSampleFileUrl] = useState("");
+  const [sampleFileName, setSampleFileName] = useState("");
   const [questionBankOpen, setQuestionBankOpen] = useState(false);
 
   useEffect(() => {
@@ -44,6 +92,9 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
         setCreateDate(editTemplate.create_date || format(new Date(), "yyyy-MM-dd"));
         setStages(Array.isArray(editTemplate.stages) ? editTemplate.stages.map((s) => ({ ...s })) : []);
         setDocChecklist(Array.isArray(editTemplate.documentation_checklist) ? editTemplate.documentation_checklist.map((it) => ({ ...it })) : []);
+        setScoringBlocks(Array.isArray(editTemplate.scoring_blocks) ? editTemplate.scoring_blocks.map((b) => ({ ...b })) : []);
+        setSampleFileUrl(editTemplate.sample_file_url || "");
+        setSampleFileName(editTemplate.sample_file_name || "");
       } else {
         setName("");
         setTemplateType(defaultTemplateType || "");
@@ -51,6 +102,9 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
         setCreateDate(format(new Date(), "yyyy-MM-dd"));
         setStages([]);
         setDocChecklist([]);
+        setScoringBlocks([]);
+        setSampleFileUrl("");
+        setSampleFileName("");
       }
     }
   }, [open, editTemplate]);
@@ -104,6 +158,19 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
       toast({ title: "Sections required", description: "Please add at least one section with a name.", variant: "destructive" });
       return;
     }
+    const isScoringMatrix = templateCategory === "Scoring Matrix";
+    const payloadScoringBlocks = isScoringMatrix ? scoringBlocks.filter((b) => (b.name || "").trim()).map((b) => ({
+      id: b.id,
+      name: b.name.trim(),
+      weight: b.weight || 0,
+      criteria: (b.criteria || []).filter((c) => (c.name || "").trim()).map((c) => ({
+        id: c.id,
+        number: c.number,
+        name: c.name.trim(),
+        category: c.category || "",
+        descriptors: (c.descriptors || []).map((d) => ({ level: d.level, text: d.text }))
+      }))
+    })) : undefined;
     const payload = {
       name: name.trim(),
       template_type: templateType || undefined,
@@ -111,6 +178,9 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
       create_date: createDate,
       stages: payloadStages,
       documentation_checklist: payloadDocChecklist,
+      scoring_blocks: payloadScoringBlocks,
+      sample_file_url: sampleFileUrl || undefined,
+      sample_file_name: sampleFileName || undefined,
       approval_process_logic: [], // explicitly clear legacy data
     };
     if (editTemplate) {
@@ -160,7 +230,40 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
             <Label>Create Date</Label>
             <DatePicker value={createDate} onChange={setCreateDate} />
           </div>
-          {(templateType === "Manager Due Diligence" || templateType === "Manager Questionnaire") && (
+          {templateCategory === "Scoring Matrix" ? (
+            <>
+              <ScoringMatrixDocumentAnalyzer
+                templateCategory={templateCategory}
+                onAnalyzed={(data) => {
+                  if (data.blocks) {
+                    setScoringBlocks(data.blocks.map((b) => ({
+                      id: b.id || `smb_${Date.now()}_${Math.random()}`,
+                      name: b.name || "",
+                      weight: b.weight || 0,
+                      criteria: (b.criteria || []).map((c) => ({
+                        id: c.id || `smc_${Date.now()}_${Math.random()}`,
+                        number: c.number || 0,
+                        name: c.name || "",
+                        category: c.category || "",
+                        descriptors: (c.descriptors || []).map((d) => ({ level: d.level, text: d.text || "" }))
+                      }))
+                    })));
+                  }
+                }}
+              />
+              <ScoringMatrixTemplateEditor blocks={scoringBlocks} onChange={setScoringBlocks} />
+              <div className="space-y-1.5">
+                <Label>Sample Document (optional)</Label>
+                <p className="text-xs text-gray-500">Attach a sample showing how to use this scoring matrix.</p>
+                <SampleFileUpload
+                  fileUrl={sampleFileUrl}
+                  fileName={sampleFileName}
+                  onUpload={(url, name) => { setSampleFileUrl(url); setSampleFileName(name); }}
+                  onClear={() => { setSampleFileUrl(""); setSampleFileName(""); }}
+                />
+              </div>
+            </>
+          ) : (templateType === "Manager Due Diligence" || templateType === "Manager Questionnaire") ? (
             <>
               <QuestionnaireUploadSection
                 onExtracted={(extracted) => setStages(extracted)}
@@ -186,7 +289,7 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
                 <DocumentationChecklistSection items={docChecklist} onChange={setDocChecklist} />
               )}
             </>
-          )}
+          ) : null}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
