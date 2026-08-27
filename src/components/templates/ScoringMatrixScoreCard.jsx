@@ -7,11 +7,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Check, X, CheckCircle2, Circle, ChevronDown, ChevronRight, Sparkles, Loader2, FileText, Download } from "lucide-react";
+import { Check, X, CheckCircle2, Circle, ChevronDown, ChevronRight, Sparkles, Loader2, FileText, Download, Brain } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend, Tooltip
 } from "recharts";
+import ScoringMatrixComparisonTableEnhanced from "@/components/templates/ScoringMatrixComparisonTable";
+import ScoringMatrixAuditPanel from "@/components/templates/ScoringMatrixAuditPanel";
 
 const SCORE_COLORS = {
   1: "bg-red-100 text-red-700 border-red-300",
@@ -288,6 +290,9 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
           <Button variant="outline" size="sm" onClick={() => setActiveTab("scoring")}>Scoring</Button>
           <Button variant="outline" size="sm" onClick={() => setActiveTab("chart")}>Radar Chart</Button>
           <Button variant="outline" size="sm" onClick={() => setActiveTab("comparison")}>Comparison</Button>
+          <Button variant="outline" size="sm" onClick={() => setActiveTab("audit")} className="text-purple-600 border-purple-200 hover:bg-purple-50">
+            <Brain className="w-3.5 h-3.5" /> AI Audit
+          </Button>
           {onBack && <Button variant="ghost" size="sm" onClick={onBack}>Back</Button>}
         </div>
       </div>
@@ -511,7 +516,12 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
 
       {/* Comparison Tab */}
       {activeTab === "comparison" && (
-        <ScoringMatrixComparisonTable blocks={blocks} showSecondary={showSecondary} showTeam={showTeam} showAdjustedPrimary={showAdjustedPrimary} showIC={showIC} showFinal={showFinal} />
+        <ScoringMatrixComparisonTableEnhanced blocks={blocks} showSecondary={showSecondary} showTeam={showTeam} showAdjustedPrimary={showAdjustedPrimary} showIC={showIC} showFinal={showFinal} />
+      )}
+
+      {/* AI Audit Tab */}
+      {activeTab === "audit" && (
+        <ScoringMatrixAuditPanel scoreId={scoreId} score={score} />
       )}
     </div>
   );
@@ -550,63 +560,6 @@ function NotesCell({ criterion, isPrimary, isSecondary, showTeam, showIC, showFi
       ) : (
         <span className="text-xs text-gray-300 italic">Add {notesLabel.toLowerCase()}...</span>
       )}
-    </div>
-  );
-}
-
-function ScoringMatrixComparisonTable({ blocks, showSecondary, showTeam, showAdjustedPrimary, showIC, showFinal }) {
-  const allCriteria = useMemo(() => {
-    const list = [];
-    blocks.forEach((block) => {
-      (block.criteria || []).forEach((crit) => {
-        list.push({ ...crit, blockName: block.name, blockWeight: block.weight });
-      });
-    });
-    return list;
-  }, [blocks]);
-
-  const hasAnyDiff = (crit) => {
-    const scores = [crit.primary_score, crit.team_score, crit.adjusted_primary_score, crit.ic_score, crit.final_score].filter((s) => s != null);
-    return scores.some((s) => s !== scores[0]);
-  };
-
-  return (
-    <div className="border border-gray-200 rounded-lg overflow-x-auto">
-      <table className="w-full text-xs">
-        <thead className="bg-gray-50">
-          <tr className="border-b">
-            <th className="text-left p-2 font-medium">Block</th>
-            <th className="text-left p-2 font-medium">Criterion</th>
-            <th className="text-center p-2 font-medium">Primary</th>
-            {showSecondary && <th className="text-center p-2 font-medium">Secondary</th>}
-            {showTeam && <th className="text-center p-2 font-medium">Team</th>}
-            {showAdjustedPrimary && <th className="text-center p-2 font-medium">Adj. Primary</th>}
-            {showIC && <th className="text-center p-2 font-medium">IC</th>}
-            {showFinal && <th className="text-center p-2 font-medium">Final</th>}
-            <th className="text-center p-2 font-medium">Diff?</th>
-          </tr>
-        </thead>
-        <tbody>
-          {allCriteria.map((crit, idx) => {
-            const hasDiff = hasAnyDiff(crit);
-            return (
-              <tr key={idx} className={`border-b hover:bg-gray-50 ${hasDiff ? "bg-yellow-50" : ""}`}>
-                <td className="p-2 text-gray-500">{crit.blockName}</td>
-                <td className="p-2 font-medium">{crit.name}</td>
-                <td className="p-2 text-center">{crit.primary_score || "—"}</td>
-                {showSecondary && <td className="p-2 text-center">{crit.secondary_score || "—"}</td>}
-                {showTeam && <td className="p-2 text-center"><DeviationCell baseScore={crit.primary_score} compareScore={crit.team_score} /></td>}
-                {showAdjustedPrimary && <td className="p-2 text-center">{crit.adjusted_primary_score || "—"}</td>}
-                {showIC && <td className="p-2 text-center"><DeviationCell baseScore={crit.adjusted_primary_score ?? crit.primary_score} compareScore={crit.ic_score} /></td>}
-                {showFinal && <td className="p-2 text-center font-bold">{crit.final_score || "—"}</td>}
-                <td className="p-2 text-center">
-                  {hasDiff ? <span className="text-yellow-600 font-medium">⚠ Diff</span> : <span className="text-green-600">✓ Same</span>}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
     </div>
   );
 }
