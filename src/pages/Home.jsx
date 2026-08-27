@@ -43,7 +43,6 @@ import MonitorNavSection from "../components/activity/MonitorNavSection";
 import ReportingNavSection from "../components/reports/ReportingNavSection";
 import DashboardNavSection from "../components/dashboard/DashboardNavSection";
 import DashboardTimelineSection from "../components/dashboard/DashboardTimelineSection";
-import StaleContactRemindersPanel from "../components/contacts/StaleContactRemindersPanel";
 import DashboardAnalystCoverageSection from "../components/dashboard/DashboardAnalystCoverageSection";
 import DashboardFirmCoverageSection from "../components/dashboard/DashboardFirmCoverageSection";
 import ManagementNavSection from "../components/dashboard/ManagementNavSection";
@@ -1033,12 +1032,6 @@ export default function Home() {
         )}
         {/* Dashboard section — link to Overview dashboard page */}
         <DashboardNavSection onOpenDashboard={() => navigate("/Overview")} />
-
-        {/* Stale contact follow-up alerts — today's list of contacts needing a follow-up */}
-        <StaleContactRemindersPanel onContactClick={(contactId) => {
-          const c = contacts.find((x) => x.id === contactId && !x.deleted_at);
-          if (c) setViewingContact(c);
-        }} />
 
         {/* Due Diligence section — with Documents, Forms, Templates nested as sub-items */}
         <div ref={formsRef} />

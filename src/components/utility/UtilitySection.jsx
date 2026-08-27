@@ -22,10 +22,9 @@ import ExperienceOptionCleanup from "./ExperienceOptionCleanup";
 import ImportJobsDashboard from "./ImportJobsDashboard";
 import NewsScrubSettings from "./NewsScrubSettings";
 import DashboardTimelineSection from "@/components/dashboard/DashboardTimelineSection";
-import StaleContactRemindersPanel from "@/components/contacts/StaleContactRemindersPanel";
 import DashboardAnalystCoverageSection from "@/components/dashboard/DashboardAnalystCoverageSection";
 import DashboardFirmCoverageSection from "@/components/dashboard/DashboardFirmCoverageSection";
-import { TrendingUp, Network, Bell, ArrowRight } from "lucide-react";
+import { TrendingUp, Network, ArrowRight } from "lucide-react";
 
 function BenchmarkItem({ b, onClick }) {
   return (
@@ -375,16 +374,6 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
                       <span className="text-[11px] text-gray-400">Recent interactions across all contacts</span>
                     </button>
                     <button
-                      onClick={() => setView("mgmt-stale-reminders")}
-                      className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-                    >
-                      <div className="w-9 h-9 rounded-full bg-rose-50 flex items-center justify-center">
-                        <Bell className="w-5 h-5 text-rose-600" />
-                      </div>
-                      <span className="text-sm font-semibold text-gray-700">Stale Contact Reminders</span>
-                      <span className="text-[11px] text-gray-400">Contacts needing outreach</span>
-                    </button>
-                    <button
                       onClick={() => navigate("/WeeklyInteractionReport")}
                       className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
                     >
@@ -603,17 +592,6 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
             <DashboardTimelineSection
               forceExpanded={forceExpanded}
               onActivityClick={onActivityClick}
-            />
-          )}
-
-          {/* Management: Stale Contact Reminders */}
-          {view === "mgmt-stale-reminders" && (
-            <StaleContactRemindersPanel
-              forceExpanded={forceExpanded}
-              onContactClick={(contactId) => {
-                const c = activeContacts.find((x) => x.id === contactId);
-                if (c) onContactClick?.(c);
-              }}
             />
           )}
 
