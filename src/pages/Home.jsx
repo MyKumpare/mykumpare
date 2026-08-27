@@ -1034,6 +1034,12 @@ export default function Home() {
         {/* Dashboard section — link to Overview dashboard page */}
         <DashboardNavSection onOpenDashboard={() => navigate("/Overview")} />
 
+        {/* Stale contact follow-up alerts — today's list of contacts needing a follow-up */}
+        <StaleContactRemindersPanel onContactClick={(contactId) => {
+          const c = contacts.find((x) => x.id === contactId && !x.deleted_at);
+          if (c) setViewingContact(c);
+        }} />
+
         {/* Due Diligence section — with Documents, Forms, Templates nested as sub-items */}
         <div ref={formsRef} />
         <DueDiligenceNavSection
