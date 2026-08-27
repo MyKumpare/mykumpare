@@ -3,8 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Share2, Loader2, Building, User, Filter, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
 import ContactNetworkGraph from "@/components/network/ContactNetworkGraph";
+import ContactNetworkBulkEditList from "@/components/network/ContactNetworkBulkEditList";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { List, Share2 as GraphIcon } from "lucide-react";
 
 const FIRM_TYPE_COLORS = {
   "Investment Manager": "#6366f1",
@@ -28,6 +30,7 @@ export default function ContactNetwork() {
   const [firmTypeFilter, setFirmTypeFilter] = useState("All");
   const [selectedId, setSelectedId] = useState(null);
   const [resetKey, setResetKey] = useState(0);
+  const [view, setView] = useState("graph"); // graph | list
 
   const { data: firms = [], isFetching: firmsLoading } = useQuery({
     queryKey: ["firms"],
@@ -205,13 +208,31 @@ export default function ContactNetwork() {
               ))}
             </select>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => { setResetKey((k) => k + 1); setSelectedId(null); }}
-          >
-            <Maximize2 className="w-4 h-4 mr-1" /> Re-center
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant={view === "graph" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setView("graph")}
+            >
+              <GraphIcon className="w-4 h-4 mr-1" /> Graph
+            </Button>
+            <Button
+              variant={view === "list" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setView("list")}
+            >
+              <List className="w-4 h-4 mr-1" /> List
+            </Button>
+          </div>
+          {view === "graph" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setResetKey((k) => k + 1); setSelectedId(null); }}
+            >
+              <Maximize2 className="w-4 h-4 mr-1" /> Re-center
+            </Button>
+          )}
         </div>
 
         {/* Stats bar */}
@@ -253,6 +274,13 @@ export default function ContactNetwork() {
             <div className="absolute inset-0 flex items-center justify-center">
               <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
             </div>
+          ) : view === "list" ? (
+            <ContactNetworkBulkEditList
+              firms={firms}
+              contacts={contacts}
+              search={search}
+              firmTypeFilter={firmTypeFilter}
+            />
           ) : nodes.length === 0 ? (
             <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
               No contacts match the current filters. Try lowering the minimum connections.
@@ -268,7 +296,7 @@ export default function ContactNetwork() {
           )}
 
           {/* Selected node info card */}
-          {selectedNode && (
+          {view === "graph" && selectedNode && (
             <div className="absolute bottom-3 left-3 max-w-xs bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-10">
               <div className="flex items-start gap-3">
                 {selectedNode.image ? (
@@ -299,9 +327,11 @@ export default function ContactNetwork() {
           )}
 
           {/* Help hint */}
-          <div className="absolute top-3 right-3 text-xs text-gray-400 bg-white/80 px-2 py-1 rounded-md border border-gray-200">
-            Drag nodes · Scroll to zoom · Hover to highlight
-          </div>
+          {view === "graph" && (
+            <div className="absolute top-3 right-3 text-xs text-gray-400 bg-white/80 px-2 py-1 rounded-md border border-gray-200">
+              Drag nodes · Scroll to zoom · Hover to highlight
+            </div>
+          )}
         </div>
       </div>
     </div>
