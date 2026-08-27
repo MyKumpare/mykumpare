@@ -87,6 +87,16 @@
       "default": "Active",
       "description": "Whether the contact is active or inactive"
     },
+    "engagement_status": {
+      "type": "string",
+      "enum": [
+        "New",
+        "Engaged",
+        "Archived"
+      ],
+      "default": "New",
+      "description": "Visual relationship status tracker \u2014 'New' = newly added contact not yet engaged with; 'Engaged' = actively in conversation / relationship building; 'Archived' = no longer being pursued or kept for historical record. Shown as a colored stepper in the contact profile so the team can see relationship progress at a glance."
+    },
     "contact_role": {
       "type": "string",
       "enum": [

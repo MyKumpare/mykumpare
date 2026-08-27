@@ -56,6 +56,7 @@ import ContactInfluenceScore from "./ContactInfluenceScore";
 import ContactQuickActions from "./ContactQuickActions";
 import QuickActivityLogFab from "./QuickActivityLogFab";
 import ContactInteractionHistory from "./ContactInteractionHistory";
+import ContactEngagementStatusTracker from "./ContactEngagementStatusTracker";
 
 const SALUTATIONS = ["Mr.", "Ms.", "Mrs.", "Dr.", "Prof.", "Hon."];
 const SUFFIXES = ["Jr.", "Sr.", "II", "III", "IV", "Esq.", "CFA", "CPA", "MBA", "PhD", "MD"];
@@ -93,6 +94,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [designations, setDesignations] = useState([]);
   const [employeeStatus, setEmployeeStatus] = useState("Employee");
   const [contactStatus, setContactStatus] = useState("Active");
+  const [engagementStatus, setEngagementStatus] = useState("New");
   const [contactRole, setContactRole] = useState("");
   const [decisionRole, setDecisionRole] = useState("");
   const [influenceLevel, setInfluenceLevel] = useState("Undetermined");
@@ -149,6 +151,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setLinkedinUrl(editingContact.linkedin_url || "");
         setEmployeeStatus(editingContact.employee_status || "");
         setContactStatus(editingContact.contact_status || "Active");
+        setEngagementStatus(editingContact.engagement_status || "New");
         setContactRole(editingContact.contact_role || "");
         setDecisionRole(editingContact.decision_role || "");
         setInfluenceLevel(editingContact.influence_level || "Undetermined");
@@ -187,6 +190,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setLinkedinUrl("");
         setEmployeeStatus("Employee");
         setContactStatus("Active");
+        setEngagementStatus("New");
         setContactRole("");
         setDecisionRole("");
         setInfluenceLevel("");
@@ -416,6 +420,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
       linkedin_url: linkedinUrl.trim(),
       employee_status: employeeStatus,
       contact_status: contactStatus,
+      engagement_status: engagementStatus,
       contact_role: contactRole,
       decision_role: decisionRole,
       influence_level: influenceLevel,
@@ -875,6 +880,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
         notes.trim() !== (e.notes || "").trim() ||
         employeeStatus !== (e.employee_status || "") ||
         contactStatus !== (e.contact_status || "Active") ||
+        engagementStatus !== (e.engagement_status || "New") ||
         contactRole !== (e.contact_role || "") ||
         decisionRole !== (e.decision_role || "") ||
         influenceLevel !== (e.influence_level || "") ||
@@ -1031,6 +1037,20 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                       queryClient.invalidateQueries({ queryKey: ["contacts"] });
                     }}
                   />
+                )}
+                {viewMode && (
+                  <div className="mt-1.5">
+                    <ContactEngagementStatusTracker
+                      value={engagementStatus}
+                      onChange={(v) => {
+                        setEngagementStatus(v);
+                        if (editingContact) {
+                          updateMutation.mutate({ id: editingContact.id, data: { engagement_status: v } });
+                        }
+                      }}
+                      compact
+                    />
+                  </div>
                 )}
               </div>
             </div>
@@ -1270,6 +1290,18 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                       <SelectItem value="Inactive">Inactive</SelectItem>
                     </SelectContent>
                   </Select>
+                )}
+              </div>
+
+              {/* Engagement Status — visual New / Engaged / Archived tracker */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Engagement Status</Label>
+                {viewMode ? (
+                  <div className="px-1">
+                    <ContactEngagementStatusTracker value={engagementStatus} />
+                  </div>
+                ) : (
+                  <ContactEngagementStatusTracker value={engagementStatus} onChange={setEngagementStatus} />
                 )}
               </div>
 

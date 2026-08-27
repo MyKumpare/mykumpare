@@ -139,6 +139,61 @@ export default function PortfolioFundingDashboard() {
     [fundingByFirmType]
   );
 
+  // Summary table: total funding amounts compared across all tracked investment firms.
+  // Aggregates active portfolio allocations per firm, with funded/terminated product counts.
+  const firmFundingComparison = useMemo(() => {
+    const map = new Map();
+    // Seed from firms so every tracked firm appears even with zero allocation
+    for (const f of firms) {
+      if (f.deleted_at) continue;
+      map.set(f.id, {
+        firmId: f.id,
+        firmName: f.name,
+        firmType: f.firm_type || (f.firm_types && f.firm_types[0]) || "Unknown",
+        activeAllocation: 0,
+        terminatedAllocation: 0,
+        activePortfolios: 0,
+        terminatedPortfolios: 0,
+        fundedProducts: 0,
+        terminatedProducts: 0,
+      });
+    }
+    // Accumulate portfolio allocations
+    for (const p of scopedPortfolios) {
+      const entry = map.get(p.firm_id) || {
+        firmId: p.firm_id,
+        firmName: p.allocator_name || firmNameMap.get(p.firm_id) || "Unknown Firm",
+        firmType: firmTypeMap.get(p.firm_id) || "Unknown",
+        activeAllocation: 0, terminatedAllocation: 0,
+        activePortfolios: 0, terminatedPortfolios: 0,
+        fundedProducts: 0, terminatedProducts: 0,
+      };
+      const amt = Number(p.initial_allocation_amount) || 0;
+      if (p.funding_status === "Active") {
+        entry.activeAllocation += amt;
+        entry.activePortfolios += 1;
+      } else if (p.funding_status === "Terminated") {
+        entry.terminatedAllocation += amt;
+        entry.terminatedPortfolios += 1;
+      }
+      map.set(p.firm_id, entry);
+    }
+    // Accumulate product funding counts
+    for (const prod of scopedProducts) {
+      const entry = map.get(prod.firm_id);
+      if (!entry) continue;
+      if (prod.funding_status === "Funded") entry.fundedProducts += 1;
+      else if (prod.funding_status === "Terminated") entry.terminatedProducts += 1;
+    }
+    return Array.from(map.values())
+      .filter((e) => e.activeAllocation > 0 || e.terminatedAllocation > 0 || e.fundedProducts > 0)
+      .sort((a, b) => (b.activeAllocation + b.terminatedAllocation) - (a.activeAllocation + a.terminatedAllocation));
+  }, [firms, scopedPortfolios, scopedProducts, firmNameMap, firmTypeMap]);
+
+  const comparisonTotalActive = firmFundingComparison.reduce((s, e) => s + e.activeAllocation, 0);
+  const comparisonTotalTerminated = firmFundingComparison.reduce((s, e) => s + e.terminatedAllocation, 0);
+  const comparisonGrandTotal = comparisonTotalActive + comparisonTotalTerminated;
+
   const loading = portfoliosLoading || productsLoading;
 
   return (
@@ -222,6 +277,82 @@ export default function PortfolioFundingDashboard() {
                 <span className="text-base font-bold text-indigo-700">{formatCurrency(totalActiveAllocation)}</span>
               </div>
             </>
+          )}
+        </div>
+
+        {/* Firm Funding Comparison Table */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100">
+            <Building2 className="w-5 h-5 text-indigo-600" />
+            <h2 className="text-sm font-semibold text-gray-800">Firm Funding Comparison</h2>
+            <span className="ml-auto text-xs text-gray-400">{firmFundingComparison.length} firm{firmFundingComparison.length !== 1 ? "s" : ""}</span>
+          </div>
+          {loading ? (
+            <div className="h-32 flex items-center justify-center text-gray-400 text-sm">Loading...</div>
+          ) : firmFundingComparison.length === 0 ? (
+            <div className="h-32 flex items-center justify-center text-gray-400 text-sm">No funding data available</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50/80 border-b border-gray-200">
+                    <th className="text-left font-semibold text-gray-600 px-4 py-2.5 whitespace-nowrap">Investment Firm</th>
+                    <th className="text-left font-semibold text-gray-600 px-3 py-2.5 whitespace-nowrap">Type</th>
+                    <th className="text-center font-semibold text-gray-600 px-3 py-2.5 whitespace-nowrap">Active Portfolios</th>
+                    <th className="text-center font-semibold text-gray-600 px-3 py-2.5 whitespace-nowrap">Funded Products</th>
+                    <th className="text-right font-semibold text-gray-600 px-3 py-2.5 whitespace-nowrap">Active Allocation</th>
+                    <th className="text-right font-semibold text-gray-600 px-3 py-2.5 whitespace-nowrap">Terminated</th>
+                    <th className="text-right font-semibold text-gray-600 px-4 py-2.5 whitespace-nowrap">Total Funding</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {firmFundingComparison.map((row) => {
+                    const rowTotal = row.activeAllocation + row.terminatedAllocation;
+                    const pct = comparisonGrandTotal > 0 ? (rowTotal / comparisonGrandTotal) * 100 : 0;
+                    return (
+                      <tr key={row.firmId} className="hover:bg-indigo-50/30 transition-colors">
+                        <td className="px-4 py-2.5 font-medium text-gray-800 truncate max-w-[200px]" title={row.firmName}>
+                          {row.firmName}
+                        </td>
+                        <td className="px-3 py-2.5 text-xs text-gray-500 whitespace-nowrap">{row.firmType}</td>
+                        <td className="px-3 py-2.5 text-center">
+                          <span className="inline-flex items-center justify-center min-w-[1.5rem] px-1.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
+                            {row.activePortfolios}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          <span className="inline-flex items-center justify-center min-w-[1.5rem] px-1.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+                            {row.fundedProducts}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5 text-right font-medium text-emerald-700 whitespace-nowrap">
+                          {formatCurrency(row.activeAllocation)}
+                        </td>
+                        <td className="px-3 py-2.5 text-right text-red-600 whitespace-nowrap">
+                          {row.terminatedAllocation > 0 ? formatCurrency(row.terminatedAllocation) : "—"}
+                        </td>
+                        <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-2">
+                            <div className="hidden sm:block w-16 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                              <div className="h-full rounded-full bg-indigo-500" style={{ width: `${Math.max(pct, 3)}%` }} />
+                            </div>
+                            <span className="font-bold text-gray-900">{formatCurrency(rowTotal)}</span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-indigo-50/60 border-t-2 border-indigo-100 font-semibold">
+                    <td className="px-4 py-3 text-gray-800" colSpan={4}>Total Across All Firms</td>
+                    <td className="px-3 py-3 text-right text-emerald-700 whitespace-nowrap">{formatCurrency(comparisonTotalActive)}</td>
+                    <td className="px-3 py-3 text-right text-red-600 whitespace-nowrap">{comparisonTotalTerminated > 0 ? formatCurrency(comparisonTotalTerminated) : "—"}</td>
+                    <td className="px-4 py-3 text-right text-indigo-700 whitespace-nowrap">{formatCurrency(comparisonGrandTotal)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
           )}
         </div>
 
