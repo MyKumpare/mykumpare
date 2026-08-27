@@ -29,6 +29,7 @@ export default function ContactNetwork() {
   const [search, setSearch] = useState("");
   const [minConnections, setMinConnections] = useState(2);
   const [firmTypeFilter, setFirmTypeFilter] = useState("All");
+  const [engagementStatusFilter, setEngagementStatusFilter] = useState("All");
   const [selectedId, setSelectedId] = useState(null);
   const [resetKey, setResetKey] = useState(0);
   const [view, setView] = useState("graph"); // graph | list
@@ -127,7 +128,12 @@ export default function ContactNetwork() {
       })
       .filter((c) => c._visibleFirmIds.length >= minConnections);
 
-    // Search filter
+    // Engagement status filter
+    if (engagementStatusFilter !== "All") {
+      relevantContacts = relevantContacts.filter((c) => (c.engagement_status || "New") === engagementStatusFilter);
+    }
+
+    // Search filter — matches contact name, title, firm name, or engagement status
     if (search.trim()) {
       const q = search.toLowerCase();
       const matchingFirmIds = new Set(
@@ -137,7 +143,11 @@ export default function ContactNetwork() {
       );
       relevantContacts = relevantContacts.filter((c) => {
         const fullName = formatContactName(c).toLowerCase();
-        return fullName.includes(q) || (c.title || "").toLowerCase().includes(q) || c._visibleFirmIds.some((id) => matchingFirmIds.has(id));
+        const engagement = (c.engagement_status || "New").toLowerCase();
+        return fullName.includes(q)
+          || (c.title || "").toLowerCase().includes(q)
+          || engagement.includes(q)
+          || c._visibleFirmIds.some((id) => matchingFirmIds.has(id));
       });
     }
 
@@ -212,7 +222,7 @@ export default function ContactNetwork() {
         multiFirmContacts: relevantContacts.filter((c) => c._visibleFirmIds.length >= 3).length,
       },
     };
-  }, [firms, contacts, minConnections, firmTypeFilter, search, resetKey, highlightFirmId]);
+  }, [firms, contacts, minConnections, firmTypeFilter, engagementStatusFilter, search, resetKey, highlightFirmId]);
 
   const handleNodeClick = (node) => {
     setSelectedId(node.id);
@@ -269,6 +279,19 @@ export default function ContactNetwork() {
               {Object.entries(FIRM_TYPE_COLORS).map(([type, color]) => (
                 <option key={type} value={type}>{type}</option>
               ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-gray-600 whitespace-nowrap">Engagement:</label>
+            <select
+              value={engagementStatusFilter}
+              onChange={(e) => setEngagementStatusFilter(e.target.value)}
+              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="All">All Statuses</option>
+              <option value="New">New</option>
+              <option value="Engaged">Engaged</option>
+              <option value="Archived">Archived</option>
             </select>
           </div>
           <div className="flex items-center gap-1">

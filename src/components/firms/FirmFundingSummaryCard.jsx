@@ -1,7 +1,7 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { Wallet, TrendingUp, Package, Loader2 } from "lucide-react";
+import { Wallet, TrendingUp, Package, Loader2, Download } from "lucide-react";
 import FundingStatusBadge from "@/components/products/FundingStatusBadge";
 
 /**
@@ -10,9 +10,17 @@ import FundingStatusBadge from "@/components/products/FundingStatusBadge";
  * based on its linked products' latest AUM history entries.
  */
 export default function FirmFundingSummaryCard({ firmId, firmName }) {
+  const [downloading, setDownloading] = useState(false);
+
   const { data: products = [], isLoading } = useQuery({
     queryKey: ["products_funding_summary", firmId],
     queryFn: () => base44.entities.Product.filter({ firm_id: firmId }),
+    enabled: !!firmId,
+  });
+
+  const { data: firm } = useQuery({
+    queryKey: ["firm_funding_summary", firmId],
+    queryFn: () => base44.entities.Firm.get(firmId),
     enabled: !!firmId,
   });
 
@@ -84,6 +92,19 @@ export default function FirmFundingSummaryCard({ firmId, firmName }) {
               <p className="text-sm font-semibold text-gray-700">{formatDate(latestDate)}</p>
             </div>
           )}
+          <button
+          onClick={async () => {
+            setDownloading(true);
+            try { await downloadFirmReport(firm, products, firmName); }
+            finally { setDownloading(false); }
+          }}
+          disabled={downloading}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-medium px-3 py-1.5 transition-colors"
+          title="Download a CSV report of all assets and net flows for this firm"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>{downloading ? "Preparing…" : "Download Report"}</span>
+          </button>
         </div>
       </div>
       {fundedProducts.length > 0 && (
@@ -127,4 +148,77 @@ function formatDate(d) {
   const dt = new Date(d);
   if (isNaN(dt)) return d;
   return dt.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+}
+
+/**
+ * Generates and downloads a CSV report of all assets and net flows for a firm.
+ * Includes the firm-level AUM history and each linked product's AUM history.
+ */
+async function downloadFirmReport(firm, products, firmName) {
+  const rows = [];
+  rows.push(["Firm Assets & Net Flows Report"]);
+  rows.push(["Firm", firmName || firm?.name || ""]);
+  rows.push(["Generated", new Date().toLocaleString("en-US")]);
+  rows.push([]);
+
+  // ── Firm-level AUM history ──
+  rows.push(["Firm-Level AUM History"]);
+  rows.push(["Month-End Date", "Firm AUM", "Assets Gained", "Assets Loss", "Net Asset Flows"]);
+  const firmHistory = (firm?.aum_history || [])
+    .filter((h) => h.month_end_date)
+    .sort((a, b) => new Date(a.month_end_date) - new Date(b.month_end_date));
+  for (const h of firmHistory) {
+    rows.push([
+      h.month_end_date,
+      Number(h.firm_aum) || 0,
+      Number(h.assets_gained) || 0,
+      Number(h.assets_loss) || 0,
+      Number(h.net_asset_flows) || 0,
+    ]);
+  }
+  rows.push([]);
+
+  // ── Per-product AUM history ──
+  const activeProducts = (products || []).filter((p) => !p.deleted_at);
+  for (const p of activeProducts) {
+    const history = (p.aum_history || [])
+      .filter((h) => h.month_end_date)
+      .sort((a, b) => new Date(a.month_end_date) - new Date(b.month_end_date));
+    if (history.length === 0) continue;
+    rows.push([`Product: ${p.name}`]);
+    rows.push(["Month-End Date", "Product AUM", "Assets Gained", "Assets Loss", "Net Asset Flows"]);
+    for (const h of history) {
+      rows.push([
+        h.month_end_date,
+        Number(h.firm_aum) || 0,
+        Number(h.assets_gained) || 0,
+        Number(h.assets_loss) || 0,
+        Number(h.net_asset_flows) || 0,
+      ]);
+    }
+    rows.push([]);
+  }
+
+  // Convert to CSV with proper escaping
+  const csv = rows
+    .map((row) =>
+      row
+        .map((cell) => {
+          const s = String(cell ?? "");
+          return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+        })
+        .join(",")
+    )
+    .join("\n");
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  const safeName = (firmName || firm?.name || "firm").replace(/[^a-z0-9]+/gi, "_");
+  link.href = url;
+  link.download = `${safeName}_Assets_NetFlows_${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
