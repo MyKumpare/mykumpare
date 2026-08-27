@@ -7,13 +7,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Check, X, CheckCircle2, Circle, ChevronDown, ChevronRight, Sparkles, Loader2, FileText, Download, Brain } from "lucide-react";
+import { Check, X, CheckCircle2, Circle, ChevronDown, ChevronRight, Sparkles, Loader2, FileText, Download, Brain, History, GitBranch, Lock, Calendar, AlertTriangle } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend, Tooltip
 } from "recharts";
+import { format } from "date-fns";
 import ScoringMatrixComparisonTable from "@/components/templates/ScoringMatrixComparisonTable";
 import ScoringMatrixAuditPanel from "@/components/templates/ScoringMatrixAuditPanel";
+import ScoringMatrixHistoryTab from "@/components/templates/ScoringMatrixHistoryTab";
+import RescoreConfirmDialog from "@/components/templates/RescoreConfirmDialog";
+import ClosedScoringEditWarning from "@/components/templates/ClosedScoringEditWarning";
+import { exportScoringMatrixComparisonPdf } from "@/components/templates/scoringMatrixComparisonPdf";
 
 const SCORE_COLORS = {
   1: "bg-red-100 text-red-700 border-red-300",
@@ -85,11 +90,15 @@ function ScoreRadarChart({ blocks, columns }) {
   );
 }
 
-export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template, currentUser, onBack }) {
+export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template, currentUser, onBack, onOpenScore }) {
   const queryClient = useQueryClient();
   const [expandedBlocks, setExpandedBlocks] = useState({});
   const [activeTab, setActiveTab] = useState("scoring");
-  // Tabs: scoring | chart | comparison | audit
+  // Tabs: scoring | chart | comparison | audit | history
+  const [showRescoreDialog, setShowRescoreDialog] = useState(false);
+  const [showClosedWarning, setShowClosedWarning] = useState(false);
+  const [editReopened, setEditReopened] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   const { data: score, isLoading } = useQuery({
     queryKey: ["scoringMatrixScore", scoreId],
@@ -101,11 +110,15 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
     mutationFn: (data) => base44.entities.ScoringMatrixScore.update(scoreId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["scoringMatrixScore", scoreId] });
+      queryClient.invalidateQueries({ queryKey: ["scoringMatrixHistory", score?.product_id, score?.template_id] });
     },
     onError: (err) => toast({ title: "Save failed", description: err?.message, variant: "destructive" })
   });
 
   const toggleBlock = (id) => setExpandedBlocks((p) => ({ ...p, [id]: !p[id] }));
+
+  // Whether the scoring is closed (finalized + is_closed) and not yet reopened for editing
+  const isClosed = score?.is_closed === true && !editReopened;
 
   if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>;
   if (!score) return <div className="text-center py-8 text-sm text-gray-400">Score record not found.</div>;
@@ -173,12 +186,58 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
   };
 
   const finalizeICReview = () => {
+    const todayStr = format(new Date(), "yyyy-MM-dd");
     updateMutation.mutate({
       ic_review_status: "completed",
       final_score_finalized: true,
-      status: "finalized"
+      status: "finalized",
+      scoring_end_date: todayStr,
+      is_closed: true
     });
-    toast({ title: "Scoring matrix finalized" });
+    setEditReopened(false);
+    toast({ title: "Scoring matrix finalized", description: `Scoring closed on ${todayStr}. Use "Start Re-Scoring" to create a new version.` });
+  };
+
+  // Reopen a closed scoring for editing (with warning already confirmed)
+  const reopenClosedScoring = () => {
+    updateMutation.mutate({
+      is_closed: false,
+      status: "ic_review",
+      ic_review_status: "in_progress",
+      final_score_finalized: false,
+      scoring_end_date: ""
+    });
+    setEditReopened(true);
+    setShowClosedWarning(false);
+    toast({ title: "Scoring reopened", description: "The closed scoring is now editable. Re-finalize to close it again.", variant: "destructive" });
+  };
+
+  // Start re-scoring from this closed scoring
+  const handleRescoreCreated = (newScoreId) => {
+    setShowRescoreDialog(false);
+    if (onOpenScore) {
+      onOpenScore(newScoreId);
+    } else {
+      // Fallback: invalidate and switch to the new score
+      queryClient.invalidateQueries({ queryKey: ["scoringMatrixScore", newScoreId] });
+    }
+  };
+
+  // Export comparison table as PDF
+  const handleExportPdf = async () => {
+    setIsExportingPdf(true);
+    try {
+      await exportScoringMatrixComparisonPdf({
+        score,
+        blocks,
+        showFlags: { showSecondary, showTeam, showAdjustedPrimary, showIC, showFinal }
+      });
+      toast({ title: "PDF exported", description: "The scoring matrix comparison has been downloaded." });
+    } catch (err) {
+      toast({ title: "PDF export failed", description: err?.message, variant: "destructive" });
+    } finally {
+      setIsExportingPdf(false);
+    }
   };
 
   // Initialize team scores from primary scores
@@ -277,26 +336,73 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
       {/* Header */}
       <div className="flex items-center justify-between border-b pb-3">
         <div>
-          <h3 className="text-lg font-semibold">{score.template_name}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold">{score.template_name}</h3>
+            <Badge variant="secondary" className="text-xs">v{score.version_number || 1}</Badge>
+            {isClosed && (
+              <Badge variant="outline" className="text-xs text-gray-500 border-gray-300 flex items-center gap-0.5">
+                <Lock className="w-2.5 h-2.5" /> Closed
+              </Badge>
+            )}
+            {score.prior_score_id && (
+              <Badge variant="outline" className="text-xs flex items-center gap-0.5">
+                <GitBranch className="w-2.5 h-2.5" /> Re-scored
+              </Badge>
+            )}
+          </div>
           <p className="text-sm text-gray-500">{score.firm_name} — {score.product_name}</p>
-          <div className="flex items-center gap-2 mt-1">
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
             <Badge variant="outline" className="text-xs">Status: {score.status}</Badge>
+            {score.scoring_start_date && (
+              <Badge variant="outline" className="text-xs text-gray-500 flex items-center gap-0.5">
+                <Calendar className="w-2.5 h-2.5" /> {format(new Date(score.scoring_start_date), "MMM d, yyyy")}
+                {score.scoring_end_date && <> → {format(new Date(score.scoring_end_date), "MMM d, yyyy")}</>}
+              </Badge>
+            )}
             {score.primary_analyst_name && <Badge variant="secondary" className="text-xs">Primary: {score.primary_analyst_name}</Badge>}
             {showSecondary && score.secondary_analyst_name && (
               <Badge variant="secondary" className="text-xs">Secondary: {score.secondary_analyst_name} ({score.secondary_scoring_status})</Badge>
             )}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap justify-end">
           <Button variant="outline" size="sm" onClick={() => setActiveTab("scoring")}>Scoring</Button>
           <Button variant="outline" size="sm" onClick={() => setActiveTab("chart")}>Radar Chart</Button>
           <Button variant="outline" size="sm" onClick={() => setActiveTab("comparison")}>Comparison</Button>
           <Button variant="outline" size="sm" onClick={() => setActiveTab("audit")} className="text-purple-600 border-purple-200 hover:bg-purple-50">
             <Brain className="w-3.5 h-3.5" /> AI Audit
           </Button>
+          <Button variant="outline" size="sm" onClick={() => setActiveTab("history")} className="text-indigo-600 border-indigo-200 hover:bg-indigo-50">
+            <History className="w-3.5 h-3.5" /> History
+          </Button>
+          {isClosed && (
+            <Button variant="outline" size="sm" onClick={() => setShowRescoreDialog(true)} className="text-indigo-600 border-indigo-300 hover:bg-indigo-50">
+              <GitBranch className="w-3.5 h-3.5" /> Re-Score
+            </Button>
+          )}
           {onBack && <Button variant="ghost" size="sm" onClick={onBack}>Back</Button>}
         </div>
       </div>
+
+      {/* Closed scoring warning banner */}
+      {isClosed && (
+        <div className="border border-amber-200 rounded-lg p-3 bg-amber-50 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Lock className="w-4 h-4 text-amber-500 shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-amber-800">This scoring is finalized and closed</p>
+              <p className="text-xs text-amber-600">
+                Editing is locked. Use "Re-Score" to create a new version from this baseline, or reopen to edit directly.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <Button variant="outline" size="sm" onClick={() => setShowClosedWarning(true)} className="border-amber-400 text-amber-700 hover:bg-amber-100 text-xs">
+              <AlertTriangle className="w-3 h-3" /> Reopen to Edit
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Scoring Tab */}
       {activeTab === "scoring" && (
@@ -517,13 +623,46 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
 
       {/* Comparison Tab */}
       {activeTab === "comparison" && (
-        <ScoringMatrixComparisonTable blocks={blocks} showSecondary={showSecondary} showTeam={showTeam} showAdjustedPrimary={showAdjustedPrimary} showIC={showIC} showFinal={showFinal} />
+        <div className="space-y-3">
+          <div className="flex justify-end">
+            <Button variant="outline" size="sm" onClick={handleExportPdf} disabled={isExportingPdf}>
+              {isExportingPdf ? (
+                <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating PDF...</>
+              ) : (
+                <><Download className="w-3.5 h-3.5" /> Export PDF</>
+              )}
+            </Button>
+          </div>
+          <ScoringMatrixComparisonTable blocks={blocks} showSecondary={showSecondary} showTeam={showTeam} showAdjustedPrimary={showAdjustedPrimary} showIC={showIC} showFinal={showFinal} />
+        </div>
       )}
 
       {/* AI Audit Tab */}
       {activeTab === "audit" && (
         <ScoringMatrixAuditPanel scoreId={scoreId} score={score} />
       )}
+
+      {/* History Tab */}
+      {activeTab === "history" && (
+        <ScoringMatrixHistoryTab score={score} onOpenScore={onOpenScore} />
+      )}
+
+      {/* Re-score dialog */}
+      {showRescoreDialog && (
+        <RescoreConfirmDialog
+          priorScore={score}
+          onCreated={handleRescoreCreated}
+          onClose={() => setShowRescoreDialog(false)}
+        />
+      )}
+
+      {/* Closed scoring edit warning */}
+      <ClosedScoringEditWarning
+        open={showClosedWarning}
+        versionNumber={score.version_number}
+        onConfirm={reopenClosedScoring}
+        onCancel={() => setShowClosedWarning(false)}
+      />
     </div>
   );
 }

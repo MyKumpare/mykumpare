@@ -219,6 +219,30 @@
       "default": "draft",
       "description": "Overall workflow status of the scoring matrix. 'draft' = just created; 'primary_scoring' = primary analyst entering scores; 'secondary_scoring' = secondary analyst scoring; 'team_review' = team review phase; 'ic_review' = IC review phase; 'finalized' = complete."
     },
+    "scoring_start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the scoring activity was started (auto-set to the system date when the score record is created). Stored as YYYY-MM-DD. Represents when the analyst began entering scores for this scoring cycle."
+    },
+    "scoring_end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the scoring activity was completed/finalized (auto-set to the system date when the score is finalized). Stored as YYYY-MM-DD. Empty while the scoring is still in progress. Together with scoring_start_date, this defines the scoring period for historical tracking."
+    },
+    "is_closed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this scoring is finalized and closed. Set to true when the scoring matrix is finalized (status='finalized'). A closed scoring is read-only; editing requires an explicit 'reopen' action that warns the user before proceeding. Re-scoring a closed scoring creates a new version rather than editing the closed one."
+    },
+    "version_number": {
+      "type": "integer",
+      "default": 1,
+      "description": "Sequential version number for this product+template scoring cycle. Version 1 is the first scoring; each re-scoring increments the version. Used by the history tab to display evaluation progress over time and to link prior scores to their re-scored successors."
+    },
+    "prior_score_id": {
+      "type": "string",
+      "description": "ID of the prior ScoringMatrixScore this re-scoring was started from (empty for the first/version 1 scoring). When a user re-scores an existing manager product, the new score starts with the prior score's data as a baseline and this field links back to the original for historical tracking."
+    },
     "created_by_id": {
       "type": "string",
       "description": "ID of the user who created this score record (auto-set by platform)."
