@@ -9,9 +9,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import InfluenceContactCard from "@/components/contacts/InfluenceContactCard";
-/** Triggers Vite re-optimize */
 
 const INFLUENCE_LEVELS = [
+  {
+    value: "Final Decision Maker",
+    label: "Final Decision Makers",
+    icon: Trophy,
+    classes: "bg-purple-50 text-purple-700 border-purple-200",
+    star: "text-purple-500",
+    badge: "bg-purple-100 text-purple-800 border-purple-300",
+    description: "Ultimate authority who signs off on investment decisions",
+  },
   {
     value: "Decision Maker",
     label: "Decision Makers",
