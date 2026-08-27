@@ -12,7 +12,7 @@ import { toast } from "@/components/ui/use-toast";
 import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend, Tooltip
 } from "recharts";
-import ScoringMatrixComparisonTableEnhanced from "@/components/templates/ScoringMatrixComparisonTable";
+import ScoringMatrixComparisonTable from "@/components/templates/ScoringMatrixComparisonTable";
 import ScoringMatrixAuditPanel from "@/components/templates/ScoringMatrixAuditPanel";
 
 const SCORE_COLORS = {
@@ -89,6 +89,7 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
   const queryClient = useQueryClient();
   const [expandedBlocks, setExpandedBlocks] = useState({});
   const [activeTab, setActiveTab] = useState("scoring");
+  // Tabs: scoring | chart | comparison | audit
 
   const { data: score, isLoading } = useQuery({
     queryKey: ["scoringMatrixScore", scoreId],
@@ -516,7 +517,7 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
 
       {/* Comparison Tab */}
       {activeTab === "comparison" && (
-        <ScoringMatrixComparisonTableEnhanced blocks={blocks} showSecondary={showSecondary} showTeam={showTeam} showAdjustedPrimary={showAdjustedPrimary} showIC={showIC} showFinal={showFinal} />
+        <ScoringMatrixComparisonTable blocks={blocks} showSecondary={showSecondary} showTeam={showTeam} showAdjustedPrimary={showAdjustedPrimary} showIC={showIC} showFinal={showFinal} />
       )}
 
       {/* AI Audit Tab */}
