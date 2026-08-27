@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, TrendingUp, AlertTriangle, CheckCircle2, BarChart3, ArrowUp, ArrowDown, Minus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import ScoringMatrixBenchmarkChart from "./ScoringMatrixBenchmarkChart";
 
 const SCORE_COLORS = {
   1: "bg-red-100 text-red-700 border-red-300",
@@ -187,6 +188,9 @@ export default function ScoringMatrixComparisonTable({ blocks, showSecondary, sh
           </div>
         </div>
       )}
+
+      {/* Benchmark visualization */}
+      <ScoringMatrixBenchmarkChart blocks={blocks} benchmark={benchmark} />
 
       {/* Legend */}
       <div className="flex items-center gap-4 text-xs text-gray-500 bg-gray-50 rounded-lg p-2 px-3">
