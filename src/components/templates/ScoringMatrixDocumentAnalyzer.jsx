@@ -5,10 +5,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Upload, FileText, Sparkles, Loader2, ClipboardPaste } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import TemplateStructurePreview from "./TemplateStructurePreview";
 
 /**
  * Component for uploading a document or pasting text to analyze and generate
- * a scoring matrix or process template structure preview.
+ * a scoring matrix or process template structure preview. The AI-generated
+ * structure is shown in a read-only preview first; the user must confirm
+ * before it is applied to the template editor.
  */
 export default function ScoringMatrixDocumentAnalyzer({ templateCategory, onAnalyzed }) {
   const [activeTab, setActiveTab] = useState("upload");
@@ -16,6 +19,7 @@ export default function ScoringMatrixDocumentAnalyzer({ templateCategory, onAnal
   const [uploadedFile, setUploadedFile] = useState(null);
   const [uploadedFileUrl, setUploadedFileUrl] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [previewStructure, setPreviewStructure] = useState(null);
 
   const handleFileUpload = async (file) => {
     if (!file) return;
@@ -42,8 +46,8 @@ export default function ScoringMatrixDocumentAnalyzer({ templateCategory, onAnal
       });
       const data = response.data?.data || response.data;
       if (data) {
-        onAnalyzed(data);
-        toast({ title: "Analysis complete", description: "Template structure generated from document." });
+        setPreviewStructure({ type: "scoring", blocks: data.blocks || [] });
+        toast({ title: "Analysis complete", description: "Review the generated structure below before applying." });
       }
     } catch (err) {
       toast({ title: "Analysis failed", description: err?.message, variant: "destructive" });
@@ -111,6 +115,25 @@ export default function ScoringMatrixDocumentAnalyzer({ templateCategory, onAnal
           </>
         )}
       </Button>
+
+      {previewStructure && (
+        <TemplateStructurePreview
+          structure={previewStructure}
+          onApply={() => {
+            onAnalyzed({ blocks: previewStructure.blocks });
+            setPreviewStructure(null);
+            setPastedText("");
+            setUploadedFile(null);
+            setUploadedFileUrl("");
+          }}
+          onDiscard={() => {
+            setPreviewStructure(null);
+            setPastedText("");
+            setUploadedFile(null);
+            setUploadedFileUrl("");
+          }}
+        />
+      )}
     </div>
   );
 }

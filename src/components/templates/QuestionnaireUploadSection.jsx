@@ -3,6 +3,7 @@ import { UploadCloud, Loader2, FileText, X, Sparkles } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
+import TemplateStructurePreview from "./TemplateStructurePreview";
 
 let _tid = 0;
 const nextId = () => `tstage_${Date.now()}_${++_tid}`;
@@ -21,6 +22,7 @@ export default function QuestionnaireUploadSection({ onExtracted, sectionLabel =
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [dragOver, setDragOver] = useState(false);
+  const [previewStages, setPreviewStages] = useState(null);
   const inputRef = useRef(null);
 
   const ACCEPTED = ".pdf,.doc,.docx,.txt,.rtf,.html,.htm,.png,.jpg,.jpeg,.csv,.xlsx";
@@ -125,10 +127,10 @@ Return ONLY the structured JSON per the schema.`;
         return;
       }
 
-      onExtracted(stages);
+      setPreviewStages(stages);
       toast({
         title: "Sections generated",
-        description: `${stages.length} ${sectionLabel.toLowerCase()}${stages.length === 1 ? "" : "s"} extracted. Review and adjust below.`,
+        description: `${stages.length} ${sectionLabel.toLowerCase()}${stages.length === 1 ? "" : "s"} extracted. Review the preview below before applying.`,
       });
       reset();
     } catch (err) {
@@ -209,6 +211,17 @@ Return ONLY the structured JSON per the schema.`;
             </>
           )}
         </Button>
+      )}
+
+      {previewStages && (
+        <TemplateStructurePreview
+          structure={{ type: "process", stages: previewStages }}
+          onApply={() => {
+            onExtracted(previewStages);
+            setPreviewStages(null);
+          }}
+          onDiscard={() => setPreviewStages(null)}
+        />
       )}
     </div>
   );
