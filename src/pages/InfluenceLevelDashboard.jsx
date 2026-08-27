@@ -9,6 +9,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import InfluenceContactCard from "@/components/contacts/InfluenceContactCard";
+import {
+  PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
+} from "recharts";
 
 const INFLUENCE_LEVELS = [
   {
@@ -64,6 +67,14 @@ const TIERS = [
   { min: 3, label: "Connected", classes: "bg-blue-50 text-blue-700 border-blue-200", star: "text-blue-500" },
   { min: 0, label: "Emerging", classes: "bg-gray-50 text-gray-600 border-gray-200", star: "text-gray-400" },
 ];
+
+const PIE_COLORS = {
+  "Final Decision Maker": "#9333ea",
+  "Decision Maker": "#f59e0b",
+  "Influencer": "#6366f1",
+  "Follower": "#3b82f6",
+  "Undetermined": "#9ca3af",
+};
 
 function getTier(score) {
   return TIERS.find((t) => score >= t.min);
@@ -308,6 +319,86 @@ export default function InfluenceLevelDashboard() {
             );
           })}
         </div>
+
+        {/* Influence Level Breakdown — Pie Chart */}
+        {!isLoading && enrichedContacts.length > 0 && (
+          <div className="mb-5 border border-gray-200 rounded-xl bg-white shadow-sm overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
+              <div className="flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-amber-500" />
+                <h2 className="text-sm font-semibold text-gray-800">Influence Level Breakdown</h2>
+              </div>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Percentage distribution of contacts across all influence levels
+              </p>
+            </div>
+            <div className="p-4 flex flex-col lg:flex-row items-center gap-4">
+              <div className="w-full lg:w-1/2 h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={INFLUENCE_LEVELS.map((l) => ({
+                        name: l.label,
+                        value: levelCounts[l.value] || 0,
+                        color: PIE_COLORS[l.value],
+                      })).filter((d) => d.value > 0)}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={90}
+                      innerRadius={45}
+                      paddingAngle={2}
+                      label={({ name, percent }) =>
+                        percent > 0.05 ? `${(percent * 100).toFixed(0)}%` : ""
+                      }
+                      labelLine={false}
+                    >
+                      {INFLUENCE_LEVELS.map((l) => (
+                        <Cell key={l.value} fill={PIE_COLORS[l.value]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value, name) => [`${value} contact${value !== 1 ? "s" : ""}`, name]}
+                      contentStyle={{ fontSize: "12px", borderRadius: "8px", border: "1px solid #e5e7eb" }}
+                    />
+                    <Legend
+                      verticalAlign="middle"
+                      align="right"
+                      layout="vertical"
+                      iconType="circle"
+                      wrapperStyle={{ fontSize: "12px", lineHeight: "20px" }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="w-full lg:w-1/2 grid grid-cols-2 gap-2">
+                {INFLUENCE_LEVELS.map((level) => {
+                  const count = levelCounts[level.value] || 0;
+                  const pct = enrichedContacts.length > 0 ? ((count / enrichedContacts.length) * 100).toFixed(1) : "0.0";
+                  return (
+                    <div
+                      key={level.value}
+                      className={`rounded-lg border p-2.5 ${level.classes}`}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: PIE_COLORS[level.value] }}
+                        />
+                        <span className="text-xs font-semibold truncate">{level.label}</span>
+                      </div>
+                      <div className="flex items-baseline gap-1.5 mt-1">
+                        <span className="text-xl font-bold text-gray-900">{count}</span>
+                        <span className="text-xs text-gray-500">({pct}%)</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Firm breakdown overview — top firms by influential contacts */}
         {!isLoading && overviewFirmBreakdown.length > 0 && (

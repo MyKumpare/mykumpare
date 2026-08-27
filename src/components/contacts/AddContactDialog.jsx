@@ -55,6 +55,7 @@ import { downloadVCard } from "./vCardExport";
 import ContactInfluenceScore from "./ContactInfluenceScore";
 import ContactQuickActions from "./ContactQuickActions";
 import QuickActivityLogFab from "./QuickActivityLogFab";
+import ContactInteractionHistory from "./ContactInteractionHistory";
 
 const SALUTATIONS = ["Mr.", "Ms.", "Mrs.", "Dr.", "Prof.", "Hon."];
 const SUFFIXES = ["Jr.", "Sr.", "II", "III", "IV", "Esq.", "CFA", "CPA", "MBA", "PhD", "MD"];
@@ -261,7 +262,11 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   });
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Contact.update(id, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["contacts"] }); onOpenChange(false); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      setViewMode(true);
+      toast({ title: "✅ Contact saved", description: "Changes saved successfully. You can continue editing or close the form." });
+    },
   });
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Contact.update(id, { deleted_at: new Date().toISOString() }),
@@ -1430,6 +1435,11 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                   <Textarea placeholder="Additional notes..." value={notes} onChange={(e) => setNotes(e.target.value)} className="min-h-16 text-sm" />
                 )}
               </div>
+
+              {/* Interaction History — visible in view mode so users see a log of past meetings and notes at a glance */}
+              {viewMode && editingContact && (
+                <ContactInteractionHistory contactId={editingContact.id} contactNotes={notes} />
+              )}
             </TabsContent>
 
             {/* ── PHONES TAB ── */}
