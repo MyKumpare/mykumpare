@@ -74,13 +74,23 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
   const isAdmin = user?.role === "admin";
   const isManagement = user?.is_management;
   const [expanded, setExpanded] = useState(false);
-  // null = categorized selection grid; a tool key = that tool's view
-  const [view, setView] = useState(defaultView || null);
+  // null = categorized selection grid; a tool key = that tool's view.
+  // "import-firms" is special: it opens the wizard dialog, not an inline view,
+  // so it must not initialize `view` (which would render an empty "Back to selection" panel).
+  const [view, setView] = useState(defaultView === "import-firms" ? null : (defaultView || null));
   const [benchmarkDialogOpen, setBenchmarkDialogOpen] = useState(false);
   const [selectedBenchmark, setSelectedBenchmark] = useState(null);
   const [benchmarkQuery, setBenchmarkQuery] = useState("");
   const [cleanupStarted, setCleanupStarted] = useState(false);
   const [firmWizardOpen, setFirmWizardOpen] = useState(false);
+
+  // When opened from the header dropdown with defaultView="import-firms",
+  // open the wizard dialog directly instead of showing an inline view.
+  useEffect(() => {
+    if (defaultView === "import-firms") {
+      setFirmWizardOpen(true);
+    }
+  }, [defaultView]);
 
   // Role-filtered module list + default categorization for the draggable grid
   const activeModules = useMemo(
