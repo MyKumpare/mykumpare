@@ -39,6 +39,9 @@ import { syncProductFundingStatus } from "./fundingStatusSync";
 import { base44 } from "@/api/base44Client";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import AuditHistoryDialog from "../shared/AuditHistoryDialog";
+import { useTabPreferences } from "../common/useTabPreferences";
+import TabCustomizer from "../common/TabCustomizer";
+import { useAuth } from "@/lib/AuthContext";
 
 // Map product type -> firm type(s) that can be associated
 const PRODUCT_TYPE_TO_FIRM_TYPE = {
@@ -132,6 +135,38 @@ export default function AddProductDialog({
 
   const isAddMode = !editingProduct;
   const activelyEditing = isAddMode || isEditing;
+  const { user } = useAuth();
+
+  // Available product tabs. Disabled tabs (require a saved product) are still
+  // customizable — the disabled state is preserved on the rendered trigger.
+  const availableProductTabs = useMemo(() => [
+    { key: "details", label: "Details" },
+    { key: "dd", label: "Due Diligence", disabled: isAddMode },
+    { key: "classifications", label: "Classifications" },
+    { key: "description", label: "Inv. Description" },
+    { key: "team", label: "Investment Team", disabled: isAddMode },
+    { key: "aum-history", label: "AUM History", disabled: isAddMode },
+    { key: "returns", label: "Returns", disabled: isAddMode },
+    { key: "third-party", label: "3rd Party", disabled: isAddMode },
+    { key: "analytics", label: "Analytics", disabled: isAddMode },
+  ], [isAddMode]);
+  const productTabMeta = useMemo(() => Object.fromEntries(availableProductTabs.map((t) => [t.key, t])), [availableProductTabs]);
+  const {
+    visibleTabs: visibleProductTabs,
+    toggleTab: toggleProductTab,
+    moveTab: moveProductTab,
+    reset: resetProductTabs,
+  } = useTabPreferences("product", availableProductTabs, user?.id);
+  const [activeProductTab, setActiveProductTab] = useState("details");
+  useEffect(() => {
+    if (open) setActiveProductTab("details");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editingProduct?.id]);
+  useEffect(() => {
+    if (visibleProductTabs.length && !visibleProductTabs.some((t) => t.key === activeProductTab)) {
+      setActiveProductTab(visibleProductTabs[0].key);
+    }
+  }, [visibleProductTabs, activeProductTab]);
 
   const prevOpenRef = useRef(false);
   useEffect(() => {
@@ -546,18 +581,24 @@ export default function AddProductDialog({
         )}
 
         <div className="flex-1 overflow-y-auto pr-1">
-          <Tabs defaultValue="details" className="w-full">
-            <TabsList className="grid grid-cols-3 w-full mb-4 h-auto">
-              <TabsTrigger value="details">Details</TabsTrigger>
-              <TabsTrigger value="dd" disabled={isAddMode}>Due Diligence</TabsTrigger>
-              <TabsTrigger value="classifications">Classifications</TabsTrigger>
-              <TabsTrigger value="description">Inv. Description</TabsTrigger>
-              <TabsTrigger value="team" disabled={isAddMode}>Investment Team</TabsTrigger>
-              <TabsTrigger value="aum-history" disabled={isAddMode}>AUM History</TabsTrigger>
-              <TabsTrigger value="returns" disabled={isAddMode}>Returns</TabsTrigger>
-              <TabsTrigger value="third-party" disabled={isAddMode}>3rd Party</TabsTrigger>
-              <TabsTrigger value="analytics" disabled={isAddMode}>Analytics</TabsTrigger>
-            </TabsList>
+          <Tabs value={activeProductTab} onValueChange={setActiveProductTab} className="w-full">
+            <div className="flex items-center gap-2 mb-4">
+              <TabsList className="grid grid-cols-3 flex-1 h-auto">
+                {visibleProductTabs.map((t) => {
+                  const meta = productTabMeta[t.key] || {};
+                  return (
+                    <TabsTrigger key={t.key} value={t.key} disabled={meta.disabled}>{t.label}</TabsTrigger>
+                  );
+                })}
+              </TabsList>
+              <TabCustomizer
+                allTabs={availableProductTabs}
+                visibleTabs={visibleProductTabs}
+                onToggle={toggleProductTab}
+                onMove={moveProductTab}
+                onReset={resetProductTabs}
+              />
+            </div>
 
             {/* ── Details Tab ── */}
             <TabsContent value="details" className="space-y-4">

@@ -57,6 +57,8 @@ import ContactQuickActions from "./ContactQuickActions";
 import QuickActivityLogFab from "./QuickActivityLogFab";
 import ContactInteractionHistory from "./ContactInteractionHistory";
 import ContactEngagementStatusTracker from "./ContactEngagementStatusTracker";
+import { useTabPreferences } from "../common/useTabPreferences";
+import TabCustomizer from "../common/TabCustomizer";
 
 const SALUTATIONS = ["Mr.", "Ms.", "Mrs.", "Dr.", "Prof.", "Hon."];
 const SUFFIXES = ["Jr.", "Sr.", "II", "III", "IV", "Esq.", "CFA", "CPA", "MBA", "PhD", "MD"];
@@ -130,6 +132,39 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
 
   const { user } = useAuth();
   const queryClient = useQueryClient();
+
+  // Available contact tabs (all always available — no firm-type gating).
+  const availableContactTabs = useMemo(() => [
+    { key: "info", label: "Info", icon: User },
+    { key: "addresses", label: "Addresses", icon: MapPin },
+    { key: "phones", label: "Phones", icon: Phone },
+    { key: "products", label: "Products", icon: Package },
+    { key: "education", label: "Education", icon: GraduationCap },
+    { key: "experience", label: "Experience", icon: Briefcase },
+    { key: "board", label: "Board", icon: Users },
+    { key: "classification", label: "Classifications", icon: Tag },
+    { key: "demographics", label: "Demographics", icon: null },
+    { key: "ownership", label: "Ownership", icon: TrendingUp },
+    { key: "activities", label: "Activities", icon: Activity },
+    { key: "relationships", label: "Relationships", icon: Users },
+    { key: "timeline", label: "Timeline", icon: Clock },
+    { key: "due-diligence", label: "Due Diligence", icon: ClipboardCheck },
+    { key: "chat", label: "Chat", icon: MessageSquare },
+    { key: "news", label: "News", icon: Newspaper },
+    { key: "notifications", label: "Notifications", icon: Bell },
+  ], []);
+  const contactTabMeta = useMemo(() => Object.fromEntries(availableContactTabs.map((t) => [t.key, t])), [availableContactTabs]);
+  const {
+    visibleTabs: visibleContactTabs,
+    toggleTab: toggleContactTab,
+    moveTab: moveContactTab,
+    reset: resetContactTabs,
+  } = useTabPreferences("contact", availableContactTabs, user?.id);
+  useEffect(() => {
+    if (visibleContactTabs.length && !visibleContactTabs.some((t) => t.key === activeTab)) {
+      setActiveTab(visibleContactTabs[0].key);
+    }
+  }, [visibleContactTabs, activeTab]);
 
   const { data: allContacts = [] } = useQuery({
     queryKey: ["contacts"],
@@ -1120,60 +1155,25 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
         <div className="overflow-y-auto flex-1 py-2 pr-1 flex gap-3">
           <div className="flex-1 min-w-0">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <div className="mb-4">
-              <TabsList className="grid grid-cols-3 gap-1 w-full h-auto">
-                <TabsTrigger value="info" className="flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5" /> Info
-                </TabsTrigger>
-                <TabsTrigger value="addresses" className="flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5" /> Addresses
-                </TabsTrigger>
-                <TabsTrigger value="phones" className="flex items-center gap-1.5">
-                  <Phone className="w-3.5 h-3.5" /> Phones
-                </TabsTrigger>
-                <TabsTrigger value="products" className="flex items-center gap-1.5">
-                  <Package className="w-3.5 h-3.5" /> Products
-                </TabsTrigger>
-                <TabsTrigger value="education" className="flex items-center gap-1.5">
-                  <GraduationCap className="w-3.5 h-3.5" /> Education
-                </TabsTrigger>
-                <TabsTrigger value="experience" className="flex items-center gap-1.5">
-                  <Briefcase className="w-3.5 h-3.5" /> Experience
-                </TabsTrigger>
-                <TabsTrigger value="board" className="flex items-center gap-1.5">
-                  <Users className="w-3.5 h-3.5" /> Board
-                </TabsTrigger>
-                <TabsTrigger value="classification" className="flex items-center gap-1.5">
-                  <Tag className="w-3.5 h-3.5" /> Classifications
-                </TabsTrigger>
-                <TabsTrigger value="demographics" className="flex items-center gap-1.5">
-                  Demographics
-                </TabsTrigger>
-                <TabsTrigger value="ownership" className="flex items-center gap-1.5">
-                  <TrendingUp className="w-3.5 h-3.5" /> Ownership
-                </TabsTrigger>
-                <TabsTrigger value="activities" className="flex items-center gap-1.5">
-                  <Activity className="w-3.5 h-3.5" /> Activities
-                </TabsTrigger>
-                <TabsTrigger value="relationships" className="flex items-center gap-1.5">
-                  <Users className="w-3.5 h-3.5" /> Relationships
-                </TabsTrigger>
-                <TabsTrigger value="timeline" className="flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5" /> Timeline
-                </TabsTrigger>
-                <TabsTrigger value="due-diligence" className="flex items-center gap-1.5">
-                  <ClipboardCheck className="w-3.5 h-3.5" /> Due Diligence
-                </TabsTrigger>
-                <TabsTrigger value="chat" className="flex items-center gap-1.5">
-                  <MessageSquare className="w-3.5 h-3.5" /> Chat
-                </TabsTrigger>
-                <TabsTrigger value="news" className="flex items-center gap-1.5">
-                  <Newspaper className="w-3.5 h-3.5" /> News
-                </TabsTrigger>
-                <TabsTrigger value="notifications" className="flex items-center gap-1.5">
-                  <Bell className="w-3.5 h-3.5" /> Notifications
-                </TabsTrigger>
+            <div className="mb-4 flex items-center gap-2">
+              <TabsList className="grid grid-cols-3 gap-1 flex-1 h-auto">
+                {visibleContactTabs.map((t) => {
+                  const meta = contactTabMeta[t.key] || {};
+                  const Icon = meta.icon;
+                  return (
+                    <TabsTrigger key={t.key} value={t.key} className="flex items-center gap-1.5">
+                      {Icon && <Icon className="w-3.5 h-3.5" />}{t.label}
+                    </TabsTrigger>
+                  );
+                })}
               </TabsList>
+              <TabCustomizer
+                allTabs={availableContactTabs}
+                visibleTabs={visibleContactTabs}
+                onToggle={toggleContactTab}
+                onMove={moveContactTab}
+                onReset={resetContactTabs}
+              />
             </div>
 
             {/* ── INFO TAB ── */}

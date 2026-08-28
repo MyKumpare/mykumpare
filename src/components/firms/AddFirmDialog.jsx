@@ -53,6 +53,8 @@ import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import ImageZoomDialog from "../common/ImageZoomDialog";
 import ErrorBoundary from "../common/ErrorBoundary";
 import AuditHistoryDialog from "../shared/AuditHistoryDialog";
+import { useTabPreferences } from "../common/useTabPreferences";
+import TabCustomizer from "../common/TabCustomizer";
 
 function getCountryCodeFromCountryName(countryName) {
   if (!countryName) return "";
@@ -509,6 +511,55 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const hideProductTabs = firmTypes.length > 0 && firmTypes.every(t => NON_PRODUCT_TYPES.includes(t));
   const showPortfolioTab = firmTypes.includes("Allocator");
   const showAdvisorPortfolioTab = firmTypes.includes("Investment Manager");
+
+  // Available tabs for this firm, filtered by firm type (the "default = see
+  // everything based on firm type" set). Order here is the default order.
+  const availableFirmTabs = useMemo(() => [
+    { key: "contacts", label: "Contacts" },
+    { key: "photo-gallery", label: "Photo Gallery" },
+    { key: "relationship-map", label: "Relationship Map" },
+    { key: "addresses", label: "Addresses" },
+    { key: "phones", label: "Phones" },
+    ...(!hideProductTabs ? [{ key: "legal-compliance", label: "Legal & Compliance" }] : []),
+    ...(showPortfolioTab ? [{ key: "portfolios", label: "Portfolios" }] : []),
+    ...(showAdvisorPortfolioTab ? [{ key: "advisor-portfolios", label: "Portfolios" }] : []),
+    ...(!hideProductTabs ? [{ key: "products", label: "Products" }] : []),
+    ...(!hideProductTabs ? [{ key: "due-diligence", label: "Due Diligence" }] : []),
+    ...(!hideProductTabs ? [{ key: "documents", label: "Documents" }] : []),
+    { key: "activity-log", label: "Activity Log" },
+    ...(!hideProductTabs ? [{ key: "ownership", label: "Ownership" }] : []),
+    { key: "orgchart", label: "Org Chart" },
+    ...(!hideProductTabs ? [{ key: "aum-history", label: "AUM History" }] : []),
+    { key: "news", label: "News" },
+    { key: "board-meetings", label: "Board Meetings" },
+    { key: "rfp-rfi", label: "RFP/RFI Search" },
+    { key: "conferences", label: "Conferences" },
+    { key: "sourcing", label: "Sourcing" },
+  ], [hideProductTabs, showPortfolioTab, showAdvisorPortfolioTab]);
+
+  const {
+    visibleTabs: visibleFirmTabs,
+    hiddenTabs: hiddenFirmTabs,
+    toggleTab: toggleFirmTab,
+    moveTab: moveFirmTab,
+    reset: resetFirmTabs,
+  } = useTabPreferences("firm", availableFirmTabs, user?.id);
+
+  const [activeTab, setActiveTab] = useState(defaultTab || "contacts");
+
+  // Reset to the requested tab whenever the dialog opens for a firm.
+  useEffect(() => {
+    if (open) setActiveTab(defaultTab || "contacts");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editingFirm?.id, defaultTab]);
+
+  // If the active tab is hidden or unavailable for the current firm type,
+  // fall back to the first visible tab.
+  useEffect(() => {
+    if (visibleFirmTabs.length && !visibleFirmTabs.some((t) => t.key === activeTab)) {
+      setActiveTab(visibleFirmTabs[0].key);
+    }
+  }, [visibleFirmTabs, activeTab]);
 
   const handleSubmit = (forceFirmName = false, forceFieldConflicts = false) => {
     if (!isValid) return;
@@ -1357,47 +1408,22 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
           )}
 
           {/* Contacts, Addresses, Phones & Ownership Tabs */}
-           <Tabs defaultValue={defaultTab || "contacts"} className="w-full">
-             {/* Single 3-column tab grid — wraps to max 3 per row */}
-             <TabsList className="grid w-full mt-0 grid-cols-3 h-auto">
-               <TabsTrigger value="contacts">Contacts</TabsTrigger>
-               <TabsTrigger value="photo-gallery">Photo Gallery</TabsTrigger>
-               <TabsTrigger value="relationship-map">Relationship Map</TabsTrigger>
-               <TabsTrigger value="addresses">Addresses</TabsTrigger>
-               <TabsTrigger value="phones">Phones</TabsTrigger>
-                 {!hideProductTabs && (
-                 <TabsTrigger value="legal-compliance">Legal & Compliance</TabsTrigger>
-                 )}
-                 {!hideProductTabs && (
-                 <>
-                   {showPortfolioTab && <TabsTrigger value="portfolios">Portfolios</TabsTrigger>}
-                   {showAdvisorPortfolioTab && <TabsTrigger value="advisor-portfolios">Portfolios</TabsTrigger>}
-                   <TabsTrigger value="products">Products</TabsTrigger>
-                   <TabsTrigger value="due-diligence">Due Diligence</TabsTrigger>
-                   <TabsTrigger value="documents">Documents</TabsTrigger>
-                   <TabsTrigger value="activity-log">Activity Log</TabsTrigger>
-                   <TabsTrigger value="ownership">Ownership</TabsTrigger>
-                   <TabsTrigger value="orgchart">Org Chart</TabsTrigger>
-                   <TabsTrigger value="aum-history">AUM History</TabsTrigger>
-                   <TabsTrigger value="news">News</TabsTrigger>
-                   <TabsTrigger value="board-meetings">Board Meetings</TabsTrigger>
-                   <TabsTrigger value="rfp-rfi">RFP/RFI Search</TabsTrigger>
-                   <TabsTrigger value="conferences">Conferences</TabsTrigger>
-                   <TabsTrigger value="sourcing">Sourcing</TabsTrigger>
-                   </>
-                   )}
-                   {hideProductTabs && (
-                   <>
-                   <TabsTrigger value="orgchart">Org Chart</TabsTrigger>
-                   <TabsTrigger value="activity-log">Activity Log</TabsTrigger>
-                   <TabsTrigger value="news">News</TabsTrigger>
-                   <TabsTrigger value="board-meetings">Board Meetings</TabsTrigger>
-                   <TabsTrigger value="rfp-rfi">RFP/RFI Search</TabsTrigger>
-                   <TabsTrigger value="conferences">Conferences</TabsTrigger>
-                   <TabsTrigger value="sourcing">Sourcing</TabsTrigger>
-                   </>
-                   )}
-                   </TabsList>
+           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+             <div className="flex items-center gap-2">
+               {/* Tab triggers — driven by the user's per-form preferences (visible + ordered). */}
+               <TabsList className="grid flex-1 grid-cols-3 h-auto">
+                 {visibleFirmTabs.map((t) => (
+                   <TabsTrigger key={t.key} value={t.key}>{t.label}</TabsTrigger>
+                 ))}
+               </TabsList>
+               <TabCustomizer
+                 allTabs={availableFirmTabs}
+                 visibleTabs={visibleFirmTabs}
+                 onToggle={toggleFirmTab}
+                 onMove={moveFirmTab}
+                 onReset={resetFirmTabs}
+               />
+             </div>
 
             <TabsContent value="contacts" className="space-y-3">
               {editingFirm ? (
