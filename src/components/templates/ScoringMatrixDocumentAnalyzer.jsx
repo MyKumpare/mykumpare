@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, FileText, Sparkles, Loader2, ClipboardPaste } from "lucide-react";
+import { Upload, FileText, Sparkles, Loader2, ClipboardPaste, CheckCircle2, X, AlertCircle } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import TemplateStructurePreview from "./TemplateStructurePreview";
 
@@ -18,17 +18,38 @@ export default function ScoringMatrixDocumentAnalyzer({ templateCategory, onAnal
   const [pastedText, setPastedText] = useState("");
   const [uploadedFile, setUploadedFile] = useState(null);
   const [uploadedFileUrl, setUploadedFileUrl] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [previewStructure, setPreviewStructure] = useState(null);
 
+  const formatFileSize = (bytes) => {
+    if (!bytes) return "";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const clearUploadedFile = () => {
+    setUploadedFile(null);
+    setUploadedFileUrl("");
+    setUploadError("");
+  };
+
   const handleFileUpload = async (file) => {
     if (!file) return;
+    setUploadError("");
     setUploadedFile(file);
+    setUploadedFileUrl("");
+    setIsUploading(true);
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
       setUploadedFileUrl(file_url);
     } catch (err) {
+      setUploadError(err?.message || "Upload failed");
       toast({ title: "Upload failed", description: err?.message, variant: "destructive" });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -76,16 +97,61 @@ export default function ScoringMatrixDocumentAnalyzer({ templateCategory, onAnal
           </TabsTrigger>
         </TabsList>
         <TabsContent value="upload" className="mt-2">
-          <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-4 cursor-pointer hover:border-cyan-400 hover:bg-cyan-50/50 transition-colors">
-            <Upload className="w-5 h-5 text-gray-400 mb-1" />
-            <span className="text-xs text-gray-500">
-              {uploadedFile ? uploadedFile.name : "Click to upload PDF, Word, or text file"}
-            </span>
+          {uploadedFile && !isUploading ? (
+            <div className={`rounded-lg border p-3 ${uploadError ? "border-red-200 bg-red-50/50" : "border-green-200 bg-green-50/50"}`}>
+              <div className="flex items-center gap-2">
+                {uploadError ? (
+                  <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                ) : (
+                  <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                )}
+                <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-medium text-gray-800 truncate">{uploadedFile.name}</div>
+                  <div className="text-[11px] text-gray-500">
+                    {uploadedFile.size ? formatFileSize(uploadedFile.size) : ""}
+                    {uploadError ? ` · ${uploadError}` : " · Uploaded successfully"}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={clearUploadedFile}
+                  className="text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
+                  title="Remove file"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              {!uploadError && (
+                <div className="mt-2 flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
+                    <CheckCircle2 className="w-3 h-3" /> Ready for analysis
+                  </span>
+                  <span className="text-[11px] text-gray-400">Click the box to choose a different file</span>
+                </div>
+              )}
+            </div>
+          ) : null}
+          <label className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-4 transition-colors ${isUploading ? "border-cyan-400 bg-cyan-50/50 cursor-wait" : "border-gray-300 cursor-pointer hover:border-cyan-400 hover:bg-cyan-50/50"} ${uploadedFile && !isUploading ? "mt-2 pt-2 pb-3" : ""}`}>
+            {isUploading ? (
+              <>
+                <Loader2 className="w-5 h-5 text-cyan-500 mb-1 animate-spin" />
+                <span className="text-xs text-cyan-700 font-medium">Uploading {uploadedFile?.name}...</span>
+              </>
+            ) : (
+              <>
+                <Upload className="w-5 h-5 text-gray-400 mb-1" />
+                <span className="text-xs text-gray-500">
+                  {uploadedFile ? "Click to replace with a different file" : "Click to upload PDF, Word, Excel, or text file"}
+                </span>
+              </>
+            )}
             <input
               type="file"
               className="hidden"
               accept=".pdf,.doc,.docx,.txt,.xlsx,.xls"
               onChange={(e) => handleFileUpload(e.target.files?.[0])}
+              disabled={isUploading}
             />
           </label>
         </TabsContent>
@@ -125,12 +191,14 @@ export default function ScoringMatrixDocumentAnalyzer({ templateCategory, onAnal
             setPastedText("");
             setUploadedFile(null);
             setUploadedFileUrl("");
+            setUploadError("");
           }}
           onDiscard={() => {
             setPreviewStructure(null);
             setPastedText("");
             setUploadedFile(null);
             setUploadedFileUrl("");
+            setUploadError("");
           }}
         />
       )}
