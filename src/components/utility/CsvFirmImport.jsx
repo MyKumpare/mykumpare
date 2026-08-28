@@ -150,10 +150,11 @@ function buildCsvMergeUpdates(existingFirm, csvFirm) {
   return updates;
 }
 
-export default function CsvFirmImport() {
+export default function CsvFirmImport({ onStageChange } = {}) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [stage, setStage] = useState("upload");
+  const goStage = useCallback((s) => { setStage(s); onStageChange?.(s); }, [onStageChange]);
   const [csvData, setCsvData] = useState(null);
   const [mapping, setMapping] = useState({});
   const [results, setResults] = useState(null);
@@ -197,7 +198,7 @@ export default function CsvFirmImport() {
     headers.forEach((h, i) => { auto[i] = autoMapHeader(h, FIELD_ALIASES); });
     setCsvData({ headers, rows: dataRows });
     setMapping(auto);
-    setStage("mapping");
+    goStage("mapping");
   }, []);
 
   const mappedFields = useMemo(() => {
@@ -273,7 +274,7 @@ export default function CsvFirmImport() {
     const needsReview = items.some((it) => it.duplicates.length > 0 && !it.duplicates.some((d) => d.score === 1));
     if (needsReview) {
       setReviewItems({ items, validationSkipped });
-      setStage("review");
+      goStage("review");
     } else {
       runImport(items, validationSkipped);
     }
@@ -285,7 +286,7 @@ export default function CsvFirmImport() {
   // enriches each firm in the background — surviving navigation/close. We
   // hand off to the Import Jobs dashboard so the user can watch progress.
   const runImport = async (items, validationSkipped) => {
-    setStage("importing");
+    goStage("importing");
     try {
       const res = await base44.functions.invoke("startImportJob", {
         source: "firm",
@@ -296,7 +297,7 @@ export default function CsvFirmImport() {
       const data = res?.data || res || {};
       queryClient.invalidateQueries({ queryKey: ["firms"] });
       queryClient.invalidateQueries({ queryKey: ["import-jobs"] });
-      setStage("job_status");
+      goStage("job_status");
       if ((data.created || 0) > 0 || (data.merged || 0) > 0) {
         toast({ title: `✅ ${data.created} firm${data.created === 1 ? "" : "s"} submitted${data.merged > 0 ? ` · ${data.merged} merged` : ""}` });
       }
@@ -324,7 +325,7 @@ export default function CsvFirmImport() {
     setResults(null);
     setEnrichProgress(null);
     setReviewItems(null);
-    setStage("upload");
+    goStage("upload");
   };
 
   if (stage === "upload") {

@@ -15,6 +15,7 @@ import OrphanedContactsCleanup from "./OrphanedContactsCleanup";
 import DueDiligenceCleanup from "./DueDiligenceCleanup";
 import CsvContactImport from "./CsvContactImport";
 import CsvFirmImport from "./CsvFirmImport";
+import FirmImportWizard from "./FirmImportWizard";
 import CsvProductImport from "./CsvProductImport";
 import PlaceholderCleanup from "./PlaceholderCleanup";
 import FirmTypeValidation from "./FirmTypeValidation";
@@ -79,6 +80,7 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
   const [selectedBenchmark, setSelectedBenchmark] = useState(null);
   const [benchmarkQuery, setBenchmarkQuery] = useState("");
   const [cleanupStarted, setCleanupStarted] = useState(false);
+  const [firmWizardOpen, setFirmWizardOpen] = useState(false);
 
   // Role-filtered module list + default categorization for the draggable grid
   const activeModules = useMemo(
@@ -96,6 +98,8 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
     if (!mod) return;
     if (mod.to) { navigate(mod.to); return; }
     if (mod.action === "ext-portal") { onOpenExternalPortal?.(); return; }
+    // The firm import opens as a step-by-step wizard dialog.
+    if (key === "import-firms") { setFirmWizardOpen(true); return; }
     setView(key);
     setCleanupStarted(false);
   };
@@ -339,11 +343,6 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
             <CsvContactImport />
           )}
 
-          {/* CSV firm import view */}
-          {view === "import-firms" && (
-            <CsvFirmImport />
-          )}
-
           {/* CSV product import view */}
           {view === "import-products" && (
             <CsvProductImport />
@@ -421,6 +420,8 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
         benchmarks={benchmarks}
         editingBenchmark={selectedBenchmark}
       />
+
+      <FirmImportWizard open={firmWizardOpen} onOpenChange={setFirmWizardOpen} />
     </div>
   );
 }
