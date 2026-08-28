@@ -17,6 +17,7 @@ import QuestionBankPickerModal from "./QuestionBankPickerModal";
 import ScoringMatrixDocumentAnalyzer from "./ScoringMatrixDocumentAnalyzer";
 import ScoringMatrixTemplateEditor from "./ScoringMatrixTemplateEditor";
 import ScoringMatrixTestModeDialog from "./ScoringMatrixTestModeDialog";
+import ProcessTemplateAudit from "./ProcessTemplateAudit";
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 import { Upload, X, FileText, FlaskConical } from "lucide-react";
@@ -302,6 +303,14 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
               {templateType === "Manager Due Diligence" && (
                 <DocumentationChecklistSection items={docChecklist} onChange={setDocChecklist} />
               )}
+              <ProcessTemplateAudit
+                stages={stages}
+                docChecklist={templateType === "Manager Due Diligence" ? docChecklist : []}
+                onStagesChange={setStages}
+                onDocChecklistChange={setDocChecklist}
+                templateId={editTemplate?.id}
+                templateName={editTemplate?.name}
+              />
             </>
           ) : null}
           <DialogFooter>
