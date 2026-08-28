@@ -21,6 +21,7 @@ import CoverageManagement from "@/pages/CoverageManagement";
 import StaleContactRemindersPanel from "@/components/contacts/StaleContactRemindersPanel";
 import ScoringAlertsTab from "@/components/templates/ScoringAlertsTab";
 import ScoreTrendAnalyticsTab from "@/components/templates/ScoreTrendAnalyticsTab";
+import FirmScoreTrend6mo from "@/components/monitor/FirmScoreTrend6mo";
 import MonitorModuleGrid from "@/components/monitor/MonitorModuleGrid";
 import { MODULE_MAP } from "@/components/monitor/monitorModules";
 
@@ -146,6 +147,11 @@ export default function MonitorPage() {
             {activeModule === "score-trends" && (
               <div className="rounded-xl border border-gray-200 bg-white p-4">
                 <ScoreTrendAnalyticsTab onFirmClick={() => navigate("/")} />
+              </div>
+            )}
+            {activeModule === "firm-score-trends-6mo" && (
+              <div className="rounded-xl border border-gray-200 bg-white p-4">
+                <FirmScoreTrend6mo onFirmClick={() => navigate("/")} />
               </div>
             )}
             {activeModule === "timeline" && (
