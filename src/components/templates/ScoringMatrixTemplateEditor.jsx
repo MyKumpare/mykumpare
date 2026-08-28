@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Trash2, GripVertical, ChevronDown, ChevronRight, Sparkles, Loader2, ToggleLeft, ToggleRight } from "lucide-react";
 import { base44 } from "@/api/base44Client";
+import ScoringMatrixRubricAudit from "./ScoringMatrixRubricAudit";
 import { toast } from "@/components/ui/use-toast";
 
 let _blockId = 0;
@@ -16,7 +17,7 @@ const nextCritId = () => `smc_${Date.now()}_${++_critId}`;
  * Editor for scoring matrix template structure: blocks, criteria, and level descriptors.
  * Allows adding, removing, reordering, and editing all elements.
  */
-export default function ScoringMatrixTemplateEditor({ blocks, onChange }) {
+export default function ScoringMatrixTemplateEditor({ blocks, onChange, templateId, templateName }) {
   const [expandedBlocks, setExpandedBlocks] = useState({});
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
@@ -366,6 +367,9 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange }) {
       <Button type="button" variant="outline" size="sm" onClick={addBlock} className="w-full text-xs">
         <Plus className="w-3.5 h-3.5" /> Add Block
       </Button>
+
+      {/* AI Rubric Audit — analyzes the rubric for bias, redundancy, and improvements */}
+      <ScoringMatrixRubricAudit blocks={blocks} onChange={onChange} templateId={templateId} templateName={templateName} />
     </div>
   );
 }

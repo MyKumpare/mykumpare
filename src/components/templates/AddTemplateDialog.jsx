@@ -253,7 +253,7 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
                   }
                 }}
               />
-              <ScoringMatrixTemplateEditor blocks={scoringBlocks} onChange={setScoringBlocks} />
+              <ScoringMatrixTemplateEditor blocks={scoringBlocks} onChange={setScoringBlocks} templateId={editTemplate?.id} templateName={editTemplate?.name} />
               <div className="flex justify-end">
                 <Button
                   type="button"
