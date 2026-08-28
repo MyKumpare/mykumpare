@@ -3,14 +3,14 @@ import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
-import { Plus, ChevronDown, ChevronRight, Building, CheckSquare, Radar as RadarIcon, Download } from "lucide-react";
+import { Plus, ChevronDown, ChevronRight, Building, CheckSquare, Radar as RadarIcon, Download, SlidersHorizontal } from "lucide-react";
 import FirmTypeSection from "./FirmTypeSection";
 import FirmCard from "./FirmCard";
 import FirmsBulkActionsBar from "./FirmsBulkActionsBar";
+import FirmFilterSidebar from "./FirmFilterSidebar";
 import { exportFirmsToCSV, exportFirmsToExcel } from "./firmListExport";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
 import SectionSearch from "@/components/common/SectionSearch";
-import SectionTypeFilter from "@/components/common/SectionTypeFilter";
 import SectionExpandCollapse from "@/components/common/SectionExpandCollapse";
 import DateRangeFilter from "@/components/common/DateRangeFilter";
 import { useViewMode } from "@/hooks/useViewMode";
@@ -42,7 +42,11 @@ export default function FirmsSection({
   const [expanded, setExpanded] = useState(false);
   const [viewMode, setViewMode] = useViewMode("firms");
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState("all");
+  const [selectedTypes, setSelectedTypes] = useState(new Set());
+  const [selectedRegions, setSelectedRegions] = useState(new Set());
+  const [activityFilter, setActivityFilter] = useState("all");
+  const [locationSearch, setLocationSearch] = useState("");
+  const [showFilters, setShowFilters] = useState(true);
   const [dateRange, setDateRange] = useState({ start: "", end: "" });
   const [expandedTypes, setExpandedTypes] = useState({});
 
@@ -53,6 +57,7 @@ export default function FirmsSection({
   const [exportOpen, setExportOpen] = useState(false);
 
   const searchLower = search.toLowerCase().trim();
+  const locationSearchLower = locationSearch.toLowerCase().trim();
 
   useEffect(() => {
     if (forceExpanded !== undefined) setExpanded(forceExpanded);
@@ -66,6 +71,7 @@ export default function FirmsSection({
       setExpandedTypes(allOpen);
     }
   }, [searchLower]);
+
   const filteredGrouped = React.useMemo(() => {
     let result = groupedFirms;
     if (searchLower) {
@@ -76,10 +82,45 @@ export default function FirmsSection({
       }
       result = searched;
     }
-    if (typeFilter !== "all") {
+    if (selectedTypes.size > 0) {
       const typed = {};
-      if (result[typeFilter]) typed[typeFilter] = result[typeFilter];
+      for (const t of selectedTypes) {
+        if (result[t]) typed[t] = result[t];
+      }
       result = typed;
+    }
+    if (selectedRegions.size > 0) {
+      const regioned = {};
+      for (const [type, firms] of Object.entries(result)) {
+        const filtered = firms.filter((f) => selectedRegions.has(f.geographic_region || "Undefined"));
+        if (filtered.length) regioned[type] = filtered;
+      }
+      result = regioned;
+    }
+    if (locationSearchLower) {
+      const located = {};
+      for (const [type, firms] of Object.entries(result)) {
+        const filtered = firms.filter((f) => (f.location || "").toLowerCase().includes(locationSearchLower));
+        if (filtered.length) located[type] = filtered;
+      }
+      result = located;
+    }
+    if (activityFilter !== "all") {
+      const now = new Date();
+      const active = {};
+      for (const [type, firms] of Object.entries(result)) {
+        const filtered = firms.filter((f) => {
+          const updated = f.updated_date ? new Date(f.updated_date) : f.created_date ? new Date(f.created_date) : null;
+          if (!updated) return activityFilter === "stale";
+          const daysSince = Math.floor((now - updated) / 86400000);
+          if (activityFilter === "30") return daysSince <= 30;
+          if (activityFilter === "90") return daysSince > 30 && daysSince <= 90;
+          if (activityFilter === "stale") return daysSince > 90;
+          return true;
+        });
+        if (filtered.length) active[type] = filtered;
+      }
+      result = active;
     }
     if (dateRange.start || dateRange.end) {
       const start = dateRange.start ? new Date(dateRange.start + "T00:00:00") : null;
@@ -98,12 +139,50 @@ export default function FirmsSection({
       result = dated;
     }
     return result;
-  }, [groupedFirms, searchLower, typeFilter, dateRange]);
+  }, [groupedFirms, searchLower, selectedTypes, selectedRegions, activityFilter, locationSearchLower, dateRange]);
 
   const allFirms = React.useMemo(
     () => FIRM_TYPES.flatMap((t) => filteredGrouped[t] || []).sort((a, b) => a.name.localeCompare(b.name)),
     [filteredGrouped]
   );
+
+  const filterCounts = React.useMemo(() => {
+    const types = {};
+    const regions = {};
+    for (const [type, firms] of Object.entries(groupedFirms)) {
+      types[type] = firms.length;
+      for (const f of firms) {
+        const r = f.geographic_region || "Undefined";
+        regions[r] = (regions[r] || 0) + 1;
+      }
+    }
+    return { types, regions };
+  }, [groupedFirms]);
+
+  const toggleTypeFilter = (type) => {
+    setSelectedTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
+      return next;
+    });
+  };
+
+  const toggleRegionFilter = (region) => {
+    setSelectedRegions((prev) => {
+      const next = new Set(prev);
+      if (next.has(region)) next.delete(region);
+      else next.add(region);
+      return next;
+    });
+  };
+
+  const clearAllFilters = () => {
+    setSelectedTypes(new Set());
+    setSelectedRegions(new Set());
+    setActivityFilter("all");
+    setLocationSearch("");
+  };
 
   const handleExpandAll = () => {
     const allOpen = {};
@@ -307,103 +386,126 @@ export default function FirmsSection({
       {expanded && (
         <div className="pl-2 border-l-2 border-gray-100">
           <SectionSearch value={search} onChange={setSearch} placeholder="Search by firm name or type..." />
-          <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
-            <SectionTypeFilter
-              label="Filter by type"
-              value={typeFilter}
-              onChange={setTypeFilter}
-              options={FIRM_TYPES}
-            />
-            <DateRangeFilter
-              value={dateRange}
-              onChange={setDateRange}
-              label="Filter by date added"
-            />
-            {viewMode === "list" && (
-              <SectionExpandCollapse onExpandAll={handleExpandAll} onCollapseAll={handleCollapseAll} />
-            )}
-          </div>
-          {viewMode === "list" && FIRM_TYPES.map((type) =>
-            filteredGrouped[type] ? (
-              <FirmTypeSection
-                key={type}
-                type={type}
-                firms={filteredGrouped[type]}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                onAddToType={onAddToType}
-                onAddProduct={onAddProduct}
-                onEditProduct={onEditProduct}
-                onAddPortfolio={onAddPortfolio}
-                forceExpand={!!searchQuery}
-                isExpanded={expandedTypes[type]}
-                onToggle={() => toggleType(type)}
-                products={products}
-                selectionMode={selectionMode}
-                selectedIds={selectedIds}
-                onToggleSelect={toggleSelect}
-                onToggleSelectMany={toggleSelectMany}
-              />
-            ) : null
-          )}
-
-          {viewMode === "card" && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 py-1">
-              {allFirms.map((firm) => (
-                <FirmCard
-                  key={firm.id}
-                  firm={firm}
-                  onEdit={onEdit}
-                  onDelete={onDelete}
-                  onAddProduct={onAddProduct}
-                  onEditProduct={onEditProduct}
-                  onAddPortfolio={onAddPortfolio}
-                  products={products}
-                  forceExpand={false}
-                  selectionMode={selectionMode}
-                  selected={selectedIds.has(firm.id)}
-                  onToggleSelect={toggleSelect}
+          <div className="flex flex-col md:flex-row gap-3">
+            {showFilters && (
+              <div className="w-full md:w-56 flex-shrink-0">
+                <FirmFilterSidebar
+                  selectedTypes={selectedTypes}
+                  onToggleType={toggleTypeFilter}
+                  selectedRegions={selectedRegions}
+                  onToggleRegion={toggleRegionFilter}
+                  activityFilter={activityFilter}
+                  onActivityChange={setActivityFilter}
+                  locationSearch={locationSearch}
+                  onLocationSearchChange={setLocationSearch}
+                  onClearAll={clearAllFilters}
+                  counts={filterCounts}
                 />
-              ))}
-            </div>
-          )}
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`h-7 px-2 gap-1 text-xs ${showFilters ? "text-indigo-700 bg-indigo-50" : "text-gray-500 hover:text-indigo-700 hover:bg-indigo-50"}`}
+                  onClick={() => setShowFilters((v) => !v)}
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  {showFilters ? "Hide Filters" : "Filters"}
+                </Button>
+                <DateRangeFilter
+                  value={dateRange}
+                  onChange={setDateRange}
+                  label="Filter by date added"
+                />
+                {viewMode === "list" && (
+                  <SectionExpandCollapse onExpandAll={handleExpandAll} onCollapseAll={handleCollapseAll} />
+                )}
+              </div>
+              {viewMode === "list" && FIRM_TYPES.map((type) =>
+                filteredGrouped[type] ? (
+                  <FirmTypeSection
+                    key={type}
+                    type={type}
+                    firms={filteredGrouped[type]}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    onAddToType={onAddToType}
+                    onAddProduct={onAddProduct}
+                    onEditProduct={onEditProduct}
+                    onAddPortfolio={onAddPortfolio}
+                    forceExpand={!!searchQuery}
+                    isExpanded={expandedTypes[type]}
+                    onToggle={() => toggleType(type)}
+                    products={products}
+                    selectionMode={selectionMode}
+                    selectedIds={selectedIds}
+                    onToggleSelect={toggleSelect}
+                    onToggleSelectMany={toggleSelectMany}
+                  />
+                ) : null
+              )}
 
-          {viewMode === "kanban" && (
-            <div className="flex gap-3 overflow-x-auto pb-2">
-              {FIRM_TYPES.filter((t) => filteredGrouped[t]?.length).map((type) => (
-                <div key={type} className="flex-shrink-0 w-72">
-                  <div className="flex items-center gap-2 mb-2 px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-100">
-                    <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide truncate">{type}</span>
-                    <span className="text-xs text-gray-400 ml-auto">{filteredGrouped[type].length}</span>
-                  </div>
-                  <div className="space-y-2">
-                    {filteredGrouped[type].sort((a, b) => a.name.localeCompare(b.name)).map((firm) => (
-                      <FirmCard
-                        key={firm.id}
-                        firm={firm}
-                        onEdit={onEdit}
-                        onDelete={onDelete}
-                        onAddProduct={onAddProduct}
-                        onEditProduct={onEditProduct}
-                        onAddPortfolio={onAddPortfolio}
-                        products={products}
-                        forceExpand={false}
-                        selectionMode={selectionMode}
-                        selected={selectedIds.has(firm.id)}
-                        onToggleSelect={toggleSelect}
-                      />
-                    ))}
-                  </div>
+              {viewMode === "card" && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 py-1">
+                  {allFirms.map((firm) => (
+                    <FirmCard
+                      key={firm.id}
+                      firm={firm}
+                      onEdit={onEdit}
+                      onDelete={onDelete}
+                      onAddProduct={onAddProduct}
+                      onEditProduct={onEditProduct}
+                      onAddPortfolio={onAddPortfolio}
+                      products={products}
+                      forceExpand={false}
+                      selectionMode={selectionMode}
+                      selected={selectedIds.has(firm.id)}
+                      onToggleSelect={toggleSelect}
+                    />
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
+              )}
 
-          {Object.keys(filteredGrouped).length === 0 && (
-            <div className="text-sm text-gray-400 italic py-3 text-center border border-dashed border-gray-200 rounded-xl">
-              {searchQuery ? "No firms found" : 'Click "Add Firm" to create your first firm'}
+              {viewMode === "kanban" && (
+                <div className="flex gap-3 overflow-x-auto pb-2">
+                  {FIRM_TYPES.filter((t) => filteredGrouped[t]?.length).map((type) => (
+                    <div key={type} className="flex-shrink-0 w-72">
+                      <div className="flex items-center gap-2 mb-2 px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-100">
+                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide truncate">{type}</span>
+                        <span className="text-xs text-gray-400 ml-auto">{filteredGrouped[type].length}</span>
+                      </div>
+                      <div className="space-y-2">
+                        {filteredGrouped[type].sort((a, b) => a.name.localeCompare(b.name)).map((firm) => (
+                          <FirmCard
+                            key={firm.id}
+                            firm={firm}
+                            onEdit={onEdit}
+                            onDelete={onDelete}
+                            onAddProduct={onAddProduct}
+                            onEditProduct={onEditProduct}
+                            onAddPortfolio={onAddPortfolio}
+                            products={products}
+                            forceExpand={false}
+                            selectionMode={selectionMode}
+                            selected={selectedIds.has(firm.id)}
+                            onToggleSelect={toggleSelect}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {Object.keys(filteredGrouped).length === 0 && (
+                <div className="text-sm text-gray-400 italic py-3 text-center border border-dashed border-gray-200 rounded-xl">
+                  {searchQuery ? "No firms found" : 'Click "Add Firm" to create your first firm'}
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       )}
     </div>
