@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Library } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import DatePicker from "@/components/ui/date-picker";
@@ -18,9 +19,10 @@ import ScoringMatrixDocumentAnalyzer from "./ScoringMatrixDocumentAnalyzer";
 import ScoringMatrixTemplateEditor from "./ScoringMatrixTemplateEditor";
 import ScoringMatrixTestModeDialog from "./ScoringMatrixTestModeDialog";
 import ProcessTemplateAudit from "./ProcessTemplateAudit";
+import TemplateVersionDiffDialog from "./TemplateVersionDiffDialog";
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "@/components/ui/use-toast";
-import { Upload, X, FileText, FlaskConical } from "lucide-react";
+import { Upload, X, FileText, FlaskConical, GitBranch, GitCompare } from "lucide-react";
 
 let _qbId = 0;
 const nextQbId = () => `tstage_${Date.now()}_${++_qbId}`;
@@ -71,7 +73,7 @@ function SampleFileUpload({ fileUrl, fileName, onUpload, onClear }) {
  * Dialog for creating a new Template.
  * Fields: Template Name, Template Type (with add-new + duplicate validation).
  */
-export default function AddTemplateDialog({ open, onOpenChange, onCreated, editTemplate, defaultTemplateType }) {
+export default function AddTemplateDialog({ open, onOpenChange, onCreated, editTemplate, defaultTemplateType, newVersionFrom }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [name, setName] = useState("");
@@ -86,6 +88,18 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
   const [sampleFileName, setSampleFileName] = useState("");
   const [questionBankOpen, setQuestionBankOpen] = useState(false);
   const [testModeOpen, setTestModeOpen] = useState(false);
+  const [diffOpen, setDiffOpen] = useState(false);
+
+  // "New version" mode: creating a new template record by copying a prior version.
+  // The dialog is pre-filled from newVersionFrom and saves a NEW record (not an update),
+  // carrying version_number + prior_version_id to track the version chain.
+  const isNewVersion = !!newVersionFrom && !editTemplate;
+  const priorVersion = newVersionFrom?.version_number || 1;
+  const nextVersion = priorVersion + 1;
+  // The original snapshot used for the "Preview Changes" diff. In new-version mode it's
+  // the prior version; in edit mode it's the saved record (editTemplate is not mutated
+  // by this dialog, so it stays a valid "before" snapshot).
+  const diffOriginal = newVersionFrom || editTemplate;
 
   useEffect(() => {
     if (open) {
@@ -94,12 +108,26 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
         setTemplateType(editTemplate.template_type || "");
         setTemplateCategory(editTemplate.template_category || "Process Template");
         setCreateDate(editTemplate.create_date || format(new Date(), "yyyy-MM-dd"));
-        setStages(Array.isArray(editTemplate.stages) ? editTemplate.stages.map((s) => ({ ...s })) : []);
+        setStages(Array.isArray(editTemplate.stages) ? editTemplate.stages.map((s) => ({ ...s, sub_stages: (s.sub_stages || []).map((ss) => ({ ...ss })) })) : []);
         setDocChecklist(Array.isArray(editTemplate.documentation_checklist) ? editTemplate.documentation_checklist.map((it) => ({ ...it })) : []);
-        setScoringBlocks(Array.isArray(editTemplate.scoring_blocks) ? editTemplate.scoring_blocks.map((b) => ({ ...b })) : []);
+        setScoringBlocks(Array.isArray(editTemplate.scoring_blocks) ? editTemplate.scoring_blocks.map((b) => ({ ...b, criteria: (b.criteria || []).map((c) => ({ ...c, descriptors: (c.descriptors || []).map((d) => ({ ...d })) })) })) : []);
         setRatingConfig(editTemplate.rating_config ? JSON.parse(JSON.stringify(editTemplate.rating_config)) : null);
         setSampleFileUrl(editTemplate.sample_file_url || "");
         setSampleFileName(editTemplate.sample_file_name || "");
+      } else if (newVersionFrom) {
+        // Pre-fill from the prior version so the user starts from its content and
+        // only modifies what needs to change. Keeps the same name (versions are
+        // distinguished by version_number); create_date resets to today.
+        setName(newVersionFrom.name || "");
+        setTemplateType(newVersionFrom.template_type || "");
+        setTemplateCategory(newVersionFrom.template_category || "Process Template");
+        setCreateDate(format(new Date(), "yyyy-MM-dd"));
+        setStages(Array.isArray(newVersionFrom.stages) ? newVersionFrom.stages.map((s) => ({ ...s, sub_stages: (s.sub_stages || []).map((ss) => ({ ...ss })) })) : []);
+        setDocChecklist(Array.isArray(newVersionFrom.documentation_checklist) ? newVersionFrom.documentation_checklist.map((it) => ({ ...it })) : []);
+        setScoringBlocks(Array.isArray(newVersionFrom.scoring_blocks) ? newVersionFrom.scoring_blocks.map((b) => ({ ...b, criteria: (b.criteria || []).map((c) => ({ ...c, descriptors: (c.descriptors || []).map((d) => ({ ...d })) })) })) : []);
+        setRatingConfig(newVersionFrom.rating_config ? JSON.parse(JSON.stringify(newVersionFrom.rating_config)) : null);
+        setSampleFileUrl(newVersionFrom.sample_file_url || "");
+        setSampleFileName(newVersionFrom.sample_file_name || "");
       } else {
         setName("");
         setTemplateType(defaultTemplateType || "");
@@ -113,7 +141,7 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
         setSampleFileName("");
       }
     }
-  }, [open, editTemplate]);
+  }, [open, editTemplate, newVersionFrom]);
 
   // Clear stages when switching away from Manager Due Diligence or Manager Questionnaire
   useEffect(() => {
@@ -127,7 +155,11 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
     mutationFn: (data) => base44.entities.Template.create({ ...data, tenant_id: user?.linked_firm_id }),
     onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: ["templates"] });
-      toast({ title: "Template created", description: `"${created.name}" has been added.` });
+      if (isNewVersion) {
+        toast({ title: "New version created", description: `"${created.name}" v${created.version_number} created from v${priorVersion}.` });
+      } else {
+        toast({ title: "Template created", description: `"${created.name}" has been added.` });
+      }
       onOpenChange(false);
       if (onCreated) onCreated(created);
     },
@@ -190,7 +222,13 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
       sample_file_name: sampleFileName || undefined,
       approval_process_logic: [], // explicitly clear legacy data
     };
-    if (editTemplate) {
+    if (isNewVersion) {
+      // Create a new version record: stamp the version chain so the new template
+      // links back to the prior version it was copied from.
+      payload.version_number = nextVersion;
+      payload.prior_version_id = newVersionFrom.id;
+      createMutation.mutate(payload);
+    } else if (editTemplate) {
       updateMutation.mutate({ id: editTemplate.id, data: payload });
     } else {
       createMutation.mutate(payload);
@@ -204,7 +242,14 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Template" : "Add Template"}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2 flex-wrap">
+            {isNewVersion ? (
+              <><GitBranch className="w-4 h-4 text-indigo-600" /> Create New Version</>
+            ) : isEditing ? "Edit Template" : "Add Template"}
+            {isNewVersion && (
+              <Badge variant="outline" className="text-xs font-normal">v{priorVersion} → v{nextVersion}</Badge>
+            )}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
@@ -318,15 +363,49 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
             </>
           ) : null}
           <DialogFooter>
+            <div className="flex items-center gap-2 mr-auto">
+              {diffOriginal && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDiffOpen(true)}
+                  className="gap-1.5"
+                >
+                  <GitCompare className="w-3.5 h-3.5" />
+                  Preview Changes
+                </Button>
+              )}
+            </div>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={!name.trim() || isPending}>
-              {isEditing ? "Save Changes" : "Add Template"}
+              {isNewVersion ? `Create v${nextVersion}` : isEditing ? "Save Changes" : "Add Template"}
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
+
+      {diffOpen && diffOriginal && (
+        <TemplateVersionDiffDialog
+          open={diffOpen}
+          onOpenChange={setDiffOpen}
+          original={diffOriginal}
+          current={{
+            name,
+            template_type: templateType,
+            template_category: templateCategory,
+            sample_file_name: sampleFileName,
+            stages,
+            documentation_checklist: docChecklist,
+            scoring_blocks: scoringBlocks,
+            rating_config: ratingConfig,
+          }}
+          nextVersion={isNewVersion ? nextVersion : priorVersion}
+          priorVersion={isNewVersion ? priorVersion : (editTemplate?.version_number || 1)}
+        />
+      )}
 
       <QuestionBankPickerModal
         open={questionBankOpen}

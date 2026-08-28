@@ -257,6 +257,15 @@
           }
         }
       }
+    },
+    "version_number": {
+      "type": "integer",
+      "default": 1,
+      "description": "Sequential version number for this template. Version 1 is the original; each 'Create New Version' action increments the version. Together with prior_version_id, this tracks the template's evolution history so users can create a new version by copying a prior one and modifying only what changed."
+    },
+    "prior_version_id": {
+      "type": "string",
+      "description": "ID of the prior Template this version was created from (empty for the original / version 1). Set when a user creates a new version by copying a prior template; links back to the source for historical tracking."
     }
   },
   "required": [
