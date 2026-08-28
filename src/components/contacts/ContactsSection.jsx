@@ -67,6 +67,7 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
   const [filterDateRange, setFilterDateRange] = useState({ start: "", end: "" });
   const [typeFilter, setTypeFilter] = useState("all");
   const [stageEditorOpen, setStageEditorOpen] = useState(false);
+  const [kanbanFirmType, setKanbanFirmType] = useState("all");
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkTagOpen, setBulkTagOpen] = useState(false);
@@ -83,6 +84,26 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
       .then(() => queryClient.invalidateQueries({ queryKey: ["contacts"] }))
       .catch((err) => toast({ title: "Failed to move contact", description: err?.message, variant: "destructive" }));
   };
+
+  // Per-firm-type pipeline: resolve a contact's firm types from its linked firms.
+  const contactFirmTypes = useMemo(() => {
+    const byId = new Map((firms || []).map((f) => [f.id, f]));
+    return (c) => {
+      const types = new Set();
+      for (const fid of c.firm_ids || []) {
+        const f = byId.get(fid);
+        if (!f) continue;
+        (f.firm_types?.length ? f.firm_types : f.firm_type ? [f.firm_type] : []).forEach((t) => types.add(t));
+      }
+      return [...types];
+    };
+  }, [firms]);
+
+  // Stages shown on the Kanban: "all" → shared (no firm_type); a specific firm type → that type's stages.
+  const kanbanStages = useMemo(() => {
+    if (kanbanFirmType === "all") return pipelineStages.filter((s) => !s.firm_type);
+    return pipelineStages.filter((s) => (s.firm_type || "") === kanbanFirmType);
+  }, [pipelineStages, kanbanFirmType]);
 
   const handleToggleFilter = (fieldKey, value) => {
     setFilterSelected((prev) => {
@@ -242,6 +263,12 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
     return filterSectionContacts(contacts, filterText, filterSelected, firmMap, contactProductMap, contactPortfolioMap, filterDateRange);
   }, [contacts, filterText, filterSelected, firmMap, contactProductMap, contactPortfolioMap, filterDateRange, hasFilters]);
 
+  // Contacts shown on the Kanban: "all" → everyone; a specific firm type → only contacts of that firm type.
+  const kanbanContacts = useMemo(() => {
+    if (kanbanFirmType === "all") return filteredContacts;
+    return filteredContacts.filter((c) => contactFirmTypes(c).includes(kanbanFirmType));
+  }, [filteredContacts, kanbanFirmType, contactFirmTypes]);
+
   const visibleFirmTypes = FIRM_TYPES.filter((t) => typeFilter === "all" || t === typeFilter);
 
   // Group contacts: by firm type → by firm → sorted by last name
@@ -336,16 +363,29 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
           </Button>
           <ViewModeToggle value={viewMode} onChange={(m) => { setViewMode(m); setExpanded(true); }} />
           {viewMode === "kanban" && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-gray-600 hover:text-gray-700 hover:bg-gray-100 gap-1 text-xs"
-              onClick={() => setStageEditorOpen(true)}
-              title="Manage pipeline stages"
-            >
-              <Settings2 className="w-3.5 h-3.5" />
-              Stages
-            </Button>
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-gray-600 hover:text-gray-700 hover:bg-gray-100 gap-1 text-xs"
+                onClick={() => setStageEditorOpen(true)}
+                title="Manage pipeline stages"
+              >
+                <Settings2 className="w-3.5 h-3.5" />
+                Stages
+              </Button>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] text-gray-400">Pipeline:</span>
+                <select
+                  value={kanbanFirmType}
+                  onChange={(e) => setKanbanFirmType(e.target.value)}
+                  className="h-7 text-xs rounded-md border border-gray-200 bg-white px-2 outline-none focus:border-indigo-400"
+                >
+                  <option value="all">All (general)</option>
+                  {FIRM_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+            </>
           )}
           <Button
             variant="ghost"
@@ -593,8 +633,8 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
 
           {viewMode === "kanban" && (
             <ContactPipelineKanban
-              contacts={filteredContacts}
-              stages={pipelineStages}
+              contacts={kanbanContacts}
+              stages={kanbanStages}
               onMoveContact={handleMoveContact}
               onContactClick={onContactClick}
             />
@@ -608,7 +648,7 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
         </div>
       )}
 
-      <ContactPipelineStageEditor open={stageEditorOpen} onOpenChange={setStageEditorOpen} />
+      <ContactPipelineStageEditor open={stageEditorOpen} onOpenChange={setStageEditorOpen} defaultFirmType={kanbanFirmType === "all" ? "" : kanbanFirmType} />
       <BulkTagDialog open={bulkTagOpen} onOpenChange={setBulkTagOpen} selectedCount={selectedIds.size} onApply={handleBulkApplyTags} />
     </div>
   );

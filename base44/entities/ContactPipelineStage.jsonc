@@ -9,7 +9,20 @@
     "order": {
       "type": "number",
       "default": 0,
-      "description": "Display order of the stage (ascending). Lower values appear first (leftmost) on the Kanban board."
+      "description": "Display order of the stage (ascending). Lower values appear first (leftmost) on the Kanban board. Ordering is independent per firm type."
+    },
+    "firm_type": {
+      "type": "string",
+      "enum": [
+        "",
+        "Investment Manager",
+        "Allocator",
+        "Investment Consultant",
+        "Securities Brokerage",
+        "Trade Organizations"
+      ],
+      "default": "",
+      "description": "Firm type this pipeline stage belongs to. Empty means it is a shared/general stage shown across all firm types (the default pipeline). Set to a specific firm type to scope the stage to that firm type's allocation workflow \u2014 the Kanban board filters its columns by the selected firm type, and the stage editor manages stages within a chosen firm type context."
     }
   },
   "required": [
