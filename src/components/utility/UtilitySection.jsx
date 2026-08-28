@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 // Utility section — tools for cleanup, imports, and validation
-import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search, ArrowLeft, Users, Sparkles, ScrollText, ShieldCheck, Ghost, Upload, Eraser, Tag, UserX, Briefcase, Building, Package, Activity, Newspaper,   ArrowRightLeft, ExternalLink, ClipboardCheck } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search, ArrowLeft, Users, Sparkles, ScrollText, ShieldCheck, Ghost, Upload, Download, Eraser, Tag, UserX, Briefcase, Building, Package, Activity, Newspaper,   ArrowRightLeft, ExternalLink, ClipboardCheck } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -16,6 +16,8 @@ import DueDiligenceCleanup from "./DueDiligenceCleanup";
 import CsvContactImport from "./CsvContactImport";
 import CsvFirmImport from "./CsvFirmImport";
 import FirmImportWizard from "./FirmImportWizard";
+import BenchmarkTemplateDialog from "./BenchmarkTemplateDialog";
+import { downloadBenchmarkTemplate } from "./benchmarkTemplate";
 import CsvProductImport from "./CsvProductImport";
 import PlaceholderCleanup from "./PlaceholderCleanup";
 import FirmTypeValidation from "./FirmTypeValidation";
@@ -83,6 +85,7 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
   const [benchmarkQuery, setBenchmarkQuery] = useState("");
   const [cleanupStarted, setCleanupStarted] = useState(false);
   const [firmWizardOpen, setFirmWizardOpen] = useState(false);
+  const [benchmarkTemplateOpen, setBenchmarkTemplateOpen] = useState(false);
 
   // When opened from the header dropdown with defaultView="import-firms",
   // open the wizard dialog directly instead of showing an inline view.
@@ -228,7 +231,27 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
           {/* Benchmark view */}
           {view === "benchmark" && (
             <div className="space-y-2">
-              <div className="flex items-center justify-end">
+              <div className="flex items-center justify-end gap-1.5">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 gap-1 text-xs"
+                  onClick={downloadBenchmarkTemplate}
+                >
+                  <Download className="w-3 h-3" />
+                  Download Template
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs"
+                  onClick={() => setBenchmarkTemplateOpen(true)}
+                >
+                  <Upload className="w-3 h-3" />
+                  Upload Template
+                </Button>
                 <Button
                   type="button"
                   variant="ghost"
@@ -432,6 +455,12 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
       />
 
       <FirmImportWizard open={firmWizardOpen} onOpenChange={setFirmWizardOpen} />
+
+      <BenchmarkTemplateDialog
+        open={benchmarkTemplateOpen}
+        onOpenChange={setBenchmarkTemplateOpen}
+        existingBenchmarks={benchmarks}
+      />
     </div>
   );
 }

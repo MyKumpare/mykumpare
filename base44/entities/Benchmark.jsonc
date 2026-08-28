@@ -40,7 +40,7 @@
     },
     "monthly_returns": {
       "type": "array",
-      "description": "Monthly gross return data points",
+      "description": "Monthly return data points. Each entry stores the gross return and optionally the net return as percentages (e.g. 1.5 for 1.5%).",
       "items": {
         "type": "object",
         "properties": {
@@ -52,6 +52,10 @@
           "return_value": {
             "type": "number",
             "description": "Monthly gross return as a percentage (e.g. 1.5 for 1.5%)"
+          },
+          "net_return_value": {
+            "type": "number",
+            "description": "Monthly net return as a percentage (e.g. 1.2 for 1.2%). Optional; empty when only gross returns are available."
           }
         },
         "required": [
