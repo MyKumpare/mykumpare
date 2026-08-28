@@ -1,0 +1,183 @@
+{
+  "name": "SectionLayout",
+  "type": "object",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "ID of the firm (tenant) that owns this layout record. Set on creation to the creator's linked_firm_id; drives tenant isolation via RLS."
+    },
+    "section": {
+      "type": "string",
+      "description": "Section key identifying which section page this layout belongs to (e.g. 'dashboard', 'due_diligence', 'reports', 'portfolios')."
+    },
+    "scope": {
+      "type": "string",
+      "enum": [
+        "user",
+        "firmwide"
+      ],
+      "description": "Whether this is a personal layout (scoped to one user) or a firmwide layout (shared across all users in the firm). 'user' layouts are only visible to and editable by their owner; 'firmwide' layouts are visible to all firm members and editable by firm admins/co-admins."
+    },
+    "user_id": {
+      "type": "string",
+      "description": "User ID of the layout owner for user-scoped layouts. Empty for firmwide layouts. Used by RLS to let a user update/delete only their own personal layouts."
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Display name of the user who saved this layout (denormalized for display in the layout management UI)."
+    },
+    "categories": {
+      "type": "array",
+      "description": "Ordered list of categories for this section layout. Each category has an id, a display name, and an ordered list of module keys. The Uncategorized system category (id 'uncat') is always last and holds any modules not assigned to a user category.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique category identifier (system categories like 'uncat' use fixed ids; user categories use 'cat-<timestamp>')"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name of the category"
+          },
+          "isSystem": {
+            "type": "boolean",
+            "description": "True for the built-in Uncategorized bucket"
+          },
+          "items": {
+            "type": "array",
+            "description": "Ordered list of module keys assigned to this category",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "updated_at_label": {
+      "type": "string",
+      "description": "Human-readable timestamp of the last save (denormalized for display so users can see when a layout was last saved)."
+    }
+  },
+  "required": [
+    "section",
+    "scope",
+    "categories"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_edit": true
+                  }
+                },
+                {
+                  "$and": [
+                    {
+                      "data.scope": "user"
+                    },
+                    {
+                      "data.user_id": "{{user.id}}"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_delete": true
+                  }
+                },
+                {
+                  "$and": [
+                    {
+                      "data.scope": "user"
+                    },
+                    {
+                      "data.user_id": "{{user.id}}"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

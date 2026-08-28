@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,12 +19,59 @@ import CategoryNameDialog from "@/components/common/CategoryNameDialog";
  *  - onSelect(key): called when a card is clicked
  *  - accentRing: tailwind ring color class applied while dragging (e.g. "ring-indigo-300")
  */
-export default function SectionModuleGrid({ modules, moduleMap, defaultCategories, storageKey, onSelect, accentRing = "ring-indigo-300" }) {
-  const { categories, addCategory, renameCategory, deleteCategory, moveCategory, onDragEnd } =
-    useSectionLayout(modules, defaultCategories, storageKey);
+export default function SectionModuleGrid({ modules, moduleMap, defaultCategories, storageKey, onSelect, accentRing = "ring-indigo-300", readOnly = false, onLayoutApi }) {
+  const layout = useSectionLayout(modules, defaultCategories, storageKey);
+  const { categories, setCategories, addCategory, renameCategory, deleteCategory, moveCategory, onDragEnd } = layout;
   const [dialog, setDialog] = useState({ open: false, mode: "create", id: null, name: "" });
 
+  // Expose the layout API (setCategories) to the parent so it can load saved
+  // layouts from the entity into the working state.
+  useEffect(() => {
+    if (onLayoutApi) onLayoutApi({ setCategories });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onLayoutApi]);
+
   const isLastUserCategory = (idx) => idx >= categories.length - 2; // last before uncat
+
+  if (readOnly) {
+    return (
+      <div className="space-y-5">
+        {categories.map((cat) => (
+          <div key={cat.id} className="rounded-xl border border-gray-200 bg-white p-3">
+            <div className="flex items-center gap-2 mb-3 px-1">
+              <h3 className="text-sm font-semibold text-gray-700">{cat.name}</h3>
+              <span className="text-xs text-gray-400">({cat.items.length})</span>
+            </div>
+            {cat.items.length === 0 ? (
+              <div className="text-xs text-gray-400 py-6 text-center border-2 border-dashed border-gray-200 rounded-lg">
+                {cat.id === UNCAT_ID ? "No unassigned modules" : "No modules in this category"}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {cat.items.map((itemKey) => {
+                  const mod = moduleMap[itemKey];
+                  if (!mod) return null;
+                  const Icon = mod.icon;
+                  return (
+                    <button
+                      key={itemKey}
+                      onClick={() => onSelect(itemKey)}
+                      className="group flex items-center gap-3 p-3 rounded-lg border bg-white text-left transition-all hover:shadow-md hover:border-gray-300"
+                    >
+                      <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${mod.bg}`}>
+                        <Icon className={`w-5 h-5 ${mod.color}`} />
+                      </span>
+                      <span className="text-sm font-semibold text-gray-800 group-hover:text-gray-900">{mod.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">

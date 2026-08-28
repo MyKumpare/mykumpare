@@ -118,5 +118,5 @@ export function useSectionLayout(modules, defaultCategories, storageKey) {
     });
   }, []);
 
-  return { categories, addCategory, renameCategory, deleteCategory, moveCategory, onDragEnd };
+  return { categories, setCategories, addCategory, renameCategory, deleteCategory, moveCategory, onDragEnd };
 }
