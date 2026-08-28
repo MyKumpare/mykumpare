@@ -19,7 +19,7 @@ import ScoringMatrixHistoryTab from "@/components/templates/ScoringMatrixHistory
 import ScoringMatrixSnapshotsTab from "@/components/templates/ScoringMatrixSnapshotsTab";
 import ScoringAttachmentsManager from "@/components/templates/ScoringAttachmentsManager";
 import { computeOverallRating } from "@/components/templates/scoringRatingLogic";
-import { computeWeightedScoreMulti } from "@/components/templates/scoringWeightLogic";
+import { computeWeightedScoreMulti, effectiveAdjustedPrimary, effectiveFinalScore } from "@/components/templates/scoringWeightLogic";
 import RescoreConfirmDialog from "@/components/templates/RescoreConfirmDialog";
 import ClosedScoringEditWarning from "@/components/templates/ClosedScoringEditWarning";
 import FinalizeGuardDialog from "@/components/templates/FinalizeGuardDialog";
@@ -331,7 +331,20 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
   };
 
   const finalizeTeamReview = () => {
+    // Auto-populate adjusted_primary_score for every criterion:
+    //  - accepted team rec → team_score
+    //  - no accepted adjustment → primary analyst's score
+    const newBlocks = blocks.map((b) => ({
+      ...b,
+      criteria: (b.criteria || []).map((c) => ({
+        ...c,
+        adjusted_primary_score: c.team_status === "accepted"
+          ? (c.team_score ?? c.primary_score)
+          : (c.adjusted_primary_score ?? c.primary_score)
+      }))
+    }));
     updateMutation.mutate({
+      scoring_blocks: newBlocks,
       team_review_status: "completed",
       adjusted_primary_finalized: true,
       status: "ic_review"
@@ -342,9 +355,28 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
 
   const finalizeICReview = () => {
     const todayStr = format(new Date(), "yyyy-MM-dd");
-    const wfNum = computeWeightedFinalScoreNum();
+    // Auto-populate adjusted_primary_score and final_score for every criterion:
+    //  - adjusted primary = accepted team rec ? team_score : primary score
+    //  - final = accepted IC rec ? ic_score : adjusted primary
+    const newBlocks = blocks.map((b) => ({
+      ...b,
+      criteria: (b.criteria || []).map((c) => {
+        const adjPrimary = c.team_status === "accepted"
+          ? (c.team_score ?? c.primary_score)
+          : (c.adjusted_primary_score ?? c.primary_score);
+        const final = c.ic_status === "accepted"
+          ? (c.ic_score ?? adjPrimary)
+          : (c.final_score ?? adjPrimary);
+        return { ...c, adjusted_primary_score: adjPrimary, final_score: final };
+      })
+    }));
+    const wfNum = computeWeightedScoreMulti(newBlocks, "final_score", {
+      applyBonusPenalty: true,
+      mode: "perCriterion"
+    });
     const rating = computeOverallRating(wfNum, template?.rating_config);
     updateMutation.mutate({
+      scoring_blocks: newBlocks,
       ic_review_status: "completed",
       final_score_finalized: true,
       status: "finalized",
@@ -488,10 +520,10 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
   // to 100% total). Multipliers default to 1, so templates without them behave
   // exactly as before.
   const computeTotals = (scoreField) => {
-    const val = computeWeightedScoreMulti(blocks, scoreField, {
-      applyBonusPenalty: scoreField === "final_score",
-      mode: "perCriterion"
-    });
+    const opts = { applyBonusPenalty: scoreField === "final_score", mode: "perCriterion" };
+    if (scoreField === "adjusted_primary_score") opts.getValue = effectiveAdjustedPrimary;
+    if (scoreField === "final_score") opts.getValue = effectiveFinalScore;
+    const val = computeWeightedScoreMulti(blocks, scoreField, opts);
     return val != null ? val.toFixed(2) : "—";
   };
 
@@ -499,15 +531,16 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
   const computeWeightedFinalScoreNum = () =>
     computeWeightedScoreMulti(blocks, "final_score", {
       applyBonusPenalty: true,
-      mode: "perCriterion"
+      mode: "perCriterion",
+      getValue: effectiveFinalScore
     });
 
   const columns = [
     { key: "primary_score", label: "Primary", color: "#3b82f6", getValue: (c) => c.primary_score },
     { key: "team_score", label: "Team", color: "#f59e0b", getValue: (c) => c.team_score },
-    { key: "adjusted_primary_score", label: "Adj. Primary", color: "#8b5cf6", getValue: (c) => c.adjusted_primary_score },
+    { key: "adjusted_primary_score", label: "Adj. Primary", color: "#8b5cf6", getValue: effectiveAdjustedPrimary },
     { key: "ic_score", label: "IC", color: "#ec4899", getValue: (c) => c.ic_score },
-    { key: "final_score", label: "Final", color: "#10b981", getValue: (c) => c.final_score }
+    { key: "final_score", label: "Final", color: "#10b981", getValue: effectiveFinalScore }
   ];
 
   const showSecondary = score.secondary_scoring_enabled;
@@ -771,9 +804,14 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
                                 </button>
                               </div>
                             ) : (
-                              <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold border ${crit.adjusted_primary_score ? SCORE_COLORS[crit.adjusted_primary_score] : "border-gray-200"}`}>
-                                {crit.adjusted_primary_score || "—"}
-                              </span>
+                              (() => {
+                                const adj = effectiveAdjustedPrimary(crit);
+                                return (
+                                  <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold border ${adj ? SCORE_COLORS[adj] : "border-gray-200"}`}>
+                                    {adj || "—"}
+                                  </span>
+                                );
+                              })()
                             )}
                             {crit.team_status === "accepted" && <div className="text-[10px] text-green-600 mt-0.5">accepted</div>}
                             {crit.team_status === "rejected" && <div className="text-[10px] text-red-600 mt-0.5">rejected</div>}
@@ -796,7 +834,7 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
                               )}
                             </td>
                             <td className="p-2 text-center">
-                              <DeviationCell baseScore={crit.adjusted_primary_score ?? crit.primary_score} compareScore={crit.ic_score} />
+                              <DeviationCell baseScore={effectiveAdjustedPrimary(crit)} compareScore={crit.ic_score} />
                             </td>
                           </>
                         )}
@@ -813,9 +851,14 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
                                 </button>
                               </div>
                             ) : (
-                              <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold border ${crit.final_score ? SCORE_COLORS[crit.final_score] : "border-gray-200"}`}>
-                                {crit.final_score || "—"}
-                              </span>
+                              (() => {
+                                const fin = effectiveFinalScore(crit);
+                                return (
+                                  <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold border ${fin ? SCORE_COLORS[fin] : "border-gray-200"}`}>
+                                    {fin || "—"}
+                                  </span>
+                                );
+                              })()
                             )}
                           </td>
                         )}

@@ -7,6 +7,17 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertTriangle, CheckCircle2, Award, Star, Loader2 } from "lucide-react";
 import { computeOverallRating } from "@/components/templates/scoringRatingLogic";
+import { effectiveAdjustedPrimary, effectiveFinalScore } from "@/components/templates/scoringWeightLogic";
+
+// Effective value for a given phase field. Primary reads the raw field; the
+// adjusted-primary and final phases derive from accept/reject status so that
+// criteria with no explicit adjustment (which default to the primary score)
+// are not treated as unscored.
+function effectiveValue(crit, scoreField) {
+  if (scoreField === "adjusted_primary_score") return effectiveAdjustedPrimary(crit);
+  if (scoreField === "final_score") return effectiveFinalScore(crit);
+  return crit[scoreField];
+}
 
 const SCORE_COLORS = {
   1: "bg-red-100 text-red-700 border-red-300",
@@ -41,7 +52,7 @@ function computeWeightedScoreNum(blocks, scoreField) {
   (blocks || []).forEach((block) => {
     const blockWeight = (block.weight || 0) / 100;
     (block.criteria || []).forEach((crit) => {
-      let s = crit[scoreField];
+      let s = effectiveValue(crit, scoreField);
       if (s != null) {
         if (scoreField === "final_score" && crit.bonus_penalty_active && crit.bonus_penalty_value) {
           s = Math.max(1, Math.min(5, s + crit.bonus_penalty_value));
@@ -84,7 +95,7 @@ export default function FinalizeGuardDialog({
     return list;
   }, [blocks]);
 
-  const unscored = allCriteria.filter(({ crit }) => crit[scoreField] == null);
+  const unscored = allCriteria.filter(({ crit }) => effectiveValue(crit, scoreField) == null);
   const allScored = unscored.length === 0;
 
   const weightedNum = computeWeightedScoreNum(blocks, scoreField);

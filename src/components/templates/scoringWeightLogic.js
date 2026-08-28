@@ -17,6 +17,36 @@
 const num = (v) => (v == null || isNaN(v) ? 1 : Number(v));
 
 /**
+ * Effective adjusted primary score for a criterion.
+ *
+ * - If the primary analyst accepted the team's recommendation → team_score.
+ * - Otherwise (rejected, or not yet reviewed) → fall back to the primary
+ *   analyst's own score. i.e. "no accepted team rec adjustment" keeps the
+ *   primary recommendation.
+ */
+export function effectiveAdjustedPrimary(crit) {
+  if (!crit) return null;
+  if (crit.team_status === "accepted") return crit.team_score ?? crit.primary_score;
+  return crit.adjusted_primary_score != null ? crit.adjusted_primary_score : crit.primary_score;
+}
+
+/**
+ * Effective final score for a criterion.
+ *
+ * - If the primary analyst accepted the IC's recommendation → ic_score.
+ * - Otherwise → the effective adjusted primary (which already incorporates
+ *   the accepted team rec, or the primary score when no team rec was accepted).
+ *
+ * So the final column = adjusted primary (with accepted team recs) plus the
+ * accepted IC recommendations, falling back to the adjusted primary otherwise.
+ */
+export function effectiveFinalScore(crit) {
+  if (!crit) return null;
+  if (crit.ic_status === "accepted") return crit.ic_score ?? effectiveAdjustedPrimary(crit);
+  return crit.final_score != null ? crit.final_score : effectiveAdjustedPrimary(crit);
+}
+
+/**
  * Effective block weight % for the editor "adjust to 100% total" display.
  * Returns one entry per block with base weight, multiplier, effective weight,
  * and the normalized percentage (all normalized pcts sum to 100).
@@ -62,7 +92,8 @@ export function hasActiveMultipliers(blocks) {
  */
 export function computeWeightedScoreMulti(blocks, field, opts = {}) {
   if (!Array.isArray(blocks)) return null;
-  const { applyBonusPenalty = false, mode = "perCriterion" } = opts;
+  const { applyBonusPenalty = false, mode = "perCriterion", getValue } = opts;
+  const read = getValue ? (crit) => getValue(crit) : (crit) => crit[field];
 
   let total = 0;
   let totalWeight = 0;
@@ -75,7 +106,7 @@ export function computeWeightedScoreMulti(blocks, field, opts = {}) {
       let cws = 0;
       let cwsum = 0;
       crits.forEach((crit) => {
-        let s = crit[field];
+        let s = read(crit);
         if (s == null) return;
         if (applyBonusPenalty && field === "final_score" && crit.bonus_penalty_active && crit.bonus_penalty_value) {
           s = Math.max(1, Math.min(5, s + crit.bonus_penalty_value));
@@ -90,7 +121,7 @@ export function computeWeightedScoreMulti(blocks, field, opts = {}) {
       totalWeight += blockEff;
     } else {
       crits.forEach((crit) => {
-        let s = crit[field];
+        let s = read(crit);
         if (s == null) return;
         if (applyBonusPenalty && field === "final_score" && crit.bonus_penalty_active && crit.bonus_penalty_value) {
           s = Math.max(1, Math.min(5, s + crit.bonus_penalty_value));
