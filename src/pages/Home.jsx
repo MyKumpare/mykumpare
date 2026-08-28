@@ -45,7 +45,6 @@ import DashboardNavSection from "../components/dashboard/DashboardNavSection";
 import DashboardTimelineSection from "../components/dashboard/DashboardTimelineSection";
 import DashboardAnalystCoverageSection from "../components/dashboard/DashboardAnalystCoverageSection";
 import DashboardFirmCoverageSection from "../components/dashboard/DashboardFirmCoverageSection";
-import TopScoredFirmsSummary from "../components/dashboard/TopScoredFirmsSummary";
 import ManagementNavSection from "../components/dashboard/ManagementNavSection";
 import AnalyticsSection from "../components/analytics/AnalyticsSection";
 
@@ -1034,14 +1033,6 @@ export default function Home() {
         )}
         {/* Dashboard section — link to Overview dashboard page */}
         <DashboardNavSection onOpenDashboard={() => navigate("/Overview")} />
-
-        {/* Top 5 firms by latest finalized scoring matrix — quick performance shift view */}
-        <TopScoredFirmsSummary
-          onFirmClick={(firmId) => {
-            const firm = firms.find((f) => f.id === firmId && !f.deleted_at);
-            if (firm) handleEdit(firm);
-          }}
-        />
 
         {/* Due Diligence section — with Documents, Forms, Templates nested as sub-items */}
         <div ref={formsRef} />

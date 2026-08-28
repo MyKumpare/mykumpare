@@ -24,6 +24,7 @@ import ScoreTrendAnalyticsTab from "@/components/templates/ScoreTrendAnalyticsTa
 import FirmScoreTrend6mo from "@/components/monitor/FirmScoreTrend6mo";
 import MonitorModuleGrid from "@/components/monitor/MonitorModuleGrid";
 import { MODULE_MAP } from "@/components/monitor/monitorModules";
+import TopScoredFirmsSummary from "@/components/dashboard/TopScoredFirmsSummary";
 
 export default function MonitorPage() {
   const navigate = useNavigate();
@@ -99,6 +100,14 @@ export default function MonitorPage() {
         {!activeModule && (
           <div className="mb-4">
             <RfpRfiDueThisWeek onOpenAll={() => setActiveModule("rfp-rfi")} />
+          </div>
+        )}
+
+        {!activeModule && (
+          <div className="mb-4">
+            <TopScoredFirmsSummary
+              onFirmClick={(firmId) => navigate("/", { state: { openFirmId: firmId } })}
+            />
           </div>
         )}
 
