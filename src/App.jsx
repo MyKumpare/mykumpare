@@ -39,6 +39,10 @@ import WeeklyInteractionReport from './pages/WeeklyInteractionReport';
 import RelationshipNetworkMap from './pages/RelationshipNetworkMap';
 import InfluenceLevelDashboard from './pages/InfluenceLevelDashboard';
 import ScoringActivityCalendar from './pages/ScoringActivityCalendar';
+import SectionDueDiligence from './pages/SectionDueDiligence';
+import SectionReports from './pages/SectionReports';
+import SectionDashboard from './pages/SectionDashboard';
+import SectionPortfolios from './pages/SectionPortfolios';
 
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -129,6 +133,10 @@ const AuthenticatedApp = () => {
       <Route path="/RelationshipNetworkMap" element={<LayoutWrapper currentPageName="RelationshipNetworkMap"><RelationshipNetworkMap /></LayoutWrapper>} />
       <Route path="/InfluenceLevelDashboard" element={<LayoutWrapper currentPageName="InfluenceLevelDashboard"><InfluenceLevelDashboard /></LayoutWrapper>} />
       <Route path="/ScoringActivityCalendar" element={<LayoutWrapper currentPageName="ScoringActivityCalendar"><ScoringActivityCalendar /></LayoutWrapper>} />
+      <Route path="/DueDiligence" element={<LayoutWrapper currentPageName="DueDiligence"><SectionDueDiligence /></LayoutWrapper>} />
+      <Route path="/Reports" element={<LayoutWrapper currentPageName="Reports"><SectionReports /></LayoutWrapper>} />
+      <Route path="/Dashboard" element={<LayoutWrapper currentPageName="Dashboard"><SectionDashboard /></LayoutWrapper>} />
+      <Route path="/Portfolios" element={<LayoutWrapper currentPageName="Portfolios"><SectionPortfolios /></LayoutWrapper>} />
       <Route path="/register" element={<ExternalPartyRegister />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>

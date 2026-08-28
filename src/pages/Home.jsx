@@ -734,9 +734,9 @@ export default function Home() {
   const isAdmin = user?.role === "admin";
 
   const mobileNavItems = [
-    { label: "Dashboard", icon: LayoutDashboard, ref: null, color: "text-indigo-300", activeBg: "bg-indigo-50", onClick: () => navigate("/Overview") },
+    { label: "Dashboard", icon: LayoutDashboard, ref: null, color: "text-indigo-300", activeBg: "bg-indigo-50", onClick: () => navigate("/Dashboard") },
     { label: "AI Agents", icon: Bot, ref: null, color: "text-violet-300", activeBg: "bg-violet-50", onClick: () => navigate("/AiAgents") },
-    { label: "Due Diligence", icon: ShieldCheck, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => setDueDiligencePickerOpen(true), submenu: [
+    { label: "Due Diligence", icon: ShieldCheck, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => navigate("/DueDiligence"), submenu: [
       { label: "DD Board", icon: LayoutGrid, onClick: () => navigate("/DueDiligenceKanban") },
       { label: "DD Stats", icon: PieChart, onClick: () => navigate("/DueDiligenceDashboard") },
       { label: "Scoring Calendar", icon: CalendarDays, onClick: () => navigate("/ScoringActivityCalendar") },
@@ -745,11 +745,11 @@ export default function Home() {
       { label: "Templates", icon: FileText, onClick: () => setTemplatesPickerOpen(true) },
     ] },
     { label: "Monitor", icon: Radar, ref: null, color: "text-rose-600", activeBg: "bg-rose-50", onClick: () => navigate("/Monitor") },
-    { label: "Report", icon: FileBarChart, ref: null, color: "text-cyan-600", activeBg: "bg-cyan-50", onClick: () => setAnalyticsLaunchOpen(true), submenu: [
+    { label: "Report", icon: FileBarChart, ref: null, color: "text-cyan-600", activeBg: "bg-cyan-50", onClick: () => navigate("/Reports"), submenu: [
       { label: "Analytics", icon: LineChart, onClick: () => setAnalyticsLaunchOpen(true) },
       { label: "Reports", icon: FileText, onClick: () => setReportsPickerOpen(true) },
     ] },
-    { label: "Portfolios", icon: BarChart3, ref: null, color: "text-emerald-600", activeBg: "bg-emerald-50", onClick: () => setPortfolioPickerOpen(true), submenu: [
+    { label: "Portfolios", icon: BarChart3, ref: null, color: "text-emerald-600", activeBg: "bg-emerald-50", onClick: () => navigate("/Portfolios"), submenu: [
       { label: "Portfolio Picker", icon: Briefcase, onClick: () => setPortfolioPickerOpen(true) },
       { label: "Funding Dashboard", icon: PieChart, onClick: () => navigate("/PortfolioFundingDashboard") },
       { label: "Funding Report", icon: FileBarChart, onClick: () => navigate("/PortfolioFundingReport") },
@@ -1032,13 +1032,13 @@ export default function Home() {
           </div>
         )}
         {/* Dashboard section — link to Overview dashboard page */}
-        <DashboardNavSection onOpenDashboard={() => navigate("/Overview")} />
+        <DashboardNavSection onOpenDashboard={() => navigate("/Dashboard")} />
 
         {/* Due Diligence section — with Documents, Forms, Templates nested as sub-items */}
         <div ref={formsRef} />
         <DueDiligenceNavSection
           documentsCount={documents.filter(d => !d.deleted_at).length}
-          onOpenDueDiligence={() => setDueDiligencePickerOpen(true)}
+          onOpenDueDiligence={() => navigate("/DueDiligence")}
           onAddDueDiligence={() => setDdAddOpen(true)}
           onOpenDocuments={() => setDocumentsPickerOpen(true)}
           onAddDocuments={() => setAddDocOpen(true)}
