@@ -4,8 +4,9 @@ import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
-import { CheckCircle2, Clock, Building2, TrendingUp, ClipboardCheck, AlertCircle, GitMerge } from "lucide-react";
+import { CheckCircle2, Clock, Building2, TrendingUp, ClipboardCheck, AlertCircle, GitMerge, X } from "lucide-react";
 import { format, differenceInDays, parseISO } from "date-fns";
+import { useNavigate } from "react-router-dom";
 import MergeDueDiligenceDialog from "@/components/firms/MergeDueDiligenceDialog";
 
 const PIE_COLORS = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
@@ -41,6 +42,7 @@ function StatCard({ icon: Icon, label, value, sublabel, color }) {
 }
 
 export default function DueDiligenceDashboard() {
+  const navigate = useNavigate();
   const [mergeOpen, setMergeOpen] = useState(false);
   const { data: records = [], isLoading } = useQuery({
     queryKey: ["due-diligence-all"],
@@ -128,10 +130,21 @@ export default function DueDiligenceDashboard() {
           <TrendingUp className="w-5 h-5 text-indigo-600" />
           <h2 className="text-lg font-bold text-gray-800">Due Diligence Analytics</h2>
         </div>
-        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setMergeOpen(true)}>
-          <GitMerge className="w-4 h-4" />
-          Merge Duplicates
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setMergeOpen(true)}>
+            <GitMerge className="w-4 h-4" />
+            Merge Duplicates
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1"
+            onClick={() => navigate("/")}
+            title="Close and return to dashboard"
+          >
+            <X className="w-4 h-4" /> Close
+          </Button>
+        </div>
       </div>
       <MergeDueDiligenceDialog open={mergeOpen} onOpenChange={setMergeOpen} />
 
