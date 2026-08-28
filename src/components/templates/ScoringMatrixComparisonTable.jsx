@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, TrendingUp, AlertTriangle, CheckCircle2, BarChart3, ArrowUp, ArrowDown, Minus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import ScoringMatrixBenchmarkChart from "./ScoringMatrixBenchmarkChart";
+import ScoringMatrixReviewNotes from "./ScoringMatrixReviewNotes";
 
 const SCORE_COLORS = {
   1: "bg-red-100 text-red-700 border-red-300",
@@ -15,7 +16,7 @@ const SCORE_COLORS = {
  * Enhanced comparison table showing Primary, Team, IC, and Final scores side-by-side.
  * Team and IC cells are shaded green/red based on their deviation from the Final score.
  */
-export default function ScoringMatrixComparisonTable({ blocks, showSecondary, showTeam, showAdjustedPrimary, showIC, showFinal, benchmark }) {
+export default function ScoringMatrixComparisonTable({ blocks, showSecondary, showTeam, showAdjustedPrimary, showIC, showFinal, benchmark, scoreId, reviewNotes }) {
   const [expandedBlocks, setExpandedBlocks] = useState({});
   const hasBenchmark = benchmark && benchmark.total_sample_size > 0 && Object.keys(benchmark.criteria || {}).length > 0;
 
@@ -329,6 +330,11 @@ export default function ScoringMatrixComparisonTable({ blocks, showSecondary, sh
             ))}
           </div>
         </div>
+      )}
+
+      {/* Qualitative review notes — auto-saves to the score record */}
+      {scoreId && (
+        <ScoringMatrixReviewNotes scoreId={scoreId} reviewNotes={reviewNotes} />
       )}
     </div>
   );

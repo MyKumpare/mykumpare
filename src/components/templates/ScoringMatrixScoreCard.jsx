@@ -821,7 +821,7 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
               )}
             </Button>
           </div>
-          <ScoringMatrixComparisonTable blocks={blocks} showSecondary={showSecondary} showTeam={showTeam} showAdjustedPrimary={showAdjustedPrimary} showIC={showIC} showFinal={showFinal} benchmark={benchmark} />
+          <ScoringMatrixComparisonTable blocks={blocks} showSecondary={showSecondary} showTeam={showTeam} showAdjustedPrimary={showAdjustedPrimary} showIC={showIC} showFinal={showFinal} benchmark={benchmark} scoreId={scoreId} reviewNotes={score.review_notes} />
         </div>
       )}
 
