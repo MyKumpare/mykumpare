@@ -63,3 +63,24 @@ export function validateEnum(value, options) {
   if (options.includes(v)) return v;
   return options.find((o) => o.toLowerCase() === v.toLowerCase());
 }
+
+/**
+ * Parse an Excel (.xlsx/.xls) file into the same 2D-array shape as parseCSV:
+ * an array of rows, each an array of stringified cell values, with the first
+ * row treated as the header. Empty rows are dropped. Reads the first worksheet.
+ */
+export async function parseExcel(file) {
+  const XLSX = await import("xlsx");
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type: "array" });
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", raw: false });
+  return aoa
+    .map((row) => (row || []).map((c) => (c == null ? "" : String(c).trim())))
+    .filter((r) => r.some((c) => c !== ""));
+}
+
+/** True when the file name ends in an Excel extension we can parse. */
+export function isExcelFile(name) {
+  return /\.(xlsx|xls|xlsm)$/i.test(name || "");
+}

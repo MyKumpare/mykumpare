@@ -6,7 +6,7 @@ import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Upload, CheckCircle2, AlertTriangle, Loader2, Download, ArrowLeft, Globe, Merge } from "lucide-react";
-import { parseCSV, autoMapHeader, validateEnum } from "./csvUtils";
+import { parseCSV, autoMapHeader, validateEnum, parseExcel, isExcelFile } from "./csvUtils";
 import { enrichFirmFromWeb, mergeEnrichmentData, mergeContactEnrichment, parsePhoneString } from "../ai/firmEnrichment";
 import { detectDesignations } from "../contacts/designationDetector";
 import { findFirmNameDuplicates } from "../firms/firmNameDuplicateCheck";
@@ -179,28 +179,25 @@ export default function CsvFirmImport() {
     return () => clearInterval(id);
   }, [stage, enrichProgress?.current]);
 
-  const handleFile = useCallback((file) => {
+  const handleFile = useCallback(async (file) => {
     if (!file) return;
-    if (!file.name.match(/\.(csv|txt)$/i)) {
-      toast({ title: "Invalid file", description: "Please upload a .csv file.", variant: "destructive" });
+    const isExcel = isExcelFile(file.name);
+    if (!isExcel && !/\.(csv|txt)$/i.test(file.name)) {
+      toast({ title: "Invalid file", description: "Please upload a .csv or .xlsx file.", variant: "destructive" });
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const rows = parseCSV(e.target.result);
-      if (rows.length < 2) {
-        toast({ title: "Empty CSV", description: "The file has no data rows.", variant: "destructive" });
-        return;
-      }
-      const headers = rows[0].map((h) => h.trim());
-      const dataRows = rows.slice(1);
-      const auto = {};
-      headers.forEach((h, i) => { auto[i] = autoMapHeader(h, FIELD_ALIASES); });
-      setCsvData({ headers, rows: dataRows });
-      setMapping(auto);
-      setStage("mapping");
-    };
-    reader.readAsText(file);
+    const rows = isExcel ? await parseExcel(file) : parseCSV(await file.text());
+    if (rows.length < 2) {
+      toast({ title: "Empty file", description: "The file has no data rows.", variant: "destructive" });
+      return;
+    }
+    const headers = rows[0].map((h) => h.trim());
+    const dataRows = rows.slice(1);
+    const auto = {};
+    headers.forEach((h, i) => { auto[i] = autoMapHeader(h, FIELD_ALIASES); });
+    setCsvData({ headers, rows: dataRows });
+    setMapping(auto);
+    setStage("mapping");
   }, []);
 
   const mappedFields = useMemo(() => {
@@ -349,10 +346,10 @@ export default function CsvFirmImport() {
             <Upload className="w-6 h-6 text-indigo-600" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-gray-700">Upload Firm CSV File</p>
-            <p className="text-xs text-gray-400 mt-1">Drag & drop or click to browse</p>
+            <p className="text-sm font-semibold text-gray-700">Upload Firm CSV or Excel File</p>
+            <p className="text-xs text-gray-400 mt-1">Drag & drop or click to browse (.csv, .xlsx)</p>
           </div>
-          <input id="firm-csv-file-input" type="file" accept=".csv,.txt" className="hidden" onChange={(e) => handleFile(e.target.files[0])} />
+          <input id="firm-csv-file-input" type="file" accept=".csv,.txt,.xlsx,.xls,.xlsm" className="hidden" onChange={(e) => handleFile(e.target.files[0])} />
         </div>
         <div className="text-xs text-gray-500 bg-gray-50 rounded-lg p-3 space-y-1">
           <p className="font-semibold text-gray-600">Only two columns are required:</p>
