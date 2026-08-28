@@ -21,6 +21,7 @@ import ScoringAttachmentsManager from "@/components/templates/ScoringAttachments
 import { computeOverallRating } from "@/components/templates/scoringRatingLogic";
 import RescoreConfirmDialog from "@/components/templates/RescoreConfirmDialog";
 import ClosedScoringEditWarning from "@/components/templates/ClosedScoringEditWarning";
+import FinalizeGuardDialog from "@/components/templates/FinalizeGuardDialog";
 import { exportScoringMatrixComparisonPdf } from "@/components/templates/scoringMatrixComparisonPdf";
 import { exportScoringMatrixScorecardPdf } from "@/components/templates/scoringMatrixScorecardPdf";
 import { createScoringNotification } from "@/components/templates/scoringNotificationHelper";
@@ -193,6 +194,8 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
   // Tabs: scoring | chart | comparison | audit | history
   const [showRescoreDialog, setShowRescoreDialog] = useState(false);
   const [showClosedWarning, setShowClosedWarning] = useState(false);
+  // Pre-finalize guard: { scoreField, label, phase } | null
+  const [finalizeGuard, setFinalizeGuard] = useState(null);
   const [editReopened, setEditReopened] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [isExportingScorecard, setIsExportingScorecard] = useState(false);
@@ -282,6 +285,17 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
       criteria: (b.criteria || []).map((c) => ({ ...c, ...updates(c) }))
     }));
     updateMutation.mutate({ scoring_blocks: newBlocks });
+  };
+
+  // Confirm the finalize after the guard dialog verifies all items are scored
+  const confirmFinalizeGuard = () => {
+    const phase = finalizeGuard?.phase;
+    const fn = phase === "primary" ? finalizePrimary
+      : phase === "team" ? finalizeTeamReview
+      : phase === "ic" ? finalizeICReview
+      : null;
+    setFinalizeGuard(null);
+    fn?.();
   };
 
   // Phase transitions
@@ -653,7 +667,7 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
           {/* Phase action buttons */}
           <div className="flex flex-wrap gap-2 items-center">
             {isPrimaryAnalyst && !score.primary_score_finalized && (
-              <Button size="sm" onClick={finalizePrimary} disabled={updateMutation.isPending}>
+              <Button size="sm" onClick={() => setFinalizeGuard({ scoreField: "primary_score", label: "Primary", phase: "primary" })} disabled={updateMutation.isPending}>
                 <CheckCircle2 className="w-3.5 h-3.5" /> Finalize Primary Scores
               </Button>
             )}
@@ -663,7 +677,7 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
               </Button>
             )}
             {isPrimaryAnalyst && showTeam && score.team_review_status === "in_progress" && (
-              <Button size="sm" onClick={finalizeTeamReview} disabled={updateMutation.isPending}>
+              <Button size="sm" onClick={() => setFinalizeGuard({ scoreField: "adjusted_primary_score", label: "Adjusted Primary", phase: "team" })} disabled={updateMutation.isPending}>
                 Finalize Adjusted Primary (End Team Review)
               </Button>
             )}
@@ -673,7 +687,7 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
               </Button>
             )}
             {isPrimaryAnalyst && showIC && score.ic_review_status === "in_progress" && (
-              <Button size="sm" onClick={finalizeICReview} disabled={updateMutation.isPending}>
+              <Button size="sm" onClick={() => setFinalizeGuard({ scoreField: "final_score", label: "Final", phase: "ic" })} disabled={updateMutation.isPending}>
                 Finalize Scoring Matrix
               </Button>
             )}
@@ -994,6 +1008,19 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
         versionNumber={score.version_number}
         onConfirm={reopenClosedScoring}
         onCancel={() => setShowClosedWarning(false)}
+      />
+
+      {/* Pre-finalize guard: unscored items + overall rating preview */}
+      <FinalizeGuardDialog
+        open={!!finalizeGuard}
+        onClose={() => setFinalizeGuard(null)}
+        blocks={blocks}
+        scoreField={finalizeGuard?.scoreField}
+        label={finalizeGuard?.label}
+        template={template}
+        updateCriterion={updateCriterion}
+        onConfirm={confirmFinalizeGuard}
+        isPending={updateMutation.isPending}
       />
     </div>
   );
