@@ -69,6 +69,7 @@ const TaskDetailModal = lazyDialog(() => import("../components/activity/TaskDeta
 const NewsAlertsModal = lazyDialog(() => import("../components/firms/NewsAlertsModal"));
 const UserProfileDialog = lazyDialog(() => import("../components/user/UserProfileDialog"));
 const ExternalPortalPickerModal = lazyDialog(() => import("../components/external/ExternalPortalPickerModal"));
+const FirmScoringExportWizard = lazyDialog(() => import("../components/firms/FirmScoringExportWizard"));
 import { useFirmOwner } from "@/components/admin/useFirmOwner";
 import { useVoiceSearch } from "@/hooks/useVoiceSearch";
 
@@ -150,6 +151,7 @@ export default function Home() {
   const [questionnaireAddOpen, setQuestionnaireAddOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [externalPortalOpen, setExternalPortalOpen] = useState(false);
+  const [firmScoringExportOpen, setFirmScoringExportOpen] = useState(false);
   const [photoCaptureOpen, setPhotoCaptureOpen] = useState(false);
   const [addContactPhotoUrl, setAddContactPhotoUrl] = useState(null);
   const [pasteContactOpen, setPasteContactOpen] = useState(false);
@@ -1148,6 +1150,7 @@ export default function Home() {
             onAddProduct={handleAddProductFromFirm}
             onEditProduct={handleEditProduct}
             onAddPortfolio={(firm) => { setPreselectedAllocatorId(firm.id); setPortfolioDialogOpen(true); }}
+            onOpenExportWizard={() => setFirmScoringExportOpen(true)}
             forceExpanded={allExpanded}
           />
         )}
@@ -1612,6 +1615,12 @@ export default function Home() {
       <ExternalPortalPickerModal
         open={externalPortalOpen}
         onClose={() => setExternalPortalOpen(false)}
+      />
+
+      <FirmScoringExportWizard
+        open={firmScoringExportOpen}
+        onClose={() => setFirmScoringExportOpen(false)}
+        firms={firms}
       />
 
       {/* Utility full-screen modal — opened from the header Utilities icon */}

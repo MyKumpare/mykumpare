@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import FirmCard from "./FirmCard";
 
 const TYPE_COLORS = {
@@ -12,7 +13,7 @@ const TYPE_COLORS = {
   "Trade Organizations": "bg-cyan-100 text-cyan-700",
 };
 
-export default function FirmTypeSection({ type, firms, onEdit, onDelete, onAddToType, onAddProduct, onEditProduct, onAddPortfolio, forceExpand, isExpanded: isExpandedProp, onToggle, products = [] }) {
+export default function FirmTypeSection({ type, firms, onEdit, onDelete, onAddToType, onAddProduct, onEditProduct, onAddPortfolio, forceExpand, isExpanded: isExpandedProp, onToggle, products = [], selectionMode = false, selectedIds = new Set(), onToggleSelect, onToggleSelectMany }) {
   const [internalExpanded, setInternalExpanded] = useState(false);
   const isExpanded = isExpandedProp !== undefined ? isExpandedProp : (forceExpand || internalExpanded);
   const handleToggle = onToggle || (() => setInternalExpanded((v) => !v));
@@ -36,6 +37,14 @@ export default function FirmTypeSection({ type, firms, onEdit, onDelete, onAddTo
             <ChevronRight className="w-4 h-4 text-gray-400" />
           )}
         </button>
+        {selectionMode && (
+          <Checkbox
+            checked={firms.length > 0 && firms.every((f) => selectedIds.has(f.id))}
+            onCheckedChange={(checked) => onToggleSelectMany?.(firms.map((f) => f.id), !!checked)}
+            className="shrink-0"
+            aria-label={`Select all ${type} firms`}
+          />
+        )}
         <Button
           variant="ghost"
           size="sm"
@@ -68,6 +77,9 @@ export default function FirmTypeSection({ type, firms, onEdit, onDelete, onAddTo
                     onAddPortfolio={onAddPortfolio}
                     products={products}
                     forceExpand={forceExpand}
+                    selectionMode={selectionMode}
+                    selected={selectedIds.has(firm.id)}
+                    onToggleSelect={onToggleSelect}
                   />
                 ))}
               </AnimatePresence>

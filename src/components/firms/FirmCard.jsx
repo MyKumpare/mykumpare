@@ -1,13 +1,14 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Package, ChevronDown, ChevronRight, LayoutList } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import FirmStatusBadges from "./FirmStatusBadges";
 
 const FIRM_TYPE_TO_PRODUCT_TYPE = {
   "Investment Manager": "Investment Manager Product",
 };
 
-export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditProduct, onAddPortfolio, products = [], forceExpand = false }) {
+export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditProduct, onAddPortfolio, products = [], forceExpand = false, selectionMode = false, selected = false, onToggleSelect }) {
   const ALLOWED_FIRM_TYPES = ["Investment Manager"];
   const effectiveTypes = firm.firm_types?.length > 0 ? firm.firm_types : (firm.firm_type ? [firm.firm_type] : []);
   const allowedType = effectiveTypes.find(t => ALLOWED_FIRM_TYPES.includes(t));
@@ -32,9 +33,18 @@ export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditP
         {/* Clicking the card body opens the edit dialog */}
         <div
           className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
-          onClick={() => onEdit(firm)}
-          title={`Edit ${firm.name}`}
+          onClick={() => !selectionMode && onEdit(firm)}
+          title={selectionMode ? `Select ${firm.name}` : `Edit ${firm.name}`}
         >
+          {/* Selection checkbox — shown only in bulk-select mode */}
+          {selectionMode && (
+            <Checkbox
+              checked={selected}
+              onCheckedChange={(checked) => onToggleSelect?.(firm.id, !!checked)}
+              onClick={(e) => e.stopPropagation()}
+              className="shrink-0"
+            />
+          )}
           {/* Logo / icon */}
           <div className="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center overflow-hidden hover:ring-2 hover:ring-indigo-300 transition-all">
             {firm.logo_url ? (

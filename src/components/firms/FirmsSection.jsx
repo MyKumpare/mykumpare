@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from "react";
+import { base44 } from "@/api/base44Client";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
-import { Plus, ChevronDown, ChevronRight, Building } from "lucide-react";
+import { Plus, ChevronDown, ChevronRight, Building, CheckSquare, Radar as RadarIcon } from "lucide-react";
 import FirmTypeSection from "./FirmTypeSection";
 import FirmCard from "./FirmCard";
+import FirmsBulkActionsBar from "./FirmsBulkActionsBar";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
 import SectionSearch from "@/components/common/SectionSearch";
 import SectionTypeFilter from "@/components/common/SectionTypeFilter";
@@ -30,14 +34,21 @@ export default function FirmsSection({
   onAddProduct,
   onEditProduct,
   onAddPortfolio,
+  onOpenExportWizard,
   forceExpanded,
 }) {
+  const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
   const [viewMode, setViewMode] = useViewMode("firms");
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [dateRange, setDateRange] = useState({ start: "", end: "" });
   const [expandedTypes, setExpandedTypes] = useState({});
+
+  // Bulk selection state
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkBusy, setBulkBusy] = useState(null);
 
   const searchLower = search.toLowerCase().trim();
 
@@ -107,6 +118,72 @@ export default function FirmsSection({
   const toggleType = (type) =>
     setExpandedTypes((prev) => ({ ...prev, [type]: !prev[type] }));
 
+  // ── Bulk selection handlers ──
+  const toggleSelect = (firmId, checked) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(firmId);
+      else next.delete(firmId);
+      return next;
+    });
+  };
+
+  const toggleSelectMany = (ids, checked) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => (checked ? next.add(id) : next.delete(id)));
+      return next;
+    });
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+    setSelectionMode(false);
+  };
+
+  const selectedCount = selectedIds.size;
+
+  const handleBulkSetStatus = async (status) => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setBulkBusy("status");
+    try {
+      await base44.entities.Firm.bulkUpdate(ids.map((id) => ({ id, funding_status: status })));
+      queryClient.invalidateQueries({ queryKey: ["firms"] });
+      toast({
+        title: "Funding status updated",
+        description: `${ids.length} firm${ids.length !== 1 ? "s" : ""} set to "${status}".`,
+      });
+      clearSelection();
+    } catch (err) {
+      toast({ title: "Bulk update failed", description: err?.message, variant: "destructive" });
+    } finally {
+      setBulkBusy(null);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    if (!window.confirm(`Delete ${ids.length} firm${ids.length !== 1 ? "s" : ""}? They will be moved to Deleted Records and can be restored.`)) return;
+    setBulkBusy("delete");
+    try {
+      const nowIso = new Date().toISOString();
+      await base44.entities.Firm.bulkUpdate(ids.map((id) => ({ id, deleted_at: nowIso })));
+      queryClient.invalidateQueries({ queryKey: ["firms"] });
+      queryClient.invalidateQueries({ queryKey: ["deletedFirms"] });
+      toast({
+        title: "Firms deleted",
+        description: `${ids.length} firm${ids.length !== 1 ? "s" : ""} moved to Deleted Records.`,
+      });
+      clearSelection();
+    } catch (err) {
+      toast({ title: "Bulk delete failed", description: err?.message, variant: "destructive" });
+    } finally {
+      setBulkBusy(null);
+    }
+  };
+
   return (
     <div className="mb-6">
       {/* Section header */}
@@ -131,6 +208,28 @@ export default function FirmsSection({
           <Button
             variant="ghost"
             size="sm"
+            className={`h-7 px-2 gap-1 text-xs ${selectionMode ? "text-indigo-700 bg-indigo-50" : "text-gray-500 hover:text-indigo-700 hover:bg-indigo-50"}`}
+            onClick={() => { setSelectionMode((v) => !v); if (selectionMode) setSelectedIds(new Set()); }}
+            title={selectionMode ? "Exit selection mode" : "Select firms for bulk actions"}
+          >
+            <CheckSquare className="w-3.5 h-3.5" />
+            Select
+          </Button>
+          {onOpenExportWizard && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 gap-1 text-xs"
+              onClick={onOpenExportWizard}
+              title="Export a firm's scoring history and radar chart"
+            >
+              <RadarIcon className="w-3.5 h-3.5" />
+              Export Wizard
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
             className="h-7 px-2 text-primary hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs"
             onClick={onAddFirm}
           >
@@ -139,6 +238,17 @@ export default function FirmsSection({
           </Button>
         </div>
       </div>
+
+      {/* Bulk action bar — visible when firms are selected */}
+      {selectionMode && (
+        <FirmsBulkActionsBar
+          selectedCount={selectedCount}
+          onClear={clearSelection}
+          onSetStatus={handleBulkSetStatus}
+          onDelete={handleBulkDelete}
+          busy={bulkBusy}
+        />
+      )}
 
       {/* Firm type sub-sections */}
       {expanded && (
@@ -176,6 +286,10 @@ export default function FirmsSection({
                 isExpanded={expandedTypes[type]}
                 onToggle={() => toggleType(type)}
                 products={products}
+                selectionMode={selectionMode}
+                selectedIds={selectedIds}
+                onToggleSelect={toggleSelect}
+                onToggleSelectMany={toggleSelectMany}
               />
             ) : null
           )}
@@ -193,6 +307,9 @@ export default function FirmsSection({
                   onAddPortfolio={onAddPortfolio}
                   products={products}
                   forceExpand={false}
+                  selectionMode={selectionMode}
+                  selected={selectedIds.has(firm.id)}
+                  onToggleSelect={toggleSelect}
                 />
               ))}
             </div>
@@ -218,6 +335,9 @@ export default function FirmsSection({
                         onAddPortfolio={onAddPortfolio}
                         products={products}
                         forceExpand={false}
+                        selectionMode={selectionMode}
+                        selected={selectedIds.has(firm.id)}
+                        onToggleSelect={toggleSelect}
                       />
                     ))}
                   </div>
