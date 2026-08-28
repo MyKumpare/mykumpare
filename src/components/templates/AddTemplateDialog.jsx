@@ -81,6 +81,7 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
   const [stages, setStages] = useState([]);
   const [docChecklist, setDocChecklist] = useState([]);
   const [scoringBlocks, setScoringBlocks] = useState([]);
+  const [ratingConfig, setRatingConfig] = useState(null);
   const [sampleFileUrl, setSampleFileUrl] = useState("");
   const [sampleFileName, setSampleFileName] = useState("");
   const [questionBankOpen, setQuestionBankOpen] = useState(false);
@@ -96,6 +97,7 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
         setStages(Array.isArray(editTemplate.stages) ? editTemplate.stages.map((s) => ({ ...s })) : []);
         setDocChecklist(Array.isArray(editTemplate.documentation_checklist) ? editTemplate.documentation_checklist.map((it) => ({ ...it })) : []);
         setScoringBlocks(Array.isArray(editTemplate.scoring_blocks) ? editTemplate.scoring_blocks.map((b) => ({ ...b })) : []);
+        setRatingConfig(editTemplate.rating_config ? JSON.parse(JSON.stringify(editTemplate.rating_config)) : null);
         setSampleFileUrl(editTemplate.sample_file_url || "");
         setSampleFileName(editTemplate.sample_file_name || "");
       } else {
@@ -106,6 +108,7 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
         setStages([]);
         setDocChecklist([]);
         setScoringBlocks([]);
+        setRatingConfig(null);
         setSampleFileUrl("");
         setSampleFileName("");
       }
@@ -182,6 +185,7 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
       stages: payloadStages,
       documentation_checklist: payloadDocChecklist,
       scoring_blocks: payloadScoringBlocks,
+      rating_config: isScoringMatrix ? (ratingConfig || undefined) : undefined,
       sample_file_url: sampleFileUrl || undefined,
       sample_file_name: sampleFileName || undefined,
       approval_process_logic: [], // explicitly clear legacy data
@@ -254,7 +258,7 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
                   }
                 }}
               />
-              <ScoringMatrixTemplateEditor blocks={scoringBlocks} onChange={setScoringBlocks} templateId={editTemplate?.id} templateName={editTemplate?.name} />
+              <ScoringMatrixTemplateEditor blocks={scoringBlocks} onChange={setScoringBlocks} templateId={editTemplate?.id} templateName={editTemplate?.name} ratingConfig={ratingConfig} onRatingConfigChange={setRatingConfig} />
               <div className="flex justify-end">
                 <Button
                   type="button"

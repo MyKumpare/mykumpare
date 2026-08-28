@@ -260,6 +260,70 @@
       "type": "string",
       "description": "Free-text qualitative feedback captured alongside the quantitative scores during review (e.g. from the Top Firms comparison summary). Lets the analyst document context, rationale, or observations that the numeric scores alone don't capture."
     },
+    "attachments": {
+      "type": "array",
+      "description": "Supporting documents and analysis files attached to this scoring matrix. Each attachment is scoped either to the overall scoring matrix (scope='overall') or to an individual scoring item (scope=criterion id, with criterion_id set). Lets the analyst attach evidence backing the scores at both the matrix and per-criterion level.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name of the attached file."
+          },
+          "file_url": {
+            "type": "string",
+            "description": "URL of the uploaded file."
+          },
+          "file_type": {
+            "type": "string",
+            "description": "MIME type or file extension."
+          },
+          "uploaded_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when the file was attached."
+          },
+          "uploaded_by_name": {
+            "type": "string",
+            "description": "Display name of the user who attached the file (denormalized)."
+          },
+          "scope": {
+            "type": "string",
+            "description": "Attachment scope: 'overall' for the whole scoring matrix, or a criterion id for a specific scoring item."
+          },
+          "criterion_id": {
+            "type": "string",
+            "description": "Criterion id when scoped to a specific scoring item (empty for overall attachments)."
+          },
+          "notes": {
+            "type": "string",
+            "description": "Optional note describing why this document is relevant to the score."
+          }
+        }
+      }
+    },
+    "overall_rating": {
+      "type": "string",
+      "description": "Auto-assigned overall rating label (numerical or text) based on the weighted final score and the template's rating_config rating_options. Assigned when the scoring matrix is finalized."
+    },
+    "overall_pass_fail": {
+      "type": "string",
+      "enum": [
+        "Pass",
+        "Fail",
+        ""
+      ],
+      "default": "",
+      "description": "Auto-assigned Pass/Fail overall assessment based on the template's pass_threshold vs the weighted final score. 'Pass' when the weighted final score meets or exceeds the threshold; 'Fail' when below; empty when Pass/Fail is not enabled on the template."
+    },
+    "rating_assigned_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the overall rating and Pass/Fail were last auto-assigned (on finalization)."
+    },
     "created_by_id": {
       "type": "string",
       "description": "ID of the user who created this score record (auto-set by platform)."

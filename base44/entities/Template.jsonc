@@ -189,6 +189,54 @@
           }
         }
       }
+    },
+    "rating_config": {
+      "type": "object",
+      "description": "Overall rating configuration for Scoring Matrix templates. Defines a Pass/Fail threshold and a set of rating options (each with a score range) that the system auto-assigns to a finalized scoring matrix based on its weighted final score. Configured once on the template and applied to every scoring matrix that uses it.",
+      "properties": {
+        "pass_fail_enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether the Pass/Fail overall assessment is active for scoring matrices using this template."
+        },
+        "pass_threshold": {
+          "type": "number",
+          "description": "Minimum weighted final score (on the 1-5 scale) required to achieve a 'Pass'. A weighted final score below this value yields a 'Fail'. Only used when pass_fail_enabled is true."
+        },
+        "rating_enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether the rating options (auto-assigned by score range) are active for scoring matrices using this template."
+        },
+        "rating_options": {
+          "type": "array",
+          "description": "Ordered list of rating options. Each option pairs a label (numerical or text, e.g. 'A', 'Buy', '5', 'Strong Buy') with a min/max weighted final score range. When a scoring matrix is finalized, the system finds the option whose range contains the weighted final score and assigns its label as the overall rating. Users can create, edit, and delete these options.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string",
+                "description": "Rating label (numerical or text) shown as the overall rating when the weighted final score falls within this option's range."
+              },
+              "min_score": {
+                "type": "number",
+                "description": "Minimum weighted final score (inclusive) for this rating to apply."
+              },
+              "max_score": {
+                "type": "number",
+                "description": "Maximum weighted final score (inclusive) for this rating to apply."
+              },
+              "color": {
+                "type": "string",
+                "description": "Hex color used for the rating badge when this option is assigned."
+              }
+            }
+          }
+        }
+      }
     }
   },
   "required": [

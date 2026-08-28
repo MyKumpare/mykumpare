@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Check, X, CheckCircle2, Circle, ChevronDown, ChevronRight, Sparkles, Loader2, FileText, Download, Brain, History, GitBranch, Lock, Calendar, AlertTriangle, PlusCircle, MinusCircle, Info, ToggleLeft, ToggleRight, Camera } from "lucide-react";
+import { Check, X, CheckCircle2, Circle, ChevronDown, ChevronRight, Sparkles, Loader2, FileText, Download, Brain, History, GitBranch, Lock, Calendar, AlertTriangle, PlusCircle, MinusCircle, Info, ToggleLeft, ToggleRight, Camera, Paperclip, Award, Star } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend, Tooltip
@@ -17,6 +17,8 @@ import ScoringMatrixComparisonTable from "@/components/templates/ScoringMatrixCo
 import ScoringMatrixAuditPanel from "@/components/templates/ScoringMatrixAuditPanel";
 import ScoringMatrixHistoryTab from "@/components/templates/ScoringMatrixHistoryTab";
 import ScoringMatrixSnapshotsTab from "@/components/templates/ScoringMatrixSnapshotsTab";
+import ScoringAttachmentsManager from "@/components/templates/ScoringAttachmentsManager";
+import { computeOverallRating } from "@/components/templates/scoringRatingLogic";
 import RescoreConfirmDialog from "@/components/templates/RescoreConfirmDialog";
 import ClosedScoringEditWarning from "@/components/templates/ClosedScoringEditWarning";
 import { exportScoringMatrixComparisonPdf } from "@/components/templates/scoringMatrixComparisonPdf";
@@ -325,12 +327,17 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
 
   const finalizeICReview = () => {
     const todayStr = format(new Date(), "yyyy-MM-dd");
+    const wfNum = computeWeightedFinalScoreNum();
+    const rating = computeOverallRating(wfNum, template?.rating_config);
     updateMutation.mutate({
       ic_review_status: "completed",
       final_score_finalized: true,
       status: "finalized",
       scoring_end_date: todayStr,
-      is_closed: true
+      is_closed: true,
+      overall_rating: rating.ratingLabel,
+      overall_pass_fail: rating.passFail,
+      rating_assigned_at: new Date().toISOString()
     });
     setEditReopened(false);
     createScoringNotification(score, "scoring_completed", currentUser, { phase: "Final" }).catch(() => {});
@@ -482,6 +489,26 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
     return totalWeight > 0 ? (total / totalWeight).toFixed(2) : "—";
   };
 
+  // Numeric weighted final score (with bonus/penalty applied) for rating auto-assignment
+  const computeWeightedFinalScoreNum = () => {
+    let total = 0;
+    let totalWeight = 0;
+    blocks.forEach((block) => {
+      const blockWeight = (block.weight || 0) / 100;
+      (block.criteria || []).forEach((crit) => {
+        let s = crit.final_score;
+        if (s != null) {
+          if (crit.bonus_penalty_active && crit.bonus_penalty_value) {
+            s = Math.max(1, Math.min(5, s + crit.bonus_penalty_value));
+          }
+          total += s * blockWeight;
+          totalWeight += blockWeight;
+        }
+      });
+    });
+    return totalWeight > 0 ? total / totalWeight : null;
+  };
+
   const columns = [
     { key: "primary_score", label: "Primary", color: "#3b82f6", getValue: (c) => c.primary_score },
     { key: "team_score", label: "Team", color: "#f59e0b", getValue: (c) => c.team_score },
@@ -495,6 +522,18 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
   const showAdjustedPrimary = score.team_review_status === "in_progress" || score.team_review_status === "completed" || score.adjusted_primary_finalized;
   const showIC = score.adjusted_primary_finalized;
   const showFinal = score.ic_review_status === "in_progress" || score.ic_review_status === "completed" || score.final_score_finalized;
+
+  // Overall rating auto-assigned from the weighted final score + template rating config
+  const weightedFinalScoreNum = computeWeightedFinalScoreNum();
+  const overallRating = computeOverallRating(weightedFinalScoreNum, template?.rating_config);
+  const ratingConfig = template?.rating_config;
+  const hasRatingConfig = !!(ratingConfig && (ratingConfig.pass_fail_enabled || ratingConfig.rating_enabled));
+
+  // Update the attachments array on the score record
+  const updateAttachments = (newAttachments) => {
+    updateMutation.mutate({ attachments: newAttachments });
+  };
+  const canEditAttachments = isPrimaryAnalyst && !isClosed;
 
   return (
     <div className="space-y-4">
@@ -529,6 +568,32 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
               <Badge variant="secondary" className="text-xs">Secondary: {score.secondary_analyst_name} ({score.secondary_scoring_status})</Badge>
             )}
           </div>
+          {hasRatingConfig && (showFinal || score.final_score_finalized) && (
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              {ratingConfig.pass_fail_enabled && (
+                <Badge
+                  variant="outline"
+                  className={`text-xs flex items-center gap-1 ${overallRating.passFail === "Pass" ? "border-green-300 text-green-700 bg-green-50" : overallRating.passFail === "Fail" ? "border-red-300 text-red-700 bg-red-50" : "text-gray-400"}`}
+                >
+                  <Award className="w-3 h-3" />
+                  {overallRating.passFail || "—"}
+                </Badge>
+              )}
+              {ratingConfig.rating_enabled && (
+                <Badge
+                  variant="outline"
+                  className="text-xs flex items-center gap-1"
+                  style={overallRating.ratingColor ? { borderColor: overallRating.ratingColor, color: overallRating.ratingColor, backgroundColor: `${overallRating.ratingColor}15` } : undefined}
+                >
+                  <Star className="w-3 h-3" />
+                  {overallRating.ratingLabel || "—"}
+                </Badge>
+              )}
+              <Badge variant="outline" className="text-xs text-gray-500">
+                Weighted Final: {weightedFinalScoreNum != null ? weightedFinalScoreNum.toFixed(2) : "—"}
+              </Badge>
+            </div>
+          )}
         </div>
         <div className="flex gap-2 flex-wrap justify-end">
           <Button variant="outline" size="sm" onClick={() => setActiveTab("scoring")}>Scoring</Button>
@@ -542,6 +607,9 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
           </Button>
           <Button variant="outline" size="sm" onClick={() => setActiveTab("snapshots")} className="text-teal-600 border-teal-200 hover:bg-teal-50">
             <Camera className="w-3.5 h-3.5" /> Snapshots
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setActiveTab("attachments")} className="text-cyan-600 border-cyan-200 hover:bg-cyan-50">
+            <Paperclip className="w-3.5 h-3.5" /> Attachments
           </Button>
           {isClosed && (
             <Button variant="outline" size="sm" onClick={() => setShowRescoreDialog(true)} className="text-indigo-600 border-indigo-300 hover:bg-indigo-50">
@@ -643,8 +711,20 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
                     {expandedBlocks[block.id] && (block.criteria || []).map((crit) => (
                       <tr key={crit.id} className="border-b hover:bg-gray-50">
                         <td className="p-2">
-                          <div className="font-medium">{crit.name}</div>
-                          {crit.category && <div className="text-gray-400 text-[10px]">{crit.category}</div>}
+                          <div className="flex items-start gap-1">
+                            <div className="flex-1">
+                              <div className="font-medium">{crit.name}</div>
+                              {crit.category && <div className="text-gray-400 text-[10px]">{crit.category}</div>}
+                            </div>
+                            <ScoringAttachmentsManager
+                              attachments={score.attachments}
+                              scope={crit.id}
+                              canEdit={canEditAttachments}
+                              onUpdate={updateAttachments}
+                              compact
+                              userName={currentUser?.full_name}
+                            />
+                          </div>
                         </td>
                         {/* Primary score */}
                         <td className="p-2 text-center">
@@ -845,6 +925,58 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
       {/* Snapshots Tab */}
       {activeTab === "snapshots" && (
         <ScoringMatrixSnapshotsTab score={score} />
+      )}
+
+      {/* Attachments Tab */}
+      {activeTab === "attachments" && (
+        <div className="space-y-4 border border-gray-200 rounded-lg p-4">
+          <div>
+            <h4 className="text-sm font-semibold mb-1 flex items-center gap-1.5">
+              <Paperclip className="w-4 h-4 text-cyan-600" /> Overall Scoring Matrix Attachments
+            </h4>
+            <p className="text-xs text-gray-500 mb-2">Supporting documents and analysis for the overall scoring matrix.</p>
+            <ScoringAttachmentsManager
+              attachments={score.attachments}
+              scope="overall"
+              canEdit={canEditAttachments}
+              onUpdate={updateAttachments}
+              userName={currentUser?.full_name}
+            />
+          </div>
+          <div className="border-t pt-3">
+            <h4 className="text-sm font-semibold mb-1">Per-Criterion Attachments</h4>
+            <p className="text-xs text-gray-500 mb-2">Supporting documents scoped to individual scoring items.</p>
+            <div className="space-y-3">
+              {blocks.map((block) => (
+                <div key={block.id} className="border border-gray-100 rounded-md">
+                  <div className="bg-gray-50 px-2 py-1.5 text-xs font-semibold text-gray-700 rounded-t-md">
+                    {block.name} <span className="text-gray-400 font-normal">({block.weight}%)</span>
+                  </div>
+                  <div className="divide-y divide-gray-100">
+                    {(block.criteria || []).map((crit) => {
+                      const critAtts = (score.attachments || []).filter((a) => (a.scope || "overall") === crit.id);
+                      return (
+                        <div key={crit.id} className="px-2 py-2">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-medium">{crit.name}</span>
+                            {critAtts.length > 0 && <Badge variant="secondary" className="text-[10px]">{critAtts.length}</Badge>}
+                          </div>
+                          <ScoringAttachmentsManager
+                            attachments={score.attachments}
+                            scope={crit.id}
+                            canEdit={canEditAttachments}
+                            onUpdate={updateAttachments}
+                            userName={currentUser?.full_name}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Re-score dialog */}
