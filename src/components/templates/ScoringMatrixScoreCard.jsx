@@ -38,18 +38,24 @@ const SCORE_COLORS = {
   5: "bg-green-100 text-green-700 border-green-300"
 };
 
-function ScoreCell({ score, onChange, disabled, placeholder = "—" }) {
+function ScoreCell({ score, onChange, disabled, placeholder = "—", descriptors }) {
+  const hasDesc = Array.isArray(descriptors) && descriptors.some((d) => d && d.text);
+  const descFor = (n) => (hasDesc ? descriptors.find((d) => d.level === n)?.text : null);
   return (
     <Select value={score?.toString() || ""} onValueChange={(v) => onChange(parseInt(v))} disabled={disabled}>
       <SelectTrigger className="h-8 w-16 text-xs">
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
-      <SelectContent>
-        {[1, 2, 3, 4, 5].map((n) => (
-          <SelectItem key={n} value={n.toString()}>
-            <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold border ${SCORE_COLORS[n]}`}>{n}</span>
-          </SelectItem>
-        ))}
+      <SelectContent className={hasDesc ? "min-w-[300px] max-w-[360px]" : ""}>
+        {[1, 2, 3, 4, 5].map((n) => {
+          const text = descFor(n);
+          return (
+            <SelectItem key={n} value={n.toString()} className="items-start py-1.5">
+              <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold border shrink-0 ${SCORE_COLORS[n]}`}>{n}</span>
+              {text && <span className="text-[11px] text-gray-600 leading-snug flex-1 ml-2 whitespace-normal">{text}</span>}
+            </SelectItem>
+          );
+        })}
       </SelectContent>
     </Select>
   );
@@ -868,6 +874,7 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
                             score={crit.primary_score}
                             onChange={(v) => updateCriterion(block.id, crit.id, { primary_score: v })}
                             disabled={!isPrimaryAnalyst || score.primary_score_finalized}
+                            descriptors={templateCriteria[crit.id]?.descriptors}
                           />
                         </td>
                         {/* Secondary score */}
@@ -877,6 +884,7 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
                               score={crit.secondary_score}
                               onChange={(v) => updateCriterion(block.id, crit.id, { secondary_score: v })}
                               disabled={!isSecondaryAnalyst || score.secondary_scoring_status === "completed"}
+                              descriptors={templateCriteria[crit.id]?.descriptors}
                             />
                           </td>
                         )}
@@ -889,6 +897,7 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
                                   score={crit.team_score}
                                   onChange={(v) => updateCriterion(block.id, crit.id, { team_score: v })}
                                   disabled={score.team_review_status === "completed"}
+                                  descriptors={templateCriteria[crit.id]?.descriptors}
                                 />
                               ) : (
                                 <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold border ${crit.team_score ? SCORE_COLORS[crit.team_score] : "border-gray-200"}`}>
@@ -936,6 +945,7 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
                                   score={crit.ic_score}
                                   onChange={(v) => updateCriterion(block.id, crit.id, { ic_score: v })}
                                   disabled={score.ic_review_status === "completed"}
+                                  descriptors={templateCriteria[crit.id]?.descriptors}
                                 />
                               ) : (
                                 <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold border ${crit.ic_score ? SCORE_COLORS[crit.ic_score] : "border-gray-200"}`}>

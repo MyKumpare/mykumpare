@@ -7,7 +7,8 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Layers, Gauge, AlertTriangle } from "lucide-react";
+import { Layers, Gauge, AlertTriangle, ArrowRight } from "lucide-react";
+import { computeEffectiveBlockWeights } from "@/components/templates/scoringWeightLogic";
 
 const SCORE_COLORS = {
   1: "bg-red-100 text-red-700 border-red-300",
@@ -77,6 +78,25 @@ export default function BulkUpdateScoringDialog({
   }, [mode, scope, sectionId, selectedCritIds, allCriteria]);
 
   const targetCount = targetCriteria.length;
+
+  // --- Multiplier preview: build the rubric with the proposed multiplier applied
+  // (not yet saved) so the user can see how effective weights shift before applying.
+  const previewBlocks = useMemo(() => {
+    const ids = mulScope === "all"
+      ? new Set((blocks || []).map((b) => b.id))
+      : new Set(mulSectionIds);
+    return (blocks || []).map((b) =>
+      ids.has(b.id)
+        ? { ...b, multiplier_enabled: mulEnabled, multiplier: mulEnabled ? mulValue : 1 }
+        : b
+    );
+  }, [blocks, mulScope, mulSectionIds, mulEnabled, mulValue]);
+
+  const currentEff = useMemo(() => computeEffectiveBlockWeights(blocks), [blocks]);
+  const previewEff = useMemo(() => computeEffectiveBlockWeights(previewBlocks), [previewBlocks]);
+  const effById = (arr) => Object.fromEntries(arr.map((b) => [b.id, b]));
+  const currentMap = effById(currentEff);
+  const previewMap = effById(previewEff);
 
   const handleApply = () => {
     if (mode === "scores") {
@@ -269,6 +289,70 @@ export default function BulkUpdateScoringDialog({
                 ))}
               </div>
             )}
+
+            {/* Side-by-side rubric preview: current vs. with the proposed multiplier,
+                with changed effective weights visually highlighted. */}
+            <div className="rounded-md border border-indigo-100 bg-indigo-50/40 p-2.5 space-y-2">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-indigo-700">
+                <Gauge className="w-3.5 h-3.5" />
+                Rubric Preview — effective weight changes
+              </div>
+              <div className="grid grid-cols-[1fr_auto_1fr] gap-x-2 items-center text-[11px]">
+                {/* Header row */}
+                <div className="text-gray-500 font-medium pl-1">Current</div>
+                <div></div>
+                <div className="text-indigo-700 font-medium pl-1">With Multiplier</div>
+                <div className="col-span-3 border-b border-indigo-100 my-0.5"></div>
+                {(blocks || []).map((b) => {
+                  const cur = currentMap[b.id];
+                  const nxt = previewMap[b.id];
+                  const curPct = cur?.normalizedPct ?? 0;
+                  const nxtPct = nxt?.normalizedPct ?? 0;
+                  const changed = Math.abs(curPct - nxtPct) > 0.05;
+                  const isTarget = (mulScope === "all" ? true : mulSectionIds.includes(b.id)) && (mulEnabled ? mulValue !== 1 : b.multiplier_enabled);
+                  const delta = nxtPct - curPct;
+                  return (
+                    <React.Fragment key={b.id}>
+                      <div className={`rounded px-1.5 py-1 ${changed ? "bg-amber-100/70" : "bg-white/60"}`}>
+                        <div className="font-medium text-gray-700 truncate">{b.name}</div>
+                        <div className="text-gray-400">
+                          {b.weight}% {b.multiplier_enabled ? `· ×${b.multiplier}` : ""}
+                          <span className="text-gray-500 font-medium"> → {curPct.toFixed(1)}%</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-center">
+                        {changed ? (
+                          <span
+                            className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${delta > 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
+                            title={delta > 0 ? "Increased" : "Decreased"}
+                          >
+                            {delta > 0 ? "▲" : "▼"} {Math.abs(delta).toFixed(1)}%
+                          </span>
+                        ) : (
+                          <ArrowRight className="w-3 h-3 text-gray-300" />
+                        )}
+                      </div>
+                      <div className={`rounded px-1.5 py-1 ${changed ? "bg-amber-100/70 ring-1 ring-amber-200" : "bg-white/60"} ${isTarget ? "border border-indigo-200" : ""}`}>
+                        <div className="font-medium text-gray-700 truncate flex items-center gap-1">
+                          {b.name}
+                          {isTarget && mulEnabled && mulValue !== 1 && (
+                            <span className="text-[9px] text-indigo-600 font-semibold">×{mulValue}</span>
+                          )}
+                        </div>
+                        <div className="text-gray-500 font-medium">{nxtPct.toFixed(1)}%</div>
+                      </div>
+                    </React.Fragment>
+                  );
+                })}
+              </div>
+              <div className="flex items-center justify-between text-[10px] text-gray-500 pt-0.5">
+                <span>Total stays 100% (normalized)</span>
+                <span className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-amber-200" /> changed</span>
+                  <span className="inline-flex items-center gap-1"><span className="w-2.5 h-2.5 rounded border border-indigo-200 bg-white" /> targeted</span>
+                </span>
+              </div>
+            </div>
 
             <div className="flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5">
               <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
