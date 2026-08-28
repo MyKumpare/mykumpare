@@ -19,6 +19,7 @@ import ScoringMatrixHistoryTab from "@/components/templates/ScoringMatrixHistory
 import RescoreConfirmDialog from "@/components/templates/RescoreConfirmDialog";
 import ClosedScoringEditWarning from "@/components/templates/ClosedScoringEditWarning";
 import { exportScoringMatrixComparisonPdf } from "@/components/templates/scoringMatrixComparisonPdf";
+import { exportScoringMatrixScorecardPdf } from "@/components/templates/scoringMatrixScorecardPdf";
 import { createScoringNotification } from "@/components/templates/scoringNotificationHelper";
 
 const SCORE_COLORS = {
@@ -191,6 +192,7 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
   const [showClosedWarning, setShowClosedWarning] = useState(false);
   const [editReopened, setEditReopened] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [isExportingScorecard, setIsExportingScorecard] = useState(false);
 
   const { data: score, isLoading } = useQuery({
     queryKey: ["scoringMatrixScore", scoreId],
@@ -377,6 +379,24 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
     }
   };
 
+  // Export individual firm scorecard as PDF (includes bonus/penalty adjustments)
+  const handleExportScorecardPdf = async () => {
+    setIsExportingScorecard(true);
+    try {
+      await exportScoringMatrixScorecardPdf({
+        score,
+        blocks,
+        template,
+        showFlags: { showSecondary, showTeam, showAdjustedPrimary, showIC, showFinal }
+      });
+      toast({ title: "Scorecard exported", description: "The firm scorecard PDF has been downloaded." });
+    } catch (err) {
+      toast({ title: "PDF export failed", description: err?.message, variant: "destructive" });
+    } finally {
+      setIsExportingScorecard(false);
+    }
+  };
+
   // Initialize team scores from primary scores
   const initTeamScores = () => {
     updateAllCriteria((c) => ({
@@ -521,6 +541,13 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
               <GitBranch className="w-3.5 h-3.5" /> Re-Score
             </Button>
           )}
+          <Button variant="outline" size="sm" onClick={handleExportScorecardPdf} disabled={isExportingScorecard} className="text-emerald-700 border-emerald-200 hover:bg-emerald-50">
+            {isExportingScorecard ? (
+              <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating...</>
+            ) : (
+              <><FileText className="w-3.5 h-3.5" /> Export Scorecard</>
+            )}
+          </Button>
           {onBack && <Button variant="ghost" size="sm" onClick={onBack}>Back</Button>}
         </div>
       </div>
