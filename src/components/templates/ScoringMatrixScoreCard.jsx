@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -158,6 +158,8 @@ function DeviationCell({ baseScore, compareScore }) {
 }
 
 function ScoreRadarChart({ blocks, columns }) {
+  const [visible, setVisible] = useState(() => new Set(columns.map((c) => c.key)));
+
   const data = useMemo(() => {
     const criteria = [];
     blocks.forEach((block) => {
@@ -172,19 +174,106 @@ function ScoreRadarChart({ blocks, columns }) {
     return criteria;
   }, [blocks, columns]);
 
+  // Keep the visible set in sync when the available columns change (phase toggles)
+  useEffect(() => {
+    setVisible((prev) => {
+      const valid = new Set(columns.map((c) => c.key));
+      const kept = new Set([...prev].filter((k) => valid.has(k)));
+      return kept.size > 0 ? kept : new Set(columns.map((c) => c.key));
+    });
+  }, [columns]);
+
+  const visibleCols = columns.filter((c) => visible.has(c.key));
+
+  const toggle = (key) => {
+    setVisible((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        if (next.size > 1) next.delete(key); // always keep at least one series
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  // Difference mode: exactly two series selected → show what changed between them.
+  // The later series (by column order) is compared against the earlier one.
+  const diffMode = visibleCols.length === 2;
+  const [fromCol, toCol] = visibleCols;
+
+  const diffData = useMemo(() => {
+    if (!diffMode) return null;
+    return data.map((d) => {
+      const diff = (d[toCol.key] || 0) - (d[fromCol.key] || 0);
+      return {
+        ...d,
+        diff,
+        diffPos: Math.max(0, diff),      // green spike magnitude (increase)
+        diffNegAbs: Math.max(0, -diff),  // red spike magnitude (decrease, plotted as absolute)
+      };
+    });
+  }, [data, diffMode, fromCol, toCol]);
+
   return (
-    <ResponsiveContainer width="100%" height={350}>
-      <RadarChart data={data}>
-        <PolarGrid />
-        <PolarAngleAxis dataKey="criterion" tick={{ fontSize: 9 }} />
-        <PolarRadiusAxis domain={[0, 5]} tick={{ fontSize: 9 }} />
-        {columns.map((col) => (
-          <Radar key={col.key} name={col.label} dataKey={col.key} stroke={col.color} fill={col.color} fillOpacity={0.15} />
-        ))}
-        <Legend />
-        <Tooltip />
-      </RadarChart>
-    </ResponsiveContainer>
+    <div>
+      <ResponsiveContainer width="100%" height={380}>
+        <RadarChart data={diffMode ? diffData : data}>
+          <PolarGrid />
+          <PolarAngleAxis dataKey="criterion" tick={{ fontSize: 9 }} />
+          <PolarRadiusAxis domain={[0, 5]} tick={{ fontSize: 9 }} />
+          {!diffMode && visibleCols.map((col) => (
+            <Radar key={col.key} name={col.label} dataKey={col.key} stroke={col.color} fill={col.color} fillOpacity={0.15} />
+          ))}
+          {diffMode && (
+            <>
+              <Radar key={fromCol.key} name={fromCol.label} dataKey={fromCol.key} stroke={fromCol.color} fill={fromCol.color} fillOpacity={0.05} strokeOpacity={0.5} />
+              <Radar key={toCol.key} name={toCol.label} dataKey={toCol.key} stroke={toCol.color} fill={toCol.color} fillOpacity={0.05} strokeOpacity={0.5} />
+              <Radar name="Increase" dataKey="diffPos" stroke="#10b981" fill="#10b981" fillOpacity={0.45} />
+              <Radar name="Decrease" dataKey="diffNegAbs" stroke="#ef4444" fill="#ef4444" fillOpacity={0.45} />
+            </>
+          )}
+          <Tooltip />
+        </RadarChart>
+      </ResponsiveContainer>
+
+      {/* Clickable legend — click a series to show/hide it; select exactly two to compare */}
+      <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
+        {columns.map((col) => {
+          const on = visible.has(col.key);
+          return (
+            <button
+              key={col.key}
+              type="button"
+              onClick={() => toggle(col.key)}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs transition ${
+                on
+                  ? "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                  : "border-gray-200 bg-gray-50 text-gray-400 line-through"
+              }`}
+              title={on ? `Hide ${col.label}` : `Show ${col.label}`}
+            >
+              <span className="w-3 h-3 rounded-sm" style={{ background: on ? col.color : "#cbd5e1" }} />
+              {col.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {diffMode && (
+        <div className="flex flex-wrap items-center justify-center gap-4 mt-2 text-xs">
+          <span className="text-gray-500">
+            Difference ({toCol.label} − {fromCol.label}):
+          </span>
+          <span className="inline-flex items-center gap-1 text-green-700">
+            <span className="w-3 h-3 rounded-sm bg-green-500" /> Increased
+          </span>
+          <span className="inline-flex items-center gap-1 text-red-700">
+            <span className="w-3 h-3 rounded-sm bg-red-500" /> Decreased
+          </span>
+        </div>
+      )}
+    </div>
   );
 }
 
