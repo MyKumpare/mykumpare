@@ -1202,6 +1202,11 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                           contactId={editingContact.id}
                           hasPhoto={!!photoUrl}
                           onPhotoScraped={(data) => { if (data.photo_url) setPhotoUrl(data.photo_url); }}
+                          linkedinUrl={linkedinUrl}
+                          firmId={firmIds[0]}
+                          website={firms.find((f) => f.id === firmIds[0])?.website}
+                          firstName={firstName}
+                          lastName={lastName}
                         />
                       )}
                     </div>
