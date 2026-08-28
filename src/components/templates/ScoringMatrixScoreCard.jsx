@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Check, X, CheckCircle2, Circle, ChevronDown, ChevronRight, Sparkles, Loader2, FileText, Download, Brain, History, GitBranch, GitCompare, Lock, Calendar, AlertTriangle, PlusCircle, MinusCircle, Info, ToggleLeft, ToggleRight, Camera, Paperclip, Award, Star } from "lucide-react";
+import { Check, X, CheckCircle2, Circle, ChevronDown, ChevronRight, Sparkles, Loader2, FileText, Download, Brain, History, GitBranch, GitCompare, Lock, Calendar, AlertTriangle, PlusCircle, MinusCircle, Info, ToggleLeft, ToggleRight, Camera, Paperclip, Award, Star, Layers } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend, Tooltip
@@ -24,6 +24,7 @@ import { computeWeightedScoreMulti, effectiveAdjustedPrimary, effectiveFinalScor
 import RescoreConfirmDialog from "@/components/templates/RescoreConfirmDialog";
 import ClosedScoringEditWarning from "@/components/templates/ClosedScoringEditWarning";
 import FinalizeGuardDialog from "@/components/templates/FinalizeGuardDialog";
+import BulkUpdateScoringDialog from "@/components/templates/BulkUpdateScoringDialog";
 import { exportScoringMatrixComparisonPdf } from "@/components/templates/scoringMatrixComparisonPdf";
 import { exportScoringMatrixScorecardPdf } from "@/components/templates/scoringMatrixScorecardPdf";
 import { createScoringNotification } from "@/components/templates/scoringNotificationHelper";
@@ -290,6 +291,7 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
   const [editReopened, setEditReopened] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [isExportingScorecard, setIsExportingScorecard] = useState(false);
+  const [showBulkUpdate, setShowBulkUpdate] = useState(false);
 
   const { data: score, isLoading } = useQuery({
     queryKey: ["scoringMatrixScore", scoreId],
@@ -376,6 +378,12 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
       criteria: (b.criteria || []).map((c) => ({ ...c, ...updates(c) }))
     }));
     updateMutation.mutate({ scoring_blocks: newBlocks });
+  };
+
+  // Bulk update: apply new scoring_blocks (scores or multipliers) in one save
+  const applyBulkBlocks = (newBlocks, description) => {
+    updateMutation.mutate({ scoring_blocks: newBlocks });
+    toast({ title: "Bulk update applied", description });
   };
 
   // Confirm the finalize after the guard dialog verifies all items are scored
@@ -771,6 +779,11 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
         <div className="space-y-3">
           {/* Phase action buttons */}
           <div className="flex flex-wrap gap-2 items-center">
+            {isPrimaryAnalyst && !isClosed && (
+              <Button size="sm" variant="outline" onClick={() => setShowBulkUpdate(true)} disabled={updateMutation.isPending} className="text-indigo-600 border-indigo-200 hover:bg-indigo-50">
+                <Layers className="w-3.5 h-3.5" /> Bulk Update
+              </Button>
+            )}
             {isPrimaryAnalyst && !score.primary_score_finalized && (
               <Button size="sm" onClick={() => setFinalizeGuard({ scoreField: "primary_score", label: "Primary", phase: "primary" })} disabled={updateMutation.isPending}>
                 <CheckCircle2 className="w-3.5 h-3.5" /> Finalize Primary Scores
@@ -1112,6 +1125,15 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
           </div>
         </div>
       )}
+
+      {/* Bulk update dialog */}
+      <BulkUpdateScoringDialog
+        open={showBulkUpdate}
+        onClose={() => setShowBulkUpdate(false)}
+        blocks={blocks}
+        score={score}
+        onApplyBlocks={applyBulkBlocks}
+      />
 
       {/* Re-score dialog */}
       {showRescoreDialog && (

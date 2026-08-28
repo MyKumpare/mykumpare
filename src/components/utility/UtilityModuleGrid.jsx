@@ -2,18 +2,19 @@ import React, { useState } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { MODULE_MAP } from "./monitorModules";
-import { useMonitorLayout, UNCAT_ID } from "./useMonitorLayout";
+import { UTILITY_MODULE_MAP } from "./utilityModules";
+import { useUtilityLayout, UNCAT_ID } from "./useUtilityLayout";
 import CategoryNameDialog from "@/components/common/CategoryNameDialog";
 
 /**
- * Categorized, drag-and-drop grid of Monitor modules. 3 cards per row.
- * Cards can be reordered within a category or dragged across categories.
- * Categories can be created, renamed, reordered, and deleted (items fall back
- * to the system "Uncategorized" bucket).
+ * Categorized, drag-and-drop grid of Utility modules. Mirrors the Monitor
+ * module grid so the two surfaces share a consistent layout-adjustment UX:
+ * cards can be reordered within a category or dragged across categories,
+ * and categories can be created, renamed, reordered, and deleted.
  */
-export default function MonitorModuleGrid({ onSelect }) {
-  const { categories, addCategory, renameCategory, deleteCategory, moveCategory, onDragEnd } = useMonitorLayout();
+export default function UtilityModuleGrid({ modules, defaultCategories, onSelect }) {
+  const { categories, addCategory, renameCategory, deleteCategory, moveCategory, onDragEnd } =
+    useUtilityLayout(modules, defaultCategories);
   const [dialog, setDialog] = useState({ open: false, mode: "create", id: null, name: "" });
 
   const isLastUserCategory = (idx) => idx >= categories.length - 2; // last before uncat
@@ -99,7 +100,7 @@ export default function MonitorModuleGrid({ onSelect }) {
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {cat.items.map((itemKey, index) => {
-                      const mod = MODULE_MAP[itemKey];
+                      const mod = UTILITY_MODULE_MAP[itemKey];
                       if (!mod) return null;
                       const Icon = mod.icon;
                       return (
@@ -108,7 +109,7 @@ export default function MonitorModuleGrid({ onSelect }) {
                             <div
                               ref={p.innerRef}
                               {...p.draggableProps}
-                              className={`group relative flex items-stretch rounded-lg border ${mod.border} bg-white overflow-hidden transition-all hover:shadow-md ${s.isDragging ? "shadow-lg ring-2 ring-rose-300" : ""}`}
+                              className={`group relative flex items-stretch rounded-lg border ${mod.border} bg-white overflow-hidden transition-all hover:shadow-md ${s.isDragging ? "shadow-lg ring-2 ring-indigo-300" : ""}`}
                             >
                               <button
                                 onClick={() => onSelect(itemKey)}

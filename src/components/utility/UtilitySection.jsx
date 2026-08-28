@@ -25,6 +25,8 @@ import DashboardTimelineSection from "@/components/dashboard/DashboardTimelineSe
 import DashboardAnalystCoverageSection from "@/components/dashboard/DashboardAnalystCoverageSection";
 import DashboardFirmCoverageSection from "@/components/dashboard/DashboardFirmCoverageSection";
 import { TrendingUp, Network, ArrowRight } from "lucide-react";
+import UtilityModuleGrid from "./UtilityModuleGrid";
+import { getActiveUtilityModules, buildDefaultUtilityCategories, UTILITY_MODULE_MAP } from "./utilityModules";
 
 function BenchmarkItem({ b, onClick }) {
   return (
@@ -71,19 +73,39 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
   const isAdmin = user?.role === "admin";
   const isManagement = user?.is_management;
   const [expanded, setExpanded] = useState(false);
-  // 'menu' = selection screen, 'benchmark' = benchmark list + search, 'cleanup' = contact cleanup, 'orphans' = orphan record cleanup
-  const [view, setView] = useState(defaultView || "menu");
+  // null = categorized selection grid; a tool key = that tool's view
+  const [view, setView] = useState(defaultView || null);
   const [benchmarkDialogOpen, setBenchmarkDialogOpen] = useState(false);
   const [selectedBenchmark, setSelectedBenchmark] = useState(null);
   const [benchmarkQuery, setBenchmarkQuery] = useState("");
   const [cleanupStarted, setCleanupStarted] = useState(false);
 
-  // Expand + reset to selection menu when the parent requests it (e.g. clicking the Utilities header icon),
+  // Role-filtered module list + default categorization for the draggable grid
+  const activeModules = useMemo(
+    () => getActiveUtilityModules({ isAdmin, isManagement }),
+    [isAdmin, isManagement]
+  );
+  const defaultCategories = useMemo(
+    () => buildDefaultUtilityCategories({ isAdmin, isManagement }),
+    [isAdmin, isManagement]
+  );
+
+  // Open a utility module from the grid: navigate, run a special action, or switch to the tool view
+  const handleModuleSelect = (key) => {
+    const mod = UTILITY_MODULE_MAP[key];
+    if (!mod) return;
+    if (mod.to) { navigate(mod.to); return; }
+    if (mod.action === "ext-portal") { onOpenExternalPortal?.(); return; }
+    setView(key);
+    setCleanupStarted(false);
+  };
+
+  // Expand + reset to selection grid when the parent requests it (e.g. clicking the Utilities header icon),
   // while still letting the user collapse it manually afterwards.
   useEffect(() => {
     if (forceExpanded !== undefined) setExpanded(forceExpanded);
     if (forceExpanded && !defaultView) {
-      setView("menu");
+      setView(null);
       setCleanupStarted(false);
     }
   }, [forceExpanded]);
@@ -170,9 +192,9 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
       {expanded && (
         <div className="pl-2 border-l-2 border-gray-100">
           {/* Sub-view navigation */}
-          {view !== "menu" && (
+          {view !== null && (
             <button
-              onClick={() => { setView("menu"); setCleanupStarted(false); }}
+              onClick={() => { setView(null); setCleanupStarted(false); }}
               className="flex items-center gap-1 mb-2 text-xs text-gray-500 hover:text-gray-700"
             >
               <ArrowLeft className="w-3 h-3" />
@@ -180,243 +202,13 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
             </button>
           )}
 
-          {/* Selection menu */}
-          {view === "menu" && (
-            <div className="grid grid-cols-2 gap-2 py-1">
-              <button
-                onClick={() => setView("benchmark")}
-                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-              >
-                <div className="w-9 h-9 rounded-full bg-indigo-50 flex items-center justify-center">
-                  <Gauge className="w-4.5 h-4.5 text-indigo-600" />
-                </div>
-                <span className="text-sm font-semibold text-gray-700">Benchmark</span>
-                <span className="text-[11px] text-gray-400">Search & manage benchmarks</span>
-              </button>
-              <button
-                onClick={() => setView("cleanup")}
-                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-              >
-                <div className="w-9 h-9 rounded-full bg-rose-50 flex items-center justify-center">
-                  <Users className="w-4.5 h-4.5 text-rose-600" />
-                </div>
-                <span className="text-sm font-semibold text-gray-700">Contact Cleanup</span>
-                <span className="text-[11px] text-gray-400">Review & merge duplicates</span>
-              </button>
-              <button
-                onClick={() => setView("bulk-merge")}
-                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-              >
-                <div className="w-9 h-9 rounded-full bg-rose-50 flex items-center justify-center">
-                  <ArrowRightLeft className="w-4.5 h-4.5 text-rose-600" />
-                </div>
-                <span className="text-sm font-semibold text-gray-700">Bulk Merge</span>
-                <span className="text-[11px] text-gray-400">Consolidate duplicates across all firms</span>
-              </button>
-              <button
-                onClick={() => setView("enrichment-logs")}
-                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-              >
-                <div className="w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center">
-                  <ScrollText className="w-4.5 h-4.5 text-slate-600" />
-                </div>
-                <span className="text-sm font-semibold text-gray-700">Enrichment Logs</span>
-                <span className="text-[11px] text-gray-400">Review enrichment results</span>
-              </button>
-              <button
-                onClick={() => setView("orphans")}
-                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-              >
-                <div className="w-9 h-9 rounded-full bg-amber-50 flex items-center justify-center">
-                  <Ghost className="w-4.5 h-4.5 text-amber-600" />
-                </div>
-                <span className="text-sm font-semibold text-gray-700">Orphan Cleanup</span>
-                <span className="text-[11px] text-gray-400">Find & remove stale records</span>
-              </button>
-              <button
-                onClick={() => setView("import-contacts")}
-                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-              >
-                <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center">
-                  <Upload className="w-5 h-5 text-emerald-600" />
-                </div>
-                <span className="text-sm font-semibold text-gray-700">Import Contacts</span>
-                <span className="text-[11px] text-gray-400">Bulk upload from CSV</span>
-              </button>
-              <button
-                onClick={() => setView("import-firms")}
-                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-              >
-                <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center">
-                  <Building className="w-5 h-5 text-blue-600" />
-                </div>
-                <span className="text-sm font-semibold text-gray-700">Import Firms</span>
-                <span className="text-[11px] text-gray-400">Bulk upload from CSV or Excel</span>
-              </button>
-              <button
-                onClick={() => setView("import-products")}
-                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-              >
-                <div className="w-9 h-9 rounded-full bg-violet-50 flex items-center justify-center">
-                  <Package className="w-5 h-5 text-violet-600" />
-                </div>
-                <span className="text-sm font-semibold text-gray-700">Import Products</span>
-                <span className="text-[11px] text-gray-400">Bulk upload from CSV or Excel</span>
-              </button>
-              <button
-                onClick={() => setView("placeholder-cleanup")}
-                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-              >
-                <div className="w-9 h-9 rounded-full bg-indigo-50 flex items-center justify-center">
-                  <Eraser className="w-5 h-5 text-indigo-600" />
-                </div>
-                <span className="text-sm font-semibold text-gray-700">Placeholder Cleanup</span>
-                <span className="text-[11px] text-gray-400">Clear inconsistent values</span>
-              </button>
-              <button
-                onClick={() => setView("firm-type-validation")}
-                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-              >
-                <div className="w-9 h-9 rounded-full bg-purple-50 flex items-center justify-center">
-                  <Tag className="w-5 h-5 text-purple-600" />
-                </div>
-                <span className="text-sm font-semibold text-gray-700">Firm Type Check</span>
-                <span className="text-[11px] text-gray-400">Find multi-type firms</span>
-              </button>
-              <button
-                onClick={() => setView("experience-option-cleanup")}
-                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-              >
-                <div className="w-9 h-9 rounded-full bg-teal-50 flex items-center justify-center">
-                  <Briefcase className="w-5 h-5 text-teal-600" />
-                </div>
-                <span className="text-sm font-semibold text-gray-700">Company / Title Cleanup</span>
-                <span className="text-[11px] text-gray-400">Merge duplicate experience options</span>
-              </button>
-              <button
-                onClick={() => setView("dd-cleanup")}
-                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-              >
-                <div className="w-9 h-9 rounded-full bg-rose-50 flex items-center justify-center">
-                  <ClipboardCheck className="w-4.5 h-4.5 text-rose-600" />
-                </div>
-                <span className="text-sm font-semibold text-gray-700">DD Integrity Cleanup</span>
-                <span className="text-[11px] text-gray-400">Remove orphaned & duplicate DD</span>
-              </button>
-              <button
-                onClick={() => setView("orphaned-contacts")}
-                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-              >
-                <div className="w-9 h-9 rounded-full bg-orange-50 flex items-center justify-center">
-                  <UserX className="w-5 h-5 text-orange-600" />
-                </div>
-                <span className="text-sm font-semibold text-gray-700">Orphaned Contacts</span>
-                <span className="text-[11px] text-gray-400">Find & fix firmless contacts</span>
-              </button>
-              <button
-                onClick={() => setView("import-jobs")}
-                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-              >
-                <div className="w-9 h-9 rounded-full bg-cyan-50 flex items-center justify-center">
-                  <Activity className="w-5 h-5 text-cyan-600" />
-                </div>
-                <span className="text-sm font-semibold text-gray-700">Import Jobs</span>
-                <span className="text-[11px] text-gray-400">Status & errors for bulk imports</span>
-              </button>
-              {isAdmin && (
-                <button
-                  onClick={() => setView("news-scrub-settings")}
-                  className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-                >
-                  <div className="w-9 h-9 rounded-full bg-rose-50 flex items-center justify-center">
-                    <Newspaper className="w-5 h-5 text-rose-600" />
-                  </div>
-                  <span className="text-sm font-semibold text-gray-700">News Scrub Settings</span>
-                  <span className="text-[11px] text-gray-400">Edit nightly scrub keywords</span>
-                </button>
-              )}
-              {isAdmin && (
-                <button
-                  onClick={() => navigate("/UserManagement")}
-                  className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-                >
-                  <div className="w-9 h-9 rounded-full bg-rose-50 flex items-center justify-center">
-                    <ShieldCheck className="w-4.5 h-4.5 text-rose-600" />
-                  </div>
-                  <span className="text-sm font-semibold text-gray-700">Admin</span>
-                  <span className="text-[11px] text-gray-400">Manage users & settings</span>
-                </button>
-              )}
-              <button
-                onClick={() => onOpenExternalPortal?.()}
-                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-              >
-                <div className="w-9 h-9 rounded-full bg-sky-50 flex items-center justify-center">
-                  <ExternalLink className="w-4.5 h-4.5 text-sky-600" />
-                </div>
-                <span className="text-sm font-semibold text-gray-700">Ext Portal</span>
-                <span className="text-[11px] text-gray-400">External party portal</span>
-              </button>
-
-              {/* Management tools — management users only */}
-              {isManagement && (
-                <div className="col-span-2 mt-2 pt-3 border-t border-gray-200">
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2 px-1">Management</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => setView("mgmt-timeline")}
-                      className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-                    >
-                      <div className="w-9 h-9 rounded-full bg-amber-50 flex items-center justify-center">
-                        <Activity className="w-5 h-5 text-amber-600" />
-                      </div>
-                      <span className="text-sm font-semibold text-gray-700">Activity Timeline</span>
-                      <span className="text-[11px] text-gray-400">Recent interactions across all contacts</span>
-                    </button>
-                    <button
-                      onClick={() => navigate("/WeeklyInteractionReport")}
-                      className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-                    >
-                      <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center">
-                        <TrendingUp className="w-5 h-5 text-emerald-600" />
-                      </div>
-                      <span className="text-sm font-semibold text-gray-700">Weekly Interaction Report</span>
-                      <span className="text-[11px] text-gray-400">Engagement snapshot for top-tier contacts</span>
-                    </button>
-                    <button
-                      onClick={() => navigate("/RelationshipNetworkMap")}
-                      className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-                    >
-                      <div className="w-9 h-9 rounded-full bg-indigo-50 flex items-center justify-center">
-                        <Network className="w-5 h-5 text-indigo-600" />
-                      </div>
-                      <span className="text-sm font-semibold text-gray-700">Relationship Network Map</span>
-                      <span className="text-[11px] text-gray-400">Visualize contact relationships</span>
-                    </button>
-                    <button
-                      onClick={() => setView("mgmt-analyst-coverage")}
-                      className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-                    >
-                      <div className="w-9 h-9 rounded-full bg-indigo-50 flex items-center justify-center">
-                        <Users className="w-5 h-5 text-indigo-600" />
-                      </div>
-                      <span className="text-sm font-semibold text-gray-700">Analyst Coverage</span>
-                      <span className="text-[11px] text-gray-400">Analyst workload & assignments</span>
-                    </button>
-                    <button
-                      onClick={() => setView("mgmt-firm-coverage")}
-                      className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-center"
-                    >
-                      <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center">
-                        <Building className="w-5 h-5 text-emerald-600" />
-                      </div>
-                      <span className="text-sm font-semibold text-gray-700">Firm Coverage</span>
-                      <span className="text-[11px] text-gray-400">Firm & product coverage overview</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+          {/* Selection grid (categorized, draggable — mirrors Monitor) */}
+          {view === null && (
+            <UtilityModuleGrid
+              modules={activeModules}
+              defaultCategories={defaultCategories}
+              onSelect={handleModuleSelect}
+            />
           )}
 
           {/* Benchmark view */}
