@@ -1,0 +1,181 @@
+{
+  "name": "ScoringThresholdAlert",
+  "type": "object",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "ID of the firm (tenant) that owns this alert. Set on creation to the creator's linked_firm_id; drives tenant isolation via RLS."
+    },
+    "firm_id": {
+      "type": "string",
+      "description": "ID of the firm whose scoring matrix triggered this below-threshold alert."
+    },
+    "firm_name": {
+      "type": "string",
+      "description": "Name of the firm (denormalized for display)."
+    },
+    "score_id": {
+      "type": "string",
+      "description": "ID of the finalized ScoringMatrixScore record whose weighted final score fell below the firm's configured threshold."
+    },
+    "product_id": {
+      "type": "string",
+      "description": "ID of the product that was scored (denormalized for quick lookup)."
+    },
+    "product_name": {
+      "type": "string",
+      "description": "Name of the product that was scored (denormalized for display)."
+    },
+    "template_id": {
+      "type": "string",
+      "description": "ID of the scoring matrix template used (denormalized)."
+    },
+    "template_name": {
+      "type": "string",
+      "description": "Name of the scoring matrix template used (denormalized for display)."
+    },
+    "version_number": {
+      "type": "integer",
+      "description": "The version_number of the ScoringMatrixScore at the time the alert was raised (denormalized so the alert shows which review cycle it belongs to)."
+    },
+    "weighted_final_score": {
+      "type": "number",
+      "description": "The weighted final score computed from the scoring matrix's final_score values (with bonus/penalty adjustments applied, clamped to 1-5) at the time the alert was raised."
+    },
+    "threshold": {
+      "type": "number",
+      "description": "The per-firm threshold value that was in effect when this alert was raised (denormalized so historical alerts remain accurate if the threshold later changes)."
+    },
+    "scoring_end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "The scoring_end_date of the finalized scoring matrix (denormalized for display)."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "acknowledged",
+        "resolved"
+      ],
+      "default": "active",
+      "description": "Lifecycle state of the alert. 'active' = newly raised and awaiting attention; 'acknowledged' = user has seen and noted it; 'resolved' = the firm was re-evaluated (a new scoring version raised the score above threshold, or the user manually resolved it)."
+    },
+    "acknowledged_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the user acknowledged this alert."
+    },
+    "resolved_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when this alert was resolved."
+    },
+    "created_by_id": {
+      "type": "string",
+      "description": "ID of the user who created this alert (auto-set by platform)."
+    }
+  },
+  "required": [
+    "firm_id",
+    "score_id",
+    "weighted_final_score",
+    "threshold"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_edit": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_delete": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

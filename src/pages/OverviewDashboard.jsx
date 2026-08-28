@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import AumAllocationSummary from "@/components/analytics/AumAllocationSummary";
 import NewsSentimentTrendChart from "@/components/analytics/NewsSentimentTrendChart";
+import ScoringThresholdAlertsPanel from "@/components/scoring/ScoringThresholdAlertsPanel";
 import { format, subDays, eachDayOfInterval, parseISO } from "date-fns";
 import { useAuth } from "@/lib/AuthContext";
 
@@ -310,6 +311,9 @@ export default function OverviewDashboard() {
             loading={ddLoading}
           />
         </div>
+
+        {/* Below-threshold scoring alerts */}
+        <ScoringThresholdAlertsPanel linkedFirmId={linkedFirmId} />
 
         {/* AUM Allocation Reconciliation */}
         <AumAllocationSummary firms={scopedFirms} loading={firmsLoading} />

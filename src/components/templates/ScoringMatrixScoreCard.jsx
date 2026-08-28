@@ -334,6 +334,9 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
     });
     setEditReopened(false);
     createScoringNotification(score, "scoring_completed", currentUser, { phase: "Final" }).catch(() => {});
+    // Real-time threshold check: raise an alert if this firm's weighted final
+    // score falls below its configured per-firm threshold.
+    base44.functions.invoke("checkScoringThresholds", { score_id: scoreId }).catch(() => {});
     toast({ title: "Scoring matrix finalized", description: `Scoring closed on ${todayStr}. Use "Start Re-Scoring" to create a new version.` });
   };
 
