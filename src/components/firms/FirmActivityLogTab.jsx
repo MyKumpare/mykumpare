@@ -10,11 +10,13 @@ import {
   Phone, Mail, Users, FileText, MoreHorizontal,
   ChevronDown, ChevronUp, Building2, User,
   Clock, AlertCircle, CheckCircle2, XCircle, Calendar, Paperclip,
-  Link2, Plus, X, ClipboardList, Trash2, UserPlus, Upload, Edit2, Check
+  Link2, Plus, X, ClipboardList, Trash2, UserPlus, Upload, Edit2, Check,
+  CalendarDays, List
 } from "lucide-react";
 import TaskAssigneeEditor from "@/components/activity/TaskAssigneeEditor";
 import TaskDetailModal from "@/components/activity/TaskDetailModal";
 import ActivityDetailModal from "@/components/activity/ActivityDetailModal";
+import FirmActivityCalendar from "@/components/firms/FirmActivityCalendar";
 import { getCurrentUserContact } from "@/components/activity/useAutoOriginator";
 import { format } from "date-fns";
 import ReactQuill from "react-quill";
@@ -834,6 +836,7 @@ function TaskRow({ task, onOpenDetail }) {
 // ── Main Tab ──────────────────────────────────────────────────────────────────
 export default function FirmActivityLogTab({ firmId, firmName, onFirmClick, onContactClick }) {
   const [activeSection, setActiveSection] = useState("activities");
+  const [viewMode, setViewMode] = useState("list"); // "list" | "calendar"
   // "idle" | "picking-for-activity" | "picking-for-task" | "activity-form" | "task-form"
   const [uiState, setUiState] = useState("idle");
   const [selectedContact, setSelectedContact] = useState(null);
@@ -933,21 +936,33 @@ export default function FirmActivityLogTab({ firmId, firmName, onFirmClick, onCo
 
   return (
     <div className="space-y-3">
-      {/* Section toggle + action buttons */}
-      <div className="flex items-center gap-2">
-        <div className="flex gap-1 p-1 bg-gray-100 rounded-lg flex-1">
-          {sections.map(s => (
-            <button key={s.key} type="button" onClick={() => setActiveSection(s.key)}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                activeSection === s.key ? "bg-white text-indigo-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
-              }`}>
-              {s.label}
-              {s.count > 0 && (
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeSection === s.key ? "bg-indigo-100 text-indigo-700" : "bg-gray-200 text-gray-500"}`}>{s.count}</span>
-              )}
-            </button>
-          ))}
+      {/* Section toggle + view toggle + action buttons */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex gap-1 p-1 bg-gray-100 rounded-lg">
+          <button type="button" onClick={() => setViewMode("list")}
+            className={`flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === "list" ? "bg-white text-indigo-700 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+            <List className="w-3.5 h-3.5" /> List
+          </button>
+          <button type="button" onClick={() => setViewMode("calendar")}
+            className={`flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === "calendar" ? "bg-white text-indigo-700 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+            <CalendarDays className="w-3.5 h-3.5" /> Calendar
+          </button>
         </div>
+        {viewMode === "list" && (
+          <div className="flex gap-1 p-1 bg-gray-100 rounded-lg flex-1 min-w-[200px]">
+            {sections.map(s => (
+              <button key={s.key} type="button" onClick={() => setActiveSection(s.key)}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                  activeSection === s.key ? "bg-white text-indigo-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                }`}>
+                {s.label}
+                {s.count > 0 && (
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeSection === s.key ? "bg-indigo-100 text-indigo-700" : "bg-gray-200 text-gray-500"}`}>{s.count}</span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
         {uiState === "idle" && (
           <>
             <Button type="button" variant="ghost" size="sm"
@@ -987,6 +1002,13 @@ export default function FirmActivityLogTab({ firmId, firmName, onFirmClick, onCo
 
       {isLoading ? (
         <div className="text-xs text-gray-400 italic py-6 text-center">Loading...</div>
+      ) : viewMode === "calendar" ? (
+        <FirmActivityCalendar
+          activities={firmActivities}
+          tasks={firmTasks}
+          onActivityClick={setDetailActivity}
+          onTaskClick={setDetailTask}
+        />
       ) : activeSection === "activities" ? (
         firmActivities.length === 0 ? (
           <div className="text-sm text-gray-400 italic py-6 text-center border border-dashed border-gray-200 rounded-xl">No activity logs for this firm yet</div>
