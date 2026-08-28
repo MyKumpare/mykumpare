@@ -17,6 +17,7 @@ import CsvContactImport from "./CsvContactImport";
 import CsvFirmImport from "./CsvFirmImport";
 import FirmImportWizard from "./FirmImportWizard";
 import BenchmarkTemplateDialog from "./BenchmarkTemplateDialog";
+import BenchmarkBulkReturnsToolbar from "./BenchmarkBulkReturnsToolbar";
 import { downloadBenchmarkTemplate } from "./benchmarkTemplate";
 import CsvProductImport from "./CsvProductImport";
 import PlaceholderCleanup from "./PlaceholderCleanup";
@@ -236,26 +237,6 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-6 px-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 gap-1 text-xs"
-                  onClick={downloadBenchmarkTemplate}
-                >
-                  <Download className="w-3 h-3" />
-                  Download Template
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs"
-                  onClick={() => setBenchmarkTemplateOpen(true)}
-                >
-                  <Upload className="w-3 h-3" />
-                  Upload Template
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
                   className="h-6 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 gap-1 text-xs"
                   onClick={() => { setSelectedBenchmark(null); setBenchmarkDialogOpen(true); }}
                 >
@@ -263,6 +244,11 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
                   Add Benchmark
                 </Button>
               </div>
+
+              <BenchmarkBulkReturnsToolbar
+                benchmarks={filteredBenchmarks}
+                onUploadTemplate={() => setBenchmarkTemplateOpen(true)}
+              />
 
               <div className="relative">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
