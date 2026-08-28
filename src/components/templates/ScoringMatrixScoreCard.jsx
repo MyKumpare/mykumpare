@@ -18,6 +18,7 @@ import ScoringMatrixAuditPanel from "@/components/templates/ScoringMatrixAuditPa
 import ScoringMatrixHistoryTab from "@/components/templates/ScoringMatrixHistoryTab";
 import ScoringMatrixVersionDiffTab from "@/components/templates/ScoringMatrixVersionDiffTab";
 import ScoringMatrixSnapshotsTab from "@/components/templates/ScoringMatrixSnapshotsTab";
+import ScoringMatrixChangeSummary from "@/components/templates/ScoringMatrixChangeSummary";
 import ScoringAttachmentsManager from "@/components/templates/ScoringAttachmentsManager";
 import { computeOverallRating } from "@/components/templates/scoringRatingLogic";
 import { computeWeightedScoreMulti, effectiveAdjustedPrimary, effectiveFinalScore } from "@/components/templates/scoringWeightLogic";
@@ -723,6 +724,9 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
           <Button variant="outline" size="sm" onClick={() => setActiveTab("scoring")}>Scoring</Button>
           <Button variant="outline" size="sm" onClick={() => setActiveTab("chart")}>Radar Chart</Button>
           <Button variant="outline" size="sm" onClick={() => setActiveTab("comparison")}>Comparison</Button>
+          <Button variant="outline" size="sm" onClick={() => setActiveTab("changesummary")} className="text-sky-600 border-sky-200 hover:bg-sky-50">
+            <GitCompare className="w-3.5 h-3.5" /> Change Summary
+          </Button>
           <Button variant="outline" size="sm" onClick={() => setActiveTab("audit")} className="text-purple-600 border-purple-200 hover:bg-purple-50">
             <Brain className="w-3.5 h-3.5" /> AI Audit
           </Button>
@@ -1051,6 +1055,26 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
             </Button>
           </div>
           <ScoringMatrixComparisonTable blocks={blocks} showSecondary={showSecondary} showTeam={showTeam} showAdjustedPrimary={showAdjustedPrimary} showIC={showIC} showFinal={showFinal} benchmark={benchmark} scoreId={scoreId} reviewNotes={score.review_notes} />
+        </div>
+      )}
+
+      {/* Change Summary Tab — only criteria whose scores changed across phases */}
+      {activeTab === "changesummary" && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-sm font-semibold flex items-center gap-1.5">
+                <GitCompare className="w-4 h-4 text-sky-600" /> Score Change Summary
+              </h4>
+              <p className="text-xs text-gray-500">Criteria where the team recommendation or final IC result differs from the primary analyst's score, with exact point differences.</p>
+            </div>
+          </div>
+          <ScoringMatrixChangeSummary
+            blocks={blocks}
+            showTeam={showTeam}
+            showIC={showIC}
+            showFinal={showFinal}
+          />
         </div>
       )}
 
