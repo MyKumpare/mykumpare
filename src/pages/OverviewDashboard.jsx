@@ -10,7 +10,7 @@ import {
 import {
   Building, ListChecks, ArrowLeft, TrendingUp, Clock,
   CheckCircle2, XCircle, Loader2, UserCircle, Globe,
-  ShieldCheck, AlertCircle, Activity, FileText, CalendarRange,
+  ShieldCheck, AlertCircle, Activity, FileText, CalendarRange, GitBranch,
 } from "lucide-react";
 import AumAllocationSummary from "@/components/analytics/AumAllocationSummary";
 import NewsSentimentTrendChart from "@/components/analytics/NewsSentimentTrendChart";
@@ -67,6 +67,16 @@ export default function OverviewDashboard() {
   const { data: questionnaires = [], isLoading: questionnairesLoading } = useQuery({
     queryKey: ["overview_questionnaires"],
     queryFn: () => base44.entities.Questionnaire.list("-created_date", 5000),
+  });
+
+  const { data: allContacts = [], isLoading: contactsLoading } = useQuery({
+    queryKey: ["overview_contacts_pipeline"],
+    queryFn: () => base44.entities.Contact.list("-created_date", 5000),
+  });
+
+  const { data: pipelineStages = [] } = useQuery({
+    queryKey: ["contact_pipeline_stages"],
+    queryFn: () => base44.entities.ContactPipelineStage.list("order", 500),
   });
 
   const scopedFirms = useMemo(() => {
@@ -235,6 +245,55 @@ export default function OverviewDashboard() {
       .map(([name, v]) => ({ name, ...v }));
   }, [questionnaires, activities, firmTypeMap, scopedFirms, dataScope, linkedFirmId]);
 
+  // Firms by pipeline stage, broken down by firm type.
+  // For each pipeline stage, counts the distinct firms that have at least one
+  // contact in that stage, grouped by the firm's firm type(s).
+  const pipelineStageByFirmType = useMemo(() => {
+    const scopedFirmIds = new Set(scopedFirms.map((f) => f.id));
+    const activeContacts = allContacts.filter((c) => !c.deleted_at && c.pipeline_stage);
+
+    // Ordered stage names from ContactPipelineStage records
+    const stageOrder = {};
+    pipelineStages.forEach((s) => { stageOrder[s.name] = s.order ?? 0; });
+
+    // stage -> { firmType -> Set(firmId) }
+    const stageFirmTypeFirms = {};
+    for (const c of activeContacts) {
+      const stage = c.pipeline_stage;
+      const firmIds = (c.firm_ids || []).filter((fid) => scopedFirmIds.has(fid));
+      for (const fid of firmIds) {
+        const types = firmTypeMap.get(fid) || [];
+        if (!stageFirmTypeFirms[stage]) stageFirmTypeFirms[stage] = {};
+        const typeList = types.length ? types : ["Uncategorized"];
+        for (const t of typeList) {
+          if (!stageFirmTypeFirms[stage][t]) stageFirmTypeFirms[stage][t] = new Set();
+          stageFirmTypeFirms[stage][t].add(fid);
+        }
+      }
+    }
+
+    // Determine which firm types have data (ordered)
+    const activeTypes = new Set();
+    for (const stage of Object.values(stageFirmTypeFirms)) {
+      for (const t of Object.keys(stage)) activeTypes.add(t);
+    }
+    const orderedTypes = [
+      ...FIRM_TYPES.filter((t) => activeTypes.has(t)),
+      ...(activeTypes.has("Uncategorized") ? ["Uncategorized"] : []),
+    ];
+
+    const stages = Object.keys(stageFirmTypeFirms)
+      .sort((a, b) => (stageOrder[a] ?? 9999) - (stageOrder[b] ?? 9999));
+
+    const data = stages.map((stage) => {
+      const row = { stage };
+      for (const t of orderedTypes) row[t] = stageFirmTypeFirms[stage][t]?.size || 0;
+      return row;
+    });
+
+    return { data, types: orderedTypes };
+  }, [allContacts, pipelineStages, scopedFirms, firmTypeMap]);
+
   const totalFirms = scopedFirms.length;
   const totalTasks = scopedTasks.length;
   const overdueTasks = useMemo(() => {
@@ -391,6 +450,57 @@ export default function OverviewDashboard() {
               </ResponsiveContainer>
             )}
           </div>
+        </div>
+
+        {/* Firms by Pipeline Stage across Firm Types */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <GitBranch className="w-5 h-5 text-indigo-600" />
+            <h2 className="text-sm font-semibold text-gray-800">Firms by Pipeline Stage (by Firm Type)</h2>
+          </div>
+          {contactsLoading ? (
+            <div className="h-72 flex items-center justify-center text-gray-400 text-sm">Loading...</div>
+          ) : pipelineStageByFirmType.data.length === 0 ? (
+            <div className="h-72 flex items-center justify-center text-gray-400 text-sm">
+              No pipeline stage data — assign contacts to pipeline stages to see this chart.
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={340}>
+              <BarChart data={pipelineStageByFirmType.data} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                <XAxis
+                  dataKey="stage"
+                  tick={{ fontSize: 10, fill: "#6b7280" }}
+                  axisLine={false}
+                  tickLine={false}
+                  angle={-15}
+                  textAnchor="end"
+                  height={60}
+                  interval={0}
+                />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} />
+                <Tooltip
+                  cursor={{ fill: "#f9fafb" }}
+                  contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "12px" }}
+                />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }} />
+                {pipelineStageByFirmType.types.map((t, idx) => {
+                  const isLast = idx === pipelineStageByFirmType.types.length - 1;
+                  const color = t === "Uncategorized" ? "#94a3b8" : TYPE_COLORS[FIRM_TYPES.indexOf(t) % TYPE_COLORS.length];
+                  return (
+                    <Bar
+                      key={t}
+                      dataKey={t}
+                      stackId="a"
+                      fill={color}
+                      radius={isLast ? [6, 6, 0, 0] : [0, 0, 0, 0]}
+                      maxBarSize={64}
+                    />
+                  );
+                })}
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
 
         {/* Firm Engagement Trend — Last 30 Days */}
