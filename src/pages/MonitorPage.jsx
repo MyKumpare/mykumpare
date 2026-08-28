@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {   Radar, Newspaper, LayoutList, ClipboardList, ClipboardCheck, CalendarDays, X, FileDown, Loader2, Activity as ActivityIcon, Bell, UserCheck, Users } from "lucide-react";
+import { Radar, CalendarDays, X, FileDown, Loader2, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
 import { toast } from "@/components/ui/use-toast";
@@ -21,28 +21,13 @@ import CoverageManagement from "@/pages/CoverageManagement";
 import StaleContactRemindersPanel from "@/components/contacts/StaleContactRemindersPanel";
 import ScoringAlertsTab from "@/components/templates/ScoringAlertsTab";
 import ScoreTrendAnalyticsTab from "@/components/templates/ScoreTrendAnalyticsTab";
-import { FileSearch, BellRing, ClipboardCheck as ScoringIcon, LineChart as TrendIcon } from "lucide-react";
-
-const TABS = [
-  { key: "news", label: "News Alerts", icon: Newspaper },
-  { key: "activity", label: "Activity", icon: ClipboardList },
-  { key: "tasks", label: "Tasks", icon: LayoutList },
-  { key: "stale-contacts", label: "Stale Contacts", icon: BellRing },
-  { key: "scoring-alerts", label: "Scoring Alerts", icon: ScoringIcon },
-  { key: "score-trends", label: "Score Trends", icon: TrendIcon },
-  { key: "conferences", label: "Conferences", icon: CalendarDays },
-  { key: "board-meetings", label: "Board Meetings", icon: ClipboardCheck },
-  { key: "board-meeting-alerts", label: "Bd Mtg Alerts", icon: Bell },
-  { key: "coverage", label: "My Coverage", icon: UserCheck },
-  { key: "coverage-mgmt", label: "Coverage Mgmt", icon: Users },
-  { key: "timeline", label: "Timeline", icon: ActivityIcon },
-  { key: "rfp-rfi", label: "RFP/RFI", icon: FileSearch },
-];
+import MonitorModuleGrid from "@/components/monitor/MonitorModuleGrid";
+import { MODULE_MAP } from "@/components/monitor/monitorModules";
 
 export default function MonitorPage() {
   const navigate = useNavigate();
-  const initialTab = new URLSearchParams(window.location.hash.split("?")[1] || "").get("tab") || "news";
-  const [tab, setTab] = useState(initialTab);
+  const initialModule = new URLSearchParams(window.location.hash.split("?")[1] || "").get("tab") || null;
+  const [activeModule, setActiveModule] = useState(initialModule);
   const [viewingTask, setViewingTask] = useState(null);
   const [viewingActivity, setViewingActivity] = useState(null);
   const [generatingReport, setGeneratingReport] = useState(false);
@@ -63,6 +48,8 @@ export default function MonitorPage() {
     }
     setGeneratingReport(false);
   };
+
+  const activeLabel = activeModule ? MODULE_MAP[activeModule]?.label : null;
 
   return (
     <div className="min-h-screen bg-gray-50/80">
@@ -106,90 +93,75 @@ export default function MonitorPage() {
         </div>
       </div>
 
-      {/* Tabs + content */}
+      {/* Body */}
       <div className="max-w-7xl xl:max-w-[1400px] mx-auto px-4 sm:px-6 pt-4 pb-12">
-        <div className="mb-4">
-          <RfpRfiDueThisWeek onOpenAll={() => setTab("rfp-rfi")} />
-        </div>
-        <div className="flex gap-1 border-b border-gray-200 mb-4 overflow-x-auto">
-          {TABS.map((t) => {
-            const Icon = t.icon;
-            const active = tab === t.key;
-            return (
-              <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
-                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                  active
-                    ? "border-rose-600 text-rose-700"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                {t.label}
-              </button>
-            );
-          })}
-        </div>
+        {!activeModule && (
+          <div className="mb-4">
+            <RfpRfiDueThisWeek onOpenAll={() => setActiveModule("rfp-rfi")} />
+          </div>
+        )}
 
-        {tab === "news" && (
-          <NewsAlertsModal inline open onClose={() => {}} onFirmClick={() => {}} />
-        )}
-        {tab === "tasks" && (
-          <FollowUpTaskPickerModal
-            inline
-            open
-            onClose={() => {}}
-            onAddTask={() => {}}
-            onTaskClick={(task) => setViewingTask(task)}
-          />
-        )}
-        {tab === "activity" && (
-          <ActivityLogPickerModal
-            inline
-            open
-            onClose={() => {}}
-            onAddActivity={() => {}}
-            onActivityClick={(activity) => setViewingActivity(activity)}
-          />
-        )}
-        {tab === "stale-contacts" && (
-          <div className="rounded-xl border border-gray-200 bg-white p-4">
-            <StaleContactRemindersPanel onContactClick={() => navigate("/")} />
+        {!activeModule ? (
+          <MonitorModuleGrid onSelect={setActiveModule} />
+        ) : (
+          <div>
+            <div className="flex items-center gap-3 mb-4">
+              <Button variant="outline" size="sm" onClick={() => setActiveModule(null)}>
+                <ChevronLeft className="w-4 h-4" /> Back to Monitor
+              </Button>
+              <h2 className="text-lg font-semibold text-gray-800">{activeLabel}</h2>
+            </div>
+
+            {activeModule === "news" && (
+              <NewsAlertsModal inline open onClose={() => {}} onFirmClick={() => {}} />
+            )}
+            {activeModule === "tasks" && (
+              <FollowUpTaskPickerModal
+                inline
+                open
+                onClose={() => {}}
+                onAddTask={() => {}}
+                onTaskClick={(task) => setViewingTask(task)}
+              />
+            )}
+            {activeModule === "activity" && (
+              <ActivityLogPickerModal
+                inline
+                open
+                onClose={() => {}}
+                onAddActivity={() => {}}
+                onActivityClick={(activity) => setViewingActivity(activity)}
+              />
+            )}
+            {activeModule === "stale-contacts" && (
+              <div className="rounded-xl border border-gray-200 bg-white p-4">
+                <StaleContactRemindersPanel onContactClick={() => navigate("/")} />
+              </div>
+            )}
+            {activeModule === "scoring-alerts" && (
+              <div className="rounded-xl border border-gray-200 bg-white p-4">
+                <ScoringAlertsTab onProductClick={() => navigate("/")} />
+              </div>
+            )}
+            {activeModule === "score-trends" && (
+              <div className="rounded-xl border border-gray-200 bg-white p-4">
+                <ScoreTrendAnalyticsTab onFirmClick={() => navigate("/")} />
+              </div>
+            )}
+            {activeModule === "timeline" && (
+              <ActivityTimeline onActivityClick={(activity) => setViewingActivity(activity)} />
+            )}
+            {activeModule === "conferences" && <ConferencesTab />}
+            {activeModule === "board-meetings" && (
+              <BoardMeetingsModal inline open onClose={() => {}} onFirmClick={() => navigate("/")} />
+            )}
+            {activeModule === "board-meeting-alerts" && (
+              <BoardMeetingAlertsTab onFirmClick={() => navigate("/")} />
+            )}
+            {activeModule === "coverage" && <CoverageTracker />}
+            {activeModule === "coverage-mgmt" && <CoverageManagement />}
+            {activeModule === "rfp-rfi" && <RfpRfiDashboard inline />}
           </div>
-        )}
-        {tab === "scoring-alerts" && (
-          <div className="rounded-xl border border-gray-200 bg-white p-4">
-            <ScoringAlertsTab onProductClick={() => navigate("/")} />
-          </div>
-        )}
-        {tab === "score-trends" && (
-          <div className="rounded-xl border border-gray-200 bg-white p-4">
-            <ScoreTrendAnalyticsTab onFirmClick={() => navigate("/")} />
-          </div>
-        )}
-        {tab === "timeline" && (
-          <ActivityTimeline
-            onActivityClick={(activity) => setViewingActivity(activity)}
-          />
-        )}
-        {tab === "conferences" && (
-          <ConferencesTab />
-        )}
-        {tab === "board-meetings" && (
-          <BoardMeetingsModal inline open onClose={() => {}} onFirmClick={() => navigate("/")} />
-        )}
-        {tab === "board-meeting-alerts" && (
-          <BoardMeetingAlertsTab onFirmClick={() => navigate("/")} />
-        )}
-        {tab === "coverage" && (
-          <CoverageTracker />
-        )}
-        {tab === "coverage-mgmt" && (
-          <CoverageManagement />
-        )}
-        {tab === "rfp-rfi" && (
-          <RfpRfiDashboard inline />
         )}
       </div>
 
