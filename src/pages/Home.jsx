@@ -738,14 +738,7 @@ export default function Home() {
   const mobileNavItems = [
     { label: "Dashboard", icon: LayoutDashboard, ref: null, color: "text-indigo-300", activeBg: "bg-indigo-50", onClick: () => navigate("/Dashboard") },
     { label: "AI Agents", icon: Bot, ref: null, color: "text-violet-300", activeBg: "bg-violet-50", onClick: () => navigate("/AiAgents") },
-    { label: "Due Diligence", icon: ShieldCheck, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => navigate("/DueDiligence"), submenu: [
-      { label: "DD Board", icon: LayoutGrid, onClick: () => navigate("/DueDiligenceKanban") },
-      { label: "DD Stats", icon: PieChart, onClick: () => navigate("/DueDiligenceDashboard") },
-      { label: "Scoring Calendar", icon: CalendarDays, onClick: () => navigate("/ScoringActivityCalendar") },
-      { label: "Documents", icon: Files, onClick: () => setDocumentsPickerOpen(true) },
-      { label: "Forms", icon: ClipboardCheck, onClick: () => setQuestionnairePickerOpen(true) },
-      { label: "Templates", icon: FileText, onClick: () => setTemplatesPickerOpen(true) },
-    ] },
+    { label: "Due Diligence", icon: ShieldCheck, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => navigate("/DueDiligence") },
     { label: "Monitor", icon: Radar, ref: null, color: "text-rose-600", activeBg: "bg-rose-50", onClick: () => navigate("/Monitor") },
     { label: "Report", icon: FileBarChart, ref: null, color: "text-cyan-600", activeBg: "bg-cyan-50", onClick: () => navigate("/Reports"), submenu: [
       { label: "Analytics", icon: LineChart, onClick: () => setAnalyticsLaunchOpen(true) },
