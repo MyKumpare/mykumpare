@@ -206,7 +206,10 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
         number: c.number,
         name: c.name.trim(),
         category: c.category || "",
-        descriptors: (c.descriptors || []).map((d) => ({ level: d.level, text: d.text }))
+        descriptors: (c.descriptors || []).map((d) => ({ level: d.level, text: d.text })),
+        bonus_penalty_enabled: c.bonus_penalty_enabled === true,
+        bonus_penalty_range: c.bonus_penalty_enabled ? (c.bonus_penalty_range || { min: -1, max: 1 }) : undefined,
+        bonus_penalty_guidance: c.bonus_penalty_enabled ? (c.bonus_penalty_guidance || "") : undefined
       }))
     })) : undefined;
     const payload = {
@@ -297,7 +300,10 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
                         number: c.number || 0,
                         name: c.name || "",
                         category: c.category || "",
-                        descriptors: (c.descriptors || []).map((d) => ({ level: d.level, text: d.text || "" }))
+                        descriptors: (c.descriptors || []).map((d) => ({ level: d.level, text: d.text || "" })),
+                        bonus_penalty_enabled: c.bonus_penalty_enabled === true,
+                        bonus_penalty_range: c.bonus_penalty_enabled ? (c.bonus_penalty_range || { min: 0, max: 1 }) : { min: -1, max: 1 },
+                        bonus_penalty_guidance: c.bonus_penalty_guidance || ""
                       }))
                     })));
                   }

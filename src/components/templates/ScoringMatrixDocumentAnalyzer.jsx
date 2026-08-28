@@ -67,7 +67,17 @@ export default function ScoringMatrixDocumentAnalyzer({ templateCategory, onAnal
       });
       const data = response.data?.data || response.data;
       if (data) {
-        setPreviewStructure({ type: "scoring", blocks: data.blocks || [] });
+        // Ensure bonus_penalty fields are preserved on each criterion
+        const blocks = (data.blocks || []).map(block => ({
+          ...block,
+          criteria: (block.criteria || []).map(c => ({
+            ...c,
+            bonus_penalty_enabled: c.bonus_penalty_enabled === true,
+            bonus_penalty_range: c.bonus_penalty_enabled ? (c.bonus_penalty_range || { min: 0, max: 1 }) : undefined,
+            bonus_penalty_guidance: c.bonus_penalty_enabled ? (c.bonus_penalty_guidance || "") : undefined,
+          }))
+        }));
+        setPreviewStructure({ type: "scoring", blocks });
         toast({ title: "Analysis complete", description: "Review the generated structure below before applying." });
       }
     } catch (err) {

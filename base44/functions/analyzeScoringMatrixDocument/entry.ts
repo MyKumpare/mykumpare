@@ -21,7 +21,8 @@ Extract:
 1. Main weighted blocks/sections and their percentage weights (should sum to 100)
 2. Individual criteria within each block (with numbers and names)
 3. Sub-categories within each criterion
-4. Level descriptors (1-5) for each criterion - the text describing what each score level means
+4. Level descriptors for each criterion - the text describing what each score level means
+5. BONUS/PENALTY detection: if a criterion is labeled as BONUS or PENALTY (e.g. "Alignment of Interests (BONUS) (0-2)", "Market Insights (BONUS) (0-3)", "Financial Solvency/Burnrate (-10-5)", "Is the Firm GIPS Compliance (-1-3)"), set bonus_penalty_enabled=true and extract the min/max range from the label (e.g. (0-2) → min:0, max:2; (-1-3) → min:-1, max:3; (-5-5) → min:-5, max:5). For BONUS-labeled criteria, descriptors use levels starting from 0 or +1. For PENALTY-labeled criteria, descriptors may include negative values. Always populate the descriptors array with all levels described in the document. Include a bonus_penalty_guidance string summarizing when/how to apply the adjustment.
 
 Return a JSON object with this exact structure:
 {
@@ -34,6 +35,9 @@ Return a JSON object with this exact structure:
           "number": 1,
           "name": "Criterion name",
           "category": "Sub-category",
+          "bonus_penalty_enabled": false,
+          "bonus_penalty_range": {"min": -1, "max": 1},
+          "bonus_penalty_guidance": "Apply this bonus/penalty when...",
           "descriptors": [
             {"level": 1, "text": "descriptor"},
             {"level": 2, "text": "descriptor"},
@@ -45,7 +49,9 @@ Return a JSON object with this exact structure:
       ]
     }
   ]
-}`
+}
+
+IMPORTANT: For regular (non-bonus/penalty) criteria set bonus_penalty_enabled=false and omit bonus_penalty_range/bonus_penalty_guidance. For bonus/penalty criteria set bonus_penalty_enabled=true and populate bonus_penalty_range with the actual min/max values from the document label.`
       : `Analyze this document and extract the complete process template / due diligence structure.
 Extract:
 1. Main stages/sections (ordered)
@@ -86,6 +92,15 @@ Return a JSON object with this exact structure:
                         number: { type: 'integer' },
                         name: { type: 'string' },
                         category: { type: 'string' },
+                        bonus_penalty_enabled: { type: 'boolean' },
+                        bonus_penalty_range: {
+                          type: 'object',
+                          properties: {
+                            min: { type: 'number' },
+                            max: { type: 'number' }
+                          }
+                        },
+                        bonus_penalty_guidance: { type: 'string' },
                         descriptors: {
                           type: 'array',
                           items: {

@@ -1,5 +1,5 @@
 import React from "react";
-import { Check, X, FileText, ListTree, Layers } from "lucide-react";
+import { Check, X, FileText, ListTree, Layers, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -50,12 +50,19 @@ export default function TemplateStructurePreview({ structure, onApply, onDiscard
                 <div className="p-2 space-y-1.5">
                   {(block.criteria || []).map((crit, cIdx) => (
                     <div key={cIdx} className="pl-3 border-l-2 border-emerald-200">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs font-bold text-gray-400">#{crit.number || cIdx + 1}</span>
                         <span className="text-xs font-medium text-gray-700">{crit.name || "(unnamed criterion)"}</span>
                         {crit.category && (
                           <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
                             {crit.category}
+                          </span>
+                        )}
+                        {crit.bonus_penalty_enabled && (
+                          <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-amber-700 bg-amber-100 border border-amber-200 px-1.5 py-0.5 rounded-full">
+                            <Zap className="w-2.5 h-2.5" />
+                            Bonus/Penalty
+                            {crit.bonus_penalty_range && ` (${crit.bonus_penalty_range.min} to +${crit.bonus_penalty_range.max})`}
                           </span>
                         )}
                       </div>
