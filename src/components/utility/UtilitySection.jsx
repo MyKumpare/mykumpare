@@ -251,7 +251,7 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
                   <Building className="w-5 h-5 text-blue-600" />
                 </div>
                 <span className="text-sm font-semibold text-gray-700">Import Firms</span>
-                <span className="text-[11px] text-gray-400">Bulk upload from CSV</span>
+                <span className="text-[11px] text-gray-400">Bulk upload from CSV or Excel</span>
               </button>
               <button
                 onClick={() => setView("import-products")}
@@ -261,7 +261,7 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
                   <Package className="w-5 h-5 text-violet-600" />
                 </div>
                 <span className="text-sm font-semibold text-gray-700">Import Products</span>
-                <span className="text-[11px] text-gray-400">Bulk upload from CSV</span>
+                <span className="text-[11px] text-gray-400">Bulk upload from CSV or Excel</span>
               </button>
               <button
                 onClick={() => setView("placeholder-cleanup")}
