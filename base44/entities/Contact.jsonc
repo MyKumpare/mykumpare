@@ -55,6 +55,10 @@
       "type": "string",
       "description": "Job title of the contact"
     },
+    "reports_to_contact_id": {
+      "type": "string",
+      "description": "ID of the contact this person reports to within the same firm. Used to build the firm's reporting hierarchy (who reports to whom). Set via the 'Reports To' picker on the contact form, filtered to active contacts at the same firm(s). Empty means this contact has no manager link (appears as a root node in the firm's reporting structure)."
+    },
     "designations": {
       "type": "array",
       "description": "Professional designations",
