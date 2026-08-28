@@ -8,7 +8,7 @@ export const UNCAT_ID = "uncat";
 const DEFAULT_CATEGORIES = [
   { id: "alerts", name: "Alerts", items: ["news", "scoring-alerts", "board-meeting-alerts", "stale-contacts"] },
   { id: "activity-tasks", name: "Activity & Tasks", items: ["activity", "tasks", "timeline"] },
-  { id: "reviews", name: "Reviews", items: ["score-trends", "firm-score-trends-6mo", "rfp-rfi"] },
+  { id: "reviews", name: "Reviews", items: ["score-trends", "firm-score-trends-6mo", "benchmark-comparison", "rfp-rfi"] },
   { id: "meetings", name: "Meetings & Events", items: ["conferences", "board-meetings"] },
   { id: "coverage", name: "Coverage", items: ["coverage", "coverage-mgmt"] },
 ];

@@ -22,6 +22,7 @@ import StaleContactRemindersPanel from "@/components/contacts/StaleContactRemind
 import ScoringAlertsTab from "@/components/templates/ScoringAlertsTab";
 import ScoreTrendAnalyticsTab from "@/components/templates/ScoreTrendAnalyticsTab";
 import FirmScoreTrend6mo from "@/components/monitor/FirmScoreTrend6mo";
+import BenchmarkComparison from "@/components/monitor/BenchmarkComparison";
 import MonitorModuleGrid from "@/components/monitor/MonitorModuleGrid";
 import { MODULE_MAP } from "@/components/monitor/monitorModules";
 import TopScoredFirmsSummary from "@/components/dashboard/TopScoredFirmsSummary";
@@ -161,6 +162,11 @@ export default function MonitorPage() {
             {activeModule === "firm-score-trends-6mo" && (
               <div className="rounded-xl border border-gray-200 bg-white p-4">
                 <FirmScoreTrend6mo onFirmClick={() => navigate("/")} />
+              </div>
+            )}
+            {activeModule === "benchmark-comparison" && (
+              <div className="rounded-xl border border-gray-200 bg-white p-4">
+                <BenchmarkComparison onFirmClick={(firmId) => navigate("/", { state: { openFirmId: firmId } })} />
               </div>
             )}
             {activeModule === "timeline" && (
