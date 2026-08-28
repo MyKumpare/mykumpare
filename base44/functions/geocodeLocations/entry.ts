@@ -1,6 +1,40 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 
 const NOMINATIM_URL = "https://nominatim.openstreetmap.org/search";
+const NOMINATIM_REVERSE_URL = "https://nominatim.openstreetmap.org/reverse";
+
+// Reverse-geocode a lat/lon point into address components using Nominatim.
+// Returns { lat, lon, displayName, address } where address holds the raw
+// Nominatim address fields (country, country_code, state, city/town/village,
+// postcode, road, house_number). The client maps these to its own country/state codes.
+async function reverseGeocodeOne(lat, lon) {
+  if (lat == null || lon == null) return null;
+  const url = `${NOMINATIM_REVERSE_URL}?lat=${lat}&lon=${lon}&format=json&zoom=18&addressdetails=1`;
+  try {
+    const resp = await fetch(url, { headers: { "User-Agent": "MyKumpare/1.0" } });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    if (!data || data.error) return null;
+    const addr = data.address || {};
+    const city = addr.city || addr.town || addr.village || addr.municipality || addr.hamlet || "";
+    return {
+      lat: parseFloat(data.lat),
+      lon: parseFloat(data.lon),
+      displayName: data.display_name || "",
+      address: {
+        country: addr.country || "",
+        country_code: (addr.country_code || "").toUpperCase(),
+        state: addr.state || addr.state_district || addr.county || "",
+        city,
+        postcode: addr.postcode || "",
+        road: addr.road || addr.pedestrian || addr.footway || "",
+        house_number: addr.house_number || "",
+      },
+    };
+  } catch {
+    return null;
+  }
+}
 
 async function geocodeOne(query) {
   if (!query || !query.trim()) return null;
@@ -68,9 +102,14 @@ export default async function(req) {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
-    const { centerQuery, locations = [] } = body || {};
+    const { centerQuery, locations = [], reverse } = body || {};
 
-    const result = { center: null, geocoded: {} };
+    const result = { center: null, geocoded: {}, reverseResult: null };
+
+    // Reverse geocode a single lat/lon point into address components
+    if (reverse && reverse.lat != null && reverse.lon != null) {
+      result.reverseResult = await reverseGeocodeOne(reverse.lat, reverse.lon);
+    }
 
     // Geocode center query
     if (centerQuery) {

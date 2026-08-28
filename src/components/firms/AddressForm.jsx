@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { MapPin, Trash2, Star, ExternalLink, Loader2, LocateFixed, GripVertical } from "lucide-react";
+import { MapPin, Trash2, Star, ExternalLink, Loader2, LocateFixed, GripVertical, Map as MapIcon } from "lucide-react";
 import { COUNTRIES, getStatesForCountry } from "./geoData";
 import { useZipCodeLookup } from "./useZipCodeLookup";
 import { base44 } from "@/api/base44Client";
+import AddressMapPickerDialog from "./AddressMapPickerDialog";
 
 function buildMapsUrl(address) {
   const parts = [
@@ -40,7 +41,25 @@ export default function AddressForm({ address, onChange, onDelete, onSetHeadquar
   const [manualCity, setManualCity] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
   const [geoError, setGeoError] = useState(null);
+  const [mapPickerOpen, setMapPickerOpen] = useState(false);
   const { lookupZip, getCitiesForState, saveZipMapping } = useZipCodeLookup();
+
+  // Populate the address drill-down (country → state → city) from a map click.
+  // Merges the picked values onto the current address without wiping fields
+  // the user may have already filled (e.g. suite/floor).
+  const handleMapPick = (picked) => {
+    onChange({
+      ...address,
+      country: picked.country || address.country,
+      state: picked.state || address.state,
+      city: picked.city || address.city,
+      postal_code: picked.postal_code || address.postal_code,
+      address_line1: picked.address_line1 || address.address_line1,
+      latitude: picked.latitude,
+      longitude: picked.longitude,
+    });
+    setManualCity(false);
+  };
 
   const states = getStatesForCountry(address.country || "");
   const hasStates = states.length > 0;
@@ -352,21 +371,34 @@ export default function AddressForm({ address, onChange, onDelete, onSetHeadquar
                 <MapPin className="w-3.5 h-3.5 text-gray-400" />
                 Geocode (Latitude, Longitude)
               </Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-7 px-2 text-xs gap-1"
-                onClick={handleAutoLocate}
-                disabled={geocoding}
-              >
-                {geocoding ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <LocateFixed className="w-3.5 h-3.5" />
-                )}
-                {geocoding ? "Locating..." : "Auto-locate"}
-              </Button>
+              <div className="flex items-center gap-1.5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2 text-xs gap-1"
+                  onClick={handleAutoLocate}
+                  disabled={geocoding}
+                >
+                  {geocoding ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <LocateFixed className="w-3.5 h-3.5" />
+                  )}
+                  {geocoding ? "Locating..." : "Auto-locate"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2 text-xs gap-1"
+                  onClick={() => setMapPickerOpen(true)}
+                  title="Pick a location on the map to fill in country, state, and city"
+                >
+                  <MapIcon className="w-3.5 h-3.5" />
+                  Pick on Map
+                </Button>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               {field("Latitude",
@@ -413,6 +445,15 @@ export default function AddressForm({ address, onChange, onDelete, onSetHeadquar
           <MapPin className="w-3 h-3" />
           {Number(address.latitude).toFixed(6)}, {Number(address.longitude).toFixed(6)}
         </div>
+      )}
+
+      {isEditing && (
+        <AddressMapPickerDialog
+          open={mapPickerOpen}
+          onClose={() => setMapPickerOpen(false)}
+          onPick={handleMapPick}
+          currentAddress={address}
+        />
       )}
     </div>
   );
