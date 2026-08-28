@@ -6,8 +6,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, X, StickyNote, RefreshCw, Check } from "lucide-react";
+import { Loader2, X, StickyNote, RefreshCw, Check, FileText } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import { exportMultiFirmComparisonByIds } from "./multiFirmComparisonPdf";
 
 const STATUS_OPTIONS = [
   { value: "draft", label: "Draft" },
@@ -35,11 +36,24 @@ export default function ScoringBulkActionsBar({ selectedScores, onClear, invalid
   const [notesValue, setNotesValue] = useState("");
   const [notesMode, setNotesMode] = useState("replace"); // "replace" | "append"
   const [pending, setPending] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const count = selectedScores.length;
   if (count === 0) return null;
 
   const ids = selectedScores.map((s) => s.scoreId);
+
+  const handleExportComparison = async () => {
+    setExporting(true);
+    try {
+      await exportMultiFirmComparisonByIds(ids);
+      toast({ title: "Comparison report generated", description: `PDF comparing ${count} firm${count !== 1 ? "s" : ""} downloaded.` });
+    } catch (err) {
+      toast({ title: "Report generation failed", description: err?.message || "Please try again.", variant: "destructive" });
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const runBulk = async (updates, successMsg) => {
     setPending(true);
@@ -113,10 +127,20 @@ export default function ScoringBulkActionsBar({ selectedScores, onClear, invalid
           <Button size="sm" variant={mode === "status" ? "default" : "outline"} onClick={() => setMode(mode === "status" ? null : "status")} disabled={pending}>
             <RefreshCw className="w-3.5 h-3.5" /> Set Status
           </Button>
-          <Button size="sm" variant={mode === "notes" ? "default" : "outline"} onClick={() => setMode(mode === "notes" ? null : "notes")} disabled={pending}>
+          <Button size="sm" variant={mode === "notes" ? "default" : "outline"} onClick={() => setMode(mode === "notes" ? null : "notes")} disabled={pending || exporting}>
             <StickyNote className="w-3.5 h-3.5" /> Assign Notes
           </Button>
-          <Button size="sm" variant="ghost" onClick={onClear} disabled={pending} className="text-gray-500">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleExportComparison}
+            disabled={pending || exporting}
+            className="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+          >
+            {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
+            Generate Comparison Report
+          </Button>
+          <Button size="sm" variant="ghost" onClick={onClear} disabled={pending || exporting} className="text-gray-500">
             <X className="w-3.5 h-3.5" /> Clear
           </Button>
         </div>
