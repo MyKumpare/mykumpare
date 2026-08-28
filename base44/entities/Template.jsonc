@@ -108,7 +108,7 @@
     },
     "scoring_blocks": {
       "type": "array",
-      "description": "Weighted scoring blocks for Scoring Matrix templates. Each block groups related criteria and has a percentage weight. The sum of all block weights should equal 100.",
+      "description": "Weighted scoring blocks for Scoring Matrix templates. Each block groups related criteria and has a percentage weight. The sum of all block weights should equal 100. An optional multiplier factor can be enabled per block (and per criterion) to scale its influence; effective weights are normalized so the overall total stays 100%.",
       "items": {
         "type": "object",
         "properties": {
@@ -122,6 +122,16 @@
           "weight": {
             "type": "number",
             "description": "Percentage weight of this block (0-100)"
+          },
+          "multiplier_enabled": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether a multiplier factor is active for this block (section). When true, the block's effective weight = weight \u00d7 multiplier, and all effective weights are normalized so the overall total stays 100%."
+          },
+          "multiplier": {
+            "type": "number",
+            "default": 1,
+            "description": "Multiplier factor applied to this block's weight (e.g. 1.5 increases the block's influence by 50%, 0.5 halves it). Only used when multiplier_enabled is true. Effective weights are normalized across all blocks so the total remains 100%."
           },
           "criteria": {
             "type": "array",
@@ -143,6 +153,16 @@
                 "category": {
                   "type": "string",
                   "description": "Sub-category label (e.g. 'Investment research')"
+                },
+                "multiplier_enabled": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Whether a multiplier factor is active for this criterion (sub-section). When true, the criterion's contribution within its block is weighted by the multiplier value instead of equal weight."
+                },
+                "multiplier": {
+                  "type": "number",
+                  "default": 1,
+                  "description": "Multiplier factor weighting this criterion within its block (e.g. 2 doubles the criterion's influence within the block relative to other criteria). Only used when multiplier_enabled is true; defaults to equal weighting (1) otherwise."
                 },
                 "descriptors": {
                   "type": "array",

@@ -3,11 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, GripVertical, ChevronDown, ChevronRight, Sparkles, Loader2, ToggleLeft, ToggleRight } from "lucide-react";
+import { Plus, Trash2, GripVertical, ChevronDown, ChevronRight, Sparkles, Loader2, ToggleLeft, ToggleRight, Sigma } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import ScoringMatrixRubricAudit from "./ScoringMatrixRubricAudit";
 import ScoringRatingConfigEditor from "./ScoringRatingConfigEditor";
 import { toast } from "@/components/ui/use-toast";
+import { computeEffectiveBlockWeights, hasActiveMultipliers } from "@/components/templates/scoringWeightLogic";
 
 let _blockId = 0;
 const nextBlockId = () => `smb_${Date.now()}_${++_blockId}`;
@@ -132,6 +133,8 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange, template
                   id: { type: "string" },
                   name: { type: "string" },
                   weight: { type: "number" },
+                  multiplier_enabled: { type: "boolean" },
+                  multiplier: { type: "number" },
                   criteria: {
                     type: "array",
                     items: {
@@ -141,6 +144,8 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange, template
                         number: { type: "integer" },
                         name: { type: "string" },
                         category: { type: "string" },
+                        multiplier_enabled: { type: "boolean" },
+                        multiplier: { type: "number" },
                         descriptors: {
                           type: "array",
                           items: {
@@ -173,13 +178,24 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange, template
   };
 
   const totalWeight = blocks.reduce((sum, b) => sum + (b.weight || 0), 0);
+  const multipliersActive = hasActiveMultipliers(blocks);
+  const effectiveWeights = computeEffectiveBlockWeights(blocks);
+  const effByBlockId = Object.fromEntries(effectiveWeights.map((b) => [b.id, b]));
 
   return (
     <div className="space-y-3 border border-gray-200 rounded-lg p-3">
       <div className="flex items-center justify-between">
         <Label className="text-sm font-semibold">Scoring Matrix Structure</Label>
-        <div className={`text-xs font-medium ${totalWeight === 100 ? "text-green-600" : "text-orange-600"}`}>
-          Total Weight: {totalWeight}% {totalWeight !== 100 && "(should be 100%)"}
+        <div className="flex items-center gap-3">
+          {multipliersActive && (
+            <div className="text-xs font-medium text-cyan-700 bg-cyan-50 border border-cyan-200 rounded px-1.5 py-0.5 flex items-center gap-1">
+              <Sigma className="w-3 h-3" />
+              Effective Total: 100% <span className="text-cyan-500 font-normal">(normalized)</span>
+            </div>
+          )}
+          <div className={`text-xs font-medium ${totalWeight === 100 ? "text-green-600" : "text-orange-600"}`}>
+            Total Weight: {totalWeight}% {totalWeight !== 100 && "(should be 100%)"}
+          </div>
         </div>
       </div>
 
@@ -238,6 +254,35 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange, template
               />
               <span className="text-gray-500">%</span>
             </div>
+            {/* Multiplier factor toggle (section level) */}
+            <button
+              type="button"
+              onClick={() => updateBlock(block.id, "multiplier_enabled", !block.multiplier_enabled)}
+              className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs border ${
+                block.multiplier_enabled
+                  ? "bg-cyan-50 border-cyan-300 text-cyan-700"
+                  : "bg-white border-gray-200 text-gray-400 hover:text-gray-600"
+              }`}
+              title={block.multiplier_enabled ? "Disable multiplier factor" : "Enable multiplier factor for this section"}
+            >
+              {block.multiplier_enabled ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
+              ×
+            </button>
+            {block.multiplier_enabled && (
+              <div className="flex items-center gap-1 text-xs">
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={block.multiplier == null ? 1 : block.multiplier}
+                  onChange={(e) => updateBlock(block.id, "multiplier", parseFloat(e.target.value) || 1)}
+                  className="h-7 w-14 text-sm text-center"
+                  placeholder="1"
+                />
+                <span className="text-cyan-700 font-medium whitespace-nowrap" title="Effective weight after multiplier, normalized to 100% total">
+                  → {effByBlockId[block.id]?.normalizedPct.toFixed(1)}%
+                </span>
+              </div>
+            )}
             <div className="flex items-center gap-0.5">
               <button type="button" onClick={() => moveBlock(block.id, -1)} disabled={bIdx === 0} className="p-1 rounded hover:bg-gray-200 disabled:opacity-30 text-xs">
                 ↑
@@ -250,6 +295,11 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange, template
               </button>
             </div>
           </div>
+          {block.multiplier_enabled && (
+            <div className="px-2 pb-1.5 text-[10px] text-cyan-600 bg-cyan-50/40">
+              Section multiplier active — effective weight {effByBlockId[block.id]?.effectiveWeight.toFixed(1)} ({effByBlockId[block.id]?.normalizedPct.toFixed(1)}% of total). Overall score normalizes all sections to 100%.
+            </div>
+          )}
           {expandedBlocks[block.id] && (
             <div className="p-2 space-y-2">
               {(block.criteria || []).map((crit, cIdx) => (
@@ -268,6 +318,31 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange, template
                       className="h-7 text-xs w-40"
                       placeholder="Category..."
                     />
+                    {/* Multiplier factor toggle (sub-section / criterion level) */}
+                    <button
+                      type="button"
+                      onClick={() => updateCriterion(block.id, crit.id, "multiplier_enabled", !crit.multiplier_enabled)}
+                      className={`flex items-center gap-0.5 px-1 py-0.5 rounded text-xs border ${
+                        crit.multiplier_enabled
+                          ? "bg-cyan-50 border-cyan-300 text-cyan-700"
+                          : "bg-white border-gray-200 text-gray-400 hover:text-gray-600"
+                      }`}
+                      title={crit.multiplier_enabled ? "Disable criterion multiplier" : "Enable multiplier factor for this sub-section (weights it within its block)"}
+                    >
+                      {crit.multiplier_enabled ? <ToggleRight className="w-3.5 h-3.5" /> : <ToggleLeft className="w-3.5 h-3.5" />}
+                      ×
+                    </button>
+                    {crit.multiplier_enabled && (
+                      <Input
+                        type="number"
+                        step="0.1"
+                        value={crit.multiplier == null ? 1 : crit.multiplier}
+                        onChange={(e) => updateCriterion(block.id, crit.id, "multiplier", parseFloat(e.target.value) || 1)}
+                        className="h-7 w-14 text-xs text-center"
+                        placeholder="1"
+                        title="Multiplier weighting this criterion within its block (1 = equal weight)"
+                      />
+                    )}
                     <div className="flex items-center gap-0.5">
                       <button type="button" onClick={() => moveCriterion(block.id, crit.id, -1)} disabled={cIdx === 0} className="p-1 rounded hover:bg-gray-200 disabled:opacity-30 text-xs">
                         ↑

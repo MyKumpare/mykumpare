@@ -1,6 +1,7 @@
 import { jsPDF } from "jspdf";
 import { drawMyKumpareBranding, drawReportHeader, preloadMyKumpareLogo } from "@/components/reports/reportBranding";
 import { format } from "date-fns";
+import { computeWeightedScoreMulti } from "@/components/templates/scoringWeightLogic";
 
 const SCORE_COLORS_HEX = {
   1: "#ef4444",
@@ -64,23 +65,13 @@ export async function exportScoringMatrixScorecardPdf({ score, blocks, template,
   doc.text(periodText, margin, y);
   y += 18;
 
-  // ── Weighted totals summary ──
+  // ── Weighted totals summary (honors optional multiplier factors) ──
   const computeTotals = (scoreField) => {
-    let total = 0, totalWeight = 0;
-    blocks.forEach((block) => {
-      const blockWeight = (block.weight || 0) / 100;
-      (block.criteria || []).forEach((crit) => {
-        let s = crit[scoreField];
-        if (s != null) {
-          if (scoreField === "final_score" && crit.bonus_penalty_active && crit.bonus_penalty_value) {
-            s = clampScore(s + crit.bonus_penalty_value);
-          }
-          total += s * blockWeight;
-          totalWeight += blockWeight;
-        }
-      });
+    const val = computeWeightedScoreMulti(blocks, scoreField, {
+      applyBonusPenalty: scoreField === "final_score",
+      mode: "perCriterion"
     });
-    return totalWeight > 0 ? (total / totalWeight).toFixed(2) : "—";
+    return val != null ? val.toFixed(2) : "—";
   };
 
   const summaryItems = [

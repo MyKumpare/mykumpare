@@ -2,6 +2,7 @@ import { jsPDF } from "jspdf";
 import { drawMyKumpareBranding, drawReportHeader, preloadMyKumpareLogo } from "@/components/reports/reportBranding";
 import { format } from "date-fns";
 import { base44 } from "@/api/base44Client";
+import { computeWeightedScoreMulti } from "@/components/templates/scoringWeightLogic";
 
 const SCORE_COLORS_HEX = {
   1: "#ef4444",
@@ -11,22 +12,14 @@ const SCORE_COLORS_HEX = {
   5: "#22c55e"
 };
 
-/** Block-weighted average of per-criterion final_score values. */
+/** Block-weighted average of per-criterion final_score values, honoring
+ *  optional block/criterion multiplier factors (normalized to 100% total). */
 function computeWeightedFinal(score) {
-  const blocks = score.scoring_blocks || [];
-  let totalWeight = 0;
-  let weightedSum = 0;
-  blocks.forEach((block) => {
-    const w = block.weight || 0;
-    const crits = block.criteria || [];
-    const scored = crits.filter((c) => c.final_score != null);
-    if (!scored.length) return;
-    const blockAvg = scored.reduce((s, c) => s + c.final_score, 0) / scored.length;
-    weightedSum += blockAvg * w;
-    totalWeight += w;
+  const val = computeWeightedScoreMulti(score.scoring_blocks || [], "final_score", {
+    applyBonusPenalty: true,
+    mode: "blockAvg"
   });
-  if (totalWeight === 0) return null;
-  return Math.round((weightedSum / totalWeight) * 100) / 100;
+  return val == null ? null : Math.round(val * 100) / 100;
 }
 
 /**

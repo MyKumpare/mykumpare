@@ -19,6 +19,7 @@ import ScoringMatrixHistoryTab from "@/components/templates/ScoringMatrixHistory
 import ScoringMatrixSnapshotsTab from "@/components/templates/ScoringMatrixSnapshotsTab";
 import ScoringAttachmentsManager from "@/components/templates/ScoringAttachmentsManager";
 import { computeOverallRating } from "@/components/templates/scoringRatingLogic";
+import { computeWeightedScoreMulti } from "@/components/templates/scoringWeightLogic";
 import RescoreConfirmDialog from "@/components/templates/RescoreConfirmDialog";
 import ClosedScoringEditWarning from "@/components/templates/ClosedScoringEditWarning";
 import FinalizeGuardDialog from "@/components/templates/FinalizeGuardDialog";
@@ -482,46 +483,24 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
     });
   };
 
-  // Compute weighted totals, applying bonus/penalty adjustments to the final score
+  // Compute weighted totals, applying bonus/penalty adjustments to the final
+  // score and honoring optional block/criterion multiplier factors (normalized
+  // to 100% total). Multipliers default to 1, so templates without them behave
+  // exactly as before.
   const computeTotals = (scoreField) => {
-    let total = 0;
-    let totalWeight = 0;
-    blocks.forEach((block) => {
-      const blockWeight = (block.weight || 0) / 100;
-      (block.criteria || []).forEach((crit) => {
-        let s = crit[scoreField];
-        if (s != null) {
-          // Apply bonus/penalty adjustment only to the final score column
-          if (scoreField === "final_score" && crit.bonus_penalty_active && crit.bonus_penalty_value) {
-            s = Math.max(1, Math.min(5, s + crit.bonus_penalty_value));
-          }
-          total += s * blockWeight;
-          totalWeight += blockWeight;
-        }
-      });
+    const val = computeWeightedScoreMulti(blocks, scoreField, {
+      applyBonusPenalty: scoreField === "final_score",
+      mode: "perCriterion"
     });
-    return totalWeight > 0 ? (total / totalWeight).toFixed(2) : "—";
+    return val != null ? val.toFixed(2) : "—";
   };
 
   // Numeric weighted final score (with bonus/penalty applied) for rating auto-assignment
-  const computeWeightedFinalScoreNum = () => {
-    let total = 0;
-    let totalWeight = 0;
-    blocks.forEach((block) => {
-      const blockWeight = (block.weight || 0) / 100;
-      (block.criteria || []).forEach((crit) => {
-        let s = crit.final_score;
-        if (s != null) {
-          if (crit.bonus_penalty_active && crit.bonus_penalty_value) {
-            s = Math.max(1, Math.min(5, s + crit.bonus_penalty_value));
-          }
-          total += s * blockWeight;
-          totalWeight += blockWeight;
-        }
-      });
+  const computeWeightedFinalScoreNum = () =>
+    computeWeightedScoreMulti(blocks, "final_score", {
+      applyBonusPenalty: true,
+      mode: "perCriterion"
     });
-    return totalWeight > 0 ? total / totalWeight : null;
-  };
 
   const columns = [
     { key: "primary_score", label: "Primary", color: "#3b82f6", getValue: (c) => c.primary_score },

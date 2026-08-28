@@ -67,7 +67,7 @@
     },
     "scoring_blocks": {
       "type": "array",
-      "description": "Scoring data for each block in the matrix. Each block contains criteria with scores from primary, team, IC, and final columns, plus notes.",
+      "description": "Scoring data for each block in the matrix. Each block contains criteria with scores from primary, team, IC, and final columns, plus notes. Blocks and criteria may carry an optional multiplier factor (copied from the template at scoring initialization) that scales their influence on the weighted total; effective weights are normalized so the overall total stays 100%.",
       "items": {
         "type": "object",
         "properties": {
@@ -79,6 +79,16 @@
           },
           "weight": {
             "type": "number"
+          },
+          "multiplier_enabled": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether a multiplier factor is active for this block (copied from the template). When true, the block's effective weight = weight \u00d7 multiplier, normalized across all blocks to 100%."
+          },
+          "multiplier": {
+            "type": "number",
+            "default": 1,
+            "description": "Multiplier factor applied to this block's weight (copied from the template). Only used when multiplier_enabled is true."
           },
           "criteria": {
             "type": "array",
@@ -96,6 +106,16 @@
                 },
                 "category": {
                   "type": "string"
+                },
+                "multiplier_enabled": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Whether a multiplier factor is active for this criterion (copied from the template). When true, the criterion's contribution within its block is weighted by the multiplier value instead of equal weight."
+                },
+                "multiplier": {
+                  "type": "number",
+                  "default": 1,
+                  "description": "Multiplier factor weighting this criterion within its block (copied from the template). Only used when multiplier_enabled is true."
                 },
                 "primary_score": {
                   "type": "integer",

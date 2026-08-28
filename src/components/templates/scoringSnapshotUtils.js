@@ -3,29 +3,22 @@
  * Computes block-weighted averages and derives a short phase summary
  * from a ScoringMatrixScore record's finalization flags.
  */
+import { computeWeightedScoreMulti } from "@/components/templates/scoringWeightLogic";
 
 /**
  * Compute the block-weighted average for a given score field across
  * the scoring_blocks of a ScoringMatrixScore (or snapshot copy).
+ * Honors optional block/criterion multiplier factors (normalized to 100%
+ * total); multipliers default to 1 so records without them are unaffected.
+ * Uses the blockAvg model (block average × block weight) to preserve the
+ * original snapshot weighting behavior.
  * @param {Array} blocks - scoring_blocks array
  * @param {string} field - criterion field to average (e.g. "final_score")
  * @returns {number|null} weighted average rounded to 2 decimals, or null
  */
 export function computeWeightedScore(blocks, field) {
-  if (!Array.isArray(blocks)) return null;
-  let totalWeight = 0;
-  let weightedSum = 0;
-  blocks.forEach((block) => {
-    const w = block.weight || 0;
-    const crits = block.criteria || [];
-    const scored = crits.filter((c) => c[field] != null);
-    if (!scored.length) return;
-    const blockAvg = scored.reduce((s, c) => s + c[field], 0) / scored.length;
-    weightedSum += blockAvg * w;
-    totalWeight += w;
-  });
-  if (totalWeight === 0) return null;
-  return Math.round((weightedSum / totalWeight) * 100) / 100;
+  const val = computeWeightedScoreMulti(blocks, field, { mode: "blockAvg" });
+  return val == null ? null : Math.round(val * 100) / 100;
 }
 
 /**
