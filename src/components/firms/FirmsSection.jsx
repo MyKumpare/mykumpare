@@ -3,10 +3,11 @@ import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
-import { Plus, ChevronDown, ChevronRight, Building, CheckSquare, Radar as RadarIcon } from "lucide-react";
+import { Plus, ChevronDown, ChevronRight, Building, CheckSquare, Radar as RadarIcon, Download } from "lucide-react";
 import FirmTypeSection from "./FirmTypeSection";
 import FirmCard from "./FirmCard";
 import FirmsBulkActionsBar from "./FirmsBulkActionsBar";
+import { exportFirmsToCSV, exportFirmsToExcel } from "./firmListExport";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
 import SectionSearch from "@/components/common/SectionSearch";
 import SectionTypeFilter from "@/components/common/SectionTypeFilter";
@@ -49,6 +50,7 @@ export default function FirmsSection({
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [bulkBusy, setBulkBusy] = useState(null);
+  const [exportOpen, setExportOpen] = useState(false);
 
   const searchLower = search.toLowerCase().trim();
 
@@ -162,6 +164,21 @@ export default function FirmsSection({
     }
   };
 
+  const handleExportList = (format) => {
+    setExportOpen(false);
+    if (allFirms.length === 0) {
+      toast({ title: "Nothing to export", description: "No firms match the current filters.", variant: "destructive" });
+      return;
+    }
+    try {
+      if (format === "csv") exportFirmsToCSV(allFirms);
+      else exportFirmsToExcel(allFirms);
+      toast({ title: "Export ready", description: `${allFirms.length} firm${allFirms.length !== 1 ? "s" : ""} exported as ${format.toUpperCase()}.` });
+    } catch (err) {
+      toast({ title: "Export failed", description: err?.message, variant: "destructive" });
+    }
+  };
+
   const handleBulkDelete = async () => {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
@@ -215,6 +232,42 @@ export default function FirmsSection({
             <CheckSquare className="w-3.5 h-3.5" />
             Select
           </Button>
+          <div className="relative">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 gap-1 text-xs"
+              onClick={() => setExportOpen((v) => !v)}
+              title="Download the filtered firm list as CSV or Excel"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Export List
+            </Button>
+            {exportOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setExportOpen(false)} />
+                <div className="absolute right-0 top-full mt-1 z-50 w-44 rounded-md border border-gray-200 bg-white shadow-lg overflow-hidden">
+                  <button
+                    className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2"
+                    onClick={() => handleExportList("csv")}
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    Download CSV
+                  </button>
+                  <button
+                    className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2 border-t border-gray-100"
+                    onClick={() => handleExportList("excel")}
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    Download Excel
+                  </button>
+                  <div className="px-3 py-1.5 text-[10px] text-gray-400 border-t border-gray-100">
+                    {allFirms.length} firm{allFirms.length !== 1 ? "s" : ""} in current filter
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
           {onOpenExportWizard && (
             <Button
               variant="ghost"
