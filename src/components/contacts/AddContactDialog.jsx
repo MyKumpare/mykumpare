@@ -56,6 +56,7 @@ import ContactInfluenceScore from "./ContactInfluenceScore";
 import ContactQuickActions from "./ContactQuickActions";
 import QuickActivityLogFab from "./QuickActivityLogFab";
 import ContactInteractionHistory from "./ContactInteractionHistory";
+import ContactQuickNotesPanel from "./ContactQuickNotesPanel";
 import ContactEngagementStatusTracker from "./ContactEngagementStatusTracker";
 import { useTabPreferences } from "../common/useTabPreferences";
 import TabCustomizer from "../common/TabCustomizer";
@@ -1463,20 +1464,14 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                 ))}
               </div>
 
-              {/* Notes */}
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-gray-700">Notes</Label>
-                {viewMode ? (
-                  <div className="text-sm text-gray-900 px-1 whitespace-pre-wrap">{notes || <span className="text-gray-400 italic">—</span>}</div>
-                ) : (
-                  <Textarea placeholder="Additional notes..." value={notes} onChange={(e) => setNotes(e.target.value)} className="min-h-16 text-sm" />
-                )}
-              </div>
-
-              {/* Interaction History — visible in view mode so users see a log of past meetings and notes at a glance */}
-              {viewMode && editingContact && (
-                <ContactInteractionHistory contactId={editingContact.id} contactNotes={notes} />
-              )}
+              {/* Quick Notes & Recent Interactions — combined panel for tracking conversations */}
+              <ContactQuickNotesPanel
+                contactId={editingContact?.id}
+                notes={notes}
+                onNotesChange={setNotes}
+                onViewAll={() => setActiveTab("timeline")}
+                readOnly={viewMode}
+              />
             </TabsContent>
 
             {/* ── PHONES TAB ── */}
