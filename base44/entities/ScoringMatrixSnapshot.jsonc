@@ -1,0 +1,267 @@
+{
+  "name": "ScoringMatrixSnapshot",
+  "type": "object",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "ID of the firm (tenant) that owns this snapshot. Set on creation to the creator's linked_firm_id; drives tenant isolation via RLS."
+    },
+    "score_id": {
+      "type": "string",
+      "description": "ID of the ScoringMatrixScore record this snapshot captures at a point in time."
+    },
+    "product_id": {
+      "type": "string",
+      "description": "ID of the product being scored (denormalized from the score for quick lookup)."
+    },
+    "product_name": {
+      "type": "string",
+      "description": "Name of the product being scored (denormalized)."
+    },
+    "firm_id": {
+      "type": "string",
+      "description": "ID of the firm being scored (denormalized)."
+    },
+    "firm_name": {
+      "type": "string",
+      "description": "Name of the firm being scored (denormalized)."
+    },
+    "template_id": {
+      "type": "string",
+      "description": "ID of the scoring matrix template (denormalized)."
+    },
+    "template_name": {
+      "type": "string",
+      "description": "Name of the scoring matrix template (denormalized)."
+    },
+    "version_number": {
+      "type": "integer",
+      "description": "The version_number of the ScoringMatrixScore at the time the snapshot was taken (denormalized so the snapshot list shows which review cycle it belongs to)."
+    },
+    "label": {
+      "type": "string",
+      "description": "User-given name for the snapshot (e.g. 'Pre-Team Review', 'After IC Feedback', 'Final Draft'). Shown in the snapshot list and comparison picker."
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional free-text note describing the context or reason this snapshot was saved."
+    },
+    "scoring_blocks": {
+      "type": "array",
+      "description": "Full copy of the score's scoring_blocks at the moment the snapshot was taken. Captures every criterion's primary/team/IC/final scores, notes, and bonus/penalty adjustments so the snapshot can be compared against other snapshots or the live score later.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "weight": {
+            "type": "number"
+          },
+          "criteria": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "number": {
+                  "type": "integer"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "category": {
+                  "type": "string"
+                },
+                "primary_score": {
+                  "type": "integer"
+                },
+                "primary_notes": {
+                  "type": "string"
+                },
+                "secondary_score": {
+                  "type": "integer"
+                },
+                "secondary_notes": {
+                  "type": "string"
+                },
+                "team_score": {
+                  "type": "integer"
+                },
+                "team_notes": {
+                  "type": "string"
+                },
+                "adjusted_primary_score": {
+                  "type": "integer"
+                },
+                "adjusted_primary_notes": {
+                  "type": "string"
+                },
+                "ic_score": {
+                  "type": "integer"
+                },
+                "ic_notes": {
+                  "type": "string"
+                },
+                "final_score": {
+                  "type": "integer"
+                },
+                "final_notes": {
+                  "type": "string"
+                },
+                "bonus_penalty_active": {
+                  "type": "boolean"
+                },
+                "bonus_penalty_value": {
+                  "type": "number"
+                },
+                "bonus_penalty_notes": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "weighted_final_score": {
+      "type": "number",
+      "description": "Block-weighted average of the per-criterion final_score values at the time the snapshot was taken (computed on save). Lets the snapshot list show the headline score without re-parsing scoring_blocks."
+    },
+    "weighted_primary_score": {
+      "type": "number",
+      "description": "Block-weighted average of the per-criterion primary_score values at the time the snapshot was taken (computed on save)."
+    },
+    "status_at_snapshot": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "primary_scoring",
+        "secondary_scoring",
+        "team_review",
+        "ic_review",
+        "finalized"
+      ],
+      "description": "The workflow status of the score when the snapshot was taken, so the user can see which review phase each snapshot represents."
+    },
+    "phase_summary": {
+      "type": "string",
+      "description": "Short human-readable summary of the review phase captured (e.g. 'Primary scores entered', 'Team review in progress', 'IC review completed'). Auto-derived from the score's finalization flags at snapshot time."
+    },
+    "created_by_id": {
+      "type": "string",
+      "description": "ID of the user who created this snapshot (auto-set by platform)."
+    }
+  },
+  "required": [
+    "score_id",
+    "label"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_edit": true
+                  }
+                },
+                {
+                  "created_by_id": "{{user.id}}"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_delete": true
+                  }
+                },
+                {
+                  "created_by_id": "{{user.id}}"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

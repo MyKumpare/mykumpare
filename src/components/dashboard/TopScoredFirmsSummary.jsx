@@ -12,6 +12,7 @@ import {
   StickyNote,
   Check
 } from "lucide-react";
+import ScoringBulkActionsBar from "@/components/templates/ScoringBulkActionsBar";
 
 /**
  * Compute the weighted final score for a single ScoringMatrixScore record.
@@ -36,7 +37,7 @@ function computeWeightedFinal(score) {
 }
 
 /** A single firm row with an inline, auto-saving qualitative notes field. */
-function FirmRow({ firm, rank, medalColors, onFirmClick }) {
+function FirmRow({ firm, rank, medalColors, onFirmClick, selected, onToggleSelect }) {
   const queryClient = useQueryClient();
   const [note, setNote] = useState(firm.reviewNotes || "");
   const [saving, setSaving] = useState(false);
@@ -70,8 +71,17 @@ function FirmRow({ firm, rank, medalColors, onFirmClick }) {
   const DeltaIcon = isUp ? TrendingUp : isDown ? TrendingDown : Minus;
 
   return (
-    <div className="px-4 py-2.5 hover:bg-gray-50 transition-colors group">
+    <div className={`px-4 py-2.5 hover:bg-gray-50 transition-colors group ${selected ? "bg-indigo-50/40" : ""}`}>
       <div className="flex items-center gap-3">
+        {/* Bulk selection checkbox */}
+        <button
+          type="button"
+          onClick={() => onToggleSelect?.(firm.scoreId)}
+          className={`flex-shrink-0 w-4 h-4 rounded border flex items-center justify-center transition-colors ${selected ? "bg-indigo-600 border-indigo-600 text-white" : "border-gray-300 hover:border-indigo-400"}`}
+          title={selected ? "Remove from bulk selection" : "Add to bulk selection"}
+        >
+          {selected ? <Check className="w-3 h-3" /> : null}
+        </button>
         {/* Rank / medal */}
         <div className="flex-shrink-0 w-7 flex items-center justify-center">
           {rank < 3 ? (
@@ -154,6 +164,7 @@ function FirmRow({ firm, rank, medalColors, onFirmClick }) {
  * per firm for documenting review feedback.
  */
 export default function TopScoredFirmsSummary({ onFirmClick }) {
+  const [selectedIds, setSelectedIds] = useState(new Set());
   const { data: scores = [], isLoading, error } = useQuery({
     queryKey: ["topScoredFirmsSummary"],
     queryFn: async () => {
@@ -219,6 +230,17 @@ export default function TopScoredFirmsSummary({ onFirmClick }) {
 
   const medalColors = ["#d4a017", "#9ca3af", "#b45309"]; // gold, silver, bronze
 
+  const toggleSelect = (scoreId) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(scoreId)) next.delete(scoreId);
+      else next.add(scoreId);
+      return next;
+    });
+  };
+  const clearSelection = () => setSelectedIds(new Set());
+  const selectedScores = topFirms.filter((f) => selectedIds.has(f.scoreId));
+
   if (isLoading) {
     return (
       <div className="flex items-center gap-2 text-sm text-gray-500 py-4 px-4">
@@ -249,17 +271,30 @@ export default function TopScoredFirmsSummary({ onFirmClick }) {
           No finalized scoring records found yet.
         </div>
       ) : (
-        <div className="divide-y divide-gray-100">
-          {topFirms.map((f, i) => (
-            <FirmRow
-              key={f.firmId}
-              firm={f}
-              rank={i}
-              medalColors={medalColors}
-              onFirmClick={onFirmClick}
-            />
-          ))}
-        </div>
+        <>
+          {selectedScores.length > 0 && (
+            <div className="px-4 pt-3">
+              <ScoringBulkActionsBar
+                selectedScores={selectedScores}
+                onClear={clearSelection}
+                invalidateKeys={[["topScoredFirmsSummary"]]}
+              />
+            </div>
+          )}
+          <div className="divide-y divide-gray-100">
+            {topFirms.map((f, i) => (
+              <FirmRow
+                key={f.firmId}
+                firm={f}
+                rank={i}
+                medalColors={medalColors}
+                onFirmClick={onFirmClick}
+                selected={selectedIds.has(f.scoreId)}
+                onToggleSelect={toggleSelect}
+              />
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

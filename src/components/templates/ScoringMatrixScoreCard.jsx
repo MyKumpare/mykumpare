@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Check, X, CheckCircle2, Circle, ChevronDown, ChevronRight, Sparkles, Loader2, FileText, Download, Brain, History, GitBranch, Lock, Calendar, AlertTriangle, PlusCircle, MinusCircle, Info, ToggleLeft, ToggleRight } from "lucide-react";
+import { Check, X, CheckCircle2, Circle, ChevronDown, ChevronRight, Sparkles, Loader2, FileText, Download, Brain, History, GitBranch, Lock, Calendar, AlertTriangle, PlusCircle, MinusCircle, Info, ToggleLeft, ToggleRight, Camera } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend, Tooltip
@@ -16,6 +16,7 @@ import { format } from "date-fns";
 import ScoringMatrixComparisonTable from "@/components/templates/ScoringMatrixComparisonTable";
 import ScoringMatrixAuditPanel from "@/components/templates/ScoringMatrixAuditPanel";
 import ScoringMatrixHistoryTab from "@/components/templates/ScoringMatrixHistoryTab";
+import ScoringMatrixSnapshotsTab from "@/components/templates/ScoringMatrixSnapshotsTab";
 import RescoreConfirmDialog from "@/components/templates/RescoreConfirmDialog";
 import ClosedScoringEditWarning from "@/components/templates/ClosedScoringEditWarning";
 import { exportScoringMatrixComparisonPdf } from "@/components/templates/scoringMatrixComparisonPdf";
@@ -536,6 +537,9 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
           <Button variant="outline" size="sm" onClick={() => setActiveTab("history")} className="text-indigo-600 border-indigo-200 hover:bg-indigo-50">
             <History className="w-3.5 h-3.5" /> History
           </Button>
+          <Button variant="outline" size="sm" onClick={() => setActiveTab("snapshots")} className="text-teal-600 border-teal-200 hover:bg-teal-50">
+            <Camera className="w-3.5 h-3.5" /> Snapshots
+          </Button>
           {isClosed && (
             <Button variant="outline" size="sm" onClick={() => setShowRescoreDialog(true)} className="text-indigo-600 border-indigo-300 hover:bg-indigo-50">
               <GitBranch className="w-3.5 h-3.5" /> Re-Score
@@ -833,6 +837,11 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
       {/* History Tab */}
       {activeTab === "history" && (
         <ScoringMatrixHistoryTab score={score} onOpenScore={onOpenScore} />
+      )}
+
+      {/* Snapshots Tab */}
+      {activeTab === "snapshots" && (
+        <ScoringMatrixSnapshotsTab score={score} />
       )}
 
       {/* Re-score dialog */}
