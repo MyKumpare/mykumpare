@@ -256,6 +256,10 @@
       "type": "string",
       "description": "ID of the prior ScoringMatrixScore this re-scoring was started from (empty for the first/version 1 scoring). When a user re-scores an existing manager product, the new score starts with the prior score's data as a baseline and this field links back to the original for historical tracking."
     },
+    "review_notes": {
+      "type": "string",
+      "description": "Free-text qualitative feedback captured alongside the quantitative scores during review (e.g. from the Top Firms comparison summary). Lets the analyst document context, rationale, or observations that the numeric scores alone don't capture."
+    },
     "created_by_id": {
       "type": "string",
       "description": "ID of the user who created this score record (auto-set by platform)."

@@ -1,5 +1,5 @@
-import React, { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import React, { useMemo, useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import {
   Trophy,
@@ -8,7 +8,9 @@ import {
   Minus,
   Loader2,
   AlertCircle,
-  ChevronRight
+  ChevronRight,
+  StickyNote,
+  Check
 } from "lucide-react";
 
 /**
@@ -33,12 +35,125 @@ function computeWeightedFinal(score) {
   return Math.round((weightedSum / totalWeight) * 100) / 100;
 }
 
+/** A single firm row with an inline, auto-saving qualitative notes field. */
+function FirmRow({ firm, rank, medalColors, onFirmClick }) {
+  const queryClient = useQueryClient();
+  const [note, setNote] = useState(firm.reviewNotes || "");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  // Keep local state in sync if the underlying record changes (e.g. refetch).
+  useEffect(() => {
+    setNote(firm.reviewNotes || "");
+  }, [firm.scoreId, firm.reviewNotes]);
+
+  const persistNote = async () => {
+    if (note === (firm.reviewNotes || "")) return;
+    setSaving(true);
+    setSaved(false);
+    try {
+      await base44.entities.ScoringMatrixScore.update(firm.scoreId, { review_notes: note });
+      setSaved(true);
+      setSaving(false);
+      queryClient.invalidateQueries({ queryKey: ["topScoredFirmsSummary"] });
+      setTimeout(() => setSaved(false), 1500);
+    } catch (err) {
+      setSaving(false);
+      // Revert on failure so the user sees it didn't save.
+      setNote(firm.reviewNotes || "");
+    }
+  };
+
+  const isUp = (firm.delta ?? 0) > 0;
+  const isDown = (firm.delta ?? 0) < 0;
+  const deltaColor = isUp ? "text-green-600" : isDown ? "text-red-600" : "text-gray-500";
+  const DeltaIcon = isUp ? TrendingUp : isDown ? TrendingDown : Minus;
+
+  return (
+    <div className="px-4 py-2.5 hover:bg-gray-50 transition-colors group">
+      <div className="flex items-center gap-3">
+        {/* Rank / medal */}
+        <div className="flex-shrink-0 w-7 flex items-center justify-center">
+          {rank < 3 ? (
+            <span
+              className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
+              style={{ backgroundColor: medalColors[rank] }}
+            >
+              {rank + 1}
+            </span>
+          ) : (
+            <span className="text-xs font-semibold text-gray-400">{rank + 1}</span>
+          )}
+        </div>
+
+        {/* Firm name + template — clickable to open the firm profile */}
+        <button
+          type="button"
+          onClick={() => onFirmClick?.(firm.firmId)}
+          className="flex-1 min-w-0 text-left"
+        >
+          <div className="text-sm font-medium text-gray-800 truncate group-hover:text-primary">
+            {firm.firmName}
+          </div>
+          <div className="text-[11px] text-gray-400 truncate">
+            {firm.templateName ? `${firm.templateName} · ` : ""}v{firm.version}
+            {firm.latestDate ? ` · ${firm.latestDate}` : ""}
+          </div>
+        </button>
+
+        {/* Latest score */}
+        <div className="flex-shrink-0 text-right">
+          <div className="text-base font-bold text-gray-800 leading-none">
+            {firm.latestScore.toFixed(2)}
+          </div>
+          <div className="text-[10px] text-gray-400 mt-0.5">latest</div>
+        </div>
+
+        {/* Performance shift */}
+        <div className={`flex-shrink-0 flex items-center gap-1 ${deltaColor} min-w-[64px] justify-end`}>
+          {firm.delta != null ? (
+            <>
+              <DeltaIcon className="w-3.5 h-3.5" />
+              <span className="text-sm font-semibold">
+                {isUp ? "+" : ""}{firm.delta.toFixed(2)}
+              </span>
+            </>
+          ) : (
+            <span className="text-xs text-gray-400">—</span>
+          )}
+        </div>
+
+        <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-400 flex-shrink-0" />
+      </div>
+
+      {/* Inline qualitative notes field — auto-saves on blur */}
+      <div className="mt-2 flex items-start gap-2 pl-10">
+        <StickyNote className="w-3.5 h-3.5 text-gray-400 mt-1.5 flex-shrink-0" />
+        <textarea
+          value={note}
+          onChange={(e) => { setNote(e.target.value); setSaved(false); }}
+          onBlur={persistNote}
+          onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); e.target.blur(); } }}
+          placeholder="Add qualitative feedback for this firm… (auto-saves on blur)"
+          rows={1}
+          className="flex-1 min-h-[32px] text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-md px-2 py-1.5 resize-y focus:outline-none focus:ring-1 focus:ring-primary/40 focus:bg-white transition-colors"
+        />
+        <div className="flex items-center gap-1 mt-1.5 flex-shrink-0 w-12">
+          {saving && <Loader2 className="w-3 h-3 text-gray-400 animate-spin" />}
+          {saved && <Check className="w-3.5 h-3.5 text-green-500" />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Dashboard summary card highlighting the top 5 firms based on their latest
  * finalized scoring matrix, with a quick view of the performance shift
- * (delta vs the prior scoring version for the same product + template).
+ * (delta vs the prior scoring version) and an inline qualitative notes field
+ * per firm for documenting review feedback.
  */
-export default function TopScoredFirmsSummary({ onFirmClick, forceExpanded }) {
+export default function TopScoredFirmsSummary({ onFirmClick }) {
   const { data: scores = [], isLoading, error } = useQuery({
     queryKey: ["topScoredFirmsSummary"],
     queryFn: async () => {
@@ -61,12 +176,14 @@ export default function TopScoredFirmsSummary({ onFirmClick, forceExpanded }) {
         byFirm[fid] = {
           firmId: fid,
           firmName: rec.firm_name || "Unknown",
+          scoreId: rec.id,
           productId: rec.product_id,
           templateId: rec.template_id,
           templateName: rec.template_name,
           latestScore: weighted,
           latestDate: rec.scoring_end_date || rec.scoring_start_date,
           version: rec.version_number || 1,
+          reviewNotes: rec.review_notes || "",
           priorScore: null,
           priorDate: null
         };
@@ -74,14 +191,10 @@ export default function TopScoredFirmsSummary({ onFirmClick, forceExpanded }) {
     });
 
     // Second pass: find the prior version for each firm's latest score.
-    // Prior = the most recent finalized score for the same firm + product +
-    // template whose version is lower (or whose id matches latest.prior_score_id).
-    const latestKeys = new Set(Object.values(byFirm).map((f) => `${f.firmId}|${f.productId}|${f.templateId}|${f.version}`));
     (scores || []).forEach((rec) => {
       const fid = rec.firm_id;
       const entry = byFirm[fid];
       if (!entry) return;
-      // Must match same product + template and be a different (earlier) version.
       if (rec.product_id !== entry.productId || rec.template_id !== entry.templateId) return;
       if ((rec.version_number || 1) >= entry.version) return;
       const weighted = computeWeightedFinal(rec);
@@ -137,70 +250,15 @@ export default function TopScoredFirmsSummary({ onFirmClick, forceExpanded }) {
         </div>
       ) : (
         <div className="divide-y divide-gray-100">
-          {topFirms.map((f, i) => {
-            const isUp = (f.delta ?? 0) > 0;
-            const isDown = (f.delta ?? 0) < 0;
-            const isFlat = f.delta === 0;
-            const deltaColor = isUp ? "text-green-600" : isDown ? "text-red-600" : "text-gray-500";
-            const DeltaIcon = isUp ? TrendingUp : isDown ? TrendingDown : Minus;
-            return (
-              <button
-                key={f.firmId}
-                type="button"
-                onClick={() => onFirmClick?.(f.firmId)}
-                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left group"
-              >
-                {/* Rank / medal */}
-                <div className="flex-shrink-0 w-7 flex items-center justify-center">
-                  {i < 3 ? (
-                    <span
-                      className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                      style={{ backgroundColor: medalColors[i] }}
-                    >
-                      {i + 1}
-                    </span>
-                  ) : (
-                    <span className="text-xs font-semibold text-gray-400">{i + 1}</span>
-                  )}
-                </div>
-
-                {/* Firm name + template */}
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-gray-800 truncate group-hover:text-primary">
-                    {f.firmName}
-                  </div>
-                  <div className="text-[11px] text-gray-400 truncate">
-                    {f.templateName ? `${f.templateName} · ` : ""}v{f.version}
-                    {f.latestDate ? ` · ${f.latestDate}` : ""}
-                  </div>
-                </div>
-
-                {/* Latest score */}
-                <div className="flex-shrink-0 text-right">
-                  <div className="text-base font-bold text-gray-800 leading-none">
-                    {f.latestScore.toFixed(2)}
-                  </div>
-                  <div className="text-[10px] text-gray-400 mt-0.5">latest</div>
-                </div>
-
-                {/* Performance shift */}
-                <div className={`flex-shrink-0 flex items-center gap-1 ${deltaColor} min-w-[64px] justify-end`}>
-                  {f.delta != null ? (
-                    <>
-                      <DeltaIcon className="w-3.5 h-3.5" />
-                      <span className="text-sm font-semibold">
-                        {isUp ? "+" : ""}{f.delta.toFixed(2)}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-xs text-gray-400">—</span>
-                  )}
-                </div>
-
-                <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-400 flex-shrink-0" />
-              </button>
-            );
-          })}
+          {topFirms.map((f, i) => (
+            <FirmRow
+              key={f.firmId}
+              firm={f}
+              rank={i}
+              medalColors={medalColors}
+              onFirmClick={onFirmClick}
+            />
+          ))}
         </div>
       )}
     </div>
