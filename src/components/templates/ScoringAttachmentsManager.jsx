@@ -2,6 +2,7 @@ import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Paperclip, Trash2, FileText, Download, Loader2 } from "lucide-react";
+import UploadStatusCard, { formatFileSize } from "@/components/common/UploadStatusCard";
 import { base44 } from "@/api/base44Client";
 import { toast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
@@ -24,6 +25,8 @@ const nextAttId = () => `att_${Date.now()}_${++_attId}`;
  */
 export default function ScoringAttachmentsManager({ attachments, scope, canEdit, onUpdate, compact, userName }) {
   const [uploading, setUploading] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(null);
+  const [uploadError, setUploadError] = useState("");
   const [addingNote, setAddingNote] = useState(null);
   const [noteText, setNoteText] = useState("");
   const fileRef = useRef(null);
@@ -35,6 +38,8 @@ export default function ScoringAttachmentsManager({ attachments, scope, canEdit,
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
+    setUploadingFile(file);
+    setUploadError("");
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
       const newAtt = {
@@ -51,9 +56,11 @@ export default function ScoringAttachmentsManager({ attachments, scope, canEdit,
       onUpdate([...all, newAtt]);
       toast({ title: "Attachment added", description: file.name });
     } catch (err) {
+      setUploadError(err?.message || "Upload failed");
       toast({ title: "Upload failed", description: err?.message, variant: "destructive" });
     } finally {
       setUploading(false);
+      setUploadingFile(null);
       if (fileRef.current) fileRef.current.value = "";
     }
   };
@@ -74,7 +81,7 @@ export default function ScoringAttachmentsManager({ attachments, scope, canEdit,
           onClick={() => fileRef.current?.click()}
           disabled={!canEdit || uploading}
           className="p-1 rounded hover:bg-gray-100 text-gray-500 disabled:opacity-40"
-          title={scoped.length ? `${scoped.length} attachment(s) — add more` : "Attach supporting document"}
+          title={uploading && uploadingFile ? `Uploading ${uploadingFile.name}...` : (scoped.length ? `${scoped.length} attachment(s) — add more` : "Attach supporting document")}
         >
           {uploading ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -103,6 +110,24 @@ export default function ScoringAttachmentsManager({ attachments, scope, canEdit,
         </Button>
         <input ref={fileRef} type="file" className="hidden" onChange={handleFile} />
       </div>
+
+      {uploading && uploadingFile && (
+        <UploadStatusCard
+          fileName={uploadingFile.name}
+          fileSize={formatFileSize(uploadingFile.size)}
+          status="uploading"
+          accent="cyan"
+        />
+      )}
+      {!uploading && uploadError && (
+        <UploadStatusCard
+          fileName={uploadingFile?.name || "File"}
+          status="error"
+          error={uploadError}
+          onRemove={() => { setUploadError(""); setUploadingFile(null); }}
+          accent="cyan"
+        />
+      )}
 
       {scoped.length === 0 ? (
         <p className="text-xs text-gray-400 italic">No supporting documents attached yet.</p>

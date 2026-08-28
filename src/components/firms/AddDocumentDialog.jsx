@@ -34,6 +34,7 @@ import { format } from "date-fns";
 import DocumentCategoryPicker from "./DocumentCategoryPicker";
 import DocumentProductTagSelect from "./DocumentProductTagSelect";
 import SimilarDocumentDialog from "./SimilarDocumentDialog";
+import UploadStatusCard, { formatFileSize } from "@/components/common/UploadStatusCard";
 import { toast } from "@/components/ui/use-toast";
 
 const todayISO = () => format(new Date(), "yyyy-MM-dd");
@@ -67,6 +68,8 @@ export default function AddDocumentDialog({ open, onOpenChange }) {
   const [firmType, setFirmType] = useState("");
   const [file, setFile] = useState(null); // { file_url, file_name, file_type }
   const [uploading, setUploading] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(null);
+  const [uploadError, setUploadError] = useState("");
   const [entryDate] = useState(todayISO());
   const [asOfDate, setAsOfDate] = useState("");
   const [categories, setCategories] = useState([]);
@@ -118,6 +121,8 @@ export default function AddDocumentDialog({ open, onOpenChange }) {
     setProductIds([]);
     setDuplicateCheck(null);
     setFirmSearch("");
+    setUploadingFile(null);
+    setUploadError("");
   };
 
   const handleClose = (o) => {
@@ -140,6 +145,8 @@ export default function AddDocumentDialog({ open, onOpenChange }) {
     const f = files?.[0];
     if (!f) return;
     setUploading(true);
+    setUploadingFile(f);
+    setUploadError("");
     try {
       const res = await base44.integrations.Core.UploadFile({ file: f });
       const file_url = res?.file_url || "";
@@ -150,6 +157,7 @@ export default function AddDocumentDialog({ open, onOpenChange }) {
         file_type: f.type || f.name.split(".").pop() || "",
       });
     } catch (e) {
+      setUploadError(e?.message || "Upload failed");
       toast({
         title: "Upload failed",
         description: e.message,
@@ -157,6 +165,7 @@ export default function AddDocumentDialog({ open, onOpenChange }) {
       });
     } finally {
       setUploading(false);
+      setUploadingFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
@@ -366,21 +375,28 @@ export default function AddDocumentDialog({ open, onOpenChange }) {
                 className="hidden"
                 onChange={(e) => handleFile(e.target.files)}
               />
-              {file ? (
-                <div className="flex items-center gap-2 rounded-md border border-teal-200 bg-teal-50/50 px-3 py-2">
-                  <FileText className="w-4 h-4 text-teal-600 shrink-0" />
-                  <span className="text-sm text-gray-800 truncate flex-1">
-                    {file.file_name}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setFile(null)}
-                    className="p-1 text-gray-400 hover:text-red-500"
-                    title="Remove file"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+              {uploading ? (
+                <UploadStatusCard
+                  fileName={uploadingFile?.name || "Uploading..."}
+                  fileSize={uploadingFile ? formatFileSize(uploadingFile.size) : ""}
+                  status="uploading"
+                  accent="teal"
+                />
+              ) : file ? (
+                <UploadStatusCard
+                  fileName={file.file_name}
+                  status="success"
+                  onRemove={() => setFile(null)}
+                  accent="teal"
+                />
+              ) : uploadError ? (
+                <UploadStatusCard
+                  fileName={uploadingFile?.name || "File"}
+                  status="error"
+                  error={uploadError}
+                  onRemove={() => { setUploadError(""); setUploadingFile(null); }}
+                  accent="teal"
+                />
               ) : (
                 <Button
                   type="button"
@@ -388,14 +404,9 @@ export default function AddDocumentDialog({ open, onOpenChange }) {
                   size="sm"
                   className="w-full h-9 text-sm gap-1.5 text-teal-700 hover:text-teal-800 hover:bg-teal-50 border-teal-200"
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
                 >
-                  {uploading ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Upload className="w-3.5 h-3.5" />
-                  )}
-                  {uploading ? "Uploading..." : "Upload Document"}
+                  <Upload className="w-3.5 h-3.5" />
+                  Upload Document
                 </Button>
               )}
             </div>
