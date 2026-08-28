@@ -3,15 +3,40 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  Bell, CheckCheck, X, Loader2, CalendarPlus, CalendarClock, FileText, ExternalLink, Building2, Flag,
+  Bell, CheckCheck, X, Loader2, CalendarPlus, CalendarClock, FileText, ExternalLink, Building2, Flag, ArrowUpDown,
 } from "lucide-react";
+import BoardMeetingCard from "@/components/firms/BoardMeetingCard";
 
 const ALERT_FILTERS = [
   { key: "unread", label: "Unread" },
   { key: "all", label: "All" },
   { key: "dismissed", label: "Dismissed" },
 ];
+
+// Sort options for the alerts list.
+const SORT_OPTIONS = [
+  { key: "date", label: "Date" },
+  { key: "alert_level", label: "Alert level" },
+  { key: "impact", label: "Impact" },
+];
+
+// Alert-type severity ranking (highest = most severe alert).
+const ALERT_LEVEL_RANK = {
+  mention_flagged: 4,
+  upcoming_reminder: 3,
+  new_meeting: 2,
+  updated_meeting: 1,
+};
+
+// Derived portfolio-impact ranking (highest = most impact on the portfolio).
+const IMPACT_RANK = {
+  mention_flagged: 3,
+  new_meeting: 2,
+  updated_meeting: 2,
+  upcoming_reminder: 1,
+};
 
 function fmtDate(d) {
   if (!d) return "—";
@@ -28,6 +53,8 @@ export default function BoardMeetingAlertsTab({ onFirmClick }) {
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState("unread");
   const [firmFilter, setFirmFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("date");
+  const [viewingMeetingId, setViewingMeetingId] = useState(null);
 
   const { data: alerts = [], isLoading } = useQuery({
     queryKey: ["board-meeting-alerts"],
@@ -43,7 +70,7 @@ export default function BoardMeetingAlertsTab({ onFirmClick }) {
   }, [alerts]);
 
   const filtered = useMemo(() => {
-    return (alerts || [])
+    const list = (alerts || [])
       .filter(a => !a.deleted_at)
       .filter(a => {
         if (filter === "unread") return !a.is_dismissed && !a.is_read;
@@ -51,7 +78,22 @@ export default function BoardMeetingAlertsTab({ onFirmClick }) {
         return true; // all (exclude deleted only)
       })
       .filter(a => firmFilter === "all" || a.firm_id === firmFilter);
-  }, [alerts, filter, firmFilter]);
+
+    const sorted = [...list];
+    if (sortBy === "date") {
+      // Most recent meeting date first; fall back to detection date when no meeting date.
+      sorted.sort((a, b) => {
+        const da = a.meeting_date || a.created_date || "";
+        const db = b.meeting_date || b.created_date || "";
+        return db.localeCompare(da);
+      });
+    } else if (sortBy === "alert_level") {
+      sorted.sort((a, b) => (ALERT_LEVEL_RANK[b.alert_type] || 0) - (ALERT_LEVEL_RANK[a.alert_type] || 0));
+    } else if (sortBy === "impact") {
+      sorted.sort((a, b) => (IMPACT_RANK[b.alert_type] || 0) - (IMPACT_RANK[a.alert_type] || 0));
+    }
+    return sorted;
+  }, [alerts, filter, firmFilter, sortBy]);
 
   const unreadCount = (alerts || []).filter(a => !a.deleted_at && !a.is_dismissed && !a.is_read).length;
 
@@ -73,6 +115,13 @@ export default function BoardMeetingAlertsTab({ onFirmClick }) {
     queryClient.invalidateQueries({ queryKey: ["board-meeting-alerts"] });
   };
 
+  // Fetch the full board meeting record when a user opens one from an alert.
+  const { data: viewingMeeting, isLoading: isLoadingMeeting } = useQuery({
+    queryKey: ["board-meeting", viewingMeetingId],
+    queryFn: () => base44.entities.BoardMeeting.get(viewingMeetingId),
+    enabled: !!viewingMeetingId,
+  });
+
   return (
     <div className="space-y-3">
       {/* Toolbar */}
@@ -93,6 +142,17 @@ export default function BoardMeetingAlertsTab({ onFirmClick }) {
             <option value="all">All firms</option>
             {firms.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
           </select>
+          <div className="inline-flex items-center gap-1">
+            <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value)}
+              className="h-8 rounded-md border border-gray-200 bg-white px-2 text-xs focus:outline-none focus:ring-1 focus:ring-amber-400"
+              title="Sort alerts"
+            >
+              {SORT_OPTIONS.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+            </select>
+          </div>
           <div className="inline-flex rounded-md border border-gray-200 bg-white overflow-hidden">
             {ALERT_FILTERS.map(f => (
               <button
@@ -168,7 +228,20 @@ export default function BoardMeetingAlertsTab({ onFirmClick }) {
                       </button>
                       {!a.is_read && !a.is_dismissed && <span className="w-2 h-2 rounded-full bg-amber-500" title="Unread" />}
                     </div>
-                    <h3 className="text-sm font-semibold text-gray-800 mt-1">{a.meeting_title || "Untitled board meeting"}</h3>
+                    <h3 className="text-sm font-semibold text-gray-800 mt-1">
+                      {a.meeting_id ? (
+                        <button
+                          type="button"
+                          onClick={() => setViewingMeetingId(a.meeting_id)}
+                          className="text-left text-indigo-600 hover:text-indigo-800 hover:underline"
+                          title="Open board meeting record"
+                        >
+                          {a.meeting_title || "Untitled board meeting"}
+                        </button>
+                      ) : (
+                        a.meeting_title || "Untitled board meeting"
+                      )}
+                    </h3>
                     <p className="text-xs text-gray-600 mt-0.5 leading-snug">{a.details}</p>
                     <div className="flex items-center gap-3 mt-1.5 text-[11px] text-gray-400 flex-wrap">
                       <span className="flex items-center gap-1"><CalendarClock className="w-3 h-3" /> {fmtDate(a.meeting_date)}</span>
@@ -202,6 +275,26 @@ export default function BoardMeetingAlertsTab({ onFirmClick }) {
           })}
         </div>
       )}
+
+      {/* Board meeting detail dialog — opens the original record with all details */}
+      <Dialog open={!!viewingMeetingId} onOpenChange={(open) => { if (!open) setViewingMeetingId(null); }}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-base">Board Meeting Details</DialogTitle>
+          </DialogHeader>
+          {isLoadingMeeting ? (
+            <div className="flex items-center justify-center py-10"><Loader2 className="w-5 h-5 text-gray-300 animate-spin" /></div>
+          ) : viewingMeeting ? (
+            <BoardMeetingCard
+              meeting={viewingMeeting}
+              firmId={viewingMeeting.firm_id}
+              onFirmClick={onFirmClick}
+            />
+          ) : (
+            <p className="text-sm text-gray-500 text-center py-6">Board meeting record not found.</p>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
