@@ -39,6 +39,7 @@ import FirmFundingSummaryCard from "./FirmFundingSummaryCard";
 import FirmContactPhotoGallery from "./FirmContactPhotoGallery";
 import FirmContactRelationshipMap from "./FirmContactRelationshipMap";
 import { GEOGRAPHIC_REGIONS, deriveGeographicRegionFromAddresses } from "./geographicRegions";
+import FirmLocationField from "./FirmLocationField";
 import EnrichmentApprovalDialog from "./EnrichmentApprovalDialog";
 import ExperienceOptionMatchDialog from "../contacts/ExperienceOptionMatchDialog";
 import SimilarAddressDialog from "../SimilarAddressDialog";
@@ -211,6 +212,9 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const [sourcingContactName, setSourcingContactName] = useState("");
   const [sourcingNotes, setSourcingNotes] = useState("");
   const [geographicRegion, setGeographicRegion] = useState("");
+  const [location, setLocation] = useState("");
+  const [locationLat, setLocationLat] = useState(undefined);
+  const [locationLng, setLocationLng] = useState(undefined);
 
   const { data: allContacts = [] } = useQuery({
     queryKey: ["contacts"],
@@ -251,6 +255,9 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         setSourcingContactName(editingFirm.sourcing_contact_name || "");
         setSourcingNotes(editingFirm.sourcing_notes || "");
         setGeographicRegion(editingFirm.geographic_region || "Undefined");
+        setLocation(editingFirm.location || "");
+        setLocationLat(editingFirm.location_lat);
+        setLocationLng(editingFirm.location_lng);
         setIsEditing(false);
       } else {
         setFirmTypes(preselectedType ? [preselectedType] : []);
@@ -271,6 +278,9 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         setSourcingContactName("");
         setSourcingNotes("");
         setGeographicRegion("Undefined");
+        setLocation("");
+        setLocationLat(undefined);
+        setLocationLng(undefined);
         setIsEditing(true);
       }
     }
@@ -443,7 +453,10 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
       sourcingDate !== (editingFirm.sourcing_date || "") ||
       sourcingContactName !== (editingFirm.sourcing_contact_name || "") ||
       sourcingNotes !== (editingFirm.sourcing_notes || "") ||
-      geographicRegion !== (editingFirm.geographic_region || "")
+      geographicRegion !== (editingFirm.geographic_region || "") ||
+      location !== (editingFirm.location || "") ||
+      locationLat !== editingFirm.location_lat ||
+      locationLng !== editingFirm.location_lng
     : false;
 
   // In add mode, any entered data counts as unsaved changes.
@@ -608,7 +621,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   };
 
   const performSubmit = (addrs) => {
-    onSubmit({ firm_type: firmTypes[0] || "", firm_types: firmTypes, name: firmName.trim(), logo_url: logoUrl, website, email, linkedin_url: linkedinUrl, year_founded: yearFounded ? parseInt(yearFounded) : null, description, addresses: addrs, phones, pending_contacts: pendingContacts.length > 0 ? pendingContacts : undefined, sourcing_sources: sourcingSources, sourcing_date: sourcingDate || null, sourcing_contact_name: sourcingContactName, sourcing_notes: sourcingNotes, geographic_region: geographicRegion || "Undefined" });
+    onSubmit({ firm_type: firmTypes[0] || "", firm_types: firmTypes, name: firmName.trim(), logo_url: logoUrl, website, email, linkedin_url: linkedinUrl, year_founded: yearFounded ? parseInt(yearFounded) : null, description, addresses: addrs, phones, pending_contacts: pendingContacts.length > 0 ? pendingContacts : undefined, sourcing_sources: sourcingSources, sourcing_date: sourcingDate || null, sourcing_contact_name: sourcingContactName, sourcing_notes: sourcingNotes, geographic_region: geographicRegion || "Undefined", location: location || "", location_lat: locationLat, location_lng: locationLng });
     // Also save AUM history (including client type breakdown) if it has unsaved changes
     if (aumSaveRef.current && aumDirty) {
       aumSaveRef.current();
@@ -1382,6 +1395,16 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                   </Select>
                 )}
               </div>
+
+              {/* Location */}
+              <FirmLocationField
+                value={location}
+                lat={locationLat}
+                lng={locationLng}
+                editing={activelyEditing}
+                onChange={setLocation}
+                onGeocode={(lat, lng) => { setLocationLat(lat); setLocationLng(lng); }}
+              />
 
               {/* Description */}
               <div className="space-y-1.5">

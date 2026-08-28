@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Package, ChevronDown, ChevronRight, LayoutList } from "lucide-react";
+import { Plus, Package, ChevronDown, ChevronRight, LayoutList, MapPin } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import FirmStatusBadges from "./FirmStatusBadges";
 
@@ -52,10 +52,16 @@ export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditP
             ) : null}
           </div>
 
-          {/* Firm name */}
+          {/* Firm name + location */}
           <span className="font-medium text-gray-900 truncate hover:text-indigo-600 transition-colors text-left">
             {firm.name}
           </span>
+          {firm.location && (
+            <span className="hidden sm:flex items-center gap-0.5 text-xs text-gray-400 flex-shrink-0">
+              <MapPin className="w-3 h-3" />
+              <span className="truncate max-w-[140px]">{firm.location}</span>
+            </span>
+          )}
 
           {/* Product count — chevron is an explicit expand toggle */}
           {showProducts && (

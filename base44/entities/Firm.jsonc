@@ -77,6 +77,18 @@
       "default": "Undefined",
       "description": "Primary geographic region in which the firm operates. Used by the analyst coverage dashboard for region-based filtering and heatmap visualization. Defaults to 'Undefined' until a user sets a region."
     },
+    "location": {
+      "type": "string",
+      "description": "Free-text location for the firm (e.g. 'New York, NY, USA' or 'London, UK'). A quick, single-field geographic tag shown on the firm profile and used to position the firm on the map view. Geocoded into location_lat/location_lng via the 'Locate' button so the map can place it precisely without a full street address."
+    },
+    "location_lat": {
+      "type": "number",
+      "description": "Geocoded latitude for the firm's location field. Auto-filled when the user clicks 'Locate' next to the location field (calls the geocodeLocations backend function). Used by the Firm Geographic Map to position firms that have a location but no full address with coordinates."
+    },
+    "location_lng": {
+      "type": "number",
+      "description": "Geocoded longitude for the firm's location field. Auto-filled when the user clicks 'Locate' next to the location field (calls the geocodeLocations backend function). Used by the Firm Geographic Map to position firms that have a location but no full address with coordinates."
+    },
     "description": {
       "type": "string",
       "description": "Description of the firm"

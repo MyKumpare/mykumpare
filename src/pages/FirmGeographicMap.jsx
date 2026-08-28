@@ -46,6 +46,11 @@ function firmPosition(firm, index) {
   if (hq) return [hq.latitude, hq.longitude];
   const any = addrs.find((a) => a.latitude != null && a.longitude != null);
   if (any) return [any.latitude, any.longitude];
+  // Fall back to the geocoded location field (set via the firm profile's
+  // Location field + Auto-locate button) before the region centroid.
+  if (firm.location_lat != null && firm.location_lng != null) {
+    return [firm.location_lat, firm.location_lng];
+  }
   const region = firm.geographic_region || "Undefined";
   const center = REGION_META[region]?.center || [0, 0];
   // Deterministic jitter based on index so stacked centroid firms spread out.
