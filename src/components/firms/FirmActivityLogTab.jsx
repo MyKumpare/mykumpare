@@ -17,6 +17,7 @@ import TaskAssigneeEditor from "@/components/activity/TaskAssigneeEditor";
 import TaskDetailModal from "@/components/activity/TaskDetailModal";
 import ActivityDetailModal from "@/components/activity/ActivityDetailModal";
 import FirmActivityCalendar from "@/components/firms/FirmActivityCalendar";
+import MeetingSummaryPanel from "@/components/firms/MeetingSummaryPanel";
 import { getCurrentUserContact } from "@/components/activity/useAutoOriginator";
 import { format } from "date-fns";
 import ReactQuill from "react-quill";
@@ -978,6 +979,11 @@ export default function FirmActivityLogTab({ firmId, firmName, onFirmClick, onCo
           </>
         )}
       </div>
+
+      {/* AI Meeting Summary — generate & save to firm profile */}
+      {uiState === "idle" && !isLoading && (
+        <MeetingSummaryPanel firmId={firmId} firmName={firmName} activities={firmActivities} />
+      )}
 
       {/* Contact picker modal */}
       {showingPicker && (

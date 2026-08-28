@@ -81,6 +81,15 @@
       "type": "string",
       "description": "Description of the firm"
     },
+    "meeting_summary": {
+      "type": "string",
+      "description": "AI-generated summary of this firm's meeting notes, produced on demand from Meeting-type activity logs via the 'Generate Meeting Summary' action in the interaction log. Stored directly on the firm profile so the team has a quick recap of recent meeting interactions without re-reading each activity."
+    },
+    "meeting_summary_generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the meeting_summary was last generated (ISO-8601). Empty until the first summary is generated."
+    },
     "funding_status": {
       "type": "string",
       "enum": [
