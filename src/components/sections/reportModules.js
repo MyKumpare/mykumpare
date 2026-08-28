@@ -1,5 +1,5 @@
 import {
-  LineChart, FileBarChart, FileText, FileSearch, GitCompare, Users, TrendingUp, Wallet,
+  LineChart, FileBarChart, FileText, FileSearch, GitCompare, Users, TrendingUp, Wallet, BarChart3,
 } from "lucide-react";
 
 /**
@@ -15,6 +15,7 @@ export const REPORT_MODULES = [
   { key: "analyst-coverage", label: "Analyst Coverage", icon: Users, color: "text-indigo-600", bg: "bg-indigo-50", border: "border-indigo-200", to: "/AnalystCoverageReport" },
   { key: "weekly-interaction", label: "Weekly Interaction", icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-200", to: "/WeeklyInteractionReport" },
   { key: "portfolio-funding-report", label: "Portfolio Funding Report", icon: Wallet, color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-200", to: "/PortfolioFundingReport" },
+  { key: "firm-summary", label: "Firm Summary Report", icon: BarChart3, color: "text-teal-600", bg: "bg-teal-50", border: "border-teal-200", to: "/FirmSummaryReport" },
 ];
 
 export const REPORT_MODULE_MAP = Object.fromEntries(REPORT_MODULES.map((m) => [m.key, m]));

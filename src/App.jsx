@@ -7,6 +7,7 @@ import PageNotFound from './lib/PageNotFound';
 import Analytics from './pages/Analytics';
 import UserManagement from './pages/UserManagement';
 import OverviewDashboard from './pages/OverviewDashboard';
+import FirmSummaryReport from './pages/FirmSummaryReport';
 import ResearchAssistant from './pages/ResearchAssistant';
 import AiAgents from './pages/AiAgents';
 import DueDiligenceKanban from './pages/DueDiligenceKanban';
@@ -103,6 +104,7 @@ const AuthenticatedApp = () => {
       ))}
 
       <Route path="/Overview" element={<LayoutWrapper currentPageName="Overview"><OverviewDashboard /></LayoutWrapper>} />
+      <Route path="/FirmSummaryReport" element={<LayoutWrapper currentPageName="FirmSummaryReport"><FirmSummaryReport /></LayoutWrapper>} />
       <Route path="/DueDiligenceKanban" element={<LayoutWrapper currentPageName="DueDiligenceKanban"><DueDiligenceKanban /></LayoutWrapper>} />
       <Route path="/DueDiligenceDashboard" element={<LayoutWrapper currentPageName="DueDiligenceDashboard"><DueDiligenceDashboard /></LayoutWrapper>} />
       <Route path="/ResearchAssistant" element={<LayoutWrapper currentPageName="ResearchAssistant"><ResearchAssistant /></LayoutWrapper>} />
