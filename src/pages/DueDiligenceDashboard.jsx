@@ -8,6 +8,7 @@ import { CheckCircle2, Clock, Building2, TrendingUp, ClipboardCheck, AlertCircle
 import { format, differenceInDays, parseISO } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import MergeDueDiligenceDialog from "@/components/firms/MergeDueDiligenceDialog";
+import DdProcessProgressSummary from "@/components/firms/DdProcessProgressSummary";
 
 const PIE_COLORS = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
 
@@ -155,6 +156,9 @@ export default function DueDiligenceDashboard() {
         <StatCard icon={AlertCircle} label="Awaiting Approval" value={stats.pendingApproval} sublabel="stages pending supervisor" color="bg-amber-500" />
         <StatCard icon={Clock} label="Avg. Time per DD" value={`${stats.avgDays}d`} sublabel="from start to latest completion" color="bg-purple-600" />
       </div>
+
+      {/* Active Process Progress Summary */}
+      <DdProcessProgressSummary records={records.filter((r) => !r.deleted_at)} />
 
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

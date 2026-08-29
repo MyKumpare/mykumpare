@@ -81,10 +81,10 @@ export default function DdAuditTrailPanel({ auditTrail = [], compact = true, ddR
             type="button"
             variant="ghost"
             size="sm"
-            className="h-6 text-[10px] text-indigo-600 hover:text-indigo-700"
+            className="h-6 text-[10px] text-indigo-600 hover:text-indigo-700 font-medium"
             onClick={() => setShowReport(true)}
           >
-            <FileText className="w-3 h-3" /> Report
+            <FileText className="w-3 h-3" /> Export PDF
           </Button>
         </div>
       </div>
