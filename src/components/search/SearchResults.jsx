@@ -567,7 +567,7 @@ export default function SearchResults({ query, firms, products, contacts, portfo
                     <LayoutList className="w-3.5 h-3.5 text-emerald-500" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium text-gray-900 truncate">{portfolio.portfolio_name}</div>
+                    <div className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline truncate">{portfolio.portfolio_name}</div>
                     {allocatorFirm && (
                       <div className="flex items-center gap-1 mt-0.5">
                         {allocatorFirm.logo_url ? <img src={allocatorFirm.logo_url} alt="" className="w-3 h-3 object-contain" /> : null}
