@@ -6,7 +6,22 @@ import ProcessTemplateKanbanBoard from "@/components/firms/ProcessTemplateKanban
 import AddDueDiligenceDialog from "@/components/firms/AddDueDiligenceDialog";
 import { evaluateStageSignoff } from "@/components/firms/DigitalSignoffPanel";
 import { evaluateGate } from "@/components/firms/ProcessLogicGate";
-import { appendAuditEntry } from "@/../base44/shared/ddAuditTrail";
+
+/** Builds a single audit trail entry (mirrors base44/shared/ddAuditTrail.ts). */
+function buildAuditEntry(actionType, opts = {}) {
+  return {
+    id: `audit_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    timestamp: new Date().toISOString(),
+    action_type: actionType,
+    stage_id: opts.stageId || "",
+    stage_name: opts.stageName || "",
+    sub_stage_id: opts.subStageId || "",
+    sub_stage_name: opts.subStageName || "",
+    actor_id: opts.actorId || "",
+    actor_name: opts.actorName || "",
+    details: opts.details || "",
+  };
+}
 import {
   LayoutDashboard, List, Loader2, X, KanbanSquare, FileText,
   UserCheck, AlertCircle, CheckCircle2, CheckSquare, Zap, XCircle,
@@ -252,11 +267,14 @@ export default function ProcessTemplateKanban() {
         }
 
         // Append audit trail entry
-        const newAuditTrail = appendAuditEntry(rec.audit_trail, "bulk_approved", {
-          stageId: stage?.id,
-          stageName: stage?.name,
-          details: `Stage "${stage?.name || ""}" bulk approved and advanced to "${newStages[nextIdx]?.name || ""}"`,
-        });
+        const newAuditTrail = [
+          ...(rec.audit_trail || []),
+          buildAuditEntry("bulk_approved", {
+            stageId: stage?.id,
+            stageName: stage?.name,
+            details: `Stage "${stage?.name || ""}" bulk approved and advanced to "${newStages[nextIdx]?.name || ""}"`,
+          }),
+        ];
 
         await base44.entities.DueDiligence.update(rec.id, {
           stages: newStages,
@@ -308,6 +326,47 @@ export default function ProcessTemplateKanban() {
           <h2 className="text-lg font-bold text-gray-800">Process Template Kanban</h2>
         </div>
         <div className="flex items-center gap-2">
+          {selectionMode ? (
+            <>
+              <span className="text-xs text-gray-500 font-medium">
+                {selectedIds.length} selected
+              </span>
+              <Button
+                type="button"
+                size="sm"
+                className="bg-purple-600 hover:bg-purple-700 text-white gap-1"
+                disabled={selectedIds.length === 0 || bulkApproving}
+                onClick={handleBulkApprove}
+              >
+                {bulkApproving ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Approving...</>
+                ) : (
+                  <><Zap className="w-4 h-4" /> Bulk Approve ({selectedIds.length})</>
+                )}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="gap-1"
+                onClick={handleExitSelection}
+              >
+                <XCircle className="w-4 h-4" /> Cancel
+              </Button>
+            </>
+          ) : (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="gap-1"
+              disabled={templateRecords.length === 0}
+              onClick={() => setSelectionMode(true)}
+              title="Select multiple processes to bulk approve"
+            >
+              <CheckSquare className="w-4 h-4" /> Select
+            </Button>
+          )}
           <Button
             type="button"
             size="sm"
@@ -394,6 +453,9 @@ export default function ProcessTemplateKanban() {
             stages={templateStages}
             onMoveCard={handleMoveCard}
             onCardClick={handleCardClick}
+            selectionMode={selectionMode}
+            selectedIds={selectedIds}
+            onToggleSelect={handleToggleSelect}
           />
         </div>
       )}
