@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, ClipboardCheck, Pencil, Trash2 } from "lucide-react";
+import { Plus, ClipboardCheck, Pencil, Trash2, Flag } from "lucide-react";
 import AddDueDiligenceDialog from "./AddDueDiligenceDialog";
 import { syncDdNotifications, syncProductStatusFromDd, deleteDdNotifications } from "./ddNotificationSync";
 import { saveStageNoteVersions } from "./ddNoteVersionSync";
@@ -177,6 +177,17 @@ export default function FirmDueDiligenceTab({ firmId, firmName, contacts = [], o
                   <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${PROCESS_STYLES[rec.process_status] || PROCESS_STYLES["Not Started"]}`}>
                     {rec.process_status || "Not Started"}
                   </span>
+                  {(() => {
+                    const ms = rec.milestones || [];
+                    if (ms.length === 0) return null;
+                    const done = ms.filter((m) => m.completed).length;
+                    return (
+                      <span className="flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded border bg-indigo-50 text-indigo-600 border-indigo-200" title={`${done} of ${ms.length} milestones completed`}>
+                        <Flag className="w-2.5 h-2.5" />
+                        {done}/{ms.length} milestones
+                      </span>
+                    );
+                  })()}
                 </div>
                 <div className="text-xs text-gray-500 mt-0.5">
                   <span>Primary: {

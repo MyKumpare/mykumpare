@@ -486,6 +486,54 @@
     "outlook_event_id": {
       "type": "string",
       "description": "ID of the corresponding Outlook Calendar event (set when the due diligence start date is synced to Outlook Calendar)"
+    },
+    "milestones": {
+      "type": "array",
+      "description": "Custom milestone tracking points for this due diligence record, independent of the kanban stages. Each milestone marks a specific progress point the team wants to track beyond the stage workflow (e.g. 'Initial call completed', 'Data room access granted', 'On-site visit done'). Milestones are user-created, have a target date and optional notes, and can be toggled complete independently of stage progression.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name/label of the milestone"
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional notes or details about this milestone"
+          },
+          "target_date": {
+            "type": "string",
+            "format": "date",
+            "description": "Target date for completing this milestone (YYYY-MM-DD)"
+          },
+          "completed_date": {
+            "type": "string",
+            "format": "date",
+            "description": "Date the milestone was marked complete (auto-set to today when toggled on, cleared when toggled off). Stored as YYYY-MM-DD."
+          },
+          "completed": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether this milestone has been achieved"
+          },
+          "created_date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when the milestone was created (auto-set on creation)"
+          },
+          "created_by_name": {
+            "type": "string",
+            "description": "Display name of the user who created this milestone (denormalized)"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      }
     }
   },
   "required": [

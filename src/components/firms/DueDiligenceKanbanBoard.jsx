@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useEffect } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { ClipboardCheck, Plus } from "lucide-react";
+import { ClipboardCheck, Plus, Flag } from "lucide-react";
 
 const COLUMN_DEFS = {
   status: {
@@ -113,11 +113,24 @@ function Card({ rec, columnField, onCardClick }) {
         </div>
       </div>
       <div className="flex items-center justify-between mt-1.5">
-        {otherVal && (
-          <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded ${other.styles[otherVal] || "bg-gray-100 text-gray-600"}`}>
-            {otherVal}
-          </span>
-        )}
+        <div className="flex items-center gap-1.5">
+          {otherVal && (
+            <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded ${other.styles[otherVal] || "bg-gray-100 text-gray-600"}`}>
+              {otherVal}
+            </span>
+          )}
+          {(() => {
+            const ms = rec.milestones || [];
+            if (ms.length === 0) return null;
+            const done = ms.filter((m) => m.completed).length;
+            return (
+              <span className="flex items-center gap-0.5 text-[9px] font-semibold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-100" title={`${done} of ${ms.length} milestones completed`}>
+                <Flag className="w-2.5 h-2.5" />
+                {done}/{ms.length}
+              </span>
+            );
+          })()}
+        </div>
         <span className="text-[10px] text-indigo-500 font-medium ml-auto">Edit →</span>
       </div>
     </div>

@@ -16,6 +16,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import DueDiligenceTemplateFlow from "./DueDiligenceTemplateFlow";
+import DdMilestonesPanel from "./DdMilestonesPanel";
 import { cn } from "@/lib/utils";
 import { findContactDuplicates } from "@/components/contacts/contactDuplicateCheck";
 import StatusOptionSelect from "./StatusOptionSelect";
@@ -364,6 +365,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
   const [templateName, setTemplateName] = useState("");
   const [startDate, setStartDate] = useState("");
   const [currentStageIndex, setCurrentStageIndex] = useState(0);
+  const [milestones, setMilestones] = useState([]);
   const [localProducts, setLocalProducts] = useState([]);
   const [localContacts, setLocalContacts] = useState([]);
   const [selectedFirmId, setSelectedFirmId] = useState("");
@@ -466,6 +468,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
       setTemplateName(editingRecord.template_name || "");
       setStartDate(editingRecord.start_date || "");
       setCurrentStageIndex(editingRecord.current_stage_index ?? 0);
+      setMilestones(Array.isArray(editingRecord.milestones) ? editingRecord.milestones : []);
     } else {
       setProductId(preselectProductId || "");
       setStatus("Pipeline"); // default for new due diligence
@@ -482,6 +485,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
       setTemplateName("");
       setStartDate("");
       setCurrentStageIndex(0);
+      setMilestones([]);
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -597,6 +601,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
     start_date: processStatus === "In-process" ? (startDate || undefined) : undefined,
     current_stage_index: processStatus === "In-process" ? currentStageIndex : undefined,
     assigned_contact_ids: processStatus === "In-process" ? assignedContactIds : undefined,
+    milestones,
   };
   // Initialize analyst coverage history for new records
   if (!editingRecord) {
@@ -608,7 +613,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
     );
   }
   return _payload;
-  }, [effectiveFirmId, effectiveFirmName, productId, selectedProduct, status, processStatus, primaryId, primaryContact, secondaryId, secondaryContact, stages, docChecklist, approvalProcess, approvalLogic, templateId, templateName, startDate, currentStageIndex, assignedContactIds, editingRecord]);
+  }, [effectiveFirmId, effectiveFirmName, productId, selectedProduct, status, processStatus, primaryId, primaryContact, secondaryId, secondaryContact, stages, docChecklist, approvalProcess, approvalLogic, templateId, templateName, startDate, currentStageIndex, assignedContactIds, editingRecord, milestones]);
 
   // Debounced auto-save — fires 800ms after the last change to any tracked field.
   useEffect(() => {
@@ -1054,6 +1059,13 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
               )}
             </div>
           )}
+
+          {/* Milestone tracking — always visible so users can track progress points beyond kanban stages */}
+          <DdMilestonesPanel
+            milestones={milestones}
+            onChange={setMilestones}
+            currentUserName={currentUserName}
+          />
         </div>
         <DialogFooter className="gap-2 pt-2 border-t">
           {editingRecord && (
