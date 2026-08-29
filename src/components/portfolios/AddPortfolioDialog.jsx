@@ -491,6 +491,12 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
     });
   }, [inceptionDate]);
 
+  // Default advisor initial allocation amount to the portfolio's initial allocation amount
+  useEffect(() => {
+    if (!initialAllocationAmount) return;
+    if (!advisorInitialAllocationAmount) setAdvisorInitialAllocationAmount(initialAllocationAmount);
+  }, [initialAllocationAmount]);
+
   // Calculated capital flow fields from allocation history
   const portfolioFlow = useMemo(() => {
     if (!editingPortfolio) return { totalAdditions: 0, totalRedemptions: 0 };
