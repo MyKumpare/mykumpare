@@ -186,12 +186,18 @@ export default function ProductPortfoliosTab({ productId, productName }) {
         {associatedPortfolios.length} client portfolio{associatedPortfolios.length !== 1 ? "s" : ""} associated with <span className="font-medium text-gray-600">{productName}</span>
       </p>
 
-      {portfolioContext.map(({ portfolio: p, role, isAdvisor, relevantRecords }) => {
+      {portfolioContext.map(({ portfolio: p, role, isAdvisor, isSubManager, relevantRecords }) => {
         const expanded = !!expandedPortfolios[p.id];
         const totalAlloc = relevantRecords.reduce((sum, r) => {
           const amt = Number(r.amount) || 0;
           return r.activity_type === "Redemption" ? sum - amt : sum + amt;
         }, 0);
+        const isMultiManager = p.advisor_product_type === "Multi-Manager Product";
+        const fundingType = isMultiManager ? "Multi-Manager" : "Direct";
+        // For sub-manager products, show the MoM firm (advisor) that channeled the funding
+        const fundingSubtext = isSubManager && p.advisor_firm_name
+          ? `${p.allocator_name} · ${p.advisor_firm_name}`
+          : p.allocator_name;
 
         return (
           <div
@@ -216,9 +222,16 @@ export default function ProductPortfoliosTab({ productId, productName }) {
                 >
                   {p.portfolio_name}
                 </button>
-                <span className="text-xs text-gray-400 truncate hidden sm:inline">· {p.allocator_name}</span>
+                <span className="text-xs text-gray-400 truncate hidden sm:inline">· {fundingSubtext}</span>
                 <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${isAdvisor ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"}`}>
                   {role}
+                </span>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0 ${
+                  fundingType === "Multi-Manager"
+                    ? "bg-violet-100 text-violet-700"
+                    : "bg-teal-100 text-teal-700"
+                }`}>
+                  {fundingType}
                 </span>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">

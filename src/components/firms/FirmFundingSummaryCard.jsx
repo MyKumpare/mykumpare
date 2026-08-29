@@ -5,6 +5,7 @@ import { base44 } from "@/api/base44Client";
 import {
   fetchFirmAssociatedPortfolios,
   computePortfolioNetFunding,
+  describeFundingSource,
 } from "./firmPortfolioLookup";
 import FundingBreakdownDialog from "./FundingBreakdownDialog";
 
@@ -63,18 +64,21 @@ export default function FirmFundingSummaryCard({ firmId, firmName, onPortfolioCl
       const role = roleMap[p.id] || {};
       const matchedIds = role.matchedProductIds || [];
       const net = computePortfolioNetFunding(p, matchedIds, role);
+      const source = describeFundingSource(p, role);
       funding += net;
       fundingByPort.push({
         id: p.id,
         name: p.portfolio_name,
-        subtext: [p.allocator_name, p.advisor_firm_name].filter(Boolean).join(" · "),
+        subtext: source.subtext,
+        fundingType: source.fundingType,
         amount: net,
         portfolio: p,
       });
       clientItems.push({
         id: p.id,
         name: p.portfolio_name,
-        subtext: [p.allocator_name, p.advisor_firm_name].filter(Boolean).join(" · "),
+        subtext: source.subtext,
+        fundingType: source.fundingType,
         amount: net,
         portfolio: p,
       });

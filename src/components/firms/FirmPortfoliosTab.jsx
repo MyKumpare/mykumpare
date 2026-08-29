@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { fetchFirmAssociatedPortfolios } from "./firmPortfolioLookup";
+import { fetchFirmAssociatedPortfolios, describeFundingSource } from "./firmPortfolioLookup";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -279,6 +279,7 @@ export default function FirmPortfoliosTab({
         } else {
           roleLabel = "Allocator";
         }
+        const fundingSource = describeFundingSource(p, role);
 
         return (
           <div
@@ -304,7 +305,7 @@ export default function FirmPortfoliosTab({
                   {p.portfolio_name}
                 </button>
                 <span className="text-xs text-gray-400 truncate hidden sm:inline">
-                  · {advisorMode ? p.allocator_name : p.advisor_firm_name}
+                  · {fundingSource.subtext}
                 </span>
                 <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${
                   roleLabel === "Sub-Manager" ? "bg-purple-100 text-purple-700"
@@ -312,6 +313,13 @@ export default function FirmPortfoliosTab({
                   : "bg-emerald-100 text-emerald-700"
                 }`}>
                   {roleLabel}
+                </span>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0 ${
+                  fundingSource.fundingType === "Multi-Manager"
+                    ? "bg-violet-100 text-violet-700"
+                    : "bg-teal-100 text-teal-700"
+                }`}>
+                  {fundingSource.fundingType === "Multi-Manager" ? "Multi-Manager" : "Direct"}
                 </span>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">

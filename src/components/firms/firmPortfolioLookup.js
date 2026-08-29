@@ -148,3 +148,58 @@ export function computePortfolioNetFunding(portfolio, matchedProductIds = [], ro
   }
   return total;
 }
+
+/**
+ * Describe the funding source for a portfolio, distinguishing direct funding
+ * (allocator → Investment Manager Product) from multi-manager funding
+ * (allocator → Multi-Manager Product → sub-manager IM firms).
+ *
+ * In the multi-manager case, surfaces the investment manager firm(s) that
+ * actually received the allocation (the sub-managers), so they can be shown
+ * after the allocator name.
+ *
+ * @param {object} portfolio
+ * @param {object} [role] — roleMap entry { isSubManager, matchedProductIds, ... }
+ * @returns {{ isDirect: boolean, fundingType: "Direct"|"Multi-Manager",
+ *            allocatorName: string, advisorFirmName: string,
+ *            imFirmNames: string[], subtext: string }}
+ */
+export function describeFundingSource(portfolio, role = {}) {
+  const allocatorName = portfolio.allocator_name || "";
+  const advisorFirmName = portfolio.advisor_firm_name || "";
+  const isMultiManager = portfolio.advisor_product_type === "Multi-Manager Product";
+
+  // Determine the IM firm(s) that actually received the funding
+  let imFirmNames = [];
+  if (isMultiManager && Array.isArray(portfolio.sub_managers)) {
+    if (role.isSubManager && role.matchedProductIds?.length) {
+      // Sub-manager view: only the sub-managers belonging to this firm
+      const matched = new Set(role.matchedProductIds);
+      imFirmNames = portfolio.sub_managers
+        .filter((sm) => matched.has(sm.product_id))
+        .map((sm) => sm.firm_name)
+        .filter(Boolean);
+    } else {
+      // Allocator/advisor view: all sub-manager firms
+      imFirmNames = portfolio.sub_managers
+        .map((sm) => sm.firm_name)
+        .filter(Boolean);
+    }
+    imFirmNames = [...new Set(imFirmNames)];
+  }
+
+  const fundingType = isMultiManager ? "Multi-Manager" : "Direct";
+
+  // Build subtext: "Allocator · MoM → IM Firm" for multi-manager, "Allocator · IM" for direct
+  let subtext;
+  if (isMultiManager && imFirmNames.length > 0) {
+    const imPart = imFirmNames.join(", ");
+    subtext = [allocatorName, advisorFirmName ? `${advisorFirmName} → ${imPart}` : imPart]
+      .filter(Boolean)
+      .join(" · ");
+  } else {
+    subtext = [allocatorName, advisorFirmName].filter(Boolean).join(" · ");
+  }
+
+  return { isDirect: !isMultiManager, fundingType, allocatorName, advisorFirmName, imFirmNames, subtext };
+}

@@ -79,7 +79,20 @@ export default function FundingBreakdownDialog({
                       </span>
                     </div>
                     {item.subtext && (
-                      <p className="text-xs text-gray-400 truncate mt-0.5">{item.subtext}</p>
+                      <p className="text-xs text-gray-400 truncate mt-0.5 flex items-center gap-1.5">
+                        {item.fundingType && (
+                          <span
+                            className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold flex-shrink-0 ${
+                              item.fundingType === "Multi-Manager"
+                                ? "bg-purple-100 text-purple-700"
+                                : "bg-emerald-100 text-emerald-700"
+                            }`}
+                          >
+                            {item.fundingType}
+                          </span>
+                        )}
+                        <span className="truncate">{item.subtext}</span>
+                      </p>
                     )}
                     {item.date && (
                       <p className="text-[11px] text-gray-400 mt-0.5">
