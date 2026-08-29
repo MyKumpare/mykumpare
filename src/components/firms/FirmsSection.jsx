@@ -294,6 +294,45 @@ export default function FirmsSection({
     }
   };
 
+  const handleBulkMoveType = async (type) => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    if (!window.confirm(`Move ${ids.length} firm${ids.length !== 1 ? "s" : ""} to "${type}"? This replaces their current firm type assignment(s).`)) return;
+    setBulkBusy("type");
+    try {
+      await base44.entities.Firm.bulkUpdate(ids.map((id) => ({ id, firm_types: [type], firm_type: type })));
+      queryClient.invalidateQueries({ queryKey: ["firms"] });
+      toast({
+        title: "Firms moved",
+        description: `${ids.length} firm${ids.length !== 1 ? "s" : ""} moved to "${type}".`,
+      });
+      clearSelection();
+    } catch (err) {
+      toast({ title: "Bulk move failed", description: err?.message, variant: "destructive" });
+    } finally {
+      setBulkBusy(null);
+    }
+  };
+
+  const handleBulkSetRegion = async (region) => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setBulkBusy("region");
+    try {
+      await base44.entities.Firm.bulkUpdate(ids.map((id) => ({ id, geographic_region: region })));
+      queryClient.invalidateQueries({ queryKey: ["firms"] });
+      toast({
+        title: "Region updated",
+        description: `${ids.length} firm${ids.length !== 1 ? "s" : ""} set to "${region}".`,
+      });
+      clearSelection();
+    } catch (err) {
+      toast({ title: "Bulk update failed", description: err?.message, variant: "destructive" });
+    } finally {
+      setBulkBusy(null);
+    }
+  };
+
   const handleExportList = (format) => {
     setExportOpen(false);
     if (allFirms.length === 0) {
@@ -427,7 +466,9 @@ export default function FirmsSection({
         <FirmsBulkActionsBar
           selectedCount={selectedCount}
           onClear={clearSelection}
+          onMoveType={handleBulkMoveType}
           onSetStatus={handleBulkSetStatus}
+          onSetRegion={handleBulkSetRegion}
           onDelete={handleBulkDelete}
           busy={bulkBusy}
         />
