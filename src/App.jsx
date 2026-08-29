@@ -20,6 +20,7 @@ import ExternalParty from './pages/ExternalParty';
 import ActivityCalendar from './pages/ActivityCalendar';
 import AnalystCoverageReport from './pages/AnalystCoverageReport';
 import FirmComparison from './pages/FirmComparison';
+import FirmPerformanceDashboard from './pages/FirmPerformanceDashboard';
 import MonitorPage from './pages/MonitorPage';
 import PortfolioFundingDashboard from './pages/PortfolioFundingDashboard';
 import PortfolioFundingReport from './pages/PortfolioFundingReport';
@@ -115,6 +116,7 @@ const AuthenticatedApp = () => {
       <Route path="/ActivityCalendar" element={<LayoutWrapper currentPageName="ActivityCalendar"><ActivityCalendar /></LayoutWrapper>} />
       <Route path="/AnalystCoverageReport" element={<LayoutWrapper currentPageName="AnalystCoverageReport"><AnalystCoverageReport /></LayoutWrapper>} />
       <Route path="/FirmComparison" element={<LayoutWrapper currentPageName="FirmComparison"><FirmComparison /></LayoutWrapper>} />
+      <Route path="/FirmPerformanceDashboard" element={<LayoutWrapper currentPageName="FirmPerformanceDashboard"><FirmPerformanceDashboard /></LayoutWrapper>} />
       <Route path="/Monitor" element={<LayoutWrapper currentPageName="Monitor"><MonitorPage /></LayoutWrapper>} />
       <Route path="/PortfolioFundingDashboard" element={<LayoutWrapper currentPageName="PortfolioFundingDashboard"><PortfolioFundingDashboard /></LayoutWrapper>} />
       <Route path="/PortfolioFundingReport" element={<LayoutWrapper currentPageName="PortfolioFundingReport"><PortfolioFundingReport /></LayoutWrapper>} />
