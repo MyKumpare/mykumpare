@@ -125,15 +125,30 @@ export async function syncProductFundingStatus(product, queryClient) {
       return;
     }
 
-    // Portfolios referencing this product as the advisor product.
-    const portfolios = await base44.entities.Portfolio.filter(
-      { advisor_product_id: fresh.id },
-      "-created_date",
-      500
+    // Portfolios referencing this product as the advisor product OR as a sub-manager
+    // product. A product can be funded two ways:
+    //   1. It is the advisor_product_id of a portfolio (direct advisor relationship)
+    //   2. It appears in a portfolio's sub_managers[] array (sub-manager inside a
+    //      multi-manager product run by another advisor firm)
+    // The sub-manager case is missed by a simple advisor_product_id filter, so we
+    // also scan all portfolios for sub_managers[] entries matching this product.
+    const [advisorPortfolios, allPortfolios] = await Promise.all([
+      base44.entities.Portfolio.filter({ advisor_product_id: fresh.id }, "-created_date", 500),
+      base44.entities.Portfolio.list("-created_date", 500),
+    ]);
+    const subManagerPortfolios = allPortfolios.filter(
+      (p) => !p.deleted_at &&
+        Array.isArray(p.sub_managers) &&
+        p.sub_managers.some((sm) => sm.product_id === fresh.id)
     );
-    const live = portfolios.filter((p) => !p.deleted_at);
-    const hasActive = live.some((p) => (p.funding_status || "Active") === "Active");
-    const hasTerminated = live.some((p) => p.funding_status === "Terminated");
+    const live = [...advisorPortfolios, ...subManagerPortfolios].filter((p) => !p.deleted_at);
+    const dedupedLive = [];
+    const seenIds = new Set();
+    for (const p of live) {
+      if (!seenIds.has(p.id)) { seenIds.add(p.id); dedupedLive.push(p); }
+    }
+    const hasActive = dedupedLive.some((p) => (p.funding_status || "Active") === "Active");
+    const hasTerminated = dedupedLive.some((p) => p.funding_status === "Terminated");
 
     let nextStatus = null;
     if (hasActive) {

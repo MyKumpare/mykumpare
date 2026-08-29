@@ -1,39 +1,46 @@
 import React, { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { Wallet, TrendingUp, Package, Loader2, Download, Users } from "lucide-react";
 import { base44 } from "@/api/base44Client";
-import { Wallet, TrendingUp, Package, Loader2, Download, BarChart3, Users } from "lucide-react";
-
-const PRODUCT_BAR_COLORS = ["#6366f1", "#8b5cf6", "#3b82f6", "#10b981", "#f59e0b", "#ec4899", "#14b8a6", "#f97316"];
+import {
+  fetchFirmAssociatedPortfolios,
+  computePortfolioNetFunding,
+} from "./firmPortfolioLookup";
+import FundingBreakdownDialog from "./FundingBreakdownDialog";
 
 /**
  * Summary card displayed at the top of the firm profile page.
- * Shows four aggregated metrics:
- *  1. Total Funding Amount — net funding across all funded client portfolios (allocation history)
- *  2. Funded Products — count of the firm's products with funding_status = "Funded"
- *  3. Total Market Value — sum of latest product AUM across all client portfolios, with the most recent market value date
- *  4. Funded Clients — count of active client portfolios referencing this firm's products
+ * Shows four aggregated metrics in this order:
+ *  1. Total Funding Amount — net funding across all associated client portfolios
+ *  2. Total Market Value    — sum of latest product AUM across all products
+ *  3. Funded Clients        — count of active client portfolios referencing this firm's products
+ *  4. Funded Products       — count of the firm's products with funding_status = "Funded"
+ *
+ * Each metric is clickable and opens a drill-down dialog showing the breakdown by
+ * client portfolio or product, with hyperlinks back to the source portfolio.
  */
-export default function FirmFundingSummaryCard({ firmId, firmName }) {
+export default function FirmFundingSummaryCard({ firmId, firmName, onPortfolioClick }) {
   const [downloading, setDownloading] = useState(false);
+  const [breakdown, setBreakdown] = useState(null); // { type, title, subtitle, items }
 
-  const { data: products = [], isLoading: productsLoading } = useQuery({
-    queryKey: ["products_funding_summary", firmId],
-    queryFn: () => base44.entities.Product.filter({ firm_id: firmId }),
-    enabled: !!firmId,
-  });
-
-  const { data: portfolios = [], isLoading: portfoliosLoading } = useQuery({
-    queryKey: ["portfolios_funding_summary", firmId],
-    queryFn: () => base44.entities.Portfolio.filter({ advisor_firm_id: firmId }),
+  // Fetch all portfolios associated with this firm (allocator + advisor + sub-manager),
+  // plus the firm's products. This covers the sub-manager case the old advisor-only
+  // filter missed.
+  const { data, isLoading } = useQuery({
+    queryKey: ["firm_funding_summary", firmId],
+    queryFn: () => fetchFirmAssociatedPortfolios(firmId),
     enabled: !!firmId,
   });
 
   const { data: firm } = useQuery({
-    queryKey: ["firm_funding_summary", firmId],
+    queryKey: ["firm_record", firmId],
     queryFn: () => base44.entities.Firm.get(firmId),
     enabled: !!firmId,
   });
+
+  const portfolios = data?.portfolios || [];
+  const products = data?.products || [];
+  const roleMap = data?.roleMap || {};
 
   const {
     totalFunding,
@@ -41,45 +48,53 @@ export default function FirmFundingSummaryCard({ firmId, firmName }) {
     totalMarketValue,
     marketValueDate,
     fundedClientCount,
-    marketValueProducts,
+    fundingByPortfolio,
+    marketValueByProduct,
+    fundedClientItems,
+    fundedProductItems,
   } = useMemo(() => {
-    // ── 1. Total Funding Amount: net funding across all funded client portfolios ──
-    // Sum advisor-level allocation_history records (Initial Allocation + Capital Addition − Redemption).
-    // Fall back to advisor_initial_allocation_amount when no advisor-level records exist.
+    // ── 1. Total Funding Amount: net funding across all associated portfolios ──
     let funding = 0;
-    let clientCount = 0;
+    const fundingByPort = [];
+    const clientItems = [];
     for (const p of portfolios) {
       if (p.deleted_at) continue;
       if ((p.funding_status || "Active") !== "Active") continue;
-      clientCount++;
-      const advisorRecords = (p.allocation_history || []).filter(
-        (r) => r.level === "advisor" && !r.deleted_at
-      );
-      if (advisorRecords.length > 0) {
-        for (const r of advisorRecords) {
-          const amt = Number(r.amount) || 0;
-          if (r.activity_type === "Redemption") {
-            funding -= Math.abs(amt);
-          } else {
-            funding += amt;
-          }
-        }
-      } else {
-        funding += Number(p.advisor_initial_allocation_amount) || 0;
-      }
+      const role = roleMap[p.id] || {};
+      const matchedIds = role.matchedProductIds || [];
+      const net = computePortfolioNetFunding(p, matchedIds, role);
+      funding += net;
+      fundingByPort.push({
+        id: p.id,
+        name: p.portfolio_name,
+        subtext: [p.allocator_name, p.advisor_firm_name].filter(Boolean).join(" · "),
+        amount: net,
+        portfolio: p,
+      });
+      clientItems.push({
+        id: p.id,
+        name: p.portfolio_name,
+        subtext: [p.allocator_name, p.advisor_firm_name].filter(Boolean).join(" · "),
+        amount: net,
+        portfolio: p,
+      });
     }
 
     // ── 2. Funded Products: count of products with funding_status = "Funded" ──
-    const fundedCount = products.filter(
-      (p) => !p.deleted_at && p.funding_status === "Funded"
-    ).length;
+    const fundedProds = products.filter((p) => p.funding_status === "Funded");
+    const fundedCount = fundedProds.length;
+    const fundedProdItems = fundedProds.map((p) => ({
+      id: p.id,
+      name: p.name,
+      subtext: p.firm_name || firmName,
+      amount: null,
+    }));
 
     // ── 3. Total Market Value: sum of latest product AUM across all products ──
     let marketValue = 0;
     let mvDate = null;
     const mvProducts = [];
     for (const p of products) {
-      if (p.deleted_at) continue;
       const history = (p.aum_history || []).filter((h) => h.month_end_date);
       if (history.length === 0) continue;
       history.sort((a, b) => new Date(b.month_end_date) - new Date(a.month_end_date));
@@ -87,9 +102,10 @@ export default function FirmFundingSummaryCard({ firmId, firmName }) {
       const aum = Number(latestEntry.firm_aum) || 0;
       marketValue += aum;
       mvProducts.push({
+        id: p.id,
         name: p.name,
-        aum,
-        fundingStatus: p.funding_status,
+        subtext: p.firm_name || firmName,
+        amount: aum,
         date: latestEntry.month_end_date,
       });
       if (!mvDate || new Date(latestEntry.month_end_date) > new Date(mvDate)) {
@@ -102,24 +118,13 @@ export default function FirmFundingSummaryCard({ firmId, firmName }) {
       fundedProductCount: fundedCount,
       totalMarketValue: marketValue,
       marketValueDate: mvDate,
-      fundedClientCount: clientCount,
-      marketValueProducts: mvProducts,
+      fundedClientCount: clientItems.length,
+      fundingByPortfolio: fundingByPort,
+      marketValueByProduct: mvProducts,
+      fundedClientItems: clientItems,
+      fundedProductItems: fundedProdItems,
     };
-  }, [products, portfolios]);
-
-  // Bar chart data — each product's latest AUM, sorted descending
-  const chartData = useMemo(
-    () =>
-      [...marketValueProducts]
-        .sort((a, b) => b.aum - a.aum)
-        .map((p) => ({
-          name: p.name.length > 22 ? p.name.slice(0, 20) + "…" : p.name,
-          aum: p.aum,
-        })),
-    [marketValueProducts]
-  );
-
-  const isLoading = productsLoading || portfoliosLoading;
+  }, [portfolios, products, roleMap, firmName]);
 
   if (isLoading) {
     return (
@@ -137,132 +142,159 @@ export default function FirmFundingSummaryCard({ firmId, firmName }) {
     );
   }
 
+  const openBreakdown = (type) => {
+    if (type === "funding") {
+      setBreakdown({
+        type,
+        title: "Total Funding Amount Breakdown",
+        subtitle: "by Client Portfolio — click a row to open the source portfolio",
+        items: fundingByPortfolio,
+        showAmount: true,
+      });
+    } else if (type === "marketValue") {
+      setBreakdown({
+        type,
+        title: "Total Market Value Breakdown",
+        subtitle: "by Product (latest month-end AUM)",
+        items: marketValueByProduct,
+        showAmount: true,
+      });
+    } else if (type === "clients") {
+      setBreakdown({
+        type,
+        title: "Funded Clients Breakdown",
+        subtitle: "Active client portfolios — click a row to open the source portfolio",
+        items: fundedClientItems,
+        showAmount: true,
+      });
+    } else if (type === "products") {
+      setBreakdown({
+        type,
+        title: "Funded Products Breakdown",
+        subtitle: "Products with funding_status = Funded",
+        items: fundedProductItems,
+        showAmount: false,
+      });
+    }
+  };
+
+  const hasFundingData = fundingByPortfolio.length > 0;
+  const hasMvData = marketValueByProduct.length > 0;
+  const hasClientData = fundedClientItems.length > 0;
+  const hasProductData = fundedProductItems.length > 0;
+
   return (
-    <div className="rounded-xl border border-indigo-100 bg-gradient-to-r from-indigo-50/70 to-violet-50/50 px-4 py-3 shadow-sm">
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0">
-          <Wallet className="w-5 h-5 text-white" />
-        </div>
-        {/* Total Funding Amount */}
-        <div className="min-w-0">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Funding Amount</p>
-          <p className="text-2xl font-bold text-gray-900 leading-tight">
-            {formatCurrency(totalFunding)}
-          </p>
-        </div>
-        <div className="flex items-center gap-5 flex-wrap ml-auto">
-          {/* Funded Products */}
-          <div className="text-center">
-            <div className="flex items-center gap-1 justify-center text-xs text-gray-500 mb-0.5">
-              <Package className="w-3.5 h-3.5" />
-              <span>Funded Products</span>
-            </div>
-            <p className="text-lg font-bold text-indigo-700">{fundedProductCount}</p>
+    <>
+      <div className="rounded-xl border border-indigo-100 bg-gradient-to-r from-indigo-50/70 to-violet-50/50 px-4 py-3 shadow-sm">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0">
+            <Wallet className="w-5 h-5 text-white" />
           </div>
-          {/* Total Market Value + date */}
-          <div className="text-center">
-            <div className="flex items-center gap-1 justify-center text-xs text-gray-500 mb-0.5">
-              <TrendingUp className="w-3.5 h-3.5" />
-              <span>Total Market Value</span>
-            </div>
-            <p className="text-lg font-bold text-gray-900 leading-tight">{formatCurrency(totalMarketValue)}</p>
-            {marketValueDate && (
-              <p className="text-[11px] text-gray-500">as of {formatDate(marketValueDate)}</p>
-            )}
-          </div>
-          {/* Funded Clients */}
-          <div className="text-center">
-            <div className="flex items-center gap-1 justify-center text-xs text-gray-500 mb-0.5">
-              <Users className="w-3.5 h-3.5" />
-              <span>Funded Clients</span>
-            </div>
-            <p className="text-lg font-bold text-indigo-700">{fundedClientCount}</p>
-          </div>
+
+          {/* 1. Total Funding Amount (clickable) */}
           <button
-            onClick={async () => {
-              setDownloading(true);
-              try {
-                await downloadFirmReport(firm, products, portfolios, firmName);
-              } finally {
-                setDownloading(false);
-              }
-            }}
-            disabled={downloading}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-medium px-3 py-1.5 transition-colors"
-            title="Download a CSV report of all assets and net flows for this firm"
+            type="button"
+            onClick={() => hasFundingData && openBreakdown("funding")}
+            disabled={!hasFundingData}
+            className={`text-left min-w-0 ${hasFundingData ? "cursor-pointer hover:opacity-80" : "cursor-default"}`}
+            title={hasFundingData ? "Click to see breakdown by client portfolio" : ""}
           >
-            <Download className="w-3.5 h-3.5" />
-            <span>{downloading ? "Preparing…" : "Download Report"}</span>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Funding Amount</p>
+            <p className="text-2xl font-bold text-gray-900 leading-tight">
+              {formatCurrency(totalFunding)}
+            </p>
           </button>
+
+          <div className="flex items-center gap-5 flex-wrap ml-auto">
+            {/* 2. Total Market Value (clickable) */}
+            <button
+              type="button"
+              onClick={() => hasMvData && openBreakdown("marketValue")}
+              disabled={!hasMvData}
+              className={`text-center ${hasMvData ? "cursor-pointer hover:opacity-80" : "cursor-default"}`}
+              title={hasMvData ? "Click to see breakdown by product" : ""}
+            >
+              <div className="flex items-center gap-1 justify-center text-xs text-gray-500 mb-0.5">
+                <TrendingUp className="w-3.5 h-3.5" />
+                <span>Total Market Value</span>
+              </div>
+              <p className="text-lg font-bold text-indigo-700 leading-tight">{formatCurrency(totalMarketValue)}</p>
+              {marketValueDate && (
+                <p className="text-[11px] text-gray-500">as of {formatDate(marketValueDate)}</p>
+              )}
+            </button>
+
+            {/* 3. Funded Clients (clickable) */}
+            <button
+              type="button"
+              onClick={() => hasClientData && openBreakdown("clients")}
+              disabled={!hasClientData}
+              className={`text-center ${hasClientData ? "cursor-pointer hover:opacity-80" : "cursor-default"}`}
+              title={hasClientData ? "Click to see breakdown by client portfolio" : ""}
+            >
+              <div className="flex items-center gap-1 justify-center text-xs text-gray-500 mb-0.5">
+                <Users className="w-3.5 h-3.5" />
+                <span>Funded Clients</span>
+              </div>
+              <p className="text-lg font-bold text-indigo-700">{fundedClientCount}</p>
+            </button>
+
+            {/* 4. Funded Products (clickable) */}
+            <button
+              type="button"
+              onClick={() => hasProductData && openBreakdown("products")}
+              disabled={!hasProductData}
+              className={`text-center ${hasProductData ? "cursor-pointer hover:opacity-80" : "cursor-default"}`}
+              title={hasProductData ? "Click to see breakdown by product" : ""}
+            >
+              <div className="flex items-center gap-1 justify-center text-xs text-gray-500 mb-0.5">
+                <Package className="w-3.5 h-3.5" />
+                <span>Funded Products</span>
+              </div>
+              <p className="text-lg font-bold text-indigo-700">{fundedProductCount}</p>
+            </button>
+
+            <button
+              onClick={async () => {
+                setDownloading(true);
+                try {
+                  await downloadFirmReport(firm, products, portfolios, firmName);
+                } finally {
+                  setDownloading(false);
+                }
+              }}
+              disabled={downloading}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-medium px-3 py-1.5 transition-colors"
+              title="Download a CSV report of all assets and net flows for this firm"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>{downloading ? "Preparing…" : "Download Report"}</span>
+            </button>
+          </div>
         </div>
       </div>
-      {marketValueProducts.length > 0 && (
-        <div className="mt-3 pt-3 border-t border-indigo-100/80 flex flex-wrap gap-1.5">
-          {marketValueProducts.slice(0, 6).map((p, i) => (
-            <span
-              key={i}
-              className="inline-flex items-center gap-1.5 rounded-full bg-white border border-gray-200 px-2 py-0.5 text-xs"
-              title={`${p.name} — ${formatCurrency(p.aum)}`}
-            >
-              <span className="font-medium text-gray-700 truncate max-w-[140px]">{p.name}</span>
-              <span className="font-semibold text-indigo-600">{formatCompactCurrency(p.aum)}</span>
-            </span>
-          ))}
-          {marketValueProducts.length > 6 && (
-            <span className="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-600">
-              +{marketValueProducts.length - 6} more
-            </span>
-          )}
-        </div>
+
+      {breakdown && (
+        <FundingBreakdownDialog
+          open={!!breakdown}
+          onOpenChange={(v) => !v && setBreakdown(null)}
+          title={breakdown.title}
+          subtitle={breakdown.subtitle}
+          items={breakdown.items}
+          showAmount={breakdown.showAmount}
+          onPortfolioClick={(portfolio) => {
+            setBreakdown(null);
+            if (onPortfolioClick) onPortfolioClick(portfolio);
+          }}
+        />
       )}
-      {marketValueProducts.length > 0 && (
-        <div className="mt-3 pt-3 border-t border-indigo-100/80">
-          <div className="flex items-center gap-1.5 mb-2">
-            <BarChart3 className="w-3.5 h-3.5 text-indigo-600" />
-            <span className="text-xs font-semibold text-gray-600">Product AUM (Market Value)</span>
-            <span className="ml-auto text-[11px] text-gray-400">Latest month-end AUM per product</span>
-          </div>
-          <ResponsiveContainer width="100%" height={Math.max(140, marketValueProducts.length * 38)}>
-            <BarChart data={chartData} layout="vertical" margin={{ top: 0, right: 12, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#eef2ff" horizontal={false} />
-              <XAxis type="number" tick={{ fontSize: 10, fill: "#6b7280" }} axisLine={false} tickLine={false} tickFormatter={formatCompactCurrency} />
-              <YAxis
-                type="category"
-                dataKey="name"
-                tick={{ fontSize: 10, fill: "#374151" }}
-                axisLine={false}
-                tickLine={false}
-                width={130}
-              />
-              <Tooltip
-                cursor={{ fill: "#f5f3ff" }}
-                contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "12px" }}
-                formatter={(v) => [formatCurrency(v), "AUM"]}
-              />
-              <Bar dataKey="aum" name="AUM" radius={[0, 6, 6, 0]} barSize={18}>
-                {chartData.map((entry, i) => (
-                  <Cell key={i} fill={PRODUCT_BAR_COLORS[i % PRODUCT_BAR_COLORS.length]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-    </div>
+    </>
   );
 }
 
 function formatCurrency(v) {
   const n = Number(v) || 0;
   return n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
-}
-
-function formatCompactCurrency(v) {
-  const n = Number(v) || 0;
-  if (Math.abs(n) >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
-  if (Math.abs(n) >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
-  if (Math.abs(n) >= 1e3) return `$${(n / 1e3).toFixed(0)}K`;
-  return `$${n.toFixed(0)}`;
 }
 
 function formatDate(d) {
@@ -274,8 +306,6 @@ function formatDate(d) {
 
 /**
  * Generates and downloads a CSV report of all assets and net flows for a firm.
- * Includes the firm-level AUM history, each linked product's AUM history,
- * and each client portfolio's allocation history.
  */
 async function downloadFirmReport(firm, products, portfolios, firmName) {
   const rows = [];
@@ -284,7 +314,6 @@ async function downloadFirmReport(firm, products, portfolios, firmName) {
   rows.push(["Generated", new Date().toLocaleString("en-US")]);
   rows.push([]);
 
-  // ── Firm-level AUM history ──
   rows.push(["Firm-Level AUM History"]);
   rows.push(["Month-End Date", "Firm AUM", "Assets Gained", "Assets Loss", "Net Asset Flows"]);
   const firmHistory = (firm?.aum_history || [])
@@ -301,7 +330,6 @@ async function downloadFirmReport(firm, products, portfolios, firmName) {
   }
   rows.push([]);
 
-  // ── Per-product AUM history ──
   const activeProducts = (products || []).filter((p) => !p.deleted_at);
   for (const p of activeProducts) {
     const history = (p.aum_history || [])
@@ -322,7 +350,6 @@ async function downloadFirmReport(firm, products, portfolios, firmName) {
     rows.push([]);
   }
 
-  // ── Client portfolio allocation history ──
   const activePortfolios = (portfolios || []).filter((p) => !p.deleted_at);
   if (activePortfolios.length > 0) {
     rows.push(["Client Portfolio Allocation History"]);
@@ -345,7 +372,6 @@ async function downloadFirmReport(firm, products, portfolios, firmName) {
     rows.push([]);
   }
 
-  // Convert to CSV with proper escaping
   const csv = rows
     .map((row) =>
       row

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { fetchFirmAssociatedPortfolios } from "./firmPortfolioLookup";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -85,28 +86,23 @@ export default function FirmPortfoliosTab({
   const [search, setSearch] = useState("");
   const [advisorFilter, setAdvisorFilter] = useState("All");
 
-  const { data: portfolios = [], isLoading } = useQuery({
-    queryKey: advisorMode ? ["portfolios-advisor", firmId] : ["portfolios", firmId],
-    queryFn: async () => {
-      if (advisorMode) {
-        return base44.entities.Portfolio.filter({ advisor_firm_id: firmId });
-      }
-      // Non-advisor mode: show portfolios where the firm is the allocator OR the advisor
-      const [allocatorPortfolios, advisorPortfolios] = await Promise.all([
-        base44.entities.Portfolio.filter({ firm_id: firmId }),
-        base44.entities.Portfolio.filter({ advisor_firm_id: firmId }),
-      ]);
-      const seen = new Set();
-      const merged = [];
-      for (const p of [...allocatorPortfolios, ...advisorPortfolios]) {
-        if (!seen.has(p.id)) {
-          seen.add(p.id);
-          merged.push(p);
-        }
-      }
-      return merged;
-    },
+  // Fetch all portfolios associated with this firm (allocator + advisor + sub-manager).
+  // The shared helper covers the sub-manager case: portfolios whose advisor_firm_id
+  // points at a different (MoM) firm but which hold this firm's products in their
+  // sub_managers[] array. In advisor mode we only want portfolios where the firm is
+  // the advisor, so we skip the sub-manager scan there.
+  const { data: lookupData, isLoading } = useQuery({
+    queryKey: advisorMode ? ["portfolios-advisor", firmId] : ["portfolios-firm-all", firmId],
+    queryFn: () =>
+      fetchFirmAssociatedPortfolios(firmId, { includeSubManager: !advisorMode }),
   });
+  const portfolios = useMemo(() => {
+    if (advisorMode) {
+      return (lookupData?.portfolios || []).filter((p) => p.advisor_firm_id === firmId);
+    }
+    return lookupData?.portfolios || [];
+  }, [lookupData, advisorMode, firmId]);
+  const roleMap = lookupData?.roleMap || {};
 
   // Filter by search text and advisor type filter
   const filtered = useMemo(() => {
@@ -132,31 +128,41 @@ export default function FirmPortfoliosTab({
       .sort((a, b) => (a.portfolio_name || "").localeCompare(b.portfolio_name || ""));
   }, [portfolios, search, advisorFilter]);
 
-  // For each portfolio, gather the allocation history records relevant to this firm,
-  // mirroring the Product Portfolios tab: the advisor firm sees portfolio-level +
-  // advisor-level cash flows (the flows through the advisor); the allocator sees all.
+  // For each portfolio, gather the allocation history records relevant to this firm.
+  // - Allocator (firm_id === firmId): sees every level (portfolio, advisor, sub_manager).
+  // - Advisor (advisor_firm_id === firmId): sees portfolio + advisor level (flows through the advisor).
+  // - Sub-manager (firm's product in sub_managers[]): sees only the sub_manager records
+  //   for this firm's products.
   const portfolioContext = useMemo(() => {
     return filtered.map((p) => {
-      const isAllocator = p.firm_id === firmId;
+      const role = roleMap[p.id] || {};
+      const isAllocator = role.isAllocator || p.firm_id === firmId;
+      const isAdvisor = role.isAdvisor || p.advisor_firm_id === firmId;
       let relevantRecords;
-      if (advisorMode || !isAllocator) {
-        // Firm is the advisor: show portfolio + advisor level records (cash flows
-        // through the advisor), matching the advisor product's view in the product tab.
+      if (isAllocator) {
+        relevantRecords = [...(p.allocation_history || [])];
+      } else if (isAdvisor) {
         relevantRecords = (p.allocation_history || []).filter(
           (r) => r.level === "portfolio" || r.level === "advisor"
         );
+      } else if (role.isSubManager) {
+        // Sub-manager: only the sub_manager records for this firm's products
+        const idSet = new Set(role.matchedProductIds || []);
+        relevantRecords = (p.allocation_history || []).filter(
+          (r) => r.level === "sub_manager" && idSet.has(r.reference_id)
+        );
       } else {
-        // Firm is the allocator/owner: sees every level (portfolio, advisor, sub_manager).
-        relevantRecords = [...(p.allocation_history || [])];
+        relevantRecords = (p.allocation_history || []).filter(
+          (r) => r.level === "portfolio" || r.level === "advisor"
+        );
       }
-      // Sort by date descending
       relevantRecords = [...relevantRecords].sort(
         (a, b) => (b.activity_date || "").localeCompare(a.activity_date || "")
       );
 
-      return { portfolio: p, relevantRecords };
+      return { portfolio: p, relevantRecords, role };
     });
-  }, [filtered, advisorMode]);
+  }, [filtered, advisorMode, roleMap]);
 
   const toggleExpand = (portfolioId) => {
     setExpandedPortfolios((prev) => ({ ...prev, [portfolioId]: !prev[portfolioId] }));
@@ -255,7 +261,15 @@ export default function FirmPortfoliosTab({
         }, 0);
 
         const isAllocator = p.firm_id === firmId;
-        const roleLabel = (advisorMode || !isAllocator) ? "Advisor" : "Allocator";
+        const role = roleMap[p.id] || {};
+        let roleLabel;
+        if (role.isSubManager && !role.isAdvisor && !role.isAllocator) {
+          roleLabel = "Sub-Manager";
+        } else if (advisorMode || !isAllocator) {
+          roleLabel = "Advisor";
+        } else {
+          roleLabel = "Allocator";
+        }
 
         return (
           <div
@@ -283,7 +297,11 @@ export default function FirmPortfoliosTab({
                 <span className="text-xs text-gray-400 truncate hidden sm:inline">
                   · {advisorMode ? p.allocator_name : p.advisor_firm_name}
                 </span>
-                <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${advisorMode ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700"}`}>
+                <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${
+                  roleLabel === "Sub-Manager" ? "bg-purple-100 text-purple-700"
+                  : advisorMode ? "bg-blue-100 text-blue-700"
+                  : "bg-emerald-100 text-emerald-700"
+                }`}>
                   {roleLabel}
                 </span>
               </div>

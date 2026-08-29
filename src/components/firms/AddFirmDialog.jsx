@@ -1433,7 +1433,11 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
           {/* Funding summary card — total funding amount based on linked products */}
           {editingFirm && !hideProductTabs && (
-            <FirmFundingSummaryCard firmId={editingFirm.id} firmName={editingFirm.name} />
+            <FirmFundingSummaryCard
+              firmId={editingFirm.id}
+              firmName={editingFirm.name}
+              onPortfolioClick={onPortfolioClick}
+            />
           )}
 
           {/* Contacts, Addresses, Phones & Ownership Tabs */}
