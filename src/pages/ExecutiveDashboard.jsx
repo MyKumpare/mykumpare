@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import ExposureHeatmap from "@/components/executive/ExposureHeatmap";
+import FundingBreakdownCharts from "@/components/executive/FundingBreakdownCharts";
 
 const FIRM_TYPES = [
   "Investment Manager",
@@ -578,6 +579,9 @@ export default function ExecutiveDashboard() {
                 )}
               </ChartCard>
             </div>
+
+            {/* Interactive funding breakdown — market value + funding counts */}
+            <FundingBreakdownCharts firms={scopedFirms} />
 
             {/* Exposure Heatmap */}
             <ExposureHeatmap firms={scopedFirms} />
