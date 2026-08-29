@@ -1,0 +1,45 @@
+{
+  "name": "Portfolio Reconciliation Alerts",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "0 7 * * *",
+      "one_time_date": null,
+      "timezone": "America/New_York",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "portfolio_reconciliation_alerts",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "check_reconciliation": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "checkPortfolioReconciliationAlerts",
+            "args": {}
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Check portfolio reconciliation",
+            "description": "Sweep every multi-manager portfolio and flag any where sub-manager allocations do not match the parent investment manager's total"
+          }
+        }
+      }
+    ]
+  },
+  "description": "Daily sweep that checks every multi-manager portfolio for a mismatch between the sum of sub-manager allocations and the parent investment manager's (advisor) total, and raises PortfolioReconciliationAlert records for any portfolio that is out of balance. Complements the real-time check that can be triggered manually from the Portfolios section."
+}

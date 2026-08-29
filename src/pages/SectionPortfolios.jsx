@@ -7,6 +7,7 @@ import SectionPageHeader, { SectionStatusCard, SectionBackButton } from "@/compo
 import SectionModuleGrid from "@/components/shared/SectionModuleGrid";
 import { PORTFOLIO_MODULES, PORTFOLIO_MODULE_MAP, PORTFOLIO_DEFAULT_CATEGORIES } from "@/components/sections/portfolioModules";
 import PortfoliosSection from "@/components/portfolios/PortfoliosSection";
+import PortfolioReconciliationAlertsPanel from "@/components/portfolios/PortfolioReconciliationAlertsPanel";
 
 export default function SectionPortfolios() {
   const navigate = useNavigate();
@@ -26,6 +27,7 @@ export default function SectionPortfolios() {
       return;
     }
     if (key === "portfolios-list") setActiveModule("portfolios-list");
+    if (key === "reconciliation-alerts") setActiveModule("reconciliation-alerts");
   };
 
   const activeLabel = activeModule ? PORTFOLIO_MODULE_MAP[activeModule]?.label : null;
@@ -70,6 +72,9 @@ export default function SectionPortfolios() {
                   forceExpanded
                 />
               </div>
+            )}
+            {activeModule === "reconciliation-alerts" && (
+              <PortfolioReconciliationAlertsPanel />
             )}
           </div>
         )}

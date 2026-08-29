@@ -1,0 +1,168 @@
+{
+  "name": "PortfolioReconciliationAlert",
+  "type": "object",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "ID of the firm (tenant) that owns this alert. Set on creation to the creator's linked_firm_id; drives tenant isolation via RLS."
+    },
+    "portfolio_id": {
+      "type": "string",
+      "description": "ID of the portfolio whose sub-manager allocations do not match its parent investment manager's total."
+    },
+    "portfolio_name": {
+      "type": "string",
+      "description": "Name of the portfolio (denormalized for display)."
+    },
+    "advisor_firm_id": {
+      "type": "string",
+      "description": "ID of the parent investment manager (advisor) firm for this portfolio (denormalized for quick lookup)."
+    },
+    "advisor_firm_name": {
+      "type": "string",
+      "description": "Name of the parent investment manager firm (denormalized for display)."
+    },
+    "advisor_total": {
+      "type": "number",
+      "description": "The net total of advisor-level allocation records at the time this alert was raised (the parent IM's total)."
+    },
+    "sub_manager_total": {
+      "type": "number",
+      "description": "The net total of sub-manager-level allocation records at the time this alert was raised (the sum of sub-manager allocations)."
+    },
+    "variance": {
+      "type": "number",
+      "description": "The difference between the advisor total and the sub-manager total (advisor_total - sub_manager_total) at the time this alert was raised. Positive means sub-managers are under-allocated vs the IM; negative means over-allocated."
+    },
+    "sub_manager_count": {
+      "type": "integer",
+      "description": "Number of sub-manager products on the portfolio at the time this alert was raised (denormalized for display)."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "acknowledged",
+        "resolved"
+      ],
+      "default": "active",
+      "description": "Lifecycle state of the alert. 'active' = newly raised and awaiting attention; 'acknowledged' = user has seen and noted it; 'resolved' = the sub-manager allocations now match the IM total (auto-resolved by the checker), or the user manually resolved it."
+    },
+    "acknowledged_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the user acknowledged this alert."
+    },
+    "resolved_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when this alert was resolved."
+    },
+    "created_by_id": {
+      "type": "string",
+      "description": "ID of the user who created this alert (auto-set by platform)."
+    }
+  },
+  "required": [
+    "portfolio_id",
+    "advisor_total",
+    "sub_manager_total",
+    "variance"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_edit": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_delete": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
