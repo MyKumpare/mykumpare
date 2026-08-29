@@ -20,7 +20,8 @@ import AddIMProductValidatedDialog from "@/components/products/AddIMProductValid
 import BenchmarkPicker from "./BenchmarkPicker";
 import SecondaryBenchmarksPicker from "./SecondaryBenchmarksPicker";
 import CapitalFlowFields from "./CapitalFlowFields";
-import { calculateCapitalFlow } from "./capitalFlowCalculator";
+import AllocationValidation from "./AllocationValidation";
+import { calculateCapitalFlow, formatCurrency } from "./capitalFlowCalculator";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { syncProductFundingStatus } from "@/components/products/fundingStatusSync";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -132,7 +133,7 @@ function DatePicker({ value, onChange, minDate, placeholder = "Select date...", 
 }
 
 // ── Multi-select product picker ────────────────────────────────────────────────
-function ProductMultiSelect({ options, value = [], onChange, onAddNew, momInceptionDate, portfolioInceptionDate, allocationHistory }) {
+function ProductMultiSelect({ options, value = [], onChange, onAddNew, momInceptionDate, portfolioInceptionDate, allocationHistory, totalAllocation }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -165,6 +166,24 @@ function ProductMultiSelect({ options, value = [], onChange, onAddNew, momIncept
 
   const updateFundingStatus = (productId, status) => {
     onChange(value.map((v) => v.product_id === productId ? { ...v, funding_status: status } : v));
+  };
+
+  const subManagerAllocTotal = value.reduce((sum, v) => sum + (parseFloat(v.initial_allocation_amount) || 0), 0);
+
+  const handleDistributeRemaining = () => {
+    const total = parseFloat(totalAllocation) || 0;
+    if (!total || value.length === 0) return;
+    const remaining = total - subManagerAllocTotal;
+    if (remaining <= 0) return;
+    const unallocated = value.filter((v) => !v.initial_allocation_amount || parseFloat(v.initial_allocation_amount) === 0);
+    const targets = unallocated.length > 0 ? unallocated : value;
+    const share = remaining / targets.length;
+    const targetIds = new Set(targets.map((v) => v.product_id));
+    onChange(value.map((v) =>
+      targetIds.has(v.product_id)
+        ? { ...v, initial_allocation_amount: Math.round(((parseFloat(v.initial_allocation_amount) || 0) + share) * 100) / 100 }
+        : v
+    ));
   };
 
   return (
@@ -312,6 +331,27 @@ function ProductMultiSelect({ options, value = [], onChange, onAddNew, momIncept
               </div>
             );
           })}
+        </div>
+      )}
+      {value.length > 0 && totalAllocation && (
+        <div className="space-y-2">
+          <AllocationValidation
+            allocated={subManagerAllocTotal}
+            total={totalAllocation}
+            label="initial allocation amount"
+          />
+          {(parseFloat(totalAllocation) || 0) > subManagerAllocTotal && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleDistributeRemaining}
+              className="w-full text-xs h-8"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" />
+              Distribute Remaining {formatCurrency((parseFloat(totalAllocation) || 0) - subManagerAllocTotal)} Equally
+            </Button>
+          )}
         </div>
       )}
     </div>
@@ -701,12 +741,20 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
     (!inceptionDate || advisorInceptionDate >= inceptionDate)
   );
 
+  const advisorOverAllocated = advisorProductType && initialAllocationAmount && advisorInitialAllocationAmount &&
+    (parseFloat(advisorInitialAllocationAmount) || 0) > (parseFloat(initialAllocationAmount) || 0);
+
+  const subManagersOverAllocated = advisorProductType === "Multi-Manager Product" && initialAllocationAmount && subManagers.length > 0 &&
+    subManagers.reduce((sum, s) => sum + (parseFloat(s.initial_allocation_amount) || 0), 0) > (parseFloat(initialAllocationAmount) || 0);
+
   const isValid =
     allocatorId &&
     portfolioName.trim() &&
     inceptionDate &&
     advisorDateValid &&
-    subManagersValid;
+    subManagersValid &&
+    !advisorOverAllocated &&
+    !subManagersOverAllocated;
 
   const viewAllocatorName = firms.find((f) => f.id === allocatorId)?.name || allocatorId;
   const viewAdvisorFirmName = firms.find((f) => f.id === advisorFirmId)?.name || advisorFirmId;
@@ -1200,8 +1248,17 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                     placeholder="Enter amount..."
                     value={advisorInitialAllocationAmount}
                     onChange={(e) => setAdvisorInitialAllocationAmount(e.target.value)}
-                    className="h-9 text-sm"
+                    className={cn(
+                      "h-9 text-sm",
+                      initialAllocationAmount && advisorInitialAllocationAmount && (parseFloat(advisorInitialAllocationAmount) || 0) > (parseFloat(initialAllocationAmount) || 0) && "border-red-400 focus-visible:ring-red-400"
+                    )}
                   />
+                  {initialAllocationAmount && (
+                    <AllocationValidation
+                      allocated={advisorInitialAllocationAmount}
+                      total={initialAllocationAmount}
+                    />
+                  )}
                 </div>
               )}
 
@@ -1226,6 +1283,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                     momInceptionDate={advisorInceptionDate}
                     portfolioInceptionDate={inceptionDate}
                     allocationHistory={editingPortfolio?.allocation_history}
+                    totalAllocation={initialAllocationAmount}
                   />
                 </div>
               )}
