@@ -46,6 +46,7 @@ import SectionReports from './pages/SectionReports';
 import SectionDashboard from './pages/SectionDashboard';
 import SectionPortfolios from './pages/SectionPortfolios';
 import SummaryReportTemplates from './pages/SummaryReportTemplates';
+import QuickNotesDrawer from "@/components/quicknotes/QuickNotesDrawer";
 
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -146,6 +147,7 @@ const AuthenticatedApp = () => {
       <Route path="/register" element={<ExternalPartyRegister />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
+    {!isRegisterRoute && <QuickNotesDrawer />}
     </>
   );
 };

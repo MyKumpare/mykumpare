@@ -9,6 +9,7 @@ import {
   Package,
   TrendingUp,
   Activity,
+  ShieldCheck,
 } from "lucide-react";
 
 export const FIRM_COLORS = [
@@ -51,7 +52,7 @@ function getLatestAum(firm) {
  * Side-by-side key metrics table for multiple firms.
  * Each row is a metric; each column is a firm. Best numeric values are highlighted.
  */
-export default function FirmMetricsTable({ firms = [], products = [] }) {
+export default function FirmMetricsTable({ firms = [], products = [], dueDiligences = [] }) {
   const metrics = useMemo(() => {
     return firms.map((firm) => {
       const latest = getLatestAum(firm);
@@ -76,9 +77,17 @@ export default function FirmMetricsTable({ firms = [], products = [] }) {
         productCount: firmProducts.length,
         fundingStatus: firm.funding_status || "—",
         aumDataPoints: (firm.aum_history || []).length,
+        ddStatus: (() => {
+          const firmDds = dueDiligences.filter((d) => d.firm_id === firm.id);
+          if (!firmDds.length) return "—";
+          const latest = firmDds[0];
+          return firmDds.length === 1
+            ? latest.status || "—"
+            : `${firmDds.length} · ${latest.status || "—"}`;
+        })(),
       };
     });
-  }, [firms, products]);
+  }, [firms, products, dueDiligences]);
 
   const rows = [
     { label: "Firm Type", icon: Building, key: "types" },
@@ -107,6 +116,7 @@ export default function FirmMetricsTable({ firms = [], products = [] }) {
       highlight: "max",
     },
     { label: "Funding Status", icon: Activity, key: "fundingStatus" },
+    { label: "Due Diligence Status", icon: ShieldCheck, key: "ddStatus" },
     {
       label: "AUM Data Points",
       icon: TrendingUp,

@@ -26,6 +26,10 @@ export default function FirmComparison() {
     queryKey: ["benchmarks"],
     queryFn: () => base44.entities.Benchmark.list(),
   });
+  const { data: dueDiligences = [] } = useQuery({
+    queryKey: ["due-diligence-comparison"],
+    queryFn: () => base44.entities.DueDiligence.list("-created_date", 5000),
+  });
 
   const selectedFirms = useMemo(
     () => selectedIds.map((id) => firms.find((f) => f.id === id)).filter(Boolean),
@@ -106,7 +110,7 @@ export default function FirmComparison() {
                 Key Metrics
               </h2>
             </div>
-            <FirmMetricsTable firms={selectedFirms} products={products} />
+            <FirmMetricsTable firms={selectedFirms} products={products} dueDiligences={dueDiligences} />
           </section>
 
           {/* AUM Trends */}
