@@ -645,6 +645,73 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
     },
   });
 
+  // Sync initial allocation amounts from the form into the allocation_history array
+  // as "Initial Allocation" records. Preserves manually-added Capital Addition /
+  // Redemption records; only creates/updates/removes Initial Allocation entries.
+  const syncInitialAllocations = (existingHistory) => {
+    const genId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+    let history = (existingHistory || []).map((e) => ({ ...e }));
+    const fmtDate = (d) => (d ? format(d, "yyyy-MM-dd") : "");
+
+    const upsertInitial = (level, refId, refName, amount, date) => {
+      const existing = history.find(
+        (e) =>
+          e.level === level &&
+          (e.reference_id || "") === (refId || "") &&
+          e.activity_type === "Initial Allocation"
+      );
+      if (!amount || !date) {
+        if (existing) history = history.filter((e) => e !== existing);
+        return;
+      }
+      if (existing) {
+        existing.amount = parseFloat(amount);
+        existing.activity_date = date;
+        existing.reference_name = refName;
+      } else {
+        history.push({
+          id: genId(),
+          activity_date: date,
+          activity_type: "Initial Allocation",
+          amount: parseFloat(amount),
+          level,
+          reference_id: refId || undefined,
+          reference_name: refName,
+        });
+      }
+    };
+
+    // Portfolio level
+    upsertInitial("portfolio", "", "Portfolio Total", initialAllocationAmount, fmtDate(inceptionDate));
+
+    // Advisor level — remove stale records for a different firm, then upsert current
+    if (advisorFirmId) {
+      history = history.filter(
+        (e) =>
+          !(e.level === "advisor" && e.activity_type === "Initial Allocation" && (e.reference_id || "") !== advisorFirmId)
+      );
+      upsertInitial("advisor", advisorFirmId, `IM: ${firms.find((f) => f.id === advisorFirmId)?.name || ""}`, advisorInitialAllocationAmount, fmtDate(advisorInceptionDate));
+    } else {
+      history = history.filter((e) => !(e.level === "advisor" && e.activity_type === "Initial Allocation"));
+    }
+
+    // Sub-manager level — remove records for sub-managers no longer in the list
+    const currentSmIds = new Set(
+      advisorProductType === "Multi-Manager Product" ? subManagers.map((sm) => sm.product_id) : []
+    );
+    history = history.filter(
+      (e) =>
+        !(e.level === "sub_manager" && e.activity_type === "Initial Allocation" && !currentSmIds.has(e.reference_id))
+    );
+    if (advisorProductType === "Multi-Manager Product") {
+      subManagers.forEach((sm) => {
+        upsertInitial("sub_manager", sm.product_id, `Sub-Manager: ${sm.product_name}`, sm.initial_allocation_amount, sm.inception_date);
+      });
+    }
+
+    return history;
+  };
+
   const handleSave = () => {
     const allocatorFirm = firms.find((f) => f.id === allocatorId);
     const advisorFirm = firms.find((f) => f.id === advisorFirmId);
@@ -667,6 +734,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
       advisor_funding_status: advisorProductType ? (advisorFundingStatus || "Active") : undefined,
       advisor_initial_allocation_amount: advisorProductType && advisorInitialAllocationAmount ? parseFloat(advisorInitialAllocationAmount) : undefined,
       sub_managers: advisorProductType === "Multi-Manager Product" ? subManagers : undefined,
+      allocation_history: syncInitialAllocations(editingPortfolio?.allocation_history),
       primary_benchmark_id: primaryBenchmarkId || undefined,
       primary_benchmark_name: primaryBenchmarkName || undefined,
       secondary_benchmarks: secondaryBenchmarks.length > 0 ? secondaryBenchmarks : undefined,
