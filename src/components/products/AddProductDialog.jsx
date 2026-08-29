@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Pencil, X, AlertTriangle, History } from "lucide-react";
+import { Pencil, X, AlertTriangle, History, Plus } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import ProductClassificationsTab from "./ProductClassificationsTab";
 import ProductInvestmentTeamTab from "./ProductInvestmentTeamTab";
@@ -43,6 +43,7 @@ import { useTabPreferences } from "../common/useTabPreferences";
 import TabCustomizer from "../common/TabCustomizer";
 import { useAuth } from "@/lib/AuthContext";
 import SummaryExportButton from "../reports/SummaryExportButton";
+import QuickAddFirmFromProduct from "./QuickAddFirmFromProduct";
 
 // Map product type -> firm type(s) that can be associated
 const PRODUCT_TYPE_TO_FIRM_TYPE = {
@@ -128,6 +129,7 @@ export default function AddProductDialog({
   const [addImProductOpen, setAddImProductOpen] = useState(false);
   const [aumDirty, setAumDirty] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [quickAddFirmOpen, setQuickAddFirmOpen] = useState(false);
   const aumSaveRef = useRef(null);
   const queryClient = useQueryClient();
   const nameInputRef = useRef(null);
@@ -654,10 +656,19 @@ export default function AddProductDialog({
                         ))}
                       </SelectContent>
                     </Select>
-                    {productType && eligibleFirms.length === 0 && (
-                      <p className="text-sm text-amber-600 mt-1">
-                        No {PRODUCT_TYPE_TO_FIRM_TYPE[productType]} firms found. Add one first.
-                      </p>
+                    {productType && (
+                      <div className="flex items-center gap-2 mt-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setQuickAddFirmOpen(true)}
+                          className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          {eligibleFirms.length === 0
+                            ? `Add a new ${PRODUCT_TYPE_TO_FIRM_TYPE[productType]} firm`
+                            : "Don't see the firm? Add new"}
+                        </button>
+                      </div>
                     )}
                     {productType && eligibleFirms.length > 0 && !firmId && (
                       <p className="text-sm text-red-600 mt-1">
@@ -1069,6 +1080,18 @@ export default function AddProductDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    {/* Quick-add-firm dialog (launched from Associated Firm field) */}
+    <QuickAddFirmFromProduct
+      open={quickAddFirmOpen}
+      onOpenChange={setQuickAddFirmOpen}
+      firmType={productType ? PRODUCT_TYPE_TO_FIRM_TYPE[productType] : ""}
+      existingFirms={firms}
+      onFirmCreated={(newFirm) => {
+        // Auto-select the newly created firm in the dropdown.
+        setFirmId(newFirm.id);
+      }}
+    />
 
     {/* Inline validated Add IM Product dialog (for Multi-Manager Product constituents) */}
     <AddIMProductValidatedDialog
