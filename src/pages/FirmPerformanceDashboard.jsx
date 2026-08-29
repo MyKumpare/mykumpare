@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { LayoutDashboard, TrendingUp, BarChart3, Table2, X, GitCompare } from "lucide-react";
+import { LayoutDashboard, TrendingUp, BarChart3, Table2, X, GitCompare, Calculator } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import FirmMultiSelector from "@/components/firms/FirmMultiSelector";
 import FirmMetricsTable from "@/components/firms/FirmMetricsTable";
@@ -11,6 +11,7 @@ import FirmPerfKpiCards from "@/components/reports/FirmPerfKpiCards";
 import FirmPerfBarChart from "@/components/reports/FirmPerfBarChart";
 import FirmPerfNetFlowChart from "@/components/reports/FirmPerfNetFlowChart";
 import FirmPerfRadarChart from "@/components/reports/FirmPerfRadarChart";
+import FirmPerfFormulaBuilder from "@/components/reports/FirmPerfFormulaBuilder";
 
 export default function FirmPerformanceDashboard() {
   const navigate = useNavigate();
@@ -118,6 +119,15 @@ export default function FirmPerformanceDashboard() {
               <h2 className="text-sm font-semibold text-gray-700">Multi-Dimensional Comparison</h2>
             </div>
             <FirmPerfRadarChart firms={selectedFirms} products={products} />
+          </section>
+
+          {/* Custom Formula */}
+          <section>
+            <div className="flex items-center gap-2 mb-2">
+              <Calculator className="w-4 h-4 text-indigo-600" />
+              <h2 className="text-sm font-semibold text-gray-700">Custom Formula Comparison</h2>
+            </div>
+            <FirmPerfFormulaBuilder firms={selectedFirms} products={products} contacts={contacts} />
           </section>
 
           {/* Key Metrics Table */}
