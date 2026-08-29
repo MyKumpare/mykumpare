@@ -22,9 +22,11 @@ import {
   Paperclip,
   DollarSign,
   X,
+  Link2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
+import AllocationWizardDialog from "./AllocationWizardDialog";
 
 const genId = () =>
   typeof crypto !== "undefined" && crypto.randomUUID
@@ -413,6 +415,8 @@ export default function PortfolioAllocationHistoryTab({ portfolio }) {
   const [editingRecord, setEditingRecord] = useState(null);
   const [saving, setSaving] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [highlightedRecordId, setHighlightedRecordId] = useState(null);
 
   // Query products to resolve sub-manager firm_ids for document creation
   const { data: products = [] } = useQuery({
@@ -545,23 +549,55 @@ export default function PortfolioAllocationHistoryTab({ portfolio }) {
     }
   };
 
+  // Linked downstream records (advisor + sub-managers) for the portfolio-level
+  // record currently being edited — pre-fills the wizard's allocation split.
+  const linkedRecords = useMemo(() => {
+    if (!editingRecord) return null;
+    const linked = allocData.filter((a) => a.source_record_id === editingRecord.id);
+    return {
+      advisor: linked.find((a) => a.level === "advisor"),
+      subManagers: linked.filter((a) => a.level === "sub_manager"),
+    };
+  }, [editingRecord, allocData]);
+
   const handleAddRecord = () => {
     setEditingRecord(null);
-    setDialogOpen(true);
+    if (selectedLevel === "portfolio") {
+      setWizardOpen(true);
+    } else {
+      setDialogOpen(true);
+    }
   };
 
   const handleEditRecord = (record) => {
     setEditingRecord(record);
-    setDialogOpen(true);
+    if (record.level === "portfolio") {
+      setWizardOpen(true);
+    } else {
+      setDialogOpen(true);
+    }
+  };
+
+  // Navigate to the portfolio-level source record from a downstream record
+  const handleNavigateToSource = (sourceRecordId) => {
+    setSelectedLevel("portfolio");
+    setSelectedRefId("");
+    setSelectedIds(new Set());
+    setHighlightedRecordId(sourceRecordId);
+    // Clear highlight after a few seconds
+    setTimeout(() => setHighlightedRecordId(null), 4000);
   };
 
   const handleDeleteRecord = (id) => {
-    saveAlloc(allocData.filter((a) => a.id !== id));
+    // Cascade delete: removing a portfolio-level record also removes its
+    // linked downstream advisor/sub-manager records.
+    saveAlloc(allocData.filter((a) => a.id !== id && a.source_record_id !== id));
   };
 
   const handleBulkDelete = () => {
     if (selectedIds.size === 0) return;
-    saveAlloc(allocData.filter((a) => !selectedIds.has(a.id)));
+    // Cascade delete: also remove downstream records linked to selected portfolio records
+    saveAlloc(allocData.filter((a) => !selectedIds.has(a.id) && !selectedIds.has(a.source_record_id)));
     setSelectedIds(new Set());
   };
 
@@ -634,6 +670,113 @@ export default function PortfolioAllocationHistoryTab({ portfolio }) {
 
     await saveAlloc(newData);
     setDialogOpen(false);
+    setEditingRecord(null);
+  };
+
+  // Save handler for the cascading allocation wizard (portfolio-level records).
+  // Creates/updates records at portfolio, advisor, and sub-manager levels in
+  // a single allocation_history write, linked via source_record_id.
+  const handleWizardSave = async (data) => {
+    const portfolioRecordId = editingRecord?.id || genId();
+    const baseFields = {
+      activity_date: data.activity_date,
+      activity_type: data.activity_type,
+      notes: data.notes,
+      document: data.document,
+    };
+
+    // Create FirmDocument for uploaded doc (same as single-record flow)
+    let documentData = data.document;
+    if (documentData?.file_url && !documentData.firm_document_id) {
+      try {
+        const firmDoc = await base44.entities.FirmDocument.create({
+          firm_id: portfolio.firm_id,
+          firm_name: portfolio.allocator_name,
+          file_url: documentData.file_url,
+          file_name: documentData.name,
+          file_type: documentData.file_type,
+          entry_date: format(new Date(), "yyyy-MM-dd"),
+          categories: ["Allocation History"],
+          description: `Allocation history document for ${portfolio.portfolio_name} (Portfolio Total)`,
+        });
+        documentData = { ...documentData, firm_document_id: firmDoc.id };
+      } catch {
+        toast({ title: "Document saved to portfolio, but failed to save to firm documents tab", variant: "destructive" });
+      }
+    }
+
+    const portfolioRecord = {
+      id: portfolioRecordId,
+      ...baseFields,
+      document: documentData,
+      amount: data.amount,
+      level: "portfolio",
+      reference_id: undefined,
+      reference_name: "Portfolio Total",
+    };
+
+    let newData;
+    if (editingRecord) {
+      // Update portfolio record + linked downstream records (or remove if amount is 0)
+      newData = allocData
+        .map((a) => {
+          if (a.id === editingRecord.id) return portfolioRecord;
+          if (a.source_record_id === editingRecord.id) {
+            if (a.level === "advisor") {
+              if (data.advisor_amount != null && data.advisor_amount > 0) {
+                return { ...a, ...baseFields, document: documentData, amount: data.advisor_amount };
+              }
+              return null; // remove downstream advisor record
+            }
+            if (a.level === "sub_manager") {
+              const smAmt = parseFloat(data.sub_manager_amounts?.[a.reference_id]);
+              if (smAmt > 0) {
+                return { ...a, ...baseFields, document: documentData, amount: smAmt };
+              }
+              return null; // remove downstream sub-manager record
+            }
+          }
+          return a;
+        })
+        .filter(Boolean);
+    } else {
+      newData = [...allocData, portfolioRecord];
+      // Add advisor record
+      if (data.advisor_amount != null && data.advisor_amount > 0) {
+        newData.push({
+          id: genId(),
+          ...baseFields,
+          document: documentData,
+          amount: data.advisor_amount,
+          level: "advisor",
+          reference_id: portfolio.advisor_firm_id,
+          reference_name: `IM: ${portfolio.advisor_firm_name || ""}`,
+          source_record_id: portfolioRecordId,
+        });
+      }
+      // Add sub-manager records
+      if (data.sub_manager_amounts) {
+        Object.entries(data.sub_manager_amounts).forEach(([productId, amtStr]) => {
+          const amt = parseFloat(amtStr);
+          if (amt > 0) {
+            const sm = (portfolio.sub_managers || []).find((s) => s.product_id === productId);
+            newData.push({
+              id: genId(),
+              ...baseFields,
+              document: documentData,
+              amount: amt,
+              level: "sub_manager",
+              reference_id: productId,
+              reference_name: `Sub-Manager: ${sm?.product_name || ""}`,
+              source_record_id: portfolioRecordId,
+            });
+          }
+        });
+      }
+    }
+
+    await saveAlloc(newData);
+    setWizardOpen(false);
     setEditingRecord(null);
   };
 
@@ -796,7 +939,8 @@ export default function PortfolioAllocationHistoryTab({ portfolio }) {
                     key={rec.id}
                     className={cn(
                       "border-t border-gray-100 hover:bg-gray-50 cursor-pointer",
-                      selectedIds.has(rec.id) && "bg-indigo-50/50"
+                      selectedIds.has(rec.id) && "bg-indigo-50/50",
+                      highlightedRecordId === rec.id && "bg-amber-100 ring-2 ring-amber-400"
                     )}
                     onClick={() => handleEditRecord(rec)}
                   >
@@ -814,19 +958,34 @@ export default function PortfolioAllocationHistoryTab({ portfolio }) {
                         : "—"}
                     </td>
                     <td className="px-3 py-2">
-                      <span
-                        className={cn(
-                          "inline-block px-2 py-0.5 rounded text-xs font-medium",
-                          rec.activity_type === "Initial Allocation" &&
-                            "bg-blue-50 text-blue-700",
-                          rec.activity_type === "Capital Addition" &&
-                            "bg-green-50 text-green-700",
-                          rec.activity_type === "Redemption" &&
-                            "bg-red-50 text-red-700"
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={cn(
+                            "inline-block px-2 py-0.5 rounded text-xs font-medium",
+                            rec.activity_type === "Initial Allocation" &&
+                              "bg-blue-50 text-blue-700",
+                            rec.activity_type === "Capital Addition" &&
+                              "bg-green-50 text-green-700",
+                            rec.activity_type === "Redemption" &&
+                              "bg-red-50 text-red-700"
+                          )}
+                        >
+                          {rec.activity_type}
+                        </span>
+                        {rec.source_record_id && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleNavigateToSource(rec.source_record_id);
+                            }}
+                            title="Go to source portfolio record"
+                            className="text-indigo-500 hover:text-indigo-700 transition-colors"
+                          >
+                            <Link2 className="w-3.5 h-3.5" />
+                          </button>
                         )}
-                      >
-                        {rec.activity_type}
-                      </span>
+                      </div>
                     </td>
                     <td className="px-3 py-2 text-right text-gray-800 font-medium whitespace-nowrap">
                       {rec.amount != null
@@ -902,6 +1061,16 @@ export default function PortfolioAllocationHistoryTab({ portfolio }) {
         parentTotal={allocationInfo.parentTotal}
         levelTotal={allocationInfo.levelTotal}
         canAllocate={allocationInfo.canAllocate}
+        availableActivityTypes={availableActivityTypes}
+      />
+
+      <AllocationWizardDialog
+        open={wizardOpen}
+        onOpenChange={setWizardOpen}
+        onSave={handleWizardSave}
+        editingRecord={editingRecord}
+        portfolio={portfolio}
+        linkedRecords={linkedRecords}
         availableActivityTypes={availableActivityTypes}
       />
     </div>
