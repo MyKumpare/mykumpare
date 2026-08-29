@@ -984,6 +984,10 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
               productId={productId}
               productName={selectedProduct?.name || ""}
               tenantId={currentUser?.linked_firm_id || ""}
+              onAllStagesCompleted={() => {
+                setStatus("Buy List");
+                setProcessStatus("Completed");
+              }}
             />
           )}
 

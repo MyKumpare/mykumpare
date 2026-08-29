@@ -45,6 +45,7 @@ export default function DueDiligenceTemplateFlow({
   approvalProcess = {}, onApprovalProcessChange,
   approvalLogic = [], onApprovalLogicChange,
   firmId = "", firmName = "", productId = "", productName = "", tenantId = "",
+  onAllStagesCompleted,
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -220,6 +221,13 @@ export default function DueDiligenceTemplateFlow({
       return updated;
     });
     onStagesChange(newStages);
+
+    // When the last stage is approved, auto-set DD status to "Buy List"
+    // and process status to "Completed".
+    if (action === "approved" && onAllStagesCompleted) {
+      const allDone = newStages.length > 0 && newStages.every((s) => s.completed);
+      if (allDone) onAllStagesCompleted();
+    }
   };
 
   // Sub-stage change: update the sub-stage within its stage,
