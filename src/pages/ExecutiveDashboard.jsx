@@ -14,6 +14,7 @@ import { useAuth } from "@/lib/AuthContext";
 import ExposureHeatmap from "@/components/executive/ExposureHeatmap";
 import FundingBreakdownCharts from "@/components/executive/FundingBreakdownCharts";
 import TopFirmsAumTrendChart from "@/components/executive/TopFirmsAumTrendChart";
+import FirmBenchmarkComparison from "@/components/executive/FirmBenchmarkComparison";
 
 const FIRM_TYPES = [
   "Investment Manager",
@@ -583,6 +584,13 @@ export default function ExecutiveDashboard() {
 
             {/* Top Firms AUM Growth Trends */}
             <TopFirmsAumTrendChart firms={scopedFirms} />
+
+            {/* Firm vs. Benchmark Performance Comparison */}
+            <FirmBenchmarkComparison
+              firms={scopedFirms}
+              products={scopedProducts}
+              portfolios={scopedPortfolios}
+            />
 
             {/* Interactive funding breakdown — market value + funding counts */}
             <FundingBreakdownCharts firms={scopedFirms} />
