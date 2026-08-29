@@ -94,11 +94,20 @@ export default function FirmPortfoliosTab({
   const { data: lookupData, isLoading } = useQuery({
     queryKey: advisorMode ? ["portfolios-advisor", firmId] : ["portfolios-firm-all", firmId],
     queryFn: () =>
-      fetchFirmAssociatedPortfolios(firmId, { includeSubManager: !advisorMode }),
+      fetchFirmAssociatedPortfolios(firmId, { includeSubManager: true }),
   });
   const portfolios = useMemo(() => {
     if (advisorMode) {
-      return (lookupData?.portfolios || []).filter((p) => p.advisor_firm_id === firmId);
+      // In advisor mode, show portfolios where the firm is the advisor OR where the
+      // firm's products are sub-managers inside a multi-manager product (the sub-manager
+      // case is missed by a simple advisor_firm_id filter because the portfolio's
+      // advisor_firm_id points at the MoM firm, not this IM firm).
+      const roleMap = lookupData?.roleMap || {};
+      return (lookupData?.portfolios || []).filter((p) => {
+        if (p.advisor_firm_id === firmId) return true;
+        const role = roleMap[p.id] || {};
+        return role.isSubManager;
+      });
     }
     return lookupData?.portfolios || [];
   }, [lookupData, advisorMode, firmId]);
@@ -198,7 +207,7 @@ export default function FirmPortfoliosTab({
       await base44.entities.Portfolio.update(portfolio.id, {
         allocation_history: updatedHistory,
       });
-      queryClient.invalidateQueries({ queryKey: advisorMode ? ["portfolios-advisor", firmId] : ["portfolios", firmId] });
+      queryClient.invalidateQueries({ queryKey: advisorMode ? ["portfolios-advisor", firmId] : ["portfolios-firm-all", firmId] });
       queryClient.invalidateQueries({ queryKey: ["portfolios-all"] });
       toast({ title: "Historical allocation added successfully" });
       setAddAllocOpen(null);
@@ -428,7 +437,7 @@ export default function FirmPortfoliosTab({
         onSuccess={() => {
           setPortfolioDialogOpen(false);
           setEditingPortfolio(null);
-          queryClient.invalidateQueries({ queryKey: advisorMode ? ["portfolios-advisor", firmId] : ["portfolios", firmId] });
+          queryClient.invalidateQueries({ queryKey: advisorMode ? ["portfolios-advisor", firmId] : ["portfolios-firm-all", firmId] });
           queryClient.invalidateQueries({ queryKey: ["portfolios-all"] });
         }}
       />
