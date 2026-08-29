@@ -26,6 +26,7 @@ import ProductInvestmentDescriptionTab from "./ProductInvestmentDescriptionTab";
 import ProductReturnsTab from "./ProductReturnsTab";
 import ProductAumHistoryTab from "./ProductAumHistoryTab";
 import ProductAnalyticsTab from "./ProductAnalyticsTab";
+import ProductPortfoliosTab from "./ProductPortfoliosTab";
 import ProductThirdPartyTab from "./ProductThirdPartyTab";
 import EVestmentUniversePicker from "./EVestmentUniversePicker";
 import DefaultBenchmarkPicker from "./DefaultBenchmarkPicker";
@@ -152,6 +153,7 @@ export default function AddProductDialog({
     { key: "returns", label: "Returns", disabled: isAddMode },
     { key: "third-party", label: "3rd Party", disabled: isAddMode },
     { key: "analytics", label: "Analytics", disabled: isAddMode },
+    { key: "portfolios", label: "Portfolios", disabled: isAddMode },
   ], [isAddMode]);
   const productTabMeta = useMemo(() => Object.fromEntries(availableProductTabs.map((t) => [t.key, t])), [availableProductTabs]);
   const {
@@ -1033,6 +1035,13 @@ export default function AddProductDialog({
             <TabsContent value="analytics">
               {editingProduct && (
                 <ProductAnalyticsTab productId={editingProduct.id} editingProduct={editingProduct} />
+              )}
+            </TabsContent>
+
+            {/* ── Portfolios Tab ── */}
+            <TabsContent value="portfolios">
+              {editingProduct && (
+                <ProductPortfoliosTab productId={editingProduct.id} productName={editingProduct.name} />
               )}
             </TabsContent>
           </Tabs>
