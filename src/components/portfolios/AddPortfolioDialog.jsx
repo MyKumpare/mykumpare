@@ -31,6 +31,7 @@ import PortfolioAllocationHistoryTab from "./PortfolioAllocationHistoryTab";
 import PortfolioReportModal from "./PortfolioReportModal";
 import PortfolioDashboardTab from "./PortfolioDashboardTab";
 import PortfolioLineupTab from "./PortfolioLineupTab";
+import PortfolioBenchmarkComparisonTab from "./PortfolioBenchmarkComparisonTab";
 
 // ── Searchable dropdown ────────────────────────────────────────────────────────
 function SearchableSelect({ options, value, onChange, placeholder, onAddNew, addNewLabel }) {
@@ -955,11 +956,12 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className={cn("grid w-full mb-1", editingPortfolio ? "grid-cols-6" : "grid-cols-2")}>
+            <TabsList className={cn("grid w-full mb-1", editingPortfolio ? "grid-cols-7" : "grid-cols-2")}>
               <TabsTrigger value="details" className="text-xs">Details</TabsTrigger>
               <TabsTrigger value="guidelines" className="text-xs">Guidelines</TabsTrigger>
               {editingPortfolio && <TabsTrigger value="dashboard" className="text-xs">Dashboard</TabsTrigger>}
               {editingPortfolio && <TabsTrigger value="lineup" className="text-xs">Lineup</TabsTrigger>}
+              {editingPortfolio && <TabsTrigger value="benchmark" className="text-xs">Benchmark</TabsTrigger>}
               {editingPortfolio && <TabsTrigger value="historical-aum" className="text-xs">Historical AUM</TabsTrigger>}
               {editingPortfolio && <TabsTrigger value="allocation-history" className="text-xs">Allocation History</TabsTrigger>}
             </TabsList>
@@ -1409,6 +1411,9 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                 </TabsContent>
                 <TabsContent value="lineup">
                   <PortfolioLineupTab portfolio={editingPortfolio} />
+                </TabsContent>
+                <TabsContent value="benchmark">
+                  <PortfolioBenchmarkComparisonTab portfolio={editingPortfolio} />
                 </TabsContent>
                 <TabsContent value="historical-aum">
                   <PortfolioHistoricalAumTab portfolio={editingPortfolio} />
