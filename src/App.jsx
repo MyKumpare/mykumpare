@@ -45,6 +45,7 @@ import SectionDueDiligence from './pages/SectionDueDiligence';
 import SectionReports from './pages/SectionReports';
 import SectionDashboard from './pages/SectionDashboard';
 import SectionPortfolios from './pages/SectionPortfolios';
+import SummaryReportTemplates from './pages/SummaryReportTemplates';
 
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -141,6 +142,7 @@ const AuthenticatedApp = () => {
       <Route path="/Reports" element={<LayoutWrapper currentPageName="Reports"><SectionReports /></LayoutWrapper>} />
       <Route path="/Dashboard" element={<LayoutWrapper currentPageName="Dashboard"><SectionDashboard /></LayoutWrapper>} />
       <Route path="/Portfolios" element={<LayoutWrapper currentPageName="Portfolios"><SectionPortfolios /></LayoutWrapper>} />
+      <Route path="/SummaryReportTemplates" element={<LayoutWrapper currentPageName="SummaryReportTemplates"><SummaryReportTemplates /></LayoutWrapper>} />
       <Route path="/register" element={<ExternalPartyRegister />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
