@@ -7,6 +7,10 @@ import {
   Users,
   Shield,
   Award,
+  Tag,
+  Building2,
+  Hash,
+  Layers,
 } from "lucide-react";
 
 export const CONTACT_STATUS_OPTIONS = [
@@ -59,9 +63,34 @@ export const DISABILITY_STATUS_OPTIONS = [
   { value: "Undetermined", label: "Undetermined" },
 ];
 
+export const SALUTATION_OPTIONS = [
+  { value: "Mr.", label: "Mr." },
+  { value: "Ms.", label: "Ms." },
+  { value: "Mrs.", label: "Mrs." },
+  { value: "Dr.", label: "Dr." },
+  { value: "Prof.", label: "Prof." },
+  { value: "Hon.", label: "Hon." },
+];
+
+export const CONTACT_ROLE_OPTIONS = [
+  { value: "Primary", label: "Primary" },
+  { value: "Secondary", label: "Secondary" },
+];
+
+export const ETHNICITY_OPTIONS = [
+  { value: "African American", label: "African American" },
+  { value: "Asian American", label: "Asian American" },
+  { value: "Caucasian", label: "Caucasian" },
+  { value: "Latino American", label: "Latino American" },
+  { value: "Native American Indian", label: "Native American Indian" },
+  { value: "Native Alaskan Indian", label: "Native Alaskan Indian" },
+];
+
 /**
  * Filter group config for the Contacts section.
- * Based on fields available in the contact form and profile tabs.
+ * Based on fields available in the contact form, profile tabs, and related sub-forms
+ * (Info, Classification, Demographics, Education, Experience, Pipeline, etc.).
+ * Groups with options: [] are dynamically populated from loaded contact data.
  */
 export const contactFilterGroups = [
   {
@@ -124,6 +153,79 @@ export const contactFilterGroups = [
     icon: Award,
     type: "checkbox",
     options: DISABILITY_STATUS_OPTIONS,
+    defaultOpen: false,
+  },
+  // ── Fields from related tabs and sub-forms ──
+  {
+    key: "salutation",
+    label: "Salutation",
+    icon: User,
+    type: "checkbox",
+    options: SALUTATION_OPTIONS,
+    defaultOpen: false,
+  },
+  {
+    key: "contact_role",
+    label: "Priority",
+    icon: Crown,
+    type: "checkbox",
+    options: CONTACT_ROLE_OPTIONS,
+    defaultOpen: false,
+  },
+  {
+    key: "contact_type",
+    label: "Contact Type",
+    icon: Tag,
+    type: "checkbox",
+    options: [], // dynamically populated from contact data
+    defaultOpen: false,
+  },
+  {
+    key: "contact_roles",
+    label: "Contact Role",
+    icon: Briefcase,
+    type: "checkbox",
+    options: [], // dynamically populated from contact data
+    defaultOpen: false,
+  },
+  {
+    key: "contact_firm_roles",
+    label: "Contact Department",
+    icon: Building2,
+    type: "checkbox",
+    options: [], // dynamically populated from contact data
+    defaultOpen: false,
+  },
+  {
+    key: "investment_team_roles",
+    label: "Investment Team Role",
+    icon: Users,
+    type: "checkbox",
+    options: [], // dynamically populated from contact data
+    defaultOpen: false,
+  },
+  {
+    key: "tags",
+    label: "Tags",
+    icon: Hash,
+    type: "checkbox",
+    options: [], // dynamically populated from contact data
+    defaultOpen: false,
+  },
+  {
+    key: "ethnicity",
+    label: "Ethnicity",
+    icon: Users,
+    type: "checkbox",
+    options: ETHNICITY_OPTIONS,
+    defaultOpen: false,
+  },
+  {
+    key: "pipeline_stage",
+    label: "Pipeline Stage",
+    icon: Layers,
+    type: "checkbox",
+    options: [], // dynamically populated from contact data
     defaultOpen: false,
   },
 ];

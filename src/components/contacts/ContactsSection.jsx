@@ -36,6 +36,28 @@ const GROUP_COLORS = {
   "Trade Organizations": "bg-gray-100 text-gray-700",
 };
 
+// Sidebar filter config: maps each sidebar filter key to its Contact entity field,
+// default value (for scalar fields), and whether the field is an array.
+const SIDEBAR_FILTER_CONFIG = {
+  contact_status: { field: "contact_status", default: "" },
+  engagement_status: { field: "engagement_status", default: "New" },
+  decision_role: { field: "decision_role", default: "" },
+  influence_level: { field: "influence_level", default: "Undetermined" },
+  employee_status: { field: "employee_status", default: "" },
+  gender: { field: "gender", default: "Undetermined" },
+  veteran_status: { field: "veteran_status", default: "Undetermined" },
+  disability_status: { field: "disability_status", default: "Undetermined" },
+  salutation: { field: "salutation", default: "" },
+  contact_role: { field: "contact_role", default: "" },
+  contact_type: { field: "contact_type", isArray: true },
+  contact_roles: { field: "contact_roles", isArray: true },
+  contact_firm_roles: { field: "contact_firm_roles", isArray: true },
+  investment_team_roles: { field: "investment_team_roles", isArray: true },
+  tags: { field: "tags", isArray: true },
+  ethnicity: { field: "ethnicity", isArray: true },
+  pipeline_stage: { field: "pipeline_stage", default: "" },
+};
+
 function formatContactName(c) {
   const name = [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ");
   return c.designations?.length ? `${name}, ${c.designations.join(", ")}` : name;
@@ -75,21 +97,16 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
   const [bulkTagOpen, setBulkTagOpen] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(null);
   const [showFilters, setShowFilters] = useState(true);
-  const [filterValues, setFilterValues] = useState({
-    contact_status: new Set(),
-    engagement_status: new Set(),
-    decision_role: new Set(),
-    influence_level: new Set(),
-    employee_status: new Set(),
-    gender: new Set(),
-    veteran_status: new Set(),
-    disability_status: new Set(),
+  const [filterValues, setFilterValues] = useState(() => {
+    const init = {};
+    Object.keys(SIDEBAR_FILTER_CONFIG).forEach((k) => { init[k] = new Set(); });
+    return init;
   });
   const handleFilterChange = (key, value) => setFilterValues((prev) => ({ ...prev, [key]: value }));
-  const clearAllSidebarFilters = () => setFilterValues({
-    contact_status: new Set(), engagement_status: new Set(), decision_role: new Set(),
-    influence_level: new Set(), employee_status: new Set(), gender: new Set(),
-    veteran_status: new Set(), disability_status: new Set(),
+  const clearAllSidebarFilters = () => setFilterValues(() => {
+    const init = {};
+    Object.keys(SIDEBAR_FILTER_CONFIG).forEach((k) => { init[k] = new Set(); });
+    return init;
   });
   const hasActiveSidebarFilters = Object.values(filterValues).some((s) => s && s.size > 0);
   const queryClient = useQueryClient();
@@ -282,49 +299,62 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
     let result = hasFilters
       ? filterSectionContacts(contacts, filterText, filterSelected, firmMap, contactProductMap, contactPortfolioMap, filterDateRange)
       : contacts;
-    if (filterValues.contact_status?.size > 0)
-      result = result.filter((c) => filterValues.contact_status.has(c.contact_status || ""));
-    if (filterValues.engagement_status?.size > 0)
-      result = result.filter((c) => filterValues.engagement_status.has(c.engagement_status || "New"));
-    if (filterValues.decision_role?.size > 0)
-      result = result.filter((c) => filterValues.decision_role.has(c.decision_role || ""));
-    if (filterValues.influence_level?.size > 0)
-      result = result.filter((c) => filterValues.influence_level.has(c.influence_level || "Undetermined"));
-    if (filterValues.employee_status?.size > 0)
-      result = result.filter((c) => filterValues.employee_status.has(c.employee_status || ""));
-    if (filterValues.gender?.size > 0)
-      result = result.filter((c) => filterValues.gender.has(c.gender || "Undetermined"));
-    if (filterValues.veteran_status?.size > 0)
-      result = result.filter((c) => filterValues.veteran_status.has(c.veteran_status || "Undetermined"));
-    if (filterValues.disability_status?.size > 0)
-      result = result.filter((c) => filterValues.disability_status.has(c.disability_status || "Undetermined"));
+    for (const [key, cfg] of Object.entries(SIDEBAR_FILTER_CONFIG)) {
+      const sel = filterValues[key];
+      if (!sel || sel.size === 0) continue;
+      result = result.filter((c) => {
+        if (cfg.isArray) {
+          const val = c[cfg.field] || [];
+          return Array.isArray(val) && val.some((v) => sel.has(v));
+        }
+        const val = c[cfg.field] ?? cfg.default;
+        return sel.has(val);
+      });
+    }
     return result;
   }, [contacts, hasFilters, filterText, filterSelected, firmMap, contactProductMap, contactPortfolioMap, filterDateRange, filterValues]);
 
   const sidebarFilterCounts = useMemo(() => {
-    const contactStatus = {}, engagementStatus = {}, decisionRole = {}, influenceLevel = {};
-    const employeeStatus = {}, gender = {}, veteranStatus = {}, disabilityStatus = {};
-    for (const c of contacts) {
-      if (c.deleted_at) continue;
-      if (c.contact_status) contactStatus[c.contact_status] = (contactStatus[c.contact_status] || 0) + 1;
-      const es = c.engagement_status || "New";
-      engagementStatus[es] = (engagementStatus[es] || 0) + 1;
-      if (c.decision_role) decisionRole[c.decision_role] = (decisionRole[c.decision_role] || 0) + 1;
-      const il = c.influence_level || "Undetermined";
-      influenceLevel[il] = (influenceLevel[il] || 0) + 1;
-      if (c.employee_status) employeeStatus[c.employee_status] = (employeeStatus[c.employee_status] || 0) + 1;
-      const g = c.gender || "Undetermined";
-      gender[g] = (gender[g] || 0) + 1;
-      const vs = c.veteran_status || "Undetermined";
-      veteranStatus[vs] = (veteranStatus[vs] || 0) + 1;
-      const ds = c.disability_status || "Undetermined";
-      disabilityStatus[ds] = (disabilityStatus[ds] || 0) + 1;
+    const counts = {};
+    for (const [key, cfg] of Object.entries(SIDEBAR_FILTER_CONFIG)) {
+      const count = {};
+      for (const c of contacts) {
+        if (c.deleted_at) continue;
+        if (cfg.isArray) {
+          const val = c[cfg.field] || [];
+          (Array.isArray(val) ? val : []).forEach((v) => {
+            if (v) count[v] = (count[v] || 0) + 1;
+          });
+        } else {
+          const val = c[cfg.field] ?? cfg.default;
+          if (val) count[val] = (count[val] || 0) + 1;
+        }
+      }
+      counts[key] = count;
     }
-    return {
-      contact_status: contactStatus, engagement_status: engagementStatus, decision_role: decisionRole,
-      influence_level: influenceLevel, employee_status: employeeStatus, gender,
-      veteran_status: veteranStatus, disability_status: disabilityStatus,
-    };
+    return counts;
+  }, [contacts]);
+
+  // Build sidebar filter groups with dynamic options computed from loaded contacts
+  // (for groups whose options array is empty — e.g. tags, contact_type, pipeline_stage).
+  const sidebarGroups = useMemo(() => {
+    const dynamicKeys = ["contact_type", "contact_roles", "contact_firm_roles", "investment_team_roles", "tags", "pipeline_stage"];
+    const dynamicOpts = {};
+    for (const key of dynamicKeys) {
+      const set = new Set();
+      for (const c of contacts) {
+        if (c.deleted_at) continue;
+        const val = c[key];
+        if (Array.isArray(val)) val.forEach((v) => v && set.add(v));
+        else if (val) set.add(val);
+      }
+      dynamicOpts[key] = Array.from(set).sort().map((v) => ({ value: v, label: v }));
+    }
+    return contactFilterGroups.map((g) =>
+      g.options && g.options.length === 0 && dynamicOpts[g.key]
+        ? { ...g, options: dynamicOpts[g.key] }
+        : g
+    );
   }, [contacts]);
 
   // Contacts shown on the Kanban: "all" → everyone; a specific firm type → only contacts of that firm type.
@@ -530,7 +560,7 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
               <div className="w-full md:w-56 flex-shrink-0">
                 <EntityFilterSidebar
                   sectionKey="contacts"
-                  groups={contactFilterGroups}
+                  groups={sidebarGroups}
                   values={filterValues}
                   onChange={handleFilterChange}
                   counts={sidebarFilterCounts}
