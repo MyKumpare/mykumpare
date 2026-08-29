@@ -1,0 +1,45 @@
+{
+  "name": "Stalled DD Process Alerts",
+  "description": "Weekly sweep that checks each due diligence process for stages stalled over 6 months and raises StalledDdAlert records with email notifications to the primary analyst.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "0 8 * * 1",
+      "one_time_date": null,
+      "timezone": "America/New_York",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "stalled_dd_process_alerts",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "check_stalled": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "checkStalledDdProcesses",
+            "args": {}
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Check stalled DD processes",
+            "description": "Sweep all DD records for stages stalled over 6 months"
+          }
+        }
+      }
+    ]
+  }
+}

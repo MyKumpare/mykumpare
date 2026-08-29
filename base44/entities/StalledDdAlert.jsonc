@@ -1,0 +1,200 @@
+{
+  "name": "StalledDdAlert",
+  "type": "object",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "ID of the firm (tenant) that owns this alert. Set on creation to the creator's linked_firm_id; drives tenant isolation via RLS."
+    },
+    "due_diligence_id": {
+      "type": "string",
+      "description": "ID of the DueDiligence record that has been stalled in the same stage for over 6 months."
+    },
+    "firm_id": {
+      "type": "string",
+      "description": "ID of the firm associated with the stalled due diligence record."
+    },
+    "firm_name": {
+      "type": "string",
+      "description": "Name of the associated firm (denormalized for display)."
+    },
+    "product_id": {
+      "type": "string",
+      "description": "ID of the product under due diligence (denormalized for quick lookup)."
+    },
+    "product_name": {
+      "type": "string",
+      "description": "Name of the product under due diligence (denormalized for display)."
+    },
+    "template_name": {
+      "type": "string",
+      "description": "Name of the due diligence template (denormalized for display)."
+    },
+    "stage_id": {
+      "type": "string",
+      "description": "ID of the stage the process has been stuck in."
+    },
+    "stage_name": {
+      "type": "string",
+      "description": "Name of the stage the process has been stuck in (denormalized for display)."
+    },
+    "stage_index": {
+      "type": "integer",
+      "description": "0-based index of the stuck stage within the due diligence stages array."
+    },
+    "stage_start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "The date the process entered the stuck stage (YYYY-MM-DD). Used to compute how long the process has been stalled."
+    },
+    "days_in_stage": {
+      "type": "integer",
+      "description": "Number of days the process has been in the current stage at the time this alert was raised (denormalized so historical alerts remain accurate)."
+    },
+    "threshold_days": {
+      "type": "integer",
+      "default": 180,
+      "description": "The stall threshold (in days) that was in effect when this alert was raised. Defaults to 180 (~6 months)."
+    },
+    "primary_analyst_name": {
+      "type": "string",
+      "description": "Name of the primary analyst assigned to the stalled process (denormalized for display)."
+    },
+    "dd_status": {
+      "type": "string",
+      "description": "The due diligence record's status at the time the alert was raised (denormalized for display)."
+    },
+    "notification_sent": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether an email notification was sent to the primary analyst for this alert."
+    },
+    "last_notified_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the last email notification was sent for this alert (ISO-8601)."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "acknowledged",
+        "resolved"
+      ],
+      "default": "active",
+      "description": "Lifecycle state of the alert. 'active' = newly raised and awaiting attention; 'acknowledged' = user has seen and noted it; 'resolved' = the process advanced to a new stage (auto-resolved by the checker), or the user manually resolved it."
+    },
+    "acknowledged_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the user acknowledged this alert."
+    },
+    "resolved_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when this alert was resolved."
+    }
+  },
+  "required": [
+    "due_diligence_id",
+    "firm_id",
+    "stage_id",
+    "days_in_stage"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_edit": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_delete": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

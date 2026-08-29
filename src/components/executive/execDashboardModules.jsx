@@ -7,6 +7,7 @@ import {
   DollarSign, Building2, Package, Wallet, Globe, TrendingUp,
   Layers, PieChart as PieIcon, BarChart3, Grid3x3, AlertTriangle,
   ClipboardCheck,
+  AlertOctagon,
 } from "lucide-react";
 import ExposureHeatmap from "./ExposureHeatmap";
 import FundingBreakdownCharts from "./FundingBreakdownCharts";
@@ -14,6 +15,7 @@ import TopFirmsAumTrendChart from "./TopFirmsAumTrendChart";
 import FirmBenchmarkComparison from "./FirmBenchmarkComparison";
 import StuckDdProcesses from "./StuckDdProcesses";
 import DdProcessesByStatus from "./DdProcessesByStatus";
+import StalledDdAlertsIndicator from "./StalledDdAlertsIndicator";
 
 export const FIRM_TYPES = [
   "Investment Manager", "Allocator", "Investment Consultant",
@@ -242,6 +244,16 @@ export const MODULE_REGISTRY = {
     render: (d) => <DdProcessesByStatus ddRecords={d.ddRecords || []} />,
   },
 
+  stalled_dd_alerts: {
+    id: "stalled_dd_alerts",
+    title: "Stalled DD Alerts",
+    description: "Processes in the same stage for 6+ months",
+    icon: AlertOctagon,
+    width: "half",
+    category: "Alerts",
+    render: () => <StalledDdAlertsIndicator />,
+  },
+
   top_firms_aum_trend: {
     id: "top_firms_aum_trend",
     title: "Top Firms AUM Growth Trends",
@@ -366,6 +378,7 @@ export const DEFAULT_MODULE_ORDER = [
   "chart_committed_capital_by_type",
   "chart_products_by_status",
   "dd_processes_by_status",
+  "stalled_dd_alerts",
   "stuck_dd_processes",
   "top_firms_aum_trend",
   "firm_benchmark_comparison",
