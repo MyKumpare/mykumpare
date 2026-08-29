@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { toast } from "@/components/ui/use-toast";
 import { Link } from "react-router-dom";
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
@@ -15,8 +16,20 @@ import {
 import AumAllocationSummary from "@/components/analytics/AumAllocationSummary";
 import NewsSentimentTrendChart from "@/components/analytics/NewsSentimentTrendChart";
 import ScoringThresholdAlertsPanel from "@/components/scoring/ScoringThresholdAlertsPanel";
+import OverviewKpiConfigDialog from "@/components/dashboard/OverviewKpiConfigDialog";
+import { resolveVisibleKpis } from "@/components/dashboard/overviewKpis";
 import { format, subDays, eachDayOfInterval, parseISO } from "date-fns";
 import { useAuth } from "@/lib/AuthContext";
+import { SlidersHorizontal } from "lucide-react";
+
+function formatCompactCurrency(n) {
+  if (n == null) return "—";
+  if (Math.abs(n) >= 1e12) return `$${(n / 1e12).toFixed(1)}T`;
+  if (Math.abs(n) >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
+  if (Math.abs(n) >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+  if (Math.abs(n) >= 1e3) return `$${(n / 1e3).toFixed(0)}K`;
+  return `$${n.toLocaleString()}`;
+}
 
 const FIRM_TYPES = [
   "Investment Manager",
@@ -78,6 +91,34 @@ export default function OverviewDashboard() {
     queryKey: ["contact_pipeline_stages"],
     queryFn: () => base44.entities.ContactPipelineStage.list("order", 500),
   });
+
+  const { data: allProducts = [], isLoading: productsLoading } = useQuery({
+    queryKey: ["overview_products"],
+    queryFn: () => base44.entities.Product.list("-created_date", 5000),
+  });
+
+  const [kpiConfigOpen, setKpiConfigOpen] = useState(false);
+  const [kpiConfig, setKpiConfig] = useState(null);
+  const [kpiConfigLoading, setKpiConfigLoading] = useState(true);
+
+  // Load the user's saved KPI configuration from their profile data.
+  useEffect(() => {
+    setKpiConfigLoading(true);
+    base44.auth.me().then((me) => {
+      setKpiConfig(me?.data?.overview_kpis || null);
+      setKpiConfigLoading(false);
+    }).catch(() => setKpiConfigLoading(false));
+  }, []);
+
+  const handleSaveKpiConfig = async (visibleKeys) => {
+    setKpiConfig(visibleKeys);
+    try {
+      await base44.auth.updateMe({ overview_kpis: visibleKeys });
+      toast({ title: "Dashboard KPIs updated" });
+    } catch {
+      toast({ title: "Could not save KPI configuration", variant: "destructive" });
+    }
+  };
 
   const scopedFirms = useMemo(() => {
     if (dataScope === "all" || !linkedFirmId) return firms.filter((f) => !f.deleted_at);
@@ -303,6 +344,28 @@ export default function OverviewDashboard() {
     ).length;
   }, [scopedTasks]);
 
+  const scopedProducts = useMemo(() => {
+    if (dataScope === "all" || !linkedFirmId) return allProducts.filter((p) => !p.deleted_at);
+    return allProducts.filter((p) => !p.deleted_at && p.tenant_id === linkedFirmId);
+  }, [allProducts, dataScope, linkedFirmId]);
+
+  const scopedContacts = useMemo(() => {
+    if (dataScope === "all" || !linkedFirmId) return allContacts.filter((c) => !c.deleted_at);
+    return allContacts.filter((c) => !c.deleted_at && (c.tenant_id === linkedFirmId || (c.firm_ids || []).some((fid) => scopedFirms.some((f) => f.id === fid))));
+  }, [allContacts, dataScope, linkedFirmId, scopedFirms]);
+
+  const visibleKpis = kpiConfigLoading ? [] : resolveVisibleKpis(kpiConfig);
+
+  const kpiValues = {
+    scopedFirms,
+    scopedTasks,
+    overdueTasks,
+    taskStatusData,
+    totalPendingApprovals,
+    scopedProducts,
+    scopedContacts,
+  };
+
   const userName = user?.full_name || user?.email || "";
 
   return (
@@ -350,26 +413,61 @@ export default function OverviewDashboard() {
           </div>
         </div>
 
-        {/* Summary cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <SummaryCard label="Total Firms" value={totalFirms} icon={Building} color="bg-indigo-500" loading={firmsLoading} />
-          <SummaryCard label="Total Tasks" value={totalTasks} icon={ListChecks} color="bg-violet-500" loading={tasksLoading} />
-          <SummaryCard label="Overdue Tasks" value={overdueTasks} icon={Clock} color="bg-red-500" loading={tasksLoading} />
-          <SummaryCard
-            label="Completion Rate"
-            value={totalTasks > 0 ? `${Math.round((taskStatusData.find((s) => s.name === "Completed")?.count || 0) / totalTasks * 100)}%` : "—"}
-            icon={TrendingUp}
-            color="bg-emerald-500"
-            loading={tasksLoading}
-          />
-          <SummaryCard
-            label="DD Pending Approval"
-            value={totalPendingApprovals}
-            icon={ShieldCheck}
-            color="bg-amber-500"
-            loading={ddLoading}
-          />
+        {/* Summary cards — configurable KPIs */}
+        <div className="flex items-center justify-end">
+          <button
+            type="button"
+            onClick={() => setKpiConfigOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs font-medium text-gray-600 hover:bg-gray-50 hover:text-indigo-600 shadow-sm transition-colors"
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5" />
+            Configure KPIs
+          </button>
         </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {kpiConfigLoading ? (
+            <>
+              <SummaryCard label="Loading…" value="" icon={Building} color="bg-gray-300" loading />
+              <SummaryCard label="Loading…" value="" icon={ListChecks} color="bg-gray-300" loading />
+              <SummaryCard label="Loading…" value="" icon={Clock} color="bg-gray-300" loading />
+              <SummaryCard label="Loading…" value="" icon={TrendingUp} color="bg-gray-300" loading />
+            </>
+          ) : visibleKpis.length === 0 ? (
+            <div className="col-span-full text-center py-8 border border-dashed border-gray-200 rounded-xl">
+              <p className="text-sm text-gray-400 mb-2">No KPIs selected for your dashboard.</p>
+              <button
+                type="button"
+                onClick={() => setKpiConfigOpen(true)}
+                className="text-xs text-indigo-600 hover:underline font-medium"
+              >
+                Configure KPIs to show metrics here
+              </button>
+            </div>
+          ) : (
+            visibleKpis.map((kpi) => {
+              const Icon = kpi.icon;
+              const raw = kpi.compute(kpiValues);
+              const value = kpi.format === "currency" ? formatCompactCurrency(raw) : raw;
+              return (
+                <SummaryCard
+                  key={kpi.key}
+                  label={kpi.label}
+                  value={value}
+                  icon={Icon}
+                  color={kpi.color}
+                  loading={firmsLoading || tasksLoading || productsLoading}
+                />
+              );
+            })
+          )}
+        </div>
+
+        <OverviewKpiConfigDialog
+          open={kpiConfigOpen}
+          onOpenChange={setKpiConfigOpen}
+          currentConfig={kpiConfig}
+          onSave={handleSaveKpiConfig}
+        />
 
         {/* Below-threshold scoring alerts */}
         <ScoringThresholdAlertsPanel linkedFirmId={linkedFirmId} />

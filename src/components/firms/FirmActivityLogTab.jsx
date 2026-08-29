@@ -18,6 +18,7 @@ import TaskDetailModal from "@/components/activity/TaskDetailModal";
 import ActivityDetailModal from "@/components/activity/ActivityDetailModal";
 import FirmActivityCalendar from "@/components/firms/FirmActivityCalendar";
 import MeetingSummaryPanel from "@/components/firms/MeetingSummaryPanel";
+import FirmRecordHistorySection from "./FirmRecordHistorySection";
 import { getCurrentUserContact } from "@/components/activity/useAutoOriginator";
 import { format } from "date-fns";
 import ReactQuill from "react-quill";
@@ -835,7 +836,7 @@ function TaskRow({ task, onOpenDetail }) {
 }
 
 // ── Main Tab ──────────────────────────────────────────────────────────────────
-export default function FirmActivityLogTab({ firmId, firmName, onFirmClick, onContactClick }) {
+export default function FirmActivityLogTab({ firmId, firmName, firm, onFirmClick, onContactClick }) {
   const [activeSection, setActiveSection] = useState("activities");
   const [viewMode, setViewMode] = useState("list"); // "list" | "calendar"
   // "idle" | "picking-for-activity" | "picking-for-task" | "activity-form" | "task-form"
@@ -930,9 +931,12 @@ export default function FirmActivityLogTab({ firmId, firmName, onFirmClick, onCo
   const isLoading = loadingActivities || loadingTasks || loadingContacts;
   const showingPicker = uiState === "picking-for-activity" || uiState === "picking-for-task";
 
+  const recordEditCount = Array.isArray(firm?.audit_history) ? firm.audit_history.length : 0;
+
   const sections = [
     { key: "activities", label: "Activity Logs", count: firmActivities.length },
     { key: "tasks", label: "Follow-up Tasks", count: firmTasks.length },
+    { key: "record-edits", label: "Record Edits", count: recordEditCount },
   ];
 
   return (
@@ -1021,6 +1025,8 @@ export default function FirmActivityLogTab({ firmId, firmName, onFirmClick, onCo
         ) : (
           <div className="space-y-2">{firmActivities.map(a => <ActivityRow key={a.id} activity={a} onOpen={setDetailActivity} />)}</div>
         )
+      ) : activeSection === "record-edits" ? (
+        <FirmRecordHistorySection firm={firm} />
       ) : (
         firmTasks.length === 0 ? (
           <div className="text-sm text-gray-400 italic py-6 text-center border border-dashed border-gray-200 rounded-xl">No follow-up tasks associated with this firm yet</div>
