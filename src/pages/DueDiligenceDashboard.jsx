@@ -9,6 +9,7 @@ import { format, differenceInDays, parseISO } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import MergeDueDiligenceDialog from "@/components/firms/MergeDueDiligenceDialog";
 import DdProcessProgressSummary from "@/components/firms/DdProcessProgressSummary";
+import DdAuditTrailIndex from "@/components/firms/DdAuditTrailIndex";
 
 const PIE_COLORS = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
 
@@ -159,6 +160,9 @@ export default function DueDiligenceDashboard() {
 
       {/* Active Process Progress Summary */}
       <DdProcessProgressSummary records={records.filter((r) => !r.deleted_at)} />
+
+      {/* Closed Process Audit Trail Index */}
+      <DdAuditTrailIndex />
 
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
