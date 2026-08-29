@@ -20,7 +20,7 @@ import ProcessProgressTracker from "./ProcessProgressTracker";
 import DigitalSignoffPanel, { evaluateStageSignoff } from "./DigitalSignoffPanel";
 import DdAuditTrailPanel from "./DdAuditTrailPanel";
 import DdAuditTrailReport from "./DdAuditTrailReport";
-import { appendAuditEntry } from "@/../base44/shared/ddAuditTrail";
+import { appendAuditEntry } from "@/lib/ddAuditTrail";
 import DatePicker from "@/components/ui/date-picker";
 import { Textarea } from "@/components/ui/textarea";
 import AddTemplateDialog from "@/components/templates/AddTemplateDialog";
