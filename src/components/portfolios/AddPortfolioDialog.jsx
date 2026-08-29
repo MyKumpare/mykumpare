@@ -464,7 +464,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
         setAdvisorFirmId(preselectedAdvisorFirmId || "");
         setAdvisorProductId("");
         setAdvisorProductName("");
-        setAdvisorInceptionDate(null);
+        setAdvisorInceptionDate(inceptionDate || null);
         setAdvisorTerminationDate(null);
         setAdvisorFundingStatus("Active");
         setAdvisorInitialAllocationAmount("");
@@ -519,7 +519,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
       setAdvisorType(next ? "Investment Manager" : "");
       setAdvisorProductId("");
       setAdvisorProductName("");
-      setAdvisorInceptionDate(null);
+      setAdvisorInceptionDate(inceptionDate || null);
       setAdvisorTerminationDate(null);
       setAdvisorFundingStatus("Active");
       setSubManagers([]);
@@ -531,7 +531,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
     setAdvisorType(pendingAdvisorType ? "Investment Manager" : "");
     setAdvisorProductId("");
     setAdvisorProductName("");
-    setAdvisorInceptionDate(null);
+    setAdvisorInceptionDate(inceptionDate || null);
     setAdvisorTerminationDate(null);
     setAdvisorFundingStatus("Active");
     setSubManagers([]);
@@ -564,7 +564,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
       setAdvisorType("");
       setAdvisorProductId("");
       setAdvisorProductName("");
-      setAdvisorInceptionDate(null);
+      setAdvisorInceptionDate(inceptionDate || null);
       setAdvisorTerminationDate(null);
       setAdvisorFundingStatus("Active");
       setSubManagers([]);
@@ -577,7 +577,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
     setAdvisorType("");
     setAdvisorProductId("");
     setAdvisorProductName("");
-    setAdvisorInceptionDate(null);
+    setAdvisorInceptionDate(inceptionDate || null);
     setAdvisorTerminationDate(null);
     setAdvisorFundingStatus("Active");
     setSubManagers([]);
@@ -775,7 +775,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
       setAdvisorType("");
       setAdvisorProductId("");
       setAdvisorProductName("");
-      setAdvisorInceptionDate(null);
+      setAdvisorInceptionDate(inceptionDate || null);
       setAdvisorTerminationDate(null);
       setAdvisorFundingStatus("Active");
       setSubManagers([]);
