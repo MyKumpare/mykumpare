@@ -117,7 +117,7 @@ function AllocationRecordDialog({
   React.useEffect(() => {
     if (open) {
       setActivityDate(
-        editingRecord?.activity_date ? parseISO(editingRecord.activity_date) : null
+        editingRecord?.activity_date ? parseISO(editingRecord.activity_date) : new Date()
       );
       setActivityType(
         editingRecord?.activity_type ||
