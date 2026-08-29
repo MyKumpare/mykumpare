@@ -2,11 +2,13 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, ChevronDown, ChevronRight, User, Camera, Download, Settings2, ClipboardPaste, CheckSquare, Check } from "lucide-react";
+import { Plus, ChevronDown, ChevronRight, User, Camera, Download, Settings2, ClipboardPaste, CheckSquare, Check, SlidersHorizontal } from "lucide-react";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
 import SectionTypeFilter from "@/components/common/SectionTypeFilter";
 import SectionExpandCollapse from "@/components/common/SectionExpandCollapse";
 import ContactsSectionFilters, { filterSectionContacts } from "@/components/contacts/ContactsSectionFilters";
+import EntityFilterSidebar from "@/components/common/EntityFilterSidebar";
+import { contactFilterGroups } from "./contactFilterGroups";
 import { useViewMode } from "@/hooks/useViewMode";
 import { exportContactsToCSV } from "./exportContactsCsv";
 import ContactPipelineKanban from "./ContactPipelineKanban";
@@ -72,6 +74,24 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkTagOpen, setBulkTagOpen] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(null);
+  const [showFilters, setShowFilters] = useState(true);
+  const [filterValues, setFilterValues] = useState({
+    contact_status: new Set(),
+    engagement_status: new Set(),
+    decision_role: new Set(),
+    influence_level: new Set(),
+    employee_status: new Set(),
+    gender: new Set(),
+    veteran_status: new Set(),
+    disability_status: new Set(),
+  });
+  const handleFilterChange = (key, value) => setFilterValues((prev) => ({ ...prev, [key]: value }));
+  const clearAllSidebarFilters = () => setFilterValues({
+    contact_status: new Set(), engagement_status: new Set(), decision_role: new Set(),
+    influence_level: new Set(), employee_status: new Set(), gender: new Set(),
+    veteran_status: new Set(), disability_status: new Set(),
+  });
+  const hasActiveSidebarFilters = Object.values(filterValues).some((s) => s && s.size > 0);
   const queryClient = useQueryClient();
 
   const { data: pipelineStages = [] } = useQuery({
@@ -259,9 +279,53 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
 
   const hasFilters = filterText.trim() || Object.keys(filterSelected).length > 0 || filterDateRange.start || filterDateRange.end;
   const filteredContacts = useMemo(() => {
-    if (!hasFilters) return contacts;
-    return filterSectionContacts(contacts, filterText, filterSelected, firmMap, contactProductMap, contactPortfolioMap, filterDateRange);
-  }, [contacts, filterText, filterSelected, firmMap, contactProductMap, contactPortfolioMap, filterDateRange, hasFilters]);
+    let result = hasFilters
+      ? filterSectionContacts(contacts, filterText, filterSelected, firmMap, contactProductMap, contactPortfolioMap, filterDateRange)
+      : contacts;
+    if (filterValues.contact_status?.size > 0)
+      result = result.filter((c) => filterValues.contact_status.has(c.contact_status || ""));
+    if (filterValues.engagement_status?.size > 0)
+      result = result.filter((c) => filterValues.engagement_status.has(c.engagement_status || "New"));
+    if (filterValues.decision_role?.size > 0)
+      result = result.filter((c) => filterValues.decision_role.has(c.decision_role || ""));
+    if (filterValues.influence_level?.size > 0)
+      result = result.filter((c) => filterValues.influence_level.has(c.influence_level || "Undetermined"));
+    if (filterValues.employee_status?.size > 0)
+      result = result.filter((c) => filterValues.employee_status.has(c.employee_status || ""));
+    if (filterValues.gender?.size > 0)
+      result = result.filter((c) => filterValues.gender.has(c.gender || "Undetermined"));
+    if (filterValues.veteran_status?.size > 0)
+      result = result.filter((c) => filterValues.veteran_status.has(c.veteran_status || "Undetermined"));
+    if (filterValues.disability_status?.size > 0)
+      result = result.filter((c) => filterValues.disability_status.has(c.disability_status || "Undetermined"));
+    return result;
+  }, [contacts, hasFilters, filterText, filterSelected, firmMap, contactProductMap, contactPortfolioMap, filterDateRange, filterValues]);
+
+  const sidebarFilterCounts = useMemo(() => {
+    const contactStatus = {}, engagementStatus = {}, decisionRole = {}, influenceLevel = {};
+    const employeeStatus = {}, gender = {}, veteranStatus = {}, disabilityStatus = {};
+    for (const c of contacts) {
+      if (c.deleted_at) continue;
+      if (c.contact_status) contactStatus[c.contact_status] = (contactStatus[c.contact_status] || 0) + 1;
+      const es = c.engagement_status || "New";
+      engagementStatus[es] = (engagementStatus[es] || 0) + 1;
+      if (c.decision_role) decisionRole[c.decision_role] = (decisionRole[c.decision_role] || 0) + 1;
+      const il = c.influence_level || "Undetermined";
+      influenceLevel[il] = (influenceLevel[il] || 0) + 1;
+      if (c.employee_status) employeeStatus[c.employee_status] = (employeeStatus[c.employee_status] || 0) + 1;
+      const g = c.gender || "Undetermined";
+      gender[g] = (gender[g] || 0) + 1;
+      const vs = c.veteran_status || "Undetermined";
+      veteranStatus[vs] = (veteranStatus[vs] || 0) + 1;
+      const ds = c.disability_status || "Undetermined";
+      disabilityStatus[ds] = (disabilityStatus[ds] || 0) + 1;
+    }
+    return {
+      contact_status: contactStatus, engagement_status: engagementStatus, decision_role: decisionRole,
+      influence_level: influenceLevel, employee_status: employeeStatus, gender,
+      veteran_status: veteranStatus, disability_status: disabilityStatus,
+    };
+  }, [contacts]);
 
   // Contacts shown on the Kanban: "all" → everyone; a specific firm type → only contacts of that firm type.
   const kanbanContacts = useMemo(() => {
@@ -461,17 +525,43 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
                 : "Tap contacts to select them for bulk actions."}
             </div>
           )}
-          {viewMode === "list" && (
-            <div className="flex items-center justify-between mb-2">
-              <SectionTypeFilter
-                label="Filter by type"
-                value={typeFilter}
-                onChange={setTypeFilter}
-                options={FIRM_TYPES}
-              />
-              <SectionExpandCollapse onExpandAll={handleExpandAll} onCollapseAll={handleCollapseAll} />
-            </div>
-          )}
+          <div className="flex flex-col md:flex-row gap-3">
+            {showFilters && (
+              <div className="w-full md:w-56 flex-shrink-0">
+                <EntityFilterSidebar
+                  sectionKey="contacts"
+                  groups={contactFilterGroups}
+                  values={filterValues}
+                  onChange={handleFilterChange}
+                  counts={sidebarFilterCounts}
+                  onClearAll={clearAllSidebarFilters}
+                  hasActiveFilters={hasActiveSidebarFilters}
+                />
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`h-7 px-2 gap-1 text-xs ${showFilters ? "text-pink-700 bg-pink-50" : "text-gray-500 hover:text-pink-700 hover:bg-pink-50"}`}
+                  onClick={() => setShowFilters((v) => !v)}
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  {showFilters ? "Hide Filters" : "Filters"}
+                </Button>
+                {viewMode === "list" && (
+                  <SectionTypeFilter
+                    label="Filter by type"
+                    value={typeFilter}
+                    onChange={setTypeFilter}
+                    options={FIRM_TYPES}
+                  />
+                )}
+                {viewMode === "list" && (
+                  <SectionExpandCollapse onExpandAll={handleExpandAll} onCollapseAll={handleCollapseAll} />
+                )}
+              </div>
           {viewMode === "list" && visibleFirmTypes.map((groupType) => {
             const firmGroups = grouped[groupType];
             if (!firmGroups) return null;
@@ -645,6 +735,8 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
               {hasFilters ? "No contacts match your filters." : 'No contacts yet. Click "Add Contact" to create one.'}
             </div>
           )}
+            </div>
+          </div>
         </div>
       )}
 

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 // Utility section — tools for cleanup, imports, and validation
-import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search, ArrowLeft, Users, Sparkles, ScrollText, ShieldCheck, Ghost, Upload, Download, Eraser, Tag, UserX, Briefcase, Building, Package, Activity, Newspaper,   ArrowRightLeft, ExternalLink, ClipboardCheck } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Gauge, Wrench, Search, ArrowLeft, Users, Sparkles, ScrollText, ShieldCheck, Ghost, Upload, Download, Eraser, Tag, UserX, Briefcase, Building, Package, Activity, Newspaper,   ArrowRightLeft, ExternalLink, ClipboardCheck, SlidersHorizontal, LayoutDashboard } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -30,6 +30,7 @@ import DashboardAnalystCoverageSection from "@/components/dashboard/DashboardAna
 import DashboardFirmCoverageSection from "@/components/dashboard/DashboardFirmCoverageSection";
 import { TrendingUp, Network, ArrowRight } from "lucide-react";
 import UtilityModuleGrid from "./UtilityModuleGrid";
+import EntityFilterSidebar from "@/components/common/EntityFilterSidebar";
 import { getActiveUtilityModules, buildDefaultUtilityCategories, UTILITY_MODULE_MAP } from "./utilityModules";
 
 function BenchmarkItem({ b, onClick }) {
@@ -87,6 +88,11 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
   const [cleanupStarted, setCleanupStarted] = useState(false);
   const [firmWizardOpen, setFirmWizardOpen] = useState(false);
   const [benchmarkTemplateOpen, setBenchmarkTemplateOpen] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
+  const [filterValues, setFilterValues] = useState({ category: new Set(), module_search: "" });
+  const handleFilterChange = (key, value) => setFilterValues((prev) => ({ ...prev, [key]: value }));
+  const clearAllFilters = () => setFilterValues({ category: new Set(), module_search: "" });
+  const hasActiveSidebarFilters = (filterValues.category?.size > 0) || (filterValues.module_search || "").trim();
 
   // When opened from the header dropdown with defaultView="import-firms",
   // open the wizard dialog directly instead of showing an inline view.
@@ -105,6 +111,33 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
     () => buildDefaultUtilityCategories({ isAdmin, isManagement }),
     [isAdmin, isManagement]
   );
+
+  const utilitySidebarGroups = useMemo(() => [
+    { key: "category", label: "Module Category", icon: LayoutDashboard, type: "checkbox",
+      options: defaultCategories.map((c) => ({ value: c.id, label: c.name })) },
+    { key: "module_search", label: "Search Modules", icon: Search, type: "search", placeholder: "Search module name..." },
+  ], [defaultCategories]);
+  const sidebarCounts = useMemo(() => {
+    const category = {};
+    for (const c of defaultCategories) category[c.id] = c.items.length;
+    return { category };
+  }, [defaultCategories]);
+  const filteredUtilityModules = useMemo(() => {
+    let result = activeModules;
+    if (filterValues.category?.size > 0) {
+      const visibleKeys = new Set(defaultCategories.filter((c) => filterValues.category.has(c.id)).flatMap((c) => c.items));
+      result = result.filter((m) => visibleKeys.has(m.key));
+    }
+    if ((filterValues.module_search || "").trim()) {
+      const q = filterValues.module_search.toLowerCase().trim();
+      result = result.filter((m) => (m.label || "").toLowerCase().includes(q));
+    }
+    return result;
+  }, [activeModules, filterValues, defaultCategories]);
+  const filteredUtilityCategories = useMemo(() => {
+    if (!filterValues.category || filterValues.category.size === 0) return defaultCategories;
+    return defaultCategories.filter((c) => filterValues.category.has(c.id));
+  }, [filterValues, defaultCategories]);
 
   // Open a utility module from the grid: navigate, run a special action, or switch to the tool view
   const handleModuleSelect = (key) => {
@@ -222,11 +255,39 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
 
           {/* Selection grid (categorized, draggable — mirrors Monitor) */}
           {view === null && (
-            <UtilityModuleGrid
-              modules={activeModules}
-              defaultCategories={defaultCategories}
-              onSelect={handleModuleSelect}
-            />
+            <div className="flex flex-col md:flex-row gap-4">
+              {showFilters && (
+                <div className="w-full md:w-56 flex-shrink-0">
+                  <EntityFilterSidebar
+                    sectionKey="utility"
+                    groups={utilitySidebarGroups}
+                    values={filterValues}
+                    onChange={handleFilterChange}
+                    counts={sidebarCounts}
+                    onClearAll={clearAllFilters}
+                    hasActiveFilters={hasActiveSidebarFilters}
+                  />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-3">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`h-7 px-2 gap-1 text-xs ${showFilters ? "text-indigo-700 bg-indigo-50" : "text-gray-500 hover:text-indigo-700 hover:bg-indigo-50"}`}
+                    onClick={() => setShowFilters((v) => !v)}
+                  >
+                    <SlidersHorizontal className="w-3.5 h-3.5" />
+                    {showFilters ? "Hide Filters" : "Filters"}
+                  </Button>
+                </div>
+                <UtilityModuleGrid
+                  modules={filteredUtilityModules}
+                  defaultCategories={filteredUtilityCategories}
+                  onSelect={handleModuleSelect}
+                />
+              </div>
+            </div>
           )}
 
           {/* Benchmark view */}

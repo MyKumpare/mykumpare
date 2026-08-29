@@ -7,7 +7,8 @@ import { Plus, ChevronDown, ChevronRight, Building, CheckSquare, Radar as RadarI
 import FirmTypeSection from "./FirmTypeSection";
 import FirmCard from "./FirmCard";
 import FirmsBulkActionsBar from "./FirmsBulkActionsBar";
-import FirmFilterSidebar from "./FirmFilterSidebar";
+import EntityFilterSidebar from "@/components/common/EntityFilterSidebar";
+import { firmFilterGroups } from "./firmFilterGroups";
 import { exportFirmsToCSV, exportFirmsToExcel } from "./firmListExport";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
 import SectionSearch from "@/components/common/SectionSearch";
@@ -42,10 +43,15 @@ export default function FirmsSection({
   const [expanded, setExpanded] = useState(false);
   const [viewMode, setViewMode] = useViewMode("firms");
   const [search, setSearch] = useState("");
-  const [selectedTypes, setSelectedTypes] = useState(new Set());
-  const [selectedRegions, setSelectedRegions] = useState(new Set());
-  const [activityFilter, setActivityFilter] = useState("all");
-  const [locationSearch, setLocationSearch] = useState("");
+  const [filterValues, setFilterValues] = useState({
+    firm_type: new Set(),
+    geographic_region: new Set(),
+    geographic_region_search: "",
+    recent_activity: "all",
+    funding_status: new Set(),
+    year_founded: new Set(),
+    sourcing_source: new Set(),
+  });
   const [showFilters, setShowFilters] = useState(true);
   const [dateRange, setDateRange] = useState({ start: "", end: "" });
   const [expandedTypes, setExpandedTypes] = useState({});
@@ -57,7 +63,7 @@ export default function FirmsSection({
   const [exportOpen, setExportOpen] = useState(false);
 
   const searchLower = search.toLowerCase().trim();
-  const locationSearchLower = locationSearch.toLowerCase().trim();
+  const locationSearchLower = (filterValues.geographic_region_search || "").toLowerCase().trim();
 
   useEffect(() => {
     if (forceExpanded !== undefined) setExpanded(forceExpanded);
@@ -82,17 +88,17 @@ export default function FirmsSection({
       }
       result = searched;
     }
-    if (selectedTypes.size > 0) {
+    if (filterValues.firm_type.size > 0) {
       const typed = {};
-      for (const t of selectedTypes) {
+      for (const t of filterValues.firm_type) {
         if (result[t]) typed[t] = result[t];
       }
       result = typed;
     }
-    if (selectedRegions.size > 0) {
+    if (filterValues.geographic_region.size > 0) {
       const regioned = {};
       for (const [type, firms] of Object.entries(result)) {
-        const filtered = firms.filter((f) => selectedRegions.has(f.geographic_region || "Undefined"));
+        const filtered = firms.filter((f) => filterValues.geographic_region.has(f.geographic_region || "Undefined"));
         if (filtered.length) regioned[type] = filtered;
       }
       result = regioned;
@@ -105,22 +111,56 @@ export default function FirmsSection({
       }
       result = located;
     }
-    if (activityFilter !== "all") {
+    if (filterValues.recent_activity !== "all") {
       const now = new Date();
       const active = {};
       for (const [type, firms] of Object.entries(result)) {
         const filtered = firms.filter((f) => {
           const updated = f.updated_date ? new Date(f.updated_date) : f.created_date ? new Date(f.created_date) : null;
-          if (!updated) return activityFilter === "stale";
+          if (!updated) return filterValues.recent_activity === "stale";
           const daysSince = Math.floor((now - updated) / 86400000);
-          if (activityFilter === "30") return daysSince <= 30;
-          if (activityFilter === "90") return daysSince > 30 && daysSince <= 90;
-          if (activityFilter === "stale") return daysSince > 90;
+          if (filterValues.recent_activity === "30") return daysSince <= 30;
+          if (filterValues.recent_activity === "90") return daysSince > 30 && daysSince <= 90;
+          if (filterValues.recent_activity === "stale") return daysSince > 90;
           return true;
         });
         if (filtered.length) active[type] = filtered;
       }
       result = active;
+    }
+    if (filterValues.funding_status.size > 0) {
+      const funded = {};
+      for (const [type, firms] of Object.entries(result)) {
+        const filtered = firms.filter((f) => filterValues.funding_status.has(f.funding_status || ""));
+        if (filtered.length) funded[type] = filtered;
+      }
+      result = funded;
+    }
+    if (filterValues.year_founded.size > 0) {
+      const yf = {};
+      for (const [type, firms] of Object.entries(result)) {
+        const filtered = firms.filter((f) => {
+          const y = f.year_founded;
+          if (!y) return filterValues.year_founded.has("before_2000");
+          if (y < 2000) return filterValues.year_founded.has("before_2000");
+          if (y < 2010) return filterValues.year_founded.has("2000s");
+          if (y < 2020) return filterValues.year_founded.has("2010s");
+          return filterValues.year_founded.has("2020s");
+        });
+        if (filtered.length) yf[type] = filtered;
+      }
+      result = yf;
+    }
+    if (filterValues.sourcing_source.size > 0) {
+      const sourced = {};
+      for (const [type, firms] of Object.entries(result)) {
+        const filtered = firms.filter((f) => {
+          const sources = f.sourcing_sources || [];
+          return sources.some((s) => filterValues.sourcing_source.has(s));
+        });
+        if (filtered.length) sourced[type] = filtered;
+      }
+      result = sourced;
     }
     if (dateRange.start || dateRange.end) {
       const start = dateRange.start ? new Date(dateRange.start + "T00:00:00") : null;
@@ -139,7 +179,7 @@ export default function FirmsSection({
       result = dated;
     }
     return result;
-  }, [groupedFirms, searchLower, selectedTypes, selectedRegions, activityFilter, locationSearchLower, dateRange]);
+  }, [groupedFirms, searchLower, filterValues, locationSearchLower, dateRange]);
 
   const allFirms = React.useMemo(
     () => FIRM_TYPES.flatMap((t) => filteredGrouped[t] || []).sort((a, b) => a.name.localeCompare(b.name)),
@@ -149,39 +189,50 @@ export default function FirmsSection({
   const filterCounts = React.useMemo(() => {
     const types = {};
     const regions = {};
+    const fundingStatus = {};
+    const yearFounded = {};
+    const sourcingSource = {};
     for (const [type, firms] of Object.entries(groupedFirms)) {
       types[type] = firms.length;
       for (const f of firms) {
         const r = f.geographic_region || "Undefined";
         regions[r] = (regions[r] || 0) + 1;
+        if (f.funding_status) fundingStatus[f.funding_status] = (fundingStatus[f.funding_status] || 0) + 1;
+        const y = f.year_founded;
+        let yk;
+        if (!y || y < 2000) yk = "before_2000";
+        else if (y < 2010) yk = "2000s";
+        else if (y < 2020) yk = "2010s";
+        else yk = "2020s";
+        yearFounded[yk] = (yearFounded[yk] || 0) + 1;
+        for (const s of f.sourcing_sources || []) {
+          sourcingSource[s] = (sourcingSource[s] || 0) + 1;
+        }
       }
     }
-    return { types, regions };
+    return {
+      firm_type: types,
+      geographic_region: regions,
+      funding_status: fundingStatus,
+      year_founded: yearFounded,
+      sourcing_source: sourcingSource,
+    };
   }, [groupedFirms]);
 
-  const toggleTypeFilter = (type) => {
-    setSelectedTypes((prev) => {
-      const next = new Set(prev);
-      if (next.has(type)) next.delete(type);
-      else next.add(type);
-      return next;
-    });
-  };
-
-  const toggleRegionFilter = (region) => {
-    setSelectedRegions((prev) => {
-      const next = new Set(prev);
-      if (next.has(region)) next.delete(region);
-      else next.add(region);
-      return next;
-    });
+  const handleFilterChange = (key, value) => {
+    setFilterValues((prev) => ({ ...prev, [key]: value }));
   };
 
   const clearAllFilters = () => {
-    setSelectedTypes(new Set());
-    setSelectedRegions(new Set());
-    setActivityFilter("all");
-    setLocationSearch("");
+    setFilterValues({
+      firm_type: new Set(),
+      geographic_region: new Set(),
+      geographic_region_search: "",
+      recent_activity: "all",
+      funding_status: new Set(),
+      year_founded: new Set(),
+      sourcing_source: new Set(),
+    });
   };
 
   const handleExpandAll = () => {
@@ -389,17 +440,22 @@ export default function FirmsSection({
           <div className="flex flex-col md:flex-row gap-3">
             {showFilters && (
               <div className="w-full md:w-56 flex-shrink-0">
-                <FirmFilterSidebar
-                  selectedTypes={selectedTypes}
-                  onToggleType={toggleTypeFilter}
-                  selectedRegions={selectedRegions}
-                  onToggleRegion={toggleRegionFilter}
-                  activityFilter={activityFilter}
-                  onActivityChange={setActivityFilter}
-                  locationSearch={locationSearch}
-                  onLocationSearchChange={setLocationSearch}
-                  onClearAll={clearAllFilters}
+                <EntityFilterSidebar
+                  sectionKey="firms"
+                  groups={firmFilterGroups}
+                  values={filterValues}
+                  onChange={handleFilterChange}
                   counts={filterCounts}
+                  onClearAll={clearAllFilters}
+                  hasActiveFilters={
+                    filterValues.firm_type.size > 0 ||
+                    filterValues.geographic_region.size > 0 ||
+                    filterValues.recent_activity !== "all" ||
+                    locationSearchLower ||
+                    filterValues.funding_status.size > 0 ||
+                    filterValues.year_founded.size > 0 ||
+                    filterValues.sourcing_source.size > 0
+                  }
                 />
               </div>
             )}

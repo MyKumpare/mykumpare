@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Radar, CalendarDays, X, FileDown, Loader2, ChevronLeft } from "lucide-react";
+import { Radar, CalendarDays, X, FileDown, Loader2, ChevronLeft, SlidersHorizontal, Search, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
 import { toast } from "@/components/ui/use-toast";
@@ -24,6 +24,7 @@ import ScoreTrendAnalyticsTab from "@/components/templates/ScoreTrendAnalyticsTa
 import FirmScoreTrend6mo from "@/components/monitor/FirmScoreTrend6mo";
 import BenchmarkComparison from "@/components/monitor/BenchmarkComparison";
 import MonitorModuleGrid from "@/components/monitor/MonitorModuleGrid";
+import EntityFilterSidebar from "@/components/common/EntityFilterSidebar";
 import { MODULE_MAP } from "@/components/monitor/monitorModules";
 import TopScoredFirmsSummary from "@/components/dashboard/TopScoredFirmsSummary";
 
@@ -34,6 +35,15 @@ export default function MonitorPage() {
   const [viewingTask, setViewingTask] = useState(null);
   const [viewingActivity, setViewingActivity] = useState(null);
   const [generatingReport, setGeneratingReport] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
+  const [filterValues, setFilterValues] = useState({ module_search: "" });
+  const handleFilterChange = (key, value) => setFilterValues((prev) => ({ ...prev, [key]: value }));
+  const clearAllFilters = () => setFilterValues({ module_search: "" });
+  const hasActiveSidebarFilters = (filterValues.module_search || "").trim();
+
+  const monitorSidebarGroups = [
+    { key: "module_search", label: "Search Modules", icon: Search, type: "search", placeholder: "Search module name..." },
+  ];
 
   const handleGenerateReport = async () => {
     setGeneratingReport(true);
@@ -113,7 +123,34 @@ export default function MonitorPage() {
         )}
 
         {!activeModule ? (
-          <MonitorModuleGrid onSelect={setActiveModule} />
+          <div className="flex flex-col md:flex-row gap-4">
+            {showFilters && (
+              <div className="w-full md:w-56 flex-shrink-0">
+                <EntityFilterSidebar
+                  sectionKey="monitor"
+                  groups={monitorSidebarGroups}
+                  values={filterValues}
+                  onChange={handleFilterChange}
+                  onClearAll={clearAllFilters}
+                  hasActiveFilters={hasActiveSidebarFilters}
+                />
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between mb-3">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`h-7 px-2 gap-1 text-xs ${showFilters ? "text-rose-700 bg-rose-50" : "text-gray-500 hover:text-rose-700 hover:bg-rose-50"}`}
+                  onClick={() => setShowFilters((v) => !v)}
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  {showFilters ? "Hide Filters" : "Filters"}
+                </Button>
+              </div>
+              <MonitorModuleGrid onSelect={setActiveModule} />
+            </div>
+          </div>
         ) : (
           <div>
             <div className="flex items-center gap-3 mb-4">

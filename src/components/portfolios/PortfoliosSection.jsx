@@ -1,12 +1,14 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, LayoutList, ChevronDown, ChevronRight, BarChart3 } from "lucide-react";
+import { Plus, LayoutList, ChevronDown, ChevronRight, BarChart3, SlidersHorizontal } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
 import SectionSearch from "@/components/common/SectionSearch";
 import SectionTypeFilter from "@/components/common/SectionTypeFilter";
 import SectionExpandCollapse from "@/components/common/SectionExpandCollapse";
 import { useViewMode } from "@/hooks/useViewMode";
+import EntityFilterSidebar from "@/components/common/EntityFilterSidebar";
+import { portfolioFilterGroups } from "./portfolioFilterGroups";
 
 const ADVISOR_TYPES = ["Investment Manager"];
 
@@ -20,6 +22,23 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
   const [allocatorFilter, setAllocatorFilter] = useState("all");
   const [benchmarkFilter, setBenchmarkFilter] = useState("all");
   const [managerFilter, setManagerFilter] = useState("all");
+  const [showFilters, setShowFilters] = useState(true);
+  const [filterValues, setFilterValues] = useState({
+    advisor_type: new Set(),
+    allocator_name: new Set(),
+    primary_benchmark_name: new Set(),
+    advisor_firm_name: new Set(),
+    portfolio_name_search: "",
+  });
+  const handleFilterChange = (key, value) => setFilterValues((prev) => ({ ...prev, [key]: value }));
+  const clearAllFilters = () => setFilterValues({
+    advisor_type: new Set(), allocator_name: new Set(), primary_benchmark_name: new Set(),
+    advisor_firm_name: new Set(), portfolio_name_search: "",
+  });
+  const hasActiveSidebarFilters =
+    filterValues.advisor_type.size > 0 || filterValues.allocator_name.size > 0 ||
+    filterValues.primary_benchmark_name.size > 0 || filterValues.advisor_firm_name.size > 0 ||
+    (filterValues.portfolio_name_search || "").trim();
 
   useEffect(() => {
     if (forceExpanded !== undefined) setExpanded(forceExpanded);
@@ -38,6 +57,31 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
     () => Array.from(new Set(portfolios.map((p) => p.advisor_firm_name).filter(Boolean))).sort(),
     [portfolios]
   );
+
+  const dynamicFilterGroups = useMemo(
+    () => portfolioFilterGroups.map((g) => {
+      if (g.key === "allocator_name") return { ...g, options: allocatorOptions.map((v) => ({ value: v, label: v })) };
+      if (g.key === "primary_benchmark_name") return { ...g, options: benchmarkOptions.map((v) => ({ value: v, label: v })) };
+      if (g.key === "advisor_firm_name") return { ...g, options: managerOptions.map((v) => ({ value: v, label: v })) };
+      return g;
+    }),
+    [allocatorOptions, benchmarkOptions, managerOptions]
+  );
+
+  const filterCounts = useMemo(() => {
+    const advisorType = {}, allocatorName = {}, benchmarkName = {}, firmName = {};
+    for (const p of portfolios) {
+      if (p.deleted_at) continue;
+      const at = p.advisor_type || "No Advisor";
+      advisorType[at] = (advisorType[at] || 0) + 1;
+      const an = p.allocator_name || "Unknown";
+      allocatorName[an] = (allocatorName[an] || 0) + 1;
+      if (p.primary_benchmark_name) benchmarkName[p.primary_benchmark_name] = (benchmarkName[p.primary_benchmark_name] || 0) + 1;
+      const fn = p.advisor_firm_name || "Unknown";
+      firmName[fn] = (firmName[fn] || 0) + 1;
+    }
+    return { advisor_type: advisorType, allocator_name: allocatorName, primary_benchmark_name: benchmarkName, advisor_firm_name: firmName };
+  }, [portfolios]);
 
   const searchLower = search.toLowerCase().trim();
   const filteredPortfolios = useMemo(() => {
@@ -62,8 +106,20 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
     if (managerFilter !== "all") {
       result = result.filter((p) => (p.advisor_firm_name || "Unknown") === managerFilter);
     }
+    if (filterValues.advisor_type.size > 0)
+      result = result.filter((p) => filterValues.advisor_type.has(p.advisor_type || "No Advisor"));
+    if (filterValues.allocator_name.size > 0)
+      result = result.filter((p) => filterValues.allocator_name.has(p.allocator_name || "Unknown"));
+    if (filterValues.primary_benchmark_name.size > 0)
+      result = result.filter((p) => filterValues.primary_benchmark_name.has(p.primary_benchmark_name || ""));
+    if (filterValues.advisor_firm_name.size > 0)
+      result = result.filter((p) => filterValues.advisor_firm_name.has(p.advisor_firm_name || "Unknown"));
+    if ((filterValues.portfolio_name_search || "").trim()) {
+      const q = filterValues.portfolio_name_search.toLowerCase().trim();
+      result = result.filter((p) => (p.portfolio_name || "").toLowerCase().includes(q));
+    }
     return result;
-  }, [portfolios, searchLower, typeFilter, allocatorFilter, benchmarkFilter, managerFilter]);
+  }, [portfolios, searchLower, typeFilter, allocatorFilter, benchmarkFilter, managerFilter, filterValues]);
 
   // Group portfolios by advisor type → allocator → portfolio name
   const grouped = useMemo(() => {
@@ -185,39 +241,35 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
       {expanded && (
         <div className="space-y-3">
           <SectionSearch value={search} onChange={setSearch} placeholder="Search by portfolio, firm, or type..." />
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-2">
-            <SectionTypeFilter
-              label="Filter by type"
-              value={typeFilter}
-              onChange={setTypeFilter}
-              options={ADVISOR_TYPES}
-              allLabel="All Advisor Types"
-            />
-            <SectionTypeFilter
-              label="Allocator"
-              value={allocatorFilter}
-              onChange={setAllocatorFilter}
-              options={allocatorOptions}
-              allLabel="All Allocators"
-            />
-            <SectionTypeFilter
-              label="Primary Benchmark"
-              value={benchmarkFilter}
-              onChange={setBenchmarkFilter}
-              options={benchmarkOptions}
-              allLabel="All Benchmarks"
-            />
-            <SectionTypeFilter
-              label="Investment Manager"
-              value={managerFilter}
-              onChange={setManagerFilter}
-              options={managerOptions}
-              allLabel="All Managers"
-            />
-            {viewMode === "list" && (
-              <SectionExpandCollapse onExpandAll={handleExpandAll} onCollapseAll={handleCollapseAll} />
+          <div className="flex flex-col md:flex-row gap-3">
+            {showFilters && (
+              <div className="w-full md:w-56 flex-shrink-0">
+                <EntityFilterSidebar
+                  sectionKey="portfolios"
+                  groups={dynamicFilterGroups}
+                  values={filterValues}
+                  onChange={handleFilterChange}
+                  counts={filterCounts}
+                  onClearAll={clearAllFilters}
+                  hasActiveFilters={hasActiveSidebarFilters}
+                />
+              </div>
             )}
-          </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between mb-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`h-7 px-2 gap-1 text-xs ${showFilters ? "text-emerald-700 bg-emerald-50" : "text-gray-500 hover:text-emerald-700 hover:bg-emerald-50"}`}
+                  onClick={() => setShowFilters((v) => !v)}
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  {showFilters ? "Hide Filters" : "Filters"}
+                </Button>
+                {viewMode === "list" && (
+                  <SectionExpandCollapse onExpandAll={handleExpandAll} onCollapseAll={handleCollapseAll} />
+                )}
+              </div>
           {viewMode === "card" && filteredPortfolios.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 py-1">
               {filteredPortfolios.map((portfolio) => (
@@ -331,6 +383,8 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
             </div>
           );
           })}
+            </div>
+          </div>
         </div>
       )}
     </div>

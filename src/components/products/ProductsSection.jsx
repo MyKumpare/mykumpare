@@ -12,6 +12,9 @@ import ProductAlignmentHeatmap from "@/components/products/ProductAlignmentHeatm
 import { useViewMode } from "@/hooks/useViewMode";
 import { useAuth } from "@/lib/AuthContext";
 import BulkScoringDialog from "@/components/templates/BulkScoringDialog";
+import EntityFilterSidebar from "@/components/common/EntityFilterSidebar";
+import { productFilterGroups } from "./productFilterGroups";
+import { SlidersHorizontal } from "lucide-react";
 
 const PRODUCT_GROUP_TYPES = ["Investment Manager"];
 
@@ -30,6 +33,31 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [showBulkScoring, setShowBulkScoring] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
+  const [filterValues, setFilterValues] = useState({
+    product_type: new Set(),
+    product_status: new Set(),
+    funding_status: new Set(),
+    product_availability_status: new Set(),
+    asset_class: "",
+    geography: "",
+  });
+  const handleFilterChange = (key, value) => setFilterValues((prev) => ({ ...prev, [key]: value }));
+  const clearAllFilters = () => setFilterValues({
+    product_type: new Set(),
+    product_status: new Set(),
+    funding_status: new Set(),
+    product_availability_status: new Set(),
+    asset_class: "",
+    geography: "",
+  });
+  const hasActiveSidebarFilters =
+    filterValues.product_type.size > 0 ||
+    filterValues.product_status.size > 0 ||
+    filterValues.funding_status.size > 0 ||
+    filterValues.product_availability_status.size > 0 ||
+    (filterValues.asset_class || "").trim() ||
+    (filterValues.geography || "").trim();
 
   useEffect(() => {
     if (forceExpanded !== undefined) setExpanded(forceExpanded);
@@ -69,14 +97,47 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
 
   const searchLower = search.toLowerCase().trim();
   const filteredProducts = React.useMemo(() => {
-    if (!searchLower) return products;
-    return products.filter((p) => {
-      const name = (p.name || "").toLowerCase();
-      const assetClass = (p.asset_class || "").toLowerCase();
-      const firm = (firmMap[p.firm_id]?.name || "").toLowerCase();
-      return name.includes(searchLower) || assetClass.includes(searchLower) || firm.includes(searchLower);
-    });
-  }, [products, searchLower, firmMap]);
+    let result = products;
+    if (searchLower) {
+      result = result.filter((p) => {
+        const name = (p.name || "").toLowerCase();
+        const assetClass = (p.asset_class || "").toLowerCase();
+        const firm = (firmMap[p.firm_id]?.name || "").toLowerCase();
+        return name.includes(searchLower) || assetClass.includes(searchLower) || firm.includes(searchLower);
+      });
+    }
+    if (filterValues.product_type.size > 0)
+      result = result.filter((p) => filterValues.product_type.has(p.product_type));
+    if (filterValues.product_status.size > 0)
+      result = result.filter((p) => filterValues.product_status.has(p.product_status || "Not Reviewed"));
+    if (filterValues.funding_status.size > 0)
+      result = result.filter((p) => filterValues.funding_status.has(p.funding_status || ""));
+    if (filterValues.product_availability_status.size > 0)
+      result = result.filter((p) => filterValues.product_availability_status.has(p.product_availability_status || "Active"));
+    if ((filterValues.asset_class || "").trim()) {
+      const q = filterValues.asset_class.toLowerCase().trim();
+      result = result.filter((p) => (p.asset_class || "").toLowerCase().includes(q));
+    }
+    if ((filterValues.geography || "").trim()) {
+      const q = filterValues.geography.toLowerCase().trim();
+      result = result.filter((p) => (p.geography || "").toLowerCase().includes(q));
+    }
+    return result;
+  }, [products, searchLower, firmMap, filterValues]);
+
+  const filterCounts = React.useMemo(() => {
+    const productType = {}, productStatus = {}, fundingStatus = {}, availability = {};
+    for (const p of products) {
+      if (p.deleted_at) continue;
+      if (p.product_type) productType[p.product_type] = (productType[p.product_type] || 0) + 1;
+      const ps = p.product_status || "Not Reviewed";
+      productStatus[ps] = (productStatus[ps] || 0) + 1;
+      if (p.funding_status) fundingStatus[p.funding_status] = (fundingStatus[p.funding_status] || 0) + 1;
+      const av = p.product_availability_status || "Active";
+      availability[av] = (availability[av] || 0) + 1;
+    }
+    return { product_type: productType, product_status: productStatus, funding_status: fundingStatus, product_availability_status: availability };
+  }, [products]);
 
   const selectedProducts = filteredProducts.filter((p) => selectedIds.has(p.id));
 
@@ -264,17 +325,35 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
           <ProductFundingSummary products={filteredProducts} firms={firms} onProductClick={onProductClick} />
           <ProductAlignmentHeatmap />
           <SectionSearch value={search} onChange={setSearch} placeholder="Search by product, firm, or type..." />
-          <div className="flex items-center justify-between mb-2">
-            <SectionTypeFilter
-              label="Filter by type"
-              value={typeFilter}
-              onChange={setTypeFilter}
-              options={PRODUCT_GROUP_TYPES}
-            />
-            {viewMode === "list" && (
-              <SectionExpandCollapse onExpandAll={handleExpandAll} onCollapseAll={handleCollapseAll} />
+          <div className="flex flex-col md:flex-row gap-3">
+            {showFilters && (
+              <div className="w-full md:w-56 flex-shrink-0">
+                <EntityFilterSidebar
+                  sectionKey="products"
+                  groups={productFilterGroups}
+                  values={filterValues}
+                  onChange={handleFilterChange}
+                  counts={filterCounts}
+                  onClearAll={clearAllFilters}
+                  hasActiveFilters={hasActiveSidebarFilters}
+                />
+              </div>
             )}
-          </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between mb-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`h-7 px-2 gap-1 text-xs ${showFilters ? "text-indigo-700 bg-indigo-50" : "text-gray-500 hover:text-indigo-700 hover:bg-indigo-50"}`}
+                  onClick={() => setShowFilters((v) => !v)}
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  {showFilters ? "Hide Filters" : "Filters"}
+                </Button>
+                {viewMode === "list" && (
+                  <SectionExpandCollapse onExpandAll={handleExpandAll} onCollapseAll={handleCollapseAll} />
+                )}
+              </div>
           {viewMode === "list" && PRODUCT_GROUP_TYPES.filter((gt) => typeFilter === "all" || gt === typeFilter).map((groupType) => {
             const firmGroups = grouped[groupType];
             if (!firmGroups) return null;
@@ -411,6 +490,8 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
               No products yet. Click "Add Product" to create one.
             </div>
           )}
+            </div>
+          </div>
         </div>
       )}
 
