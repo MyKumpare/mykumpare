@@ -46,6 +46,7 @@ import SectionReports from './pages/SectionReports';
 import SectionDashboard from './pages/SectionDashboard';
 import SectionPortfolios from './pages/SectionPortfolios';
 import SummaryReportTemplates from './pages/SummaryReportTemplates';
+import ExecutiveDashboard from './pages/ExecutiveDashboard';
 import QuickNotesDrawer from "@/components/quicknotes/QuickNotesDrawer";
 
 
@@ -144,6 +145,7 @@ const AuthenticatedApp = () => {
       <Route path="/Dashboard" element={<LayoutWrapper currentPageName="Dashboard"><SectionDashboard /></LayoutWrapper>} />
       <Route path="/Portfolios" element={<LayoutWrapper currentPageName="Portfolios"><SectionPortfolios /></LayoutWrapper>} />
       <Route path="/SummaryReportTemplates" element={<LayoutWrapper currentPageName="SummaryReportTemplates"><SummaryReportTemplates /></LayoutWrapper>} />
+      <Route path="/ExecutiveDashboard" element={<LayoutWrapper currentPageName="ExecutiveDashboard"><ExecutiveDashboard /></LayoutWrapper>} />
       <Route path="/register" element={<ExternalPartyRegister />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>

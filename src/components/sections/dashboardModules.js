@@ -8,6 +8,7 @@ import {
  */
 export const DASHBOARD_MODULES = [
   { key: "overview", label: "Overview Dashboard", icon: LayoutDashboard, color: "text-indigo-600", bg: "bg-indigo-50", border: "border-indigo-200", to: "/Overview" },
+  { key: "executive", label: "Executive Dashboard", icon: LayoutDashboard, color: "text-slate-600", bg: "bg-slate-50", border: "border-slate-200", to: "/ExecutiveDashboard" },
   { key: "activity-timeline", label: "Activity Timeline", icon: Activity, color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-200", to: "/ActivityTimeline" },
   { key: "analyst-coverage", label: "Analyst Coverage", icon: Users, color: "text-indigo-600", bg: "bg-indigo-50", border: "border-indigo-200", to: "/AnalystCoverageReport" },
   { key: "firm-coverage", label: "Firm Coverage Map", icon: Globe, color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-200", to: "/FirmGeographicMap" },
@@ -21,7 +22,7 @@ export const DASHBOARD_MODULES = [
 export const DASHBOARD_MODULE_MAP = Object.fromEntries(DASHBOARD_MODULES.map((m) => [m.key, m]));
 
 export const DASHBOARD_DEFAULT_CATEGORIES = [
-  { id: "overview", name: "Overview", items: ["overview", "activity-timeline"] },
+  { id: "overview", name: "Overview", items: ["executive", "overview", "activity-timeline"] },
   { id: "coverage", name: "Coverage", items: ["analyst-coverage", "firm-coverage"] },
   { id: "network", name: "Network", items: ["contact-network", "network-dashboard", "influence-dashboard", "degrees", "relationship-map"] },
 ];
