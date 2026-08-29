@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { evaluateRequirement, evaluateGate } from "./ProcessLogicGate";
+import { evaluateStageSignoff } from "./DigitalSignoffPanel";
 
 const REQ_TYPE_META = {
   sub_stage_completion: { label: "Sub-Stage", icon: ClipboardCheck, color: "text-indigo-600", bg: "bg-indigo-50", ring: "ring-indigo-200" },
@@ -25,9 +26,9 @@ const REQ_TYPE_META = {
  *
  * Returns a structured list of pending items grouped by type.
  */
-function collectPendingForStage(stage, index, { stages, docChecklist, approvalProcess, processLogic }) {
+function collectPendingForStage(stage, index, { stages, docChecklist, approvalProcess, processLogic, stageApprovers, digitalSignatures }) {
   const pending = [];
-  const ctx = { stages, docChecklist, approvalProcess };
+  const ctx = { stages, docChecklist, approvalProcess, stageApprovers, digitalSignatures };
 
   // 1. Pending sub-stages within this stage
   const subs = stage.sub_stages || [];
@@ -74,7 +75,21 @@ function collectPendingForStage(stage, index, { stages, docChecklist, approvalPr
     }
   }
 
-  // 3. Gate requirements leading FROM this stage to the next
+  // 3. Digital sign-off pending (if stage has approvers defined)
+  const signoffEval = evaluateStageSignoff(stageApprovers, digitalSignatures, stage.id);
+  if (signoffEval.hasApprovers && !signoffEval.allSigned) {
+    signoffEval.pendingRequired.forEach((role) => {
+      pending.push({
+        type: "approval",
+        label: `Digital sign-off: ${role.role || "Approver"}${role.contact_name ? " (" + role.contact_name + ")" : " (unassigned)"}`,
+        detail: role.contact_id ? "Awaiting signature" : "Assign contact first",
+        satisfied: false,
+        stageId: stage.id,
+      });
+    });
+  }
+
+  // 4. Gate requirements leading FROM this stage to the next
   const gate = (processLogic || []).find((g) => g.from_stage_id === stage.id);
   if (gate && gate.requirements) {
     const gateEval = evaluateGate(gate, ctx);
@@ -99,16 +114,24 @@ function collectPendingForStage(stage, index, { stages, docChecklist, approvalPr
 /**
  * Counts completed vs total items for a stage (sub-stages + gate requirements).
  */
-function getStageCompletionStats(stage, { stages, docChecklist, approvalProcess, processLogic }) {
+function getStageCompletionStats(stage, { stages, docChecklist, approvalProcess, processLogic, stageApprovers, digitalSignatures }) {
   const subs = stage.sub_stages || [];
   const subsDone = subs.filter((ss) => (ss.status || "not_started") === "completed").length;
   const subsTotal = subs.length;
+
+  // Count digital sign-off requirements for this stage
+  const signoffEval = evaluateStageSignoff(stageApprovers, digitalSignatures, stage.id);
+  let signoffDone = 0, signoffTotal = 0;
+  if (signoffEval.hasApprovers) {
+    signoffTotal = signoffEval.requiredCount;
+    signoffDone = signoffEval.signedCount;
+  }
 
   // Count gate requirements for this stage
   const gate = (processLogic || []).find((g) => g.from_stage_id === stage.id);
   let gateDone = 0, gateTotal = 0;
   if (gate && gate.requirements) {
-    const ctx = { stages, docChecklist, approvalProcess };
+    const ctx = { stages, docChecklist, approvalProcess, stageApprovers, digitalSignatures };
     const gateEval = evaluateGate(gate, ctx);
     gateEval.requirements.forEach(({ req, eval: evalResult }) => {
       if (req.required !== false) {
@@ -118,10 +141,10 @@ function getStageCompletionStats(stage, { stages, docChecklist, approvalProcess,
     });
   }
 
-  const total = subsTotal + gateTotal + (stage.completed ? 0 : 1); // +1 for supervisor approval
-  const done = subsDone + gateDone + (stage.completed ? 1 : 0);
+  const total = subsTotal + gateTotal + signoffTotal + (stage.completed ? 0 : 1); // +1 for supervisor approval
+  const done = subsDone + gateDone + signoffDone + (stage.completed ? 1 : 0);
 
-  return { subsDone, subsTotal, gateDone, gateTotal, total, done };
+  return { subsDone, subsTotal, gateDone, gateTotal, signoffDone, signoffTotal, total, done };
 }
 
 /**
@@ -136,11 +159,13 @@ export default function ProcessProgressTracker({
   docChecklist = [],
   approvalProcess = {},
   processLogic = [],
+  stageApprovers = [],
+  digitalSignatures = [],
 }) {
   const [expandedStages, setExpandedStages] = useState({});
   const toggleExpand = (id) => setExpandedStages((prev) => ({ ...prev, [id]: !prev[id] }));
 
-  const ctx = useMemo(() => ({ stages, docChecklist, approvalProcess, processLogic }), [stages, docChecklist, approvalProcess, processLogic]);
+  const ctx = useMemo(() => ({ stages, docChecklist, approvalProcess, processLogic, stageApprovers, digitalSignatures }), [stages, docChecklist, approvalProcess, processLogic, stageApprovers, digitalSignatures]);
 
   // Overall stats
   const overall = useMemo(() => {

@@ -583,6 +583,113 @@
         }
       }
     },
+    "stage_approvers": {
+      "type": "array",
+      "description": "Approvers assigned to each stage (copied from template on creation, with specific contacts assigned to each role). Each required approver must digitally sign off before the process can advance past that stage. Signatures are tracked in the digital_signatures array.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "stage_id": {
+            "type": "string",
+            "description": "ID of the stage these approvers apply to"
+          },
+          "stage_name": {
+            "type": "string",
+            "description": "Name of the stage (denormalized)"
+          },
+          "approver_roles": {
+            "type": "array",
+            "description": "Approver roles for this stage, each with a contact assigned at DD creation time.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "role": {
+                  "type": "string",
+                  "description": "Approver role label (e.g. 'Supervisor', 'Investment Committee Chair')"
+                },
+                "required": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Whether this role's sign-off is mandatory (true) or optional (false)"
+                },
+                "contact_id": {
+                  "type": "string",
+                  "description": "ID of the contact assigned to this approver role. Empty means not yet assigned."
+                },
+                "contact_name": {
+                  "type": "string",
+                  "description": "Name of the assigned contact (denormalized)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "digital_signatures": {
+      "type": "array",
+      "description": "Digital sign-off records collected from assigned approvers. Each signature records who signed, when, for which stage, and an optional comment. A stage cannot advance until all its required approvers have signed.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "stage_id": {
+            "type": "string",
+            "description": "ID of the stage this signature approves"
+          },
+          "stage_name": {
+            "type": "string",
+            "description": "Name of the stage (denormalized)"
+          },
+          "approver_role_id": {
+            "type": "string",
+            "description": "ID of the stage_approvers approver_role entry this signature fulfills"
+          },
+          "role": {
+            "type": "string",
+            "description": "Role of the signer (denormalized from stage_approvers)"
+          },
+          "contact_id": {
+            "type": "string",
+            "description": "ID of the contact who signed"
+          },
+          "contact_name": {
+            "type": "string",
+            "description": "Name of the contact who signed (denormalized)"
+          },
+          "signed_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when the digital signature was recorded (ISO-8601)"
+          },
+          "signature_date": {
+            "type": "string",
+            "format": "date",
+            "description": "Date of the signature (YYYY-MM-DD)"
+          },
+          "comment": {
+            "type": "string",
+            "description": "Optional comment from the approver accompanying the sign-off"
+          },
+          "signed_by_user_id": {
+            "type": "string",
+            "description": "User ID of the person who recorded the signature"
+          },
+          "signed_by_user_name": {
+            "type": "string",
+            "description": "Display name of the user who recorded the signature (denormalized)"
+          }
+        }
+      }
+    },
     "outlook_event_id": {
       "type": "string",
       "description": "ID of the corresponding Outlook Calendar event (set when the due diligence start date is synced to Outlook Calendar)"

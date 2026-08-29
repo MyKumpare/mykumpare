@@ -362,6 +362,8 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
   const [approvalProcess, setApprovalProcess] = useState({});
   const [approvalLogic, setApprovalLogic] = useState([]);
   const [processLogic, setProcessLogic] = useState([]);
+  const [stageApprovers, setStageApprovers] = useState([]);
+  const [digitalSignatures, setDigitalSignatures] = useState([]);
   const [templateId, setTemplateId] = useState("");
   const [templateName, setTemplateName] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -466,6 +468,8 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
       setApprovalProcess(editingRecord.approval_process || {});
       setApprovalLogic(Array.isArray(editingRecord.approval_process_logic) ? editingRecord.approval_process_logic : []);
       setProcessLogic(Array.isArray(editingRecord.process_logic) ? editingRecord.process_logic : []);
+      setStageApprovers(Array.isArray(editingRecord.stage_approvers) ? editingRecord.stage_approvers : []);
+      setDigitalSignatures(Array.isArray(editingRecord.digital_signatures) ? editingRecord.digital_signatures : []);
       setTemplateId(editingRecord.template_id || "");
       setTemplateName(editingRecord.template_name || "");
       setStartDate(editingRecord.start_date || "");
@@ -484,6 +488,8 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
       setApprovalProcess({});
       setApprovalLogic([]);
       setProcessLogic([]);
+      setStageApprovers([]);
+      setDigitalSignatures([]);
       setTemplateId("");
       setTemplateName("");
       setStartDate("");
@@ -600,6 +606,8 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
     approval_process: processStatus === "In-process" ? approvalProcess : undefined,
     approval_process_logic: processStatus === "In-process" ? approvalLogic : undefined,
     process_logic: processStatus === "In-process" ? processLogic : undefined,
+    stage_approvers: processStatus === "In-process" ? stageApprovers : undefined,
+    digital_signatures: processStatus === "In-process" ? digitalSignatures : undefined,
     template_id: processStatus === "In-process" ? (templateId || undefined) : undefined,
     template_name: processStatus === "In-process" ? (templateName || undefined) : undefined,
     start_date: processStatus === "In-process" ? (startDate || undefined) : undefined,
@@ -617,7 +625,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
     );
   }
   return _payload;
-  }, [effectiveFirmId, effectiveFirmName, productId, selectedProduct, status, processStatus, primaryId, primaryContact, secondaryId, secondaryContact, stages, docChecklist, approvalProcess, approvalLogic, processLogic, templateId, templateName, startDate, currentStageIndex, assignedContactIds, editingRecord, milestones]);
+  }, [effectiveFirmId, effectiveFirmName, productId, selectedProduct, status, processStatus, primaryId, primaryContact, secondaryId, secondaryContact, stages, docChecklist, approvalProcess, approvalLogic, processLogic, stageApprovers, digitalSignatures, templateId, templateName, startDate, currentStageIndex, assignedContactIds, editingRecord, milestones]);
 
   // Debounced auto-save — fires 800ms after the last change to any tracked field.
   useEffect(() => {
@@ -987,6 +995,10 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
               onApprovalLogicChange={setApprovalLogic}
               processLogic={processLogic}
               onProcessLogicChange={setProcessLogic}
+              stageApprovers={stageApprovers}
+              onStageApproversChange={setStageApprovers}
+              digitalSignatures={digitalSignatures}
+              onDigitalSignaturesChange={setDigitalSignatures}
               firmId={effectiveFirmId}
               firmName={effectiveFirmName}
               productId={productId}

@@ -17,6 +17,7 @@ import DocumentationChecklistTab from "./DocumentationChecklistTab";
 import ApprovalProcessTab from "./ApprovalProcessTab";
 import ProcessLogicGate from "./ProcessLogicGate";
 import ProcessProgressTracker from "./ProcessProgressTracker";
+import DigitalSignoffPanel, { evaluateStageSignoff } from "./DigitalSignoffPanel";
 import DatePicker from "@/components/ui/date-picker";
 import AddTemplateDialog from "@/components/templates/AddTemplateDialog";
 import { format } from "date-fns";
@@ -47,6 +48,8 @@ export default function DueDiligenceTemplateFlow({
   approvalProcess = {}, onApprovalProcessChange,
   approvalLogic = [], onApprovalLogicChange,
   processLogic = [], onProcessLogicChange,
+  stageApprovers = [], onStageApproversChange,
+  digitalSignatures = [], onDigitalSignaturesChange,
   firmId = "", firmName = "", productId = "", productName = "", tenantId = "",
   onAllStagesCompleted,
 }) {
@@ -203,6 +206,26 @@ export default function DueDiligenceTemplateFlow({
       }));
       onProcessLogicChange(newProcessLogic);
     }
+    // Copy stage approvers from template (with empty contact assignments)
+    if (onStageApproversChange) {
+      const newStageApprovers = (template.stage_approvers || []).map((sa) => ({
+        id: sa.id,
+        stage_id: sa.stage_id || "",
+        stage_name: sa.stage_name || "",
+        approver_roles: (sa.approver_roles || []).map((r) => ({
+          id: r.id,
+          role: r.role || "",
+          required: r.required !== false,
+          contact_id: "",
+          contact_name: "",
+        })),
+      }));
+      onStageApproversChange(newStageApprovers);
+    }
+    // Clear any existing digital signatures when a new template is selected
+    if (onDigitalSignaturesChange) {
+      onDigitalSignaturesChange([]);
+    }
     setOpen(false);
     setSearch("");
   };
@@ -218,6 +241,14 @@ export default function DueDiligenceTemplateFlow({
   const handleSupervisorAction = (index, action) => {
     // Guard: supervisor cannot approve/reject/on_hold unless all sub-stages are completed
     if (!allSubStagesCompleted(stagesList[index])) return;
+    // Guard: for "approved" action, block unless all required digital sign-offs are collected
+    if (action === "approved" && onDigitalSignaturesChange) {
+      const stage = stagesList[index];
+      const signoffEval = evaluateStageSignoff(stageApprovers, digitalSignatures, stage.id);
+      if (signoffEval.hasApprovers && !signoffEval.allSigned) {
+        return; // Block — not all required approvers have signed
+      }
+    }
     const newStages = stagesList.map((s, i) => {
       if (i !== index) return s;
       const updated = {
@@ -406,6 +437,8 @@ export default function DueDiligenceTemplateFlow({
               docChecklist={docChecklist}
               approvalProcess={approvalProcess}
               processLogic={processLogic}
+              stageApprovers={stageApprovers}
+              digitalSignatures={digitalSignatures}
             />
           )}
 
@@ -632,6 +665,8 @@ export default function DueDiligenceTemplateFlow({
                       stages={stagesList}
                       docChecklist={docChecklist}
                       approvalProcess={approvalProcess}
+                      stageApprovers={stageApprovers}
+                      digitalSignatures={digitalSignatures}
                       />
                       )}
                       </React.Fragment>
@@ -639,6 +674,20 @@ export default function DueDiligenceTemplateFlow({
                       })}
                       </div>
                       )}
+
+          {/* Digital Sign-off Panel — approver assignments and signatures */ }
+          {stageApprovers.length > 0 && onStageApproversChange && (
+            <DigitalSignoffPanel
+              stages={stagesList}
+              stageApprovers={stageApprovers}
+              digitalSignatures={digitalSignatures}
+              teamMembers={teamMembers}
+              currentUserId={currentUserId}
+              currentUserName={currentUserName}
+              onChangeApprovers={onStageApproversChange}
+              onChangeSignatures={onDigitalSignaturesChange}
+            />
+          )}
 
           {/* Documentation Checklist Tab */}
           {docChecklist.length > 0 && onDocChecklistChange && (

@@ -201,6 +201,47 @@
         }
       }
     },
+    "stage_approvers": {
+      "type": "array",
+      "description": "Approver roles assigned to each stage at the template level. Each entry maps a stage to one or more approver roles (e.g. 'Supervisor', 'Investment Committee Chair') who must digitally sign off before the process can advance past that stage. Copied to the DueDiligence record on creation, where specific contacts are assigned to each role.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "stage_id": {
+            "type": "string",
+            "description": "ID of the stage these approver roles apply to"
+          },
+          "stage_name": {
+            "type": "string",
+            "description": "Name of the stage (denormalized)"
+          },
+          "approver_roles": {
+            "type": "array",
+            "description": "Approver roles required for this stage. Each role defines a label and whether sign-off is mandatory.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "role": {
+                  "type": "string",
+                  "description": "Approver role label (e.g. 'Supervisor', 'Investment Committee Chair')"
+                },
+                "required": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Whether this role's sign-off is mandatory (true) or optional (false). Optional roles are shown but do not block stage advancement."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "scoring_blocks": {
       "type": "array",
       "description": "Weighted scoring blocks for Scoring Matrix templates. Each block groups related criteria and has a percentage weight. The sum of all block weights should equal 100. An optional multiplier factor can be enabled per block (and per criterion) to scale its influence; effective weights are normalized so the overall total stays 100%.",

@@ -20,6 +20,7 @@ import ScoringMatrixTemplateEditor from "./ScoringMatrixTemplateEditor";
 import ScoringMatrixTestModeDialog from "./ScoringMatrixTestModeDialog";
 import ProcessTemplateAudit from "./ProcessTemplateAudit";
 import ProcessLogicEditor from "./ProcessLogicEditor";
+import StageApproversEditor from "./StageApproversEditor";
 import TemplateVersionDiffDialog from "./TemplateVersionDiffDialog";
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "@/components/ui/use-toast";
@@ -88,6 +89,7 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
   const [sampleFileUrl, setSampleFileUrl] = useState("");
   const [sampleFileName, setSampleFileName] = useState("");
   const [processLogic, setProcessLogic] = useState([]);
+  const [stageApprovers, setStageApprovers] = useState([]);
   const [questionBankOpen, setQuestionBankOpen] = useState(false);
   const [testModeOpen, setTestModeOpen] = useState(false);
   const [diffOpen, setDiffOpen] = useState(false);
@@ -117,6 +119,7 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
         setSampleFileUrl(editTemplate.sample_file_url || "");
         setSampleFileName(editTemplate.sample_file_name || "");
         setProcessLogic(Array.isArray(editTemplate.process_logic) ? JSON.parse(JSON.stringify(editTemplate.process_logic)) : []);
+        setStageApprovers(Array.isArray(editTemplate.stage_approvers) ? JSON.parse(JSON.stringify(editTemplate.stage_approvers)) : []);
       } else if (newVersionFrom) {
         // Pre-fill from the prior version so the user starts from its content and
         // only modifies what needs to change. Keeps the same name (versions are
@@ -132,6 +135,7 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
         setSampleFileUrl(newVersionFrom.sample_file_url || "");
         setSampleFileName(newVersionFrom.sample_file_name || "");
         setProcessLogic(Array.isArray(newVersionFrom.process_logic) ? JSON.parse(JSON.stringify(newVersionFrom.process_logic)) : []);
+        setStageApprovers(Array.isArray(newVersionFrom.stage_approvers) ? JSON.parse(JSON.stringify(newVersionFrom.stage_approvers)) : []);
       } else {
         setName("");
         setTemplateType(defaultTemplateType || "");
@@ -144,6 +148,7 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
         setSampleFileUrl("");
         setSampleFileName("");
         setProcessLogic([]);
+        setStageApprovers([]);
       }
     }
   }, [open, editTemplate, newVersionFrom]);
@@ -154,6 +159,7 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
       setStages([]);
       setDocChecklist([]);
       setProcessLogic([]);
+      setStageApprovers([]);
     }
   }, [templateType]);
 
@@ -230,6 +236,16 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
       sample_file_url: sampleFileUrl || undefined,
       sample_file_name: sampleFileName || undefined,
       approval_process_logic: [], // explicitly clear legacy data
+      stage_approvers: isMDD ? stageApprovers.filter((sa) => (sa.stage_id || "").trim()).map((sa) => ({
+        id: sa.id,
+        stage_id: sa.stage_id,
+        stage_name: sa.stage_name || "",
+        approver_roles: (sa.approver_roles || []).filter((r) => (r.role || "").trim()).map((r) => ({
+          id: r.id,
+          role: r.role.trim(),
+          required: r.required !== false,
+        })),
+      })) : undefined,
       process_logic: isMDD ? processLogic.filter((g) => (g.name || "").trim()).map((g) => ({
         id: g.id,
         name: g.name.trim(),
@@ -393,6 +409,13 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
                   onChange={setProcessLogic}
                 />
               )}
+              {templateType === "Manager Due Diligence" && (
+                <StageApproversEditor
+                  stages={stages}
+                  stageApprovers={stageApprovers}
+                  onChange={setStageApprovers}
+                />
+              )}
               <ProcessTemplateAudit
                 stages={stages}
                 docChecklist={templateType === "Manager Due Diligence" ? docChecklist : []}
@@ -443,6 +466,7 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
             scoring_blocks: scoringBlocks,
             rating_config: ratingConfig,
             process_logic: processLogic,
+            stage_approvers: stageApprovers,
           }}
           nextVersion={isNewVersion ? nextVersion : priorVersion}
           priorVersion={isNewVersion ? priorVersion : (editTemplate?.version_number || 1)}

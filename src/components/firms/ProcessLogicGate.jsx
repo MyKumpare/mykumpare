@@ -4,6 +4,7 @@ import {
   ClipboardCheck, FileText, FileCheck, BarChart3, AlignLeft, Calculator, UserCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { evaluateStageSignoff } from "./DigitalSignoffPanel";
 
 const REQ_TYPE_META = {
   sub_stage_completion: { label: "Sub-Stage Completion", icon: ClipboardCheck, color: "text-indigo-600", bg: "bg-indigo-50" },
@@ -19,7 +20,7 @@ const REQ_TYPE_META = {
  * Evaluates whether a single requirement is satisfied given the current
  * due diligence state (stages, doc checklist, approval process).
  */
-export function evaluateRequirement(req, { stages, docChecklist, approvalProcess }) {
+export function evaluateRequirement(req, { stages, docChecklist, approvalProcess, stageApprovers, digitalSignatures }) {
   if (!req || !req.required) return { satisfied: true, label: req?.label || "", detail: "Optional" };
 
   switch (req.type) {
@@ -81,10 +82,27 @@ export function evaluateRequirement(req, { stages, docChecklist, approvalProcess
       const stage = stages.find((s) => s.id === req.stage_id);
       if (!stage) return { satisfied: false, label: req.label || "Approval", detail: "Stage not found" };
       const approved = (stage.supervisor_status || "pending") === "approved";
+
+      // Also check digital sign-off: if stage_approvers are defined for this stage,
+      // all required approvers must have digitally signed.
+      const signoffEval = evaluateStageSignoff(stageApprovers, digitalSignatures, req.stage_id || stage.id);
+      const hasDigitalSignoff = !signoffEval.hasApprovers || signoffEval.allSigned;
+
+      const fullySatisfied = approved && hasDigitalSignoff;
+      let detail;
+      if (fullySatisfied) {
+        detail = "Approved & signed";
+      } else if (!approved && !hasDigitalSignoff) {
+        detail = "Awaiting approval & signatures";
+      } else if (!approved) {
+        detail = "Awaiting approval";
+      } else {
+        detail = `Awaiting ${signoffEval.pendingRequired.length} signature${signoffEval.pendingRequired.length !== 1 ? "s" : ""}`;
+      }
       return {
-        satisfied: approved,
+        satisfied: fullySatisfied,
         label: req.label || `Approval${req.approval_role ? ": " + req.approval_role : ""}`,
-        detail: approved ? "Approved" : (stage.supervisor_status === "pending" ? "Awaiting approval" : "Not approved"),
+        detail,
       };
     }
     default:
@@ -121,8 +139,8 @@ export function evaluateGate(gate, ctx) {
  *   approvalProcess  — current DD approval process
  *   compact          — if true, show a compact summary (for inline display)
  */
-export default function ProcessLogicGate({ gate, stages = [], docChecklist = [], approvalProcess = {}, compact = false }) {
-  const ctx = useMemo(() => ({ stages, docChecklist, approvalProcess }), [stages, docChecklist, approvalProcess]);
+export default function ProcessLogicGate({ gate, stages = [], docChecklist = [], approvalProcess = {}, stageApprovers = [], digitalSignatures = [], compact = false }) {
+  const ctx = useMemo(() => ({ stages, docChecklist, approvalProcess, stageApprovers, digitalSignatures }), [stages, docChecklist, approvalProcess, stageApprovers, digitalSignatures]);
   const evaluation = useMemo(() => evaluateGate(gate, ctx), [gate, ctx]);
 
   if (!gate || !gate.requirements || gate.requirements.length === 0) return null;
