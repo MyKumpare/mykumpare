@@ -618,7 +618,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
       firms.filter((f) => getFirmTypes(f).includes("Investment Manager")).map((f) => f.id)
     );
     return products
-      .filter((p) => imFirmIds.has(p.firm_id))
+      .filter((p) => p.product_type === "Investment Manager Product" && imFirmIds.has(p.firm_id) && !p.deleted_at)
       .map((p) => ({ value: p.id, label: p.name, firm_name: p.firm_name || "" }))
       .sort((a, b) => a.label.localeCompare(b.label));
   }, [firms, products]);
