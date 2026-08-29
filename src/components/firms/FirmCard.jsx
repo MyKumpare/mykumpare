@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Package, ChevronDown, ChevronRight, LayoutList, MapPin } from "lucide-react";
+import { Plus, Package, ChevronDown, ChevronRight, LayoutList, MapPin, FileDown, Loader2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import FirmStatusBadges from "./FirmStatusBadges";
+import { exportFirmProfilePdf } from "@/components/reports/firmProfilePdfExport";
 
 const FIRM_TYPE_TO_PRODUCT_TYPE = {
   "Investment Manager": "Investment Manager Product",
@@ -16,7 +17,21 @@ export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditP
   const isAllocator = effectiveTypes.includes("Allocator");
   const isInvestmentManager = effectiveTypes.includes("Investment Manager");
   const [expanded, setExpanded] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const isExpanded = forceExpand || expanded;
+
+  const handleDownloadReport = async (e) => {
+    e.stopPropagation();
+    if (exporting) return;
+    setExporting(true);
+    try {
+      await exportFirmProfilePdf(firm, products);
+    } catch (err) {
+      console.error("Firm report export failed:", err);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const firmProducts = products.filter((p) => p.firm_id === firm.id).sort((a, b) => a.name.localeCompare(b.name));
   const showProducts = !!productType;
@@ -105,6 +120,14 @@ export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditP
               <span className="hidden sm:inline text-xs font-medium whitespace-nowrap">Add Portfolio</span>
             </button>
           )}
+          <button
+            onClick={handleDownloadReport}
+            disabled={exporting}
+            className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors sm:opacity-0 sm:group-hover:opacity-100 disabled:opacity-60"
+            title="Download Firm Report (PDF)"
+          >
+            {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileDown className="w-3.5 h-3.5" />}
+          </button>
         </div>
       </div>
 
