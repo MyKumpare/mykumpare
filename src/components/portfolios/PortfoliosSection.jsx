@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, LayoutList, ChevronDown, ChevronRight, BarChart3, SlidersHorizontal } from "lucide-react";
+import { Plus, LayoutList, ChevronDown, ChevronRight, BarChart3, SlidersHorizontal, AlertTriangle, DollarSign } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
 import SectionSearch from "@/components/common/SectionSearch";
@@ -43,6 +45,55 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
   useEffect(() => {
     if (forceExpanded !== undefined) setExpanded(forceExpanded);
   }, [forceExpanded]);
+
+  // Fetch firms to get allocator AUM (the limit against which committed capital is compared)
+  const { data: firms = [] } = useQuery({
+    queryKey: ["firms"],
+    queryFn: () => base44.entities.Firm.list("-created_date"),
+  });
+
+  // Helper: get latest firm AUM from aum_history
+  const getLatestAum = useMemo(() => (firm) => {
+    const history = firm?.aum_history || [];
+    if (!history.length) return 0;
+    const latest = [...history].sort(
+      (a, b) => (b.month_end_date || "").localeCompare(a.month_end_date || "")
+    )[0];
+    return Number(latest?.firm_aum) || 0;
+  }, []);
+
+  // Per-allocator exposure: total committed capital across all portfolios vs. the
+  // allocator firm's latest AUM. When total committed exceeds the firm's AUM, the
+  // allocator is over-allocated and the discrepancy is highlighted.
+  const allocatorExposure = useMemo(() => {
+    const map = {};
+    for (const p of portfolios) {
+      if (p.deleted_at) continue;
+      const name = p.allocator_name || "Unknown";
+      const amount = Number(p.initial_allocation_amount) || 0;
+      if (!map[name]) map[name] = { totalAllocated: 0, firmId: null };
+      map[name].totalAllocated += amount;
+      map[name].firmId = p.firm_id || map[name].firmId;
+    }
+    const firmMap = new Map(firms.map((f) => [f.id, f]));
+    for (const [name, info] of Object.entries(map)) {
+      const firm = firmMap.get(info.firmId);
+      info.firmAum = firm ? getLatestAum(firm) : 0;
+      info.overAllocated = info.firmAum > 0 && info.totalAllocated > info.firmAum;
+      info.discrepancy = info.overAllocated ? info.totalAllocated - info.firmAum : 0;
+    }
+    return map;
+  }, [portfolios, firms, getLatestAum]);
+
+  const formatCompactCurrency = (n) => {
+    if (n == null || isNaN(n)) return "$0";
+    const abs = Math.abs(n);
+    if (abs >= 1e12) return `$${(n / 1e12).toFixed(2)}T`;
+    if (abs >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
+    if (abs >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+    if (abs >= 1e3) return `$${(n / 1e3).toFixed(0)}K`;
+    return `$${Math.round(n).toLocaleString()}`;
+  };
 
   // Derive unique filter options from the loaded portfolios
   const allocatorOptions = useMemo(
@@ -329,13 +380,18 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
                   {Object.entries(allocatorGroups).map(([allocator, portfolioList]) => {
                     const groupKey = `${advisorType}/${allocator}`;
                     const isOpen = expandedGroups[groupKey];
+                    const exposure = allocatorExposure[allocator];
 
                     return (
                       <div key={groupKey} className="space-y-1.5">
                         {/* Allocator Header */}
                         <button
                           onClick={() => toggleGroup(groupKey)}
-                          className="flex items-center gap-2 w-full px-2 py-1.5 text-xs font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded transition-colors"
+                          className={`flex items-center gap-2 w-full px-2 py-1.5 text-xs font-medium rounded transition-colors ${
+                            exposure?.overAllocated
+                              ? "text-red-700 hover:text-red-800 hover:bg-red-50"
+                              : "text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                          }`}
                         >
                           {isOpen ? (
                             <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
@@ -343,12 +399,39 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
                             <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
                           )}
                           <span>{allocator}</span>
+                          {exposure && exposure.totalAllocated > 0 && (
+                            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${
+                              exposure.overAllocated
+                                ? "bg-red-100 text-red-700"
+                                : "bg-emerald-50 text-emerald-600"
+                            }`}>
+                              <DollarSign className="w-2.5 h-2.5" />
+                              {formatCompactCurrency(exposure.totalAllocated)}
+                              {exposure.firmAum > 0 && ` / ${formatCompactCurrency(exposure.firmAum)}`}
+                            </span>
+                          )}
+                          {exposure?.overAllocated && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-red-500 text-white">
+                              <AlertTriangle className="w-2.5 h-2.5" />
+                              Over by {formatCompactCurrency(exposure.discrepancy)}
+                            </span>
+                          )}
                           <span className="text-gray-400 ml-auto">{portfolioList.length}</span>
                         </button>
 
                         {/* Portfolio List */}
                         {isOpen && (
                           <div className="ml-3 space-y-1.5">
+                            {exposure?.overAllocated && (
+                              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700">
+                                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                                <span>
+                                  Total committed capital ({formatCompactCurrency(exposure.totalAllocated)}) exceeds
+                                  allocator's AUM limit ({formatCompactCurrency(exposure.firmAum)}) by{" "}
+                                  <strong>{formatCompactCurrency(exposure.discrepancy)}</strong>.
+                                </span>
+                              </div>
+                            )}
                             {portfolioList.map((portfolio) => (
                               <button
                                 key={portfolio.id}
