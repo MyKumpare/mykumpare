@@ -5,12 +5,13 @@ import {
 } from "recharts";
 import {
   DollarSign, Building2, Package, Wallet, Globe, TrendingUp,
-  Layers, PieChart as PieIcon, BarChart3, Grid3x3,
+  Layers, PieChart as PieIcon, BarChart3, Grid3x3, AlertTriangle,
 } from "lucide-react";
 import ExposureHeatmap from "./ExposureHeatmap";
 import FundingBreakdownCharts from "./FundingBreakdownCharts";
 import TopFirmsAumTrendChart from "./TopFirmsAumTrendChart";
 import FirmBenchmarkComparison from "./FirmBenchmarkComparison";
+import StuckDdProcesses from "./StuckDdProcesses";
 
 export const FIRM_TYPES = [
   "Investment Manager", "Allocator", "Investment Consultant",
@@ -219,6 +220,16 @@ export const MODULE_REGISTRY = {
     ),
   },
 
+  stuck_dd_processes: {
+    id: "stuck_dd_processes",
+    title: "Stuck Due Diligence Processes",
+    description: "Processes in the same stage for 5+ days",
+    icon: AlertTriangle,
+    width: "full",
+    category: "Analytics",
+    render: (d) => <StuckDdProcesses ddRecords={d.ddRecords || []} />,
+  },
+
   top_firms_aum_trend: {
     id: "top_firms_aum_trend",
     title: "Top Firms AUM Growth Trends",
@@ -342,6 +353,7 @@ export const DEFAULT_MODULE_ORDER = [
   "chart_exposure_by_funding",
   "chart_committed_capital_by_type",
   "chart_products_by_status",
+  "stuck_dd_processes",
   "top_firms_aum_trend",
   "firm_benchmark_comparison",
   "funding_breakdown_charts",

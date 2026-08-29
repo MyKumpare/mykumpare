@@ -4,6 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import ProcessTemplateKanbanBoard from "@/components/firms/ProcessTemplateKanbanBoard";
 import AddDueDiligenceDialog from "@/components/firms/AddDueDiligenceDialog";
+import StageCommentsDialog from "@/components/firms/StageCommentsDialog";
 import { evaluateStageSignoff } from "@/components/firms/DigitalSignoffPanel";
 import { evaluateGate } from "@/components/firms/ProcessLogicGate";
 
@@ -90,6 +91,7 @@ export default function ProcessTemplateKanban() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkApproving, setBulkApproving] = useState(false);
+  const [commentsState, setCommentsState] = useState({ open: false, record: null, stageIndex: 0 });
 
   const { data: records = [], isLoading: ddLoading } = useQuery({
     queryKey: ["due-diligence-all"],
@@ -221,6 +223,22 @@ export default function ProcessTemplateKanban() {
   const handleExitSelection = () => {
     setSelectionMode(false);
     setSelectedIds([]);
+  };
+
+  const handleOpenComments = (rec, stageIndex) => {
+    setCommentsState({ open: true, record: rec, stageIndex });
+  };
+
+  const handleSaveComments = async (updatedStages) => {
+    const rec = commentsState.record;
+    if (!rec) return;
+    await base44.entities.DueDiligence.update(rec.id, { stages: updatedStages });
+    await queryClient.invalidateQueries({ queryKey: ["due-diligence-all"] });
+    // Update the local state so the dialog reflects the new comment immediately
+    setCommentsState((prev) => ({
+      ...prev,
+      record: { ...prev.record, stages: updatedStages },
+    }));
   };
 
   // Bulk approve: checks each selected process meets checklist requirements,
@@ -456,6 +474,7 @@ export default function ProcessTemplateKanban() {
             selectionMode={selectionMode}
             selectedIds={selectedIds}
             onToggleSelect={handleToggleSelect}
+            onOpenComments={handleOpenComments}
           />
         </div>
       )}
@@ -487,6 +506,14 @@ export default function ProcessTemplateKanban() {
           setShowDialog(false);
           setEditing(null);
         }}
+      />
+
+      <StageCommentsDialog
+        open={commentsState.open}
+        onOpenChange={(open) => setCommentsState((prev) => ({ ...prev, open }))}
+        record={commentsState.record}
+        stageIndex={commentsState.stageIndex}
+        onSave={handleSaveComments}
       />
     </div>
   );

@@ -2,7 +2,7 @@ import React, { useMemo, useRef, useEffect } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import {
   ClipboardCheck, FileText, UserCheck, AlertCircle, CheckCircle2,
-  Circle, Clock, Lock, ChevronRight,
+  Circle, Clock, Lock, ChevronRight, MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { evaluateGate } from "./ProcessLogicGate";
@@ -63,7 +63,7 @@ function getPendingSummary(rec) {
   };
 }
 
-function KanbanCard({ rec, stageIndex, onCardClick, selectionMode, isSelected, onToggleSelect }) {
+function KanbanCard({ rec, stageIndex, onCardClick, selectionMode, isSelected, onToggleSelect, onOpenComments }) {
   const cardRef = useRef(null);
   const pending = useMemo(() => getPendingSummary(rec), [rec]);
   const stages = rec.stages || [];
@@ -163,10 +163,27 @@ function KanbanCard({ rec, stageIndex, onCardClick, selectionMode, isSelected, o
         </div>
       )}
 
-      {/* Analyst */}
+      {/* Analyst + Comments */}
       <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t border-gray-100">
         <span className="text-[10px] text-gray-400 truncate">{rec.primary_analyst_name || "—"}</span>
-        <span className="text-[10px] text-indigo-500 font-medium">Edit →</span>
+        <div className="flex items-center gap-2">
+          {onOpenComments && (() => {
+            const stage = rec.stages?.[stageIndex];
+            const commentCount = (stage?.comments || []).length;
+            return (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onOpenComments(rec, stageIndex); }}
+                className="flex items-center gap-0.5 text-[10px] text-gray-400 hover:text-indigo-500 transition-colors"
+                title="Stage discussion"
+              >
+                <MessageSquare className="w-3 h-3" />
+                {commentCount > 0 && <span className="font-medium">{commentCount}</span>}
+              </button>
+            );
+          })()}
+          <span className="text-[10px] text-indigo-500 font-medium">Edit →</span>
+        </div>
       </div>
     </div>
   );
@@ -179,7 +196,7 @@ function KanbanCard({ rec, stageIndex, onCardClick, selectionMode, isSelected, o
  * Props:
  *   records, stages (template stages), onMoveCard, onCardClick
  */
-export default function ProcessTemplateKanbanBoard({ records, stages, onMoveCard, onCardClick, selectionMode = false, selectedIds = [], onToggleSelect }) {
+export default function ProcessTemplateKanbanBoard({ records, stages, onMoveCard, onCardClick, selectionMode = false, selectedIds = [], onToggleSelect, onOpenComments }) {
   const grouped = useMemo(() => {
     const map = {};
     stages.forEach((s, i) => { map[i] = []; });
@@ -246,6 +263,7 @@ export default function ProcessTemplateKanbanBoard({ records, stages, onMoveCard
                                 selectionMode={selectionMode}
                                 isSelected={selectedIds.includes(rec.id)}
                                 onToggleSelect={onToggleSelect}
+                                onOpenComments={onOpenComments}
                               />
                             </div>
                           )}

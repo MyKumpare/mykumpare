@@ -43,6 +43,11 @@ export default function ExecutiveDashboard() {
     queryFn: () => base44.entities.Portfolio.list("-created_date"),
   });
 
+  const { data: ddRecords = [] } = useQuery({
+    queryKey: ["dd-records-exec"],
+    queryFn: () => base44.entities.DueDiligence.list("-created_date", 500),
+  });
+
   const scopedFirms = useMemo(() => {
     const active = firms.filter((f) => !f.deleted_at);
     if (dataScope === "all" || !linkedFirmId) return active;
@@ -281,6 +286,7 @@ export default function ExecutiveDashboard() {
             productByAssetClass, productByStatus,
             portfolioCapitalByType, firmTypeSummary,
             totalExposure, totalFirms, totalProducts,
+            ddRecords,
           }}
           loading={loading}
           hasData={totalExposure > 0 || totalPortfolioCapital > 0}
