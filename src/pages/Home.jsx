@@ -889,7 +889,7 @@ export default function Home() {
                       onFirmClick={(firm) => { setSearchQuery(""); setSearchFocused(false); handleEdit(firm); }}
                       onContactClick={(contact) => { setSearchQuery(""); setSearchFocused(false); setViewingContact(contact); }}
                       onProductClick={(product) => { setSearchQuery(""); setSearchFocused(false); handleEditProduct(product); }}
-                      onPortfolioClick={(portfolio) => { setSearchQuery(""); setSearchFocused(false); setPreselectedAllocatorId(portfolio.firm_id); setPortfolioDialogOpen(true); }}
+                      onPortfolioClick={(portfolio) => { setSearchQuery(""); setSearchFocused(false); setEditingPortfolio(portfolio); setPreselectedAllocatorId(null); setPortfolioDialogOpen(true); }}
                       onAnalysisClick={(analysis) => { setSearchQuery(""); setSearchFocused(false); setEditingAnalysis(analysis); }}
                       onActivityClick={(activity) => { setSearchQuery(""); setSearchFocused(false); setViewingActivity(activity); }}
                       onTaskClick={(task) => { setSearchQuery(""); setSearchFocused(false); setViewingTask(task); }}
