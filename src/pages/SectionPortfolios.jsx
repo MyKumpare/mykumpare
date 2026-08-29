@@ -8,6 +8,7 @@ import SectionModuleGrid from "@/components/shared/SectionModuleGrid";
 import { PORTFOLIO_MODULES, PORTFOLIO_MODULE_MAP, PORTFOLIO_DEFAULT_CATEGORIES } from "@/components/sections/portfolioModules";
 import PortfoliosSection from "@/components/portfolios/PortfoliosSection";
 import PortfolioReconciliationAlertsPanel from "@/components/portfolios/PortfolioReconciliationAlertsPanel";
+import FundingStatusAlertsPanel from "@/components/portfolios/FundingStatusAlertsPanel";
 
 export default function SectionPortfolios() {
   const navigate = useNavigate();
@@ -28,6 +29,7 @@ export default function SectionPortfolios() {
     }
     if (key === "portfolios-list") setActiveModule("portfolios-list");
     if (key === "reconciliation-alerts") setActiveModule("reconciliation-alerts");
+    if (key === "funding-status-alerts") setActiveModule("funding-status-alerts");
   };
 
   const activeLabel = activeModule ? PORTFOLIO_MODULE_MAP[activeModule]?.label : null;
@@ -75,6 +77,9 @@ export default function SectionPortfolios() {
             )}
             {activeModule === "reconciliation-alerts" && (
               <PortfolioReconciliationAlertsPanel />
+            )}
+            {activeModule === "funding-status-alerts" && (
+              <FundingStatusAlertsPanel />
             )}
           </div>
         )}

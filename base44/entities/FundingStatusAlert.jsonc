@@ -1,0 +1,200 @@
+{
+  "name": "FundingStatusAlert",
+  "type": "object",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "ID of the firm (tenant) that owns this alert. Set on creation to the creator's linked_firm_id; drives tenant isolation via RLS."
+    },
+    "entity_type": {
+      "type": "string",
+      "enum": [
+        "Product",
+        "Firm"
+      ],
+      "description": "Whether this alert is for a product-level or firm-level funding status change."
+    },
+    "entity_id": {
+      "type": "string",
+      "description": "ID of the product or firm whose funding status changed."
+    },
+    "entity_name": {
+      "type": "string",
+      "description": "Name of the product or firm (denormalized for display)."
+    },
+    "firm_id": {
+      "type": "string",
+      "description": "ID of the associated firm. For product alerts, the owning firm; for firm alerts, the firm itself."
+    },
+    "firm_name": {
+      "type": "string",
+      "description": "Name of the associated firm (denormalized for display)."
+    },
+    "product_id": {
+      "type": "string",
+      "description": "ID of the product (set for product-level alerts; empty for firm-level alerts)."
+    },
+    "product_name": {
+      "type": "string",
+      "description": "Name of the product (denormalized for display; empty for firm-level alerts)."
+    },
+    "previous_status": {
+      "type": "string",
+      "enum": [
+        "Funded",
+        "Terminated"
+      ],
+      "description": "Funding status before this change. null/empty means the entity had no funding status yet (the change 'started' its funding lifecycle)."
+    },
+    "new_status": {
+      "type": "string",
+      "enum": [
+        "Funded",
+        "Terminated"
+      ],
+      "description": "Funding status after this change. null/empty means the funding status was cleared."
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "auto",
+        "manual"
+      ],
+      "default": "auto",
+      "description": "What caused the change. 'auto' = driven by portfolio allocation state (fundingStatusSync). 'manual' = a user overrode the value."
+    },
+    "changed_by_id": {
+      "type": "string",
+      "description": "User ID of the person who triggered the change (for manual overrides). Empty for auto-sync."
+    },
+    "changed_by_name": {
+      "type": "string",
+      "description": "Display name of the user who triggered the change (denormalized)."
+    },
+    "note": {
+      "type": "string",
+      "description": "Optional context note about the change."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "acknowledged",
+        "resolved"
+      ],
+      "default": "active",
+      "description": "Lifecycle state of the alert. 'active' = newly raised; 'acknowledged' = user has seen and noted it; 'resolved' = user manually resolved it."
+    },
+    "acknowledged_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the user acknowledged this alert."
+    },
+    "resolved_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when this alert was resolved."
+    }
+  },
+  "required": [
+    "entity_type",
+    "entity_id",
+    "new_status"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_edit": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_delete": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

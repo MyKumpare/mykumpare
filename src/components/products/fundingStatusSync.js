@@ -42,8 +42,54 @@ export async function logFundingStatusChange({
       changed_by_name: changedByName || "",
       note: note || "",
     });
+
+    // Create a FundingStatusAlert so the team is notified of the change.
+    await base44.entities.FundingStatusAlert.create({
+      entity_type: "Product",
+      entity_id: productId,
+      entity_name: productName || "",
+      firm_id: firmId || "",
+      firm_name: "",
+      product_id: productId,
+      product_name: productName || "",
+      previous_status: prev || undefined,
+      new_status: next || undefined,
+      source,
+      changed_by_id: changedById || "",
+      changed_by_name: changedByName || "",
+      note: note || "",
+      status: "active",
+    });
   } catch (err) {
     console.error("logFundingStatusChange failed:", err);
+  }
+}
+
+/**
+ * Create a FundingStatusAlert for a firm-level funding status change.
+ * Called from recomputeFirmFundingStatus when the firm's aggregate changes.
+ */
+async function logFirmFundingStatusAlert({ firmId, firmName, prevStatus, newStatus, note }) {
+  const prev = prevStatus || null;
+  const next = newStatus || null;
+  if (prev === next) return;
+  try {
+    await base44.entities.FundingStatusAlert.create({
+      entity_type: "Firm",
+      entity_id: firmId,
+      entity_name: firmName || "",
+      firm_id: firmId,
+      firm_name: firmName || "",
+      product_id: "",
+      product_name: "",
+      previous_status: prev || undefined,
+      new_status: next || undefined,
+      source: "auto",
+      note: note || "Firm aggregate funding status recomputed from products",
+      status: "active",
+    });
+  } catch (err) {
+    console.error("logFirmFundingStatusAlert failed:", err);
   }
 }
 
@@ -148,6 +194,12 @@ export async function recomputeFirmFundingStatus(firmId, queryClient) {
 
     const firm = await base44.entities.Firm.get(firmId);
     if (firm && !firm.deleted_at && (firm.funding_status || null) !== (aggregate || null)) {
+      await logFirmFundingStatusAlert({
+        firmId,
+        firmName: firm.name || "",
+        prevStatus: firm.funding_status,
+        newStatus: aggregate,
+      });
       await base44.entities.Firm.update(firmId, {
         funding_status: aggregate || undefined,
       });
