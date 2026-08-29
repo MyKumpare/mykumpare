@@ -13,7 +13,13 @@ import { useViewMode } from "@/hooks/useViewMode";
 import { useAuth } from "@/lib/AuthContext";
 import BulkScoringDialog from "@/components/templates/BulkScoringDialog";
 import EntityFilterSidebar from "@/components/common/EntityFilterSidebar";
-import { productFilterGroups } from "./productFilterGroups";
+import {
+  buildInitialProductFilterValues,
+  buildDynamicProductGroups,
+  computeProductFilterCounts,
+  hasActiveProductFilters,
+  applyProductSidebarFilters,
+} from "./productSidebarFilter";
 import { SlidersHorizontal } from "lucide-react";
 
 const PRODUCT_GROUP_TYPES = ["Investment Manager"];
@@ -34,30 +40,10 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [showBulkScoring, setShowBulkScoring] = useState(false);
   const [showFilters, setShowFilters] = useState(true);
-  const [filterValues, setFilterValues] = useState({
-    product_type: new Set(),
-    product_status: new Set(),
-    funding_status: new Set(),
-    product_availability_status: new Set(),
-    asset_class: "",
-    geography: "",
-  });
+  const [filterValues, setFilterValues] = useState(() => buildInitialProductFilterValues());
   const handleFilterChange = (key, value) => setFilterValues((prev) => ({ ...prev, [key]: value }));
-  const clearAllFilters = () => setFilterValues({
-    product_type: new Set(),
-    product_status: new Set(),
-    funding_status: new Set(),
-    product_availability_status: new Set(),
-    asset_class: "",
-    geography: "",
-  });
-  const hasActiveSidebarFilters =
-    filterValues.product_type.size > 0 ||
-    filterValues.product_status.size > 0 ||
-    filterValues.funding_status.size > 0 ||
-    filterValues.product_availability_status.size > 0 ||
-    (filterValues.asset_class || "").trim() ||
-    (filterValues.geography || "").trim();
+  const clearAllFilters = () => setFilterValues(buildInitialProductFilterValues());
+  const hasActiveSidebarFilters = hasActiveProductFilters(filterValues);
 
   useEffect(() => {
     if (forceExpanded !== undefined) setExpanded(forceExpanded);
@@ -106,38 +92,18 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
         return name.includes(searchLower) || assetClass.includes(searchLower) || firm.includes(searchLower);
       });
     }
-    if (filterValues.product_type.size > 0)
-      result = result.filter((p) => filterValues.product_type.has(p.product_type));
-    if (filterValues.product_status.size > 0)
-      result = result.filter((p) => filterValues.product_status.has(p.product_status || "Not Reviewed"));
-    if (filterValues.funding_status.size > 0)
-      result = result.filter((p) => filterValues.funding_status.has(p.funding_status || ""));
-    if (filterValues.product_availability_status.size > 0)
-      result = result.filter((p) => filterValues.product_availability_status.has(p.product_availability_status || "Active"));
-    if ((filterValues.asset_class || "").trim()) {
-      const q = filterValues.asset_class.toLowerCase().trim();
-      result = result.filter((p) => (p.asset_class || "").toLowerCase().includes(q));
-    }
-    if ((filterValues.geography || "").trim()) {
-      const q = filterValues.geography.toLowerCase().trim();
-      result = result.filter((p) => (p.geography || "").toLowerCase().includes(q));
-    }
+    result = applyProductSidebarFilters(result, filterValues);
     return result;
   }, [products, searchLower, firmMap, filterValues]);
 
-  const filterCounts = React.useMemo(() => {
-    const productType = {}, productStatus = {}, fundingStatus = {}, availability = {};
-    for (const p of products) {
-      if (p.deleted_at) continue;
-      if (p.product_type) productType[p.product_type] = (productType[p.product_type] || 0) + 1;
-      const ps = p.product_status || "Not Reviewed";
-      productStatus[ps] = (productStatus[ps] || 0) + 1;
-      if (p.funding_status) fundingStatus[p.funding_status] = (fundingStatus[p.funding_status] || 0) + 1;
-      const av = p.product_availability_status || "Active";
-      availability[av] = (availability[av] || 0) + 1;
-    }
-    return { product_type: productType, product_status: productStatus, funding_status: fundingStatus, product_availability_status: availability };
-  }, [products]);
+  const filterCounts = React.useMemo(() => computeProductFilterCounts(products), [products]);
+
+  // Group configs with dynamic options (firm, eVestment universe, benchmark)
+  // populated from the loaded product data.
+  const dynamicFilterGroups = React.useMemo(
+    () => buildDynamicProductGroups(products),
+    [products]
+  );
 
   const selectedProducts = filteredProducts.filter((p) => selectedIds.has(p.id));
 
@@ -330,7 +296,7 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
               <div className="w-full md:w-56 flex-shrink-0">
                 <EntityFilterSidebar
                   sectionKey="products"
-                  groups={productFilterGroups}
+                  groups={dynamicFilterGroups}
                   values={filterValues}
                   onChange={handleFilterChange}
                   counts={filterCounts}
