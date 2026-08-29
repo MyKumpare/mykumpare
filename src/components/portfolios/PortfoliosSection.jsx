@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, LayoutList, ChevronDown, ChevronRight, BarChart3, SlidersHorizontal, AlertTriangle, DollarSign } from "lucide-react";
+import { Plus, LayoutList, ChevronDown, ChevronRight, BarChart3, SlidersHorizontal, AlertTriangle, DollarSign, RefreshCw } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
 import SectionSearch from "@/components/common/SectionSearch";
@@ -11,10 +11,15 @@ import SectionExpandCollapse from "@/components/common/SectionExpandCollapse";
 import { useViewMode } from "@/hooks/useViewMode";
 import EntityFilterSidebar from "@/components/common/EntityFilterSidebar";
 import { portfolioFilterGroups } from "./portfolioFilterGroups";
+import { reconcilePortfolioAllocationHistory, hasOutstandingReconciliation } from "./reconcileAllocations";
+import { useToast } from "@/components/ui/use-toast";
 
 const ADVISOR_TYPES = ["Investment Manager"];
 
 export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddPortfolio, forceExpanded }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [reconcilingAll, setReconcilingAll] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState({});
   const [expandedAdvisorTypes, setExpandedAdvisorTypes] = useState({});
@@ -93,6 +98,42 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
     if (abs >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
     if (abs >= 1e3) return `$${(n / 1e3).toFixed(0)}K`;
     return `$${Math.round(n).toLocaleString()}`;
+  };
+
+  // Portfolios with outstanding (un-cascaded) allocation records — legacy
+  // records that need reconciliation so cash flows cascade through the IM.
+  const portfoliosToReconcile = useMemo(
+    () => portfolios.filter((p) => !p.deleted_at && hasOutstandingReconciliation(p)),
+    [portfolios]
+  );
+
+  // Bulk reconcile: cascade all un-cascaded portfolio-level records across
+  // every portfolio that has an advisor, in one click.
+  const handleReconcileAll = async () => {
+    if (portfoliosToReconcile.length === 0) return;
+    setReconcilingAll(true);
+    let successCount = 0;
+    let totalRecords = 0;
+    try {
+      for (const p of portfoliosToReconcile) {
+        const result = reconcilePortfolioAllocationHistory(p);
+        if (!result || result.reconciledCount === 0) continue;
+        await base44.entities.Portfolio.update(p.id, {
+          allocation_history: result.newData,
+        });
+        successCount++;
+        totalRecords += result.reconciledCount;
+      }
+      queryClient.invalidateQueries({ queryKey: ["portfolios"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolios-all"] });
+      toast({
+        title: `Reconciled ${totalRecords} record${totalRecords !== 1 ? "s" : ""} across ${successCount} portfolio${successCount !== 1 ? "s" : ""}`,
+      });
+    } catch (err) {
+      toast({ title: "Reconciliation failed for some portfolios", variant: "destructive" });
+    } finally {
+      setReconcilingAll(false);
+    }
   };
 
   // Derive unique filter options from the loaded portfolios
@@ -276,6 +317,18 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
         </button>
         <div className="flex items-center gap-2">
           <ViewModeToggle value={viewMode} onChange={(m) => { setViewMode(m); setExpanded(true); }} />
+          {portfoliosToReconcile.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50 gap-1 text-xs"
+              onClick={handleReconcileAll}
+              disabled={reconcilingAll}
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${reconcilingAll ? "animate-spin" : ""}`} />
+              {reconcilingAll ? "Reconciling..." : `Reconcile All (${portfoliosToReconcile.length})`}
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"

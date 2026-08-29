@@ -26,10 +26,12 @@ import {
   CheckCircle2,
   AlertTriangle,
   ArrowRight,
+  Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 import AllocationWizardDialog from "./AllocationWizardDialog";
+import { reconcilePortfolioAllocationHistory } from "./reconcileAllocations";
 
 const genId = () =>
   typeof crypto !== "undefined" && crypto.randomUUID
@@ -775,73 +777,20 @@ export default function PortfolioAllocationHistoryTab({ portfolio }) {
   };
 
   // Reconcile all portfolio-level records that don't have cascaded downstream
-  // records. For each un-cascaded portfolio record, creates a linked advisor
-  // record (full amount) and, for multi-manager products, equally distributes
-  // across sub-managers. Existing linked records are preserved.
+  // records. Uses the shared reconciliation helper so the same logic powers
+  // the bulk "Reconcile All" action on the portfolio list page.
   const handleReconcileAll = async () => {
-    const hasAdvisor = !!(portfolio.advisor_type && portfolio.advisor_firm_id);
-    if (!hasAdvisor) return;
+    const result = reconcilePortfolioAllocationHistory(portfolio);
+    if (!result) return; // no advisor to cascade to
 
-    const isMultiManager = portfolio.advisor_product_type === "Multi-Manager Product";
-    const subManagers = portfolio.sub_managers || [];
-
-    // Find portfolio-level records without linked advisor records
-    const portfolioRecords = allocData.filter(
-      (a) => a.level === "portfolio" && !a.source_record_id
-    );
-    const unCascaded = portfolioRecords.filter(
-      (r) => !allocData.some((a) => a.source_record_id === r.id && a.level === "advisor")
-    );
-
-    if (unCascaded.length === 0) {
+    if (result.reconciledCount === 0) {
       toast({ title: "All records are already cascaded" });
       return;
     }
 
-    let newData = [...allocData];
-    unCascaded.forEach((rec) => {
-      // Create linked advisor record (full amount cascades through IM)
-      newData.push({
-        id: genId(),
-        activity_date: rec.activity_date,
-        activity_type: rec.activity_type,
-        amount: rec.amount,
-        notes: rec.notes,
-        document: rec.document,
-        level: "advisor",
-        reference_id: portfolio.advisor_firm_id,
-        reference_name: `IM: ${portfolio.advisor_firm_name || ""}`,
-        source_record_id: rec.id,
-      });
-      // For multi-manager, equally distribute across sub-managers
-      if (isMultiManager && subManagers.length > 0) {
-        const per = rec.amount / subManagers.length;
-        const rounded = Math.floor(per * 100) / 100;
-        subManagers.forEach((sm, i) => {
-          let amt = rounded;
-          if (i === subManagers.length - 1) {
-            const allocated = rounded * (subManagers.length - 1);
-            amt = Math.round((rec.amount - allocated) * 100) / 100;
-          }
-          newData.push({
-            id: genId(),
-            activity_date: rec.activity_date,
-            activity_type: rec.activity_type,
-            amount: amt,
-            notes: rec.notes,
-            document: rec.document,
-            level: "sub_manager",
-            reference_id: sm.product_id,
-            reference_name: `Sub-Manager: ${sm.product_name || ""}`,
-            source_record_id: rec.id,
-          });
-        });
-      }
-    });
-
-    await saveAlloc(newData);
+    await saveAlloc(result.newData);
     toast({
-      title: `Reconciled ${unCascaded.length} record${unCascaded.length !== 1 ? "s" : ""} — cash flows cascaded to IM${isMultiManager && subManagers.length > 0 ? " and sub-managers" : ""}`,
+      title: `Reconciled ${result.reconciledCount} record${result.reconciledCount !== 1 ? "s" : ""} — cash flows cascaded to IM${result.isMultiManager && result.subManagerCount > 0 ? " and sub-managers" : ""}`,
     });
   };
 
@@ -851,6 +800,63 @@ export default function PortfolioAllocationHistoryTab({ portfolio }) {
     setSelectedLevel(opt.value);
     setSelectedRefId(opt.refId || "");
     setSelectedIds(new Set());
+  };
+
+  // Export the full allocation history (all levels) to CSV for external analysis
+  const handleExportCsv = () => {
+    const rows = [...allocData].sort((a, b) =>
+      (a.activity_date || "").localeCompare(b.activity_date || "")
+    );
+    if (rows.length === 0) return;
+
+    const header = [
+      "Activity Date",
+      "Activity Type",
+      "Amount",
+      "Level",
+      "Reference Name",
+      "Notes",
+      "Document Name",
+      "Document URL",
+    ];
+
+    const escapeCsv = (val) => {
+      const s = val == null ? "" : String(val);
+      if (s.includes(",") || s.includes('"') || s.includes("\n")) {
+        return `"${s.replace(/"/g, '""')}"`;
+      }
+      return s;
+    };
+
+    const csvLines = [header.join(",")];
+    rows.forEach((r) => {
+      csvLines.push(
+        [
+          r.activity_date || "",
+          r.activity_type || "",
+          r.amount != null ? Number(r.amount).toFixed(2) : "",
+          r.level || "",
+          r.reference_name || "",
+          stripHtml(r.notes || ""),
+          r.document?.name || "",
+          r.document?.file_url || "",
+        ]
+          .map(escapeCsv)
+          .join(",")
+      );
+    });
+
+    const csv = csvLines.join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    const safeName = (portfolio.portfolio_name || "portfolio").replace(/[^a-zA-Z0-9_-]/g, "_");
+    link.download = `${safeName}_allocation_history.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const selectedLevelIdx = levelOptions.findIndex(
@@ -986,6 +992,17 @@ export default function PortfolioAllocationHistoryTab({ portfolio }) {
         >
           <Plus className="w-3.5 h-3.5" />
           Add Record
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-9 gap-1.5 text-xs whitespace-nowrap"
+          onClick={handleExportCsv}
+          disabled={allocData.length === 0}
+        >
+          <Download className="w-3.5 h-3.5" />
+          Export to CSV
         </Button>
       </div>
 
