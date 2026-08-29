@@ -13,6 +13,7 @@ import {
 import { useAuth } from "@/lib/AuthContext";
 import ExposureHeatmap from "@/components/executive/ExposureHeatmap";
 import FundingBreakdownCharts from "@/components/executive/FundingBreakdownCharts";
+import TopFirmsAumTrendChart from "@/components/executive/TopFirmsAumTrendChart";
 
 const FIRM_TYPES = [
   "Investment Manager",
@@ -579,6 +580,9 @@ export default function ExecutiveDashboard() {
                 )}
               </ChartCard>
             </div>
+
+            {/* Top Firms AUM Growth Trends */}
+            <TopFirmsAumTrendChart firms={scopedFirms} />
 
             {/* Interactive funding breakdown — market value + funding counts */}
             <FundingBreakdownCharts firms={scopedFirms} />
