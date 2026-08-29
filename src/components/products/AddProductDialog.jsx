@@ -42,6 +42,7 @@ import AuditHistoryDialog from "../shared/AuditHistoryDialog";
 import { useTabPreferences } from "../common/useTabPreferences";
 import TabCustomizer from "../common/TabCustomizer";
 import { useAuth } from "@/lib/AuthContext";
+import SummaryExportButton from "../reports/SummaryExportButton";
 
 // Map product type -> firm type(s) that can be associated
 const PRODUCT_TYPE_TO_FIRM_TYPE = {
@@ -515,6 +516,9 @@ export default function AddProductDialog({
               {isAddMode ? "Add Product" : "Product Details"}
             </DialogTitle>
             <div className="flex items-center gap-1">
+              {!isAddMode && !isEditing && editingProduct && (
+                <SummaryExportButton entityType="Product" record={editingProduct} />
+              )}
               {!isAddMode && (
                 <Button
                   variant="ghost"

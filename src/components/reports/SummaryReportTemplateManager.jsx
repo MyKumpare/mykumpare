@@ -7,7 +7,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Plus, Pencil, Trash2, FileDown, Search, X, Loader2, LayoutTemplate } from "lucide-react";
 import { SUMMARY_ENTITY_TYPES, recordDisplayName } from "./summaryReportTemplateConfig";
-import { generateSummaryPdf } from "./summaryReportPdf";
+import { exportRecordSummary } from "./summaryReportExport";
 import SummaryReportTemplateDesigner from "./SummaryReportTemplateDesigner";
 
 const ENTITY_LABELS = { Firm: "Firm", Product: "Product", Portfolio: "Portfolio", Contact: "Contact" };
@@ -164,31 +164,7 @@ export default function SummaryReportTemplateManager() {
   const runGenerate = async (record) => {
     const template = picker?.template;
     if (!template || !record) return;
-    // Fetch related data for derived fields
-    let ctx = {};
-    try {
-      if (template.entity_type === "Firm") {
-        const [products, contacts] = await Promise.all([
-          base44.entities.Product.filter({ firm_id: record.id }, "-updated_date", 50).catch(() => []),
-          base44.entities.Contact.filter({ firm_ids: record.id }, "-updated_date", 50).catch(() => []),
-        ]);
-        ctx = { products: products || [], contacts: contacts || [] };
-      } else if (template.entity_type === "Product") {
-        const team = record.investment_team || [];
-        ctx = { team };
-      } else if (template.entity_type === "Portfolio") {
-        const constituents = record.constituents || record.lineup || [];
-        ctx = { constituents };
-      } else if (template.entity_type === "Contact") {
-        let firmName = "—";
-        if (record.firm_ids?.length) {
-          const firm = await base44.entities.Firm.get(record.firm_ids[0]).catch(() => null);
-          if (firm) firmName = firm.name;
-        }
-        ctx = { firmName };
-      }
-    } catch { /* ignore */ }
-    await generateSummaryPdf(template, record, ctx);
+    await exportRecordSummary(template, record);
   };
 
   return (

@@ -57,6 +57,7 @@ import ErrorBoundary from "../common/ErrorBoundary";
 import AuditHistoryDialog from "../shared/AuditHistoryDialog";
 import { useTabPreferences } from "../common/useTabPreferences";
 import TabCustomizer from "../common/TabCustomizer";
+import SummaryExportButton from "../reports/SummaryExportButton";
 
 function getCountryCodeFromCountryName(countryName) {
   if (!countryName) return "";
@@ -1089,6 +1090,9 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               </DialogTitle>
             )}
             <div className="flex items-center gap-1">
+              {!isAddMode && !isEditing && editingFirm && (
+                <SummaryExportButton entityType="Firm" record={editingFirm} />
+              )}
               {!isAddMode && (
                 <Button
                   variant="ghost"
