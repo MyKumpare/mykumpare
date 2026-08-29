@@ -1,0 +1,156 @@
+{
+  "name": "FirmAumAlert",
+  "type": "object",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "ID of the firm (tenant) that owns this alert. Set on creation to the creator's linked_firm_id; drives tenant isolation via RLS."
+    },
+    "firm_id": {
+      "type": "string",
+      "description": "ID of the firm whose AUM dropped below its configured threshold."
+    },
+    "firm_name": {
+      "type": "string",
+      "description": "Name of the firm (denormalized for display)."
+    },
+    "aum_value": {
+      "type": "number",
+      "description": "The firm's latest month-end AUM that fell below the configured threshold."
+    },
+    "threshold": {
+      "type": "number",
+      "description": "The per-firm threshold value that was in effect when this alert was raised (denormalized so historical alerts remain accurate if the threshold later changes)."
+    },
+    "month_end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "The month-end date of the AUM data point that triggered this alert (YYYY-MM-DD)."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "acknowledged",
+        "resolved"
+      ],
+      "default": "active",
+      "description": "Lifecycle state of the alert. 'active' = newly raised and awaiting attention; 'acknowledged' = user has seen and noted it; 'resolved' = the firm's AUM recovered above threshold, or the user manually resolved it."
+    },
+    "acknowledged_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the user acknowledged this alert."
+    },
+    "resolved_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when this alert was resolved."
+    },
+    "created_by_id": {
+      "type": "string",
+      "description": "ID of the user who created this alert (auto-set by platform)."
+    }
+  },
+  "required": [
+    "firm_id",
+    "aum_value",
+    "threshold"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_edit": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_delete": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

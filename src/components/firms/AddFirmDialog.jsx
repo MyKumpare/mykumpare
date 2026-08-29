@@ -36,6 +36,7 @@ import FirmDueDiligenceTab from "./FirmDueDiligenceTab";
 import LegalComplianceTab from "./LegalComplianceTab";
 import FirmSourcingTab from "./FirmSourcingTab";
 import FirmFundingSummaryCard from "./FirmFundingSummaryCard";
+import FirmAumThresholdPanel from "./FirmAumThresholdPanel";
 import FirmContactPhotoGallery from "./FirmContactPhotoGallery";
 import FirmContactRelationshipMap from "./FirmContactRelationshipMap";
 import { GEOGRAPHIC_REGIONS, deriveGeographicRegionFromAddresses } from "./geographicRegions";
@@ -543,6 +544,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     ...(!hideProductTabs ? [{ key: "ownership", label: "Ownership" }] : []),
     { key: "orgchart", label: "Org Chart" },
     ...(!hideProductTabs ? [{ key: "aum-history", label: "AUM History" }] : []),
+    ...(!hideProductTabs ? [{ key: "aum-alerts", label: "AUM Alerts" }] : []),
     { key: "news", label: "News" },
     { key: "board-meetings", label: "Board Meetings" },
     { key: "rfp-rfi", label: "RFP/RFI Search" },
@@ -1817,6 +1819,16 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               ) : (
                 <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
                   Save the firm first to add AUM history
+                </div>
+              )}
+              </TabsContent>
+
+              <TabsContent value="aum-alerts" className="space-y-3">
+              {editingFirm ? (
+                <FirmAumThresholdPanel firmId={editingFirm.id} firmName={editingFirm.name} />
+              ) : (
+                <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
+                  Save the firm first to configure AUM alerts
                 </div>
               )}
               </TabsContent>
