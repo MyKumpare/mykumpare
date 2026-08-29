@@ -11,6 +11,7 @@ import {
   Globe, TrendingUp, Layers, PieChart as PieIcon, BarChart3, Loader2,
 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
+import ExposureHeatmap from "@/components/executive/ExposureHeatmap";
 
 const FIRM_TYPES = [
   "Investment Manager",
@@ -577,6 +578,9 @@ export default function ExecutiveDashboard() {
                 )}
               </ChartCard>
             </div>
+
+            {/* Exposure Heatmap */}
+            <ExposureHeatmap firms={scopedFirms} />
 
             {/* Firm Type Summary Table */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
