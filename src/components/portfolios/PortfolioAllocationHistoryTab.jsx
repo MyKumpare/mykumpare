@@ -23,6 +23,9 @@ import {
   DollarSign,
   X,
   Link2,
+  CheckCircle2,
+  AlertTriangle,
+  ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
@@ -674,8 +677,11 @@ export default function PortfolioAllocationHistoryTab({ portfolio }) {
   };
 
   // Save handler for the cascading allocation wizard (portfolio-level records).
-  // Creates/updates records at portfolio, advisor, and sub-manager levels in
-  // a single allocation_history write, linked via source_record_id.
+  // EVERY cash flow cascades through the IM (amount forced = portfolio amount)
+  // and, for multi-manager products, down to sub-managers. All levels are
+  // created/updated in a single allocation_history write, linked via
+  // source_record_id. When editing, old linked records are replaced so legacy
+  // records that were added without cascading get reconciled on save.
   const handleWizardSave = async (data) => {
     const portfolioRecordId = editingRecord?.id || genId();
     const baseFields = {
@@ -715,69 +721,128 @@ export default function PortfolioAllocationHistoryTab({ portfolio }) {
       reference_name: "Portfolio Total",
     };
 
+    // Build the set of downstream records that SHOULD exist for this cascade
+    const downstreamRecords = [];
+    // IM record — always created (amount forced = portfolio amount)
+    if (data.advisor_amount != null && data.advisor_amount > 0) {
+      downstreamRecords.push({
+        id: genId(),
+        ...baseFields,
+        document: documentData,
+        amount: data.advisor_amount,
+        level: "advisor",
+        reference_id: portfolio.advisor_firm_id,
+        reference_name: `IM: ${portfolio.advisor_firm_name || ""}`,
+        source_record_id: portfolioRecordId,
+      });
+    }
+    // Sub-manager records (multi-manager only)
+    if (data.sub_manager_amounts) {
+      Object.entries(data.sub_manager_amounts).forEach(([productId, amtStr]) => {
+        const amt = parseFloat(amtStr);
+        if (amt > 0) {
+          const sm = (portfolio.sub_managers || []).find((s) => s.product_id === productId);
+          downstreamRecords.push({
+            id: genId(),
+            ...baseFields,
+            document: documentData,
+            amount: amt,
+            level: "sub_manager",
+            reference_id: productId,
+            reference_name: `Sub-Manager: ${sm?.product_name || ""}`,
+            source_record_id: portfolioRecordId,
+          });
+        }
+      });
+    }
+
     let newData;
     if (editingRecord) {
-      // Update portfolio record + linked downstream records (or remove if amount is 0)
-      newData = allocData
-        .map((a) => {
-          if (a.id === editingRecord.id) return portfolioRecord;
-          if (a.source_record_id === editingRecord.id) {
-            if (a.level === "advisor") {
-              if (data.advisor_amount != null && data.advisor_amount > 0) {
-                return { ...a, ...baseFields, document: documentData, amount: data.advisor_amount };
-              }
-              return null; // remove downstream advisor record
-            }
-            if (a.level === "sub_manager") {
-              const smAmt = parseFloat(data.sub_manager_amounts?.[a.reference_id]);
-              if (smAmt > 0) {
-                return { ...a, ...baseFields, document: documentData, amount: smAmt };
-              }
-              return null; // remove downstream sub-manager record
-            }
-          }
-          return a;
-        })
-        .filter(Boolean);
+      // Remove the old portfolio record + all its old linked downstream records,
+      // then add the updated portfolio record + fresh downstream records.
+      // This reconciles legacy records that were added without cascading.
+      newData = allocData.filter(
+        (a) => a.id !== editingRecord.id && a.source_record_id !== editingRecord.id
+      );
+      newData = [...newData, portfolioRecord, ...downstreamRecords];
     } else {
-      newData = [...allocData, portfolioRecord];
-      // Add advisor record
-      if (data.advisor_amount != null && data.advisor_amount > 0) {
-        newData.push({
-          id: genId(),
-          ...baseFields,
-          document: documentData,
-          amount: data.advisor_amount,
-          level: "advisor",
-          reference_id: portfolio.advisor_firm_id,
-          reference_name: `IM: ${portfolio.advisor_firm_name || ""}`,
-          source_record_id: portfolioRecordId,
-        });
-      }
-      // Add sub-manager records
-      if (data.sub_manager_amounts) {
-        Object.entries(data.sub_manager_amounts).forEach(([productId, amtStr]) => {
-          const amt = parseFloat(amtStr);
-          if (amt > 0) {
-            const sm = (portfolio.sub_managers || []).find((s) => s.product_id === productId);
-            newData.push({
-              id: genId(),
-              ...baseFields,
-              document: documentData,
-              amount: amt,
-              level: "sub_manager",
-              reference_id: productId,
-              reference_name: `Sub-Manager: ${sm?.product_name || ""}`,
-              source_record_id: portfolioRecordId,
-            });
-          }
-        });
-      }
+      newData = [...allocData, portfolioRecord, ...downstreamRecords];
     }
 
     await saveAlloc(newData);
     setWizardOpen(false);
     setEditingRecord(null);
+  };
+
+  // Reconcile all portfolio-level records that don't have cascaded downstream
+  // records. For each un-cascaded portfolio record, creates a linked advisor
+  // record (full amount) and, for multi-manager products, equally distributes
+  // across sub-managers. Existing linked records are preserved.
+  const handleReconcileAll = async () => {
+    const hasAdvisor = !!(portfolio.advisor_type && portfolio.advisor_firm_id);
+    if (!hasAdvisor) return;
+
+    const isMultiManager = portfolio.advisor_product_type === "Multi-Manager Product";
+    const subManagers = portfolio.sub_managers || [];
+
+    // Find portfolio-level records without linked advisor records
+    const portfolioRecords = allocData.filter(
+      (a) => a.level === "portfolio" && !a.source_record_id
+    );
+    const unCascaded = portfolioRecords.filter(
+      (r) => !allocData.some((a) => a.source_record_id === r.id && a.level === "advisor")
+    );
+
+    if (unCascaded.length === 0) {
+      toast({ title: "All records are already cascaded" });
+      return;
+    }
+
+    let newData = [...allocData];
+    unCascaded.forEach((rec) => {
+      // Create linked advisor record (full amount cascades through IM)
+      newData.push({
+        id: genId(),
+        activity_date: rec.activity_date,
+        activity_type: rec.activity_type,
+        amount: rec.amount,
+        notes: rec.notes,
+        document: rec.document,
+        level: "advisor",
+        reference_id: portfolio.advisor_firm_id,
+        reference_name: `IM: ${portfolio.advisor_firm_name || ""}`,
+        source_record_id: rec.id,
+      });
+      // For multi-manager, equally distribute across sub-managers
+      if (isMultiManager && subManagers.length > 0) {
+        const per = rec.amount / subManagers.length;
+        const rounded = Math.floor(per * 100) / 100;
+        subManagers.forEach((sm, i) => {
+          let amt = rounded;
+          if (i === subManagers.length - 1) {
+            const allocated = rounded * (subManagers.length - 1);
+            amt = Math.round((rec.amount - allocated) * 100) / 100;
+          }
+          newData.push({
+            id: genId(),
+            activity_date: rec.activity_date,
+            activity_type: rec.activity_type,
+            amount: amt,
+            notes: rec.notes,
+            document: rec.document,
+            level: "sub_manager",
+            reference_id: sm.product_id,
+            reference_name: `Sub-Manager: ${sm.product_name || ""}`,
+            source_record_id: rec.id,
+          });
+        });
+      }
+    });
+
+    await saveAlloc(newData);
+    toast({
+      title: `Reconciled ${unCascaded.length} record${unCascaded.length !== 1 ? "s" : ""} — cash flows cascaded to IM${isMultiManager && subManagers.length > 0 ? " and sub-managers" : ""}`,
+    });
   };
 
   const handleLevelChange = (e) => {
@@ -792,8 +857,108 @@ export default function PortfolioAllocationHistoryTab({ portfolio }) {
     (o) => o.value === selectedLevel && o.refId === (selectedRefId || "")
   );
 
+  // Reconciliation check: do all levels match?
+  const reconciliation = useMemo(() => {
+    const hasAdvisor = !!(portfolio.advisor_type && portfolio.advisor_firm_id);
+    const isMultiManager = portfolio.advisor_product_type === "Multi-Manager Product";
+    const subManagers = portfolio.sub_managers || [];
+    const hasSubManagers = isMultiManager && subManagers.length > 0;
+
+    if (!hasAdvisor) return null;
+
+    const portfolioNet = calculateLevelTotal(allocData, "portfolio");
+    const advisorNet = calculateLevelTotal(allocData, "advisor");
+    const subManagerNet = calculateLevelTotal(allocData, "sub_manager");
+
+    const advisorMatches = portfolioNet === advisorNet;
+    const subManagerMatches = !hasSubManagers || advisorNet === subManagerNet;
+    const allMatch = advisorMatches && subManagerMatches;
+
+    return {
+      hasAdvisor,
+      hasSubManagers,
+      portfolioNet,
+      advisorNet,
+      subManagerNet,
+      advisorMatches,
+      subManagerMatches,
+      allMatch,
+    };
+  }, [allocData, portfolio]);
+
   return (
     <div className="space-y-3 py-2">
+      {/* Reconciliation indicator — shows whether cash flows cascade correctly */}
+      {reconciliation && (
+        <div
+          className={cn(
+            "rounded-lg border p-2.5 text-xs",
+            reconciliation.allMatch
+              ? "border-emerald-200 bg-emerald-50"
+              : "border-amber-200 bg-amber-50"
+          )}
+        >
+          <div className="flex items-center gap-2 mb-1.5">
+            {reconciliation.allMatch ? (
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+            ) : (
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+            )}
+            <span className="font-semibold text-gray-800">
+              {reconciliation.allMatch
+                ? "All levels reconciled"
+                : "Levels out of balance — cash flows must cascade through the IM" +
+                  (reconciliation.hasSubManagers ? " and sub-managers" : "")}
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-gray-600">
+            <span>
+              Portfolio:{" "}
+              <strong className={cn(!reconciliation.advisorMatches && "text-amber-700")}>
+                {fmtCurrency(reconciliation.portfolioNet)}
+              </strong>
+            </span>
+            <span>→</span>
+            <span>
+              IM:{" "}
+              <strong className={cn(!reconciliation.advisorMatches && "text-amber-700")}>
+                {fmtCurrency(reconciliation.advisorNet)}
+              </strong>
+            </span>
+            {reconciliation.hasSubManagers && (
+              <>
+                <span>→</span>
+                <span>
+                  Sub-Managers:{" "}
+                  <strong className={cn(!reconciliation.subManagerMatches && "text-amber-700")}>
+                    {fmtCurrency(reconciliation.subManagerNet)}
+                  </strong>
+                </span>
+              </>
+            )}
+          </div>
+          {!reconciliation.allMatch && (
+            <div className="flex items-center justify-between mt-1.5">
+              <p className="text-[11px] text-amber-700 flex-1">
+                Some portfolio cash flows haven't cascaded to the IM
+                {reconciliation.hasSubManagers ? " and sub-managers" : ""}.
+                Reconcile now to auto-cascade all records.
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                className="h-7 ml-2 text-[11px] gap-1 bg-amber-600 hover:bg-amber-700 text-white whitespace-nowrap"
+                onClick={handleReconcileAll}
+                disabled={saving}
+              >
+                <ArrowRight className="w-3 h-3" />
+                Reconcile Now
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Level selector + Add button */}
       <div className="flex items-end gap-2">
         <div className="flex-1">
