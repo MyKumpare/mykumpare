@@ -8,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import {
   ChevronDown, Check, Plus, Play, CheckCircle2, Circle,
   Clock, BarChart3, Calendar, X, ChevronRight, Lock,
-  ShieldCheck, ShieldX, ShieldAlert, UserCheck,
+  ShieldCheck, ShieldX, ShieldAlert, UserCheck, ListChecks,
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SubStageItem from "./SubStageItem";
@@ -16,6 +16,7 @@ import StageNotesEditor from "./StageNotesEditor";
 import DocumentationChecklistTab from "./DocumentationChecklistTab";
 import ApprovalProcessTab from "./ApprovalProcessTab";
 import ProcessLogicGate from "./ProcessLogicGate";
+import ProcessProgressTracker from "./ProcessProgressTracker";
 import DatePicker from "@/components/ui/date-picker";
 import AddTemplateDialog from "@/components/templates/AddTemplateDialog";
 import { format } from "date-fns";
@@ -53,6 +54,7 @@ export default function DueDiligenceTemplateFlow({
   const [search, setSearch] = useState("");
   const [addTemplateOpen, setAddTemplateOpen] = useState(false);
   const [showProgressModal, setShowProgressModal] = useState(false);
+  const [showTracker, setShowTracker] = useState(false);
   const [expandedStages, setExpandedStages] = useState({});
   const prevApproverRef = useRef(undefined); // tracks previous approver ID to skip mount
 
@@ -301,14 +303,27 @@ export default function DueDiligenceTemplateFlow({
       <div className="flex items-center justify-between">
         <Label className="text-xs font-medium text-gray-700">Due Diligence Template</Label>
         {stagesList.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setShowProgressModal(true)}
-            className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700 font-medium"
-          >
-            <BarChart3 className="w-3.5 h-3.5" />
-            Progress ({progressPct}%)
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setShowTracker((v) => !v)}
+              className={cn(
+                "flex items-center gap-1 text-xs font-medium",
+                showTracker ? "text-indigo-700" : "text-indigo-600 hover:text-indigo-700"
+              )}
+            >
+              <ListChecks className="w-3.5 h-3.5" />
+              Tracker
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowProgressModal(true)}
+              className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+            >
+              <BarChart3 className="w-3.5 h-3.5" />
+              Progress ({progressPct}%)
+            </button>
+          </div>
         )}
       </div>
 
@@ -383,6 +398,16 @@ export default function DueDiligenceTemplateFlow({
               <div className="h-full bg-indigo-600 rounded-full transition-all duration-300" style={{ width: `${progressPct}%` }} />
             </div>
           </div>
+
+          {/* Visual Progress Tracker — collapsible panel */}
+          {showTracker && (
+            <ProcessProgressTracker
+              stages={stagesList}
+              docChecklist={docChecklist}
+              approvalProcess={approvalProcess}
+              processLogic={processLogic}
+            />
+          )}
 
           {/* Start button */}
           {!isStarted && !allComplete && (
