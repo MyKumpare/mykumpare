@@ -450,7 +450,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
       } else {
         setAllocatorId(preselectedAllocatorId || "");
         setPortfolioName("");
-        setInceptionDate(null);
+        setInceptionDate(new Date());
         setTerminationDate(null);
         setFundingStatus("Active");
         setInitialAllocationAmount("");
