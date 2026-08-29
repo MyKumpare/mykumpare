@@ -87,10 +87,25 @@ export default function FirmPortfoliosTab({
 
   const { data: portfolios = [], isLoading } = useQuery({
     queryKey: advisorMode ? ["portfolios-advisor", firmId] : ["portfolios", firmId],
-    queryFn: () =>
-      advisorMode
-        ? base44.entities.Portfolio.filter({ advisor_firm_id: firmId })
-        : base44.entities.Portfolio.filter({ firm_id: firmId }),
+    queryFn: async () => {
+      if (advisorMode) {
+        return base44.entities.Portfolio.filter({ advisor_firm_id: firmId });
+      }
+      // Non-advisor mode: show portfolios where the firm is the allocator OR the advisor
+      const [allocatorPortfolios, advisorPortfolios] = await Promise.all([
+        base44.entities.Portfolio.filter({ firm_id: firmId }),
+        base44.entities.Portfolio.filter({ advisor_firm_id: firmId }),
+      ]);
+      const seen = new Set();
+      const merged = [];
+      for (const p of [...allocatorPortfolios, ...advisorPortfolios]) {
+        if (!seen.has(p.id)) {
+          seen.add(p.id);
+          merged.push(p);
+        }
+      }
+      return merged;
+    },
   });
 
   // Filter by search text and advisor type filter
@@ -122,8 +137,9 @@ export default function FirmPortfoliosTab({
   // advisor-level cash flows (the flows through the advisor); the allocator sees all.
   const portfolioContext = useMemo(() => {
     return filtered.map((p) => {
+      const isAllocator = p.firm_id === firmId;
       let relevantRecords;
-      if (advisorMode) {
+      if (advisorMode || !isAllocator) {
         // Firm is the advisor: show portfolio + advisor level records (cash flows
         // through the advisor), matching the advisor product's view in the product tab.
         relevantRecords = (p.allocation_history || []).filter(
@@ -238,7 +254,8 @@ export default function FirmPortfoliosTab({
           return r.activity_type === "Redemption" ? sum - amt : sum + amt;
         }, 0);
 
-        const roleLabel = advisorMode ? "Advisor" : "Allocator";
+        const isAllocator = p.firm_id === firmId;
+        const roleLabel = (advisorMode || !isAllocator) ? "Advisor" : "Allocator";
 
         return (
           <div

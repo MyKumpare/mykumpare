@@ -58,12 +58,12 @@
         "Funded",
         "Terminated"
       ],
-      "description": "Funding status derived from the product's due diligence completion and portfolio state. Auto-set to 'Funded' when the DD reaches Buy List and the product is in an active portfolio; 'Terminated' when that portfolio is terminated. Only appears once the DD is completed and the product has been added to a portfolio. Users can manually override (sets funding_status_manual=true, which pauses auto-sync)."
+      "description": "Funding status derived from the product's portfolio allocation state. Auto-set to 'Funded' when the product is in an active portfolio (advisor_product_id matches, funding_status 'Active'); 'Terminated' when all referencing portfolios are terminated. Only appears once the product has been added to a portfolio. Users can manually override (sets funding_status_manual=true, which pauses auto-sync)."
     },
     "funding_status_manual": {
       "type": "boolean",
       "default": false,
-      "description": "True when a user has manually overridden funding_status. While true, the auto-sync (DD completion / portfolio state) skips this product so the manual value sticks. Clearing the field resets to auto."
+      "description": "True when a user has manually overridden funding_status. While true, the auto-sync (portfolio allocation state) skips this product so the manual value sticks. Clearing the field resets to auto."
     },
     "inception_date": {
       "type": "string",

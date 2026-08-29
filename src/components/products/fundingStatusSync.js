@@ -53,13 +53,11 @@ export async function logFundingStatusChange({
  * funding_status.
  *
  * Rules (auto-sync):
- * - "Funded"     → DD completed (product_status "Approved", auto-set at Buy List)
- *                  AND an active portfolio references this product
+ * - "Funded"     → an active portfolio references this product
  *                  (advisor_product_id === product.id, funding_status "Active").
- * - "Terminated" → DD completed, no active portfolio, but at least one
- *                  terminated portfolio references this product.
- * - null         → otherwise (funding status only appears once the DD is
- *                  completed and the product has been in a portfolio).
+ * - "Terminated" → no active portfolio, but at least one terminated
+ *                  portfolio references this product.
+ * - null         → otherwise (no portfolio references this product yet).
  *
  * Manual override: if product.funding_status_manual === true, auto-sync is
  * skipped so a user's manual value sticks. Clearing the field (in the product
@@ -81,8 +79,6 @@ export async function syncProductFundingStatus(product, queryClient) {
       return;
     }
 
-    const ddCompleted = fresh.product_status === "Approved";
-
     // Portfolios referencing this product as the advisor product.
     const portfolios = await base44.entities.Portfolio.filter(
       { advisor_product_id: fresh.id },
@@ -94,9 +90,9 @@ export async function syncProductFundingStatus(product, queryClient) {
     const hasTerminated = live.some((p) => p.funding_status === "Terminated");
 
     let nextStatus = null;
-    if (ddCompleted && hasActive) {
+    if (hasActive) {
       nextStatus = "Funded";
-    } else if (ddCompleted && !hasActive && hasTerminated) {
+    } else if (hasTerminated) {
       nextStatus = "Terminated";
     }
 
@@ -108,7 +104,7 @@ export async function syncProductFundingStatus(product, queryClient) {
         prevStatus: fresh.funding_status,
         newStatus: nextStatus,
         source: "auto",
-        note: "Auto-synced from due diligence completion and portfolio state",
+        note: "Auto-synced from portfolio allocation state",
       });
       await base44.entities.Product.update(fresh.id, {
         funding_status: nextStatus || undefined,
