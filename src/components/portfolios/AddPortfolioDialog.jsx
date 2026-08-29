@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, startOfDay } from "date-fns";
 import { CalendarIcon, Plus, X, ChevronDown, Check, Pencil, LayoutList, AlertTriangle, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -256,8 +256,8 @@ function ProductMultiSelect({ options, value = [], onChange, onAddNew, momIncept
             const effectiveMin = momInceptionDate && portfolioInceptionDate
               ? (momInceptionDate > portfolioInceptionDate ? momInceptionDate : portfolioInceptionDate)
               : momInceptionDate || portfolioInceptionDate || undefined;
-            const isBeforeMoM = momInceptionDate && subDate && subDate < momInceptionDate;
-            const isBeforePortfolio = portfolioInceptionDate && subDate && subDate < portfolioInceptionDate;
+            const isBeforeMoM = momInceptionDate && subDate && startOfDay(subDate) < startOfDay(momInceptionDate);
+            const isBeforePortfolio = portfolioInceptionDate && subDate && startOfDay(subDate) < startOfDay(portfolioInceptionDate);
             const subError = isBeforeMoM
               ? "Cannot be before MoM inception date"
               : isBeforePortfolio
@@ -806,8 +806,8 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
     subManagers.every((s) => {
       if (!s.inception_date) return false;
       const d = parseISO(s.inception_date);
-      if (momInceptionDate && d < momInceptionDate) return false;
-      if (inceptionDate && d < inceptionDate) return false;
+      if (momInceptionDate && startOfDay(d) < startOfDay(momInceptionDate)) return false;
+      if (inceptionDate && startOfDay(d) < startOfDay(inceptionDate)) return false;
       return true;
     });
 
