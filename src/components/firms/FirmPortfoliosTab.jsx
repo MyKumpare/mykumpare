@@ -117,20 +117,30 @@ export default function FirmPortfoliosTab({
       .sort((a, b) => (a.portfolio_name || "").localeCompare(b.portfolio_name || ""));
   }, [portfolios, search, advisorFilter]);
 
-  // For each portfolio, gather all allocation history records relevant to this firm
+  // For each portfolio, gather the allocation history records relevant to this firm,
+  // mirroring the Product Portfolios tab: the advisor firm sees portfolio-level +
+  // advisor-level cash flows (the flows through the advisor); the allocator sees all.
   const portfolioContext = useMemo(() => {
     return filtered.map((p) => {
-      // The firm sees ALL allocation records (portfolio, advisor, sub_manager levels)
-      // since the firm is either the allocator or the advisor managing the portfolio.
-      let relevantRecords = [...(p.allocation_history || [])];
+      let relevantRecords;
+      if (advisorMode) {
+        // Firm is the advisor: show portfolio + advisor level records (cash flows
+        // through the advisor), matching the advisor product's view in the product tab.
+        relevantRecords = (p.allocation_history || []).filter(
+          (r) => r.level === "portfolio" || r.level === "advisor"
+        );
+      } else {
+        // Firm is the allocator/owner: sees every level (portfolio, advisor, sub_manager).
+        relevantRecords = [...(p.allocation_history || [])];
+      }
       // Sort by date descending
-      relevantRecords = relevantRecords.sort(
+      relevantRecords = [...relevantRecords].sort(
         (a, b) => (b.activity_date || "").localeCompare(a.activity_date || "")
       );
 
       return { portfolio: p, relevantRecords };
     });
-  }, [filtered]);
+  }, [filtered, advisorMode]);
 
   const toggleExpand = (portfolioId) => {
     setExpandedPortfolios((prev) => ({ ...prev, [portfolioId]: !prev[portfolioId] }));
