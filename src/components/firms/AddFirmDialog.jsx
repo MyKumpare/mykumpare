@@ -35,6 +35,7 @@ import FirmDocumentsTab from "./FirmDocumentsTab";
 import FirmDueDiligenceTab from "./FirmDueDiligenceTab";
 import LegalComplianceTab from "./LegalComplianceTab";
 import FirmSourcingTab from "./FirmSourcingTab";
+import FirmConsultantTab from "./FirmConsultantTab";
 import FirmFundingSummaryCard from "./FirmFundingSummaryCard";
 import FirmAumThresholdPanel from "./FirmAumThresholdPanel";
 import FirmContactPhotoGallery from "./FirmContactPhotoGallery";
@@ -551,6 +552,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     { key: "rfp-rfi", label: "RFP/RFI Search" },
     { key: "conferences", label: "Conferences" },
     { key: "sourcing", label: "Sourcing" },
+    ...(showPortfolioTab ? [{ key: "consultants", label: "Consultants" }] : []),
   ], [hideProductTabs, showPortfolioTab, showAdvisorPortfolioTab]);
 
   const {
@@ -1853,6 +1855,16 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                   onNotesChange={setSourcingNotes}
                   isEditing={activelyEditing}
                 />
+              </TabsContent>
+
+              <TabsContent value="consultants" className="space-y-3">
+              {editingFirm ? (
+                <FirmConsultantTab firmId={editingFirm.id} firmName={editingFirm.name} />
+              ) : (
+                <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
+                  Save the firm first to add consultants
+                </div>
+              )}
               </TabsContent>
 
               </Tabs>

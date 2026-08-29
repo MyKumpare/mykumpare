@@ -1,0 +1,182 @@
+{
+  "name": "FirmConsultant",
+  "type": "object",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "ID of the firm (tenant) that owns this consultant record. Set on creation to the creator's linked_firm_id; drives tenant isolation via RLS."
+    },
+    "firm_id": {
+      "type": "string",
+      "description": "ID of the allocator firm this consultant is assigned to."
+    },
+    "firm_name": {
+      "type": "string",
+      "description": "Name of the allocator firm (denormalized for display)."
+    },
+    "consultant_firm_id": {
+      "type": "string",
+      "description": "ID of the investment consultant firm assigned to this allocator."
+    },
+    "consultant_firm_name": {
+      "type": "string",
+      "description": "Name of the investment consultant firm (denormalized for display)."
+    },
+    "roles": {
+      "type": "array",
+      "description": "Investment consultant role(s) this consultant firm holds for the allocator (e.g. General Consultant, Asset Class Consultant). Drawn from the InvestmentConsultantRole master list.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "inception_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the consultant relationship began (YYYY-MM-DD)."
+    },
+    "termination_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the consultant relationship ended (YYYY-MM-DD). Empty means the relationship is ongoing."
+    },
+    "contacts": {
+      "type": "array",
+      "description": "Related contacts from the investment consultant firm, each with their own contact role, inception date, and termination date.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for this contact assignment"
+          },
+          "contact_id": {
+            "type": "string",
+            "description": "ID of the contact from the investment consultant firm"
+          },
+          "contact_name": {
+            "type": "string",
+            "description": "Full name of the contact (denormalized for display)"
+          },
+          "contact_role": {
+            "type": "string",
+            "description": "Role of this contact within the consultant relationship (e.g. Manager Research, Field Consultant). Drawn from the ConsultantContactRole master list."
+          },
+          "inception_date": {
+            "type": "string",
+            "format": "date",
+            "description": "Date this contact's role began (YYYY-MM-DD)."
+          },
+          "termination_date": {
+            "type": "string",
+            "format": "date",
+            "description": "Date this contact's role ended (YYYY-MM-DD). Empty means the role is ongoing."
+          }
+        },
+        "required": [
+          "id",
+          "contact_id"
+        ]
+      }
+    }
+  },
+  "required": [
+    "firm_id",
+    "consultant_firm_id"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_edit": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_delete": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
