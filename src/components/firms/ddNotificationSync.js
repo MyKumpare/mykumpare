@@ -115,19 +115,46 @@ export async function syncDdNotifications(ddRecord) {
           supStatus === "approved" ? "approved" :
           supStatus === "rejected" ? "rejected" : "put on hold";
 
+        const feedback = stage.rejection_feedback || "";
+        const messageBody = supStatus === "rejected" && feedback
+          ? `${stage.supervisor_name || "Supervisor"} has ${label} stage "${stage.name || "Stage"}" for ${ddRecord.product_name || "due diligence"}${ddRecord.firm_name ? ` (${ddRecord.firm_name})` : ""}.\n\nRejection Feedback: ${feedback}`
+          : `${stage.supervisor_name || "Supervisor"} has ${label} stage "${stage.name || "Stage"}" for ${ddRecord.product_name || "due diligence"}${ddRecord.firm_name ? ` (${ddRecord.firm_name})` : ""}.`;
+
         await base44.entities.DdNotification.create({
           contact_id: ddRecord.primary_analyst_contact_id,
           contact_name: ddRecord.primary_analyst_name || "",
           type: "approval_decision",
           title: `Stage "${stage.name || "Stage"}" ${label}`,
-          message: `${stage.supervisor_name || "Supervisor"} has ${label} stage "${stage.name || "Stage"}" for ${ddRecord.product_name || "due diligence"}${ddRecord.firm_name ? ` (${ddRecord.firm_name})` : ""}.`,
+          message: messageBody,
           due_diligence_id: ddRecord.id,
           firm_name: ddRecord.firm_name || "",
           product_name: ddRecord.product_name || "",
           stage_name: stage.name || "",
           supervisor_status: supStatus,
+          rejection_feedback: feedback,
           status: "unread",
         });
+
+        // Send email notification for rejections with feedback
+        if (supStatus === "rejected" && feedback) {
+          try {
+            const analystContact = await base44.entities.Contact.get(ddRecord.primary_analyst_contact_id);
+            if (analystContact?.email) {
+              await base44.integrations.Core.SendEmail({
+                to: analystContact.email,
+                subject: `Stage Rejected: "${stage.name || "Stage"}" — ${ddRecord.product_name || "Due Diligence"}`,
+                body: `<p>Hello ${ddRecord.primary_analyst_name || analystContact.first_name || ""},</p>` +
+                  `<p>Stage <strong>"${stage.name || "Stage"}"</strong> for <strong>${ddRecord.product_name || "due diligence"}</strong>${ddRecord.firm_name ? ` at <strong>${ddRecord.firm_name}</strong>` : ""} has been <strong style="color:#dc2626;">rejected</strong> by ${stage.supervisor_name || "the supervisor"}.</p>` +
+                  `<div style="margin:12px 0;padding:10px;border-left:3px solid #dc2626;background:#fef2f2;border-radius:4px;">` +
+                  `<p style="margin:0;font-weight:600;color:#991b1b;font-size:13px;">Rejection Feedback:</p>` +
+                  `<p style="margin:4px 0 0 0;color:#7f1d1d;font-size:13px;white-space:pre-wrap;">${feedback}</p>` +
+                  `</div>` +
+                  `<p>Please log in to MyKumpare to review the feedback and take corrective action.</p>` +
+                  `<p style="color:#888;font-size:12px;margin-top:16px;">This is an automated notification from MyKumpare.</p>`,
+              });
+            }
+          } catch { /* analyst not a registered user — in-app notification still works */ }
+        }
       }
 
       // 3. Mark the original supervisor_request notification as "completed"

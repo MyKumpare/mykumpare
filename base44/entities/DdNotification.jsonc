@@ -61,6 +61,10 @@
       ],
       "description": "Supervisor status this notification was created for"
     },
+    "rejection_feedback": {
+      "type": "string",
+      "description": "Rejection feedback from the supervisor (for 'approval_decision' notifications with supervisor_status 'rejected'). Explains why the stage was rejected so the analyst team can take corrective action."
+    },
     "external_chat_id": {
       "type": "string",
       "description": "ID of the related ExternalChat record (for external_chat notifications)"

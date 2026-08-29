@@ -170,6 +170,10 @@
             "format": "date",
             "description": "Date the supervisor action was taken (YYYY-MM-DD)"
           },
+          "rejection_feedback": {
+            "type": "string",
+            "description": "Feedback provided by the supervisor when rejecting this stage. Explains the reason for rejection and any required corrective actions. Shown in the rejection notification sent to the analyst team."
+          },
           "sub_stages": {
             "type": "array",
             "description": "Ordered sub-stages within this stage (loaded from template). Sub-stages can be worked on in any order.",

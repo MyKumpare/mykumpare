@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import {
   History, CheckCircle2, XCircle, Clock, PenLine, Play,
-  ChevronRight, ShieldAlert, ShieldCheck, ShieldX, FileCheck2, Zap,
+  ChevronRight, ShieldAlert, ShieldCheck, ShieldX, FileCheck2, Zap, FileText,
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import DdAuditTrailReport from "./DdAuditTrailReport";
 
 const ACTION_META = {
   process_created: { label: "Process Created", icon: Play, color: "text-blue-600", bg: "bg-blue-50" },
@@ -32,8 +33,9 @@ const ACTION_META = {
  *   auditTrail — array of audit entries
  *   compact   — if true, shows only the last 5 entries with a "View all" button
  */
-export default function DdAuditTrailPanel({ auditTrail = [], compact = true }) {
+export default function DdAuditTrailPanel({ auditTrail = [], compact = true, ddRecord = null }) {
   const [showAll, setShowAll] = useState(false);
+  const [showReport, setShowReport] = useState(false);
 
   const sorted = useMemo(() => {
     return [...(auditTrail || [])].sort((a, b) =>
@@ -63,17 +65,28 @@ export default function DdAuditTrailPanel({ auditTrail = [], compact = true }) {
           <span className="text-xs font-medium text-gray-700">Audit Trail</span>
           <span className="text-[10px] text-gray-400">({auditTrail.length} event{auditTrail.length !== 1 ? "s" : ""})</span>
         </div>
-        {compact && sorted.length > 5 && (
+        <div className="flex items-center gap-1">
+          {compact && sorted.length > 5 && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-6 text-[10px] text-indigo-600 hover:text-indigo-700"
+              onClick={() => setShowAll((v) => !v)}
+            >
+              {showAll ? "Show less" : `View all (${sorted.length})`}
+            </Button>
+          )}
           <Button
             type="button"
             variant="ghost"
             size="sm"
             className="h-6 text-[10px] text-indigo-600 hover:text-indigo-700"
-            onClick={() => setShowAll((v) => !v)}
+            onClick={() => setShowReport(true)}
           >
-            {showAll ? "Show less" : `View all (${sorted.length})`}
+            <FileText className="w-3 h-3" /> Report
           </Button>
-        )}
+        </div>
       </div>
 
       <div className="space-y-1.5 max-h-64 overflow-y-auto">
@@ -125,6 +138,12 @@ export default function DdAuditTrailPanel({ auditTrail = [], compact = true }) {
           );
         })}
       </div>
+
+      <DdAuditTrailReport
+        open={showReport}
+        onOpenChange={setShowReport}
+        ddRecord={ddRecord || { audit_trail: auditTrail }}
+      />
     </div>
   );
 }

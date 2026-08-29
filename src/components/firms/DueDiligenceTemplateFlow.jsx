@@ -8,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import {
   ChevronDown, Check, Plus, Play, CheckCircle2, Circle,
   Clock, BarChart3, Calendar, X, ChevronRight, Lock,
-  ShieldCheck, ShieldX, ShieldAlert, UserCheck, ListChecks,
+  ShieldCheck, ShieldX, ShieldAlert, UserCheck, ListChecks, FileText,
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SubStageItem from "./SubStageItem";
@@ -19,8 +19,10 @@ import ProcessLogicGate from "./ProcessLogicGate";
 import ProcessProgressTracker from "./ProcessProgressTracker";
 import DigitalSignoffPanel, { evaluateStageSignoff } from "./DigitalSignoffPanel";
 import DdAuditTrailPanel from "./DdAuditTrailPanel";
+import DdAuditTrailReport from "./DdAuditTrailReport";
 import { appendAuditEntry } from "@/../base44/shared/ddAuditTrail";
 import DatePicker from "@/components/ui/date-picker";
+import { Textarea } from "@/components/ui/textarea";
 import AddTemplateDialog from "@/components/templates/AddTemplateDialog";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -58,6 +60,9 @@ export default function DueDiligenceTemplateFlow({
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [rejectingStageIndex, setRejectingStageIndex] = useState(null);
+  const [rejectionFeedback, setRejectionFeedback] = useState("");
+  const [showReport, setShowReport] = useState(false);
   const [addTemplateOpen, setAddTemplateOpen] = useState(false);
   const [showProgressModal, setShowProgressModal] = useState(false);
   const [showTracker, setShowTracker] = useState(false);
@@ -276,7 +281,7 @@ export default function DueDiligenceTemplateFlow({
   // Supervisor action: approve / reject / on_hold.
   // The supervisor_contact_id/name are preserved from when they were
   // assigned via "Submit for Approval" — this only changes the status.
-  const handleSupervisorAction = (index, action) => {
+  const handleSupervisorAction = (index, action, feedback = "") => {
     // Guard: supervisor cannot approve/reject/on_hold unless all sub-stages are completed
     if (!allSubStagesCompleted(stagesList[index])) return;
     // Guard: for "approved" action, block unless all required digital sign-offs are collected
@@ -287,6 +292,12 @@ export default function DueDiligenceTemplateFlow({
         return; // Block — not all required approvers have signed
       }
     }
+    // For "rejected" action, open the feedback dialog if no feedback was provided yet
+    if (action === "rejected" && !feedback && rejectingStageIndex === null) {
+      setRejectingStageIndex(index);
+      setRejectionFeedback("");
+      return;
+    }
     const newStages = stagesList.map((s, i) => {
       if (i !== index) return s;
       const updated = {
@@ -294,6 +305,9 @@ export default function DueDiligenceTemplateFlow({
         supervisor_status: action,
         supervisor_date: todayStr,
       };
+      if (action === "rejected") {
+        updated.rejection_feedback = feedback;
+      }
       // Mark the supervisor approval sub-step as completed
       if (s.sub_stages && s.sub_stages.length > 0) {
         updated.sub_stages = s.sub_stages.map((ss) => {
@@ -332,7 +346,7 @@ export default function DueDiligenceTemplateFlow({
       details: action === "approved"
         ? `Approved by ${stage?.supervisor_name || currentUserName || "supervisor"}`
         : action === "rejected"
-          ? `Rejected by ${stage?.supervisor_name || currentUserName || "supervisor"}`
+          ? `Rejected by ${stage?.supervisor_name || currentUserName || "supervisor"}${feedback ? ` — Feedback: ${feedback}` : ""}`
           : `Put on hold by ${stage?.supervisor_name || currentUserName || "supervisor"}`,
     });
 
@@ -711,6 +725,12 @@ export default function DueDiligenceTemplateFlow({
                                     <Button type="button" size="sm" variant="outline" className="h-7 text-[10px] border-red-300 text-red-600 hover:bg-red-50" disabled={!subsCompleted} title={!subsCompleted ? "Complete all sub-stages first" : undefined} onClick={() => handleSupervisorAction(index, "rejected")}>
                                       <ShieldX className="w-3 h-3" /> Reject
                                     </Button>
+                                    {stage.rejection_feedback && supStatus === "rejected" && (
+                                      <div className="w-full mt-1 p-1.5 rounded-md bg-red-50 border border-red-200">
+                                        <p className="text-[10px] font-medium text-red-700 mb-0.5">Rejection Feedback:</p>
+                                        <p className="text-[10px] text-red-600 whitespace-pre-wrap">{stage.rejection_feedback}</p>
+                                      </div>
+                                    )}
                                     <Button type="button" size="sm" variant="outline" className="h-7 text-[10px] border-orange-300 text-orange-600 hover:bg-orange-50" disabled={!subsCompleted} title={!subsCompleted ? "Complete all sub-stages first" : undefined} onClick={() => handleSupervisorAction(index, "on_hold")}>
                                       <ShieldAlert className="w-3 h-3" /> On Hold
                                     </Button>
@@ -795,7 +815,18 @@ export default function DueDiligenceTemplateFlow({
 
           {/* Audit Trail — full history of workflow progression */}
           {auditTrail.length > 0 && (
-            <DdAuditTrailPanel auditTrail={auditTrail} />
+            <div className="space-y-1.5">
+              <DdAuditTrailPanel auditTrail={auditTrail} />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full h-7 text-[11px] text-indigo-600 hover:text-indigo-700 border-indigo-200 hover:bg-indigo-50"
+                onClick={() => setShowReport(true)}
+              >
+                <FileText className="w-3 h-3" /> Generate Audit Trail Report
+              </Button>
+            </div>
           )}
 
           {/* All complete message */}
@@ -871,6 +902,66 @@ export default function DueDiligenceTemplateFlow({
           </div>
         </div>
       )}
+
+      {/* Rejection Feedback Dialog */}
+      {rejectingStageIndex !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => { setRejectingStageIndex(null); setRejectionFeedback(""); }} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                <ShieldX className="w-4 h-4 text-red-600" /> Reject Stage
+              </h3>
+              <button type="button" onClick={() => { setRejectingStageIndex(null); setRejectionFeedback(""); }}>
+                <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mb-2">
+              You are rejecting <strong>Stage {rejectingStageIndex + 1}: {stagesList[rejectingStageIndex]?.name || "Unnamed"}</strong>.
+              Please provide feedback explaining the reason for rejection. This will be included in the notification sent to the analyst team.
+            </p>
+            <Textarea
+              value={rejectionFeedback}
+              onChange={(e) => setRejectionFeedback(e.target.value)}
+              placeholder="Enter rejection feedback (e.g. 'Documentation incomplete — missing Q3 performance attribution. Please resubmit with the required attachments.')"
+              className="min-h-[100px] text-xs"
+              autoFocus
+            />
+            <div className="flex justify-end gap-2 mt-3">
+              <Button type="button" variant="outline" size="sm" onClick={() => { setRejectingStageIndex(null); setRejectionFeedback(""); }}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="bg-red-600 hover:bg-red-700 text-white"
+                onClick={() => {
+                  handleSupervisorAction(rejectingStageIndex, "rejected", rejectionFeedback);
+                  setRejectingStageIndex(null);
+                  setRejectionFeedback("");
+                }}
+              >
+                <ShieldX className="w-3 h-3" /> Confirm Rejection
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Audit Trail Report Dialog */}
+      <DdAuditTrailReport
+        open={showReport}
+        onOpenChange={setShowReport}
+        ddRecord={{
+          audit_trail: auditTrail,
+          firm_name: firmName,
+          product_name: productName,
+          template_name: templateName,
+          start_date: startDate,
+          status: stagesList.length > 0 && stagesList.every((s) => s.completed) ? "Completed" : "In Progress",
+          primary_analyst_name: primaryAnalystName,
+        }}
+      />
     </div>
   );
 }
