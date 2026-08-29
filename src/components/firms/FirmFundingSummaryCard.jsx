@@ -2,22 +2,30 @@ import React, { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { base44 } from "@/api/base44Client";
-import { Wallet, TrendingUp, Package, Loader2, Download, BarChart3 } from "lucide-react";
-import FundingStatusBadge from "@/components/products/FundingStatusBadge";
+import { Wallet, TrendingUp, Package, Loader2, Download, BarChart3, Users } from "lucide-react";
 
 const PRODUCT_BAR_COLORS = ["#6366f1", "#8b5cf6", "#3b82f6", "#10b981", "#f59e0b", "#ec4899", "#14b8a6", "#f97316"];
 
 /**
  * Summary card displayed at the top of the firm profile page.
- * Calculates and displays the total funding amount for a specific firm
- * based on its linked products' latest AUM history entries.
+ * Shows four aggregated metrics:
+ *  1. Total Funding Amount — net funding across all funded client portfolios (allocation history)
+ *  2. Funded Products — count of the firm's products with funding_status = "Funded"
+ *  3. Total Market Value — sum of latest product AUM across all client portfolios, with the most recent market value date
+ *  4. Funded Clients — count of active client portfolios referencing this firm's products
  */
 export default function FirmFundingSummaryCard({ firmId, firmName }) {
   const [downloading, setDownloading] = useState(false);
 
-  const { data: products = [], isLoading } = useQuery({
+  const { data: products = [], isLoading: productsLoading } = useQuery({
     queryKey: ["products_funding_summary", firmId],
     queryFn: () => base44.entities.Product.filter({ firm_id: firmId }),
+    enabled: !!firmId,
+  });
+
+  const { data: portfolios = [], isLoading: portfoliosLoading } = useQuery({
+    queryKey: ["portfolios_funding_summary", firmId],
+    queryFn: () => base44.entities.Portfolio.filter({ advisor_firm_id: firmId }),
     enabled: !!firmId,
   });
 
@@ -27,41 +35,91 @@ export default function FirmFundingSummaryCard({ firmId, firmName }) {
     enabled: !!firmId,
   });
 
-  const { totalFunding, fundedProductCount, fundedProducts, latestDate } = useMemo(() => {
-    let total = 0;
-    let count = 0;
-    let latest = null;
-    const funded = [];
+  const {
+    totalFunding,
+    fundedProductCount,
+    totalMarketValue,
+    marketValueDate,
+    fundedClientCount,
+    marketValueProducts,
+  } = useMemo(() => {
+    // ── 1. Total Funding Amount: net funding across all funded client portfolios ──
+    // Sum advisor-level allocation_history records (Initial Allocation + Capital Addition − Redemption).
+    // Fall back to advisor_initial_allocation_amount when no advisor-level records exist.
+    let funding = 0;
+    let clientCount = 0;
+    for (const p of portfolios) {
+      if (p.deleted_at) continue;
+      if ((p.funding_status || "Active") !== "Active") continue;
+      clientCount++;
+      const advisorRecords = (p.allocation_history || []).filter(
+        (r) => r.level === "advisor" && !r.deleted_at
+      );
+      if (advisorRecords.length > 0) {
+        for (const r of advisorRecords) {
+          const amt = Number(r.amount) || 0;
+          if (r.activity_type === "Redemption") {
+            funding -= Math.abs(amt);
+          } else {
+            funding += amt;
+          }
+        }
+      } else {
+        funding += Number(p.advisor_initial_allocation_amount) || 0;
+      }
+    }
+
+    // ── 2. Funded Products: count of products with funding_status = "Funded" ──
+    const fundedCount = products.filter(
+      (p) => !p.deleted_at && p.funding_status === "Funded"
+    ).length;
+
+    // ── 3. Total Market Value: sum of latest product AUM across all products ──
+    let marketValue = 0;
+    let mvDate = null;
+    const mvProducts = [];
     for (const p of products) {
       if (p.deleted_at) continue;
-      // Get the latest AUM history entry for this product
       const history = (p.aum_history || []).filter((h) => h.month_end_date);
       if (history.length === 0) continue;
       history.sort((a, b) => new Date(b.month_end_date) - new Date(a.month_end_date));
       const latestEntry = history[0];
       const aum = Number(latestEntry.firm_aum) || 0;
-      total += aum;
-      count += 1;
-      funded.push({ name: p.name, aum, fundingStatus: p.funding_status, date: latestEntry.month_end_date });
-      if (!latest || new Date(latestEntry.month_end_date) > new Date(latest)) {
-        latest = latestEntry.month_end_date;
+      marketValue += aum;
+      mvProducts.push({
+        name: p.name,
+        aum,
+        fundingStatus: p.funding_status,
+        date: latestEntry.month_end_date,
+      });
+      if (!mvDate || new Date(latestEntry.month_end_date) > new Date(mvDate)) {
+        mvDate = latestEntry.month_end_date;
       }
     }
-    return { totalFunding: total, fundedProductCount: count, fundedProducts: funded, latestDate: latest };
-  }, [products]);
 
-  // Bar chart data — each product's latest AUM, sorted descending so the
-  // largest products appear at the top of the horizontal bar chart.
+    return {
+      totalFunding: funding,
+      fundedProductCount: fundedCount,
+      totalMarketValue: marketValue,
+      marketValueDate: mvDate,
+      fundedClientCount: clientCount,
+      marketValueProducts: mvProducts,
+    };
+  }, [products, portfolios]);
+
+  // Bar chart data — each product's latest AUM, sorted descending
   const chartData = useMemo(
     () =>
-      [...fundedProducts]
+      [...marketValueProducts]
         .sort((a, b) => b.aum - a.aum)
         .map((p) => ({
           name: p.name.length > 22 ? p.name.slice(0, 20) + "…" : p.name,
           aum: p.aum,
         })),
-    [fundedProducts]
+    [marketValueProducts]
   );
+
+  const isLoading = productsLoading || portfoliosLoading;
 
   if (isLoading) {
     return (
@@ -85,13 +143,15 @@ export default function FirmFundingSummaryCard({ firmId, firmName }) {
         <div className="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0">
           <Wallet className="w-5 h-5 text-white" />
         </div>
-        <div className="flex-1 min-w-0">
+        {/* Total Funding Amount */}
+        <div className="min-w-0">
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Funding Amount</p>
           <p className="text-2xl font-bold text-gray-900 leading-tight">
             {formatCurrency(totalFunding)}
           </p>
         </div>
-        <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex items-center gap-5 flex-wrap ml-auto">
+          {/* Funded Products */}
           <div className="text-center">
             <div className="flex items-center gap-1 justify-center text-xs text-gray-500 mb-0.5">
               <Package className="w-3.5 h-3.5" />
@@ -99,33 +159,46 @@ export default function FirmFundingSummaryCard({ firmId, firmName }) {
             </div>
             <p className="text-lg font-bold text-indigo-700">{fundedProductCount}</p>
           </div>
-          {latestDate && (
-            <div className="text-center">
-              <div className="flex items-center gap-1 justify-center text-xs text-gray-500 mb-0.5">
-                <TrendingUp className="w-3.5 h-3.5" />
-                <span>As of</span>
-              </div>
-              <p className="text-sm font-semibold text-gray-700">{formatDate(latestDate)}</p>
+          {/* Total Market Value + date */}
+          <div className="text-center">
+            <div className="flex items-center gap-1 justify-center text-xs text-gray-500 mb-0.5">
+              <TrendingUp className="w-3.5 h-3.5" />
+              <span>Total Market Value</span>
             </div>
-          )}
+            <p className="text-lg font-bold text-gray-900 leading-tight">{formatCurrency(totalMarketValue)}</p>
+            {marketValueDate && (
+              <p className="text-[11px] text-gray-500">as of {formatDate(marketValueDate)}</p>
+            )}
+          </div>
+          {/* Funded Clients */}
+          <div className="text-center">
+            <div className="flex items-center gap-1 justify-center text-xs text-gray-500 mb-0.5">
+              <Users className="w-3.5 h-3.5" />
+              <span>Funded Clients</span>
+            </div>
+            <p className="text-lg font-bold text-indigo-700">{fundedClientCount}</p>
+          </div>
           <button
-          onClick={async () => {
-            setDownloading(true);
-            try { await downloadFirmReport(firm, products, firmName); }
-            finally { setDownloading(false); }
-          }}
-          disabled={downloading}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-medium px-3 py-1.5 transition-colors"
-          title="Download a CSV report of all assets and net flows for this firm"
+            onClick={async () => {
+              setDownloading(true);
+              try {
+                await downloadFirmReport(firm, products, portfolios, firmName);
+              } finally {
+                setDownloading(false);
+              }
+            }}
+            disabled={downloading}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-medium px-3 py-1.5 transition-colors"
+            title="Download a CSV report of all assets and net flows for this firm"
           >
             <Download className="w-3.5 h-3.5" />
             <span>{downloading ? "Preparing…" : "Download Report"}</span>
           </button>
         </div>
       </div>
-      {fundedProducts.length > 0 && (
+      {marketValueProducts.length > 0 && (
         <div className="mt-3 pt-3 border-t border-indigo-100/80 flex flex-wrap gap-1.5">
-          {fundedProducts.slice(0, 6).map((p, i) => (
+          {marketValueProducts.slice(0, 6).map((p, i) => (
             <span
               key={i}
               className="inline-flex items-center gap-1.5 rounded-full bg-white border border-gray-200 px-2 py-0.5 text-xs"
@@ -135,21 +208,21 @@ export default function FirmFundingSummaryCard({ firmId, firmName }) {
               <span className="font-semibold text-indigo-600">{formatCompactCurrency(p.aum)}</span>
             </span>
           ))}
-          {fundedProducts.length > 6 && (
+          {marketValueProducts.length > 6 && (
             <span className="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-600">
-              +{fundedProducts.length - 6} more
+              +{marketValueProducts.length - 6} more
             </span>
           )}
         </div>
       )}
-      {fundedProducts.length > 0 && (
+      {marketValueProducts.length > 0 && (
         <div className="mt-3 pt-3 border-t border-indigo-100/80">
           <div className="flex items-center gap-1.5 mb-2">
             <BarChart3 className="w-3.5 h-3.5 text-indigo-600" />
-            <span className="text-xs font-semibold text-gray-600">Product AUM Growth</span>
+            <span className="text-xs font-semibold text-gray-600">Product AUM (Market Value)</span>
             <span className="ml-auto text-[11px] text-gray-400">Latest month-end AUM per product</span>
           </div>
-          <ResponsiveContainer width="100%" height={Math.max(140, fundedProducts.length * 38)}>
+          <ResponsiveContainer width="100%" height={Math.max(140, marketValueProducts.length * 38)}>
             <BarChart data={chartData} layout="vertical" margin={{ top: 0, right: 12, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#eef2ff" horizontal={false} />
               <XAxis type="number" tick={{ fontSize: 10, fill: "#6b7280" }} axisLine={false} tickLine={false} tickFormatter={formatCompactCurrency} />
@@ -201,9 +274,10 @@ function formatDate(d) {
 
 /**
  * Generates and downloads a CSV report of all assets and net flows for a firm.
- * Includes the firm-level AUM history and each linked product's AUM history.
+ * Includes the firm-level AUM history, each linked product's AUM history,
+ * and each client portfolio's allocation history.
  */
-async function downloadFirmReport(firm, products, firmName) {
+async function downloadFirmReport(firm, products, portfolios, firmName) {
   const rows = [];
   rows.push(["Firm Assets & Net Flows Report"]);
   rows.push(["Firm", firmName || firm?.name || ""]);
@@ -244,6 +318,29 @@ async function downloadFirmReport(firm, products, firmName) {
         Number(h.assets_loss) || 0,
         Number(h.net_asset_flows) || 0,
       ]);
+    }
+    rows.push([]);
+  }
+
+  // ── Client portfolio allocation history ──
+  const activePortfolios = (portfolios || []).filter((p) => !p.deleted_at);
+  if (activePortfolios.length > 0) {
+    rows.push(["Client Portfolio Allocation History"]);
+    rows.push(["Portfolio", "Activity Date", "Activity Type", "Level", "Amount", "Notes"]);
+    for (const p of activePortfolios) {
+      const allocHistory = (p.allocation_history || [])
+        .filter((r) => !r.deleted_at)
+        .sort((a, b) => new Date(a.activity_date || 0) - new Date(b.activity_date || 0));
+      for (const r of allocHistory) {
+        rows.push([
+          p.portfolio_name || "",
+          r.activity_date || "",
+          r.activity_type || "",
+          r.level || "",
+          Number(r.amount) || 0,
+          (r.notes || "").replace(/<[^>]*>/g, ""),
+        ]);
+      }
     }
     rows.push([]);
   }
