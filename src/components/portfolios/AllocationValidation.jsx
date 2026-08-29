@@ -31,12 +31,12 @@ export default function AllocationValidation({ allocated = 0, total = 0, label =
 
   if (remaining > 0) {
     return (
-      <div className="flex items-start gap-2 mt-1.5 p-2 rounded-md bg-amber-50 border border-amber-200">
-        <Info className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
-        <p className="text-xs text-amber-700">
-          Not fully allocated —{" "}
+      <div className="flex items-start gap-2 mt-1.5 p-2 rounded-md bg-red-50 border border-red-200">
+        <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
+        <p className="text-xs text-red-700">
+          Under-allocated —{" "}
           <span className="font-semibold">{formatCurrency(remaining)}</span> remaining of{" "}
-          {formatCurrency(tot)}.
+          {formatCurrency(tot)}. Must be fully allocated to save.
         </p>
       </div>
     );

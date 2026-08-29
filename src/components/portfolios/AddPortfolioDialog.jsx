@@ -809,11 +809,21 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
     (!inceptionDate || advisorInceptionDate >= inceptionDate)
   );
 
-  const advisorOverAllocated = advisorProductType && initialAllocationAmount && advisorInitialAllocationAmount &&
-    (parseFloat(advisorInitialAllocationAmount) || 0) > (parseFloat(initialAllocationAmount) || 0);
+  const portfolioTotal = parseFloat(initialAllocationAmount) || 0;
+  const advisorAmount = parseFloat(advisorInitialAllocationAmount) || 0;
+  const subManagersTotal = subManagers.reduce((sum, s) => sum + (parseFloat(s.initial_allocation_amount) || 0), 0);
 
-  const subManagersOverAllocated = advisorProductType === "Multi-Manager Product" && initialAllocationAmount && subManagers.length > 0 &&
-    subManagers.reduce((sum, s) => sum + (parseFloat(s.initial_allocation_amount) || 0), 0) > (parseFloat(initialAllocationAmount) || 0);
+  // Advisor allocation must match portfolio total exactly — no over, no under
+  const advisorOverAllocated = advisorProductType && portfolioTotal > 0 && advisorInitialAllocationAmount &&
+    advisorAmount > portfolioTotal;
+  const advisorUnderAllocated = advisorProductType && portfolioTotal > 0 && advisorInitialAllocationAmount &&
+    advisorAmount < portfolioTotal;
+
+  // Sub-managers allocation must match portfolio total exactly — no over, no under
+  const subManagersOverAllocated = advisorProductType === "Multi-Manager Product" && portfolioTotal > 0 && subManagers.length > 0 &&
+    subManagersTotal > portfolioTotal;
+  const subManagersUnderAllocated = advisorProductType === "Multi-Manager Product" && portfolioTotal > 0 && subManagers.length > 0 &&
+    subManagersTotal < portfolioTotal;
 
   const isValid =
     allocatorId &&
@@ -822,7 +832,9 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
     advisorDateValid &&
     subManagersValid &&
     !advisorOverAllocated &&
-    !subManagersOverAllocated;
+    !advisorUnderAllocated &&
+    !subManagersOverAllocated &&
+    !subManagersUnderAllocated;
 
   const viewAllocatorName = firms.find((f) => f.id === allocatorId)?.name || allocatorId;
   const viewAdvisorFirmName = firms.find((f) => f.id === advisorFirmId)?.name || advisorFirmId;
@@ -1318,7 +1330,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                     onChange={(e) => setAdvisorInitialAllocationAmount(e.target.value)}
                     className={cn(
                       "h-9 text-sm",
-                      initialAllocationAmount && advisorInitialAllocationAmount && (parseFloat(advisorInitialAllocationAmount) || 0) > (parseFloat(initialAllocationAmount) || 0) && "border-red-400 focus-visible:ring-red-400"
+                      initialAllocationAmount && advisorInitialAllocationAmount && (parseFloat(advisorInitialAllocationAmount) || 0) !== (parseFloat(initialAllocationAmount) || 0) && "border-red-400 focus-visible:ring-red-400"
                     )}
                   />
                   {initialAllocationAmount && (
