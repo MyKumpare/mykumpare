@@ -18,6 +18,8 @@ import ApprovalProcessTab from "./ApprovalProcessTab";
 import ProcessLogicGate from "./ProcessLogicGate";
 import ProcessProgressTracker from "./ProcessProgressTracker";
 import DigitalSignoffPanel, { evaluateStageSignoff } from "./DigitalSignoffPanel";
+import DdAuditTrailPanel from "./DdAuditTrailPanel";
+import { appendAuditEntry } from "@/../base44/shared/ddAuditTrail";
 import DatePicker from "@/components/ui/date-picker";
 import AddTemplateDialog from "@/components/templates/AddTemplateDialog";
 import { format } from "date-fns";
@@ -50,6 +52,7 @@ export default function DueDiligenceTemplateFlow({
   processLogic = [], onProcessLogicChange,
   stageApprovers = [], onStageApproversChange,
   digitalSignatures = [], onDigitalSignaturesChange,
+  auditTrail = [], onAuditTrailChange,
   firmId = "", firmName = "", productId = "", productName = "", tenantId = "",
   onAllStagesCompleted,
 }) {
@@ -62,6 +65,41 @@ export default function DueDiligenceTemplateFlow({
   const prevApproverRef = useRef(undefined); // tracks previous approver ID to skip mount
 
   const toggleExpand = (id) => setExpandedStages((prev) => ({ ...prev, [id]: !prev[id] }));
+
+  // ─── Audit trail helper ───
+  const appendAudit = (actionType, options = {}) => {
+    if (!onAuditTrailChange) return;
+    onAuditTrailChange(appendAuditEntry(auditTrail, actionType, {
+      actorId: currentUserId,
+      actorName: currentUserName,
+      ...options,
+    }));
+  };
+
+  // Wrap digital signatures change to log signature events
+  const handleDigitalSignaturesChange = (newSigs) => {
+    onDigitalSignaturesChange?.(newSigs);
+    // Detect newly added signatures
+    const prevIds = new Set((digitalSignatures || []).map((s) => s.id));
+    const newEntries = (newSigs || []).filter((s) => !prevIds.has(s.id));
+    for (const sig of newEntries) {
+      appendAudit("signature_collected", {
+        stageId: sig.stage_id,
+        stageName: sig.stage_name,
+        details: `${sig.role || "Approver"}: ${sig.contact_name || ""}`.trim(),
+      });
+    }
+    // Detect revoked signatures
+    const newIds = new Set((newSigs || []).map((s) => s.id));
+    const revoked = (digitalSignatures || []).filter((s) => !newIds.has(s.id));
+    for (const sig of revoked) {
+      appendAudit("signature_revoked", {
+        stageId: sig.stage_id,
+        stageName: sig.stage_name,
+        details: `${sig.role || "Approver"}: ${sig.contact_name || ""}`.trim(),
+      });
+    }
+  };
 
   // ─── Auto-populate supervisor for all stages when approver is selected ───
   // When the user selects an approver in the Approval Process tab, that person
@@ -283,6 +321,21 @@ export default function DueDiligenceTemplateFlow({
     });
     onStagesChange(newStages);
 
+    // Audit trail: log supervisor action
+    const stage = stagesList[index];
+    const auditAction = action === "approved" ? "stage_approved"
+      : action === "rejected" ? "stage_rejected"
+      : "stage_on_hold";
+    appendAudit(auditAction, {
+      stageId: stage?.id,
+      stageName: stage?.name,
+      details: action === "approved"
+        ? `Approved by ${stage?.supervisor_name || currentUserName || "supervisor"}`
+        : action === "rejected"
+          ? `Rejected by ${stage?.supervisor_name || currentUserName || "supervisor"}`
+          : `Put on hold by ${stage?.supervisor_name || currentUserName || "supervisor"}`,
+    });
+
     // When the last stage is approved, auto-set DD status to "Buy List"
     // and process status to "Completed".
     if (action === "approved" && onAllStagesCompleted) {
@@ -295,6 +348,7 @@ export default function DueDiligenceTemplateFlow({
   // and auto-set stage start_date when a sub-stage is started
   const handleSubStageChange = (stageIndex, newSubStage) => {
     const stage = stagesList[stageIndex];
+    const prevSubStage = stage?.sub_stages?.find((ss) => ss.id === newSubStage.id);
     const newStages = stagesList.map((s, i) => {
       if (i !== stageIndex) return s;
       const newSubs = (s.sub_stages || []).map((ss) =>
@@ -307,6 +361,26 @@ export default function DueDiligenceTemplateFlow({
       return { ...s, sub_stages: newSubs, ...updates };
     });
     onStagesChange(newStages);
+
+    // Audit trail: log sub-stage status transitions
+    if (prevSubStage && prevSubStage.status !== newSubStage.status) {
+      if (newSubStage.status === "completed") {
+        appendAudit("sub_stage_completed", {
+          stageId: stage?.id,
+          stageName: stage?.name,
+          subStageId: newSubStage.id,
+          subStageName: newSubStage.name,
+          details: `Completed by ${newSubStage.performed_by_name || currentUserName || "analyst"}`,
+        });
+      } else if (newSubStage.status === "in_process") {
+        appendAudit("sub_stage_started", {
+          stageId: stage?.id,
+          stageName: stage?.name,
+          subStageId: newSubStage.id,
+          subStageName: newSubStage.name,
+        });
+      }
+    }
   };
 
   const allExpanded = stagesList.length > 0 && stagesList.every((s) => expandedStages[s.id]);
@@ -685,7 +759,7 @@ export default function DueDiligenceTemplateFlow({
               currentUserId={currentUserId}
               currentUserName={currentUserName}
               onChangeApprovers={onStageApproversChange}
-              onChangeSignatures={onDigitalSignaturesChange}
+              onChangeSignatures={handleDigitalSignaturesChange}
             />
           )}
 
@@ -717,6 +791,11 @@ export default function DueDiligenceTemplateFlow({
               onChangeProcess={onApprovalProcessChange}
               onChangeLogic={onApprovalLogicChange}
             />
+          )}
+
+          {/* Audit Trail — full history of workflow progression */}
+          {auditTrail.length > 0 && (
+            <DdAuditTrailPanel auditTrail={auditTrail} />
           )}
 
           {/* All complete message */}

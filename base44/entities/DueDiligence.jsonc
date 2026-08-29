@@ -690,6 +690,74 @@
         }
       }
     },
+    "audit_trail": {
+      "type": "array",
+      "description": "Chronological audit trail of workflow progression for this due diligence record. Each entry logs a single workflow event \u2014 stage approval, sub-stage completion, digital sign-off, stage advancement, or rejection \u2014 with the actor, timestamp, and contextual details. Appended automatically as the process progresses, providing a full history of who approved each step and when.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for this audit entry"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO-8601 timestamp when the event occurred"
+          },
+          "action_type": {
+            "type": "string",
+            "enum": [
+              "process_created",
+              "stage_started",
+              "sub_stage_completed",
+              "sub_stage_started",
+              "stage_approved",
+              "stage_rejected",
+              "stage_on_hold",
+              "stage_advanced",
+              "signature_collected",
+              "signature_revoked",
+              "bulk_approved"
+            ],
+            "description": "Type of workflow event"
+          },
+          "stage_id": {
+            "type": "string",
+            "description": "ID of the stage this event relates to (empty for process-level events)"
+          },
+          "stage_name": {
+            "type": "string",
+            "description": "Name of the stage (denormalized)"
+          },
+          "sub_stage_id": {
+            "type": "string",
+            "description": "ID of the sub-stage this event relates to (empty for stage-level events)"
+          },
+          "sub_stage_name": {
+            "type": "string",
+            "description": "Name of the sub-stage (denormalized)"
+          },
+          "actor_id": {
+            "type": "string",
+            "description": "User ID of the person who performed the action"
+          },
+          "actor_name": {
+            "type": "string",
+            "description": "Display name of the person who performed the action (denormalized)"
+          },
+          "details": {
+            "type": "string",
+            "description": "Human-readable description of the event"
+          }
+        },
+        "required": [
+          "id",
+          "timestamp",
+          "action_type"
+        ]
+      }
+    },
     "outlook_event_id": {
       "type": "string",
       "description": "ID of the corresponding Outlook Calendar event (set when the due diligence start date is synced to Outlook Calendar)"

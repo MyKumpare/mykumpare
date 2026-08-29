@@ -4,12 +4,67 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import ProcessTemplateKanbanBoard from "@/components/firms/ProcessTemplateKanbanBoard";
 import AddDueDiligenceDialog from "@/components/firms/AddDueDiligenceDialog";
+import { evaluateStageSignoff } from "@/components/firms/DigitalSignoffPanel";
+import { evaluateGate } from "@/components/firms/ProcessLogicGate";
+import { appendAuditEntry } from "@/../base44/shared/ddAuditTrail";
 import {
   LayoutDashboard, List, Loader2, X, KanbanSquare, FileText,
-  UserCheck, AlertCircle, CheckCircle2,
+  UserCheck, AlertCircle, CheckCircle2, CheckSquare, Zap, XCircle,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { toast } from "@/components/ui/use-toast";
+
+/**
+ * Checks whether a DD record's current stage meets all checklist requirements
+ * for bulk approval:
+ *  - All sub-stages in the current stage are completed
+ *  - All required digital sign-offs are collected
+ *  - All gate requirements (document attachments, etc.) are satisfied
+ * Returns { canApprove, blockers: [{ type, label }] }
+ */
+function checkCanApprove(rec) {
+  const stages = rec.stages || [];
+  const idx = rec.current_stage_index || 0;
+  const stage = stages[idx];
+  if (!stage) return { canApprove: false, blockers: [{ type: "stage", label: "No current stage" }] };
+  if (stage.completed) return { canApprove: false, blockers: [{ type: "stage", label: "Stage already completed" }] };
+
+  const blockers = [];
+  const subs = stage.sub_stages || [];
+  const docChecklist = rec.documentation_checklist || [];
+  const processLogic = rec.process_logic || [];
+  const approvalProcess = rec.approval_process || {};
+  const stageApprovers = rec.stage_approvers || [];
+  const digitalSignatures = rec.digital_signatures || [];
+
+  // 1. All sub-stages completed
+  const pendingSubs = subs.filter((ss) => (ss.status || "not_started") !== "completed");
+  if (pendingSubs.length > 0) {
+    blockers.push({ type: "sub_stage", label: `${pendingSubs.length} sub-stage(s) not completed` });
+  }
+
+  // 2. All required digital sign-offs collected
+  const signoffEval = evaluateStageSignoff(stageApprovers, digitalSignatures, stage.id);
+  if (signoffEval.hasApprovers && !signoffEval.allSigned) {
+    blockers.push({ type: "signoff", label: `${signoffEval.pendingRequired.length} required sign-off(s) pending` });
+  }
+
+  // 3. Gate requirements satisfied
+  const gate = processLogic.find((g) => g.from_stage_id === stage.id);
+  if (gate && gate.requirements) {
+    const ctx = { stages, docChecklist, approvalProcess, stageApprovers, digitalSignatures };
+    const gateEval = evaluateGate(gate, ctx);
+    gateEval.requirements.forEach(({ req, eval: evalResult }) => {
+      if (req.required !== false && !evalResult.satisfied) {
+        blockers.push({ type: req.type, label: evalResult.label || req.label || "Gate requirement" });
+      }
+    });
+  }
+
+  return { canApprove: blockers.length === 0, blockers };
+}
 
 export default function ProcessTemplateKanban() {
   const queryClient = useQueryClient();
@@ -17,6 +72,9 @@ export default function ProcessTemplateKanban() {
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [showDialog, setShowDialog] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkApproving, setBulkApproving] = useState(false);
 
   const { data: records = [], isLoading: ddLoading } = useQuery({
     queryKey: ["due-diligence-all"],
@@ -134,8 +192,111 @@ export default function ProcessTemplateKanban() {
   };
 
   const handleCardClick = (rec) => {
+    if (selectionMode) return; // Don't open dialog in selection mode
     setEditing(rec);
     setShowDialog(true);
+  };
+
+  const handleToggleSelect = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleExitSelection = () => {
+    setSelectionMode(false);
+    setSelectedIds([]);
+  };
+
+  // Bulk approve: checks each selected process meets checklist requirements,
+  // then approves the current stage and advances to the next.
+  const handleBulkApprove = async () => {
+    if (selectedIds.length === 0) return;
+    setBulkApproving(true);
+
+    const selectedRecs = templateRecords.filter((r) => selectedIds.includes(r.id));
+    const todayStr = format(new Date(), "yyyy-MM-dd");
+    const results = { approved: 0, blocked: 0, errors: 0, blockedDetails: [] };
+
+    for (const rec of selectedRecs) {
+      const { canApprove, blockers } = checkCanApprove(rec);
+      if (!canApprove) {
+        results.blocked++;
+        results.blockedDetails.push({
+          name: rec.product_name || rec.firm_name || rec.id,
+          blockers: blockers.map((b) => b.label),
+        });
+        continue;
+      }
+
+      try {
+        const stages = rec.stages || [];
+        const idx = rec.current_stage_index || 0;
+        const stage = stages[idx];
+        const newStages = stages.map((s, i) => {
+          if (i !== idx) return s;
+          return {
+            ...s,
+            supervisor_status: "approved",
+            supervisor_date: todayStr,
+            completed: true,
+            completed_date: todayStr,
+            end_date: todayStr,
+          };
+        });
+
+        // Determine next stage index (advance if not last stage)
+        const nextIdx = idx < stages.length - 1 ? idx + 1 : idx;
+        if (nextIdx !== idx && !newStages[nextIdx].start_date) {
+          newStages[nextIdx] = { ...newStages[nextIdx], start_date: todayStr };
+        }
+
+        // Append audit trail entry
+        const newAuditTrail = appendAuditEntry(rec.audit_trail, "bulk_approved", {
+          stageId: stage?.id,
+          stageName: stage?.name,
+          details: `Stage "${stage?.name || ""}" bulk approved and advanced to "${newStages[nextIdx]?.name || ""}"`,
+        });
+
+        await base44.entities.DueDiligence.update(rec.id, {
+          stages: newStages,
+          current_stage_index: nextIdx,
+          audit_trail: newAuditTrail,
+        });
+        results.approved++;
+      } catch (err) {
+        console.error("Bulk approve error for", rec.id, err);
+        results.errors++;
+      }
+    }
+
+    await queryClient.invalidateQueries({ queryKey: ["due-diligence-all"] });
+
+    if (results.approved > 0) {
+      toast({
+        title: "Bulk approve complete",
+        description: `${results.approved} process${results.approved !== 1 ? "es" : ""} approved and advanced.`,
+      });
+    }
+    if (results.blocked > 0) {
+      toast({
+        title: `${results.blocked} process${results.blocked !== 1 ? "es" : ""} blocked`,
+        description: results.blockedDetails
+          .map((d) => `${d.name}: ${d.blockers.join(", ")}`)
+          .join("; "),
+        variant: "destructive",
+      });
+    }
+    if (results.errors > 0) {
+      toast({
+        title: `${results.errors} error(s)`,
+        description: "Some processes could not be saved. Check console for details.",
+        variant: "destructive",
+      });
+    }
+
+    setBulkApproving(false);
+    handleExitSelection();
   };
 
   return (

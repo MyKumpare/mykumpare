@@ -63,7 +63,7 @@ function getPendingSummary(rec) {
   };
 }
 
-function KanbanCard({ rec, stageIndex, onCardClick }) {
+function KanbanCard({ rec, stageIndex, onCardClick, selectionMode, isSelected, onToggleSelect }) {
   const cardRef = useRef(null);
   const pending = useMemo(() => getPendingSummary(rec), [rec]);
   const stages = rec.stages || [];
@@ -90,10 +90,27 @@ function KanbanCard({ rec, stageIndex, onCardClick }) {
     <div
       ref={cardRef}
       className={cn(
-        "bg-white rounded-lg border shadow-sm p-2.5 hover:shadow-md transition-all cursor-pointer",
-        isCompleted ? "border-emerald-200" : "border-gray-200 hover:border-indigo-300"
+        "bg-white rounded-lg border shadow-sm p-2.5 hover:shadow-md transition-all cursor-pointer relative",
+        isCompleted ? "border-emerald-200" : "border-gray-200 hover:border-indigo-300",
+        isSelected && "ring-2 ring-indigo-400 border-indigo-400"
       )}
     >
+      {/* Selection checkbox */}
+      {selectionMode && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onToggleSelect?.(rec.id); }}
+          className="absolute top-1.5 right-1.5 z-10"
+        >
+          <div className={cn(
+            "w-4 h-4 rounded border-2 flex items-center justify-center transition-colors",
+            isSelected ? "bg-indigo-600 border-indigo-600" : "bg-white border-gray-300 hover:border-indigo-400"
+          )}>
+            {isSelected && <CheckCircle2 className="w-3 h-3 text-white" />}
+          </div>
+        </button>
+      )}
+
       {/* Header */}
       <div className="flex items-start gap-2">
         <ClipboardCheck className={cn("w-3.5 h-3.5 flex-shrink-0 mt-0.5", isCompleted ? "text-emerald-500" : "text-indigo-400")} />
@@ -162,7 +179,7 @@ function KanbanCard({ rec, stageIndex, onCardClick }) {
  * Props:
  *   records, stages (template stages), onMoveCard, onCardClick
  */
-export default function ProcessTemplateKanbanBoard({ records, stages, onMoveCard, onCardClick }) {
+export default function ProcessTemplateKanbanBoard({ records, stages, onMoveCard, onCardClick, selectionMode = false, selectedIds = [], onToggleSelect }) {
   const grouped = useMemo(() => {
     const map = {};
     stages.forEach((s, i) => { map[i] = []; });
@@ -222,7 +239,14 @@ export default function ProcessTemplateKanbanBoard({ records, stages, onMoveCard
                               style={prov.draggableProps.style}
                               className={snap.isDragging ? "opacity-80 shadow-lg" : "cursor-pointer"}
                             >
-                              <KanbanCard rec={rec} stageIndex={index} onCardClick={onCardClick} />
+                              <KanbanCard
+                                rec={rec}
+                                stageIndex={index}
+                                onCardClick={onCardClick}
+                                selectionMode={selectionMode}
+                                isSelected={selectedIds.includes(rec.id)}
+                                onToggleSelect={onToggleSelect}
+                              />
                             </div>
                           )}
                         </Draggable>
