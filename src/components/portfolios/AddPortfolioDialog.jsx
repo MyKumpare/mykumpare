@@ -379,6 +379,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
   const [advisorTerminationDate, setAdvisorTerminationDate] = useState(null);
   const [advisorFundingStatus, setAdvisorFundingStatus] = useState("Active");
   const [advisorInitialAllocationAmount, setAdvisorInitialAllocationAmount] = useState("");
+  const [advisorAllocationTouched, setAdvisorAllocationTouched] = useState(false);
   const [subManagers, setSubManagers] = useState([]);
   const [primaryBenchmarkId, setPrimaryBenchmarkId] = useState("");
   const [primaryBenchmarkName, setPrimaryBenchmarkName] = useState("");
@@ -468,6 +469,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
         setAdvisorTerminationDate(null);
         setAdvisorFundingStatus("Active");
         setAdvisorInitialAllocationAmount("");
+        setAdvisorAllocationTouched(false);
         setSubManagers([]);
         setPrimaryBenchmarkId("");
         setPrimaryBenchmarkName("");
@@ -491,11 +493,13 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
     });
   }, [inceptionDate]);
 
-  // Default advisor initial allocation amount to the portfolio's initial allocation amount
+  // Default advisor initial allocation amount to the portfolio's initial allocation amount.
+  // Only applies when creating a new portfolio and the user hasn't manually edited the field.
   useEffect(() => {
+    if (editingPortfolio) return;
     if (!initialAllocationAmount) return;
-    if (!advisorInitialAllocationAmount) setAdvisorInitialAllocationAmount(initialAllocationAmount);
-  }, [initialAllocationAmount]);
+    if (!advisorAllocationTouched) setAdvisorInitialAllocationAmount(initialAllocationAmount);
+  }, [initialAllocationAmount, advisorAllocationTouched, editingPortfolio]);
 
   // Calculated capital flow fields from allocation history
   const portfolioFlow = useMemo(() => {
@@ -1335,7 +1339,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                     min="0"
                     placeholder="Enter amount..."
                     value={advisorInitialAllocationAmount}
-                    onChange={(e) => setAdvisorInitialAllocationAmount(e.target.value)}
+                    onChange={(e) => { setAdvisorInitialAllocationAmount(e.target.value); setAdvisorAllocationTouched(true); }}
                     className={cn(
                       "h-9 text-sm",
                       initialAllocationAmount && advisorInitialAllocationAmount && (parseFloat(advisorInitialAllocationAmount) || 0) !== (parseFloat(initialAllocationAmount) || 0) && "border-red-400 focus-visible:ring-red-400"
