@@ -647,6 +647,8 @@ export default function DueDiligenceTemplateFlow({
               firmId={firmId}
               productId={productId}
               onChange={onDocChecklistChange}
+              processLogic={processLogic}
+              stages={stagesList}
             />
           )}
 

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import DatePicker from "@/components/ui/date-picker";
 import StageNotesEditor from "./StageNotesEditor";
 import AddDocumentDialog from "./AddDocumentDialog";
-import { FileText, CheckCircle2, Circle, Clock, Plus, ChevronDown, ChevronRight, Search, Check, ExternalLink, Loader2 } from "lucide-react";
+import { FileText, CheckCircle2, Circle, Clock, Plus, ChevronDown, ChevronRight, Search, Check, ExternalLink, Loader2, Lock, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -35,10 +35,37 @@ const STATUS_CONFIG = {
  *   productId: string
  *   onChange: (newItems) => void
  */
-export default function DocumentationChecklistTab({ items = [], firmId, productId, onChange }) {
+export default function DocumentationChecklistTab({ items = [], firmId, productId, onChange, processLogic = [], stages = [] }) {
   const [expanded, setExpanded] = useState({});
   const [addDocOpen, setAddDocOpen] = useState(false);
   const [search, setSearch] = useState({});
+
+  // Cross-reference process logic gates to find which checklist items are mandatory
+  // (referenced by document_attachment requirements in any gate)
+  const mandatoryItemIds = useMemo(() => {
+    const ids = new Set();
+    (processLogic || []).forEach((gate) => {
+      (gate.requirements || []).forEach((req) => {
+        if (req.type === "document_attachment" && req.required !== false && req.document_checklist_item_id) {
+          ids.add(req.document_checklist_item_id);
+        }
+      });
+    });
+    return ids;
+  }, [processLogic]);
+
+  // For each mandatory item, find which stage gate requires it (for the "Required for" label)
+  const requiredForStage = useMemo(() => {
+    const map = {};
+    (processLogic || []).forEach((gate) => {
+      (gate.requirements || []).forEach((req) => {
+        if (req.type === "document_attachment" && req.required !== false && req.document_checklist_item_id) {
+          map[req.document_checklist_item_id] = gate.to_stage_name || gate.name || "next stage";
+        }
+      });
+    });
+    return map;
+  }, [processLogic]);
 
   // Fetch firm documents for selection
   const { data: firmDocs = [] } = useQuery({
@@ -120,8 +147,16 @@ export default function DocumentationChecklistTab({ items = [], firmId, productI
             !itemSearch || (d.file_name || "").toLowerCase().includes(itemSearch.toLowerCase())
           );
 
+          const isMandatory = mandatoryItemIds.has(item.id);
+          const hasDoc = !!(item.document_url || item.document_id);
+          const isBlocking = isMandatory && !hasDoc;
+          const requiredLabel = requiredForStage[item.id];
+
           return (
-            <div key={item.id} className={cn("rounded-md border px-2 py-1.5 transition-colors", statusCfg.bgClass)}>
+            <div key={item.id} className={cn(
+              "rounded-md border px-2 py-1.5 transition-colors",
+              isBlocking ? "border-red-200 bg-red-50/40" : statusCfg.bgClass
+            )}>
               {/* Header */}
               <div className="flex items-center gap-2">
                 <StatusIcon className={cn("w-3.5 h-3.5 shrink-0", statusCfg.iconClass)} />
@@ -131,6 +166,11 @@ export default function DocumentationChecklistTab({ items = [], firmId, productI
                 <span className={cn("text-xs font-medium flex-1 truncate", status === "completed" ? "text-emerald-700" : "text-gray-700")}>
                   {index + 1}. {item.name || "Unnamed item"}
                 </span>
+                {isMandatory && (
+                  <span className="flex items-center gap-0.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 shrink-0" title={`Required document — must be uploaded before advancing to ${requiredLabel || "next stage"}`}>
+                    <Lock className="w-2.5 h-2.5" /> Required
+                  </span>
+                )}
                 {item.document_name && (
                   <span className="text-[10px] text-gray-500 truncate max-w-[120px] flex items-center gap-0.5">
                     <FileText className="w-2.5 h-2.5" /> {item.document_name}
@@ -140,6 +180,14 @@ export default function DocumentationChecklistTab({ items = [], firmId, productI
                   {statusCfg.label}
                 </span>
               </div>
+
+              {/* Mandatory warning */}
+              {isBlocking && (
+                <div className="flex items-center gap-1 mt-1 pl-5 text-[10px] text-red-600">
+                  <AlertCircle className="w-3 h-3 shrink-0" />
+                  <span>Must be uploaded before advancing to {requiredLabel || "next stage"}</span>
+                </div>
+              )}
 
               {/* Expanded detail */}
               {isExpanded && (
