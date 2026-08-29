@@ -19,6 +19,7 @@ import ScoringMatrixDocumentAnalyzer from "./ScoringMatrixDocumentAnalyzer";
 import ScoringMatrixTemplateEditor from "./ScoringMatrixTemplateEditor";
 import ScoringMatrixTestModeDialog from "./ScoringMatrixTestModeDialog";
 import ProcessTemplateAudit from "./ProcessTemplateAudit";
+import ProcessLogicEditor from "./ProcessLogicEditor";
 import TemplateVersionDiffDialog from "./TemplateVersionDiffDialog";
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "@/components/ui/use-toast";
@@ -86,6 +87,7 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
   const [ratingConfig, setRatingConfig] = useState(null);
   const [sampleFileUrl, setSampleFileUrl] = useState("");
   const [sampleFileName, setSampleFileName] = useState("");
+  const [processLogic, setProcessLogic] = useState([]);
   const [questionBankOpen, setQuestionBankOpen] = useState(false);
   const [testModeOpen, setTestModeOpen] = useState(false);
   const [diffOpen, setDiffOpen] = useState(false);
@@ -114,6 +116,7 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
         setRatingConfig(editTemplate.rating_config ? JSON.parse(JSON.stringify(editTemplate.rating_config)) : null);
         setSampleFileUrl(editTemplate.sample_file_url || "");
         setSampleFileName(editTemplate.sample_file_name || "");
+        setProcessLogic(Array.isArray(editTemplate.process_logic) ? JSON.parse(JSON.stringify(editTemplate.process_logic)) : []);
       } else if (newVersionFrom) {
         // Pre-fill from the prior version so the user starts from its content and
         // only modifies what needs to change. Keeps the same name (versions are
@@ -128,6 +131,7 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
         setRatingConfig(newVersionFrom.rating_config ? JSON.parse(JSON.stringify(newVersionFrom.rating_config)) : null);
         setSampleFileUrl(newVersionFrom.sample_file_url || "");
         setSampleFileName(newVersionFrom.sample_file_name || "");
+        setProcessLogic(Array.isArray(newVersionFrom.process_logic) ? JSON.parse(JSON.stringify(newVersionFrom.process_logic)) : []);
       } else {
         setName("");
         setTemplateType(defaultTemplateType || "");
@@ -139,6 +143,7 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
         setRatingConfig(null);
         setSampleFileUrl("");
         setSampleFileName("");
+        setProcessLogic([]);
       }
     }
   }, [open, editTemplate, newVersionFrom]);
@@ -148,6 +153,7 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
     if (templateType !== "Manager Due Diligence" && templateType !== "Manager Questionnaire") {
       setStages([]);
       setDocChecklist([]);
+      setProcessLogic([]);
     }
   }, [templateType]);
 
@@ -224,6 +230,27 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
       sample_file_url: sampleFileUrl || undefined,
       sample_file_name: sampleFileName || undefined,
       approval_process_logic: [], // explicitly clear legacy data
+      process_logic: isMDD ? processLogic.filter((g) => (g.name || "").trim()).map((g) => ({
+        id: g.id,
+        name: g.name.trim(),
+        from_stage_id: g.from_stage_id || "",
+        from_stage_name: g.from_stage_name || "",
+        to_stage_id: g.to_stage_id || "",
+        to_stage_name: g.to_stage_name || "",
+        requirements: (g.requirements || []).map((r) => ({
+          id: r.id,
+          type: r.type,
+          label: r.label || "",
+          stage_id: r.stage_id || "",
+          sub_stage_id: r.sub_stage_id || "",
+          document_checklist_item_id: r.document_checklist_item_id || "",
+          form_id: r.form_id || "",
+          score_card_template_id: r.score_card_template_id || "",
+          analysis_description: r.analysis_description || "",
+          approval_role: r.approval_role || "",
+          required: r.required !== false,
+        })),
+      })) : undefined,
     };
     if (isNewVersion) {
       // Create a new version record: stamp the version chain so the new template
@@ -358,6 +385,14 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
               {templateType === "Manager Due Diligence" && (
                 <DocumentationChecklistSection items={docChecklist} onChange={setDocChecklist} />
               )}
+              {templateType === "Manager Due Diligence" && (
+                <ProcessLogicEditor
+                  stages={stages}
+                  docChecklist={docChecklist}
+                  processLogic={processLogic}
+                  onChange={setProcessLogic}
+                />
+              )}
               <ProcessTemplateAudit
                 stages={stages}
                 docChecklist={templateType === "Manager Due Diligence" ? docChecklist : []}
@@ -407,6 +442,7 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
             documentation_checklist: docChecklist,
             scoring_blocks: scoringBlocks,
             rating_config: ratingConfig,
+            process_logic: processLogic,
           }}
           nextVersion={isNewVersion ? nextVersion : priorVersion}
           priorVersion={isNewVersion ? priorVersion : (editTemplate?.version_number || 1)}

@@ -106,6 +106,101 @@
         }
       }
     },
+    "process_logic": {
+      "type": "array",
+      "description": "Process logic gate rules defined in the template. Each gate sits between two consecutive stages and defines the requirements that must all be satisfied before the process can advance to the next stage. Requirements can include sub-stage completion, document attachment, form completion, score card completion, qualitative/quantitative analysis, and approval. Copied to the DueDiligence record on creation.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for this gate rule"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name for this gate (e.g. 'Gate: Screening to Deep Dive')"
+          },
+          "from_stage_id": {
+            "type": "string",
+            "description": "ID of the stage that must be completed before this gate can pass"
+          },
+          "from_stage_name": {
+            "type": "string",
+            "description": "Name of the source stage (denormalized)"
+          },
+          "to_stage_id": {
+            "type": "string",
+            "description": "ID of the next stage that becomes available once this gate passes"
+          },
+          "to_stage_name": {
+            "type": "string",
+            "description": "Name of the destination stage (denormalized)"
+          },
+          "requirements": {
+            "type": "array",
+            "description": "Ordered list of requirements that must ALL be satisfied for this gate to pass. Each requirement has a type and type-specific reference fields.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "sub_stage_completion",
+                    "document_attachment",
+                    "form_completion",
+                    "score_card_completion",
+                    "qualitative_analysis",
+                    "quantitative_analysis",
+                    "approval"
+                  ],
+                  "description": "Type of requirement: sub_stage_completion = a specific sub-stage must be completed; document_attachment = a documentation checklist item must have a document attached; form_completion = a questionnaire/form must be completed; score_card_completion = a scoring matrix must be completed; qualitative_analysis = a qualitative analysis must be completed; quantitative_analysis = a quantitative analysis must be completed; approval = supervisor/approver approval is required."
+                },
+                "label": {
+                  "type": "string",
+                  "description": "Display label for this requirement (auto-generated from the type and reference, or user-customized)"
+                },
+                "stage_id": {
+                  "type": "string",
+                  "description": "For sub_stage_completion: the stage containing the sub-stage"
+                },
+                "sub_stage_id": {
+                  "type": "string",
+                  "description": "For sub_stage_completion: the specific sub-stage that must be completed (empty means all sub-stages in the stage)"
+                },
+                "document_checklist_item_id": {
+                  "type": "string",
+                  "description": "For document_attachment: the documentation checklist item ID that must have a document attached"
+                },
+                "form_id": {
+                  "type": "string",
+                  "description": "For form_completion: the questionnaire/form ID that must be completed"
+                },
+                "score_card_template_id": {
+                  "type": "string",
+                  "description": "For score_card_completion: the scoring matrix template ID that must be completed"
+                },
+                "analysis_description": {
+                  "type": "string",
+                  "description": "For qualitative_analysis / quantitative_analysis: a description of what analysis must be completed"
+                },
+                "approval_role": {
+                  "type": "string",
+                  "description": "For approval: the role of the approver who must approve (e.g. 'Supervisor', 'Investment Committee')"
+                },
+                "required": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Whether this requirement is mandatory (true) or optional (false). Optional requirements are shown but do not block the gate."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "scoring_blocks": {
       "type": "array",
       "description": "Weighted scoring blocks for Scoring Matrix templates. Each block groups related criteria and has a percentage weight. The sum of all block weights should equal 100. An optional multiplier factor can be enabled per block (and per criterion) to scale its influence; effective weights are normalized so the overall total stays 100%.",

@@ -361,6 +361,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
   const [docChecklist, setDocChecklist] = useState([]);
   const [approvalProcess, setApprovalProcess] = useState({});
   const [approvalLogic, setApprovalLogic] = useState([]);
+  const [processLogic, setProcessLogic] = useState([]);
   const [templateId, setTemplateId] = useState("");
   const [templateName, setTemplateName] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -464,6 +465,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
       setDocChecklist(Array.isArray(editingRecord.documentation_checklist) ? editingRecord.documentation_checklist : []);
       setApprovalProcess(editingRecord.approval_process || {});
       setApprovalLogic(Array.isArray(editingRecord.approval_process_logic) ? editingRecord.approval_process_logic : []);
+      setProcessLogic(Array.isArray(editingRecord.process_logic) ? editingRecord.process_logic : []);
       setTemplateId(editingRecord.template_id || "");
       setTemplateName(editingRecord.template_name || "");
       setStartDate(editingRecord.start_date || "");
@@ -481,6 +483,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
       setDocChecklist([]);
       setApprovalProcess({});
       setApprovalLogic([]);
+      setProcessLogic([]);
       setTemplateId("");
       setTemplateName("");
       setStartDate("");
@@ -596,6 +599,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
     documentation_checklist: processStatus === "In-process" ? docChecklist : undefined,
     approval_process: processStatus === "In-process" ? approvalProcess : undefined,
     approval_process_logic: processStatus === "In-process" ? approvalLogic : undefined,
+    process_logic: processStatus === "In-process" ? processLogic : undefined,
     template_id: processStatus === "In-process" ? (templateId || undefined) : undefined,
     template_name: processStatus === "In-process" ? (templateName || undefined) : undefined,
     start_date: processStatus === "In-process" ? (startDate || undefined) : undefined,
@@ -613,7 +617,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
     );
   }
   return _payload;
-  }, [effectiveFirmId, effectiveFirmName, productId, selectedProduct, status, processStatus, primaryId, primaryContact, secondaryId, secondaryContact, stages, docChecklist, approvalProcess, approvalLogic, templateId, templateName, startDate, currentStageIndex, assignedContactIds, editingRecord, milestones]);
+  }, [effectiveFirmId, effectiveFirmName, productId, selectedProduct, status, processStatus, primaryId, primaryContact, secondaryId, secondaryContact, stages, docChecklist, approvalProcess, approvalLogic, processLogic, templateId, templateName, startDate, currentStageIndex, assignedContactIds, editingRecord, milestones]);
 
   // Debounced auto-save — fires 800ms after the last change to any tracked field.
   useEffect(() => {
@@ -914,6 +918,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
                 setDocChecklist([]);
                 setApprovalProcess({});
                 setApprovalLogic([]);
+                setProcessLogic([]);
                 setTemplateId("");
                 setTemplateName("");
                 setStartDate("");
@@ -942,6 +947,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
                     setDocChecklist([]);
                     setApprovalProcess({});
                     setApprovalLogic([]);
+                    setProcessLogic([]);
                     setTemplateId("");
                     setTemplateName("");
                     setStartDate("");
@@ -979,6 +985,8 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
               onApprovalProcessChange={setApprovalProcess}
               approvalLogic={approvalLogic}
               onApprovalLogicChange={setApprovalLogic}
+              processLogic={processLogic}
+              onProcessLogicChange={setProcessLogic}
               firmId={effectiveFirmId}
               firmName={effectiveFirmName}
               productId={productId}

@@ -15,6 +15,7 @@ import SubStageItem from "./SubStageItem";
 import StageNotesEditor from "./StageNotesEditor";
 import DocumentationChecklistTab from "./DocumentationChecklistTab";
 import ApprovalProcessTab from "./ApprovalProcessTab";
+import ProcessLogicGate from "./ProcessLogicGate";
 import DatePicker from "@/components/ui/date-picker";
 import AddTemplateDialog from "@/components/templates/AddTemplateDialog";
 import { format } from "date-fns";
@@ -44,6 +45,7 @@ export default function DueDiligenceTemplateFlow({
   docChecklist = [], onDocChecklistChange,
   approvalProcess = {}, onApprovalProcessChange,
   approvalLogic = [], onApprovalLogicChange,
+  processLogic = [], onProcessLogicChange,
   firmId = "", firmName = "", productId = "", productName = "", tenantId = "",
   onAllStagesCompleted,
 }) {
@@ -172,6 +174,32 @@ export default function DueDiligenceTemplateFlow({
         notes: "",
       }));
       onDocChecklistChange(newChecklist);
+    }
+    // Copy process logic gates from template (with satisfied=false on each requirement)
+    if (onProcessLogicChange) {
+      const newProcessLogic = (template.process_logic || []).map((g) => ({
+        id: g.id,
+        name: g.name || "",
+        from_stage_id: g.from_stage_id || "",
+        from_stage_name: g.from_stage_name || "",
+        to_stage_id: g.to_stage_id || "",
+        to_stage_name: g.to_stage_name || "",
+        requirements: (g.requirements || []).map((r) => ({
+          id: r.id,
+          type: r.type,
+          label: r.label || "",
+          stage_id: r.stage_id || "",
+          sub_stage_id: r.sub_stage_id || "",
+          document_checklist_item_id: r.document_checklist_item_id || "",
+          form_id: r.form_id || "",
+          score_card_template_id: r.score_card_template_id || "",
+          analysis_description: r.analysis_description || "",
+          approval_role: r.approval_role || "",
+          required: r.required !== false,
+          satisfied: false,
+        })),
+      }));
+      onProcessLogicChange(newProcessLogic);
     }
     setOpen(false);
     setSearch("");
@@ -383,10 +411,12 @@ export default function DueDiligenceTemplateFlow({
                 const supCfg = SUP_STATUS[supStatus] || SUP_STATUS.pending;
                 const SupIcon = supCfg.icon;
                 const isCompleted = !!stage.completed;
+                // Find the process logic gate leading from this stage to the next
+                const gateToNext = (processLogic || []).find((g) => g.from_stage_id === stage.id);
 
                 return (
+                  <React.Fragment key={stage.id}>
                   <div
-                    key={stage.id}
                     className={cn(
                       "rounded-lg border px-3 py-2 transition-colors space-y-2",
                       isCompleted && "bg-emerald-50 border-emerald-200",
@@ -568,12 +598,22 @@ export default function DueDiligenceTemplateFlow({
                           </div>
                         )}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                      )}
+                      </div>
+                      {/* Process Logic Gate — shown between this stage and the next */}
+                      {gateToNext && gateToNext.requirements && gateToNext.requirements.length > 0 && (
+                      <ProcessLogicGate
+                      gate={gateToNext}
+                      stages={stagesList}
+                      docChecklist={docChecklist}
+                      approvalProcess={approvalProcess}
+                      />
+                      )}
+                      </React.Fragment>
+                      );
+                      })}
+                      </div>
+                      )}
 
           {/* Documentation Checklist Tab */}
           {docChecklist.length > 0 && onDocChecklistChange && (
