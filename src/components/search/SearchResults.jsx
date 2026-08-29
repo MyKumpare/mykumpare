@@ -371,14 +371,23 @@ export default function SearchResults({ query, firms, products, contacts, portfo
     .filter((b) => b._score > 0)
     .sort(byScoreDesc);
 
-  // For a firm result, gather its contacts — but only those that also match
-  // the search keywords, so searching "tina williams" doesn't surface every
-  // employee at a matching firm. Deduped so the same person shows only once.
-  const firmContacts = (firmId) => dedupeContacts(
-    contacts
-      .filter(c => (c.firm_ids || []).includes(firmId))
-      .filter(c => scoreContact(keywords, c) > 0)
-  );
+  // For a firm result, gather its contacts. When the firm matched the search
+  // via its NAME (e.g. searching "calstrs"), show ALL contacts at that firm so
+  // the user sees the full team. When the firm matched only via other fields
+  // (description, website — e.g. a person-name search that incidentally hit a
+  // firm), keep only keyword-matching contacts so person searches don't flood
+  // results with every employee at a matching firm. Deduped either way.
+  const firmContacts = (firm) => {
+    const firmNameLower = (firm.name || "").toLowerCase();
+    const nameMatched = keywords.some((kw) => firmNameLower.includes(kw));
+    const firmContactsList = contacts.filter(
+      (c) => (c.firm_ids || []).includes(firm.id) && !c.deleted_at
+    );
+    if (nameMatched) {
+      return dedupeContacts(firmContactsList);
+    }
+    return dedupeContacts(firmContactsList.filter((c) => scoreContact(keywords, c) > 0));
+  };
 
   // For a contact result, gather its firms
   const contactFirms = (contact) => (contact.firm_ids || []).map(id => firms.find(f => f.id === id)).filter(Boolean);
@@ -417,7 +426,7 @@ export default function SearchResults({ query, firms, products, contacts, portfo
             <Building2 className="w-3.5 h-3.5" /> Firms
           </div>
           {matchedFirms.map((firm) => {
-            const assocContacts = firmContacts(firm.id);
+            const assocContacts = firmContacts(firm);
             return (
               <button
                 key={firm.id}
