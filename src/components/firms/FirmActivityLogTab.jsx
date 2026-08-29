@@ -19,6 +19,7 @@ import ActivityDetailModal from "@/components/activity/ActivityDetailModal";
 import FirmActivityCalendar from "@/components/firms/FirmActivityCalendar";
 import MeetingSummaryPanel from "@/components/firms/MeetingSummaryPanel";
 import FirmRecordHistorySection from "./FirmRecordHistorySection";
+import FirmUnifiedFeed from "./FirmUnifiedFeed";
 import { getCurrentUserContact } from "@/components/activity/useAutoOriginator";
 import { format } from "date-fns";
 import ReactQuill from "react-quill";
@@ -837,7 +838,7 @@ function TaskRow({ task, onOpenDetail }) {
 
 // ── Main Tab ──────────────────────────────────────────────────────────────────
 export default function FirmActivityLogTab({ firmId, firmName, firm, onFirmClick, onContactClick }) {
-  const [activeSection, setActiveSection] = useState("activities");
+  const [activeSection, setActiveSection] = useState("unified");
   const [viewMode, setViewMode] = useState("list"); // "list" | "calendar"
   // "idle" | "picking-for-activity" | "picking-for-task" | "activity-form" | "task-form"
   const [uiState, setUiState] = useState("idle");
@@ -934,6 +935,7 @@ export default function FirmActivityLogTab({ firmId, firmName, firm, onFirmClick
   const recordEditCount = Array.isArray(firm?.audit_history) ? firm.audit_history.length : 0;
 
   const sections = [
+    { key: "unified", label: "Unified Feed", count: 0 },
     { key: "activities", label: "Activity Logs", count: firmActivities.length },
     { key: "tasks", label: "Follow-up Tasks", count: firmTasks.length },
     { key: "record-edits", label: "Record Edits", count: recordEditCount },
@@ -1014,6 +1016,15 @@ export default function FirmActivityLogTab({ firmId, firmName, firm, onFirmClick
         <div className="text-xs text-gray-400 italic py-6 text-center">Loading...</div>
       ) : viewMode === "calendar" ? (
         <FirmActivityCalendar
+          activities={firmActivities}
+          tasks={firmTasks}
+          onActivityClick={setDetailActivity}
+          onTaskClick={setDetailTask}
+        />
+      ) : activeSection === "unified" ? (
+        <FirmUnifiedFeed
+          firmId={firmId}
+          firm={firm}
           activities={firmActivities}
           tasks={firmTasks}
           onActivityClick={setDetailActivity}
