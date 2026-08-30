@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => ({
     // base44 plugin makes external network calls during build that break
     // production builds on Netlify/GitHub Pages — use it only in dev mode
     ...(mode === 'development' ? [base44({
-      legacySDKImports: process.env.BASE44_LEGACY_SDK_IMPORTS === 'true',
+      legacySDKImports: true,
       hmrNotifier: true,
       navigationNotifier: true,
       analyticsTracker: true,
@@ -24,10 +24,19 @@ export default defineConfig(({ mode }) => ({
     alias: {
       // Explicit '@' alias — mirrors jsconfig.json for production builds
       '@': path.resolve(__dirname, './src'),
+      // Pin React/ReactDOM to the installed copies — prevents Vite dep cache
+      // corruption from serving a null React module.
+      react: path.resolve(__dirname, 'node_modules/react'),
+      'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
     },
     // Force a single copy of React/ReactDOM — prevents the
     // "Cannot read properties of null (reading 'useState')" runtime error
     // caused by duplicate React copies in the Vite dep cache.
     dedupe: ['react', 'react-dom'],
+  },
+  optimizeDeps: {
+    // Force re-optimization on every server start — clears stale/corrupted
+    // dep chunks that cause the null React module error.
+    force: true,
   },
 }));
