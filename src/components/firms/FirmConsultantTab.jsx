@@ -2,10 +2,11 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Building2, User, Calendar } from "lucide-react";
+import { Plus, Pencil, Trash2, Building2, User, Calendar, Download, FileSpreadsheet, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import AddConsultantDialog from "./AddConsultantDialog";
 import { buildContactFullName } from "./consultantFullName";
+import { exportConsultantsPdf, exportConsultantsExcel } from "./consultantReportExport";
 
 function formatDate(iso) {
   if (!iso) return "—";
@@ -23,6 +24,29 @@ export default function FirmConsultantTab({ firmId, firmName }) {
   const [showDialog, setShowDialog] = useState(false);
   const [editingConsultant, setEditingConsultant] = useState(null);
   const [pendingDelete, setPendingDelete] = useState(null);
+  const [exporting, setExporting] = useState(null); // "pdf" | "excel" | null
+
+  const handleExportPdf = async () => {
+    setExporting("pdf");
+    try {
+      await exportConsultantsPdf({ firmName, consultants });
+      toast({ title: "PDF exported", description: "Consultant report downloaded." });
+    } catch (err) {
+      toast({ title: "Export failed", description: err.message, variant: "destructive" });
+    }
+    setExporting(null);
+  };
+
+  const handleExportExcel = async () => {
+    setExporting("excel");
+    try {
+      await exportConsultantsExcel({ firmName, consultants });
+      toast({ title: "Excel exported", description: "Consultant report downloaded." });
+    } catch (err) {
+      toast({ title: "Export failed", description: err.message, variant: "destructive" });
+    }
+    setExporting(null);
+  };
 
   const { data: consultants = [], isLoading } = useQuery({
     queryKey: ["firm-consultants", firmId],
@@ -62,7 +86,31 @@ export default function FirmConsultantTab({ firmId, firmName }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-end">
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-1.5">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 px-2 text-xs gap-1"
+            onClick={handleExportPdf}
+            disabled={exporting !== null || consultants.length === 0}
+          >
+            {exporting === "pdf" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+            PDF
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 px-2 text-xs gap-1"
+            onClick={handleExportExcel}
+            disabled={exporting !== null || consultants.length === 0}
+          >
+            {exporting === "excel" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileSpreadsheet className="w-3.5 h-3.5" />}
+            Excel
+          </Button>
+        </div>
         <Button
           type="button"
           variant="ghost"

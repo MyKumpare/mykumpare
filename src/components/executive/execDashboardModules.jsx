@@ -8,6 +8,7 @@ import {
   Layers, PieChart as PieIcon, BarChart3, Grid3x3, AlertTriangle,
   ClipboardCheck,
   AlertOctagon,
+  Briefcase,
 } from "lucide-react";
 import ExposureHeatmap from "./ExposureHeatmap";
 import FundingBreakdownCharts from "./FundingBreakdownCharts";
@@ -17,6 +18,7 @@ import StuckDdProcesses from "./StuckDdProcesses";
 import DdProcessesByStatus from "./DdProcessesByStatus";
 import StalledDdAlertsIndicator from "./StalledDdAlertsIndicator";
 import DdApprovalsByTeamMember from "./DdApprovalsByTeamMember";
+import AllocatorsByConsultantRole from "./AllocatorsByConsultantRole";
 
 export const FIRM_TYPES = [
   "Investment Manager", "Allocator", "Investment Consultant",
@@ -265,6 +267,16 @@ export const MODULE_REGISTRY = {
     render: (d) => <DdApprovalsByTeamMember ddRecords={d.ddRecords || []} />,
   },
 
+  allocators_by_consultant_role: {
+    id: "allocators_by_consultant_role",
+    title: "Allocators by Consultant Role",
+    description: "Allocator count per investment consultant role type",
+    icon: Briefcase,
+    width: "half",
+    category: "Charts",
+    render: () => <AllocatorsByConsultantRole />,
+  },
+
   top_firms_aum_trend: {
     id: "top_firms_aum_trend",
     title: "Top Firms AUM Growth Trends",
@@ -390,6 +402,7 @@ export const DEFAULT_MODULE_ORDER = [
   "chart_products_by_status",
   "dd_processes_by_status",
   "dd_approvals_by_team_member",
+  "allocators_by_consultant_role",
   "stalled_dd_alerts",
   "stuck_dd_processes",
   "top_firms_aum_trend",
