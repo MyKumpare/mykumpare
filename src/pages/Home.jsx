@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, ClipboardCheck, FileText, Files, ShieldCheck, X, LayoutDashboard, FlaskConical, MapPin, Camera,   LayoutGrid, PieChart, Bot, ExternalLink, ChevronDown, CalendarDays, Radar, FileBarChart, Mic, Newspaper, Gauge, Users, ScrollText,   Ghost, Upload, Eraser, Tag, UserX, Briefcase, Activity, ArrowRightLeft, UserCheck,   Globe, Share2, Network, Bell, TrendingUp, ArrowRight, Trophy, GitCompare } from "lucide-react";
+import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, ClipboardCheck, FileText, Files, ShieldCheck, X, LayoutDashboard, FlaskConical, MapPin, Camera,   LayoutGrid, PieChart, Bot, ExternalLink, ChevronDown, CalendarDays, Radar, FileBarChart, Mic, Newspaper, Gauge, Users, ScrollText,   Ghost, Upload, Eraser, Tag, UserX, Briefcase, Activity, ArrowRightLeft, UserCheck,   Globe, Share2, Network, Bell, TrendingUp, ArrowRight, Trophy, GitCompare, Video } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
@@ -775,6 +775,7 @@ export default function Home() {
       { label: "Company / Title Cleanup", icon: Briefcase, onClick: () => { setUtilityDefaultView("experience-option-cleanup"); setUtilityModalOpen(true); } },
       { label: "Orphaned Contacts", icon: UserX, onClick: () => { setUtilityDefaultView("orphaned-contacts"); setUtilityModalOpen(true); } },
       { label: "Import Jobs", icon: Activity, onClick: () => { setUtilityDefaultView("import-jobs"); setUtilityModalOpen(true); } },
+      { label: "Video Library", icon: Video, onClick: () => navigate("/VideoLibrary") },
       ...(isAdmin ? [
         { label: "News Scrub Settings", icon: Newspaper, onClick: () => { setUtilityDefaultView("news-scrub-settings"); setUtilityModalOpen(true); } },
         { label: "Admin", icon: ShieldCheck, onClick: () => navigate("/UserManagement") },
