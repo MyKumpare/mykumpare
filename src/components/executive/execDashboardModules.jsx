@@ -16,6 +16,7 @@ import FirmBenchmarkComparison from "./FirmBenchmarkComparison";
 import StuckDdProcesses from "./StuckDdProcesses";
 import DdProcessesByStatus from "./DdProcessesByStatus";
 import StalledDdAlertsIndicator from "./StalledDdAlertsIndicator";
+import DdApprovalsByTeamMember from "./DdApprovalsByTeamMember";
 
 export const FIRM_TYPES = [
   "Investment Manager", "Allocator", "Investment Consultant",
@@ -254,6 +255,16 @@ export const MODULE_REGISTRY = {
     render: () => <StalledDdAlertsIndicator />,
   },
 
+  dd_approvals_by_team_member: {
+    id: "dd_approvals_by_team_member",
+    title: "DD Approvals by Team Member",
+    description: "Stage approvals completed per team member",
+    icon: ClipboardCheck,
+    width: "half",
+    category: "Charts",
+    render: (d) => <DdApprovalsByTeamMember ddRecords={d.ddRecords || []} />,
+  },
+
   top_firms_aum_trend: {
     id: "top_firms_aum_trend",
     title: "Top Firms AUM Growth Trends",
@@ -378,6 +389,7 @@ export const DEFAULT_MODULE_ORDER = [
   "chart_committed_capital_by_type",
   "chart_products_by_status",
   "dd_processes_by_status",
+  "dd_approvals_by_team_member",
   "stalled_dd_alerts",
   "stuck_dd_processes",
   "top_firms_aum_trend",
