@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import {
   Video, Plus, Tag, Search, X, Sparkles, Settings2,
-  Filter, Play,
+  Filter, Play, FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import AddVideoDialog from "@/components/videolibrary/AddVideoDialog";
 import VideoTagManager from "@/components/videolibrary/VideoTagManager";
 import VideoCreationAssistant from "@/components/videolibrary/VideoCreationAssistant";
 import TrainingManualDialog from "@/components/videolibrary/TrainingManualDialog";
+import ManualToVideoDialog from "@/components/videolibrary/ManualToVideoDialog";
 
 export default function VideoLibrary() {
   const queryClient = useQueryClient();
@@ -25,6 +26,7 @@ export default function VideoLibrary() {
   const [tagManagerOpen, setTagManagerOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [trainingManualVideo, setTrainingManualVideo] = useState(null);
+  const [manualToVideoOpen, setManualToVideoOpen] = useState(false);
 
   const { data: videos = [], isLoading } = useQuery({
     queryKey: ["video_library_items"],
@@ -110,6 +112,14 @@ export default function VideoLibrary() {
               className="bg-white/20 text-white hover:bg-white/30 border-0"
             >
               <Settings2 className="w-4 h-4" /> Manage Tags
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setManualToVideoOpen(true)}
+              className="bg-white/20 text-white hover:bg-white/30 border-0"
+            >
+              <FileText className="w-4 h-4" /> Upload Manual
             </Button>
             <Button
               size="sm"
@@ -224,6 +234,7 @@ export default function VideoLibrary() {
       <VideoTagManager open={tagManagerOpen} onClose={() => setTagManagerOpen(false)} />
       <VideoCreationAssistant open={assistantOpen} onClose={() => setAssistantOpen(false)} />
       <TrainingManualDialog video={trainingManualVideo} onClose={() => setTrainingManualVideo(null)} />
+      <ManualToVideoDialog open={manualToVideoOpen} onClose={() => setManualToVideoOpen(false)} />
     </div>
   );
 }
