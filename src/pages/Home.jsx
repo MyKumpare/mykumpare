@@ -761,6 +761,7 @@ export default function Home() {
       { label: "Relationship Map", icon: Network, onClick: () => navigate("/RelationshipNetworkMap") },
       { label: "Influence Dashboard", icon: Trophy, onClick: () => navigate("/InfluenceLevelDashboard") },
     ] },
+    { label: "Videos", icon: Video, ref: null, color: "text-orange-600", activeBg: "bg-orange-50", onClick: () => navigate("/VideoLibrary") },
     { label: "Utilities", icon: Wrench, ref: utilityRef, color: "text-gray-600", activeBg: "bg-gray-100", onClick: () => { setUtilityDefaultView(null); setUtilityModalOpen(true); }, submenu: [
       { label: "Benchmark", icon: Gauge, onClick: () => { setUtilityDefaultView("benchmark"); setUtilityModalOpen(true); } },
       { label: "Contact Cleanup", icon: Users, onClick: () => { setUtilityDefaultView("cleanup"); setUtilityModalOpen(true); } },
@@ -775,7 +776,6 @@ export default function Home() {
       { label: "Company / Title Cleanup", icon: Briefcase, onClick: () => { setUtilityDefaultView("experience-option-cleanup"); setUtilityModalOpen(true); } },
       { label: "Orphaned Contacts", icon: UserX, onClick: () => { setUtilityDefaultView("orphaned-contacts"); setUtilityModalOpen(true); } },
       { label: "Import Jobs", icon: Activity, onClick: () => { setUtilityDefaultView("import-jobs"); setUtilityModalOpen(true); } },
-      { label: "Video Library", icon: Video, onClick: () => navigate("/VideoLibrary") },
       ...(isAdmin ? [
         { label: "News Scrub Settings", icon: Newspaper, onClick: () => { setUtilityDefaultView("news-scrub-settings"); setUtilityModalOpen(true); } },
         { label: "Admin", icon: ShieldCheck, onClick: () => navigate("/UserManagement") },
