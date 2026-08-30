@@ -19,9 +19,11 @@
         "questionnaire_submitted",
         "questionnaire_completed",
         "external_chat",
-        "coverage_assignment"
+        "coverage_assignment",
+        "stage_completed",
+        "deadline_approaching"
       ],
-      "description": "Type of notification. 'external_chat' is a chat message from an external firm user to the primary analyst. 'coverage_assignment' is an alert to an analyst when they are newly assigned as primary or secondary analyst on a due diligence record (or a new firm is added to their coverage)."
+      "description": "Type of notification. 'external_chat' is a chat message from an external firm user to the primary analyst. 'coverage_assignment' is an alert to an analyst when they are newly assigned as primary or secondary analyst on a due diligence record (or a new firm is added to their coverage). 'stage_completed' is an alert sent to all team members when a due diligence stage is completed (all sub-stages done + supervisor approved). 'deadline_approaching' is an alert sent to assigned team members when a sub-stage assignment, task, or milestone deadline is approaching."
     },
     "title": {
       "type": "string",
@@ -51,6 +53,10 @@
       "type": "string",
       "description": "Stage name this notification refers to (denormalized)"
     },
+    "sub_stage_name": {
+      "type": "string",
+      "description": "Sub-stage name this notification refers to (denormalized, for deadline_approaching notifications)"
+    },
     "supervisor_status": {
       "type": "string",
       "enum": [
@@ -76,6 +82,24 @@
         "secondary"
       ],
       "description": "For 'coverage_assignment' notifications: whether the analyst was assigned as primary or secondary analyst."
+    },
+    "deadline_date": {
+      "type": "string",
+      "format": "date",
+      "description": "The approaching deadline date (YYYY-MM-DD). Used for 'deadline_approaching' notifications so the UI can sort and display urgency."
+    },
+    "deadline_type": {
+      "type": "string",
+      "enum": [
+        "sub_stage_assignment",
+        "task_assignment",
+        "milestone"
+      ],
+      "description": "For 'deadline_approaching' notifications: what kind of deadline is approaching (sub-stage assignment due date, task assignment due date, or milestone target date)."
+    },
+    "deadline_days_away": {
+      "type": "integer",
+      "description": "Number of days until the deadline (at the time the notification was created). Used to show urgency in the UI (e.g. 'Due in 2 days')."
     },
     "status": {
       "type": "string",

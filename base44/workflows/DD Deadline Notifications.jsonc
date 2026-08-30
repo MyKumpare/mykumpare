@@ -1,0 +1,47 @@
+{
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "0 8 * * 1-5",
+      "one_time_date": null,
+      "timezone": "America/New_York",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "dd_deadline_notifications",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "check_deadlines": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "checkDdDeadlines",
+            "args": {
+              "threshold_days": 3
+            }
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Check DD deadlines",
+            "description": "Scan all active DD processes for approaching deadlines"
+          }
+        }
+      }
+    ]
+  },
+  "description": "Daily check of all active due diligence processes for approaching sub-stage assignment, task, and milestone deadlines. Creates in-app notifications for assigned team members when a deadline is within 3 days.",
+  "name": "DD Deadline Notifications"
+}

@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import {
   ShieldCheck, ShieldX, ShieldAlert, Clock, Bell, Eye, Loader2,
-  CheckCircle2, ExternalLink, MessageSquare, Send,
+  CheckCircle2, ExternalLink, MessageSquare, Send, Flag, AlertCircle,
 } from "lucide-react";
 import AddDueDiligenceDialog from "../firms/AddDueDiligenceDialog";
 import { syncDdNotifications, deleteDdNotifications } from "../firms/ddNotificationSync";
@@ -34,6 +34,30 @@ const TYPE_CONFIG = {
     bgClass: "bg-violet-50 border-violet-200",
     badgeClass: "bg-violet-100 text-violet-700",
     actionLabel: "Respond",
+  },
+  stage_completed: {
+    label: "Stage Completed",
+    icon: CheckCircle2,
+    iconClass: "text-emerald-600",
+    bgClass: "bg-emerald-50 border-emerald-200",
+    badgeClass: "bg-emerald-100 text-emerald-700",
+    actionLabel: "View",
+  },
+  deadline_approaching: {
+    label: "Deadline",
+    icon: AlertCircle,
+    iconClass: "text-amber-600",
+    bgClass: "bg-amber-50 border-amber-200",
+    badgeClass: "bg-amber-100 text-amber-700",
+    actionLabel: "View",
+  },
+  coverage_assignment: {
+    label: "Coverage",
+    icon: Flag,
+    iconClass: "text-blue-600",
+    bgClass: "bg-blue-50 border-blue-200",
+    badgeClass: "bg-blue-100 text-blue-700",
+    actionLabel: "View",
   },
 };
 
@@ -310,6 +334,25 @@ export default function ContactNotificationsTab({ contactId, contactName, onCont
                     {n.title}
                   </button>
                   <p className="text-xs text-gray-500 mt-0.5">{n.message}</p>
+                  {n.type === "deadline_approaching" && n.deadline_date && (
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                        n.deadline_days_away <= 1
+                          ? "bg-red-100 text-red-700"
+                          : n.deadline_days_away <= 3
+                          ? "bg-amber-100 text-amber-700"
+                          : "bg-gray-100 text-gray-600"
+                      }`}>
+                        {n.deadline_days_away <= 0
+                          ? "Due today"
+                          : `Due in ${n.deadline_days_away} day${n.deadline_days_away === 1 ? "" : "s"}`
+                        }
+                      </span>
+                      <span className="text-[10px] text-gray-400">
+                        {new Date(n.deadline_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      </span>
+                    </div>
+                  )}
                   {n.type === "supervisor_request" && !isCompleted && (
                     <div className="flex gap-1.5 mt-1.5">
                       <Button type="button" size="sm" className="h-6 text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white" disabled={decideMutation.isPending} onClick={() => decideMutation.mutate({ notification: n, decision: "approved" })}>

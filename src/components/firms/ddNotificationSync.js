@@ -176,6 +176,75 @@ export async function syncDdNotifications(ddRecord) {
         }
       }
     }
+
+    // 4. Stage completed — when supervisor_status is "approved", notify ALL
+    //    team members assigned to this stage (primary analyst, secondary
+    //    analyst, and every contact assigned to a sub-stage in this stage).
+    //    Deduplicated per (contact, stage) pair.
+    if (supStatus === "approved") {
+      await createStageCompletedNotifications(ddRecord, stage);
+    }
+  }
+}
+
+/**
+ * Creates "stage_completed" notifications for every team member involved in a
+ * completed stage. Recipients: primary analyst, secondary analyst, and all
+ * contacts assigned to sub-stages within the stage. Deduplicated per
+ * (due_diligence_id, contact_id, type, stage_name).
+ */
+async function createStageCompletedNotifications(ddRecord, stage) {
+  const stageName = stage.name || "Stage";
+
+  // Collect all recipient contact IDs + names
+  const recipients = new Map();
+
+  if (ddRecord.primary_analyst_contact_id) {
+    recipients.set(ddRecord.primary_analyst_contact_id, ddRecord.primary_analyst_name || "");
+  }
+  if (ddRecord.secondary_analyst_contact_id) {
+    recipients.set(ddRecord.secondary_analyst_contact_id, ddRecord.secondary_analyst_name || "");
+  }
+
+  // Gather contacts from sub-stage assignments
+  for (const ss of stage.sub_stages || []) {
+    if (ss.performed_by_contact_id) {
+      recipients.set(ss.performed_by_contact_id, ss.performed_by_name || "");
+    }
+    for (const a of ss.assignments || []) {
+      if (a.contact_id) {
+        recipients.set(a.contact_id, a.contact_name || "");
+      }
+    }
+  }
+
+  for (const [contactId, contactName] of recipients) {
+    // Skip if a stage_completed notification already exists for this contact+stage
+    const existing = await base44.entities.DdNotification.filter(
+      {
+        due_diligence_id: ddRecord.id,
+        contact_id: contactId,
+        type: "stage_completed",
+        stage_name: stageName,
+      },
+      "-created_date",
+      5
+    );
+    if (existing.length > 0) continue;
+
+    await base44.entities.DdNotification.create({
+      contact_id: contactId,
+      contact_name: contactName,
+      type: "stage_completed",
+      title: `Stage completed: "${stageName}"`,
+      message: `Stage "${stageName}" for ${ddRecord.product_name || "due diligence"}${ddRecord.firm_name ? ` (${ddRecord.firm_name})` : ""} has been completed and approved.`,
+      due_diligence_id: ddRecord.id,
+      firm_name: ddRecord.firm_name || "",
+      product_name: ddRecord.product_name || "",
+      stage_name: stageName,
+      supervisor_status: "approved",
+      status: "unread",
+    });
   }
 }
 
