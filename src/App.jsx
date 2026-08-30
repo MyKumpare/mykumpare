@@ -48,6 +48,8 @@ import SectionPortfolios from './pages/SectionPortfolios';
 import SummaryReportTemplates from './pages/SummaryReportTemplates';
 import ExecutiveDashboard from './pages/ExecutiveDashboard';
 import ProcessTemplateKanban from './pages/ProcessTemplateKanban';
+import DdTimeline from './pages/DdTimeline';
+import VideoLibrary from './pages/VideoLibrary';
 import QuickNotesDrawer from "@/components/quicknotes/QuickNotesDrawer";
 
 
@@ -148,6 +150,8 @@ const AuthenticatedApp = () => {
       <Route path="/SummaryReportTemplates" element={<LayoutWrapper currentPageName="SummaryReportTemplates"><SummaryReportTemplates /></LayoutWrapper>} />
       <Route path="/ExecutiveDashboard" element={<LayoutWrapper currentPageName="ExecutiveDashboard"><ExecutiveDashboard /></LayoutWrapper>} />
       <Route path="/ProcessTemplateKanban" element={<LayoutWrapper currentPageName="ProcessTemplateKanban"><ProcessTemplateKanban /></LayoutWrapper>} />
+      <Route path="/DdTimeline" element={<LayoutWrapper currentPageName="DdTimeline"><DdTimeline /></LayoutWrapper>} />
+      <Route path="/VideoLibrary" element={<LayoutWrapper currentPageName="VideoLibrary"><VideoLibrary /></LayoutWrapper>} />
       <Route path="/register" element={<ExternalPartyRegister />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>

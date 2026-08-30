@@ -1,0 +1,63 @@
+{
+  "name": "VideoTag",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Tag label (unique \u2014 validated for no duplicates)"
+    },
+    "sort_order": {
+      "type": "integer",
+      "default": 0,
+      "description": "Display order in the multi-select dropdown. Lower values appear first. Users can reorder tags via the tag manager."
+    },
+    "color": {
+      "type": "string",
+      "description": "Optional hex color for visual distinction in the dropdown and video cards (e.g. '#6366f1')."
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "user"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": null,
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

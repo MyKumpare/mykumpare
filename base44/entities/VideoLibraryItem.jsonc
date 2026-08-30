@@ -1,0 +1,100 @@
+{
+  "name": "VideoLibraryItem",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Video title (unique \u2014 validated for no duplicates)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional description or summary of the video content"
+    },
+    "video_url": {
+      "type": "string",
+      "description": "URL of the video file (uploaded via UploadFile or an external URL)"
+    },
+    "thumbnail_url": {
+      "type": "string",
+      "description": "Optional thumbnail image URL for the video card"
+    },
+    "category": {
+      "type": "string",
+      "default": "How To Use",
+      "description": "Category grouping for the video (e.g. 'How To Use', 'Best Practices', 'Training')"
+    },
+    "tag_ids": {
+      "type": "array",
+      "description": "Multi-select tag IDs assigned to this video. References VideoTag records. Users can assign multiple tags via the multi-select dropdown.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "tag_names": {
+      "type": "array",
+      "description": "Denormalized tag names for display (mirrors tag_ids, resolved from VideoTag records).",
+      "items": {
+        "type": "string"
+      }
+    },
+    "uploaded_by_name": {
+      "type": "string",
+      "description": "Display name of the user who uploaded/created this video (denormalized)"
+    },
+    "duration_label": {
+      "type": "string",
+      "description": "Optional human-readable duration (e.g. '3:45')"
+    },
+    "sort_order": {
+      "type": "integer",
+      "default": 0,
+      "description": "Display order within the video library. Lower values appear first."
+    }
+  },
+  "required": [
+    "title",
+    "video_url",
+    "category"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "user"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": null,
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
