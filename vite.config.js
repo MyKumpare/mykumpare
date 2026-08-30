@@ -25,5 +25,9 @@ export default defineConfig(({ mode }) => ({
       // Explicit '@' alias — mirrors jsconfig.json for production builds
       '@': path.resolve(__dirname, './src'),
     },
+    // Force a single copy of React/ReactDOM — prevents the
+    // "Cannot read properties of null (reading 'useState')" runtime error
+    // caused by duplicate React copies in the Vite dep cache.
+    dedupe: ['react', 'react-dom'],
   },
 }));
