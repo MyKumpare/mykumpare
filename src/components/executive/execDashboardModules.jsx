@@ -25,6 +25,7 @@ import DdWorkloadHeatmap from "./DdWorkloadHeatmap";
 import AllocatorsByConsultantRole from "./AllocatorsByConsultantRole";
 import ConsultantRolesByFirmType from "./ConsultantRolesByFirmType";
 import DdAvgStageDuration from "./DdAvgStageDuration";
+import ConsultantActivityHeatmap from "./ConsultantActivityHeatmap";
 
 export const FIRM_TYPES = [
   "Investment Manager", "Allocator", "Investment Consultant",
@@ -313,6 +314,16 @@ export const MODULE_REGISTRY = {
     render: () => <ConsultantRolesByFirmType />,
   },
 
+  consultant_activity_heatmap: {
+    id: "consultant_activity_heatmap",
+    title: "Consultant Activity Heatmap",
+    description: "Consultant engagement intensity across firm types and consultant firms",
+    icon: Grid3x3,
+    width: "full",
+    category: "Analytics",
+    render: () => <ConsultantActivityHeatmap />,
+  },
+
   top_firms_aum_trend: {
     id: "top_firms_aum_trend",
     title: "Top Firms AUM Growth Trends",
@@ -441,6 +452,7 @@ export const DEFAULT_MODULE_ORDER = [
   "dd_avg_stage_duration",
   "allocators_by_consultant_role",
   "consultant_roles_by_firm_type",
+  "consultant_activity_heatmap",
   "dd_workload_heatmap",
   "stalled_dd_alerts",
   "stuck_dd_processes",
