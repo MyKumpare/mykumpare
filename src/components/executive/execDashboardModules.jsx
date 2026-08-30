@@ -9,6 +9,7 @@ import {
   ClipboardCheck,
   AlertOctagon,
   Briefcase,
+  Users,
 } from "lucide-react";
 import ExposureHeatmap from "./ExposureHeatmap";
 import FundingBreakdownCharts from "./FundingBreakdownCharts";
@@ -18,6 +19,7 @@ import StuckDdProcesses from "./StuckDdProcesses";
 import DdProcessesByStatus from "./DdProcessesByStatus";
 import StalledDdAlertsIndicator from "./StalledDdAlertsIndicator";
 import DdApprovalsByTeamMember from "./DdApprovalsByTeamMember";
+import DdWorkloadHeatmap from "./DdWorkloadHeatmap";
 import AllocatorsByConsultantRole from "./AllocatorsByConsultantRole";
 
 export const FIRM_TYPES = [
@@ -277,6 +279,16 @@ export const MODULE_REGISTRY = {
     render: () => <AllocatorsByConsultantRole />,
   },
 
+  dd_workload_heatmap: {
+    id: "dd_workload_heatmap",
+    title: "DD Workload Heatmap",
+    description: "Active due diligence assignments per team member by status",
+    icon: Users,
+    width: "full",
+    category: "Analytics",
+    render: (d) => <DdWorkloadHeatmap ddRecords={d.ddRecords || []} />,
+  },
+
   top_firms_aum_trend: {
     id: "top_firms_aum_trend",
     title: "Top Firms AUM Growth Trends",
@@ -403,6 +415,7 @@ export const DEFAULT_MODULE_ORDER = [
   "dd_processes_by_status",
   "dd_approvals_by_team_member",
   "allocators_by_consultant_role",
+  "dd_workload_heatmap",
   "stalled_dd_alerts",
   "stuck_dd_processes",
   "top_firms_aum_trend",
