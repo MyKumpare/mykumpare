@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => ({
     // base44 plugin makes external network calls during build that break
     // production builds on Netlify/GitHub Pages — use it only in dev mode
     ...(mode === 'development' ? [base44({
-      legacySDKImports: true,
+      legacySDKImports: process.env.BASE44_LEGACY_SDK_IMPORTS === 'true',
       hmrNotifier: true,
       navigationNotifier: true,
       analyticsTracker: true,
@@ -24,10 +24,6 @@ export default defineConfig(({ mode }) => ({
     alias: {
       // Explicit '@' alias — mirrors jsconfig.json for production builds
       '@': path.resolve(__dirname, './src'),
-      // Pin React/ReactDOM to the installed copies — prevents Vite dep cache
-      // corruption from serving a null React module.
-      react: path.resolve(__dirname, 'node_modules/react'),
-      'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
     },
     // Force a single copy of React/ReactDOM — prevents the
     // "Cannot read properties of null (reading 'useState')" runtime error
@@ -35,8 +31,22 @@ export default defineConfig(({ mode }) => ({
     dedupe: ['react', 'react-dom'],
   },
   optimizeDeps: {
-    // Force re-optimization on every server start — clears stale/corrupted
-    // dep chunks that cause the null React module error.
-    force: true,
+    // Pre-bundle all React entries so Vite doesn't discover react/jsx-dev-runtime
+    // mid-load, re-optimize, and mint mismatched chunks (react.js?v=A vs react.js?v=B)
+    // that cause "Cannot read properties of null (reading 'useState')".
+    // This mirrors @base44/vite-plugin's PREBUNDLED_SANDBOX_DEPS, which is only
+    // applied inside the Modal sandbox — we need it in local dev too.
+    include: [
+      'react',
+      'react/jsx-runtime',
+      'react/jsx-dev-runtime',
+      'react-dom',
+      'react-dom/client',
+      'react-router-dom',
+      'framer-motion',
+      'lodash',
+      'moment',
+      'react-quill',
+    ],
   },
 }));
