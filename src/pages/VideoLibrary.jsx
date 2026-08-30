@@ -12,6 +12,7 @@ import VideoPlayerDialog from "@/components/videolibrary/VideoPlayerDialog";
 import AddVideoDialog from "@/components/videolibrary/AddVideoDialog";
 import VideoTagManager from "@/components/videolibrary/VideoTagManager";
 import VideoCreationAssistant from "@/components/videolibrary/VideoCreationAssistant";
+import TrainingManualDialog from "@/components/videolibrary/TrainingManualDialog";
 
 export default function VideoLibrary() {
   const queryClient = useQueryClient();
@@ -23,6 +24,7 @@ export default function VideoLibrary() {
   const [editingVideo, setEditingVideo] = useState(null);
   const [tagManagerOpen, setTagManagerOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [trainingManualVideo, setTrainingManualVideo] = useState(null);
 
   const { data: videos = [], isLoading } = useQuery({
     queryKey: ["video_library_items"],
@@ -204,6 +206,7 @@ export default function VideoLibrary() {
                 onPlay={() => setPlayerVideo(video)}
                 onEdit={() => handleEdit(video)}
                 onDelete={() => handleDelete(video)}
+                onTrainingManual={() => setTrainingManualVideo(video)}
               />
             ))}
           </div>
@@ -220,6 +223,7 @@ export default function VideoLibrary() {
       />
       <VideoTagManager open={tagManagerOpen} onClose={() => setTagManagerOpen(false)} />
       <VideoCreationAssistant open={assistantOpen} onClose={() => setAssistantOpen(false)} />
+      <TrainingManualDialog video={trainingManualVideo} onClose={() => setTrainingManualVideo(null)} />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import React from "react";
-import { Play, Pencil, Trash2, User, Clock, Tag } from "lucide-react";
+import { Play, Pencil, Trash2, User, Clock, Tag, BookOpen } from "lucide-react";
 
 /**
  * VideoCard — displays a single video in the library grid.
@@ -11,7 +11,7 @@ import { Play, Pencil, Trash2, User, Clock, Tag } from "lucide-react";
  *   onEdit — () => void
  *   onDelete — () => void
  */
-export default function VideoCard({ video, tags = [], onPlay, onEdit, onDelete }) {
+export default function VideoCard({ video, tags = [], onPlay, onEdit, onDelete, onTrainingManual }) {
   const videoTags = (video.tag_names || []).map((name) => tags.find((t) => t.name === name)).filter(Boolean);
 
   return (
@@ -73,6 +73,17 @@ export default function VideoCard({ video, tags = [], onPlay, onEdit, onDelete }
               </span>
             ))}
           </div>
+        )}
+
+        {/* Training Manual button */}
+        {onTrainingManual && (
+          <button
+            onClick={onTrainingManual}
+            className="w-full mt-2 flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-medium transition-colors border border-emerald-200"
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            Training Manual
+          </button>
         )}
 
         {/* Footer */}
