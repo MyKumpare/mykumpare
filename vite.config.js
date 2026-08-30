@@ -31,6 +31,8 @@ export default defineConfig(({ mode }) => ({
     dedupe: ['react', 'react-dom'],
   },
   optimizeDeps: {
+    // Force re-optimization to clear stale browser hash from server memory
+    force: true,
     // Pre-bundle all React entries so Vite doesn't discover react/jsx-dev-runtime
     // mid-load, re-optimize, and mint mismatched chunks (react.js?v=A vs react.js?v=B)
     // that cause "Cannot read properties of null (reading 'useState')".
