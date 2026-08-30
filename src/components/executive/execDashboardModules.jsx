@@ -11,6 +11,7 @@ import {
   Briefcase,
   Users,
   Network,
+  Clock,
 } from "lucide-react";
 import ExposureHeatmap from "./ExposureHeatmap";
 import FundingBreakdownCharts from "./FundingBreakdownCharts";
@@ -23,6 +24,7 @@ import DdApprovalsByTeamMember from "./DdApprovalsByTeamMember";
 import DdWorkloadHeatmap from "./DdWorkloadHeatmap";
 import AllocatorsByConsultantRole from "./AllocatorsByConsultantRole";
 import ConsultantRolesByFirmType from "./ConsultantRolesByFirmType";
+import DdAvgStageDuration from "./DdAvgStageDuration";
 
 export const FIRM_TYPES = [
   "Investment Manager", "Allocator", "Investment Consultant",
@@ -271,6 +273,16 @@ export const MODULE_REGISTRY = {
     render: (d) => <DdApprovalsByTeamMember ddRecords={d.ddRecords || []} />,
   },
 
+  dd_avg_stage_duration: {
+    id: "dd_avg_stage_duration",
+    title: "Avg. Time per DD Stage",
+    description: "Average days spent on each due diligence stage across active projects",
+    icon: Clock,
+    width: "half",
+    category: "Charts",
+    render: (d) => <DdAvgStageDuration ddRecords={d.ddRecords || []} />,
+  },
+
   allocators_by_consultant_role: {
     id: "allocators_by_consultant_role",
     title: "Allocators by Consultant Role",
@@ -426,6 +438,7 @@ export const DEFAULT_MODULE_ORDER = [
   "chart_products_by_status",
   "dd_processes_by_status",
   "dd_approvals_by_team_member",
+  "dd_avg_stage_duration",
   "allocators_by_consultant_role",
   "consultant_roles_by_firm_type",
   "dd_workload_heatmap",
