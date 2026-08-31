@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { X, BookOpen, Loader2, Download, AlertCircle, ArrowLeft, RotateCcw } from "lucide-react";
+import { X, BookOpen, Loader2, Download, AlertCircle, ArrowLeft, RotateCcw, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateTrainingManualPdf } from "./trainingManualPdf";
+import TrainingManualEditor from "./TrainingManualEditor";
 
 function isYouTubeUrl(url) {
   return /youtube\.com|youtu\.be/.test(url || "");
@@ -97,7 +98,7 @@ async function extractFrames(videoUrl, frameCount, onProgress) {
 }
 
 export default function TrainingManualDialog({ video, onClose }) {
-  const [step, setStep] = useState("config"); // config | extracting | analyzing | preview | error
+  const [step, setStep] = useState("config"); // config | extracting | analyzing | preview | edit | error
   const [frameCount, setFrameCount] = useState(8);
   const [progress, setProgress] = useState(0);
   const [frames, setFrames] = useState([]);
@@ -331,6 +332,9 @@ You may combine or skip screenshots if the same action spans multiple frames. Ma
                   <Button variant="outline" size="sm" onClick={handleReset}>
                     <RotateCcw className="w-3.5 h-3.5" /> Start Over
                   </Button>
+                  <Button variant="outline" size="sm" onClick={() => setStep("edit")}>
+                    <Pencil className="w-3.5 h-3.5" /> Edit
+                  </Button>
                   <Button size="sm" onClick={handleDownload} className="bg-emerald-600 hover:bg-emerald-700 text-white">
                     <Download className="w-3.5 h-3.5" /> Download PDF
                   </Button>
@@ -362,6 +366,17 @@ You may combine or skip screenshots if the same action spans multiple frames. Ma
                 })}
               </div>
             </div>
+          )}
+
+          {/* ── Edit step ── */}
+          {step === "edit" && manual && (
+            <TrainingManualEditor
+              manual={manual}
+              onManualChange={setManual}
+              frames={frames}
+              onBack={() => setStep("preview")}
+              onDownload={handleDownload}
+            />
           )}
 
           {/* ── Error step ── */}
