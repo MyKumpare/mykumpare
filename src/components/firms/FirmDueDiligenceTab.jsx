@@ -9,6 +9,7 @@ import { saveStageNoteVersions } from "./ddNoteVersionSync";
 import { computeAnalystHistory, initAnalystHistory } from "@/lib/analystHistoryClient";
 import DdFilterTabs, { getDdCounts, filterDdRecords } from "./DdFilterTabs";
 import FirmDdChecklistWidget from "./FirmDdChecklistWidget";
+import FirmDdProgressTracker from "./FirmDdProgressTracker";
 
 const STATUS_STYLES = {
   "Pipeline": "bg-blue-50 text-blue-700 border-blue-200",
@@ -191,6 +192,7 @@ export default function FirmDueDiligenceTab({ firmId, firmName, contacts = [], o
                     );
                   })()}
                 </div>
+                <FirmDdProgressTracker rec={rec} />
                 <div className="text-xs text-gray-500 mt-0.5">
                   <span>Primary: {
                     rec.primary_analyst_contact_id && findContact(rec.primary_analyst_contact_id) ? (
