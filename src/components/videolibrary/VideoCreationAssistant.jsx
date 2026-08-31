@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { Send, Sparkles, X, Loader2, Bot, User as UserIcon } from "lucide-react";
+import { Send, Sparkles, X, Loader2, Bot, User as UserIcon, Film, Download, Check, Plus } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +21,12 @@ export default function VideoCreationAssistant({ open, onClose }) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [generatingVideo, setGeneratingVideo] = useState(false);
+  const [generatedVideoUrl, setGeneratedVideoUrl] = useState(null);
+  const [videoTitle, setVideoTitle] = useState("");
+  const [savedToLibrary, setSavedToLibrary] = useState(false);
+  const [videoError, setVideoError] = useState(null);
+  const queryClient = useQueryClient();
   const scrollRef = useRef(null);
 
   // Create conversation on open
@@ -57,6 +64,17 @@ export default function VideoCreationAssistant({ open, onClose }) {
     }
   }, [messages]);
 
+  // Reset video state when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setGeneratedVideoUrl(null);
+      setVideoTitle("");
+      setSavedToLibrary(false);
+      setVideoError(null);
+      setGeneratingVideo(false);
+    }
+  }, [open]);
+
   const handleSend = async () => {
     if (!input.trim() || !conversation) return;
     const msg = input.trim();
@@ -68,6 +86,97 @@ export default function VideoCreationAssistant({ open, onClose }) {
     } catch {
       setLoading(false);
     }
+  };
+
+  const handleGenerateVideo = async () => {
+    if (messages.length === 0 || generatingVideo) return;
+    try {
+      setGeneratingVideo(true);
+      setGeneratedVideoUrl(null);
+      setSavedToLibrary(false);
+      setVideoError(null);
+
+      // Compile script from assistant messages
+      const script = messages
+        .filter((m) => m.role === "assistant" && m.content)
+        .map((m) => m.content)
+        .join("\n\n");
+
+      if (!script.trim()) {
+        setVideoError("No script found. Ask the assistant to help plan a video first.");
+        return;
+      }
+
+      // Generate a title and visual prompt from the script
+      const scriptResult = await base44.integrations.Core.InvokeLLM({
+        prompt: `Based on this video script/plan, create:
+1. A concise video title (3-6 words)
+2. A detailed visual prompt for an AI video generator (2-3 sentences describing the visual scenes, setting, lighting, and atmosphere for a professional training video)
+
+Script:
+${script}
+
+Return as JSON.`,
+        response_json_schema: {
+          type: "object",
+          properties: {
+            title: { type: "string" },
+            visual_prompt: { type: "string" },
+          },
+          required: ["title", "visual_prompt"],
+        },
+      });
+
+      const title = scriptResult.title || "AI Generated Video";
+      const visualPrompt = scriptResult.visual_prompt || script.slice(0, 500);
+      setVideoTitle(title);
+
+      // Generate the video (takes ~30-60 seconds)
+      const videoResult = await base44.integrations.Core.GenerateVideo({
+        prompt: visualPrompt,
+        duration: 8,
+        aspect_ratio: "16:9",
+        generate_audio: true,
+      });
+
+      setGeneratedVideoUrl(videoResult.url);
+    } catch (err) {
+      console.error("Video generation failed:", err);
+      setVideoError(err?.message || "Failed to generate video. Please try again.");
+    } finally {
+      setGeneratingVideo(false);
+    }
+  };
+
+  const handleSaveVideoToLibrary = async () => {
+    if (!generatedVideoUrl) return;
+    try {
+      let userName = "Unknown";
+      try {
+        const user = await base44.auth.me();
+        userName = user?.full_name || "Unknown";
+      } catch {}
+      await base44.entities.VideoLibraryItem.create({
+        title: videoTitle || "AI Generated Video",
+        video_url: generatedVideoUrl,
+        category: "Training",
+        uploaded_by_name: userName,
+      });
+      await queryClient.invalidateQueries({ queryKey: ["video_library_items"] });
+      setSavedToLibrary(true);
+    } catch (err) {
+      setVideoError("Failed to save to library: " + (err?.message || "Unknown error"));
+    }
+  };
+
+  const handleDownloadVideo = () => {
+    if (!generatedVideoUrl) return;
+    const a = document.createElement("a");
+    a.href = generatedVideoUrl;
+    a.download = `${(videoTitle || "generated-video").replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.mp4`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   if (!open) return null;
@@ -89,9 +198,19 @@ export default function VideoCreationAssistant({ open, onClose }) {
               <p className="text-[10px] text-gray-500">AI help for planning and creating videos</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleGenerateVideo}
+              disabled={generatingVideo || messages.length === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+            >
+              {generatingVideo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Film className="w-3.5 h-3.5" />}
+              {generatingVideo ? "Generating…" : "Generate Video"}
+            </button>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Messages */}
@@ -118,7 +237,49 @@ export default function VideoCreationAssistant({ open, onClose }) {
               <span>Assistant is thinking...</span>
             </div>
           )}
+          {generatingVideo && (
+            <div className="flex items-center gap-2 text-sm text-indigo-600 bg-indigo-50 rounded-lg px-3 py-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Generating video from script… (this takes 30-60 seconds)</span>
+            </div>
+          )}
+          {videoError && (
+            <div className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">
+              {videoError}
+            </div>
+          )}
         </div>
+
+        {/* Generated video preview */}
+        {generatedVideoUrl && (
+          <div className="px-5 py-3 border-t border-gray-100 bg-indigo-50/30 space-y-2">
+            <div className="flex items-center gap-2">
+              <Film className="w-4 h-4 text-indigo-600" />
+              <p className="text-sm font-medium text-gray-700">{videoTitle || "Generated Video"}</p>
+            </div>
+            <video src={generatedVideoUrl} controls className="w-full rounded-lg max-h-48" />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleDownloadVideo}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 text-gray-600 text-xs font-medium hover:bg-gray-50 transition-colors"
+              >
+                <Download className="w-3.5 h-3.5" /> Download
+              </button>
+              {!savedToLibrary ? (
+                <button
+                  onClick={handleSaveVideoToLibrary}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Save to Library
+                </button>
+              ) : (
+                <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
+                  <Check className="w-3.5 h-3.5" /> Saved to library
+                </span>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Input */}
         <div className="px-5 py-3 border-t border-gray-100 flex items-center gap-2">
