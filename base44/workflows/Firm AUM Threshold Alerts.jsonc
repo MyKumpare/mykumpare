@@ -35,11 +35,11 @@
           "then": "end",
           "x-base44": {
             "title": "Check firm AUM thresholds",
-            "description": "Sweep each firm's latest AUM vs per-firm thresholds"
+            "description": "Sweep each firm's latest AUM vs per-firm min/max thresholds"
           }
         }
       }
     ]
   },
-  "description": "Daily sweep that checks each firm's latest month-end AUM against its configured per-firm AUM threshold and raises FirmAumAlert records for any firm whose AUM falls below it. Complements the real-time check that can be triggered manually from the firm profile."
+  "description": "Daily sweep that checks each firm's latest month-end AUM against its configured per-firm AUM thresholds (minimum and/or maximum) and raises FirmAumAlert records for any firm whose AUM falls below its minimum or exceeds its maximum threshold. Complements the real-time check that can be triggered manually from the firm profile."
 }

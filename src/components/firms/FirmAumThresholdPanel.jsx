@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { AlertTriangle, Check, X, Loader2, TrendingDown, RefreshCw, DollarSign } from "lucide-react";
+import { AlertTriangle, Check, X, Loader2, TrendingDown, TrendingUp, RefreshCw, DollarSign } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { toast } from "@/components/ui/use-toast";
 
@@ -21,6 +21,7 @@ const fmtCurrency = (n) => {
 export default function FirmAumThresholdPanel({ firmId, firmName }) {
   const queryClient = useQueryClient();
   const [draftThreshold, setDraftThreshold] = useState("");
+  const [draftMaxThreshold, setDraftMaxThreshold] = useState("");
 
   const { data: settings = [], isLoading: settingsLoading } = useQuery({
     queryKey: ["firmAumThreshold", firmId],
@@ -36,9 +37,9 @@ export default function FirmAumThresholdPanel({ firmId, firmName }) {
 
   const setting = settings[0];
 
-  // Sync draft input with the saved setting when it loads/changes.
+  // Sync draft inputs with the saved setting when it loads/changes.
   React.useEffect(() => {
-    if (setting) setDraftThreshold("");
+    if (setting) { setDraftThreshold(""); setDraftMaxThreshold(""); }
   }, [setting?.id]);
 
   const invalidate = () => {
@@ -47,14 +48,13 @@ export default function FirmAumThresholdPanel({ firmId, firmName }) {
   };
 
   const createMutation = useMutation({
-    mutationFn: (threshold) =>
-      base44.entities.FirmAumThreshold.create({
-        firm_id: firmId,
-        firm_name: firmName,
-        threshold: Number(threshold),
-        enabled: true,
-      }),
-    onSuccess: () => { invalidate(); toast({ title: "AUM threshold set" }); setDraftThreshold(""); },
+    mutationFn: ({ threshold, max_threshold }) => {
+      const data = { firm_id: firmId, firm_name: firmName, enabled: true };
+      if (threshold != null && !isNaN(threshold)) data.threshold = threshold;
+      if (max_threshold != null && !isNaN(max_threshold)) data.max_threshold = max_threshold;
+      return base44.entities.FirmAumThreshold.create(data);
+    },
+    onSuccess: () => { invalidate(); toast({ title: "AUM threshold set" }); setDraftThreshold(""); setDraftMaxThreshold(""); },
     onError: (e) => toast({ title: "Failed", description: e?.message, variant: "destructive" }),
   });
 
@@ -91,14 +91,27 @@ export default function FirmAumThresholdPanel({ firmId, firmName }) {
 
   const handleSaveThreshold = () => {
     const val = draftThreshold === "" ? null : Number(draftThreshold);
-    if (val == null || isNaN(val) || val < 0) {
-      toast({ title: "Enter a valid threshold", variant: "destructive" });
+    const maxVal = draftMaxThreshold === "" ? null : Number(draftMaxThreshold);
+
+    // At least one threshold must be set
+    if ((val == null || isNaN(val) || val < 0) && (maxVal == null || isNaN(maxVal) || maxVal < 0)) {
+      toast({ title: "Enter at least one threshold", description: "Set a minimum, maximum, or both.", variant: "destructive" });
       return;
     }
+    // If both are set, min must be less than max
+    if (val != null && maxVal != null && !isNaN(val) && !isNaN(maxVal) && val >= maxVal) {
+      toast({ title: "Min must be below max", description: "The minimum threshold must be less than the maximum.", variant: "destructive" });
+      return;
+    }
+
+    const data = {};
+    if (val != null && !isNaN(val) && val >= 0) data.threshold = val;
+    if (maxVal != null && !isNaN(maxVal) && maxVal >= 0) data.max_threshold = maxVal;
+
     if (setting) {
-      updateMutation.mutate({ id: setting.id, data: { threshold: val } });
+      updateMutation.mutate({ id: setting.id, data });
     } else {
-      createMutation.mutate(val);
+      createMutation.mutate({ threshold: val, max_threshold: maxVal });
     }
   };
 
@@ -141,7 +154,7 @@ export default function FirmAumThresholdPanel({ firmId, firmName }) {
           </div>
           <div>
             <h3 className="text-sm font-semibold text-gray-800">AUM Threshold Alert</h3>
-            <p className="text-xs text-gray-500">Get notified when this firm's AUM drops below a level you set.</p>
+            <p className="text-xs text-gray-500">Get notified when this firm's AUM drops below or exceeds a level you set.</p>
           </div>
         </div>
 
@@ -149,17 +162,36 @@ export default function FirmAumThresholdPanel({ firmId, firmName }) {
           <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-gray-300" /></div>
         ) : (
           <div className="flex items-end gap-2 flex-wrap">
-            <div className="flex-1 min-w-[180px] space-y-1">
-              <label className="text-xs font-medium text-gray-600">Threshold (USD)</label>
+            <div className="flex-1 min-w-[160px] space-y-1">
+              <label className="text-xs font-medium text-gray-600 flex items-center gap-1">
+                <TrendingDown className="w-3 h-3 text-red-500" /> Min (below)
+              </label>
               <div className="relative">
                 <DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
                 <Input
                   type="number"
                   min="0"
                   step="1000000"
-                  value={draftThreshold !== "" ? draftThreshold : (setting ? setting.threshold : "")}
+                  value={draftThreshold !== "" ? draftThreshold : (setting ? (setting.threshold ?? "") : "")}
                   onChange={(e) => setDraftThreshold(e.target.value)}
-                  placeholder={setting ? fmtCurrency(setting.threshold) : "e.g. 500000000"}
+                  placeholder={setting && setting.threshold != null ? fmtCurrency(setting.threshold) : "e.g. 500000000"}
+                  className="pl-8 h-9"
+                />
+              </div>
+            </div>
+            <div className="flex-1 min-w-[160px] space-y-1">
+              <label className="text-xs font-medium text-gray-600 flex items-center gap-1">
+                <TrendingUp className="w-3 h-3 text-amber-500" /> Max (exceeds)
+              </label>
+              <div className="relative">
+                <DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                <Input
+                  type="number"
+                  min="0"
+                  step="1000000"
+                  value={draftMaxThreshold !== "" ? draftMaxThreshold : (setting ? (setting.max_threshold ?? "") : "")}
+                  onChange={(e) => setDraftMaxThreshold(e.target.value)}
+                  placeholder={setting && setting.max_threshold != null ? fmtCurrency(setting.max_threshold) : "e.g. 2000000000"}
                   className="pl-8 h-9"
                 />
               </div>
@@ -192,7 +224,13 @@ export default function FirmAumThresholdPanel({ firmId, firmName }) {
 
         {setting && (
           <div className="mt-2 text-xs text-gray-400">
-            Alert triggers when the latest month-end AUM falls below {fmtCurrency(setting.threshold)}.
+            {setting.threshold != null && setting.max_threshold != null ? (
+              <>Alert triggers when AUM falls below {fmtCurrency(setting.threshold)} or exceeds {fmtCurrency(setting.max_threshold)}.</>
+            ) : setting.threshold != null ? (
+              <>Alert triggers when the latest month-end AUM falls below {fmtCurrency(setting.threshold)}.</>
+            ) : setting.max_threshold != null ? (
+              <>Alert triggers when the latest month-end AUM exceeds {fmtCurrency(setting.max_threshold)}.</>
+            ) : null}
           </div>
         )}
       </div>
@@ -231,28 +269,31 @@ export default function FirmAumThresholdPanel({ firmId, firmName }) {
           </div>
         ) : (
           <div className="space-y-2">
-            {sortedAlerts.map((a) => (
-              <div key={a.id} className="flex items-center gap-3 p-3 rounded-lg border border-red-100 bg-red-50/40">
-                <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0">
-                  <TrendingDown className="w-4 h-4 text-red-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold text-gray-800">{fmtCurrency(a.aum_value)}</div>
-                  <div className="text-xs text-gray-500">
-                    below {fmtCurrency(a.threshold)}
-                    {a.month_end_date && <> · {format(parseISO(a.month_end_date), "MMM d, yyyy")}</>}
+            {sortedAlerts.map((a) => {
+              const isBelow = (a.alert_type || "below_min") === "below_min";
+              return (
+                <div key={a.id} className={`flex items-center gap-3 p-3 rounded-lg border ${isBelow ? "border-red-100 bg-red-50/40" : "border-amber-100 bg-amber-50/40"}`}>
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isBelow ? "bg-red-100" : "bg-amber-100"}`}>
+                    {isBelow ? <TrendingDown className="w-4 h-4 text-red-600" /> : <TrendingUp className="w-4 h-4 text-amber-600" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-gray-800">{fmtCurrency(a.aum_value)}</div>
+                    <div className="text-xs text-gray-500">
+                      {isBelow ? "below" : "exceeds"} {fmtCurrency(a.threshold)}
+                      {a.month_end_date && <> · {format(parseISO(a.month_end_date), "MMM d, yyyy")}</>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <button onClick={() => acknowledgeMutation.mutate(a.id)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600" title="Acknowledge">
+                      <Check className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => resolveMutation.mutate(a.id)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-emerald-600" title="Mark resolved">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  <button onClick={() => acknowledgeMutation.mutate(a.id)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600" title="Acknowledge">
-                    <Check className="w-3.5 h-3.5" />
-                  </button>
-                  <button onClick={() => resolveMutation.mutate(a.id)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-emerald-600" title="Mark resolved">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

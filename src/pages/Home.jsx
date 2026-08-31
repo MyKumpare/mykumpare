@@ -74,6 +74,7 @@ import { useFirmOwner } from "@/components/admin/useFirmOwner";
 import { useVoiceSearch } from "@/hooks/useVoiceSearch";
 import { triggerStartRecording } from "@/components/videolibrary/recorderStore";
 import { usePersistentState } from "@/hooks/usePersistentState";
+import AumAlertsBell from "@/components/firms/AumAlertsBell";
 
 const FIRM_TYPES = [
   "Investment Manager",
@@ -973,6 +974,7 @@ export default function Home() {
                 </button>
               )
             ))}
+            <AumAlertsBell onFirmClick={(firmId) => { const firm = firms.find(f => f.id === firmId); if (firm) handleEdit(firm); }} />
             <button
               onClick={() => setAllExpanded(v => !v)}
               title={allExpanded ? "Collapse all" : "Expand all"}
@@ -1251,6 +1253,7 @@ export default function Home() {
               </button>
             )
           ))}
+          <AumAlertsBell onFirmClick={(firmId) => { const firm = firms.find(f => f.id === firmId); if (firm) handleEdit(firm); }} />
           <button
             onTouchEnd={(e) => { e.preventDefault(); setAllExpanded(v => !v); }}
             onClick={() => setAllExpanded(v => !v)}
