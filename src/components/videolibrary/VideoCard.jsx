@@ -1,5 +1,5 @@
 import React from "react";
-import { Play, Pencil, Trash2, User, Clock, Tag, BookOpen } from "lucide-react";
+import { Play, Pencil, Trash2, User, Clock, Tag, BookOpen, Check } from "lucide-react";
 
 /**
  * VideoCard — displays a single video in the library grid.
@@ -11,7 +11,7 @@ import { Play, Pencil, Trash2, User, Clock, Tag, BookOpen } from "lucide-react";
  *   onEdit — () => void
  *   onDelete — () => void
  */
-export default function VideoCard({ video, tags = [], onPlay, onEdit, onDelete, onTrainingManual }) {
+export default function VideoCard({ video, tags = [], onPlay, onEdit, onDelete, onTrainingManual, selected, onToggleSelect }) {
   const videoTags = (video.tag_names || []).map((name) => tags.find((t) => t.name === name)).filter(Boolean);
 
   return (
@@ -21,6 +21,17 @@ export default function VideoCard({ video, tags = [], onPlay, onEdit, onDelete, 
         className="relative h-32 bg-gradient-to-br from-indigo-100 to-violet-100 cursor-pointer flex items-center justify-center"
         onClick={onPlay}
       >
+        {onToggleSelect && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleSelect(video.id); }}
+            className={`absolute top-1.5 left-1.5 z-10 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+              selected ? "bg-indigo-600 border-indigo-600 text-white" : "bg-white/80 border-gray-300 hover:border-indigo-400"
+            }`}
+            title={selected ? "Deselect" : "Select for bulk export"}
+          >
+            {selected && <Check className="w-3 h-3" />}
+          </button>
+        )}
         {video.thumbnail_url ? (
           <img src={video.thumbnail_url} alt={video.title} className="w-full h-full object-cover" />
         ) : (

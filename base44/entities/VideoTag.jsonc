@@ -6,6 +6,17 @@
       "type": "string",
       "description": "Tag label (unique \u2014 validated for no duplicates)"
     },
+    "category": {
+      "type": "string",
+      "enum": [
+        "Topic",
+        "Department",
+        "Software Process",
+        "General"
+      ],
+      "default": "General",
+      "description": "Tag category for grouping tags by topic, department, or software process. Used by the Video Library to group tags in the filter dropdown."
+    },
     "sort_order": {
       "type": "integer",
       "default": 0,

@@ -16,9 +16,13 @@ import { Input } from "@/components/ui/input";
 export default function VideoTagManager({ open, onClose }) {
   const queryClient = useQueryClient();
   const [newName, setNewName] = useState("");
+  const [newCategory, setNewCategory] = useState("General");
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState("");
+  const [editCategory, setEditCategory] = useState("General");
   const [error, setError] = useState("");
+
+  const TAG_CATEGORIES = ["Topic", "Department", "Software Process", "General"];
 
   const { data: tags = [], isLoading } = useQuery({
     queryKey: ["video_tags"],
@@ -37,6 +41,7 @@ export default function VideoTagManager({ open, onClose }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["video_tags"] });
       setNewName("");
+      setNewCategory("General");
       setError("");
     },
   });
@@ -68,7 +73,7 @@ export default function VideoTagManager({ open, onClose }) {
       return;
     }
     const maxOrder = sorted.length > 0 ? Math.max(...sorted.map((t) => t.sort_order || 0)) : 0;
-    createMutation.mutate({ name: newName.trim(), sort_order: maxOrder + 1 });
+    createMutation.mutate({ name: newName.trim(), sort_order: maxOrder + 1, category: newCategory });
   };
 
   const handleEdit = (tag) => {
@@ -77,7 +82,7 @@ export default function VideoTagManager({ open, onClose }) {
       setError(`A tag named "${editName.trim()}" already exists.`);
       return;
     }
-    updateMutation.mutate({ id: tag.id, data: { name: editName.trim() } });
+    updateMutation.mutate({ id: tag.id, data: { name: editName.trim(), category: editCategory } });
   };
 
   const handleMove = (tag, direction) => {
@@ -118,8 +123,17 @@ export default function VideoTagManager({ open, onClose }) {
               onChange={(e) => { setNewName(e.target.value); setError(""); }}
               onKeyDown={(e) => e.key === "Enter" && handleAdd()}
               placeholder="New tag name..."
-              className="h-8 text-sm"
+              className="h-8 text-sm flex-1"
             />
+            <select
+              value={newCategory}
+              onChange={(e) => setNewCategory(e.target.value)}
+              className="h-8 px-2 text-sm border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+            >
+              {TAG_CATEGORIES.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
             <Button size="sm" onClick={handleAdd} disabled={!newName.trim()} className="h-8">
               <Plus className="w-3.5 h-3.5" /> Add
             </Button>
@@ -153,8 +167,17 @@ export default function VideoTagManager({ open, onClose }) {
                         className="h-7 text-sm flex-1"
                         autoFocus
                       />
+                      <select
+                        value={editCategory}
+                        onChange={(e) => setEditCategory(e.target.value)}
+                        className="h-7 px-1.5 text-xs border border-gray-300 rounded-md bg-white"
+                      >
+                        {TAG_CATEGORIES.map((c) => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
                       <Button size="sm" onClick={() => handleEdit(tag)} className="h-7 px-2">Save</Button>
-                      <Button size="sm" variant="ghost" onClick={() => { setEditingId(null); setEditName(""); setError(""); }} className="h-7 px-2">
+                      <Button size="sm" variant="ghost" onClick={() => { setEditingId(null); setEditName(""); setEditCategory("General"); setError(""); }} className="h-7 px-2">
                         Cancel
                       </Button>
                     </>
@@ -165,6 +188,11 @@ export default function VideoTagManager({ open, onClose }) {
                         style={{ backgroundColor: tag.color || "#6366f1" }}
                       />
                       <span className="text-sm text-gray-700 flex-1">{tag.name}</span>
+                      {tag.category && tag.category !== "General" && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium">
+                          {tag.category}
+                        </span>
+                      )}
                       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => handleMove(tag, "up")}
@@ -183,7 +211,7 @@ export default function VideoTagManager({ open, onClose }) {
                           <ArrowDown className="w-3.5 h-3.5" />
                         </button>
                         <button
-                          onClick={() => { setEditingId(tag.id); setEditName(tag.name); }}
+                          onClick={() => { setEditingId(tag.id); setEditName(tag.name); setEditCategory(tag.category || "General"); }}
                           className="p-1 text-gray-400 hover:text-indigo-600"
                           title="Edit"
                         >

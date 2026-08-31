@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import {
   Video, Plus, Tag, Search, X, Sparkles, Settings2,
-  Filter, Play, FileText, Camera,
+  Filter, Play, FileText, Camera, Check, Loader2, Package,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,9 @@ export default function VideoLibrary() {
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [trainingManualVideo, setTrainingManualVideo] = useState(null);
   const [manualToVideoOpen, setManualToVideoOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [exporting, setExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState("");
   const screenshots = useScreenshots();
 
   const { data: videos = [], isLoading } = useQuery({
@@ -71,6 +74,61 @@ export default function VideoLibrary() {
     mutationFn: (id) => base44.entities.VideoLibraryItem.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["video_library_items"] }),
   });
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => setSelectedIds(new Set(filtered.map((v) => v.id)));
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const handleBulkExport = async () => {
+    const selected = videos.filter((v) => selectedIds.has(v.id));
+    if (selected.length === 0) return;
+    setExporting(true);
+    try {
+      const JSZip = (await import("jszip")).default;
+      const zip = new JSZip();
+      let added = 0;
+      for (const video of selected) {
+        setExportProgress(`Downloading "${video.title}"… (${added + 1}/${selected.length})`);
+        try {
+          const response = await fetch(video.video_url);
+          if (!response.ok) continue;
+          const blob = await response.blob();
+          const ext = (video.video_url.match(/\.(mp4|webm|mov|avi|mkv|m4v)$/i)?.[0] || ".mp4").toLowerCase();
+          const filename = `${(video.title || "video").replace(/[^a-zA-Z0-9]/g, "_")}${ext}`;
+          zip.file(filename, blob);
+          added++;
+        } catch { /* skip CORS-blocked files */ }
+      }
+      if (added === 0) {
+        alert("Could not download any video files. They may be protected against cross-origin requests.");
+        return;
+      }
+      setExportProgress("Creating ZIP file…");
+      const content = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(content);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `video_library_export_${new Date().toISOString().slice(0, 10)}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      clearSelection();
+    } catch (err) {
+      alert("Failed to export: " + (err?.message || "Unknown error"));
+    } finally {
+      setExporting(false);
+      setExportProgress("");
+    }
+  };
 
   const handleEdit = (video) => {
     setEditingVideo(video);
@@ -206,12 +264,45 @@ export default function VideoLibrary() {
               className="h-9 px-2 text-sm border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
             >
               <option value="">All tags</option>
-              {sortedTags.map((t) => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
+              {["Topic", "Department", "Software Process", "General"].map((cat) => {
+                const catTags = sortedTags.filter((t) => (t.category || "General") === cat);
+                if (catTags.length === 0) return null;
+                return (
+                  <optgroup key={cat} label={cat}>
+                    {catTags.map((t) => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </optgroup>
+                );
+              })}
             </select>
           )}
         </div>
+
+        {/* Bulk action bar */}
+        {selectedIds.size > 0 && (
+          <div className="flex items-center justify-between gap-3 mb-4 px-4 py-2.5 bg-indigo-50 border border-indigo-200 rounded-lg">
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium text-indigo-700">{selectedIds.size} selected</span>
+              <button onClick={selectAll} className="text-xs text-indigo-600 hover:text-indigo-800 underline">
+                Select all filtered
+              </button>
+              <button onClick={clearSelection} className="text-xs text-gray-500 hover:text-gray-700 underline">
+                Clear
+              </button>
+            </div>
+            {exporting ? (
+              <div className="flex items-center gap-2 text-sm text-indigo-600">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                {exportProgress || "Exporting…"}
+              </div>
+            ) : (
+              <Button size="sm" onClick={handleBulkExport} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                <Package className="w-4 h-4" /> Export {selectedIds.size} as ZIP
+              </Button>
+            )}
+          </div>
+        )}
 
         {/* Video grid */}
         {isLoading ? (
@@ -241,6 +332,8 @@ export default function VideoLibrary() {
                 onEdit={() => handleEdit(video)}
                 onDelete={() => handleDelete(video)}
                 onTrainingManual={() => setTrainingManualVideo(video)}
+                selected={selectedIds.has(video.id)}
+                onToggleSelect={toggleSelect}
               />
             ))}
           </div>
