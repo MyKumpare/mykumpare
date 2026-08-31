@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { Send, Sparkles, X, Loader2, Bot, User as UserIcon, Film, Download, Check, Plus } from "lucide-react";
+import { Send, Sparkles, X, Loader2, Bot, User as UserIcon, Film, Download, Check, Plus, BookOpen } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
+import ScriptToManualDialog from "@/components/videolibrary/ScriptToManualDialog";
+import { useScreenshots } from "@/components/videolibrary/screenshotStore";
 
 const AGENT_NAME = "video_creation_assistant";
 
@@ -27,6 +29,8 @@ export default function VideoCreationAssistant({ open, onClose }) {
   const [savedToLibrary, setSavedToLibrary] = useState(false);
   const [videoError, setVideoError] = useState(null);
   const queryClient = useQueryClient();
+  const screenshots = useScreenshots();
+  const [manualDialogOpen, setManualDialogOpen] = useState(false);
   const scrollRef = useRef(null);
 
   // Create conversation on open
@@ -87,6 +91,13 @@ export default function VideoCreationAssistant({ open, onClose }) {
       setLoading(false);
     }
   };
+
+  const compiledScript = useMemo(() => {
+    return messages
+      .filter((m) => m.role === "assistant" && m.content)
+      .map((m) => m.content)
+      .join("\n\n");
+  }, [messages]);
 
   const handleGenerateVideo = async () => {
     if (messages.length === 0 || generatingVideo) return;
@@ -207,6 +218,17 @@ Return as JSON.`,
               {generatingVideo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Film className="w-3.5 h-3.5" />}
               {generatingVideo ? "Generating…" : "Generate Video"}
             </button>
+            <button
+              onClick={() => setManualDialogOpen(true)}
+              disabled={messages.length === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              Create Manual
+              {screenshots.length > 0 && (
+                <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-white/20 text-[10px]">{screenshots.length}</span>
+              )}
+            </button>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
               <X className="w-5 h-5" />
             </button>
@@ -301,6 +323,11 @@ Return as JSON.`,
           </button>
         </div>
       </div>
+      <ScriptToManualDialog
+        open={manualDialogOpen}
+        onClose={() => setManualDialogOpen(false)}
+        script={compiledScript}
+      />
     </div>
   );
 }

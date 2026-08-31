@@ -51,6 +51,7 @@ import ProcessTemplateKanban from './pages/ProcessTemplateKanban';
 import DdTimeline from './pages/DdTimeline';
 import VideoLibrary from './pages/VideoLibrary';
 import QuickNotesDrawer from "@/components/quicknotes/QuickNotesDrawer";
+import ScreenshotCaptureTool from "@/components/videolibrary/ScreenshotCaptureTool";
 
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -156,6 +157,7 @@ const AuthenticatedApp = () => {
       <Route path="*" element={<PageNotFound />} />
     </Routes>
     {!isRegisterRoute && <QuickNotesDrawer />}
+    {!isRegisterRoute && <ScreenshotCaptureTool />}
     </>
   );
 };

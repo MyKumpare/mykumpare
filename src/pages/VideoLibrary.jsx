@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import {
   Video, Plus, Tag, Search, X, Sparkles, Settings2,
-  Filter, Play, FileText,
+  Filter, Play, FileText, Camera,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import VideoTagManager from "@/components/videolibrary/VideoTagManager";
 import VideoCreationAssistant from "@/components/videolibrary/VideoCreationAssistant";
 import TrainingManualDialog from "@/components/videolibrary/TrainingManualDialog";
 import ManualToVideoDialog from "@/components/videolibrary/ManualToVideoDialog";
+import { setCaptureToolOpen, useScreenshots } from "@/components/videolibrary/screenshotStore";
 
 export default function VideoLibrary() {
   const queryClient = useQueryClient();
@@ -27,6 +28,7 @@ export default function VideoLibrary() {
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [trainingManualVideo, setTrainingManualVideo] = useState(null);
   const [manualToVideoOpen, setManualToVideoOpen] = useState(false);
+  const screenshots = useScreenshots();
 
   const { data: videos = [], isLoading } = useQuery({
     queryKey: ["video_library_items"],
@@ -120,6 +122,17 @@ export default function VideoLibrary() {
               className="bg-white/20 text-white hover:bg-white/30 border-0"
             >
               <FileText className="w-4 h-4" /> Upload Manual
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setCaptureToolOpen(true)}
+              className="bg-white/20 text-white hover:bg-white/30 border-0"
+            >
+              <Camera className="w-4 h-4" /> Screenshots
+              {screenshots.length > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 rounded-full bg-white/30 text-[10px] font-bold">{screenshots.length}</span>
+              )}
             </Button>
             <Button
               size="sm"
