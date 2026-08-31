@@ -1,9 +1,10 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { FileDown, Loader2, X, LayoutTemplate } from "lucide-react";
+import { FileDown, Loader2, X, LayoutTemplate, ArrowUpRight } from "lucide-react";
 import { recordDisplayName } from "./summaryReportTemplateConfig";
 import { exportRecordSummary } from "./summaryReportExport";
 
@@ -18,6 +19,7 @@ import { exportRecordSummary } from "./summaryReportExport";
 export default function SummaryExportButton({ entityType, record, className }) {
   const [open, setOpen] = useState(false);
   const [generatingId, setGeneratingId] = useState(null);
+  const navigate = useNavigate();
 
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ["summary_report_templates", entityType],
@@ -87,9 +89,21 @@ export default function SummaryExportButton({ entityType, record, className }) {
               <div className="text-center py-8">
                 <LayoutTemplate className="w-8 h-8 text-gray-300 mx-auto mb-2" />
                 <p className="text-sm text-gray-500 mb-1">No {entityType} templates yet</p>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-gray-400 mb-4">
                   Create one in Summary Report Templates first.
                 </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => {
+                    setOpen(false);
+                    navigate("/SummaryReportTemplates");
+                  }}
+                >
+                  Go to Summary Report Templates
+                  <ArrowUpRight className="w-3.5 h-3.5" />
+                </Button>
               </div>
             )}
             {templates.map((tpl) => (
