@@ -141,6 +141,65 @@ export async function discoverBioUrlByPattern(
   return '';
 }
 
+// Post-process a raw biography string from the LLM into presentable
+// paragraphs. The LLM often returns the entire bio as a single line of text
+// with no paragraph breaks. This function:
+//  1. Normalizes existing newlines (\r\n → \n, 3+ newlines → 2).
+//  2. If the text already has paragraph breaks (\n\n), trims each paragraph.
+//  3. If the text has only single \n breaks, promotes them to \n\n.
+//  4. If the text has no newlines at all, inserts \n\n before sentences that
+//     start a new paragraph (common professional-bio paragraph starters like
+//     "He", "She", "Mr.", "Prior to", "In 1984", etc.).
+export function formatBioParagraphs(bio: string): string {
+  if (!bio) return '';
+  let text = bio.trim();
+  // Normalize line endings and collapse excessive newlines.
+  text = text.replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n');
+
+  // Case 1: already has \n\n paragraph breaks — clean each paragraph.
+  if (text.includes('\n\n')) {
+    return text
+      .split('\n\n')
+      .map((p) => p.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim())
+      .filter((p) => p.length > 0)
+      .join('\n\n');
+  }
+
+  // Case 2: has single \n breaks but no \n\n — promote to paragraph breaks.
+  if (text.includes('\n')) {
+    return text
+      .split('\n')
+      .map((p) => p.replace(/\s+/g, ' ').trim())
+      .filter((p) => p.length > 0)
+      .join('\n\n');
+  }
+
+  // Case 3: no newlines at all — insert \n\n before common paragraph starters.
+  // These are phrases that typically begin a new paragraph in professional bios.
+  const starters =
+    /\.\s+(?=(?:He|She|Mr\.|Ms\.|Mrs\.|Dr\.|Prof\.|His|Her|Their|They|In\s+\d{4}|After|Prior\s+to|Before|Following|During|Earlier|Previously|Most\s+recently|Currently|He\s+has|She\s+has|He\s+received|She\s+received|He\s+earned|She\s+earned|He\s+began|She\s+began|He\s+joined|She\s+joined|He\s+serves|She\s+serves|He\s+is|She\s+is|He\s+was|She\s+was|His\s+experience|Her\s+experience|His\s+career|Her\s+career|Mr\.\s+|Ms\.\s+|Mrs\.\s+|Dr\.\s+|Prof\.\s+)\b)/g;
+  let formatted = text.replace(starters, '.\n\n');
+
+  // If no paragraph starters were found and the bio is long, split every ~3
+  // sentences so it's still readable.
+  if (!formatted.includes('\n\n') && text.length > 300) {
+    const sentences = text.match(/[^.!?]+[.!?]+(?:\s+|$)/g) || [text];
+    const paragraphs: string[] = [];
+    let current: string[] = [];
+    for (let i = 0; i < sentences.length; i++) {
+      current.push(sentences[i]);
+      if (current.length >= 3) {
+        paragraphs.push(current.join('').trim());
+        current = [];
+      }
+    }
+    if (current.length > 0) paragraphs.push(current.join('').trim());
+    formatted = paragraphs.filter((p) => p.length > 0).join('\n\n');
+  }
+
+  return formatted.trim();
+}
+
 // Extract biography from an individual profile page.
 export async function extractBiographyFromPage(base44: any, personName: string, bioUrl: string): Promise<string> {
   const pageText = await fetchPage(bioUrl);
@@ -154,6 +213,7 @@ CRITICAL INSTRUCTIONS:
 - Include EVERY paragraph from the first sentence to the last sentence of the bio.
 - Do NOT stop partway through. The biography must end with a complete sentence, not mid-sentence.
 - If the bio is long (multiple paragraphs), include ALL of them.
+- PRESERVE PARAGRAPH BREAKS: separate each paragraph with a double newline (\\n\\n). Do NOT collapse the entire bio into a single block of text — keep the original paragraph structure.
 - Do not include navigation, headers, footers, or other page chrome — only the biography text.
 - If no biography is found, return an empty string.
 
@@ -162,7 +222,7 @@ ${pageText.substring(0, 50000)}
 --- END ---`,
       response_json_schema: { type: 'object', properties: { biography: { type: 'string' } } },
     });
-    return (res?.biography || '').trim();
+    return formatBioParagraphs(res?.biography || '');
   } catch {
     return '';
   }
