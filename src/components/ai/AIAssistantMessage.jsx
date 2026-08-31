@@ -228,13 +228,13 @@ export default function AIAssistantMessage({ message, onSelectOption, onConfirmC
         {!isUser && message.options?.length > 0 && (
           <div className="mt-2 space-y-1.5">
             {message.options.map((opt, i) => (
-            <button
-              key={i}
-              onClick={() => onSelectOption?.(opt, message)}
-              className="w-full text-left px-3 py-2 text-sm rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300 transition-colors"
-            >
-              {opt}
-            </button>
+              <button
+                key={i}
+                onClick={() => onSelectOption?.(opt)}
+                className="w-full text-left px-3 py-2 text-sm rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300 transition-colors"
+              >
+                {opt}
+              </button>
             ))}
           </div>
         )}

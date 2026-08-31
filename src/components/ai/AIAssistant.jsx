@@ -23,7 +23,6 @@ import { buildSystemPrompt, buildToolContext } from "./aiContextBuilder";
 import {
   detectEnrichmentIntent,
   findFirmByName,
-  findSimilarFirms,
   enrichFirmFromWeb,
   mergeEnrichmentData,
   mergeContactEnrichment,
@@ -168,28 +167,9 @@ export default function AIAssistant() {
     }
   };
 
-  const handleFirmEnrichment = async (firmName, { skipAlternates = false, isCreateIntent = false } = {}) => {
+  const handleFirmEnrichment = async (firmName, { skipAlternates = false } = {}) => {
     try {
-      // For create-intent, only an EXACT name match returns an existing firm.
-      // A loose substring match (e.g. "LM Capital" → "LM Capital Group") would
-      // silently update the wrong record, so we surface those as disambiguation
-      // options instead.
-      const firm = await findFirmByName(firmName, isCreateIntent);
-
-      if (!firm && isCreateIntent) {
-        // No exact match — check for similar firms the user might have meant.
-        const similar = await findSimilarFirms(firmName);
-        if (similar.length > 0 && !skipAlternates) {
-          const options = [firmName, ...similar.map((f) => f.name)];
-          return {
-            role: "assistant",
-            content: `I found ${similar.length === 1 ? "an existing firm" : "existing firms"} with a similar name. Did you mean to update one of these, or create a brand-new firm called **${firmName}**?`,
-            options,
-            is_create_disambiguation: true,
-            original_firm_name: firmName,
-          };
-        }
-      }
+      const firm = await findFirmByName(firmName);
 
       if (!firm) {
         let enrichedData = null;
@@ -476,25 +456,11 @@ export default function AIAssistant() {
     }]);
   };
 
-  const handleSelectFirmOption = async (selectedName, message) => {
+  const handleSelectFirmOption = async (selectedName) => {
     setMessages((prev) => [...prev, { role: "user", content: selectedName }]);
     setIsLoading(true);
     try {
-      // Create-disambiguation: the user chose from a list that included their
-      // original name plus similar existing firms. If they picked the original
-      // name they typed, create a brand-new firm (skipAlternates + exactOnly).
-      // If they picked an existing firm name, enrich/update that firm.
-      const isCreateDisambiguation = message?.is_create_disambiguation;
-      const originalName = message?.original_firm_name;
-      const userChoseNewName =
-        isCreateDisambiguation &&
-        originalName &&
-        selectedName.toLowerCase().trim() === originalName.toLowerCase().trim();
-
-      const result = await handleFirmEnrichment(selectedName, {
-        skipAlternates: true,
-        isCreateIntent: userChoseNewName,
-      });
+      const result = await handleFirmEnrichment(selectedName, { skipAlternates: true });
       setMessages((prev) => [...prev, result]);
     } catch (error) {
       setMessages((prev) => [
@@ -517,9 +483,7 @@ export default function AIAssistant() {
     try {
       const enrichmentIntent = detectEnrichmentIntent(userMessage);
       if (enrichmentIntent.isEnrichment) {
-        const result = await handleFirmEnrichment(enrichmentIntent.firmName, {
-          isCreateIntent: enrichmentIntent.isCreateIntent,
-        });
+        const result = await handleFirmEnrichment(enrichmentIntent.firmName);
         setMessages((prev) => [...prev, result]);
         return;
       }
