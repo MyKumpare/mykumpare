@@ -131,11 +131,6 @@ export function usePersistentState(key, initialValue) {
     }
   }, [key, value]);
 
-  /**
-   * Read the CURRENT value of a persisted key from the in-memory registry
-   * (always fresh), falling back to sessionStorage if no live component is
-   * mounted for that key. Returns undefined when the key has no value.
-   */
   const clear = useCallback(() => {
     try {
       sessionStorage.removeItem(PREFIX + key);
@@ -149,23 +144,4 @@ export function usePersistentState(key, initialValue) {
   }, [key, initialValue]);
 
   return [value, setValue, clear];
-}
-
-/**
- * Read the current value of a persisted key from the in-memory registry
- * (always fresh — reflects the latest setState even before a flush), falling
- * back to sessionStorage if no live component is mounted for that key.
- * Returns undefined when the key has no value.
- */
-export function readPersistentState(key) {
-  const ref = registry.get(key);
-  if (ref && ref.current !== null && ref.current !== undefined) {
-    return ref.current;
-  }
-  try {
-    const saved = sessionStorage.getItem(PREFIX + key);
-    return saved !== null ? JSON.parse(saved) : undefined;
-  } catch {
-    return undefined;
-  }
 }

@@ -29,7 +29,7 @@ function toNumber(v) {
   return Number.isFinite(n) ? n : 0;
 }
 
-export function fmtCurrency(n) {
+function fmtCurrency(n) {
   if (n === null || n === undefined) return "—";
   const v = Math.round(toNumber(n));
   if (Math.abs(v) >= 1e9) return `$${(v / 1e9).toFixed(1)}B`;
@@ -52,110 +52,88 @@ function getLatestAum(firm) {
 }
 
 /**
- * Per-firm metric values used by the comparison table and the export.
- * Returns one entry per firm in the same order as `firms`.
- */
-export function buildFirmMetrics(firms = [], products = [], dueDiligences = []) {
-  return firms.map((firm) => {
-    const latest = getLatestAum(firm);
-    const firmProducts = products.filter(
-      (p) => p.firm_id === firm.id && !p.deleted_at
-    );
-    const types = firm.firm_types?.length
-      ? firm.firm_types
-      : firm.firm_type
-      ? [firm.firm_type]
-      : [];
-    return {
-      firm,
-      types: types.join(", ") || "—",
-      yearFounded: firm.year_founded || "—",
-      region: firm.geographic_region || "Undefined",
-      location: firm.location || "—",
-      website: firm.website || "",
-      aum: latest.aum,
-      netFlow: latest.netFlow,
-      aumDate: latest.date,
-      productCount: firmProducts.length,
-      fundingStatus: firm.funding_status || "—",
-      aumDataPoints: (firm.aum_history || []).length,
-      ddStatus: (() => {
-        const firmDds = dueDiligences.filter((d) => d.firm_id === firm.id);
-        if (!firmDds.length) return "—";
-        const latest = firmDds[0];
-        return firmDds.length === 1
-          ? latest.status || "—"
-          : `${firmDds.length} · ${latest.status || "—"}`;
-      })(),
-    };
-  });
-}
-
-export const ALL_ROWS = [
-  { id: "firm_type", label: "Firm Type", icon: Building, key: "types" },
-  { id: "year_founded", label: "Year Founded", icon: Calendar, key: "yearFounded" },
-  { id: "geographic_region", label: "Geographic Region", icon: MapPin, key: "region" },
-  { id: "location", label: "Location", icon: MapPin, key: "location" },
-  { id: "website", label: "Website", icon: Globe, key: "website", isLink: true },
-  {
-    id: "total_aum",
-    label: "Total AUM (latest)",
-    icon: DollarSign,
-    key: "aum",
-    format: fmtCurrency,
-    highlight: "max",
-  },
-  {
-    id: "net_flow",
-    label: "Latest Net Flow",
-    icon: TrendingUp,
-    key: "netFlow",
-    format: fmtCurrency,
-    highlight: "max",
-  },
-  {
-    id: "products",
-    label: "Products",
-    icon: Package,
-    key: "productCount",
-    highlight: "max",
-  },
-  { id: "funding_status", label: "Funding Status", icon: Activity, key: "fundingStatus" },
-  { id: "dd_status", label: "Due Diligence Status", icon: ShieldCheck, key: "ddStatus" },
-  {
-    id: "aum_data_points",
-    label: "AUM Data Points",
-    icon: TrendingUp,
-    key: "aumDataPoints",
-    highlight: "max",
-  },
-];
-
-export const DEFAULT_ORDER = ALL_ROWS.map((r) => r.id);
-
-/**
- * Resolve the active, ordered, enabled rows from stored order/enabled lists.
- * Guards against stale ids and appends newly-added metrics at the end.
- */
-export function resolveMetricRows(order, enabled) {
-  const ord = (order && order.length ? order : DEFAULT_ORDER).filter((id) =>
-    ALL_ROWS.some((r) => r.id === id)
-  );
-  const missing = ALL_ROWS.filter((r) => !ord.includes(r.id)).map((r) => r.id);
-  const fullOrder = [...ord, ...missing];
-  const enabledSet = new Set(
-    enabled && enabled.length ? enabled : DEFAULT_ORDER
-  );
-  return fullOrder
-    .map((id) => ALL_ROWS.find((r) => r.id === id))
-    .filter((r) => r && enabledSet.has(r.id));
-}
-
-/**
  * Side-by-side key metrics table for multiple firms.
  * Each row is a metric; each column is a firm. Best numeric values are highlighted.
  */
 export default function FirmMetricsTable({ firms = [], products = [], dueDiligences = [] }) {
+  const metrics = useMemo(() => {
+    return firms.map((firm) => {
+      const latest = getLatestAum(firm);
+      const firmProducts = products.filter(
+        (p) => p.firm_id === firm.id && !p.deleted_at
+      );
+      const types = firm.firm_types?.length
+        ? firm.firm_types
+        : firm.firm_type
+        ? [firm.firm_type]
+        : [];
+      return {
+        firm,
+        types: types.join(", ") || "—",
+        yearFounded: firm.year_founded || "—",
+        region: firm.geographic_region || "Undefined",
+        location: firm.location || "—",
+        website: firm.website || "",
+        aum: latest.aum,
+        netFlow: latest.netFlow,
+        aumDate: latest.date,
+        productCount: firmProducts.length,
+        fundingStatus: firm.funding_status || "—",
+        aumDataPoints: (firm.aum_history || []).length,
+        ddStatus: (() => {
+          const firmDds = dueDiligences.filter((d) => d.firm_id === firm.id);
+          if (!firmDds.length) return "—";
+          const latest = firmDds[0];
+          return firmDds.length === 1
+            ? latest.status || "—"
+            : `${firmDds.length} · ${latest.status || "—"}`;
+        })(),
+      };
+    });
+  }, [firms, products, dueDiligences]);
+
+  const ALL_ROWS = [
+    { id: "firm_type", label: "Firm Type", icon: Building, key: "types" },
+    { id: "year_founded", label: "Year Founded", icon: Calendar, key: "yearFounded" },
+    { id: "geographic_region", label: "Geographic Region", icon: MapPin, key: "region" },
+    { id: "location", label: "Location", icon: MapPin, key: "location" },
+    { id: "website", label: "Website", icon: Globe, key: "website", isLink: true },
+    {
+      id: "total_aum",
+      label: "Total AUM (latest)",
+      icon: DollarSign,
+      key: "aum",
+      format: fmtCurrency,
+      highlight: "max",
+    },
+    {
+      id: "net_flow",
+      label: "Latest Net Flow",
+      icon: TrendingUp,
+      key: "netFlow",
+      format: fmtCurrency,
+      highlight: "max",
+    },
+    {
+      id: "products",
+      label: "Products",
+      icon: Package,
+      key: "productCount",
+      highlight: "max",
+    },
+    { id: "funding_status", label: "Funding Status", icon: Activity, key: "fundingStatus" },
+    { id: "dd_status", label: "Due Diligence Status", icon: ShieldCheck, key: "ddStatus" },
+    {
+      id: "aum_data_points",
+      label: "AUM Data Points",
+      icon: TrendingUp,
+      key: "aumDataPoints",
+      highlight: "max",
+    },
+  ];
+
+  const DEFAULT_ORDER = ALL_ROWS.map((r) => r.id);
+
   const [metricOrder, setMetricOrder] = usePersistentState(
     "firmMetrics_order",
     DEFAULT_ORDER
@@ -166,15 +144,21 @@ export default function FirmMetricsTable({ firms = [], products = [], dueDiligen
   );
   const [customizerOpen, setCustomizerOpen] = useState(false);
 
-  const metrics = useMemo(
-    () => buildFirmMetrics(firms, products, dueDiligences),
-    [firms, products, dueDiligences]
-  );
-
-  const rows = useMemo(
-    () => resolveMetricRows(metricOrder, metricEnabled),
-    [metricOrder, metricEnabled]
-  );
+  // Resolve the active rows: ordered + enabled only. Guard against stale ids.
+  const rows = useMemo(() => {
+    const order = (metricOrder && metricOrder.length ? metricOrder : DEFAULT_ORDER)
+      .filter((id) => ALL_ROWS.some((r) => r.id === id));
+    // Include any ids that exist in ALL_ROWS but are missing from stored order
+    // (e.g. new metrics added later) at the end, enabled by default.
+    const missing = ALL_ROWS.filter((r) => !order.includes(r.id)).map((r) => r.id);
+    const fullOrder = [...order, ...missing];
+    const enabledSet = new Set(
+      metricEnabled && metricEnabled.length ? metricEnabled : DEFAULT_ORDER
+    );
+    return fullOrder
+      .map((id) => ALL_ROWS.find((r) => r.id === id))
+      .filter((r) => r && enabledSet.has(r.id));
+  }, [metricOrder, metricEnabled]);
 
   const bestValues = useMemo(() => {
     const bv = {};

@@ -7,9 +7,7 @@ import FirmMultiSelector from "@/components/firms/FirmMultiSelector";
 import FirmMetricsTable from "@/components/firms/FirmMetricsTable";
 import FirmComparisonAumChart from "@/components/firms/FirmComparisonAumChart";
 import FirmBenchmarkComparison from "@/components/firms/FirmBenchmarkComparison";
-import FirmComparisonExportBar from "@/components/firms/FirmComparisonExportBar";
 import ReportDateRangePicker from "@/components/reports/ReportDateRangePicker";
-import ReportBrandingFooter from "@/components/reports/ReportBrandingFooter";
 
 export default function FirmComparison() {
   const navigate = useNavigate();
@@ -59,24 +57,13 @@ export default function FirmComparison() {
           <GitCompare className="w-5 h-5 text-indigo-600" />
           <h1 className="text-xl font-bold text-gray-800">Firm Comparison</h1>
         </div>
-        <div className="flex items-center gap-2">
-          {selectedFirms.length > 0 && (
-            <FirmComparisonExportBar
-              firms={selectedFirms}
-              products={products}
-              benchmarks={benchmarks}
-              dueDiligences={dueDiligences}
-              dateRange={dateRange}
-            />
-          )}
-          <button
-            onClick={() => navigate("/")}
-            className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-            title="Close"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+        <button
+          onClick={() => navigate("/")}
+          className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+          title="Close"
+        >
+          <X className="w-5 h-5" />
+        </button>
       </div>
 
       {/* Firm selector */}
@@ -114,7 +101,7 @@ export default function FirmComparison() {
           Loading firms…
         </div>
       ) : (
-        <div className="pdf-block space-y-6">
+        <>
           {/* Key Metrics Table */}
           <section>
             <div className="flex items-center gap-2 mb-2">
@@ -154,8 +141,7 @@ export default function FirmComparison() {
               benchmarks={benchmarks}
             />
           </section>
-          <ReportBrandingFooter />
-        </div>
+        </>
       )}
     </div>
   );
