@@ -374,6 +374,7 @@ You may combine or skip screenshots if the same action spans multiple frames. Ma
               manual={manual}
               onManualChange={setManual}
               frames={frames}
+              onFramesChange={setFrames}
               onBack={() => setStep("preview")}
               onDownload={handleDownload}
             />

@@ -1,16 +1,19 @@
 import React from "react";
-import { ArrowUp, ArrowDown, Trash2, Plus, ArrowLeft, Download, GripVertical, Check } from "lucide-react";
+import { ArrowUp, ArrowDown, Trash2, Plus, ArrowLeft, Download, GripVertical, Check, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
 /**
  * Edit mode for the training manual generator.
- * Lets the user review/edit the title, intro, and each step's text,
- * reorder steps via drag-and-drop or arrow buttons (which reorders the
- * screenshots in the document), change which screenshot is assigned to
- * each step, and add/remove steps. "Finalize" downloads the PDF.
+ * Lets the user:
+ *  - review/edit the title, intro, and each step's text
+ *  - drag-and-drop screenshots to reorder them (step references auto-remap)
+ *  - drag-and-drop steps to reorder them
+ *  - change which screenshot is assigned to each step
+ *  - add/remove steps
+ * "Finalize" downloads the PDF with all edits applied.
  */
-export default function TrainingManualEditor({ manual, onManualChange, frames, onBack, onDownload }) {
+export default function TrainingManualEditor({ manual, onManualChange, frames, onFramesChange, onBack, onDownload }) {
   if (!manual) return null;
 
   const updateField = (field, value) => onManualChange({ ...manual, [field]: value });
@@ -30,13 +33,37 @@ export default function TrainingManualEditor({ manual, onManualChange, frames, o
     onManualChange({ ...manual, steps });
   };
 
-  const onDragEnd = (result) => {
+  const onStepDragEnd = (result) => {
     if (!result.destination || result.destination.index === result.source.index) return;
     const steps = [...(manual.steps || [])];
     const [moved] = steps.splice(result.source.index, 1);
     steps.splice(result.destination.index, 0, moved);
     steps.forEach((s, i) => (s.step_number = i + 1));
     onManualChange({ ...manual, steps });
+  };
+
+  // Reorder screenshots (frames). Builds an old→new index remap so every
+  // step's screenshot_index stays pointing at the same screenshot.
+  const onFrameDragEnd = (result) => {
+    if (!result.destination || result.destination.index === result.source.index) return;
+    if (!onFramesChange) return;
+    const newFrames = [...frames];
+    const [moved] = newFrames.splice(result.source.index, 1);
+    newFrames.splice(result.destination.index, 0, moved);
+
+    // Map old array position → new array position for each frame object
+    const remap = {};
+    frames.forEach((frame, oldIdx) => {
+      remap[oldIdx] = newFrames.findIndex((f) => f === frame);
+    });
+
+    const newSteps = (manual.steps || []).map((s) => ({
+      ...s,
+      screenshot_index: remap[s.screenshot_index ?? 0] ?? 0,
+    }));
+
+    onFramesChange(newFrames);
+    onManualChange({ ...manual, steps: newSteps });
   };
 
   const deleteStep = (index) => {
@@ -64,7 +91,7 @@ export default function TrainingManualEditor({ manual, onManualChange, frames, o
           <Button variant="outline" size="sm" onClick={onBack}>
             <ArrowLeft className="w-3.5 h-3.5" /> Back to Preview
           </Button>
-          <span className="text-xs text-gray-400 hidden sm:inline">Editing — drag steps to reorder</span>
+          <span className="text-xs text-gray-400 hidden sm:inline">Editing — drag screenshots or steps to reorder</span>
         </div>
         <Button size="sm" onClick={onDownload} className="bg-emerald-600 hover:bg-emerald-700 text-white">
           <Check className="w-3.5 h-3.5" /> Finalize &amp; Download PDF
@@ -93,6 +120,52 @@ export default function TrainingManualEditor({ manual, onManualChange, frames, o
         </div>
       </div>
 
+      {/* Screenshots — drag to reorder */}
+      {frames.length > 0 && (
+        <div className="space-y-2 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+              <ImageIcon className="w-4 h-4 text-gray-500" /> Screenshots ({frames.length})
+            </p>
+            <span className="text-xs text-gray-400">Drag to reorder</span>
+          </div>
+          <DragDropContext onDragEnd={onFrameDragEnd}>
+            <Droppable droppableId="frames" direction="horizontal">
+              {(provided) => (
+                <div ref={provided.innerRef} {...provided.droppableProps} className="flex gap-2 overflow-x-auto pb-2">
+                  {frames.map((frame, i) => (
+                    <Draggable key={`frame-${frame.index}`} draggableId={`frame-${frame.index}`} index={i}>
+                      {(dragProvided, snapshot) => (
+                        <div
+                          ref={dragProvided.innerRef}
+                          {...dragProvided.draggableProps}
+                          {...dragProvided.dragHandleProps}
+                          className={`flex-shrink-0 relative cursor-grab active:cursor-grabbing touch-none ${
+                            snapshot.isDragging ? "opacity-80 ring-2 ring-emerald-400 rounded" : ""
+                          }`}
+                          title={`Screenshot ${i + 1} — drag to reorder`}
+                        >
+                          <img
+                            src={frame.dataUrl}
+                            alt={`Screenshot ${i + 1}`}
+                            className="w-24 h-16 rounded border border-gray-200 object-cover bg-gray-100"
+                          />
+                          <span className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-black/60 text-white text-[10px] font-bold flex items-center justify-center">
+                            {i + 1}
+                          </span>
+                          <GripVertical className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 text-white/70 bg-black/40 rounded p-0.5" />
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
+        </div>
+      )}
+
       {/* Steps */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
@@ -102,7 +175,7 @@ export default function TrainingManualEditor({ manual, onManualChange, frames, o
           </Button>
         </div>
 
-        <DragDropContext onDragEnd={onDragEnd}>
+        <DragDropContext onDragEnd={onStepDragEnd}>
           <Droppable droppableId="steps">
             {(provided) => (
               <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-3">
