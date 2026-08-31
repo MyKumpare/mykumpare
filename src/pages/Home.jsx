@@ -279,7 +279,7 @@ export default function Home() {
 
   const { data: products = [] } = useQuery({
     queryKey: ["products"],
-    queryFn: () => base44.entities.Product.list("-created_date"),
+    queryFn: () => base44.entities.Product.list("-created_date", 5000),
     select: (data) => data.filter((p) => !p.deleted_at),
   });
 
@@ -291,49 +291,49 @@ export default function Home() {
 
   const { data: portfolios = [] } = useQuery({
     queryKey: ["portfolios"],
-    queryFn: () => base44.entities.Portfolio.list("-created_date"),
+    queryFn: () => base44.entities.Portfolio.list("-created_date", 5000),
     select: (data) => data.filter((p) => !p.deleted_at),
   });
 
   const { data: deletedFirms = [] } = useQuery({
     queryKey: ["deletedFirms"],
-    queryFn: () => base44.entities.Firm.filter({ deleted_at: { $exists: true } }),
+    queryFn: () => base44.entities.Firm.filter({ deleted_at: { $exists: true } }, "-created_date", 1000),
   });
 
   const { data: deletedProducts = [] } = useQuery({
     queryKey: ["deletedProducts"],
-    queryFn: () => base44.entities.Product.filter({ deleted_at: { $exists: true } }),
+    queryFn: () => base44.entities.Product.filter({ deleted_at: { $exists: true } }, "-created_date", 1000),
   });
 
   const { data: deletedContacts = [] } = useQuery({
     queryKey: ["deletedContacts"],
-    queryFn: () => base44.entities.Contact.filter({ deleted_at: { $exists: true } }),
+    queryFn: () => base44.entities.Contact.filter({ deleted_at: { $exists: true } }, "-created_date", 1000),
   });
 
   const { data: deletedPortfolios = [] } = useQuery({
     queryKey: ["deletedPortfolios"],
-    queryFn: () => base44.entities.Portfolio.filter({ deleted_at: { $exists: true } }),
+    queryFn: () => base44.entities.Portfolio.filter({ deleted_at: { $exists: true } }, "-created_date", 1000),
   });
 
   const { data: analyses = [] } = useQuery({
     queryKey: ["analyses"],
-    queryFn: () => base44.entities.Analysis.list("-created_date"),
+    queryFn: () => base44.entities.Analysis.list("-created_date", 500),
   });
 
   const { data: benchmarks = [] } = useQuery({
     queryKey: ["benchmarks"],
-    queryFn: () => base44.entities.Benchmark.list("-created_date"),
+    queryFn: () => base44.entities.Benchmark.list("-created_date", 500),
   });
 
   const { data: activities = [] } = useQuery({
     queryKey: ["contact_activities_search"],
-    queryFn: () => base44.entities.ContactActivity.list("-activity_date"),
+    queryFn: () => base44.entities.ContactActivity.list("-activity_date", 2000),
     enabled: searchFocused,
   });
 
   const { data: followUpTasks = [] } = useQuery({
     queryKey: ["follow_up_tasks_search"],
-    queryFn: () => base44.entities.FollowUpTask.list("-due_date"),
+    queryFn: () => base44.entities.FollowUpTask.list("-due_date", 2000),
     enabled: searchFocused,
   });
 
@@ -375,7 +375,7 @@ export default function Home() {
 
   const { data: customReports = [] } = useQuery({
     queryKey: ["custom_reports_search"],
-    queryFn: () => base44.entities.CustomReport.list("-created_date"),
+    queryFn: () => base44.entities.CustomReport.list("-created_date", 500),
     enabled: searchFocused,
   });
 
