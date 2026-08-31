@@ -201,6 +201,15 @@ export function detectEnrichmentIntent(query) {
 
   if (!hasEnrichmentKeyword) return { isEnrichment: false };
 
+  // Detect whether the user explicitly wants to CREATE a new firm (vs
+  // enrich/update an existing one). When the word "new" appears alongside
+  // "create"/"add" + a firm-type noun, the user expects a brand-new record
+  // and should not silently match an existing firm with a similar name.
+  const isCreateIntent =
+    /(?:create|add)\s+(?:a\s+)?new\s+(?:firm|company|investment\s+manager|allocator|investment\s+consultant|securities\s+brokerage|trade\s+organization)/i.test(
+      query
+    );
+
   const patterns = [
     /populate\s+(.+?)\s+(?:from|with|using)\s+/i,
     /enrich\s+(.+?)(?:\s+(?:from|with|using)\s+|\s*$)/i,
@@ -241,17 +250,33 @@ export function detectEnrichmentIntent(query) {
     firmName = firmName.replace(/['"]/g, "").trim();
   }
 
-  return { isEnrichment: !!firmName, firmName };
+  return { isEnrichment: !!firmName, firmName, isCreateIntent };
 }
 
-export async function findFirmByName(firmName) {
+/**
+ * Find an existing firm by name.
+ *
+ * @param firmName     The name to search for.
+ * @param exactOnly    When true (create-intent), only an exact case-insensitive
+ *                     match returns a firm. Loose substring matches are NOT
+ *                     returned — the user asked for a NEW firm, so matching
+ *                     "LM Capital" to "LM Capital Group" would silently update
+ *                     the wrong record. Instead the caller can then surface
+ *                     the similar name as a disambiguation option.
+ */
+export async function findFirmByName(firmName, exactOnly = false) {
   try {
     const allFirms = await base44.entities.Firm.list(null, 500);
     const activeFirms = allFirms.filter((f) => !f.deleted_at);
     const q = firmName.toLowerCase();
 
+    // Exact match is always authoritative.
     let match = activeFirms.find((f) => f.name.toLowerCase() === q);
     if (match) return match;
+
+    // For create-intent, stop here — a loose match would silently update the
+    // wrong firm. Return null so the caller creates a new record.
+    if (exactOnly) return null;
 
     match = activeFirms.find((f) => f.name.toLowerCase().includes(q) || q.includes(f.name.toLowerCase()));
     if (match) return match;
@@ -262,6 +287,31 @@ export async function findFirmByName(firmName) {
     return match || null;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Find firms whose name is similar (but not an exact match) to the given name.
+ * Used by create-intent to surface "did you mean…?" options so the user can
+ * choose to update an existing firm instead of creating a duplicate.
+ */
+export async function findSimilarFirms(firmName) {
+  try {
+    const allFirms = await base44.entities.Firm.list(null, 500);
+    const activeFirms = allFirms.filter((f) => !f.deleted_at);
+    const q = firmName.toLowerCase();
+    const cleanQ = q.replace(/[,.\-&'"]/g, "").trim();
+
+    return activeFirms.filter((f) => {
+      const name = f.name.toLowerCase();
+      const cleanName = name.replace(/[,.\-&'"]/g, "").trim();
+      return (
+        name !== q && // exclude exact match (already handled)
+        (name.includes(q) || q.includes(name) || cleanName.includes(cleanQ))
+      );
+    });
+  } catch {
+    return [];
   }
 }
 
