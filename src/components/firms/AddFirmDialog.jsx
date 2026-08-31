@@ -39,6 +39,7 @@ import FirmConsultantTab from "./FirmConsultantTab";
 import FirmTrainingVideosTab from "./FirmTrainingVideosTab";
 import FirmFundingSummaryCard from "./FirmFundingSummaryCard";
 import FirmAumThresholdPanel from "./FirmAumThresholdPanel";
+import XponanceContactPicker from "@/components/xponance/XponanceContactPicker";
 import FirmContactPhotoGallery from "./FirmContactPhotoGallery";
 import FirmContactRelationshipMap from "./FirmContactRelationshipMap";
 import { GEOGRAPHIC_REGIONS, deriveGeographicRegionFromAddresses } from "./geographicRegions";
@@ -218,6 +219,10 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const [sourcingNotes, setSourcingNotes] = useState("");
   const [geographicRegion, setGeographicRegion] = useState("");
   const [location, setLocation] = useState("");
+  const [primaryXponanceId, setPrimaryXponanceId] = useState("");
+  const [primaryXponanceName, setPrimaryXponanceName] = useState("");
+  const [secondaryXponanceId, setSecondaryXponanceId] = useState("");
+  const [secondaryXponanceName, setSecondaryXponanceName] = useState("");
   const [locationLat, setLocationLat] = useState(undefined);
   const [locationLng, setLocationLng] = useState(undefined);
 
@@ -263,6 +268,10 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         setLocation(editingFirm.location || "");
         setLocationLat(editingFirm.location_lat);
         setLocationLng(editingFirm.location_lng);
+        setPrimaryXponanceId(editingFirm.primary_xponance_contact_id || "");
+        setPrimaryXponanceName(editingFirm.primary_xponance_contact_name || "");
+        setSecondaryXponanceId(editingFirm.secondary_xponance_contact_id || "");
+        setSecondaryXponanceName(editingFirm.secondary_xponance_contact_name || "");
         setIsEditing(false);
       } else {
         setFirmTypes(preselectedType ? [preselectedType] : []);
@@ -286,6 +295,10 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         setLocation("");
         setLocationLat(undefined);
         setLocationLng(undefined);
+        setPrimaryXponanceId("");
+        setPrimaryXponanceName("");
+        setSecondaryXponanceId("");
+        setSecondaryXponanceName("");
         setIsEditing(true);
       }
     }
@@ -618,7 +631,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   };
 
   const performSubmit = (addrs) => {
-    onSubmit({ firm_type: firmTypes[0] || "", firm_types: firmTypes, name: firmName.trim(), logo_url: logoUrl, website, email, linkedin_url: linkedinUrl, year_founded: yearFounded ? parseInt(yearFounded) : null, description, addresses: addrs, phones, pending_contacts: pendingContacts.length > 0 ? pendingContacts : undefined, sourcing_sources: sourcingSources, sourcing_date: sourcingDate || null, sourcing_contact_name: sourcingContactName, sourcing_notes: sourcingNotes, geographic_region: geographicRegion || "Undefined", location: location || "", location_lat: locationLat, location_lng: locationLng });
+    onSubmit({ firm_type: firmTypes[0] || "", firm_types: firmTypes, name: firmName.trim(), logo_url: logoUrl, website, email, linkedin_url: linkedinUrl, year_founded: yearFounded ? parseInt(yearFounded) : null, description, addresses: addrs, phones, pending_contacts: pendingContacts.length > 0 ? pendingContacts : undefined, sourcing_sources: sourcingSources, sourcing_date: sourcingDate || null, sourcing_contact_name: sourcingContactName, sourcing_notes: sourcingNotes, geographic_region: geographicRegion || "Undefined", location: location || "", location_lat: locationLat, location_lng: locationLng, primary_xponance_contact_id: primaryXponanceId || null, primary_xponance_contact_name: primaryXponanceName || null, secondary_xponance_contact_id: secondaryXponanceId || null, secondary_xponance_contact_name: secondaryXponanceName || null });
     // Also save AUM history (including client type breakdown) if it has unsaved changes
     if (aumSaveRef.current && aumDirty) {
       aumSaveRef.current();
@@ -1428,6 +1441,27 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                     className="min-h-20"
                   />
                 )}
+              </div>
+
+              {/* Xponance Contacts — Primary & Secondary */}
+              <div className="space-y-3 p-3 rounded-lg bg-indigo-50/30 border border-indigo-100">
+                <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wider">Xponance Contacts</p>
+                <XponanceContactPicker
+                  label="Primary Xponance Contact"
+                  value={primaryXponanceId ? { contact_id: primaryXponanceId, contact_name: primaryXponanceName } : null}
+                  onChange={(id, name) => { setPrimaryXponanceId(id); setPrimaryXponanceName(name); }}
+                  onClear={() => { setPrimaryXponanceId(""); setPrimaryXponanceName(""); }}
+                  editing={activelyEditing}
+                  excludeId={secondaryXponanceId}
+                />
+                <XponanceContactPicker
+                  label="Secondary Xponance Contact"
+                  value={secondaryXponanceId ? { contact_id: secondaryXponanceId, contact_name: secondaryXponanceName } : null}
+                  onChange={(id, name) => { setSecondaryXponanceId(id); setSecondaryXponanceName(name); }}
+                  onClear={() => { setSecondaryXponanceId(""); setSecondaryXponanceName(""); }}
+                  editing={activelyEditing}
+                  excludeId={primaryXponanceId}
+                />
               </div>
               </div>
               </div>

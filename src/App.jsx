@@ -50,6 +50,7 @@ import ExecutiveDashboard from './pages/ExecutiveDashboard';
 import ProcessTemplateKanban from './pages/ProcessTemplateKanban';
 import DdTimeline from './pages/DdTimeline';
 import VideoLibrary from './pages/VideoLibrary';
+import XponanceDashboard from './pages/XponanceDashboard';
 import QuickNotesDrawer from "@/components/quicknotes/QuickNotesDrawer";
 import ScreenshotCaptureTool from "@/components/videolibrary/ScreenshotCaptureTool";
 import ScreenRecorderTool from "@/components/videolibrary/ScreenRecorderTool";
@@ -154,6 +155,7 @@ const AuthenticatedApp = () => {
       <Route path="/ProcessTemplateKanban" element={<LayoutWrapper currentPageName="ProcessTemplateKanban"><ProcessTemplateKanban /></LayoutWrapper>} />
       <Route path="/DdTimeline" element={<LayoutWrapper currentPageName="DdTimeline"><DdTimeline /></LayoutWrapper>} />
       <Route path="/VideoLibrary" element={<LayoutWrapper currentPageName="VideoLibrary"><VideoLibrary /></LayoutWrapper>} />
+      <Route path="/XponanceDashboard" element={<LayoutWrapper currentPageName="XponanceDashboard"><XponanceDashboard /></LayoutWrapper>} />
       <Route path="/register" element={<ExternalPartyRegister />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>

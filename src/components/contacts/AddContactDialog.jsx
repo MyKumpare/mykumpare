@@ -38,6 +38,7 @@ import ContactDecisionRolePicker, { DecisionRoleBadge } from "./ContactDecisionR
 import ContactInvestmentTeamRolePicker from "./ContactInvestmentTeamRolePicker";
 import ContactTagsField from "./ContactTagsField";
 import ContactTagChips from "./ContactTagChips";
+import XponanceContactPicker from "@/components/xponance/XponanceContactPicker";
 import ContactDepartmentPicker from "./ContactDepartmentPicker";
 import ContactTypePicker, { defaultContactTypesFromFirm } from "./ContactTypePicker";
 import { findContactDuplicates, findContactsByNormalizedName } from "./contactDuplicateCheck";
@@ -112,6 +113,10 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [disabilityStatus, setDisabilityStatus] = useState("Undetermined");
   const [showUndeterminedWarning, setShowUndeterminedWarning] = useState(false);
   const [notes, setNotes] = useState("");
+  const [primaryXponanceId, setPrimaryXponanceId] = useState("");
+  const [primaryXponanceName, setPrimaryXponanceName] = useState("");
+  const [secondaryXponanceId, setSecondaryXponanceId] = useState("");
+  const [secondaryXponanceName, setSecondaryXponanceName] = useState("");
   const [firmIds, setFirmIds] = useState([]);
   const [firmSearch, setFirmSearch] = useState("");
   const [showFirmPicker, setShowFirmPicker] = useState(false);
@@ -203,6 +208,10 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setBiography(editingContact.biography || "");
         setBioUrl(editingContact.bio_url || "");
         setNotes(editingContact.notes || "");
+        setPrimaryXponanceId(editingContact.primary_xponance_contact_id || "");
+        setPrimaryXponanceName(editingContact.primary_xponance_contact_name || "");
+        setSecondaryXponanceId(editingContact.secondary_xponance_contact_id || "");
+        setSecondaryXponanceName(editingContact.secondary_xponance_contact_name || "");
         setFirmIds(editingContact.firm_ids || []);
         setEducation(editingContact.education || []);
         setProfessionalExperience(editingContact.professional_experience || []);
@@ -243,6 +252,10 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setBiography("");
         setBioUrl("");
         setNotes("");
+        setPrimaryXponanceId("");
+        setPrimaryXponanceName("");
+        setSecondaryXponanceId("");
+        setSecondaryXponanceName("");
         setFirmIds(currentFirmId ? [currentFirmId] : []);
         setEducation([]);
         setProfessionalExperience([]);
@@ -472,6 +485,10 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
       biography: biography.trim(),
       bio_url: bioUrl.trim(),
       notes: notes.trim(),
+      primary_xponance_contact_id: primaryXponanceId || null,
+      primary_xponance_contact_name: primaryXponanceName || null,
+      secondary_xponance_contact_id: secondaryXponanceId || null,
+      secondary_xponance_contact_name: secondaryXponanceName || null,
       education: ed,
       professional_experience: ex,
       board_memberships: boardMemberships,
@@ -1462,6 +1479,27 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                     )}
                   </div>
                 ))}
+              </div>
+
+              {/* Xponance Contacts — Primary & Secondary */}
+              <div className="space-y-3 p-3 rounded-lg bg-indigo-50/30 border border-indigo-100">
+                <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wider">Xponance Contacts</p>
+                <XponanceContactPicker
+                  label="Primary Xponance Contact"
+                  value={primaryXponanceId ? { contact_id: primaryXponanceId, contact_name: primaryXponanceName } : null}
+                  onChange={(id, name) => { setPrimaryXponanceId(id); setPrimaryXponanceName(name); }}
+                  onClear={() => { setPrimaryXponanceId(""); setPrimaryXponanceName(""); }}
+                  editing={!viewMode}
+                  excludeId={secondaryXponanceId}
+                />
+                <XponanceContactPicker
+                  label="Secondary Xponance Contact"
+                  value={secondaryXponanceId ? { contact_id: secondaryXponanceId, contact_name: secondaryXponanceName } : null}
+                  onChange={(id, name) => { setSecondaryXponanceId(id); setSecondaryXponanceName(name); }}
+                  onClear={() => { setSecondaryXponanceId(""); setSecondaryXponanceName(""); }}
+                  editing={!viewMode}
+                  excludeId={primaryXponanceId}
+                />
               </div>
 
               {/* Quick Notes & Recent Interactions — combined panel for tracking conversations */}

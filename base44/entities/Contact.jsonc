@@ -395,6 +395,22 @@
       "type": "string",
       "description": "Additional notes about the contact"
     },
+    "primary_xponance_contact_id": {
+      "type": "string",
+      "description": "ID of the primary Xponance contact assigned to this contact. The assigned contact must belong to the Xponance (tenant) firm. Set via the Xponance Contact Picker in the contact edit form."
+    },
+    "primary_xponance_contact_name": {
+      "type": "string",
+      "description": "Full name of the primary Xponance contact (denormalized for display in badges and the Xponance dashboard)."
+    },
+    "secondary_xponance_contact_id": {
+      "type": "string",
+      "description": "ID of the secondary Xponance contact assigned to this contact. The assigned contact must belong to the Xponance (tenant) firm. Set via the Xponance Contact Picker in the contact edit form."
+    },
+    "secondary_xponance_contact_name": {
+      "type": "string",
+      "description": "Full name of the secondary Xponance contact (denormalized for display in badges and the Xponance dashboard)."
+    },
     "deleted_at": {
       "type": "string",
       "format": "date-time",
