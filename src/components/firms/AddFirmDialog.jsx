@@ -51,6 +51,7 @@ import SimilarFirmFieldDialog from "./SimilarFirmFieldDialog";
 import { findFirmFieldConflicts } from "./firmFieldDuplicateCheck";
 import LiveFieldConflictWarning from "./LiveFieldConflictWarning";
 import { isFirmNameSimilarToLinkedin } from "./firmNameSimilarity";
+import { findFirmNameDuplicates } from "./firmNameDuplicateCheck";
 import LinkedinFirmMismatchDialog from "./LinkedinFirmMismatchDialog";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
@@ -490,15 +491,9 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   // submit-time warning uses, so the two never disagree. Only in add mode.
   const liveSimilarFirms = useMemo(() => {
     if (!isAddMode || !activelyEditing) return [];
-    const input = firmName.trim().toLowerCase();
-    if (input.length < 3) return [];
-    return existingFirms
-      .filter((f) => {
-        if (f.deleted_at) return false;
-        if (editingFirm && f.id === editingFirm.id) return false;
-        const existing = (f.name || "").toLowerCase();
-        return existing.includes(input) || input.includes(existing);
-      })
+    if (firmName.trim().length < 3) return [];
+    return findFirmNameDuplicates(firmName.trim(), existingFirms)
+      .filter((d) => !editingFirm || d.firm.id !== editingFirm.id)
       .slice(0, 5);
   }, [isAddMode, activelyEditing, firmName, existingFirms, editingFirm]);
 
@@ -587,15 +582,10 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     // user can confirm they're not creating a duplicate. Matches the same
     // substring-inclusion check used by the quick-add firm form.
     if (!forceFirmName && isAddMode && firmName.trim().length >= 2) {
-      const input = firmName.trim().toLowerCase();
-      const matches = existingFirms.filter((f) => {
-        if (f.deleted_at) return false;
-        if (editingFirm && f.id === editingFirm.id) return false;
-        const existing = (f.name || "").toLowerCase();
-        return existing.includes(input) || input.includes(existing);
-      });
-      if (matches.length > 0) {
-        setSimilarFirmWarning(matches);
+      const dups = findFirmNameDuplicates(firmName.trim(), existingFirms)
+        .filter((d) => !editingFirm || d.firm.id !== editingFirm.id);
+      if (dups.length > 0) {
+        setSimilarFirmWarning(dups);
         return;
       }
     }
@@ -1271,13 +1261,20 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                       <div className="mt-1.5 rounded-md border border-amber-200 bg-amber-50 p-2 space-y-1">
                         <p className="text-xs font-medium text-amber-700 flex items-center gap-1">
                           <AlertTriangle className="w-3 h-3" />
-                          {liveSimilarFirms.length} similar firm{liveSimilarFirms.length > 1 ? "s" : ""} already in the system
+                          {liveSimilarFirms.length} potential duplicate{liveSimilarFirms.length > 1 ? "s" : ""} found
                         </p>
                         <ul className="space-y-0.5">
-                          {liveSimilarFirms.map((f) => {
+                          {liveSimilarFirms.map((d) => {
+                            const f = d.firm;
                             const types = f.firm_types?.length ? f.firm_types : (f.firm_type ? [f.firm_type] : []);
+                            const isExact = d.score === 1;
                             return (
                               <li key={f.id} className="text-xs text-gray-700 flex items-start gap-1 flex-wrap">
+                                {isExact ? (
+                                  <span className="text-red-600 font-medium">● Exact match:</span>
+                                ) : (
+                                  <span className="text-amber-600 font-medium">○ Near match:</span>
+                                )}
                                 <span className="font-medium">{f.name}</span>
                                 {types.length > 0 && <span className="text-gray-500">— {types.join(", ")}</span>}
                               </li>
@@ -1994,20 +1991,32 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-amber-500" />
-                Similar Firm Name Exists
+                {similarFirmWarning.some((d) => d.score === 1) ? "Duplicate Firm Name Found" : "Similar Firm Name Found"}
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-3 py-2">
               <p className="text-sm text-gray-600">
-                A firm with a similar name already exists. Would you like to add this firm anyway?
+                {similarFirmWarning.some((d) => d.score === 1)
+                  ? "A firm with an exact matching name already exists. Please review before proceeding."
+                  : "A firm with a similar name already exists. Would you like to add this firm anyway?"}
               </p>
               <div className="space-y-2 max-h-60 overflow-y-auto">
-                {similarFirmWarning.map((f) => {
+                {similarFirmWarning.map((d) => {
+                  const f = d.firm;
                   const types = f.firm_types?.length ? f.firm_types : (f.firm_type ? [f.firm_type] : []);
+                  const isExact = d.score === 1;
                   return (
-                    <div key={f.id} className="rounded-lg border border-amber-200 bg-amber-50 p-3">
-                      <p className="font-semibold text-sm text-gray-800">{f.name}</p>
-                      {types.length > 0 && <p className="text-xs text-gray-500">{types.join(", ")}</p>}
+                    <div key={f.id} className={`rounded-lg border p-3 ${isExact ? "border-red-300 bg-red-50" : "border-amber-200 bg-amber-50"}`}>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-semibold text-sm text-gray-800">{f.name}</p>
+                        {isExact ? (
+                          <span className="text-xs font-medium text-red-600 bg-red-100 px-2 py-0.5 rounded">Exact Match</span>
+                        ) : (
+                          <span className="text-xs font-medium text-amber-600 bg-amber-100 px-2 py-0.5 rounded">Near Match</span>
+                        )}
+                      </div>
+                      {types.length > 0 && <p className="text-xs text-gray-500 mt-0.5">{types.join(", ")}</p>}
+                      <p className="text-xs text-gray-600 mt-1">{d.reasons.join(" ")}</p>
                     </div>
                   );
                 })}
