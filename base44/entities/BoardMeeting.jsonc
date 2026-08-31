@@ -120,6 +120,17 @@
       "type": "string",
       "description": "Note-taking format template (rich text HTML) applied from a board meeting template, giving the meeting a consistent notes structure."
     },
+    "meeting_summary": {
+      "type": "string",
+      "description": "AI-generated or user-edited overall meeting summary notes, structured according to the applied BoardMeetingTemplate's agenda sections. Captures the executive summary and key takeaways documented immediately after the meeting."
+    },
+    "key_decisions": {
+      "type": "array",
+      "description": "Key decisions documented during the meeting, extracted by AI from the minutes/notes or entered manually by the user. Each entry is a single decision statement.",
+      "items": {
+        "type": "string"
+      }
+    },
     "status": {
       "type": "string",
       "enum": [

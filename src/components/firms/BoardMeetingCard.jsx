@@ -5,11 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Calendar, MapPin, Video, Users, FileText, ScrollText, AlertTriangle,
-  CheckCircle2, Loader2, ExternalLink, Flag, Trash2, FileDown, ListTodo, Tag,
+  CheckCircle2, Loader2, ExternalLink, Flag, Trash2, FileDown, ListTodo, Tag, ClipboardList,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import TagMentionedFirmDialog from "./TagMentionedFirmDialog";
 import BoardMeetingPdfSummaryDialog from "./BoardMeetingPdfSummaryDialog";
+import MeetingSummaryDialog from "./MeetingSummaryDialog";
 
 const FORMAT_LABEL = { "in-person": "In-Person", virtual: "Virtual", hybrid: "Hybrid", unknown: "—" };
 const SESSION_LABEL = { public_meeting: "Public Meeting", closed_session: "Closed Session", unknown: "—" };
@@ -32,6 +33,7 @@ export default function BoardMeetingCard({ meeting, firmId, onFirmClick }) {
   const [showTagFirm, setShowTagFirm] = useState(false);
   const [showMentions, setShowMentions] = useState(false);
   const [showPdfSummary, setShowPdfSummary] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["board-meetings", firmId] });
 
@@ -200,6 +202,9 @@ export default function BoardMeetingCard({ meeting, firmId, onFirmClick }) {
             {expanded ? "Hide minutes" : "View minutes"}
           </button>
         )}
+        <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => setShowSummary(true)}>
+          <ClipboardList className="w-3 h-3" /> Summary
+        </Button>
         <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => setShowPdfSummary(true)}>
           <FileDown className="w-3 h-3" /> PDF Summary
         </Button>
@@ -273,6 +278,13 @@ export default function BoardMeetingCard({ meeting, firmId, onFirmClick }) {
         meeting={meeting}
         onTagged={invalidate}
         onFirmClick={onFirmClick}
+      />
+
+      <MeetingSummaryDialog
+        open={showSummary}
+        onClose={() => setShowSummary(false)}
+        meeting={meeting}
+        onSaved={invalidate}
       />
 
       {/* Extracted action items */}
