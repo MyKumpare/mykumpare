@@ -2,7 +2,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { cleanStr } from '../../shared/enrichmentUtils.ts';
 import {
   normalizeName, isStubBio, discoverPeoplePage, discoverBioUrlByPattern,
-  extractPeopleFromPage, extractBiographyFromPage,
+  extractPeopleFromPage, extractBiographyFromPage, formatBioParagraphs,
 } from '../../shared/contactBioScrape.ts';
 import { extractBoardMembershipsFromBio, mergeBoardMemberships } from '../../shared/boardMembershipExtract.ts';
 
@@ -80,7 +80,7 @@ export default async function(req: Request): Promise<Response> {
         const res = await base44.integrations.Core.InvokeLLM({
           prompt: `Find the professional biography of "${fullName}"${firmIds.length > 0 ? ' (an investment professional)' : ''}. Search the web for their biography on their firm's website, LinkedIn, or other professional sources.
 
-CRITICAL: Return the COMPLETE biography text VERBATIM — do not summarize, paraphrase, or shorten. Include EVERY paragraph from start to finish. The biography must end with a complete sentence — do NOT truncate mid-sentence. If the biography is long, include all of it. If no biography can be found, return an empty string.`,
+CRITICAL: Return the COMPLETE biography text VERBATIM — do not summarize, paraphrase, or shorten. Include EVERY paragraph from start to finish. The biography must end with a complete sentence — do NOT truncate mid-sentence. If the biography is long, include all of it. PRESERVE PARAGRAPH BREAKS: separate each paragraph with a double newline (\\n\\n) — do NOT collapse the entire bio into a single block of text. If no biography can be found, return an empty string.`,
           add_context_from_internet: true,
           model: 'gemini_3_flash',
           response_json_schema: {
@@ -91,7 +91,7 @@ CRITICAL: Return the COMPLETE biography text VERBATIM — do not summarize, para
             },
           },
         });
-        const bio = cleanStr(res?.biography);
+        const bio = formatBioParagraphs(cleanStr(res?.biography));
         if (bio && bio.length > 60) {
           foundBio = bio;
           foundBioUrl = cleanStr(res?.source_url) || '';

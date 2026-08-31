@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import { resolveUrl, DOC_KEYWORDS, isLikelyPersonSlug, extractPersonDataFromScripts, discoverCategoryUrlsFromHtml } from '../../shared/enrichmentHelpers.ts';
+import { formatBioParagraphs } from '../../shared/contactBioScrape.ts';
 
 /**
  * Fetches a website's content directly (homepage + common sub-pages like /about, /team)
@@ -393,6 +394,7 @@ EXTRACT THESE FIELDS:
    - Copy the biography VERBATIM — do not summarize, do not paraphrase, do not abbreviate, do not truncate.
    - Include EVERY paragraph of the biography in full, from the first sentence to the last sentence.
    - The biography often spans MULTIPLE paragraphs. You MUST include ALL of them — do not stop after the first paragraph.
+   - PRESERVE PARAGRAPH BREAKS: separate each paragraph with a double newline (\\n\\n). Do NOT collapse the entire bio into a single block of text — keep the original paragraph structure.
    - If the page lists multiple people, extract only the biography belonging to "${personName}".
    - If no biography text is found, return an empty string.
    - The biography typically includes: current role, tenure at the firm, prior employers, education, and areas of expertise. Include ALL of this text.
@@ -450,7 +452,7 @@ Return a JSON object with all fields above. Leave fields empty or return empty a
     return {
       first_name: (res?.first_name || '').trim(),
       last_name: (res?.last_name || '').trim(),
-      biography: (res?.biography || '').trim(),
+      biography: formatBioParagraphs(res?.biography || ''),
       phone: (res?.phone || '').trim(),
       email: (res?.email || '').trim(),
       title: (res?.title || '').trim(),
@@ -2151,7 +2153,7 @@ Deno.serve(async (req) => {
           person.photo_url = cleanStr(person.photo_url) || '';
           person.email = cleanStr(person.email) || '';
           person.linkedin_url = cleanStr(person.linkedin_url) || '';
-          person.biography = cleanStr(person.biography) || '';
+          person.biography = formatBioParagraphs(cleanStr(person.biography)) || '';
           delete person.bio_url;
         }
         // Extract education + professional experience from any bios the web
@@ -2217,7 +2219,7 @@ IMPORTANT:
 - Only include information you actually find in the content above
 - Do not fabricate or guess
 - Leave fields empty/null if not found
-- For biography, copy the complete text — do not summarize. If the biography is NOT present on this listing page (only name/title are shown), leave biography empty but still set bio_url to that person's individual profile page link`;
+- For biography, copy the complete text — do not summarize. PRESERVE PARAGRAPH BREAKS: separate each paragraph with a double newline (\\n\\n); do NOT collapse the entire bio into a single block of text. If the biography is NOT present on this listing page (only name/title are shown), leave biography empty but still set bio_url to that person's individual profile page link`;
 
     const enrichedData = await base44.integrations.Core.InvokeLLM({
       prompt: extractionPrompt,
@@ -2330,7 +2332,7 @@ IMPORTANT:
       person.photo_url = cleanStr(person.photo_url) || '';
       person.email = cleanStr(person.email) || '';
       person.linkedin_url = cleanStr(person.linkedin_url) || '';
-      person.biography = cleanStr(person.biography) || '';
+      person.biography = formatBioParagraphs(cleanStr(person.biography)) || '';
       person.bio_url = cleanStr(person.bio_url) || '';
     }
 
@@ -2427,7 +2429,7 @@ IMPORTANT:
           person.photo_url = cleanStr2(person.photo_url) || '';
           person.email = cleanStr2(person.email) || '';
           person.linkedin_url = cleanStr2(person.linkedin_url) || '';
-          person.biography = cleanStr2(person.biography) || '';
+          person.biography = formatBioParagraphs(cleanStr2(person.biography)) || '';
           delete person.bio_url;
         }
         // Use the web search fallback's people, but keep the main extraction's
