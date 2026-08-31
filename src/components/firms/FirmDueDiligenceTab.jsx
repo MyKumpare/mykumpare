@@ -8,6 +8,7 @@ import { syncDdNotifications, syncProductStatusFromDd, deleteDdNotifications } f
 import { saveStageNoteVersions } from "./ddNoteVersionSync";
 import { computeAnalystHistory, initAnalystHistory } from "@/lib/analystHistoryClient";
 import DdFilterTabs, { getDdCounts, filterDdRecords } from "./DdFilterTabs";
+import FirmDdChecklistWidget from "./FirmDdChecklistWidget";
 
 const STATUS_STYLES = {
   "Pipeline": "bg-blue-50 text-blue-700 border-blue-200",
@@ -120,6 +121,7 @@ export default function FirmDueDiligenceTab({ firmId, firmName, contacts = [], o
 
   return (
     <div className="space-y-3">
+      <FirmDdChecklistWidget firmId={firmId} />
       <div className="flex justify-end">
         <Button
           type="button"
