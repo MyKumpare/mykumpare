@@ -17,6 +17,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
 import { findContactDuplicates, findContactsByNormalizedName } from "@/components/contacts/contactDuplicateCheck";
 import { detectDesignations } from "@/components/contacts/designationDetector";
+import FirmTypePicker from "./FirmTypePicker";
 import FirmEnrichmentPanel from "./FirmEnrichmentPanel";
 import AddressForm from "./AddressForm";
 import PhoneForm from "./PhoneForm";
@@ -1216,27 +1217,10 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                     }
                   </div>
                 ) : (
-                  <div className="rounded-md border bg-white p-2 space-y-1.5">
-                    {FIRM_TYPES.map((type) => (
-                      <label key={type} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 px-1 py-0.5 rounded">
-                        <input
-                          type="radio"
-                          name="firmType"
-                          checked={firmTypes.includes(type)}
-                          onChange={() => setFirmTypes([type])}
-                          disabled={preselectedType === type && !editingFirm}
-                          className="w-4 h-4 text-primary border-gray-300 focus:ring-indigo-500 cursor-pointer"
-                        />
-                        <span className="text-sm text-gray-700">{type}</span>
-                      </label>
-                    ))}
-                    {firmTypes.length > 1 && (
-                      <p className="text-xs text-amber-600 flex items-center gap-1 px-1 pt-1">
-                        <AlertTriangle className="w-3 h-3" />
-                        A firm can only have one type. Only the first selected type will be saved.
-                      </p>
-                    )}
-                  </div>
+                  <FirmTypePicker
+                    value={firmTypes[0] || ""}
+                    onChange={(type) => setFirmTypes(type ? [type] : [])}
+                  />
                 )}
               </div>
 

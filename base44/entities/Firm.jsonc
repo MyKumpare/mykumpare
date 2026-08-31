@@ -12,29 +12,13 @@
     },
     "firm_type": {
       "type": "string",
-      "enum": [
-        "Investment Manager",
-        "Allocator",
-        "Investment Consultant",
-        "Securities Brokerage",
-        "Trade Organizations",
-        "Other"
-      ],
-      "description": "Primary type of firm (legacy single value)"
+      "description": "Primary type of firm (legacy single value). Free-text value drawn from the FirmType master list; users can add new types via the firm form dropdown."
     },
     "firm_types": {
       "type": "array",
-      "description": "Types of firm (multi-select)",
+      "description": "Types of firm (multi-select). Free-text values drawn from the FirmType master list; users can add new types via the firm form dropdown.",
       "items": {
-        "type": "string",
-        "enum": [
-          "Investment Manager",
-          "Allocator",
-          "Investment Consultant",
-          "Securities Brokerage",
-          "Trade Organizations",
-          "Other"
-        ]
+        "type": "string"
       }
     },
     "logo_url": {
