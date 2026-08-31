@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { fetchPage, cleanStr, parsePhone } from '../../shared/enrichmentUtils.ts';
+import { formatBioParagraphs } from '../../shared/contactBioScrape.ts';
 import { assertSafePublicUrl } from '../../shared/urlSafety.ts';
 
 /**
@@ -127,7 +128,7 @@ IMPORTANT: Many sites use collapsible/accordion sections for detailed informatio
 
 EXTRACT THESE FIELDS:
 
-1. biography: the COMPLETE biography text for this person. Copy VERBATIM — do not summarize, paraphrase, or truncate. Include EVERY paragraph.
+1. biography: the COMPLETE biography text for this person. Copy VERBATIM — do not summarize, paraphrase, or truncate. Include EVERY paragraph. PRESERVE PARAGRAPH BREAKS: separate each paragraph with a double newline (\\n\\n) — do NOT collapse the entire bio into a single block of text; keep the original paragraph structure.
 2. title: their job title/role as it appears on the page.
 3. email: any email address listed for this person.
 4. phone: any phone number listed for this person (include area code).
@@ -181,7 +182,7 @@ Return a JSON object with all fields above. Leave fields empty or return empty a
       },
     });
     return {
-      biography: cleanStr(res?.biography),
+      biography: formatBioParagraphs(cleanStr(res?.biography)),
       title: cleanStr(res?.title),
       email: cleanStr(res?.email),
       phone: cleanStr(res?.phone),
