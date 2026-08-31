@@ -32,6 +32,7 @@ import ContactProductsTab from "./ContactProductsTab";
 import ContactNewsTab from "./ContactNewsTab";
 import ScrapeProfileButton from "./ScrapeProfileButton";
 import ScrapeBiographyButton from "./ScrapeBiographyButton";
+import BiographyEditor from "./BiographyEditor";
 import ScrapePhotoButton from "./ScrapePhotoButton";
 import ContactRolePicker from "./ContactRolePicker";
 import ContactDecisionRolePicker, { DecisionRoleBadge } from "./ContactDecisionRolePicker";
@@ -1394,11 +1395,11 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                     />
                   )}
                 </div>
-                {viewMode ? (
-                  <div className="text-sm text-gray-900 px-1 whitespace-pre-wrap">{biography || <span className="text-gray-400 italic">—</span>}</div>
-                ) : (
-                  <Textarea placeholder="Brief biography..." value={biography} onChange={(e) => setBiography(e.target.value)} className="min-h-20 text-sm" />
-                )}
+                <BiographyEditor
+                  value={biography}
+                  onChange={setBiography}
+                  viewMode={viewMode}
+                />
               </div>
 
               {/* Scrape Profile Page — lets the user point at the contact's
