@@ -1,9 +1,11 @@
 import React, { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { Search, Building, User, UserCircle2, ArrowUpDown, Filter, X, MapPin } from "lucide-react";
 import XponanceContactBadges from "@/components/xponance/XponanceContactBadges";
+import XponanceAssignmentCell from "@/components/xponance/XponanceAssignmentCell";
 
 const FIRM_TYPES = [
   "Investment Manager",
@@ -21,7 +23,13 @@ const getContactName = (c) =>
 
 export default function XponanceDashboard() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const tenantFirmId = user?.linked_firm_id;
+
+  const handleAssignmentSaved = () => {
+    queryClient.invalidateQueries({ queryKey: ["firms"] });
+    queryClient.invalidateQueries({ queryKey: ["contacts"] });
+  };
 
   const [search, setSearch] = useState("");
   const [firmTypeFilter, setFirmTypeFilter] = useState("");
@@ -314,7 +322,7 @@ export default function XponanceDashboard() {
                                 </div>
                               )}
                               <div className="min-w-0">
-                                <p className="text-sm font-medium text-gray-900 truncate">{firm.name}</p>
+                                <Link to={`/Home?openFirm=${firm.id}`} onClick={(e) => e.stopPropagation()} className="text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:underline truncate">{firm.name}</Link>
                                 {firm.location && (
                                   <p className="text-xs text-gray-400 flex items-center gap-0.5">
                                     <MapPin className="w-3 h-3" />
@@ -334,24 +342,26 @@ export default function XponanceDashboard() {
                             </div>
                           </td>
                           <td className="px-4 py-3">
-                            {firm.primary_xponance_contact_id ? (
-                              <div className="flex items-center gap-1.5">
-                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-bold">P</span>
-                                <span className="text-sm text-gray-700">{firm.primary_xponance_contact_name}</span>
-                              </div>
-                            ) : (
-                              <span className="text-xs text-gray-300">—</span>
-                            )}
+                            <XponanceAssignmentCell
+                              entityType="Firm"
+                              entityId={firm.id}
+                              role="primary"
+                              value={{ contact_id: firm.primary_xponance_contact_id, contact_name: firm.primary_xponance_contact_name }}
+                              excludeId={firm.secondary_xponance_contact_id}
+                              xponanceContacts={xponanceContacts}
+                              onSaved={handleAssignmentSaved}
+                            />
                           </td>
                           <td className="px-4 py-3">
-                            {firm.secondary_xponance_contact_id ? (
-                              <div className="flex items-center gap-1.5">
-                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-violet-100 text-violet-700 text-[10px] font-bold">S</span>
-                                <span className="text-sm text-gray-700">{firm.secondary_xponance_contact_name}</span>
-                              </div>
-                            ) : (
-                              <span className="text-xs text-gray-300">—</span>
-                            )}
+                            <XponanceAssignmentCell
+                              entityType="Firm"
+                              entityId={firm.id}
+                              role="secondary"
+                              value={{ contact_id: firm.secondary_xponance_contact_id, contact_name: firm.secondary_xponance_contact_name }}
+                              excludeId={firm.primary_xponance_contact_id}
+                              xponanceContacts={xponanceContacts}
+                              onSaved={handleAssignmentSaved}
+                            />
                           </td>
                         </tr>
                       );
@@ -399,7 +409,7 @@ export default function XponanceDashboard() {
                                 </div>
                               )}
                               <div className="min-w-0">
-                                <p className="text-sm font-medium text-gray-900 truncate">{getContactName(contact)}</p>
+                                <Link to={`/Home?openContact=${contact.id}`} onClick={(e) => e.stopPropagation()} className="text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:underline truncate">{getContactName(contact)}</Link>
                                 {contact.title && <p className="text-xs text-gray-400 truncate">{contact.title}</p>}
                               </div>
                             </div>
@@ -408,24 +418,26 @@ export default function XponanceDashboard() {
                             <span className="text-sm text-gray-600">{firmName || "—"}</span>
                           </td>
                           <td className="px-4 py-3">
-                            {contact.primary_xponance_contact_id ? (
-                              <div className="flex items-center gap-1.5">
-                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-bold">P</span>
-                                <span className="text-sm text-gray-700">{contact.primary_xponance_contact_name}</span>
-                              </div>
-                            ) : (
-                              <span className="text-xs text-gray-300">—</span>
-                            )}
+                            <XponanceAssignmentCell
+                              entityType="Contact"
+                              entityId={contact.id}
+                              role="primary"
+                              value={{ contact_id: contact.primary_xponance_contact_id, contact_name: contact.primary_xponance_contact_name }}
+                              excludeId={contact.secondary_xponance_contact_id}
+                              xponanceContacts={xponanceContacts}
+                              onSaved={handleAssignmentSaved}
+                            />
                           </td>
                           <td className="px-4 py-3">
-                            {contact.secondary_xponance_contact_id ? (
-                              <div className="flex items-center gap-1.5">
-                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-violet-100 text-violet-700 text-[10px] font-bold">S</span>
-                                <span className="text-sm text-gray-700">{contact.secondary_xponance_contact_name}</span>
-                              </div>
-                            ) : (
-                              <span className="text-xs text-gray-300">—</span>
-                            )}
+                            <XponanceAssignmentCell
+                              entityType="Contact"
+                              entityId={contact.id}
+                              role="secondary"
+                              value={{ contact_id: contact.secondary_xponance_contact_id, contact_name: contact.secondary_xponance_contact_name }}
+                              excludeId={contact.primary_xponance_contact_id}
+                              xponanceContacts={xponanceContacts}
+                              onSaved={handleAssignmentSaved}
+                            />
                           </td>
                         </tr>
                       );

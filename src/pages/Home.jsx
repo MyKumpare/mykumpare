@@ -273,6 +273,7 @@ export default function Home() {
   const reportsRef = useRef(null);
   const formsRef = useRef(null);
   const utilityRef = useRef(null);
+  const openedFromQueryRef = useRef("");
 
   const scrollTo = (ref) => {
     ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -407,6 +408,37 @@ export default function Home() {
     // Clear the state so a refresh or back-navigation doesn't re-trigger.
     navigate(location.pathname, { replace: true, state: null });
   }, [location.state, firms, navigate]);
+
+  // Open a firm/contact dialog from query params (?openFirm=ID or ?openContact=ID),
+  // used by cross-page hyperlinks (e.g. the Xponance Dashboard name links).
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const openFirmId = params.get("openFirm");
+    const openContactId = params.get("openContact");
+    const key = openFirmId || openContactId;
+    if (!key || openedFromQueryRef.current === key) return;
+    if (openFirmId) {
+      const firm = firms.find((f) => f.id === openFirmId && !f.deleted_at);
+      if (firm) {
+        openedFromQueryRef.current = key;
+        setEditingFirm(firm);
+        setPreselectedType(null);
+        setOwnershipNavTarget(null);
+        setDocumentsNavTarget(null);
+        setBoardMeetingNavTarget(null);
+        setDialogOpen(true);
+        navigate(location.pathname, { replace: true });
+      }
+    } else if (openContactId) {
+      const contact = contacts.find((c) => c.id === openContactId && !c.deleted_at);
+      if (contact) {
+        openedFromQueryRef.current = key;
+        setDialogOpen(false);
+        setViewingContact(contact);
+        navigate(location.pathname, { replace: true });
+      }
+    }
+  }, [location.search, firms, contacts, navigate]);
 
   const deletedCount = deletedFirms.length + deletedProducts.length + deletedContacts.length + deletedPortfolios.length;
 
