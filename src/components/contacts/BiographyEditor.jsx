@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { Wand2 } from "lucide-react";
@@ -130,8 +130,43 @@ function cleanBiographyHtml(html) {
  *   onChange: (html) => void
  *   viewMode: boolean
  */
-export default function BiographyEditor({ value = "", onChange, viewMode = false }) {
+export default function BiographyEditor({ value = "", onChange, onPersist, viewMode = false }) {
   const quillRef = useRef(null);
+  const [cleaning, setCleaning] = useState(false);
+
+  const handleCleanFormatting = async () => {
+    let current;
+    if (viewMode) {
+      current = toHtmlIfPlain(value);
+    } else {
+      const editor = quillRef.current?.getEditor?.();
+      current = editor?.root?.innerHTML || toHtmlIfPlain(value);
+    }
+    const cleaned = cleanBiographyHtml(current);
+
+    if (viewMode && onPersist) {
+      // View mode: persist the cleaned bio directly to the database
+      setCleaning(true);
+      try {
+        await onPersist(cleaned);
+      } finally {
+        setCleaning(false);
+      }
+      return;
+    }
+
+    // Edit mode: push the cleaned HTML directly into the Quill editor
+    // (ReactQuill ignores external value prop changes after mount).
+    if (!viewMode) {
+      const editor = quillRef.current?.getEditor?.();
+      if (editor) {
+        editor.clipboard.dangerouslyPasteHTML(cleaned);
+        onChange(cleaned);
+        return;
+      }
+    }
+    onChange(cleaned);
+  };
 
   if (viewMode) {
     const html = toHtmlIfPlain(value);
@@ -139,18 +174,26 @@ export default function BiographyEditor({ value = "", onChange, viewMode = false
       return <div className="text-sm text-gray-400 italic px-1">—</div>;
     }
     return (
-      <div
-        className="quill-preview text-sm text-gray-900 px-1 prose prose-sm max-w-none"
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
+      <div className="space-y-1">
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={handleCleanFormatting}
+            disabled={cleaning}
+            className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50 transition-colors disabled:opacity-50"
+            title="Normalize paragraph breaks, remove extra whitespace, and strip messy formatting from scraped bios"
+          >
+            <Wand2 className={`h-3.5 w-3.5 ${cleaning ? "animate-pulse" : ""}`} />
+            {cleaning ? "Cleaning…" : "Clean Formatting"}
+          </button>
+        </div>
+        <div
+          className="quill-preview text-sm text-gray-900 px-1 prose prose-sm max-w-none"
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
+      </div>
     );
   }
-
-  const handleCleanFormatting = () => {
-    const current = quillRef.current?.editor?.root?.innerHTML || value;
-    const cleaned = cleanBiographyHtml(current);
-    onChange(cleaned);
-  };
 
   return (
     <div className="rounded-md border border-gray-200 overflow-hidden">

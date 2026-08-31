@@ -1399,6 +1399,13 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                   value={biography}
                   onChange={setBiography}
                   viewMode={viewMode}
+                  onPersist={async (cleaned) => {
+                    if (!editingContact) return;
+                    await base44.entities.Contact.update(editingContact.id, { biography: cleaned });
+                    setBiography(cleaned);
+                    queryClient.invalidateQueries({ queryKey: ["contacts"] });
+                    toast({ title: "Biography cleaned and saved" });
+                  }}
                 />
               </div>
 
