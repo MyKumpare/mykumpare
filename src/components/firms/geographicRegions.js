@@ -47,6 +47,32 @@ export function countryToGeographicRegion(country) {
   return null;
 }
 
+// Maps common ISO-2 country codes to full names for the location string.
+// Falls back to the raw value when the code isn't recognized.
+const COUNTRY_CODE_TO_NAME = {
+  US: "USA", CA: "Canada", GB: "United Kingdom", AU: "Australia", DE: "Germany",
+  FR: "France", JP: "Japan", CN: "China", IN: "India", BR: "Brazil", MX: "Mexico",
+  NL: "Netherlands", CH: "Switzerland", SE: "Sweden", NO: "Norway", DK: "Denmark",
+  FI: "Finland", IE: "Ireland", IT: "Italy", ES: "Spain", PT: "Portugal", BE: "Belgium",
+  AT: "Austria", SG: "Singapore", HK: "Hong Kong", KR: "South Korea", TW: "Taiwan",
+  ZA: "South Africa", AE: "UAE", SA: "Saudi Arabia", IL: "Israel", LU: "Luxembourg",
+  NZ: "New Zealand", CL: "Chile", AR: "Argentina", CO: "Colombia", PE: "Peru",
+};
+
+// Builds a concise location string (e.g. "Philadelphia, PA, USA")
+// from a firm's headquarters address (or first address if none marked HQ).
+// Returns null when the address lacks enough location data.
+export function deriveLocationFromAddresses(addresses) {
+  if (!addresses || addresses.length === 0) return null;
+  const hq = addresses.find(a => a.is_headquarters) || addresses[0];
+  const parts = [];
+  if (hq.city) parts.push(hq.city);
+  if (hq.state) parts.push(hq.state);
+  if (hq.country) parts.push(COUNTRY_CODE_TO_NAME[hq.country] || hq.country);
+  const result = parts.filter(Boolean).join(", ");
+  return result || null;
+}
+
 // Derives a single geographic region from a list of firm addresses.
 // Returns "Global" when addresses span multiple regions, a single region
 // when all classified addresses agree, or null when no address can be classified.

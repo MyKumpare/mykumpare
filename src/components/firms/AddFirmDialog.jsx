@@ -43,7 +43,7 @@ import FirmAumThresholdPanel from "./FirmAumThresholdPanel";
 import XponanceContactPicker from "@/components/xponance/XponanceContactPicker";
 import FirmContactPhotoGallery from "./FirmContactPhotoGallery";
 import FirmContactRelationshipMap from "./FirmContactRelationshipMap";
-import { GEOGRAPHIC_REGIONS, deriveGeographicRegionFromAddresses } from "./geographicRegions";
+import { GEOGRAPHIC_REGIONS, deriveGeographicRegionFromAddresses, deriveLocationFromAddresses } from "./geographicRegions";
 import FirmLocationField from "./FirmLocationField";
 import EnrichmentApprovalDialog from "./EnrichmentApprovalDialog";
 import ExperienceOptionMatchDialog from "../contacts/ExperienceOptionMatchDialog";
@@ -329,6 +329,16 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
       setGeographicRegion(derived);
     }
   }, [addresses, activelyEditing, geographicRegion]);
+
+  // Auto-populate the free-text Location field from the headquarters address
+  // whenever addresses change. Only fills when Location is empty so a manual
+  // entry is preserved.
+  useEffect(() => {
+    if (!activelyEditing) return;
+    if (location) return;
+    const derived = deriveLocationFromAddresses(addresses);
+    if (derived) setLocation(derived);
+  }, [addresses, activelyEditing, location]);
 
   const handleLogoUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -1401,9 +1411,11 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                 )}
               </div>
 
-              {/* Location */}
+              {/* Location — falls back to the headquarters address when the
+                  free-text Location field is empty, so the profile still
+                  shows a location even before the field is explicitly set. */}
               <FirmLocationField
-                value={location}
+                value={location || (!activelyEditing ? (deriveLocationFromAddresses(addresses) || "") : "")}
                 lat={locationLat}
                 lng={locationLng}
                 editing={activelyEditing}
