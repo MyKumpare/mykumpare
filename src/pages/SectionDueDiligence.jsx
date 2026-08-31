@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { usePersistentState } from "@/hooks/usePersistentState";
 import { ShieldCheck, ListChecks, Clock, LayoutDashboard, Search, SlidersHorizontal } from "lucide-react";
 import SectionPageHeader, { SectionStatusCard } from "@/components/shared/SectionPageHeader";
 import SectionModuleGrid from "@/components/shared/SectionModuleGrid";
@@ -18,9 +19,9 @@ const QuestionnairePickerModal = lazyDialog(() => import("@/components/questionn
 export default function SectionDueDiligence() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [documentsOpen, setDocumentsOpen] = useState(false);
-  const [formsOpen, setFormsOpen] = useState(false);
-  const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [documentsOpen, setDocumentsOpen] = usePersistentState("dd_documentsOpen", false);
+  const [formsOpen, setFormsOpen] = usePersistentState("dd_formsOpen", false);
+  const [templatesOpen, setTemplatesOpen] = usePersistentState("dd_templatesOpen", false);
   const [showFilters, setShowFilters] = useState(true);
   const [filterValues, setFilterValues] = useState({ category: new Set(), module_search: "" });
   const handleFilterChange = (key, value) => setFilterValues((prev) => ({ ...prev, [key]: value }));

@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { usePersistentState } from "@/hooks/usePersistentState";
 import SectionPageHeader from "@/components/shared/SectionPageHeader";
 import SectionModuleGrid from "@/components/shared/SectionModuleGrid";
 import { DASHBOARD_MODULES, DASHBOARD_MODULE_MAP, DASHBOARD_DEFAULT_CATEGORIES } from "@/components/sections/dashboardModules";
@@ -11,7 +12,7 @@ import { useToast } from "@/components/ui/use-toast";
 export default function SectionDashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [mode, setMode] = useState("edit"); // "edit" | "preview"
+  const [mode, setMode] = usePersistentState("dash_mode", "edit");
   const [layoutApi, setLayoutApi] = useState(null);
   const { userLayout, firmwideLayout, saveLayout, isSaving } = useSavedSectionLayout("dashboard");
 

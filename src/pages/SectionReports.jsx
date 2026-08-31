@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { usePersistentState } from "@/hooks/usePersistentState";
 import { FileBarChart, FileStack, LayoutDashboard, Search, SlidersHorizontal } from "lucide-react";
 import SectionPageHeader, { SectionStatusCard } from "@/components/shared/SectionPageHeader";
 import SectionModuleGrid from "@/components/shared/SectionModuleGrid";
@@ -15,8 +16,8 @@ const StandardReportsList = lazyDialog(() => import("@/components/reports/Standa
 
 export default function SectionReports() {
   const navigate = useNavigate();
-  const [customOpen, setCustomOpen] = useState(false);
-  const [standardOpen, setStandardOpen] = useState(false);
+  const [customOpen, setCustomOpen] = usePersistentState("rpt_customOpen", false);
+  const [standardOpen, setStandardOpen] = usePersistentState("rpt_standardOpen", false);
   const [showFilters, setShowFilters] = useState(true);
   const [filterValues, setFilterValues] = useState({ category: new Set(), module_search: "" });
   const handleFilterChange = (key, value) => setFilterValues((prev) => ({ ...prev, [key]: value }));

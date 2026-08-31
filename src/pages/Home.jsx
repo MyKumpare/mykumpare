@@ -73,6 +73,7 @@ const FirmScoringExportWizard = lazyDialog(() => import("../components/firms/Fir
 import { useFirmOwner } from "@/components/admin/useFirmOwner";
 import { useVoiceSearch } from "@/hooks/useVoiceSearch";
 import { triggerStartRecording } from "@/components/videolibrary/recorderStore";
+import { usePersistentState } from "@/hooks/usePersistentState";
 
 const FIRM_TYPES = [
   "Investment Manager",
@@ -92,71 +93,77 @@ export default function Home() {
   const navigate = useNavigate();
   const location = useLocation();
   const firmOwner = useFirmOwner();
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingFirm, setEditingFirm] = useState(null);
-  const [preselectedType, setPreselectedType] = useState(null);
-  const [deletingFirm, setDeletingFirm] = useState(null);
+  // ─── Persistent dialog & edit state (survives app interruptions) ───
+  // Dialog open/close states and editing data use usePersistentState so that
+  // when the app is interrupted (notification, app switch, OS killing the
+  // WebView), the open dialogs and in-progress edits are restored on reload.
+  // Transient UI state (loading, search, focus, expand toggles) stays as
+  // useState since those should reset on a fresh load.
+  const [dialogOpen, setDialogOpen] = usePersistentState("home_dialogOpen", false);
+  const [editingFirm, setEditingFirm] = usePersistentState("home_editingFirm", null);
+  const [preselectedType, setPreselectedType] = usePersistentState("home_preselectedType", null);
+  const [deletingFirm, setDeletingFirm] = usePersistentState("home_deletingFirm", null);
   const [firmDeleteLoading, setFirmDeleteLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statsModal, setStatsModal] = useState(null); // "firms" | "products" | "portfolios" | null
-  const [contactsModalOpen, setContactsModalOpen] = useState(false);
-  const [addContactOpen, setAddContactOpen] = useState(false);
-  const [viewingContact, setViewingContact] = useState(null);
-  const [photoViewerContact, setPhotoViewerContact] = useState(null);
+  const [statsModal, setStatsModal] = usePersistentState("home_statsModal", null);
+  const [contactsModalOpen, setContactsModalOpen] = usePersistentState("home_contactsModalOpen", false);
+  const [addContactOpen, setAddContactOpen] = usePersistentState("home_addContactOpen", false);
+  const [viewingContact, setViewingContact] = usePersistentState("home_viewingContact", null);
+  const [photoViewerContact, setPhotoViewerContact] = usePersistentState("home_photoViewerContact", null);
   const [searchFocused, setSearchFocused] = useState(false);
-  const [ownershipNavTarget, setOwnershipNavTarget] = useState(null); // { firmId, ownershipId }
-  const [documentsNavTarget, setDocumentsNavTarget] = useState(null); // firmId to open at Documents tab
-  const [boardMeetingNavTarget, setBoardMeetingNavTarget] = useState(null); // { firmId, meetingId } to open at Board Meetings tab (optionally a specific meeting)
+  const [ownershipNavTarget, setOwnershipNavTarget] = usePersistentState("home_ownershipNavTarget", null);
+  const [documentsNavTarget, setDocumentsNavTarget] = usePersistentState("home_documentsNavTarget", null);
+  const [boardMeetingNavTarget, setBoardMeetingNavTarget] = usePersistentState("home_boardMeetingNavTarget", null);
 
-  const [productDialogOpen, setProductDialogOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null);
-  const [deletingProduct, setDeletingProduct] = useState(null);
-  const [preselectedProductType, setPreselectedProductType] = useState(null);
-  const [preselectedFirmId, setPreselectedFirmId] = useState(null);
-  const [returnToProduct, setReturnToProduct] = useState(false); // track if firm was opened from product
-  const [returnToContact, setReturnToContact] = useState(false); // track if product was opened from contact
-  const [returnToContactFromFirm, setReturnToContactFromFirm] = useState(false); // track if firm was opened from contact
-  const [portfolioDialogOpen, setPortfolioDialogOpen] = useState(false);
-  const [preselectedAllocatorId, setPreselectedAllocatorId] = useState(null);
-  const [editingPortfolio, setEditingPortfolio] = useState(null);
+  const [productDialogOpen, setProductDialogOpen] = usePersistentState("home_productDialogOpen", false);
+  const [editingProduct, setEditingProduct] = usePersistentState("home_editingProduct", null);
+  const [deletingProduct, setDeletingProduct] = usePersistentState("home_deletingProduct", null);
+  const [preselectedProductType, setPreselectedProductType] = usePersistentState("home_preselectedProductType", null);
+  const [preselectedFirmId, setPreselectedFirmId] = usePersistentState("home_preselectedFirmId", null);
+  const [returnToProduct, setReturnToProduct] = usePersistentState("home_returnToProduct", false);
+  const [returnToContact, setReturnToContact] = usePersistentState("home_returnToContact", false);
+  const [returnToContactFromFirm, setReturnToContactFromFirm] = usePersistentState("home_returnToContactFromFirm", false);
+  const [portfolioDialogOpen, setPortfolioDialogOpen] = usePersistentState("home_portfolioDialogOpen", false);
+  const [preselectedAllocatorId, setPreselectedAllocatorId] = usePersistentState("home_preselectedAllocatorId", null);
+  const [editingPortfolio, setEditingPortfolio] = usePersistentState("home_editingPortfolio", null);
 
-  const [analyticsLaunchOpen, setAnalyticsLaunchOpen] = useState(false);
+  const [analyticsLaunchOpen, setAnalyticsLaunchOpen] = usePersistentState("home_analyticsLaunchOpen", false);
   const [allExpanded, setAllExpanded] = useState(false);
   const [utilityForceExpanded, setUtilityForceExpanded] = useState(false);
-  const [utilityModalOpen, setUtilityModalOpen] = useState(false);
-  const [utilityDefaultView, setUtilityDefaultView] = useState(null);
-  const [editingAnalysis, setEditingAnalysis] = useState(null);
-  const [analyticsReturnState, setAnalyticsReturnState] = useState(null); // { type: 'product'|'firm'|'benchmark', data: ... }
-  const [benchmarkDialogOpen, setBenchmarkDialogOpen] = useState(false);
-  const [editingBenchmark, setEditingBenchmark] = useState(null);
-  const [activityLogModalOpen, setActivityLogModalOpen] = useState(false);
-  const [activityLogDefaultTab, setActivityLogDefaultTab] = useState("activity");
-  const [newsAlertsOpen, setNewsAlertsOpen] = useState(false);
-  const [portfolioPickerOpen, setPortfolioPickerOpen] = useState(false);
-  const [firmPickerOpen, setFirmPickerOpen] = useState(false);
-  const [dueDiligencePickerOpen, setDueDiligencePickerOpen] = useState(false);
-  const [productPickerOpen, setProductPickerOpen] = useState(false);
-  const [contactPickerOpen, setContactPickerOpen] = useState(false);
-  const [activityPickerOpen, setActivityPickerOpen] = useState(false);
-  const [viewingActivity, setViewingActivity] = useState(null);
-  const [returnToActivity, setReturnToActivity] = useState(null); // activity to reopen when contact closes
-  const [taskPickerOpen, setTaskPickerOpen] = useState(false);
-  const [viewingTask, setViewingTask] = useState(null);
-  const [reportsPickerOpen, setReportsPickerOpen] = useState(false);
-  const [documentsPickerOpen, setDocumentsPickerOpen] = useState(false);
-  const [mapSearchOpen, setMapSearchOpen] = useState(false);
-  const [ddAddOpen, setDdAddOpen] = useState(false);
-  const [addDocOpen, setAddDocOpen] = useState(false);
-  const [templatesPickerOpen, setTemplatesPickerOpen] = useState(false);
-  const [questionnairePickerOpen, setQuestionnairePickerOpen] = useState(false);
-  const [questionnaireAddOpen, setQuestionnaireAddOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [externalPortalOpen, setExternalPortalOpen] = useState(false);
-  const [firmScoringExportOpen, setFirmScoringExportOpen] = useState(false);
-  const [photoCaptureOpen, setPhotoCaptureOpen] = useState(false);
-  const [addContactPhotoUrl, setAddContactPhotoUrl] = useState(null);
-  const [pasteContactOpen, setPasteContactOpen] = useState(false);
-  const [pasteInitialData, setPasteInitialData] = useState(null);
+  const [utilityModalOpen, setUtilityModalOpen] = usePersistentState("home_utilityModalOpen", false);
+  const [utilityDefaultView, setUtilityDefaultView] = usePersistentState("home_utilityDefaultView", null);
+  const [editingAnalysis, setEditingAnalysis] = usePersistentState("home_editingAnalysis", null);
+  const [analyticsReturnState, setAnalyticsReturnState] = usePersistentState("home_analyticsReturnState", null);
+  const [benchmarkDialogOpen, setBenchmarkDialogOpen] = usePersistentState("home_benchmarkDialogOpen", false);
+  const [editingBenchmark, setEditingBenchmark] = usePersistentState("home_editingBenchmark", null);
+  const [activityLogModalOpen, setActivityLogModalOpen] = usePersistentState("home_activityLogModalOpen", false);
+  const [activityLogDefaultTab, setActivityLogDefaultTab] = usePersistentState("home_activityLogDefaultTab", "activity");
+  const [newsAlertsOpen, setNewsAlertsOpen] = usePersistentState("home_newsAlertsOpen", false);
+  const [portfolioPickerOpen, setPortfolioPickerOpen] = usePersistentState("home_portfolioPickerOpen", false);
+  const [firmPickerOpen, setFirmPickerOpen] = usePersistentState("home_firmPickerOpen", false);
+  const [dueDiligencePickerOpen, setDueDiligencePickerOpen] = usePersistentState("home_dueDiligencePickerOpen", false);
+  const [productPickerOpen, setProductPickerOpen] = usePersistentState("home_productPickerOpen", false);
+  const [contactPickerOpen, setContactPickerOpen] = usePersistentState("home_contactPickerOpen", false);
+  const [activityPickerOpen, setActivityPickerOpen] = usePersistentState("home_activityPickerOpen", false);
+  const [viewingActivity, setViewingActivity] = usePersistentState("home_viewingActivity", null);
+  const [returnToActivity, setReturnToActivity] = usePersistentState("home_returnToActivity", null);
+  const [taskPickerOpen, setTaskPickerOpen] = usePersistentState("home_taskPickerOpen", false);
+  const [viewingTask, setViewingTask] = usePersistentState("home_viewingTask", null);
+  const [reportsPickerOpen, setReportsPickerOpen] = usePersistentState("home_reportsPickerOpen", false);
+  const [documentsPickerOpen, setDocumentsPickerOpen] = usePersistentState("home_documentsPickerOpen", false);
+  const [mapSearchOpen, setMapSearchOpen] = usePersistentState("home_mapSearchOpen", false);
+  const [ddAddOpen, setDdAddOpen] = usePersistentState("home_ddAddOpen", false);
+  const [addDocOpen, setAddDocOpen] = usePersistentState("home_addDocOpen", false);
+  const [templatesPickerOpen, setTemplatesPickerOpen] = usePersistentState("home_templatesPickerOpen", false);
+  const [questionnairePickerOpen, setQuestionnairePickerOpen] = usePersistentState("home_questionnairePickerOpen", false);
+  const [questionnaireAddOpen, setQuestionnaireAddOpen] = usePersistentState("home_questionnaireAddOpen", false);
+  const [profileOpen, setProfileOpen] = usePersistentState("home_profileOpen", false);
+  const [externalPortalOpen, setExternalPortalOpen] = usePersistentState("home_externalPortalOpen", false);
+  const [firmScoringExportOpen, setFirmScoringExportOpen] = usePersistentState("home_firmScoringExportOpen", false);
+  const [photoCaptureOpen, setPhotoCaptureOpen] = usePersistentState("home_photoCaptureOpen", false);
+  const [addContactPhotoUrl, setAddContactPhotoUrl] = usePersistentState("home_addContactPhotoUrl", null);
+  const [pasteContactOpen, setPasteContactOpen] = usePersistentState("home_pasteContactOpen", false);
+  const [pasteInitialData, setPasteInitialData] = usePersistentState("home_pasteInitialData", null);
 
   // Voice search — routes spoken commands to app search, photo search, or map search.
   const handleVoiceResult = (transcript) => {

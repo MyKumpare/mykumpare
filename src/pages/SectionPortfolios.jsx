@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { usePersistentState } from "@/hooks/usePersistentState";
 import { Briefcase, TrendingUp } from "lucide-react";
 import SectionPageHeader, { SectionStatusCard, SectionBackButton } from "@/components/shared/SectionPageHeader";
 import SectionModuleGrid from "@/components/shared/SectionModuleGrid";
@@ -12,7 +13,7 @@ import FundingStatusAlertsPanel from "@/components/portfolios/FundingStatusAlert
 
 export default function SectionPortfolios() {
   const navigate = useNavigate();
-  const [activeModule, setActiveModule] = useState(null);
+  const [activeModule, setActiveModule] = usePersistentState("port_activeModule", null);
 
   const { data: portfolios = [], isLoading } = useQuery({
     queryKey: ["portfolios_section_list"],
