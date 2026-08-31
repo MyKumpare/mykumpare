@@ -103,6 +103,34 @@ function cleanBiographyHtml(html) {
     if (!p.textContent.trim()) p.remove();
   });
 
+  // Split overly long paragraphs into readable ones at sentence boundaries.
+  // Scraped bios often arrive as one dense block of text; this breaks them into
+  // paragraphs of ~2 sentences each so the profile reads naturally.
+  const LONG_PARAGRAPH_CHARS = 240;
+  const SENTENCES_PER_PARAGRAPH = 2;
+  container.querySelectorAll("p").forEach((p) => {
+    const text = p.textContent.trim();
+    if (text.length <= LONG_PARAGRAPH_CHARS) return;
+    // Only split plain-text blocks; preserve paragraphs with inline bold/italic/links.
+    if (p.querySelector("strong, em, a, b, i")) return;
+    // Preserve any inline links/bold by splitting on sentence-ending punctuation
+    // followed by a space and capital letter.
+    const sentences = text.match(/[^.!?]+[.!?]+(?:["')\]]*)\s*/g) || [text];
+    if (sentences.length <= 1) return;
+    const groups = [];
+    for (let i = 0; i < sentences.length; i += SENTENCES_PER_PARAGRAPH) {
+      groups.push(sentences.slice(i, i + SENTENCES_PER_PARAGRAPH).join("").trim());
+    }
+    if (groups.length <= 1) return;
+    const frag = document.createDocumentFragment();
+    groups.forEach((g) => {
+      const np = document.createElement("p");
+      np.textContent = g;
+      frag.appendChild(np);
+    });
+    p.replaceWith(frag);
+  });
+
   // Wrap any loose text nodes (outside <p>) in <p> tags
   const wrapped = [];
   container.childNodes.forEach((node) => {
