@@ -49,19 +49,8 @@ export default function VideoCard({ video, tags = [], onPlay, onEdit, onDelete, 
             {video.duration_label}
           </span>
         )}
-        {/* Hover overlay actions */}
+        {/* Hover overlay actions — edit/delete only (link is always visible below) */}
         <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          {onLink && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onLink(video); }}
-              className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${
-                linkedCount > 0 ? "bg-indigo-600 text-white" : "bg-white/90 text-gray-600 hover:bg-white hover:text-indigo-600"
-              }`}
-              title={linkedCount > 0 ? `Linked to ${linkedCount} firm/DD` : "Link to firms or due diligence"}
-            >
-              <Link2 className="w-3.5 h-3.5" />
-            </button>
-          )}
           {onEdit && (
             <button
               onClick={(e) => { e.stopPropagation(); onEdit(video); }}
@@ -131,16 +120,32 @@ export default function VideoCard({ video, tags = [], onPlay, onEdit, onDelete, 
           </div>
         )}
 
-        {/* Training Manual button */}
-        {onTrainingManual && (
-          <button
-            onClick={onTrainingManual}
-            className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-medium transition-colors border border-emerald-200"
-          >
-            <BookOpen className="w-3.5 h-3.5" />
-            Training Manual
-          </button>
-        )}
+        {/* Action buttons */}
+        <div className="flex items-center gap-1.5">
+          {onLink && (
+            <button
+              onClick={() => onLink(video)}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+                linkedCount > 0
+                  ? "bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200"
+                  : "bg-gray-50 hover:bg-gray-100 text-gray-600 border-gray-200"
+              }`}
+              title={linkedCount > 0 ? `Linked to ${linkedCount} firm/DD` : "Link to firms or due diligence"}
+            >
+              <Link2 className="w-3.5 h-3.5" />
+              {linkedCount > 0 ? `${linkedCount} Linked` : "Link"}
+            </button>
+          )}
+          {onTrainingManual && (
+            <button
+              onClick={onTrainingManual}
+              className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-medium transition-colors border border-emerald-200"
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              Manual
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

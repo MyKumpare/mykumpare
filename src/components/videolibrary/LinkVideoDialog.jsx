@@ -31,8 +31,6 @@ export default function LinkVideoDialog({ video, onClose }) {
     queryFn: () => base44.entities.DueDiligence.list("-created_date", 500),
   });
 
-  if (!video) return null;
-
   const filteredFirms = useMemo(() => {
     const q = firmSearch.toLowerCase().trim();
     return firms.filter((f) => !q || (f.name || "").toLowerCase().includes(q));
@@ -45,6 +43,8 @@ export default function LinkVideoDialog({ video, onClose }) {
       return !q || name.includes(q);
     });
   }, [dueDiligences, ddSearch]);
+
+  if (!video) return null;
 
   const toggleFirm = (id) => {
     setFirmIds((prev) => {
