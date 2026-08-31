@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { COUNTRIES, getStatesForCountry } from "./geoData";
 import { useZipCodeLookup } from "./useZipCodeLookup";
 import { base44 } from "@/api/base44Client";
 import AddressMapPickerDialog from "./AddressMapPickerDialog";
+import AddressMiniMap from "./AddressMiniMap";
 
 function buildMapsUrl(address) {
   const parts = [
@@ -37,17 +38,91 @@ function buildAddressString(address) {
   return parts.join(", ");
 }
 
+// Build the geocode query string from the address (excludes suite/floor —
+// Nominatim can't resolve unit-level details and will fail if included).
+function buildGeocodeQuery(address) {
+  return [
+    address.address_line1,
+    address.city,
+    address.state,
+    address.postal_code,
+    COUNTRIES.find(c => c.code === address.country)?.name,
+  ].filter(Boolean).join(", ");
+}
+
+// Minimum number of meaningful fields required before auto-geocoding kicks in.
+function hasEnoughAddressInfo(address) {
+  const fields = [
+    address.address_line1,
+    address.city,
+    address.state,
+    address.postal_code,
+    address.country,
+  ].filter(Boolean);
+  return fields.length >= 2;
+}
+
 export default function AddressForm({ address, onChange, onDelete, onSetHeadquarters, isHeadquarters, isEditing, isOnly, dragHandleProps }) {
   const [manualCity, setManualCity] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
+  const [autoGeocoding, setAutoGeocoding] = useState(false);
   const [geoError, setGeoError] = useState(null);
   const [mapPickerOpen, setMapPickerOpen] = useState(false);
   const { lookupZip, getCitiesForState, saveZipMapping } = useZipCodeLookup();
+
+  // Track whether the user manually edited coordinates — if so, don't
+  // auto-geocode over their manual values.
+  const manualCoordsRef = useRef(false);
+
+  // Auto-geocode when address fields change (debounced). Only fires when
+  // enough info is present and the user hasn't manually set coordinates.
+  useEffect(() => {
+    if (!isEditing) return;
+    if (!hasEnoughAddressInfo(address)) return;
+    if (manualCoordsRef.current) return;
+
+    const query = buildGeocodeQuery(address);
+    if (!query) return;
+
+    setAutoGeocoding(true);
+    setGeoError(null);
+    const timer = setTimeout(async () => {
+      try {
+        const resp = await base44.functions.invoke("geocodeLocations", {
+          centerQuery: query,
+          locations: [],
+        });
+        const data = resp?.data ?? resp ?? {};
+        if (data.center) {
+          onChange({
+            ...address,
+            latitude: data.center.lat,
+            longitude: data.center.lon,
+          });
+        }
+      } catch {
+        // Silent fail for auto-geocode — the manual button still surfaces errors.
+      } finally {
+        setAutoGeocoding(false);
+      }
+    }, 1200);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    address.address_line1,
+    address.city,
+    address.state,
+    address.postal_code,
+    address.country,
+    isEditing,
+  ]);
 
   // Populate the address drill-down (country → state → city) from a map click.
   // Merges the picked values onto the current address without wiping fields
   // the user may have already filled (e.g. suite/floor).
   const handleMapPick = (picked) => {
+    manualCoordsRef.current = true;
     onChange({
       ...address,
       country: picked.country || address.country,
@@ -100,21 +175,14 @@ export default function AddressForm({ address, onChange, onDelete, onSetHeadquar
   };
 
   const handleAutoLocate = async () => {
-    // Exclude suite/floor (address_line2) — Nominatim can't resolve
-    // unit-level details and will fail if they're included in the query.
-    const addrStr = [
-      address.address_line1,
-      address.city,
-      address.state,
-      address.postal_code,
-      COUNTRIES.find(c => c.code === address.country)?.name,
-    ].filter(Boolean).join(", ");
+    const addrStr = buildGeocodeQuery(address);
     if (!addrStr) {
       setGeoError("Fill in address fields first.");
       return;
     }
     setGeocoding(true);
     setGeoError(null);
+    manualCoordsRef.current = false;
     try {
       const resp = await base44.functions.invoke("geocodeLocations", {
         centerQuery: addrStr,
@@ -410,6 +478,7 @@ export default function AddressForm({ address, onChange, onDelete, onSetHeadquar
                   value={address.latitude ?? ""}
                   onChange={(e) => {
                     const val = e.target.value === "" ? undefined : parseFloat(e.target.value);
+                    manualCoordsRef.current = true;
                     onChange({ ...address, latitude: Number.isNaN(val) ? undefined : val });
                   }}
                 />
@@ -423,6 +492,7 @@ export default function AddressForm({ address, onChange, onDelete, onSetHeadquar
                   value={address.longitude ?? ""}
                   onChange={(e) => {
                     const val = e.target.value === "" ? undefined : parseFloat(e.target.value);
+                    manualCoordsRef.current = true;
                     onChange({ ...address, longitude: Number.isNaN(val) ? undefined : val });
                   }}
                 />
@@ -431,19 +501,31 @@ export default function AddressForm({ address, onChange, onDelete, onSetHeadquar
             {geoError && (
               <div className="text-xs text-red-500">{geoError}</div>
             )}
-            {address.latitude != null && address.longitude != null && !geoError && (
+            {autoGeocoding && !geoError && (
+              <div className="text-xs text-indigo-500 flex items-center gap-1">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Looking up location…
+              </div>
+            )}
+            {address.latitude != null && address.longitude != null && !geoError && !autoGeocoding && (
               <div className="text-xs text-green-600 flex items-center gap-1">
                 <MapPin className="w-3 h-3" />
                 Coordinates set — map search will use these directly.
               </div>
             )}
+            {address.latitude != null && address.longitude != null && (
+              <AddressMiniMap lat={address.latitude} lng={address.longitude} />
+            )}
           </div>
         </>
       )}
       {!isEditing && address.latitude != null && address.longitude != null && (
-        <div className="text-xs text-gray-400 flex items-center gap-1 px-1">
-          <MapPin className="w-3 h-3" />
-          {Number(address.latitude).toFixed(6)}, {Number(address.longitude).toFixed(6)}
+        <div className="space-y-1.5 px-1">
+          <AddressMiniMap lat={address.latitude} lng={address.longitude} />
+          <div className="text-xs text-gray-400 flex items-center gap-1">
+            <MapPin className="w-3 h-3" />
+            {Number(address.latitude).toFixed(6)}, {Number(address.longitude).toFixed(6)}
+          </div>
         </div>
       )}
 
