@@ -12,6 +12,7 @@ import VideoCard from "@/components/videolibrary/VideoCard";
 import VideoPlayerDialog from "@/components/videolibrary/VideoPlayerDialog";
 import AddVideoDialog from "@/components/videolibrary/AddVideoDialog";
 import VideoTagManager from "@/components/videolibrary/VideoTagManager";
+import BulkEditVideosDialog from "@/components/videolibrary/BulkEditVideosDialog";
 import VideoCreationAssistant from "@/components/videolibrary/VideoCreationAssistant";
 import TrainingManualDialog from "@/components/videolibrary/TrainingManualDialog";
 import ManualToVideoDialog from "@/components/videolibrary/ManualToVideoDialog";
@@ -30,6 +31,7 @@ export default function VideoLibrary() {
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [trainingManualVideo, setTrainingManualVideo] = useState(null);
   const [manualToVideoOpen, setManualToVideoOpen] = useState(false);
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [exporting, setExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState("");
@@ -297,9 +299,14 @@ export default function VideoLibrary() {
                 {exportProgress || "Exporting…"}
               </div>
             ) : (
-              <Button size="sm" onClick={handleBulkExport} className="bg-indigo-600 hover:bg-indigo-700 text-white">
-                <Package className="w-4 h-4" /> Export {selectedIds.size} as ZIP
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="outline" onClick={() => setBulkEditOpen(true)} className="border-indigo-300 text-indigo-700 hover:bg-indigo-50">
+                  <Tag className="w-4 h-4" /> Bulk Edit
+                </Button>
+                <Button size="sm" onClick={handleBulkExport} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                  <Package className="w-4 h-4" /> Export {selectedIds.size} as ZIP
+                </Button>
+              </div>
             )}
           </div>
         )}
@@ -352,6 +359,14 @@ export default function VideoLibrary() {
       <VideoCreationAssistant open={assistantOpen} onClose={() => setAssistantOpen(false)} />
       <TrainingManualDialog video={trainingManualVideo} onClose={() => setTrainingManualVideo(null)} />
       <ManualToVideoDialog open={manualToVideoOpen} onClose={() => setManualToVideoOpen(false)} />
+      <BulkEditVideosDialog
+        open={bulkEditOpen}
+        onClose={() => setBulkEditOpen(false)}
+        selectedVideos={videos.filter((v) => selectedIds.has(v.id))}
+        tags={sortedTags}
+        existingCategories={categories.filter((c) => c !== "All")}
+        onOpenTagManager={() => setTagManagerOpen(true)}
+      />
     </div>
   );
 }
