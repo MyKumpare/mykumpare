@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import {
@@ -18,6 +19,7 @@ import { setCaptureToolOpen, useScreenshots } from "@/components/videolibrary/sc
 
 export default function VideoLibrary() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [tagFilter, setTagFilter] = useState(null); // tag id or null
@@ -140,6 +142,15 @@ export default function VideoLibrary() {
               className="bg-white text-indigo-700 hover:bg-indigo-50"
             >
               <Plus className="w-4 h-4" /> Add Video
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => navigate("/")}
+              className="bg-white/20 text-white hover:bg-white/30 border-0"
+              title="Close Video Library"
+            >
+              <X className="w-4 h-4" /> Close
             </Button>
           </div>
         </div>
