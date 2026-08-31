@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { Share2, Loader2, Building, User, Filter, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
+import { Share2, Loader2, Building, User, Filter, ZoomIn, ZoomOut, Maximize2, X } from "lucide-react";
 import ContactNetworkGraph from "@/components/network/ContactNetworkGraph";
 import ContactNetworkBulkEditList from "@/components/network/ContactNetworkBulkEditList";
 import ContactNetworkSidebar from "@/components/network/ContactNetworkSidebar";
@@ -26,6 +27,7 @@ function getFirmTypes(f) {
 }
 
 export default function ContactNetwork() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [minConnections, setMinConnections] = useState(2);
   const [firmTypeFilter, setFirmTypeFilter] = useState("All");
@@ -240,6 +242,14 @@ export default function ContactNetwork() {
             <h1 className="text-lg font-bold">Contact Network</h1>
             <p className="text-xs text-white/70">Visualize how contacts connect across firms and boards</p>
           </div>
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="ml-auto p-1.5 rounded-md text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+            title="Close"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
       </div>
 
