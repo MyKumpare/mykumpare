@@ -8,7 +8,7 @@
     },
     "firm_id": {
       "type": "string",
-      "description": "ID of the firm whose AUM dropped below its configured threshold."
+      "description": "ID of the firm whose AUM crossed its configured threshold."
     },
     "firm_name": {
       "type": "string",
@@ -16,11 +16,20 @@
     },
     "aum_value": {
       "type": "number",
-      "description": "The firm's latest month-end AUM that fell below the configured threshold."
+      "description": "The firm's latest month-end AUM that crossed the configured threshold."
     },
     "threshold": {
       "type": "number",
-      "description": "The per-firm threshold value that was in effect when this alert was raised (denormalized so historical alerts remain accurate if the threshold later changes)."
+      "description": "The per-firm threshold value that was in effect when this alert was raised (denormalized so historical alerts remain accurate if the threshold later changes). For 'below_min' alerts this is the min threshold; for 'above_max' alerts this is the max threshold."
+    },
+    "alert_type": {
+      "type": "string",
+      "enum": [
+        "below_min",
+        "above_max"
+      ],
+      "default": "below_min",
+      "description": "Whether this alert was triggered because the firm's AUM fell below its minimum threshold ('below_min') or exceeded its maximum threshold ('above_max')."
     },
     "month_end_date": {
       "type": "string",
@@ -35,7 +44,7 @@
         "resolved"
       ],
       "default": "active",
-      "description": "Lifecycle state of the alert. 'active' = newly raised and awaiting attention; 'acknowledged' = user has seen and noted it; 'resolved' = the firm's AUM recovered above threshold, or the user manually resolved it."
+      "description": "Lifecycle state of the alert. 'active' = newly raised and awaiting attention; 'acknowledged' = user has seen and noted it; 'resolved' = the firm's AUM recovered within thresholds, or the user manually resolved it."
     },
     "acknowledged_at": {
       "type": "string",
@@ -55,7 +64,8 @@
   "required": [
     "firm_id",
     "aum_value",
-    "threshold"
+    "threshold",
+    "alert_type"
   ],
   "rls": {
     "create": {

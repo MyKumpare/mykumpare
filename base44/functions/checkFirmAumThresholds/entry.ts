@@ -4,8 +4,9 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
  * checkFirmAumThresholds
  *
  * Scans each firm's latest month-end AUM against its configured per-firm
- * threshold (FirmAumThreshold) and raises FirmAumAlert records for any firm
- * whose latest AUM falls below its threshold.
+ * thresholds (FirmAumThreshold) and raises FirmAumAlert records for any firm
+ * whose latest AUM falls below its minimum threshold OR exceeds its maximum
+ * threshold.
  *
  * Two modes:
  *  - Real-time: pass { firm_id } to check a single firm (e.g. right after AUM
@@ -13,11 +14,11 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
  *  - Sweep (daily workflow): pass no firm_id to scan all enabled thresholds.
  *
  * Deduplication: an alert is only created if no existing FirmAumAlert already
- * references the same firm_id + month_end_date (so re-running the sweep never
- * produces duplicates for the same data point).
+ * references the same firm_id + month_end_date + alert_type (so re-running the
+ * sweep never produces duplicates for the same data point).
  *
  * Also auto-resolves existing 'active' alerts for a firm when a newer AUM data
- * point comes in at or above threshold (the firm's AUM recovered).
+ * point comes in within thresholds (the firm's AUM recovered).
  */
 export default async function(req) {
   try {
@@ -30,7 +31,9 @@ export default async function(req) {
 
     // 1. Load all enabled per-firm threshold settings (tenant-scoped via RLS).
     const settings = await base44.entities.FirmAumThreshold.list('-created_date', 500);
-    const enabledSettings = (settings || []).filter((s) => s.enabled && s.firm_id && s.threshold != null);
+    const enabledSettings = (settings || []).filter(
+      (s) => s.enabled && s.firm_id && (s.threshold != null || s.max_threshold != null)
+    );
     if (enabledSettings.length === 0) {
       return Response.json({ checked: 0, raised: 0, message: 'No enabled AUM threshold settings found.' });
     }
@@ -40,10 +43,12 @@ export default async function(req) {
       settingsByFirmId.set(s.firm_id, s);
     }
 
-    // 2. Load existing alerts so we can dedup by firm_id + month_end_date and
-    //    auto-resolve stale ones.
+    // 2. Load existing alerts so we can dedup by firm_id + month_end_date + alert_type
+    //    and auto-resolve stale ones.
     const existingAlerts = await base44.entities.FirmAumAlert.list('-created_date', 500);
-    const alertKeys = new Set((existingAlerts || []).map((a) => `${a.firm_id}|${a.month_end_date}`));
+    const alertKeys = new Set(
+      (existingAlerts || []).map((a) => `${a.firm_id}|${a.month_end_date}|${a.alert_type || 'below_min'}`)
+    );
 
     let checked = 0;
     let raised = 0;
@@ -83,9 +88,15 @@ export default async function(req) {
       const aum = latest.firm_aum;
       const monthEndDate = latest.month_end_date;
 
+      const minThreshold = setting.threshold;
+      const maxThreshold = setting.max_threshold;
+
+      const belowMin = minThreshold != null && aum < minThreshold;
+      const aboveMax = maxThreshold != null && aum > maxThreshold;
+
       // Auto-resolve any prior 'active' alerts for this firm when this newer
-      // AUM data point is at or above threshold (firm's AUM recovered).
-      if (aum >= setting.threshold) {
+      // AUM data point is within thresholds (firm's AUM recovered).
+      if (!belowMin && !aboveMax) {
         const stale = (existingAlerts || []).filter(
           (a) => a.firm_id === firmId && a.status === 'active'
         );
@@ -98,23 +109,30 @@ export default async function(req) {
         continue;
       }
 
-      // Below threshold — raise an alert unless one already exists for this
-      // firm + month_end_date.
-      const dedupKey = `${firmId}|${monthEndDate}`;
-      if (alertKeys.has(dedupKey)) continue;
+      // Raise alert(s) — a firm can trigger both below_min and above_max if
+      // the thresholds are misconfigured, but normally only one fires.
+      const triggers = [];
+      if (belowMin) triggers.push({ alert_type: 'below_min', threshold: minThreshold });
+      if (aboveMax) triggers.push({ alert_type: 'above_max', threshold: maxThreshold });
 
-      const alert = await base44.entities.FirmAumAlert.create({
-        tenant_id: firm.tenant_id || setting.tenant_id,
-        firm_id: firmId,
-        firm_name: firm.name || setting.firm_name || '',
-        aum_value: aum,
-        threshold: setting.threshold,
-        month_end_date: monthEndDate,
-        status: 'active'
-      });
-      raised += 1;
-      raisedAlerts.push(alert);
-      alertKeys.add(dedupKey);
+      for (const trig of triggers) {
+        const dedupKey = `${firmId}|${monthEndDate}|${trig.alert_type}`;
+        if (alertKeys.has(dedupKey)) continue;
+
+        const alert = await base44.entities.FirmAumAlert.create({
+          tenant_id: firm.tenant_id || setting.tenant_id,
+          firm_id: firmId,
+          firm_name: firm.name || setting.firm_name || '',
+          aum_value: aum,
+          threshold: trig.threshold,
+          alert_type: trig.alert_type,
+          month_end_date: monthEndDate,
+          status: 'active'
+        });
+        raised += 1;
+        raisedAlerts.push(alert);
+        alertKeys.add(dedupKey);
+      }
     }
 
     return Response.json({
@@ -125,6 +143,7 @@ export default async function(req) {
         firm_name: a.firm_name,
         aum_value: a.aum_value,
         threshold: a.threshold,
+        alert_type: a.alert_type,
         month_end_date: a.month_end_date
       }))
     });

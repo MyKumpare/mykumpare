@@ -16,7 +16,11 @@
     },
     "threshold": {
       "type": "number",
-      "description": "Minimum acceptable firm AUM (in dollars). When the firm's latest month-end AUM falls below this value, a FirmAumAlert is created."
+      "description": "Minimum acceptable firm AUM (in dollars). When the firm's latest month-end AUM falls below this value, a FirmAumAlert with alert_type 'below_min' is created."
+    },
+    "max_threshold": {
+      "type": "number",
+      "description": "Maximum acceptable firm AUM (in dollars). When the firm's latest month-end AUM exceeds this value, a FirmAumAlert with alert_type 'above_max' is created. Leave empty to only monitor the minimum (below) threshold."
     },
     "enabled": {
       "type": "boolean",
@@ -29,8 +33,7 @@
     }
   },
   "required": [
-    "firm_id",
-    "threshold"
+    "firm_id"
   ],
   "rls": {
     "create": {
