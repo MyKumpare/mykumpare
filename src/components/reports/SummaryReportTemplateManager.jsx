@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { Plus, Pencil, Trash2, FileDown, Search, X, Loader2, LayoutTemplate } from "lucide-react";
+import { Plus, Pencil, Trash2, FileDown, Search, X, Loader2, LayoutTemplate, ArrowLeft } from "lucide-react";
 import { SUMMARY_ENTITY_TYPES, recordDisplayName } from "./summaryReportTemplateConfig";
 import { exportRecordSummary } from "./summaryReportExport";
 import SummaryReportTemplateDesigner from "./SummaryReportTemplateDesigner";
@@ -132,6 +133,7 @@ export default function SummaryReportTemplateManager() {
   const [picker, setPicker] = useState(null); // { template }
   const [filterType, setFilterType] = useState("");
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ["summary_report_templates"],
@@ -192,6 +194,15 @@ export default function SummaryReportTemplateManager() {
           </select>
           <Button onClick={handleNew} className="h-9">
             <Plus className="w-4 h-4" /> New Template
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9"
+            onClick={() => navigate(-1)}
+            title="Back"
+          >
+            <ArrowLeft className="w-4 h-4" />
           </Button>
         </div>
       </div>
