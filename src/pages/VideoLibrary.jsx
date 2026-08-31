@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { usePersistentState } from "@/hooks/usePersistentState";
 import {
   Video, Plus, Tag, Search, X, Sparkles, Settings2,
   Filter, Play, FileText, Camera, Check, Loader2, Package,
@@ -22,18 +23,18 @@ import { setCaptureToolOpen, useScreenshots } from "@/components/videolibrary/sc
 export default function VideoLibrary() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("All");
-  const [tagFilter, setTagFilter] = useState(null); // tag id or null
-  const [playerVideo, setPlayerVideo] = useState(null);
-  const [addOpen, setAddOpen] = useState(false);
-  const [editingVideo, setEditingVideo] = useState(null);
-  const [tagManagerOpen, setTagManagerOpen] = useState(false);
-  const [assistantOpen, setAssistantOpen] = useState(false);
-  const [trainingManualVideo, setTrainingManualVideo] = useState(null);
-  const [linkVideo, setLinkVideo] = useState(null);
-  const [manualToVideoOpen, setManualToVideoOpen] = useState(false);
-  const [bulkEditOpen, setBulkEditOpen] = useState(false);
+  const [search, setSearch] = usePersistentState("vl_search", "");
+  const [categoryFilter, setCategoryFilter] = usePersistentState("vl_category", "All");
+  const [tagFilter, setTagFilter] = usePersistentState("vl_tagFilter", null);
+  const [playerVideo, setPlayerVideo] = usePersistentState("vl_playerVideo", null);
+  const [addOpen, setAddOpen] = usePersistentState("vl_addOpen", false);
+  const [editingVideo, setEditingVideo] = usePersistentState("vl_editingVideo", null);
+  const [tagManagerOpen, setTagManagerOpen] = usePersistentState("vl_tagManagerOpen", false);
+  const [assistantOpen, setAssistantOpen] = usePersistentState("vl_assistantOpen", false);
+  const [trainingManualVideo, setTrainingManualVideo] = usePersistentState("vl_trainingManualVideo", null);
+  const [linkVideo, setLinkVideo] = usePersistentState("vl_linkVideo", null);
+  const [manualToVideoOpen, setManualToVideoOpen] = usePersistentState("vl_manualToVideoOpen", false);
+  const [bulkEditOpen, setBulkEditOpen] = usePersistentState("vl_bulkEditOpen", false);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [exporting, setExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState("");

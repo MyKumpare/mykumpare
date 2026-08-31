@@ -66,6 +66,8 @@ if (typeof window !== "undefined" && !window.__psInit) {
   });
   window.addEventListener("pagehide", flushAll);
   window.addEventListener("beforeunload", flushAll);
+  // Save when the window loses focus (cursor moved to another app/tab/element)
+  window.addEventListener("blur", flushAll);
 }
 
 // Clear stale sessions on module load
