@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Radar, CalendarDays, X, FileDown, Loader2, ChevronLeft, SlidersHorizontal, Search, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { usePersistentState } from "@/hooks/usePersistentState";
 import { base44 } from "@/api/base44Client";
 import { toast } from "@/components/ui/use-toast";
 import { generateWeeklyMonitorReportPdf } from "@/components/news/weeklyMonitorReportPdf";
@@ -31,9 +32,9 @@ import TopScoredFirmsSummary from "@/components/dashboard/TopScoredFirmsSummary"
 export default function MonitorPage() {
   const navigate = useNavigate();
   const initialModule = new URLSearchParams(window.location.hash.split("?")[1] || "").get("tab") || null;
-  const [activeModule, setActiveModule] = useState(initialModule);
-  const [viewingTask, setViewingTask] = useState(null);
-  const [viewingActivity, setViewingActivity] = useState(null);
+  const [activeModule, setActiveModule] = usePersistentState("monitor_activeModule", initialModule);
+  const [viewingTask, setViewingTask] = usePersistentState("monitor_viewingTask", null);
+  const [viewingActivity, setViewingActivity] = usePersistentState("monitor_viewingActivity", null);
   const [generatingReport, setGeneratingReport] = useState(false);
   const [showFilters, setShowFilters] = useState(true);
   const [filterValues, setFilterValues] = useState({ module_search: "" });

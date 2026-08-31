@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { usePersistentState } from "@/hooks/usePersistentState";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
@@ -45,7 +46,7 @@ function StatCard({ icon: Icon, label, value, sublabel, color }) {
 
 export default function DueDiligenceDashboard() {
   const navigate = useNavigate();
-  const [mergeOpen, setMergeOpen] = useState(false);
+  const [mergeOpen, setMergeOpen] = usePersistentState("ddDash_mergeOpen", false);
   const { data: records = [], isLoading } = useQuery({
     queryKey: ["due-diligence-all"],
     queryFn: () => base44.entities.DueDiligence.list("-created_date", 500),

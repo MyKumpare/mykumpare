@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { usePersistentState } from "@/hooks/usePersistentState";
 import { toast } from "@/components/ui/use-toast";
 import { Link } from "react-router-dom";
 import {
@@ -54,7 +55,7 @@ const TASK_STATUSES = Object.keys(TASK_STATUS_META);
 
 export default function OverviewDashboard() {
   const { user } = useAuth();
-  const [dataScope, setDataScope] = useState("my"); // "my" | "all"
+  const [dataScope, setDataScope] = usePersistentState("overview_dataScope", "my");
   const linkedFirmId = user?.data?.linked_firm_id;
 
   const { data: firms = [], isLoading: firmsLoading } = useQuery({

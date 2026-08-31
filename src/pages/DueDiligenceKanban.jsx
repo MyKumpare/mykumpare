@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { usePersistentState } from "@/hooks/usePersistentState";
 import { Button } from "@/components/ui/button";
 import DueDiligenceKanbanBoard, { computeApprovalStatus } from "@/components/firms/DueDiligenceKanbanBoard";
 import DdSummaryChart from "@/components/firms/DdSummaryChart";
@@ -19,10 +20,10 @@ const GROUP_MODES = [
 export default function DueDiligenceKanban() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [groupMode, setGroupMode] = useState("approval_status");
-  const [showDialog, setShowDialog] = useState(false);
-  const [editing, setEditing] = useState(null);
-  const [activeTab, setActiveTab] = useState("active");
+  const [groupMode, setGroupMode] = usePersistentState("ddKanban_groupMode", "approval_status");
+  const [showDialog, setShowDialog] = usePersistentState("ddKanban_showDialog", false);
+  const [editing, setEditing] = usePersistentState("ddKanban_editing", null);
+  const [activeTab, setActiveTab] = usePersistentState("ddKanban_activeTab", "active");
 
   const { data: records = [], isLoading } = useQuery({
     queryKey: ["due-diligence-all"],

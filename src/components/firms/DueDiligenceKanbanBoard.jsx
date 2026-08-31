@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useEffect } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { ClipboardCheck, Plus, Flag } from "lucide-react";
+import DdProgressBar from "@/components/firms/DdProgressBar";
 
 const COLUMN_DEFS = {
   status: {
@@ -133,6 +134,7 @@ function Card({ rec, columnField, onCardClick }) {
         </div>
         <span className="text-[10px] text-indigo-500 font-medium ml-auto">Edit →</span>
       </div>
+      <DdProgressBar rec={rec} compact />
     </div>
   );
 }
