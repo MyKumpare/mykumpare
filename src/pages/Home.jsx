@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, ClipboardCheck, FileText, Files, ShieldCheck, X, LayoutDashboard, FlaskConical, MapPin, Camera,   LayoutGrid, PieChart, Bot, ExternalLink, ChevronDown, CalendarDays, Radar, FileBarChart, Mic, Newspaper, Gauge, Users, ScrollText,   Ghost, Upload, Eraser, Tag, UserX, Briefcase, Activity, ArrowRightLeft, UserCheck,   Globe, Share2, Network, Bell, TrendingUp, ArrowRight, Trophy, GitCompare, Video } from "lucide-react";
+import { Plus, Building, Search, Package, User, LayoutList, BarChart3, Wrench, LogIn, LogOut, LineChart, ChevronsDownUp, ChevronsUpDown, ClipboardList, ClipboardCheck, FileText, Files, ShieldCheck, X, LayoutDashboard, FlaskConical, MapPin, Camera,   LayoutGrid, PieChart, Bot, ExternalLink, ChevronDown, CalendarDays, Radar, FileBarChart, Mic, Newspaper, Gauge, Users, ScrollText,   Ghost, Upload, Eraser, Tag, UserX, Briefcase, Activity, ArrowRightLeft, UserCheck,   Globe, Share2, Network, Bell, TrendingUp, ArrowRight, Trophy, GitCompare, Video, Circle } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
@@ -72,6 +72,7 @@ const ExternalPortalPickerModal = lazyDialog(() => import("../components/externa
 const FirmScoringExportWizard = lazyDialog(() => import("../components/firms/FirmScoringExportWizard"));
 import { useFirmOwner } from "@/components/admin/useFirmOwner";
 import { useVoiceSearch } from "@/hooks/useVoiceSearch";
+import { triggerStartRecording } from "@/components/videolibrary/recorderStore";
 
 const FIRM_TYPES = [
   "Investment Manager",
@@ -764,6 +765,7 @@ export default function Home() {
       { label: "Influence Dashboard", icon: Trophy, onClick: () => navigate("/InfluenceLevelDashboard") },
     ] },
     { label: "Videos", icon: Video, ref: null, color: "text-orange-600", activeBg: "bg-orange-50", onClick: () => navigate("/VideoLibrary") },
+    { label: "Record", icon: Circle, ref: null, color: "text-red-500", activeBg: "bg-red-50", onClick: triggerStartRecording },
     { label: "Utilities", icon: Wrench, ref: utilityRef, color: "text-gray-600", activeBg: "bg-gray-100", onClick: () => { setUtilityDefaultView(null); setUtilityModalOpen(true); }, submenu: [
       { label: "Benchmark", icon: Gauge, onClick: () => { setUtilityDefaultView("benchmark"); setUtilityModalOpen(true); } },
       { label: "Contact Cleanup", icon: Users, onClick: () => { setUtilityDefaultView("cleanup"); setUtilityModalOpen(true); } },

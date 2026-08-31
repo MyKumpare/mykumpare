@@ -52,6 +52,7 @@ import DdTimeline from './pages/DdTimeline';
 import VideoLibrary from './pages/VideoLibrary';
 import QuickNotesDrawer from "@/components/quicknotes/QuickNotesDrawer";
 import ScreenshotCaptureTool from "@/components/videolibrary/ScreenshotCaptureTool";
+import ScreenRecorderTool from "@/components/videolibrary/ScreenRecorderTool";
 
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -158,6 +159,7 @@ const AuthenticatedApp = () => {
     </Routes>
     {!isRegisterRoute && <QuickNotesDrawer />}
     {!isRegisterRoute && <ScreenshotCaptureTool />}
+    {!isRegisterRoute && <ScreenRecorderTool />}
     </>
   );
 };
