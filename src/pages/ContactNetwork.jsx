@@ -16,6 +16,7 @@ const FIRM_TYPE_COLORS = {
   "Investment Consultant": "#f59e0b",
   "Securities Brokerage": "#ef4444",
   "Trade Organizations": "#14b8a6",
+  "Other": "#6b7280",
 };
 
 function formatContactName(c) {

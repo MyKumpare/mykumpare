@@ -11,6 +11,7 @@ const TYPE_COLORS = {
   "Investment Consultant": "bg-amber-100 text-amber-700",
   "Securities Brokerage": "bg-rose-100 text-rose-700",
   "Trade Organizations": "bg-cyan-100 text-cyan-700",
+  "Other": "bg-gray-100 text-gray-700",
 };
 
 export default function FirmTypeSection({ type, firms, onEdit, onDelete, onAddToType, onAddProduct, onEditProduct, onAddPortfolio, forceExpand, isExpanded: isExpandedProp, onToggle, products = [], selectionMode = false, selectedIds = new Set(), onToggleSelect, onToggleSelectMany }) {

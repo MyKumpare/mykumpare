@@ -17,7 +17,8 @@
         "Allocator",
         "Investment Consultant",
         "Securities Brokerage",
-        "Trade Organizations"
+        "Trade Organizations",
+        "Other"
       ],
       "description": "Primary type of firm (legacy single value)"
     },
@@ -31,7 +32,8 @@
           "Allocator",
           "Investment Consultant",
           "Securities Brokerage",
-          "Trade Organizations"
+          "Trade Organizations",
+          "Other"
         ]
       }
     },

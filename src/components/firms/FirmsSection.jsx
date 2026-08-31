@@ -22,6 +22,7 @@ const FIRM_TYPES = [
   "Investment Consultant",
   "Securities Brokerage",
   "Trade Organizations",
+  "Other",
 ];
 
 export default function FirmsSection({

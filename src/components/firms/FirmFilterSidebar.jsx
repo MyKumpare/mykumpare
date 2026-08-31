@@ -7,6 +7,7 @@ const FIRM_TYPES = [
   "Investment Consultant",
   "Securities Brokerage",
   "Trade Organizations",
+  "Other",
 ];
 
 const REGIONS = [
