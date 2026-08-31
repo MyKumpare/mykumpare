@@ -15,6 +15,7 @@ import VideoTagManager from "@/components/videolibrary/VideoTagManager";
 import BulkEditVideosDialog from "@/components/videolibrary/BulkEditVideosDialog";
 import VideoCreationAssistant from "@/components/videolibrary/VideoCreationAssistant";
 import TrainingManualDialog from "@/components/videolibrary/TrainingManualDialog";
+import LinkVideoDialog from "@/components/videolibrary/LinkVideoDialog";
 import ManualToVideoDialog from "@/components/videolibrary/ManualToVideoDialog";
 import { setCaptureToolOpen, useScreenshots } from "@/components/videolibrary/screenshotStore";
 
@@ -30,6 +31,7 @@ export default function VideoLibrary() {
   const [tagManagerOpen, setTagManagerOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [trainingManualVideo, setTrainingManualVideo] = useState(null);
+  const [linkVideo, setLinkVideo] = useState(null);
   const [manualToVideoOpen, setManualToVideoOpen] = useState(false);
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -63,10 +65,15 @@ export default function VideoLibrary() {
     }
     const q = search.toLowerCase().trim();
     if (q) {
+      const tagNameSet = new Set(
+        sortedTags.filter((t) => (t.name || "").toLowerCase().includes(q)).map((t) => t.id)
+      );
       result = result.filter(
         (v) =>
           (v.title || "").toLowerCase().includes(q) ||
-          (v.description || "").toLowerCase().includes(q)
+          (v.description || "").toLowerCase().includes(q) ||
+          (v.tag_names || []).some((name) => name.toLowerCase().includes(q)) ||
+          (v.tag_ids || []).some((id) => tagNameSet.has(id))
       );
     }
     return [...result].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
@@ -225,7 +232,7 @@ export default function VideoLibrary() {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search videos..."
+              placeholder="Search by name, description, or tag..."
               className="pl-9 pr-9"
             />
             {search && (
@@ -339,6 +346,7 @@ export default function VideoLibrary() {
                 onEdit={() => handleEdit(video)}
                 onDelete={() => handleDelete(video)}
                 onTrainingManual={() => setTrainingManualVideo(video)}
+                onLink={(v) => setLinkVideo(v)}
                 selected={selectedIds.has(video.id)}
                 onToggleSelect={toggleSelect}
               />
@@ -358,6 +366,7 @@ export default function VideoLibrary() {
       <VideoTagManager open={tagManagerOpen} onClose={() => setTagManagerOpen(false)} />
       <VideoCreationAssistant open={assistantOpen} onClose={() => setAssistantOpen(false)} />
       <TrainingManualDialog video={trainingManualVideo} onClose={() => setTrainingManualVideo(null)} />
+      <LinkVideoDialog video={linkVideo} onClose={() => setLinkVideo(null)} />
       <ManualToVideoDialog open={manualToVideoOpen} onClose={() => setManualToVideoOpen(false)} />
       <BulkEditVideosDialog
         open={bulkEditOpen}

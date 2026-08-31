@@ -37,6 +37,34 @@
         "type": "string"
       }
     },
+    "linked_firm_ids": {
+      "type": "array",
+      "description": "IDs of investment firms this video/training manual is linked to. Lets users see relevant training videos directly from the firm summary page.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "linked_firm_names": {
+      "type": "array",
+      "description": "Denormalized firm names for display (mirrors linked_firm_ids).",
+      "items": {
+        "type": "string"
+      }
+    },
+    "linked_dd_ids": {
+      "type": "array",
+      "description": "IDs of DueDiligence records this video/training manual is linked to. Lets users see relevant training videos directly from the due diligence project.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "linked_dd_names": {
+      "type": "array",
+      "description": "Denormalized due diligence names for display (mirrors linked_dd_ids).",
+      "items": {
+        "type": "string"
+      }
+    },
     "uploaded_by_name": {
       "type": "string",
       "description": "Display name of the user who uploaded/created this video (denormalized)"

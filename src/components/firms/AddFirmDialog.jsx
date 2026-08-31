@@ -36,6 +36,7 @@ import FirmDueDiligenceTab from "./FirmDueDiligenceTab";
 import LegalComplianceTab from "./LegalComplianceTab";
 import FirmSourcingTab from "./FirmSourcingTab";
 import FirmConsultantTab from "./FirmConsultantTab";
+import FirmTrainingVideosTab from "./FirmTrainingVideosTab";
 import FirmFundingSummaryCard from "./FirmFundingSummaryCard";
 import FirmAumThresholdPanel from "./FirmAumThresholdPanel";
 import FirmContactPhotoGallery from "./FirmContactPhotoGallery";
@@ -552,6 +553,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     { key: "rfp-rfi", label: "RFP/RFI Search" },
     { key: "conferences", label: "Conferences" },
     { key: "sourcing", label: "Sourcing" },
+    { key: "training-videos", label: "Training Videos" },
     ...(showPortfolioTab ? [{ key: "consultants", label: "Consultants" }] : []),
   ], [hideProductTabs, showPortfolioTab, showAdvisorPortfolioTab]);
 
@@ -1863,6 +1865,16 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               ) : (
                 <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
                   Save the firm first to add consultants
+                </div>
+              )}
+              </TabsContent>
+
+              <TabsContent value="training-videos" className="space-y-3">
+              {editingFirm ? (
+                <FirmTrainingVideosTab firmId={editingFirm.id} firmName={editingFirm.name} />
+              ) : (
+                <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
+                  Save the firm first to view training videos
                 </div>
               )}
               </TabsContent>
