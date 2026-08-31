@@ -535,8 +535,10 @@ export default function Home() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }) => {
-      const current = await base44.entities.Firm.get(id);
+    mutationFn: async ({ id, data, current }) => {
+      // Use the already-loaded firm record (editingFirm) as the audit
+      // baseline instead of fetching it again — eliminates a redundant
+      // Firm.get() read on every save.
       const payload = withAuditHistory(current, data, user);
       return base44.entities.Firm.update(id, payload);
     },
@@ -566,7 +568,7 @@ export default function Home() {
 
   const handleSubmit = (data) => {
     if (editingFirm) {
-      updateMutation.mutate({ id: editingFirm.id, data });
+      updateMutation.mutate({ id: editingFirm.id, data, current: editingFirm });
     } else {
       createMutation.mutate(data);
     }
