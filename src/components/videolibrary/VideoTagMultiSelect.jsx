@@ -59,7 +59,6 @@ export default function VideoTagMultiSelect({ tags = [], selectedIds = [], onCha
               onClick={(e) => { e.stopPropagation(); toggle(t.id); }}
             >
               {t.name}
-              <X className="w-3 h-3" />
             </span>
           ))
         )}

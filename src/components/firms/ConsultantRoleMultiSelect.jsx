@@ -107,11 +107,8 @@ export default function ConsultantRoleMultiSelect({ value = [], onChange }) {
       {value.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {value.map((r) => (
-            <span key={r} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-600 text-white">
+            <span key={r} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-600 text-white">
               {r}
-              <button type="button" onClick={() => onChange(value.filter((x) => x !== r))} className="hover:opacity-70">
-                <X className="w-3 h-3" />
-              </button>
             </span>
           ))}
         </div>

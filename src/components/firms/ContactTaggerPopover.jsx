@@ -52,9 +52,6 @@ export default function ContactTaggerPopover({ contacts, taggedIds = [], onTagCh
       {taggedContacts.map(c => (
         <span key={c.id} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
           {[c.first_name, c.last_name].filter(Boolean).join(" ")}
-          <button type="button" onClick={() => toggle(c.id)} className="hover:text-red-500">
-            <X className="w-2.5 h-2.5" />
-          </button>
         </span>
       ))}
       <Popover open={open} onOpenChange={setOpen}>

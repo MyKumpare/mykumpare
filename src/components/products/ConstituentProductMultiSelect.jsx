@@ -121,13 +121,6 @@ export default function ConstituentProductMultiSelect({
             >
               <span className="font-medium text-indigo-700 truncate max-w-[200px]">{p.label}</span>
               {p.firm_name && <span className="text-indigo-400">· {p.firm_name}</span>}
-              <button
-                type="button"
-                onClick={() => toggle(p.value)}
-                className="text-indigo-400 hover:text-red-500 ml-0.5"
-              >
-                <X className="w-3 h-3" />
-              </button>
             </div>
           ))}
         </div>

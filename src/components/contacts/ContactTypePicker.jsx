@@ -184,15 +184,8 @@ export default function ContactTypePicker({ value, onChange, viewMode = false })
       <div className="min-h-9 flex flex-wrap items-center gap-1 rounded-md border border-input bg-transparent px-2 py-1 text-sm shadow-sm cursor-pointer" onClick={() => setOpen((o) => !o)}>
         {selected.length === 0 && <span className="text-gray-400 text-xs px-1">Select type(s)...</span>}
         {selected.map((t) => (
-          <span key={t} className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
+          <span key={t} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
             {t}
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); removeSelected(t); }}
-              className="hover:text-indigo-900"
-            >
-              <X className="w-3 h-3" />
-            </button>
           </span>
         ))}
         <ChevronDown className="w-4 h-4 text-gray-400 ml-auto flex-shrink-0" />

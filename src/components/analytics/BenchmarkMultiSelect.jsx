@@ -81,14 +81,6 @@ export default function BenchmarkMultiSelect({ benchmarks, selectedIds = [], onC
               <span key={id} className="flex items-center gap-1 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-md px-1.5 py-0.5">
                 <span className="truncate max-w-[120px]">{bm?.name ?? id}</span>
                 {roleBadge(id)}
-                <button
-                  type="button"
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onClick={(e) => remove(id, e)}
-                  className="text-indigo-400 hover:text-indigo-700 ml-0.5"
-                >
-                  <X className="w-2.5 h-2.5" />
-                </button>
               </span>
             );
           })
