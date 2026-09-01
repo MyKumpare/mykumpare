@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload, TrendingUp, Tag, GraduationCap, Briefcase, Activity, Package, AlertTriangle, Linkedin, Loader2, ClipboardCheck, Image as ImageIcon, Bell, MessageSquare, Mail, Clock, Newspaper, Download, Users } from "lucide-react";
+import {   X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload, TrendingUp, Tag, GraduationCap, Briefcase, Activity, Package, AlertTriangle, Linkedin, Loader2, ClipboardCheck, Image as ImageIcon, Bell, MessageSquare, Mail, Clock, Newspaper, Download, Users, Eye } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
@@ -54,6 +54,7 @@ import ImageZoomDialog from "../common/ImageZoomDialog";
 import ExperienceOptionMatchDialog from "./ExperienceOptionMatchDialog";
 import ContactUpcomingTasksPanel from "./ContactUpcomingTasksPanel";
 import { downloadVCard } from "./vCardExport";
+import VCardPreviewDialog from "./VCardPreviewDialog";
 import ContactInfluenceScore from "./ContactInfluenceScore";
 import ContactCentralityRank from "./ContactCentralityRank";
 import ContactQuickActions from "./ContactQuickActions";
@@ -136,6 +137,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [extracting, setExtracting] = useState(null); // "education" | "experience" | null
   const [portalInviteOpen, setPortalInviteOpen] = useState(false);
   const [photoZoomOpen, setPhotoZoomOpen] = useState(false);
+  const [vCardPreviewOpen, setVCardPreviewOpen] = useState(false);
   const [pendingExperienceExtract, setPendingExperienceExtract] = useState(null);
 
   const { user } = useAuth();
@@ -2153,6 +2155,12 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                   >
                     <Download className="w-4 h-4 mr-1" /> vCard
                   </Button>
+                  <Button variant="outline" size="sm" className="text-primary border-indigo-200 hover:bg-indigo-50"
+                    onClick={() => setVCardPreviewOpen(true)}
+                    title="Preview the vCard file content"
+                  >
+                    <Eye className="w-4 h-4 mr-1" /> Preview vCard
+                  </Button>
                   <div className="flex-1" />
                   <Button variant="outline" onClick={guardedClose}>Close</Button>
                   <Button className="bg-primary hover:bg-primary/90 text-white" onClick={() => setViewMode(false)}>
@@ -2297,12 +2305,19 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
     />
 
     <ImageZoomDialog
-      open={photoZoomOpen}
-      onOpenChange={setPhotoZoomOpen}
-      src={photoUrl}
-      alt="Contact photo"
-      caption={formatFullName()}
-    />
-    </>
+            open={photoZoomOpen}
+            onOpenChange={setPhotoZoomOpen}
+            src={photoUrl}
+            alt="Contact photo"
+            caption={formatFullName()}
+          />
+
+          <VCardPreviewDialog
+            contact={editingContact}
+            firms={firms}
+            open={vCardPreviewOpen}
+            onOpenChange={setVCardPreviewOpen}
+          />
+        </>
   );
 }
