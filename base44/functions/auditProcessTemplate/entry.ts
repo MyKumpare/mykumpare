@@ -35,19 +35,28 @@ export default async function(req: Request): Promise<Response> {
 
 Your task is to make the process more efficient, eliminate redundancy, and ensure it is complete and well-sequenced. Analyze the process for:
 
-1. REDUNDANCY — overlapping or duplicate stages, sub-stages, or checklist items that measure or request the same thing and could be consolidated or merged.
-2. EFFICIENCY — unnecessary steps, bottlenecks, overly granular sub-stages that add no value, steps that could be parallelized or merged, and opportunities to streamline the workflow so analysts spend less time on low-value work.
-3. COMPLETENESS GAPS — missing standard due-diligence stages (e.g. initial screening, on-site meeting, reference checks, legal/compliance review, operational due diligence, investment committee approval), missing key documentation items, or missing sub-stages that a rigorous process should contain.
-4. SEQUENCING & FLOW — stages out of logical order, dependencies not respected (e.g. reference checks before on-site, legal review before IC approval), approval/handoff logic gaps, and anything that creates rework or dead-ends.
-5. CLARITY — vague or ambiguous stage/sub-stage/checklist names that could be misinterpreted by different analysts, and naming that does not make the purpose of the step obvious.
+1. REDUNDANCY — overlapping or duplicate stages, sub-stages, or checklist items that measure or request the same thing and could be consolidated or merged. Name the specific stages/sub-stages/checklist items that overlap.
+2. EFFICIENCY — unnecessary steps, bottlenecks, overly granular sub-stages that add no value, steps that could be parallelized or merged, and opportunities to streamline the workflow so analysts spend less time on low-value work. Cite the specific step and explain the waste.
+3. COMPLETENESS GAPS — missing standard due-diligence stages (e.g. initial screening, on-site meeting, reference checks, legal/compliance review, operational due diligence, investment committee approval), missing key documentation items, or missing sub-stages that a rigorous process should contain. For each gap, name the missing item and explain what firm-data gap it would leave uncaught (e.g. undisclosed fee structures, unverified AUM, missing regulatory disclosures, untested risk controls, absent team-stability checks).
+4. SEQUENCING & FLOW — stages out of logical order, dependencies not respected (e.g. reference checks before on-site, legal review before IC approval), approval/handoff logic gaps, and anything that creates rework or dead-ends. Name the specific stages whose order is wrong.
+5. CLARITY — vague or ambiguous stage/sub-stage/checklist names that could be misinterpreted by different analysts, and naming that does not make the purpose of the step obvious. Quote the exact name and suggest a concrete replacement.
 
 ## Current Process Structure
 ${JSON.stringify(processData, null, 2)}
 
+## CRITICAL INSTRUCTION — YOU MUST FIND ISSUES
+No real-world due-diligence process template is perfect. A process with ${processData.stages.length} stages ALWAYS has room for improvement in redundancy, efficiency, completeness, sequencing, or clarity. You MUST produce AT LEAST 4 findings and AT LEAST 4 discrete changes. An empty or near-empty result is a failure — it means you did not analyze the process seriously. Scrutinize every stage name, every sub-stage, every checklist item, and the overall ordering. Look hard for:
+- Stages or sub-stages that overlap with each other or request redundant information
+- Missing standard due-diligence steps that any rigorous process should have (e.g. operational due diligence, background checks, fee verification, capacity analysis, key-person risk assessment)
+- Checklist items that are vague ("Review documents" is not actionable — it should specify WHICH documents and WHAT to look for)
+- Stages whose names are ambiguous or could be interpreted differently by different analysts
+- Sequencing issues where a later stage should logically come before an earlier one
+- Steps that collect firm data but don't verify or cross-check it against a source
+
 ## Instructions
-- Produce a comprehensive set of findings. Each finding has a category (one of: "Redundancy", "Efficiency", "Completeness", "Sequencing", "Clarity"), a severity (high/medium/low), a short title, and a description.
-- Produce a COMPLETE recommended process structure with two top-level arrays: "recommended_stages" and "recommended_doc_checklist". Reuse existing stage/sub-stage/checklist IDs wherever an item is kept or only lightly edited; generate new IDs only for genuinely new items (strings like "rec_stage_<n>", "rec_sub_<n>", "rec_doc_<n>"). Keep the same schema as the input. Preserve a sensible ordered sequence.
-- Produce a list of discrete, independently-applicable "changes". Each change must be self-contained and reference existing IDs from the input where it modifies an existing item. Each change has:
+- Produce a comprehensive set of findings (AT LEAST 4). Each finding has a category (one of: "Redundancy", "Efficiency", "Completeness", "Sequencing", "Clarity"), a severity (high/medium/low), a short title, and a description. The description MUST reference specific stage/sub-stage/checklist names from the input and explain concretely what the issue is and why it matters — vague descriptions like "the process could be improved" are not acceptable.
+- Produce a COMPLETE recommended process structure with two top-level arrays: "recommended_stages" and "recommended_doc_checklist". Reuse existing stage/sub-stage/checklist IDs wherever an item is kept or only lightly edited; generate new IDs only for genuinely new items (strings like "rec_stage_<n>", "rec_sub_<n>", "rec_doc_<n>"). Keep the same schema as the input. Preserve a sensible ordered sequence. The recommended structure MUST differ from the input — it is the improved version.
+- Produce a list of discrete, independently-applicable "changes" (AT LEAST 4). Each change must be self-contained and reference existing IDs from the input where it modifies an existing item. The rationale for each change MUST be specific and actionable — explain exactly what to change, why it improves the process, and what firm-data gap it addresses. Each change has:
   - id: a short unique string (e.g. "chg_1")
   - type: one of "rename_stage" | "remove_stage" | "add_stage" | "merge_stages" | "move_stage" | "rename_sub_stage" | "remove_sub_stage" | "add_sub_stage" | "merge_sub_stages" | "move_sub_stage" | "add_doc_item" | "remove_doc_item" | "rename_doc_item" | "merge_doc_items"
   - category: one of the finding categories

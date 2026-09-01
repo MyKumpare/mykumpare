@@ -151,16 +151,20 @@ ${templateDescriptors ? JSON.stringify(templateDescriptors, null, 2) : 'Not avai
 ## Context
 ${JSON.stringify(contextData, null, 2)}
 
+## CRITICAL INSTRUCTION — YOU MUST BE THOROUGH AND SPECIFIC
+A scoring matrix with ${(score.scoring_blocks || []).length} blocks always has inconsistencies, unsupported scores, or missing notes. You MUST produce at least 3 rescoring_recommendations, at least 3 strengths, at least 3 weaknesses, at least 3 areas_of_concern, and at least 3 follow_up_items. An empty or near-empty result is a failure. Every item MUST reference specific criterion names and specific scores — vague statements like "some criteria need review" are not acceptable.
+
 ## Instructions
-- Compare Primary vs Team vs IC vs Final scores for each criterion. Flag any deviation of 2 or more points as a significant inconsistency.
-- For criteria where the team or IC score differs significantly from the primary or final score, note this as an area for re-scoring review.
-- For your independent scores: use the level descriptors and ALL notes from every column to determine what you believe the correct score should be. If descriptors are not available, use the notes and your expertise to assess.
+- Compare Primary vs Team vs IC vs Final scores for each criterion. Flag any deviation of 2 or more points as a significant inconsistency. Name the exact criterion and state both scores.
+- For criteria where the team or IC score differs significantly from the primary or final score, note this as an area for re-scoring review. Explain which direction the score should move and why.
+- For criteria with empty or one-word notes, flag them as unsupported scores — a score without justification is a data gap.
+- For your independent scores: use the level descriptors and ALL notes from every column to determine what you believe the correct score should be. If descriptors are not available, use the notes and your expertise to assess. Your ai_rationale MUST reference specific notes or descriptor levels.
 - Your independent scores should be integers 1-5.
-- Be specific and actionable in your recommendations.
+- Be specific and actionable in your recommendations. Every follow_up_item must be a concrete action the analyst can take (e.g. "Request audited financials to verify the AUM figure cited in the Capacity criterion" — not "do more research").
 - The executive summary should be 2-3 paragraphs covering the overall quality of the evaluation and the manager.
 - Strengths and weaknesses should reference specific criteria and scores.
-- Areas of concern should focus on evaluation process issues (inconsistencies, missing notes, unsupported scores).
-- Follow-up items should be specific actions the analyst should take.
+- Areas of concern should focus on evaluation process issues (inconsistencies, missing notes, unsupported scores, criteria where the firm data is thin or unverified).
+- Follow-up items should be specific actions the analyst should take, including identifying what firm data is missing or needs verification.
 
 Return a JSON object with this exact structure:
 {

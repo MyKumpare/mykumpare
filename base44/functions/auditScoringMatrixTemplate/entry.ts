@@ -46,23 +46,25 @@ export default async function(req: Request): Promise<Response> {
 
 Your task is to make the rubric more rigorous, fair, and efficient. Analyze the rubric for:
 
-1. INHERENT BIAS — criteria or descriptor language that systematically favors or disfavors certain manager types (e.g., size, geography, style, tenure, ownership structure), subjective/ambiguous wording, recency bias, confirmation bias, survivorship bias, cultural bias, or criteria that conflate "we like them" with "they are skilled".
-2. REDUNDANCY — overlapping or duplicate criteria across blocks that measure the same thing and could be consolidated or merged.
-3. SCORING LOGIC & DESCRIPTOR QUALITY — gaps between adjacent levels, non-monotonic descriptors, ambiguous or unobservable descriptors, missing calibration, levels that are not behaviorally anchored, criteria where a 1-5 scale is the wrong granularity.
-4. WEIGHT BALANCE — blocks whose weights over- or under-emphasize what matters, or weights that don't sum to 100.
-5. EFFICIENCY & EFFECTIVENESS — criteria that add little signal, missing criteria that would add signal, opportunities to streamline, and anything that makes the rubric easier to apply consistently across analysts.
+1. INHERENT BIAS — criteria or descriptor language that systematically favors or disfavors certain manager types (e.g., size, geography, style, tenure, ownership structure), subjective/ambiguous wording, recency bias, confirmation bias, survivorship bias, cultural bias, or criteria that conflate "we like them" with "they are skilled". Quote the exact descriptor text that is biased.
+2. REDUNDANCY — overlapping or duplicate criteria across blocks that measure the same thing and could be consolidated or merged. Name the specific criteria that overlap and explain the duplication.
+3. SCORING LOGIC & DESCRIPTOR QUALITY — gaps between adjacent levels, non-monotonic descriptors, ambiguous or unobservable descriptors, missing calibration, levels that are not behaviorally anchored, criteria where a 1-5 scale is the wrong granularity. For each issue, cite the criterion and quote the problematic descriptor text.
+4. WEIGHT BALANCE — blocks whose weights over- or under-emphasize what matters, or weights that don't sum to 100. State the current weight, what it should be, and why.
+5. EFFICIENCY & EFFECTIVENESS — criteria that add little signal, missing criteria that would add signal, opportunities to streamline, and anything that makes the rubric easier to apply consistently across analysts. For missing criteria, name the specific firm-data gap the rubric fails to capture (e.g., fee alignment, capacity constraints, team stability, risk management, regulatory compliance, performance attribution, downside protection).
 
 ## Current Rubric Structure
 ${JSON.stringify(rubricData, null, 2)}
 
 ## CRITICAL INSTRUCTION — YOU MUST FIND ISSUES
-No real-world scoring rubric is perfect. A rubric with ${rubricData.length} blocks and multiple criteria ALWAYS has room for improvement in bias, redundancy, descriptor quality, weight balance, or efficiency. You MUST produce AT LEAST 3 findings and AT LEAST 3 discrete changes. An empty result is a failure — it means you did not analyze the rubric seriously. Scrutinize every block, every criterion name, every descriptor text, and every weight. Look hard for:
-- Ambiguous or subjective descriptor wording that two analysts could score differently
-- Weights that don't sum to exactly 100, or that over/under-weight a block relative to its importance
-- Criteria that overlap with criteria in other blocks
-- Missing criteria that any due-diligence rubric should have (e.g., risk management, fee alignment, capacity, team stability)
-- Descriptors where adjacent levels (e.g., 3 vs 4) are not clearly distinguishable
-- Criteria that are too vague to be observable or measurable
+No real-world scoring rubric is perfect. A rubric with ${rubricData.length} blocks and multiple criteria ALWAYS has room for improvement in bias, redundancy, descriptor quality, weight balance, or efficiency. You MUST produce AT LEAST 5 findings and AT LEAST 5 discrete changes. An empty or near-empty result is a failure — it means you did not analyze the rubric seriously. Scrutinize every block, every criterion name, every descriptor text, and every weight. Look hard for:
+- Ambiguous or subjective descriptor wording that two analysts could score differently — quote the exact text and explain the ambiguity
+- Weights that don't sum to exactly 100, or that over/under-weight a block relative to its importance — state the current and recommended weights
+- Criteria that overlap with criteria in other blocks — name both criteria and explain the duplication
+- Missing criteria that any due-diligence rubric should have (e.g., risk management, fee alignment, capacity, team stability, regulatory compliance, performance attribution, downside protection, key-person risk) — for each, explain what firm-data gap the missing criterion leaves uncaught
+- Descriptors where adjacent levels (e.g., 3 vs 4) are not clearly distinguishable — quote both levels and explain why they blur together
+- Criteria that are too vague to be observable or measurable — quote the criterion name and suggest a concrete, observable replacement
+- Descriptor text that is copy-pasted or nearly identical across levels — this is a calibration failure
+- Criteria where all 5 levels exist but the level 1 or level 5 descriptor is unrealistically extreme or too mild, compressing the usable range
 
 ## Instructions
 - Produce a comprehensive set of findings (AT LEAST 3). Each finding has a category (one of: "Bias", "Redundancy", "Scoring Logic", "Weight Balance", "Efficiency", "Effectiveness"), a severity (high/medium/low), a short title, and a description.
