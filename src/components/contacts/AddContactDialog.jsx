@@ -55,6 +55,7 @@ import ExperienceOptionMatchDialog from "./ExperienceOptionMatchDialog";
 import ContactUpcomingTasksPanel from "./ContactUpcomingTasksPanel";
 import { downloadVCard } from "./vCardExport";
 import ContactInfluenceScore from "./ContactInfluenceScore";
+import ContactCentralityRank from "./ContactCentralityRank";
 import ContactQuickActions from "./ContactQuickActions";
 import QuickActivityLogFab from "./QuickActivityLogFab";
 import ContactInteractionHistory from "./ContactInteractionHistory";
@@ -1073,7 +1074,8 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                   </div>
                 )}
                 {editingContact && (
-                  <div className="mt-1">
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <ContactCentralityRank contactId={editingContact.id} />
                     <ContactInfluenceScore
                       contactId={editingContact.id}
                       firmIds={firmIds}
