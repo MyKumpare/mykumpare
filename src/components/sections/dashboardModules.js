@@ -1,5 +1,5 @@
 import {
-  LayoutDashboard, Activity, Users, Globe, Network, GitBranch, Share2, UserCheck, TrendingUp,
+  LayoutDashboard, Activity, Users, Globe, Network, GitBranch, Share2, UserCheck, TrendingUp, ShieldCheck,
 } from "lucide-react";
 
 /**
@@ -19,6 +19,7 @@ export const DASHBOARD_MODULES = [
   { key: "relationship-map", label: "Relationship Network Map", icon: Network, color: "text-indigo-600", bg: "bg-indigo-50", border: "border-indigo-200", to: "/RelationshipNetworkMap" },
   { key: "firm-network-map", label: "Firm Network Map", icon: Share2, color: "text-cyan-600", bg: "bg-cyan-50", border: "border-cyan-200", to: "/FirmNetworkMap" },
   { key: "aum-trends", label: "Firm AUM & Net Flow Trends", icon: TrendingUp, color: "text-indigo-600", bg: "bg-indigo-50", border: "border-indigo-200", to: "/FirmAumTrends" },
+  { key: "compliance", label: "Compliance Tracker", icon: ShieldCheck, color: "text-rose-600", bg: "bg-rose-50", border: "border-rose-200", to: "/ComplianceRenewalDashboard" },
 ];
 
 export const DASHBOARD_MODULE_MAP = Object.fromEntries(DASHBOARD_MODULES.map((m) => [m.key, m]));
@@ -28,4 +29,5 @@ export const DASHBOARD_DEFAULT_CATEGORIES = [
   { id: "coverage", name: "Coverage", items: ["analyst-coverage", "firm-coverage"] },
   { id: "network", name: "Network", items: ["contact-network", "network-dashboard", "influence-dashboard", "degrees", "relationship-map", "firm-network-map"] },
   { id: "trends", name: "Trends", items: ["aum-trends"] },
+  { id: "compliance", name: "Compliance", items: ["compliance"] },
 ];
