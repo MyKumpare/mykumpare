@@ -156,7 +156,8 @@ Return ONLY a JSON object with this exact shape:
     const llmResponse = await base44.integrations.Core.InvokeLLM({
       prompt,
       response_json_schema: responseSchema,
-      add_context_from_internet: false
+      add_context_from_internet: false,
+      model: "claude_opus_4_8"
     });
 
     return Response.json({ success: true, data: llmResponse });
