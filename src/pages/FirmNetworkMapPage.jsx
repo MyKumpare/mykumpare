@@ -1,12 +1,14 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { Network, Loader2, Info, Building2, Search, X, Filter, Download, Palette } from "lucide-react";
+import { Network, Loader2, Info, Building2, Search, X, Filter, Download, Palette, PanelRightClose, PanelRight, Route, Layers } from "lucide-react";
 import ContactNetworkGraph from "@/components/network/ContactNetworkGraph";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { exportFirmNetworkMapPdf, strengthColorHex } from "@/components/firms/firmNetworkMapPdf";
+import FirmNetworkPathFinder from "@/components/firms/FirmNetworkPathFinder";
+import FirmNetworkClusterPanel from "@/components/firms/FirmNetworkClusterPanel";
 
 const FIRM_TYPE_COLORS = {
   "Investment Manager": "#6366f1",
@@ -60,6 +62,10 @@ export default function FirmNetworkMapPage() {
   const [onlyConnected, setOnlyConnected] = useState(true);
   const [vizMode, setVizMode] = useState("type"); // "type" | "strength"
   const [exporting, setExporting] = useState(false);
+  const [sidePanelOpen, setSidePanelOpen] = useState(true);
+  const [sidePanelTab, setSidePanelTab] = useState("path"); // "path" | "clusters"
+  const [pathHighlight, setPathHighlight] = useState(null); // Set of node IDs or null
+  const [clusterFocusId, setClusterFocusId] = useState(null); // node ID or null
   const graphContainerRef = useRef(null);
 
   const { data: allFirms = [], isFetching: firmsLoading } = useQuery({
@@ -82,7 +88,7 @@ export default function FirmNetworkMapPage() {
     queryFn: () => base44.entities.Contact.list("-created_date", 5000),
   });
 
-  const { nodes, edges, stats, relMap } = useMemo(() => {
+  const { nodes, edges, stats, relMap, adjacency, centralityMap, visibleFirms } = useMemo(() => {
     const firmMap = new Map(allFirms.filter(f => !f.deleted_at).map(f => [f.id, f]));
     const liveProducts = allProducts.filter(p => !p.deleted_at);
     const liveConsultants = consultants.filter(c => !c.deleted_at);
@@ -233,6 +239,9 @@ export default function FirmNetworkMapPage() {
     return {
       nodes: builtNodes,
       edges: builtEdges,
+      adjacency,
+      centralityMap,
+      visibleFirms,
       stats: {
         total: visibleFirms.length,
         sub_manager: [...adjacency.values()].reduce((acc, m) => {
@@ -253,6 +262,12 @@ export default function FirmNetworkMapPage() {
   }, [allFirms, allProducts, consultants, allContacts, activeTypes, onlyConnected, search, vizMode]);
 
   const selectedNode = nodes.find(n => n.id === selectedId);
+
+  // Clear path/cluster highlights when the graph resets (filters changed)
+  useEffect(() => {
+    setPathHighlight(null);
+    setClusterFocusId(null);
+  }, [resetKey]);
 
   const toggleType = (t) => {
     setActiveTypes(prev => ({ ...prev, [t]: !prev[t] }));
@@ -375,7 +390,7 @@ export default function FirmNetworkMapPage() {
         </div>
       </div>
 
-      {/* Graph */}
+      {/* Graph + Side Panel */}
       {nodes.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center border border-dashed border-gray-200 rounded-xl">
           <Network className="w-10 h-10 text-gray-300 mb-3" />
@@ -387,66 +402,145 @@ export default function FirmNetworkMapPage() {
           </p>
         </div>
       ) : (
-        <div ref={graphContainerRef} className="relative border border-gray-200 rounded-xl bg-white overflow-hidden" style={{ height: "calc(100vh - 220px)", minHeight: "500px" }}>
-          {firmsLoading ? (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
-            </div>
-          ) : (
-            <ContactNetworkGraph
-              key={resetKey}
-              nodes={nodes}
-              edges={edges}
-              onNodeClick={(n) => setSelectedId(n.id)}
-              highlightId={selectedId}
-            />
-          )}
-
-          {selectedNode && (
-            <div className="absolute bottom-3 left-3 max-w-xs bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-10">
-              <div className="flex items-start gap-3">
-                <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center text-white shrink-0"
-                  style={{ background: selectedNode.color }}
-                >
-                  <Building2 className="w-5 h-5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-sm text-gray-800 truncate">{selectedNode.label}</p>
-                  <p className="text-xs text-gray-500 truncate">
-                    {getFirmTypes(selectedNode._entity).join(", ") || "—"}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {selectedNode._degree} connection{selectedNode._degree !== 1 ? "s" : ""}
-                  </p>
-                </div>
-                <button onClick={() => setSelectedId(null)} className="text-gray-400 hover:text-gray-600 text-sm">✕</button>
+        <div className="flex gap-4" style={{ height: "calc(100vh - 220px)", minHeight: "500px" }}>
+          {/* Graph */}
+          <div ref={graphContainerRef} className="relative flex-1 border border-gray-200 rounded-xl bg-white overflow-hidden">
+            {firmsLoading ? (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
               </div>
+            ) : (
+              <ContactNetworkGraph
+                key={resetKey}
+                nodes={nodes}
+                edges={edges}
+                onNodeClick={(n) => setSelectedId(n.id)}
+                highlightId={selectedId || clusterFocusId}
+                highlightPath={pathHighlight}
+              />
+            )}
+
+            {selectedNode && (
+              <div className="absolute bottom-3 left-3 max-w-xs bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-10">
+                <div className="flex items-start gap-3">
+                  <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center text-white shrink-0"
+                    style={{ background: selectedNode.color }}
+                  >
+                    <Building2 className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-sm text-gray-800 truncate">{selectedNode.label}</p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {getFirmTypes(selectedNode._entity).join(", ") || "—"}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {selectedNode._degree} connection{selectedNode._degree !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                  <button onClick={() => setSelectedId(null)} className="text-gray-400 hover:text-gray-600 text-sm">✕</button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openFirmProfile(selectedNode._entity)}
+                  className="mt-2 w-full text-xs text-indigo-600 hover:text-indigo-700 font-medium border border-indigo-200 rounded-md py-1.5 hover:bg-indigo-50 transition-colors"
+                >
+                  Open firm profile
+                </button>
+              </div>
+            )}
+
+            <div className="absolute top-3 right-3 text-xs text-gray-400 bg-white/80 px-2 py-1 rounded-md border border-gray-200 flex items-center gap-1">
+              <Info className="w-3 h-3" /> Click a node for details · Drag to rearrange · Scroll to zoom
+            </div>
+
+            {vizMode === "strength" && (
+              <div className="absolute top-3 left-3 bg-white/90 px-3 py-2 rounded-md border border-gray-200 shadow-sm">
+                <p className="text-[10px] font-semibold text-gray-600 mb-1.5">Connection centrality</p>
+                <div className="flex items-center gap-2">
+                  <span
+                    className="h-2 w-24 rounded-full"
+                    style={{ background: `linear-gradient(to right, ${strengthColorHex(0)}, ${strengthColorHex(0.33)}, ${strengthColorHex(0.66)}, ${strengthColorHex(1)})` }}
+                  />
+                  <span className="text-[10px] text-gray-400">Less → More central</span>
+                </div>
+                <p className="text-[10px] text-gray-400 mt-1">Node size & color reflect connection strength</p>
+              </div>
+            )}
+
+            {/* Side panel toggle button (when closed) */}
+            {!sidePanelOpen && (
               <button
                 type="button"
-                onClick={() => openFirmProfile(selectedNode._entity)}
-                className="mt-2 w-full text-xs text-indigo-600 hover:text-indigo-700 font-medium border border-indigo-200 rounded-md py-1.5 hover:bg-indigo-50 transition-colors"
+                onClick={() => setSidePanelOpen(true)}
+                className="absolute top-3 right-3 bg-white border border-gray-200 rounded-md shadow-sm px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 flex items-center gap-1"
+                style={{ top: "3rem" }}
               >
-                Open firm profile
+                <PanelRight className="w-3.5 h-3.5" /> Panel
               </button>
-            </div>
-          )}
-
-          <div className="absolute top-3 right-3 text-xs text-gray-400 bg-white/80 px-2 py-1 rounded-md border border-gray-200 flex items-center gap-1">
-            <Info className="w-3 h-3" /> Click a node for details · Drag to rearrange · Scroll to zoom
+            )}
           </div>
 
-          {vizMode === "strength" && (
-            <div className="absolute top-3 left-3 bg-white/90 px-3 py-2 rounded-md border border-gray-200 shadow-sm">
-              <p className="text-[10px] font-semibold text-gray-600 mb-1.5">Connection centrality</p>
-              <div className="flex items-center gap-2">
-                <span
-                  className="h-2 w-24 rounded-full"
-                  style={{ background: `linear-gradient(to right, ${strengthColorHex(0)}, ${strengthColorHex(0.33)}, ${strengthColorHex(0.66)}, ${strengthColorHex(1)})` }}
-                />
-                <span className="text-[10px] text-gray-400">Less → More central</span>
+          {/* Side Panel */}
+          {sidePanelOpen && (
+            <div className="w-[320px] shrink-0 border border-gray-200 rounded-xl bg-white flex flex-col overflow-hidden">
+              {/* Panel header */}
+              <div className="flex items-center justify-between border-b border-gray-100 px-3 py-2">
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setSidePanelTab("path")}
+                    className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1 ${
+                      sidePanelTab === "path"
+                        ? "bg-amber-100 text-amber-700"
+                        : "text-gray-500 hover:bg-gray-50"
+                    }`}
+                  >
+                    <Route className="w-3 h-3" /> Path Finder
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSidePanelTab("clusters")}
+                    className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1 ${
+                      sidePanelTab === "clusters"
+                        ? "bg-violet-100 text-violet-700"
+                        : "text-gray-500 hover:bg-gray-50"
+                    }`}
+                  >
+                    <Layers className="w-3 h-3" /> Clusters
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSidePanelOpen(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <PanelRightClose className="w-4 h-4" />
+                </button>
               </div>
-              <p className="text-[10px] text-gray-400 mt-1">Node size & color reflect connection strength</p>
+
+              {/* Panel content */}
+              <div className="flex-1 overflow-y-auto p-3">
+                {sidePanelTab === "path" ? (
+                  <FirmNetworkPathFinder
+                    firms={visibleFirms}
+                    adjacency={adjacency}
+                    relMap={relMap}
+                    contacts={allContacts}
+                    activeTypes={activeTypes}
+                    onPathHighlight={setPathHighlight}
+                  />
+                ) : (
+                  <FirmNetworkClusterPanel
+                    firms={visibleFirms}
+                    adjacency={adjacency}
+                    centralityMap={centralityMap}
+                    relMap={relMap}
+                    activeTypes={activeTypes}
+                    onClusterFocus={setClusterFocusId}
+                  />
+                )}
+              </div>
             </div>
           )}
         </div>

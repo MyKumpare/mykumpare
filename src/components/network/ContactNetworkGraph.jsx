@@ -9,7 +9,7 @@ import React, { useRef, useEffect, useState, useCallback } from "react";
  * Interactions: hover highlights a node and its connections; click fires
  * onNodeClick; nodes are draggable; background drag pans; wheel zooms.
  */
-export default function ContactNetworkGraph({ nodes, edges, onNodeClick, highlightId }) {
+export default function ContactNetworkGraph({ nodes, edges, onNodeClick, highlightId, highlightPath }) {
   const svgRef = useRef(null);
   const [simNodes, setSimNodes] = useState([]);
   const [hoverId, setHoverId] = useState(null);
@@ -206,6 +206,8 @@ export default function ContactNetworkGraph({ nodes, edges, onNodeClick, highlig
   }, []);
 
   // Determine highlighted set (hover or external highlightId).
+  // When highlightPath is provided (a Set of node IDs), it takes precedence —
+  // only nodes/edges on the path are shown at full opacity, everything else dims.
   const activeId = hoverId || highlightId;
   const connectedIds = new Set();
   if (activeId) {
@@ -215,7 +217,15 @@ export default function ContactNetworkGraph({ nodes, edges, onNodeClick, highlig
       if (e.target === activeId) connectedIds.add(e.source);
     }
   }
-  const isDimmed = (id) => activeId && !connectedIds.has(id);
+  const pathSet = highlightPath instanceof Set ? highlightPath : null;
+  const isDimmed = (id) => {
+    if (pathSet) return !pathSet.has(id);
+    return activeId && !connectedIds.has(id);
+  };
+  const isEdgeDimmed = (e) => {
+    if (pathSet) return !(pathSet.has(e.source) && pathSet.has(e.target));
+    return activeId && !(e.source === activeId || e.target === activeId);
+  };
 
   return (
     <svg
@@ -236,7 +246,8 @@ export default function ContactNetworkGraph({ nodes, edges, onNodeClick, highlig
           const s = simNodes.find((n) => n.id === e.source);
           const t = simNodes.find((n) => n.id === e.target);
           if (!s || !t) return null;
-          const dim = activeId && !(e.source === activeId || e.target === activeId);
+          const dim = isEdgeDimmed(e);
+          const onPath = pathSet && pathSet.has(e.source) && pathSet.has(e.target);
           return (
             <line
               key={i}
@@ -244,9 +255,9 @@ export default function ContactNetworkGraph({ nodes, edges, onNodeClick, highlig
               y1={s.y}
               x2={t.x}
               y2={t.y}
-              stroke={dim ? "#e5e7eb" : (e.color || "#cbd5e1")}
-              strokeWidth={dim ? 1 : (e.width || 1.5)}
-              opacity={dim ? 0.3 : 0.7}
+              stroke={onPath ? "#f59e0b" : (dim ? "#e5e7eb" : (e.color || "#cbd5e1"))}
+              strokeWidth={onPath ? 4 : (dim ? 1 : (e.width || 1.5))}
+              opacity={onPath ? 1 : (dim ? 0.2 : 0.7)}
             />
           );
         })}
@@ -284,8 +295,8 @@ export default function ContactNetworkGraph({ nodes, edges, onNodeClick, highlig
                 <circle
                   r={r}
                   fill={n.color || (isFirm ? "#6366f1" : "#ec4899")}
-                  stroke={activeId === n.id ? "#fff" : "rgba(255,255,255,0.6)"}
-                  strokeWidth={activeId === n.id ? 3 : 1.5}
+                  stroke={pathSet?.has(n.id) ? "#f59e0b" : (activeId === n.id ? "#fff" : "rgba(255,255,255,0.6)")}
+                  strokeWidth={pathSet?.has(n.id) ? 4 : (activeId === n.id ? 3 : 1.5)}
                   className="pointer-events-none"
                 />
               )}
@@ -299,8 +310,8 @@ export default function ContactNetworkGraph({ nodes, edges, onNodeClick, highlig
                   {n.initials}
                 </text>
               )}
-              {/* Label — only show for firms, hovered node, or high-degree contacts */}
-              {(isFirm || hoverId === n.id || (n.degree >= 3 && !activeId)) && (
+              {/* Label — only show for firms, hovered node, path nodes, or high-degree contacts */}
+              {(isFirm || hoverId === n.id || pathSet?.has(n.id) || (n.degree >= 3 && !activeId && !pathSet)) && (
                 <text
                   textAnchor="middle"
                   dy={r + 12}
