@@ -28,7 +28,7 @@ function buildAddress(a) {
   ].join(";");
 }
 
-export function generateVCard(contact, firms = []) {
+export function generateVCard(contact, firms = [], fieldOrder = null) {
   const {
     salutation, first_name, middle_name, last_name, suffix,
     title, email, linkedin_url, notes, phones = [], addresses = [],
@@ -39,38 +39,79 @@ export function generateVCard(contact, firms = []) {
     .map((id) => firms.find((f) => f.id === id)?.name)
     .filter(Boolean);
 
-  const lines = [
+  const headerLines = [
     "BEGIN:VCARD",
     "VERSION:3.0",
     `N:${escapeVCard(last_name)};${escapeVCard(first_name)};${escapeVCard(middle_name)};${escapeVCard(suffix)};${escapeVCard(salutation)}`,
     `FN:${escapeVCard([salutation, first_name, middle_name, last_name].filter(Boolean).join(" "))}`,
   ];
 
-  if (title) lines.push(`TITLE:${escapeVCard(title)}`);
-  if (firmNames.length > 0) lines.push(`ORG:${escapeVCard(firmNames.join("; "))}`);
-  if (email) lines.push(`EMAIL;TYPE=INTERNET:${escapeVCard(email)}`);
+  // Build property blocks keyed by field id
+  const propertyBlocks = {};
+  if (title) {
+    propertyBlocks.title = [`TITLE:${escapeVCard(title)}`];
+  }
+  if (firmNames.length > 0) {
+    propertyBlocks.company = [`ORG:${escapeVCard(firmNames.join("; "))}`];
+  }
+  if (email) {
+    propertyBlocks.email = [`EMAIL;TYPE=INTERNET:${escapeVCard(email)}`];
+  }
+  if (phones.length > 0) {
+    propertyBlocks.phone = phones.map((p) => {
+      const num = formatPhone(p);
+      if (!num) return null;
+      const type = (p.phone_type || "WORK").toUpperCase();
+      return `TEL;TYPE=${type},VOICE:${escapeVCard(num)}`;
+    }).filter(Boolean);
+  }
+  if (addresses.length > 0) {
+    propertyBlocks.address = addresses.map((a) => {
+      if (!a.address_line1 && !a.city && !a.state) return null;
+      const type = a.is_primary ? "WORK,HOME" : "WORK";
+      const adrLines = [`ADR;TYPE=${type}:${buildAddress(a)}`];
+      const label = [a.address_line1, a.city, a.state, a.postal_code, a.country].filter(Boolean).join(", ");
+      if (label) adrLines.push(`LABEL;TYPE=${type}:${escapeVCard(label)}`);
+      return adrLines;
+    }).filter(Boolean).flat();
+  }
+  if (linkedin_url) {
+    propertyBlocks.website = [`URL:${escapeVCard(linkedin_url)}`];
+  }
+  if (notes) {
+    propertyBlocks.notes = [`NOTE:${escapeVCard(notes)}`];
+  }
 
-  phones.forEach((p) => {
-    const num = formatPhone(p);
-    if (!num) return;
-    const type = (p.phone_type || "WORK").toUpperCase();
-    lines.push(`TEL;TYPE=${type},VOICE:${escapeVCard(num)}`);
+  // Default order if none provided
+  const defaultOrder = ["title", "company", "email", "phone", "address", "website", "notes"];
+  const order = fieldOrder || defaultOrder;
+
+  const bodyLines = [];
+  order.forEach((fieldId) => {
+    if (propertyBlocks[fieldId]) {
+      bodyLines.push(...propertyBlocks[fieldId]);
+    }
+  });
+  // Append any property blocks not in the order array (safety)
+  defaultOrder.forEach((fieldId) => {
+    if (!order.includes(fieldId) && propertyBlocks[fieldId]) {
+      bodyLines.push(...propertyBlocks[fieldId]);
+    }
   });
 
-  addresses.forEach((a) => {
-    if (!a.address_line1 && !a.city && !a.state) return;
-    const type = a.is_primary ? "WORK,HOME" : "WORK";
-    lines.push(`ADR;TYPE=${type}:${buildAddress(a)}`);
-    const label = [a.address_line1, a.city, a.state, a.postal_code, a.country].filter(Boolean).join(", ");
-    if (label) lines.push(`LABEL;TYPE=${type}:${escapeVCard(label)}`);
-  });
-
-  if (linkedin_url) lines.push(`URL:${escapeVCard(linkedin_url)}`);
-  if (notes) lines.push(`NOTE:${escapeVCard(notes)}`);
-
-  lines.push("END:VCARD");
+  const lines = [...headerLines, ...bodyLines, "END:VCARD"];
   return lines.join("\r\n");
 }
+
+export const VCARD_FIELD_LABELS = {
+  title: "Title",
+  company: "Company",
+  email: "Email",
+  phone: "Phone",
+  address: "Address",
+  website: "Website",
+  notes: "Notes",
+};
 
 export function downloadVCard(contact, firms = []) {
   const vcard = generateVCard(contact, firms);
