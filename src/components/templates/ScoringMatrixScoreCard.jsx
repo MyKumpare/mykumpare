@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Check, X, CheckCircle2, Circle, ChevronDown, ChevronRight, Sparkles, Loader2, FileText, Download, Brain, History, GitBranch, GitCompare, Lock, Calendar, AlertTriangle, PlusCircle, MinusCircle, Info, ToggleLeft, ToggleRight, Camera, Paperclip, Award, Star, Layers } from "lucide-react";
+import { Check, X, CheckCircle2, Circle, ChevronDown, ChevronRight, Sparkles, Loader2, FileText, Download, Brain, History, GitBranch, GitCompare, Lock, Calendar, AlertTriangle, PlusCircle, MinusCircle, Info, ToggleLeft, ToggleRight, Camera, Paperclip, Award, Star, Layers, Users } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend, Tooltip
@@ -19,6 +19,7 @@ import ScoringMatrixHistoryTab from "@/components/templates/ScoringMatrixHistory
 import ScoringMatrixVersionDiffTab from "@/components/templates/ScoringMatrixVersionDiffTab";
 import ScoringMatrixSnapshotsTab from "@/components/templates/ScoringMatrixSnapshotsTab";
 import ScoringMatrixChangeSummary from "@/components/templates/ScoringMatrixChangeSummary";
+import ScoringPeerInsightsPanel from "@/components/templates/ScoringPeerInsightsPanel";
 import ScoringAttachmentsManager from "@/components/templates/ScoringAttachmentsManager";
 import { computeOverallRating } from "@/components/templates/scoringRatingLogic";
 import { computeWeightedScoreMulti, effectiveAdjustedPrimary, effectiveFinalScore } from "@/components/templates/scoringWeightLogic";
@@ -730,6 +731,9 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
           <Button variant="outline" size="sm" onClick={() => setActiveTab("scoring")}>Scoring</Button>
           <Button variant="outline" size="sm" onClick={() => setActiveTab("chart")}>Radar Chart</Button>
           <Button variant="outline" size="sm" onClick={() => setActiveTab("comparison")}>Comparison</Button>
+          <Button variant="outline" size="sm" onClick={() => setActiveTab("peerinsights")} className="text-indigo-600 border-indigo-200 hover:bg-indigo-50">
+            <Users className="w-3.5 h-3.5" /> Peer Insights
+          </Button>
           <Button variant="outline" size="sm" onClick={() => setActiveTab("changesummary")} className="text-sky-600 border-sky-200 hover:bg-sky-50">
             <GitCompare className="w-3.5 h-3.5" /> Change Summary
           </Button>
@@ -1066,6 +1070,11 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
           </div>
           <ScoringMatrixComparisonTable blocks={blocks} showSecondary={showSecondary} showTeam={showTeam} showAdjustedPrimary={showAdjustedPrimary} showIC={showIC} showFinal={showFinal} benchmark={benchmark} scoreId={scoreId} reviewNotes={score.review_notes} />
         </div>
+      )}
+
+      {/* Peer Insights Tab — select manager products & compare High/Low/Mean/Median */}
+      {activeTab === "peerinsights" && (
+        <ScoringPeerInsightsPanel score={score} template={template} />
       )}
 
       {/* Change Summary Tab — only criteria whose scores changed across phases */}
