@@ -19,6 +19,8 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import DateRangeFilter from "@/components/common/DateRangeFilter";
+import { parseISO, isAfter, isBefore, startOfMonth, endOfMonth, format } from "date-fns";
 
 const MONTHS_BACK = 6;
 
@@ -61,6 +63,9 @@ function dateToMonthLabel(dateStr) {
 }
 
 export default function FirmScoreTrend6mo({ onFirmClick }) {
+  const [dateRange, setDateRange] = useState({ start: "", end: "" });
+  const hasCustomRange = !!(dateRange.start || dateRange.end);
+
   const { data, isLoading, error } = useQuery({
     queryKey: ["firmScoreTrend6mo", MONTHS_BACK],
     queryFn: async () => {
@@ -72,12 +77,46 @@ export default function FirmScoreTrend6mo({ onFirmClick }) {
     staleTime: 5 * 60 * 1000,
   });
 
-  const monthLabels = useMemo(() => lastNMonths(new Date(), MONTHS_BACK), []);
+  // Filter records to the custom date range when set
+  const filteredData = useMemo(() => {
+    if (!hasCustomRange) return data || [];
+    const fromD = dateRange.start ? startOfMonth(parseISO(dateRange.start)) : null;
+    const toD = dateRange.end ? endOfMonth(parseISO(dateRange.end)) : null;
+    return (data || []).filter((rec) => {
+      const dStr = rec.scoring_end_date || rec.scoring_start_date;
+      if (!dStr) return false;
+      const d = parseISO(dStr);
+      if (fromD && isBefore(d, fromD)) return false;
+      if (toD && isAfter(d, toD)) return false;
+      return true;
+    });
+  }, [data, dateRange, hasCustomRange]);
+
+  // Build month labels: custom range derives from the filtered data's min/max;
+  // default uses the last 6 months from today.
+  const monthLabels = useMemo(() => {
+    if (!hasCustomRange) return lastNMonths(new Date(), MONTHS_BACK);
+    if (!filteredData.length) return [];
+    const dates = filteredData
+      .map((r) => r.scoring_end_date || r.scoring_start_date)
+      .filter(Boolean)
+      .sort();
+    if (!dates.length) return [];
+    const start = startOfMonth(parseISO(dates[0]));
+    const end = endOfMonth(parseISO(dates[dates.length - 1]));
+    const labels = [];
+    let cur = start;
+    while (!isAfter(cur, end)) {
+      labels.push(MONTH_FMT.format(cur));
+      cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
+    }
+    return labels;
+  }, [filteredData, hasCustomRange]);
 
   // Group records by firm → month → latest weighted final score
   const firmMonthMap = useMemo(() => {
     const map = {};
-    (data || []).forEach((rec) => {
+    (filteredData || []).forEach((rec) => {
       const m = dateToMonthLabel(rec.scoring_end_date || rec.scoring_start_date);
       if (!m || !monthLabels.includes(m)) return;
       const weighted = computeWeightedFinal(rec);
@@ -93,7 +132,7 @@ export default function FirmScoreTrend6mo({ onFirmClick }) {
       }
     });
     return map;
-  }, [data, monthLabels]);
+  }, [filteredData, monthLabels]);
 
   // Chart data: one row per month, one series per firm
   const trendData = useMemo(() => {
@@ -168,10 +207,19 @@ export default function FirmScoreTrend6mo({ onFirmClick }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <TrendingUp className="w-5 h-5 text-rose-600" />
-        <h3 className="text-base font-semibold text-gray-800">Firm Score Trends — Last 6 Months</h3>
-        <span className="text-xs text-gray-500">({firmSummaries.length} firms)</span>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="w-5 h-5 text-rose-600" />
+          <h3 className="text-base font-semibold text-gray-800">
+            Firm Score Trends {hasCustomRange ? "" : "— Last 6 Months"}
+          </h3>
+          <span className="text-xs text-gray-500">({firmSummaries.length} firms)</span>
+        </div>
+        <DateRangeFilter
+          value={dateRange}
+          onChange={setDateRange}
+          label="Score trend period"
+        />
       </div>
 
       {improvingFirms.length > 0 && (
@@ -221,7 +269,9 @@ export default function FirmScoreTrend6mo({ onFirmClick }) {
       <div className="border border-gray-200 rounded-lg p-4 bg-white">
         {firmSummaries.length === 0 ? (
           <div className="text-center py-10 text-sm text-gray-400">
-            No finalized scoring records found in the last {MONTHS_BACK} months.
+            {hasCustomRange
+              ? "No finalized scoring records found in the selected date range."
+              : `No finalized scoring records found in the last ${MONTHS_BACK} months.`}
           </div>
         ) : (
           <div style={{ height: 380 }}>

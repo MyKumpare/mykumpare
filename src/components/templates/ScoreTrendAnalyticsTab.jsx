@@ -27,6 +27,8 @@ import {
   ArrowDown
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import DateRangeFilter from "@/components/common/DateRangeFilter";
+import { parseISO, isAfter, isBefore, startOfMonth, endOfMonth } from "date-fns";
 
 const QUARTERS_BACK = 6; // last ~6 quarters
 
@@ -72,6 +74,8 @@ function lastNQuarters(fromDate, n) {
 export default function ScoreTrendAnalyticsTab({ onFirmClick }) {
   const [view, setView] = useState("trend"); // "trend" | "ranking"
   const [minScores, setMinScores] = useState(2); // min data points to include a firm
+  const [dateRange, setDateRange] = useState({ start: "", end: "" });
+  const hasCustomRange = !!(dateRange.start || dateRange.end);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["scoreTrendAnalytics", QUARTERS_BACK],
@@ -86,12 +90,50 @@ export default function ScoreTrendAnalyticsTab({ onFirmClick }) {
     staleTime: 5 * 60 * 1000,
   });
 
-  const quarterLabels = useMemo(() => lastNQuarters(new Date(), QUARTERS_BACK), []);
+  // Filter records to the custom date range when set
+  const filteredData = useMemo(() => {
+    if (!hasCustomRange) return data || [];
+    const fromD = dateRange.start ? startOfMonth(parseISO(dateRange.start)) : null;
+    const toD = dateRange.end ? endOfMonth(parseISO(dateRange.end)) : null;
+    return (data || []).filter((rec) => {
+      const dStr = rec.scoring_end_date || rec.scoring_start_date;
+      if (!dStr) return false;
+      const d = parseISO(dStr);
+      if (fromD && isBefore(d, fromD)) return false;
+      if (toD && isAfter(d, toD)) return false;
+      return true;
+    });
+  }, [data, dateRange, hasCustomRange]);
+
+  // Build quarter labels: custom range derives from the filtered data's min/max;
+  // default uses the last 6 quarters from today.
+  const quarterLabels = useMemo(() => {
+    if (!hasCustomRange) return lastNQuarters(new Date(), QUARTERS_BACK);
+    if (!filteredData.length) return [];
+    const dates = filteredData
+      .map((r) => r.scoring_end_date || r.scoring_start_date)
+      .filter(Boolean)
+      .sort();
+    if (!dates.length) return [];
+    const startD = parseISO(dates[0]);
+    const endD = parseISO(dates[dates.length - 1]);
+    const labels = [];
+    let y = startD.getFullYear();
+    let q = Math.floor(startD.getMonth() / 3) + 1;
+    const endY = endD.getFullYear();
+    const endQ = Math.floor(endD.getMonth() / 3) + 1;
+    while (y < endY || (y === endY && q <= endQ)) {
+      labels.push(`Q${q} ${y}`);
+      q += 1;
+      if (q > 4) { q = 1; y += 1; }
+    }
+    return labels;
+  }, [filteredData, hasCustomRange]);
 
   // Group records by firm → quarter → latest weighted final score
   const firmQuarterMap = useMemo(() => {
     const map = {}; // firm_id -> { name, quarters: { "Q1 2026": score }, recordCount }
-    (data || []).forEach((rec) => {
+    (filteredData || []).forEach((rec) => {
       const q = dateToQuarter(rec.scoring_end_date || rec.scoring_start_date);
       if (!q || !quarterLabels.includes(q)) return;
       const weighted = computeWeightedFinal(rec);
@@ -113,7 +155,7 @@ export default function ScoreTrendAnalyticsTab({ onFirmClick }) {
       }
     });
     return map;
-  }, [data, quarterLabels]);
+  }, [filteredData, quarterLabels]);
 
   // Build chart data: one row per quarter, one series per firm
   const trendData = useMemo(() => {
@@ -200,10 +242,15 @@ export default function ScoreTrendAnalyticsTab({ onFirmClick }) {
           <TrendingUp className="w-5 h-5 text-rose-600" />
           <h3 className="text-base font-semibold text-gray-800">Score Trend Analytics</h3>
           <span className="text-xs text-gray-500">
-            ({firmSummaries.length} firms · last {QUARTERS_BACK} quarters)
+            ({firmSummaries.length} firms{hasCustomRange ? "" : ` · last ${QUARTERS_BACK} quarters`})
           </span>
         </div>
         <div className="flex items-center gap-2">
+          <DateRangeFilter
+            value={dateRange}
+            onChange={setDateRange}
+            label="Score trend period"
+          />
           <div className="flex items-center gap-1 text-xs text-gray-500">
             <Filter className="w-3.5 h-3.5" />
             Min data points:
@@ -296,7 +343,9 @@ export default function ScoreTrendAnalyticsTab({ onFirmClick }) {
       <div className="border border-gray-200 rounded-lg p-4 bg-white">
         {firmSummaries.length === 0 ? (
           <div className="text-center py-10 text-sm text-gray-400">
-            No finalized scoring records found in the last {QUARTERS_BACK} quarters.
+            {hasCustomRange
+              ? "No finalized scoring records found in the selected date range."
+              : `No finalized scoring records found in the last ${QUARTERS_BACK} quarters.`}
           </div>
         ) : view === "trend" ? (
           <div style={{ height: 380 }}>
