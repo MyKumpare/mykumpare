@@ -1,11 +1,12 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { Network, Loader2, Info, Building2, Search, X, Filter } from "lucide-react";
+import { Network, Loader2, Info, Building2, Search, X, Filter, Download, Palette } from "lucide-react";
 import ContactNetworkGraph from "@/components/network/ContactNetworkGraph";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { exportFirmNetworkMapPdf, strengthColorHex } from "@/components/firms/firmNetworkMapPdf";
 
 const FIRM_TYPE_COLORS = {
   "Investment Manager": "#6366f1",
@@ -57,6 +58,9 @@ export default function FirmNetworkMapPage() {
     shared_contact: true,
   });
   const [onlyConnected, setOnlyConnected] = useState(true);
+  const [vizMode, setVizMode] = useState("type"); // "type" | "strength"
+  const [exporting, setExporting] = useState(false);
+  const graphContainerRef = useRef(null);
 
   const { data: allFirms = [], isFetching: firmsLoading } = useQuery({
     queryKey: ["firms"],
@@ -119,14 +123,27 @@ export default function FirmNetworkMapPage() {
         contactFirms.get(c.id).add(fid);
       });
     }
+    // Track how many contacts each pair of firms shares (connection strength)
+    const sharedContactCounts = new Map(); // "idA:idB" (sorted) -> count
     for (const firmSet of contactFirms.values()) {
       const ids = [...firmSet];
       for (let i = 0; i < ids.length; i++) {
         for (let j = i + 1; j < ids.length; j++) {
           addLink(ids[i], ids[j], "shared_contact");
+          const key = [ids[i], ids[j]].sort().join(":");
+          sharedContactCounts.set(key, (sharedContactCounts.get(key) || 0) + 1);
         }
       }
     }
+
+    // Edge strength: shared-contact count + 1 per other relationship type
+    const edgeStrength = (a, b, types) => {
+      let s = 0;
+      if (types.has("shared_contact")) s += sharedContactCounts.get([a, b].sort().join(":")) || 1;
+      if (types.has("sub_manager")) s += 1;
+      if (types.has("consultant")) s += 1;
+      return s;
+    };
 
     // Determine which firms to include based on filters
     const includeFirm = (firmId) => {
@@ -148,6 +165,21 @@ export default function FirmNetworkMapPage() {
 
     const visibleFirms = allFirms.filter(f => !f.deleted_at && includeFirm(f.id) && matchesSearch(f));
 
+    // Compute centrality (weighted degree) for each visible firm
+    const centralityMap = new Map();
+    for (const f of visibleFirms) {
+      const neighbors = adjacency.get(f.id);
+      if (!neighbors) { centralityMap.set(f.id, 0); continue; }
+      let c = 0;
+      for (const [otherId, types] of neighbors) {
+        const activeRels = [...types].filter(t => activeTypes[t]);
+        if (activeRels.length === 0) continue;
+        c += edgeStrength(f.id, otherId, types);
+      }
+      centralityMap.set(f.id, c);
+    }
+    const maxCentrality = Math.max(1, ...centralityMap.values());
+
     // Build edges — dedupe pairs, only include if at least one active type
     const edgeSet = new Set();
     const builtEdges = [];
@@ -165,11 +197,13 @@ export default function FirmNetworkMapPage() {
         if (edgeSet.has(key)) continue;
         edgeSet.add(key);
         const primary = activeRels[0];
+        const strength = edgeStrength(f.id, otherId, types);
         builtEdges.push({
           source: `firm-${f.id}`,
           target: `firm-${otherId}`,
           color: EDGE_COLORS[primary] || "#94a3b8",
           relType: primary,
+          width: vizMode === "strength" ? 1 + Math.min(5, strength * 0.8) : 1.5,
         });
         builtRelMap[`${f.id}:${otherId}`] = types;
         builtRelMap[`${otherId}:${f.id}`] = types;
@@ -178,15 +212,21 @@ export default function FirmNetworkMapPage() {
 
     const builtNodes = visibleFirms.map(f => {
       const neighborCount = adjacency.get(f.id)?.size || 0;
+      const centrality = centralityMap.get(f.id) || 0;
+      const centralityT = centrality / maxCentrality;
+      const useStrength = vizMode === "strength";
       return {
         id: `firm-${f.id}`,
         label: f.name,
         type: "firm",
-        color: colorFor(f),
-        radius: 10 + Math.min(12, Math.sqrt(neighborCount) * 2),
+        color: useStrength ? strengthColorHex(centralityT) : colorFor(f),
+        radius: useStrength
+          ? 10 + centralityT * 16
+          : 10 + Math.min(12, Math.sqrt(neighborCount) * 2),
         _entity: f,
         _entityType: "firm",
         _degree: neighborCount,
+        _centrality: centrality,
       };
     });
 
@@ -210,7 +250,7 @@ export default function FirmNetworkMapPage() {
       },
       relMap: builtRelMap,
     };
-  }, [allFirms, allProducts, consultants, allContacts, activeTypes, onlyConnected, search]);
+  }, [allFirms, allProducts, consultants, allContacts, activeTypes, onlyConnected, search, vizMode]);
 
   const selectedNode = nodes.find(n => n.id === selectedId);
 
@@ -221,6 +261,24 @@ export default function FirmNetworkMapPage() {
 
   const openFirmProfile = (firm) => {
     navigate(`/?openFirm=${firm.id}`);
+  };
+
+  const handleExportPdf = async () => {
+    if (!graphContainerRef.current || exporting) return;
+    setExporting(true);
+    try {
+      await exportFirmNetworkMapPdf({
+        container: graphContainerRef.current,
+        vizMode,
+        stats,
+        nodeCount: nodes.length,
+        activeTypes,
+      });
+    } catch (e) {
+      console.error("PDF export failed", e);
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -292,6 +350,28 @@ export default function FirmNetworkMapPage() {
             <Filter className="w-3 h-3" />
             {onlyConnected ? "Connected only" : "All firms"}
           </button>
+          <button
+            type="button"
+            onClick={() => { setVizMode(prev => prev === "type" ? "strength" : "type"); setResetKey(k => k + 1); }}
+            className={`inline-flex items-center gap-1 px-2 py-1 rounded-md font-medium border transition-colors text-xs ${
+              vizMode === "strength" ? "bg-violet-100 text-violet-700 border-violet-300" : "bg-gray-50 text-gray-400 border-gray-200"
+            }`}
+            title="Toggle between firm-type colors and connection-strength colors"
+          >
+            <Palette className="w-3 h-3" />
+            {vizMode === "strength" ? "Strength view" : "Type view"}
+          </button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleExportPdf}
+            disabled={exporting || nodes.length === 0}
+            className="h-7 px-2 text-xs gap-1"
+          >
+            {exporting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
+            {exporting ? "Exporting..." : "Export PDF"}
+          </Button>
         </div>
       </div>
 
@@ -307,7 +387,7 @@ export default function FirmNetworkMapPage() {
           </p>
         </div>
       ) : (
-        <div className="relative border border-gray-200 rounded-xl bg-white overflow-hidden" style={{ height: "calc(100vh - 220px)", minHeight: "500px" }}>
+        <div ref={graphContainerRef} className="relative border border-gray-200 rounded-xl bg-white overflow-hidden" style={{ height: "calc(100vh - 220px)", minHeight: "500px" }}>
           {firmsLoading ? (
             <div className="absolute inset-0 flex items-center justify-center">
               <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
@@ -355,6 +435,20 @@ export default function FirmNetworkMapPage() {
           <div className="absolute top-3 right-3 text-xs text-gray-400 bg-white/80 px-2 py-1 rounded-md border border-gray-200 flex items-center gap-1">
             <Info className="w-3 h-3" /> Click a node for details · Drag to rearrange · Scroll to zoom
           </div>
+
+          {vizMode === "strength" && (
+            <div className="absolute top-3 left-3 bg-white/90 px-3 py-2 rounded-md border border-gray-200 shadow-sm">
+              <p className="text-[10px] font-semibold text-gray-600 mb-1.5">Connection centrality</p>
+              <div className="flex items-center gap-2">
+                <span
+                  className="h-2 w-24 rounded-full"
+                  style={{ background: `linear-gradient(to right, ${strengthColorHex(0)}, ${strengthColorHex(0.33)}, ${strengthColorHex(0.66)}, ${strengthColorHex(1)})` }}
+                />
+                <span className="text-[10px] text-gray-400">Less → More central</span>
+              </div>
+              <p className="text-[10px] text-gray-400 mt-1">Node size & color reflect connection strength</p>
+            </div>
+          )}
         </div>
       )}
     </div>
