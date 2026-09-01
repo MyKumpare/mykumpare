@@ -43,6 +43,7 @@ import MonitorNavSection from "../components/activity/MonitorNavSection";
 import ReportingNavSection from "../components/reports/ReportingNavSection";
 import DashboardNavSection from "../components/dashboard/DashboardNavSection";
 import DashboardTimelineSection from "../components/dashboard/DashboardTimelineSection";
+import FirmAumTrendCard from "../components/dashboard/FirmAumTrendCard";
 import DashboardAnalystCoverageSection from "../components/dashboard/DashboardAnalystCoverageSection";
 import DashboardFirmCoverageSection from "../components/dashboard/DashboardFirmCoverageSection";
 import ManagementNavSection from "../components/dashboard/ManagementNavSection";
@@ -1078,6 +1079,11 @@ export default function Home() {
         )}
         {/* Dashboard section — link to Overview dashboard page */}
         <DashboardNavSection onOpenDashboard={() => navigate("/Dashboard")} />
+
+        {/* AUM & Net Flow trend chart for selected firms */}
+        <div className="mt-3">
+          <FirmAumTrendCard firms={activeFirms} />
+        </div>
 
         {/* Due Diligence section — with Documents, Forms, Templates nested as sub-items */}
         <div ref={formsRef} />
