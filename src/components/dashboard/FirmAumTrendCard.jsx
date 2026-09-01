@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isBefore, isAfter, startOfDay, endOfDay } from "date-fns";
 import {
   LineChart,
   Line,
@@ -11,7 +11,7 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
-import { TrendingUp, Download } from "lucide-react";
+import { TrendingUp, Download, Calendar, RotateCcw } from "lucide-react";
 import FirmMultiSelector from "@/components/firms/FirmMultiSelector";
 import PeerGroupTrendLoader from "@/components/dashboard/PeerGroupTrendLoader";
 import { Button } from "@/components/ui/button";
@@ -62,6 +62,9 @@ function fmtDisplay(iso) {
  */
 export default function FirmAumTrendCard({ firms = [] }) {
   const [selectedIds, setSelectedIds] = usePersistentState("dash_aum_trend_firms", []);
+  const [dateRange, setDateRange] = usePersistentState("dash_aum_trend_daterange", { from: "", to: "" });
+  const [showDateFilter, setShowDateFilter] = useState(false);
+  const isFiltered = !!(dateRange.from || dateRange.to);
 
   const selectedFirms = useMemo(
     () => selectedIds.map((id) => firms.find((f) => f.id === id)).filter(Boolean),
@@ -83,11 +86,25 @@ export default function FirmAumTrendCard({ firms = [] }) {
       }
     }
 
-    const data = Array.from(dateMap.values()).sort((a, b) =>
+    let data = Array.from(dateMap.values()).sort((a, b) =>
       (a.date || "").localeCompare(b.date || "")
     );
+
+    // Apply date-range filter if set
+    if (dateRange.from || dateRange.to) {
+      const fromDate = dateRange.from ? startOfDay(parseISO(dateRange.from)) : null;
+      const toDate = dateRange.to ? endOfDay(parseISO(dateRange.to)) : null;
+      data = data.filter((entry) => {
+        if (!entry.date) return false;
+        const d = parseISO(entry.date);
+        if (fromDate && isBefore(d, fromDate)) return false;
+        if (toDate && isAfter(d, toDate)) return false;
+        return true;
+      });
+    }
+
     return { chartData: data, hasData: data.length > 0 };
-  }, [selectedFirms]);
+  }, [selectedFirms, dateRange]);
 
   const exportCsv = () => {
     if (!hasData || selectedFirms.length === 0) return;
@@ -146,7 +163,67 @@ export default function FirmAumTrendCard({ firms = [] }) {
           maxFirms={MAX_FIRMS}
           onApply={(ids) => setSelectedIds(ids)}
         />
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowDateFilter((s) => !s)}
+            className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-md border transition-colors ${
+              showDateFilter || isFiltered
+                ? "bg-indigo-50 text-indigo-700 border-indigo-200"
+                : "text-gray-600 hover:bg-gray-50 border-gray-200"
+            }`}
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            Date Range
+            {isFiltered && (
+              <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-indigo-600 text-white text-[10px]">
+                Active
+              </span>
+            )}
+          </button>
+          {isFiltered && (
+            <button
+              type="button"
+              onClick={() => setDateRange({ from: "", to: "" })}
+              className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-red-600 font-medium"
+            >
+              <RotateCcw className="w-3 h-3" /> Clear
+            </button>
+          )}
+        </div>
       </div>
+
+      {showDateFilter && (
+        <div className="flex flex-wrap items-center gap-3 mt-2 px-1">
+          <div className="flex items-center gap-1.5">
+            <label className="text-[11px] text-gray-500 font-medium">From</label>
+            <input
+              type="date"
+              value={dateRange.from}
+              max={dateRange.to || undefined}
+              onChange={(e) => setDateRange((r) => ({ ...r, from: e.target.value }))}
+              className="h-8 text-xs border border-gray-200 rounded-md px-2 focus:outline-none focus:border-indigo-400"
+            />
+          </div>
+          <div className="flex items-center gap-1.5">
+            <label className="text-[11px] text-gray-500 font-medium">To</label>
+            <input
+              type="date"
+              value={dateRange.to}
+              min={dateRange.from || undefined}
+              onChange={(e) => setDateRange((r) => ({ ...r, to: e.target.value }))}
+              className="h-8 text-xs border border-gray-200 rounded-md px-2 focus:outline-none focus:border-indigo-400"
+            />
+          </div>
+          {isFiltered && (
+            <span className="text-[11px] text-gray-500">
+              {dateRange.from ? format(parseISO(dateRange.from), "MMM d, yyyy") : "Start"}
+              {" → "}
+              {dateRange.to ? format(parseISO(dateRange.to), "MMM d, yyyy") : "End"}
+            </span>
+          )}
+        </div>
+      )}
 
       {selectedFirms.length === 0 ? (
         <div className="mt-4 text-sm text-gray-400 italic text-center py-8 border border-dashed border-gray-200 rounded-xl">
