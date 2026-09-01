@@ -8,6 +8,8 @@ import {
   effectiveFinalScore,
   effectiveAdjustedPrimary,
 } from "@/components/templates/scoringWeightLogic";
+import ScoringPeerTrendChart from "@/components/templates/ScoringPeerTrendChart";
+import ScoringPeerReportSummary from "@/components/templates/ScoringPeerReportSummary";
 
 const SCORE_COLORS = {
   1: "bg-red-100 text-red-700 border-red-300",
@@ -400,6 +402,14 @@ export default function ScoringPeerInsightsPanel({ score, template }) {
         </div>
       ) : (
         <>
+          {/* Trend chart: product score over time vs peer benchmark */}
+          <ScoringPeerTrendChart
+            score={score}
+            peerScores={peerScores}
+            representativeScores={representativeScores}
+            phase={phase}
+          />
+
           {/* Overall total summary card */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             <div className="border border-gray-200 rounded-lg p-3 bg-white">
@@ -427,6 +437,14 @@ export default function ScoringPeerInsightsPanel({ score, template }) {
             Based on {representativeScores.length} peer score{representativeScores.length > 1 ? "s" : ""} ·
             weighted totals use the same multiplier logic as the scorecard.
           </p>
+
+          {/* Visual report summary: bar chart of high/low/mean/median vs own score */}
+          <ScoringPeerReportSummary
+            overallStats={overallStats}
+            ownScore={ownTotals.overall}
+            phaseLabel={phase.label}
+            peerCount={representativeScores.length}
+          />
 
           {/* Section + item breakdown table */}
           <div className="border border-gray-200 rounded-lg overflow-x-auto">
