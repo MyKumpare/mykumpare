@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import {   X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload, TrendingUp, Tag, GraduationCap, Briefcase, Activity, Package, AlertTriangle, Linkedin, Loader2, ClipboardCheck, Image as ImageIcon, Bell, MessageSquare, Mail, Clock, Newspaper, Download, Users, Eye } from "lucide-react";
+import {   X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload, TrendingUp, Tag, GraduationCap, Briefcase, Activity, Package, AlertTriangle, Linkedin, Loader2, ClipboardCheck, Image as ImageIcon, Bell, MessageSquare, Mail, Clock, Newspaper, Download, Users, Eye, Award } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
@@ -55,6 +55,7 @@ import ExperienceOptionMatchDialog from "./ExperienceOptionMatchDialog";
 import ContactUpcomingTasksPanel from "./ContactUpcomingTasksPanel";
 import { downloadVCard } from "./vCardExport";
 import VCardPreviewDialog from "./VCardPreviewDialog";
+import ContactCardDialog from "./ContactCardDialog";
 import ContactInfluenceScore from "./ContactInfluenceScore";
 import ContactCentralityRank from "./ContactCentralityRank";
 import ContactQuickActions from "./ContactQuickActions";
@@ -138,6 +139,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [portalInviteOpen, setPortalInviteOpen] = useState(false);
   const [photoZoomOpen, setPhotoZoomOpen] = useState(false);
   const [vCardPreviewOpen, setVCardPreviewOpen] = useState(false);
+  const [contactCardOpen, setContactCardOpen] = useState(false);
   const [pendingExperienceExtract, setPendingExperienceExtract] = useState(null);
 
   const { user } = useAuth();
@@ -1035,6 +1037,15 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                     />
                     {contactStatus || "Active"}
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => setContactCardOpen(true)}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border border-teal-200 bg-teal-50 text-teal-700 hover:bg-teal-100 transition-colors"
+                    title="Generate a visual contact card"
+                  >
+                    <Award className="w-3 h-3" />
+                    Contact Card
+                  </button>
                 </DialogTitle>
                 {firmIds.length > 0 && (
                   <p className="text-sm text-primary font-medium mt-0.5 truncate">
@@ -2317,6 +2328,13 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
             firms={firms}
             open={vCardPreviewOpen}
             onOpenChange={setVCardPreviewOpen}
+          />
+
+          <ContactCardDialog
+            contact={editingContact}
+            firms={firms}
+            open={contactCardOpen}
+            onOpenChange={setContactCardOpen}
           />
         </>
   );
