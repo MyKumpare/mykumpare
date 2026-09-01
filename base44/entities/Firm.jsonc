@@ -45,6 +45,58 @@
       "type": "string",
       "description": "URL of the regulatory registry page where registration_number was found (denormalized for display). Set by the auto-lookup workflow."
     },
+    "legal_compliance": {
+      "type": "object",
+      "description": "Structured legal & compliance information for the firm, managed via the Legal & Compliance tab and persisted to the firm record so it can be aggregated across firms. Holds the legal entity name, entity type, an array of jurisdictions (each with entity jurisdiction, country, governing regulatory body, registration number, and optional renewal date), assigned compliance officer contact IDs, and free-text notes. Source of truth for the Compliance & Renewals dashboard.",
+      "properties": {
+        "legalEntityName": {
+          "type": "string"
+        },
+        "entityType": {
+          "type": "string"
+        },
+        "jurisdictions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "entityJurisdiction": {
+                "type": "string"
+              },
+              "jurisdictionCountry": {
+                "type": "string"
+              },
+              "registrationNumber": {
+                "type": "string"
+              },
+              "renewalDate": {
+                "type": "string",
+                "format": "date",
+                "description": "Registration renewal due date (YYYY-MM-DD)."
+              }
+            }
+          }
+        },
+        "complianceOfficerIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "complianceOfficerNames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
     "year_founded": {
       "type": "integer",
       "description": "Year the firm was founded"

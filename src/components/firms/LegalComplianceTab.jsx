@@ -46,6 +46,7 @@ const emptyJurisdiction = () => ({
   entityJurisdiction: "",
   jurisdictionCountry: "",
   registrationNumber: "",
+  renewalDate: "",
 });
 
 function isComplianceContact(c) {
@@ -73,6 +74,7 @@ function migrateStored(data) {
         entityJurisdiction: j.entityJurisdiction || "",
         jurisdictionCountry: j.jurisdictionCountry || "",
         registrationNumber: j.registrationNumber || "",
+        renewalDate: j.renewalDate || "",
       })),
       complianceOfficerIds: Array.isArray(data.complianceOfficerIds)
         ? data.complianceOfficerIds
@@ -93,6 +95,7 @@ function migrateStored(data) {
           entityJurisdiction: data.entityJurisdiction || "",
           jurisdictionCountry: data.jurisdictionCountry || "",
           registrationNumber: data.registrationNumber || "",
+          renewalDate: "",
         }]
       : [],
     complianceOfficerIds: data.complianceOfficerId ? [data.complianceOfficerId] : [],
@@ -118,48 +121,43 @@ export default function LegalComplianceTab({ firmId, isEditing, contacts = [] })
 
   useEffect(() => {
     if (!firmId) return;
+    let active = true;
+    const apply = (migrated) => {
+      if (!active || !migrated) return;
+      setLegalEntityName(migrated.legalEntityName);
+      setEntityType(migrated.entityType);
+      setJurisdictions(migrated.jurisdictions);
+      setComplianceOfficerIds(migrated.complianceOfficerIds);
+      setNotes(migrated.notes);
+    };
+    const seedAutoCrd = (autoCrd) => {
+      if (!autoCrd) return;
+      setJurisdictions((prev) => {
+        if (prev.length === 0) return [{ ...emptyJurisdiction(), registrationNumber: autoCrd }];
+        if (prev[0].registrationNumber) return prev;
+        const copy = [...prev];
+        copy[0] = { ...copy[0], registrationNumber: autoCrd };
+        return copy;
+      });
+    };
+
+    // Legacy localStorage fallback (immediate, before the server round-trip).
     try {
       const stored = localStorage.getItem(`legal_compliance_${firmId}`);
-      if (stored) {
-        const migrated = migrateStored(JSON.parse(stored));
-        if (migrated) {
-          setLegalEntityName(migrated.legalEntityName);
-          setEntityType(migrated.entityType);
-          setJurisdictions(migrated.jurisdictions);
-          setComplianceOfficerIds(migrated.complianceOfficerIds);
-          setNotes(migrated.notes);
-        }
-      }
+      if (stored) apply(migrateStored(JSON.parse(stored)));
     } catch {}
-  }, [firmId]);
 
-  useEffect(() => {
-    if (!firmId) return;
-    let active = true;
     base44.entities.Firm.get(firmId)
       .then((f) => {
         if (!active) return;
         setFirmName(f?.name || "");
-        // If the auto-lookup workflow saved a CRD to the firm record and the
-        // user hasn't manually entered one in any jurisdiction, populate the
-        // first jurisdiction's registration number.
-        const autoCrd = f?.registration_number || "";
-        if (autoCrd) {
-          try {
-            const stored = localStorage.getItem(`legal_compliance_${firmId}`);
-            const parsed = stored ? JSON.parse(stored) : null;
-            const existingCrd = parsed && (parsed.registration_number || (parsed.jurisdictions || [])[0]?.registrationNumber || "");
-            if (!existingCrd) {
-              setJurisdictions((prev) => {
-                if (prev.length === 0) return [{ ...emptyJurisdiction(), registrationNumber: autoCrd }];
-                if (prev[0].registrationNumber) return prev;
-                const copy = [...prev];
-                copy[0] = { ...copy[0], registrationNumber: autoCrd };
-                return copy;
-              });
-            }
-          } catch {}
+        const lc = f?.legal_compliance;
+        if (lc && (lc.jurisdictions?.length || lc.complianceOfficerIds?.length || lc.legalEntityName)) {
+          // Server-side data is the source of truth — override localStorage.
+          apply(migrateStored(lc));
         }
+        // If the auto-lookup workflow saved a CRD and no jurisdiction has one, seed the first.
+        seedAutoCrd(f?.registration_number || "");
       })
       .catch(() => {});
     return () => { active = false; };
@@ -266,7 +264,7 @@ export default function LegalComplianceTab({ firmId, isEditing, contacts = [] })
     .map((id) => firmContacts.find((c) => c.id === id))
     .filter(Boolean);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!firmId) return;
     const data = {
       legalEntityName,
@@ -277,8 +275,14 @@ export default function LegalComplianceTab({ firmId, isEditing, contacts = [] })
       notes,
     };
     localStorage.setItem(`legal_compliance_${firmId}`, JSON.stringify(data));
-    setDirty(false);
-    toast({ title: "Saved", description: "Legal & Compliance information saved." });
+    try {
+      await base44.entities.Firm.update(firmId, { legal_compliance: data });
+      queryClient.invalidateQueries({ queryKey: ["firms"] });
+      setDirty(false);
+      toast({ title: "Saved", description: "Legal & Compliance information saved." });
+    } catch (err) {
+      toast({ title: "Failed to save to firm record", description: err.message, variant: "destructive" });
+    }
   };
 
   const handleAddContact = async () => {
@@ -419,6 +423,17 @@ export default function LegalComplianceTab({ firmId, isEditing, contacts = [] })
                       {lookingUpId === j.id ? "Searching registry..." : `Auto-detect from ${regulatoryBody}`}
                     </button>
                   )}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium text-gray-700">Registration Renewal Date</Label>
+                  <Input
+                    type="date"
+                    value={j.renewalDate || ""}
+                    onChange={(e) => updateJurisdiction(j.id, { renewalDate: e.target.value })}
+                    disabled={!isEditing}
+                  />
                 </div>
               </div>
             </div>
