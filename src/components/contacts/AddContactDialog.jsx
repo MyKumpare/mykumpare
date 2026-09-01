@@ -1067,23 +1067,48 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                 )}
                 {/* Role & tag chips — visible at a glance in view mode */}
                 {(investmentTeamRoles.length > 0 || tags.length > 0 || contactRoles.length > 0 || contactFirmRoles.length > 0) && (
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {investmentTeamRoles.map((r) => (
-                      <span key={`itr-${r}`} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
-                        <Briefcase className="w-2.5 h-2.5" /> {r}
-                      </span>
-                    ))}
-                    {contactRoles.map((r) => (
-                      <span key={`cr-${r}`} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-violet-50 text-violet-700 border border-violet-100">
-                        {r}
-                      </span>
-                    ))}
-                    {contactFirmRoles.map((r) => (
-                      <span key={`cfr-${r}`} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-100">
-                        {r}
-                      </span>
-                    ))}
-                    <ContactTagChips tags={tags} />
+                  <div className="mt-1">
+                    <div className="flex flex-wrap gap-1">
+                      {investmentTeamRoles.map((r) => (
+                        <span key={`itr-${r}`} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
+                          <Briefcase className="w-2.5 h-2.5" /> {r}
+                        </span>
+                      ))}
+                      {contactRoles.map((r) => (
+                        <span key={`cr-${r}`} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-violet-50 text-violet-700 border border-violet-100">
+                          {r}
+                        </span>
+                      ))}
+                      {contactFirmRoles.map((r) => (
+                        <span key={`cfr-${r}`} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                          {r}
+                        </span>
+                      ))}
+                      <ContactTagChips tags={tags} />
+                    </div>
+                    {/* Legend explaining what each tag color represents */}
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
+                      {investmentTeamRoles.length > 0 && (
+                        <span className="inline-flex items-center gap-1 text-[9px] text-gray-400 font-medium">
+                          <span className="w-2 h-2 rounded-full bg-indigo-200 border border-indigo-300"></span> Investment Team
+                        </span>
+                      )}
+                      {contactRoles.length > 0 && (
+                        <span className="inline-flex items-center gap-1 text-[9px] text-gray-400 font-medium">
+                          <span className="w-2 h-2 rounded-full bg-violet-200 border border-violet-300"></span> Contact Department
+                        </span>
+                      )}
+                      {contactFirmRoles.length > 0 && (
+                        <span className="inline-flex items-center gap-1 text-[9px] text-gray-400 font-medium">
+                          <span className="w-2 h-2 rounded-full bg-blue-200 border border-blue-300"></span> Contact Roles
+                        </span>
+                      )}
+                      {tags.length > 0 && (
+                        <span className="inline-flex items-center gap-1 text-[9px] text-gray-400 font-medium">
+                          <span className="w-2 h-2 rounded-full bg-gray-200 border border-gray-300"></span> Tags
+                        </span>
+                      )}
+                    </div>
                   </div>
                 )}
 
