@@ -1,0 +1,235 @@
+{
+  "name": "OnsiteVisit",
+  "type": "object",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "ID of the firm (tenant) that owns this onsite visit record. Set on creation to the creator's linked_firm_id; drives tenant isolation via RLS."
+    },
+    "firm_id": {
+      "type": "string",
+      "description": "ID of the firm this onsite visit is for."
+    },
+    "firm_name": {
+      "type": "string",
+      "description": "Name of the firm (denormalized for display)."
+    },
+    "target_visit_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Target date for the onsite visit (YYYY-MM-DD)."
+    },
+    "actual_visit_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Actual date the visit took place (YYYY-MM-DD). Set when the visit status changes to 'Completed'."
+    },
+    "visiting_analyst_contact_id": {
+      "type": "string",
+      "description": "ID of the Xponance contact who is the visiting analyst for this visit. Defaults to the firm's primary Xponance contact; can be changed to any Xponance contact."
+    },
+    "visiting_analyst_name": {
+      "type": "string",
+      "description": "Full name of the visiting analyst (denormalized for display)."
+    },
+    "onsite_type": {
+      "type": "string",
+      "enum": [
+        "In-person",
+        "Virtual"
+      ],
+      "default": "In-person",
+      "description": "Whether the visit is in-person or virtual."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Scheduled",
+        "Completed",
+        "Cancelled",
+        "No-show"
+      ],
+      "default": "Scheduled",
+      "description": "Status of the onsite visit."
+    },
+    "agenda": {
+      "type": "string",
+      "description": "Agenda for the visit (rich text HTML)."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notes from the visit (rich text HTML)."
+    },
+    "follow_up_items": {
+      "type": "array",
+      "description": "Follow-up items to collect from the firm during/after the visit. Each entry is a text description of what needs to be collected.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "description": "What needs to be collected from the firm"
+          },
+          "collected": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether this item has been collected"
+          }
+        }
+      }
+    },
+    "attachments": {
+      "type": "array",
+      "description": "Documents attached to this visit. Each attachment is also copied to the FirmDocument table so it appears in the firm's Documents tab.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name for the file"
+          },
+          "file_url": {
+            "type": "string",
+            "description": "URL of the uploaded file"
+          },
+          "file_type": {
+            "type": "string",
+            "description": "MIME type or extension"
+          },
+          "firm_document_id": {
+            "type": "string",
+            "description": "ID of the corresponding FirmDocument record created as a copy (links to the Documents tab)"
+          },
+          "uploaded_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    "follow_up_task_ids": {
+      "type": "array",
+      "description": "IDs of FollowUpTask records created from this visit. The actual tasks live in the FollowUpTask table so they surface in the existing task and alert system.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "visit_rule_id": {
+      "type": "string",
+      "description": "ID of the OnsiteVisitRule that auto-generated this visit (empty for manually created visits)."
+    },
+    "created_by_name": {
+      "type": "string",
+      "description": "Display name of the user who created this visit (denormalized)."
+    }
+  },
+  "required": [
+    "firm_id",
+    "target_visit_date",
+    "visiting_analyst_contact_id",
+    "onsite_type",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_edit": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_delete": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -34,6 +34,7 @@ import FirmBoardMeetingTab from "./FirmBoardMeetingTab";
 import FirmRfpRfiTab from "./FirmRfpRfiTab";
 import FirmDocumentsTab from "./FirmDocumentsTab";
 import FirmDueDiligenceTab from "./FirmDueDiligenceTab";
+import FirmOnsiteDueDiligenceTab from "./FirmOnsiteDueDiligenceTab";
 import LegalComplianceTab from "./LegalComplianceTab";
 import FirmSourcingTab from "./FirmSourcingTab";
 import FirmConsultantTab from "./FirmConsultantTab";
@@ -566,6 +567,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     ...(showAdvisorPortfolioTab ? [{ key: "advisor-portfolios", label: "Portfolios" }] : []),
     ...(!hideProductTabs ? [{ key: "products", label: "Products" }] : []),
     ...(!hideProductTabs ? [{ key: "due-diligence", label: "Due Diligence" }] : []),
+    ...(!hideProductTabs ? [{ key: "onsite-dd", label: "Onsite Due Diligence" }] : []),
     ...(!hideProductTabs ? [{ key: "documents", label: "Documents" }] : []),
     { key: "activity-log", label: "Activity Log" },
     ...(!hideProductTabs ? [{ key: "ownership", label: "Ownership" }] : []),
@@ -1784,6 +1786,16 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               ) : (
                 <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
                   Save the firm first to add due diligence information
+                </div>
+              )}
+              </TabsContent>
+
+              <TabsContent value="onsite-dd" className="space-y-3">
+              {editingFirm ? (
+                <FirmOnsiteDueDiligenceTab firmId={editingFirm.id} firmName={editingFirm.name} firm={editingFirm} />
+              ) : (
+                <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
+                  Save the firm first to add onsite visits
                 </div>
               )}
               </TabsContent>

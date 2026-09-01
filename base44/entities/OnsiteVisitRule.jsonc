@@ -1,0 +1,152 @@
+{
+  "name": "OnsiteVisitRule",
+  "type": "object",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "ID of the firm (tenant) that owns this visit rule. Set on creation to the creator's linked_firm_id; drives tenant isolation via RLS."
+    },
+    "firm_id": {
+      "type": "string",
+      "description": "ID of the firm this visit rule applies to. One rule per firm."
+    },
+    "firm_name": {
+      "type": "string",
+      "description": "Name of the firm (denormalized for display)."
+    },
+    "visit_cycle_days": {
+      "type": "integer",
+      "description": "Required visit cycle in days. A new visit must be completed within this many days of the last completed visit; otherwise the firm is flagged as 'late' in the visit status report."
+    },
+    "visiting_analyst_contact_id": {
+      "type": "string",
+      "description": "ID of the default Xponance contact to assign as the visiting analyst for auto-generated visits. Empty means no default analyst."
+    },
+    "visiting_analyst_name": {
+      "type": "string",
+      "description": "Full name of the default visiting analyst (denormalized for display)."
+    },
+    "onsite_type": {
+      "type": "string",
+      "enum": [
+        "In-person",
+        "Virtual"
+      ],
+      "default": "In-person",
+      "description": "Default onsite type for auto-generated visits from this rule."
+    },
+    "auto_deadline_days": {
+      "type": "integer",
+      "description": "Number of days from the last completed visit (or rule creation date if no prior visit) by which the next visit must be completed. Used to set the automatic deadline (target visit date) for auto-generated visits."
+    },
+    "enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this visit rule is active. When false, the firm is excluded from the visit cycle status report and no auto-generated visits are created."
+    },
+    "created_by_name": {
+      "type": "string",
+      "description": "Display name of the user who created this rule (denormalized)."
+    }
+  },
+  "required": [
+    "firm_id",
+    "visit_cycle_days"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_edit": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_delete": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
