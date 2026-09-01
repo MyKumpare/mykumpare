@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/use-toast";
-import { ShieldCheck, Loader2, Sparkles, ArrowRight, Check, AlertTriangle, Info, AlertOctagon } from "lucide-react";
+import { ShieldCheck, Loader2, Sparkles, ArrowRight, Check, AlertTriangle, Info, AlertOctagon, ListChecks } from "lucide-react";
 import { applyChanges } from "./scoringRubricAuditApply";
 
 const SEVERITY_STYLE = {
@@ -61,9 +61,11 @@ export default function ScoringMatrixRubricAudit({ blocks, onChange, templateId,
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [processTrace, setProcessTrace] = useState([]);
   const [selected, setSelected] = useState({});
   const [applied, setApplied] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showTrace, setShowTrace] = useState(false);
 
   const runAudit = async () => {
     if (!blocks || blocks.length === 0) {
@@ -72,6 +74,7 @@ export default function ScoringMatrixRubricAudit({ blocks, onChange, templateId,
     }
     setLoading(true);
     setResult(null);
+    setProcessTrace([]);
     setApplied(false);
     setSelected({});
     try {
@@ -79,6 +82,7 @@ export default function ScoringMatrixRubricAudit({ blocks, onChange, templateId,
       if (res?.error) throw new Error(res.error);
       const data = res?.data || res;
       setResult(data);
+      setProcessTrace(res?.process_trace || []);
       // Default: all changes selected
       const sel = {};
       (data.changes || []).forEach((ch) => { sel[ch.id] = true; });
@@ -190,6 +194,38 @@ export default function ScoringMatrixRubricAudit({ blocks, onChange, templateId,
 
           {result && (
             <div className="space-y-4">
+              {/* Process Trace */}
+              {processTrace.length > 0 && (
+                <div className="border border-gray-200 rounded-md bg-gray-50/50">
+                  <button
+                    type="button"
+                    className="w-full flex items-center gap-2 p-2 text-left"
+                    onClick={() => setShowTrace((s) => !s)}
+                  >
+                    <ListChecks className="w-3.5 h-3.5 text-indigo-600" />
+                    <span className="text-xs font-semibold text-gray-700">AI Process Trace ({processTrace.length} steps)</span>
+                    <span className="ml-auto text-[10px] text-gray-400">{showTrace ? "Hide" : "Show"}</span>
+                  </button>
+                  {showTrace && (
+                    <div className="px-3 pb-3 space-y-1.5">
+                      {processTrace.map((t) => (
+                        <div key={t.step} className="flex items-start gap-2 text-[11px]">
+                          <span className={`mt-0.5 flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${
+                            t.status === "ok" ? "bg-green-100 text-green-700" :
+                            t.status === "warning" ? "bg-amber-100 text-amber-700" :
+                            "bg-gray-200 text-gray-500"
+                          }`}>{t.step}</span>
+                          <div className="min-w-0">
+                            <span className="font-semibold text-gray-700">{t.label}</span>
+                            <p className="text-gray-500 whitespace-pre-line leading-snug">{t.detail}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Findings */}
               <div>
                 <h4 className="text-sm font-semibold text-gray-800 mb-2">Audit Findings ({findings.length})</h4>

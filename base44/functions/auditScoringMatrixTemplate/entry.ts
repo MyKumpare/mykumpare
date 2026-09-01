@@ -22,8 +22,20 @@ export default async function(req: Request): Promise<Response> {
     const body = await req.json();
     const { scoring_blocks } = body;
 
+    console.log('[auditScoringMatrixTemplate] STEP 1: Input received', {
+      blockCount: Array.isArray(scoring_blocks) ? scoring_blocks.length : 'NOT_AN_ARRAY',
+      blockIds: Array.isArray(scoring_blocks) ? scoring_blocks.map((b: any) => b?.id) : [],
+      blockNames: Array.isArray(scoring_blocks) ? scoring_blocks.map((b: any) => b?.name) : []
+    });
+
     if (!Array.isArray(scoring_blocks)) {
+      console.log('[auditScoringMatrixTemplate] FAIL: scoring_blocks is not an array — returning 400');
       return Response.json({ error: 'scoring_blocks array is required' }, { status: 400 });
+    }
+
+    if (scoring_blocks.length === 0) {
+      console.log('[auditScoringMatrixTemplate] FAIL: scoring_blocks is empty — nothing to audit');
+      return Response.json({ error: 'scoring_blocks array is empty — nothing to audit' }, { status: 400 });
     }
 
     const rubricData = scoring_blocks.map((block: any) => ({
@@ -41,6 +53,56 @@ export default async function(req: Request): Promise<Response> {
         bonus_penalty_guidance: crit.bonus_penalty_guidance
       }))
     }));
+
+    const totalCriteria = rubricData.reduce((sum: number, b: any) => sum + (b.criteria?.length || 0), 0);
+    const totalWeight = rubricData.reduce((sum: number, b: any) => sum + (Number(b.weight) || 0), 0);
+
+    // Build a visible process trace so the user can confirm what was analyzed.
+    const processTrace: any[] = [];
+    processTrace.push({
+      step: 1,
+      label: 'Input validation',
+      detail: `Received ${rubricData.length} block(s) with ${totalCriteria} total criteria. Weights sum to ${totalWeight}.`,
+      status: 'ok'
+    });
+    processTrace.push({
+      step: 2,
+      label: 'Rubric normalization',
+      detail: rubricData.map((b: any) => `Block "${b.name}" (${b.weight}%) — ${(b.criteria || []).length} criteria: ${(b.criteria || []).map((c: any) => c.name).join(', ') || 'none'}`).join('\n'),
+      status: 'ok'
+    });
+    processTrace.push({
+      step: 3,
+      label: 'Descriptor scan',
+      detail: `${totalCriteria} criteria scanned for behaviorally-anchored descriptors. ${(function() {
+        let generic = 0, anchored = 0;
+        for (const b of rubricData) for (const c of (b.criteria || [])) {
+          const texts = (c.descriptors || []).map((d: any) => (d.text || '').toLowerCase().trim());
+          const genericSet = ['poor', 'below average', 'average', 'above average', 'excellent', 'good', 'fair', 'strong', 'weak'];
+          if (texts.every((t: string) => genericSet.includes(t))) generic++;
+          else anchored++;
+        }
+        return `${generic} use generic labels, ${anchored} have custom descriptors.`;
+      })()}`,
+      status: 'ok'
+    });
+    processTrace.push({
+      step: 4,
+      label: 'Analysis dimensions',
+      detail: 'Checking 5 dimensions: (1) Inherent Bias, (2) Redundancy, (3) Scoring Logic & Descriptor Quality, (4) Weight Balance, (5) Efficiency & Effectiveness.',
+      status: 'ok'
+    });
+
+    console.log('[auditScoringMatrixTemplate] STEP 2: Rubric normalized for LLM', {
+      blocks: rubricData.length,
+      totalCriteria,
+      totalWeight,
+      blockSummary: rubricData.map((b: any) => ({
+        id: b.id, name: b.name, weight: b.weight,
+        criteriaCount: b.criteria?.length || 0,
+        criteriaNames: (b.criteria || []).map((c: any) => c.name)
+      }))
+    });
 
     const prompt = `You are an expert consultant who designs and audits investment-manager due-diligence scoring matrix rubrics. You are auditing the STRUCTURE of a scoring matrix rubric (its blocks, weighted criteria, and 1-5 level descriptors) — NOT any filled-in scores.
 
@@ -200,6 +262,20 @@ Return ONLY a JSON object with this exact shape:
       }
     };
 
+    processTrace.push({
+      step: 5,
+      label: 'AI analysis (Claude Opus 4.8)',
+      detail: `Sent ${prompt.length}-char prompt with the full rubric structure and a JSON schema requiring findings, recommended blocks, and discrete changes. Waiting for AI response…`,
+      status: 'pending'
+    });
+
+    console.log('[auditScoringMatrixTemplate] STEP 3: Invoking LLM', {
+      model: "claude_opus_4_8",
+      promptLength: prompt.length,
+      hasJsonSchema: true,
+      addContextFromInternet: false
+    });
+
     const llmResponse = await base44.integrations.Core.InvokeLLM({
       prompt,
       response_json_schema: responseSchema,
@@ -207,7 +283,42 @@ Return ONLY a JSON object with this exact shape:
       model: "claude_opus_4_8"
     });
 
-    return Response.json({ success: true, data: llmResponse });
+    const findingsCount = llmResponse?.findings?.length || 0;
+    const changesCount = llmResponse?.changes?.length || 0;
+    const recBlocksCount = llmResponse?.recommended_blocks?.length || 0;
+
+    // Update the AI analysis step with the outcome
+    const aiStep = processTrace.find((s: any) => s.step === 5);
+    if (aiStep) {
+      aiStep.status = findingsCount > 0 || changesCount > 0 ? 'ok' : 'warning';
+      aiStep.detail += `\nAI returned ${findingsCount} finding(s), ${changesCount} change(s), and ${recBlocksCount} recommended block(s).`;
+    }
+
+    processTrace.push({
+      step: 6,
+      label: 'Result validation',
+      detail: findingsCount === 0 && changesCount === 0
+        ? 'WARNING: AI returned no findings and no changes. This can happen if the rubric is very small or the AI could not identify issues. Try adding more criteria or descriptors.'
+        : `Audit complete. ${findingsCount} finding(s) across bias, redundancy, scoring logic, weight balance, and efficiency. ${changesCount} actionable change(s) ready to apply.`,
+      status: findingsCount === 0 && changesCount === 0 ? 'warning' : 'ok'
+    });
+
+    console.log('[auditScoringMatrixTemplate] STEP 4: LLM response received', {
+      responseType: typeof llmResponse,
+      hasFindings: Array.isArray(llmResponse?.findings),
+      findingsCount,
+      hasRecommendedBlocks: Array.isArray(llmResponse?.recommended_blocks),
+      recommendedBlocksCount: recBlocksCount,
+      hasChanges: Array.isArray(llmResponse?.changes),
+      changesCount,
+      findingTitles: (llmResponse?.findings || []).map((f: any) => f?.title)
+    });
+
+    if (!llmResponse || (!llmResponse.findings?.length && !llmResponse.changes?.length)) {
+      console.log('[auditScoringMatrixTemplate] WARNING: LLM returned no findings or changes — possible empty result');
+    }
+
+    return Response.json({ success: true, data: llmResponse, process_trace: processTrace });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
