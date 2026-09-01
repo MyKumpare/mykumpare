@@ -32,6 +32,7 @@ import BoardMeetingDashboard from './pages/BoardMeetingDashboard';
 import ActionItemsKanban from './pages/ActionItemsKanban';
 import ActionItemsDashboard from './pages/ActionItemsDashboard';
 import FirmGeographicMap from './pages/FirmGeographicMap';
+import FirmGeographicDashboard from './pages/FirmGeographicDashboard';
 import ContactNetwork from './pages/ContactNetwork';
 import DegreesOfSeparation from './pages/DegreesOfSeparation';
 import ContactNetworkDashboard from './pages/ContactNetworkDashboard';
@@ -137,6 +138,7 @@ const AuthenticatedApp = () => {
       <Route path="/ActionItemsKanban" element={<LayoutWrapper currentPageName="ActionItemsKanban"><ActionItemsKanban /></LayoutWrapper>} />
       <Route path="/ActionItemsDashboard" element={<LayoutWrapper currentPageName="ActionItemsDashboard"><ActionItemsDashboard /></LayoutWrapper>} />
       <Route path="/FirmGeographicMap" element={<LayoutWrapper currentPageName="FirmGeographicMap"><FirmGeographicMap /></LayoutWrapper>} />
+      <Route path="/FirmGeographicDashboard" element={<LayoutWrapper currentPageName="FirmGeographicDashboard"><FirmGeographicDashboard /></LayoutWrapper>} />
       <Route path="/ContactNetwork" element={<LayoutWrapper currentPageName="ContactNetwork"><ContactNetwork /></LayoutWrapper>} />
       <Route path="/DegreesOfSeparation" element={<LayoutWrapper currentPageName="DegreesOfSeparation"><DegreesOfSeparation /></LayoutWrapper>} />
       <Route path="/ContactNetworkDashboard" element={<LayoutWrapper currentPageName="ContactNetworkDashboard"><ContactNetworkDashboard /></LayoutWrapper>} />
