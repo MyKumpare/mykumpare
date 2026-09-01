@@ -11,8 +11,9 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, Download } from "lucide-react";
 import FirmMultiSelector from "@/components/firms/FirmMultiSelector";
+import { Button } from "@/components/ui/button";
 import { usePersistentState } from "@/hooks/usePersistentState";
 
 const MAX_FIRMS = 6;
@@ -87,11 +88,50 @@ export default function FirmAumTrendCard({ firms = [] }) {
     return { chartData: data, hasData: data.length > 0 };
   }, [selectedFirms]);
 
+  const exportCsv = () => {
+    if (!hasData || selectedFirms.length === 0) return;
+
+    const headers = ["Month End Date", ...selectedFirms.flatMap((f) => [`${f.name} - AUM`, `${f.name} - Net Flow`])];
+    const rows = chartData.map((entry) => {
+      const row = [entry.date];
+      for (const firm of selectedFirms) {
+        row.push(entry[`${firm.id}_aum`] ?? "");
+        row.push(entry[`${firm.id}_flow`] ?? "");
+      }
+      return row;
+    });
+
+    const csv = [headers, ...rows]
+      .map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `firm_aum_trends_${format(new Date(), "yyyy-MM-dd")}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="border border-gray-200 rounded-xl bg-white shadow-sm p-4">
       <div className="flex items-center gap-2 mb-3">
         <TrendingUp className="w-4 h-4 text-indigo-600" />
         <h3 className="text-sm font-semibold text-gray-800">Firm AUM &amp; Net Flow Trends</h3>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={exportCsv}
+          disabled={!hasData || selectedFirms.length === 0}
+          className="ml-auto h-7 px-2 text-xs gap-1"
+        >
+          <Download className="w-3 h-3" />
+          Export CSV
+        </Button>
       </div>
 
       <FirmMultiSelector
