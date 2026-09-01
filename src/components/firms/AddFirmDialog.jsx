@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Pencil, Plus, Upload, X, Globe, AlertTriangle, Linkedin, Loader2, History } from "lucide-react";
+import { Pencil, Plus, Upload, X, Globe, AlertTriangle, Linkedin, Loader2, History, Network } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
@@ -44,6 +44,7 @@ import XponanceContactPicker from "@/components/xponance/XponanceContactPicker";
 import FirmContactPhotoGallery from "./FirmContactPhotoGallery";
 import FirmContactRelationshipMap from "./FirmContactRelationshipMap";
 import FirmNetworkMap from "./FirmNetworkMap";
+import FirmNetworkMapModal from "./FirmNetworkMapModal";
 import { GEOGRAPHIC_REGIONS, deriveGeographicRegionFromAddresses, deriveLocationFromAddresses } from "./geographicRegions";
 import FirmLocationField from "./FirmLocationField";
 import EnrichmentApprovalDialog from "./EnrichmentApprovalDialog";
@@ -213,6 +214,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const [firmFieldConflicts, setFirmFieldConflicts] = useState(null);
   const [logoZoomOpen, setLogoZoomOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [networkMapOpen, setNetworkMapOpen] = useState(false);
   const [aumDirty, setAumDirty] = useState(false);
   const aumSaveRef = useRef(null);
   const nameInputRef = useRef(null);
@@ -1517,10 +1519,24 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
             <TabsContent value="relationship-map" className="space-y-3">
               {editingFirm ? (
-                <FirmContactRelationshipMap
-                  firmId={editingFirm.id}
-                  onContactClick={onContactClick ? (c) => { handleClose(); onContactClick(c); } : undefined}
-                />
+                <>
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-1.5 text-indigo-600 border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
+                      onClick={() => setNetworkMapOpen(true)}
+                    >
+                      <Network className="w-4 h-4" />
+                      View Full Network Map
+                    </Button>
+                  </div>
+                  <FirmContactRelationshipMap
+                    firmId={editingFirm.id}
+                    onContactClick={onContactClick ? (c) => { handleClose(); onContactClick(c); } : undefined}
+                  />
+                </>
               ) : (
                 <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
                   Save the firm first to view the relationship map
@@ -2116,6 +2132,14 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
       />
       {guardDialog}
     </Dialog>
+
+    <FirmNetworkMapModal
+      open={networkMapOpen}
+      onOpenChange={setNetworkMapOpen}
+      firmId={editingFirm?.id}
+      firmName={editingFirm?.name}
+      onFirmClick={onFirmClick ? (f) => { handleClose(); onFirmClick(f); } : undefined}
+    />
 
     <ImageZoomDialog
       open={logoZoomOpen}
