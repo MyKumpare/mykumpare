@@ -55,10 +55,19 @@ Your task is to make the rubric more rigorous, fair, and efficient. Analyze the 
 ## Current Rubric Structure
 ${JSON.stringify(rubricData, null, 2)}
 
+## CRITICAL INSTRUCTION — YOU MUST FIND ISSUES
+No real-world scoring rubric is perfect. A rubric with ${rubricData.length} blocks and multiple criteria ALWAYS has room for improvement in bias, redundancy, descriptor quality, weight balance, or efficiency. You MUST produce AT LEAST 3 findings and AT LEAST 3 discrete changes. An empty result is a failure — it means you did not analyze the rubric seriously. Scrutinize every block, every criterion name, every descriptor text, and every weight. Look hard for:
+- Ambiguous or subjective descriptor wording that two analysts could score differently
+- Weights that don't sum to exactly 100, or that over/under-weight a block relative to its importance
+- Criteria that overlap with criteria in other blocks
+- Missing criteria that any due-diligence rubric should have (e.g., risk management, fee alignment, capacity, team stability)
+- Descriptors where adjacent levels (e.g., 3 vs 4) are not clearly distinguishable
+- Criteria that are too vague to be observable or measurable
+
 ## Instructions
-- Produce a comprehensive set of findings. Each finding has a category (one of: "Bias", "Redundancy", "Scoring Logic", "Weight Balance", "Efficiency", "Effectiveness"), a severity (high/medium/low), a short title, and a description.
-- Produce a COMPLETE recommended rubric structure ("recommended_blocks") that implements your improvements. Reuse existing block/criterion IDs wherever an item is kept or only lightly edited; generate new IDs (strings like "rec_b_<n>" for blocks and "rec_c_<n>" for criteria) only for genuinely new items. Keep the same schema as the input. Ensure weights sum to 100.
-- Produce a list of discrete, independently-applicable "changes". Each change must be self-contained and reference existing IDs from the input rubric where it modifies an existing item. Each change has:
+- Produce a comprehensive set of findings (AT LEAST 3). Each finding has a category (one of: "Bias", "Redundancy", "Scoring Logic", "Weight Balance", "Efficiency", "Effectiveness"), a severity (high/medium/low), a short title, and a description.
+- Produce a COMPLETE recommended rubric structure ("recommended_blocks") that implements your improvements. Reuse existing block/criterion IDs wherever an item is kept or only lightly edited; generate new IDs (strings like "rec_b_<n>" for blocks and "rec_c_<n>" for criteria) only for genuinely new items. Keep the same schema as the input. Ensure weights sum to 100. The recommended_blocks MUST differ from the input — it is the improved version.
+- Produce a list of discrete, independently-applicable "changes" (AT LEAST 3). Each change must be self-contained and reference existing IDs from the input rubric where it modifies an existing item. Each change has:
   - id: a short unique string (e.g. "chg_1")
   - type: one of "rename_block" | "adjust_weight" | "rename_criterion" | "improve_descriptor" | "add_criterion" | "remove_criterion" | "merge_criteria" | "add_block" | "remove_block"
   - category: one of the finding categories
@@ -192,7 +201,8 @@ Return ONLY a JSON object with this exact shape:
     const llmResponse = await base44.integrations.Core.InvokeLLM({
       prompt,
       response_json_schema: responseSchema,
-      add_context_from_internet: false
+      add_context_from_internet: false,
+      model: "claude_sonnet_4_6"
     });
 
     return Response.json({ success: true, data: llmResponse });
