@@ -110,29 +110,9 @@ export async function discoverContactPhoto(
     }
   }
 
-  // 2) Fallback: general web search for the person's headshot.
-  if (!foundPhoto) {
-    sourcesTried.push('General web search');
-    try {
-      const res = await base44.integrations.Core.InvokeLLM({
-        prompt: `Find a professional headshot/photo of "${fullName}"${firmIds.length > 0 ? ' (an investment professional)' : ''}. Search the web for their photo on their firm's website, LinkedIn, or other professional sources. Return the direct image URL (the src of the <img> tag pointing to the photo). If you cannot find a photo, return an empty string.`,
-        add_context_from_internet: true,
-        model: 'gemini_3_flash',
-        response_json_schema: {
-          type: 'object',
-          properties: {
-            photo_url: { type: 'string' },
-            source_url: { type: 'string' },
-          },
-        },
-      });
-      const photo = cleanStr(res?.photo_url);
-      if (photo) {
-        foundPhoto = photo;
-        foundSource = 'web_search';
-      }
-    } catch { /* web search may fail; continue */ }
-  }
+  // NOTE: The general web-search fallback was removed to prevent stock/generic
+  // photos from being assigned to contacts. Only photos found on the firm's
+  // own website are used; if none is found, the contact's photo is left blank.
 
   return {
     photo_url: foundPhoto,
