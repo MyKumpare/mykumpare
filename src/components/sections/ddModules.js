@@ -1,5 +1,5 @@
 import {
-  LayoutDashboard, PieChart, CalendarDays, Files, ClipboardCheck, FileText,
+  LayoutDashboard, PieChart, CalendarDays, Files, ClipboardCheck, FileText, ShieldCheck,
 } from "lucide-react";
 
 /**
@@ -15,6 +15,7 @@ export const DD_MODULES = [
   { key: "documents", label: "Documents", icon: Files, color: "text-teal-600", bg: "bg-teal-50", border: "border-teal-200" },
   { key: "forms", label: "Forms", icon: ClipboardCheck, color: "text-violet-600", bg: "bg-violet-50", border: "border-violet-200" },
   { key: "templates", label: "Templates", icon: FileText, color: "text-cyan-600", bg: "bg-cyan-50", border: "border-cyan-200" },
+  { key: "compliance-tracker", label: "Compliance Tracker", icon: ShieldCheck, color: "text-rose-600", bg: "bg-rose-50", border: "border-rose-200", to: "/ComplianceRenewalDashboard" },
 ];
 
 export const DD_MODULE_MAP = Object.fromEntries(DD_MODULES.map((m) => [m.key, m]));
@@ -22,4 +23,5 @@ export const DD_MODULE_MAP = Object.fromEntries(DD_MODULES.map((m) => [m.key, m]
 export const DD_DEFAULT_CATEGORIES = [
   { id: "pipeline", name: "Pipeline", items: ["dd-board", "dd-stats", "scoring-calendar"] },
   { id: "library", name: "Library", items: ["documents", "forms", "templates"] },
+  { id: "compliance", name: "Compliance", items: ["compliance-tracker"] },
 ];
