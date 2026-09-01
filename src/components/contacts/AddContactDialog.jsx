@@ -1086,41 +1086,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                     <ContactTagChips tags={tags} />
                   </div>
                 )}
-                {editingContact && (
-                  <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <ContactCentralityRank contactId={editingContact.id} />
-                    <ContactInfluenceScore
-                      contactId={editingContact.id}
-                      firmIds={firmIds}
-                      firms={firms}
-                      onFirmClick={onFirmClick}
-                      onProductClick={onProductClick}
-                    />
-                  </div>
-                )}
-                {editingContact && viewMode && (
-                  <ContactQuickActions
-                    contact={editingContact}
-                    onEdited={(updated) => {
-                      // Refresh the contact list so the header chips update
-                      queryClient.invalidateQueries({ queryKey: ["contacts"] });
-                    }}
-                  />
-                )}
-                {viewMode && (
-                  <div className="mt-1.5">
-                    <ContactEngagementStatusTracker
-                      value={engagementStatus}
-                      onChange={(v) => {
-                        setEngagementStatus(v);
-                        if (editingContact) {
-                          updateMutation.mutate({ id: editingContact.id, data: { engagement_status: v } });
-                        }
-                      }}
-                      compact
-                    />
-                  </div>
-                )}
+
               </div>
             </div>
           ) : editingContact ? (
