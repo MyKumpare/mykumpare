@@ -1,5 +1,7 @@
 import React, { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import SectionPageHeader from "@/components/shared/SectionPageHeader";
 import SectionModuleGrid from "@/components/shared/SectionModuleGrid";
@@ -8,6 +10,7 @@ import { useSavedSectionLayout } from "@/components/shared/useSavedSectionLayout
 import { LayoutDashboard, Pencil, Eye, Save, Users, Building2, Upload, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
+import FirmAumTrendCard from "@/components/dashboard/FirmAumTrendCard";
 
 export default function SectionDashboard() {
   const navigate = useNavigate();
@@ -15,6 +18,12 @@ export default function SectionDashboard() {
   const [mode, setMode] = usePersistentState("dash_mode", "edit");
   const [layoutApi, setLayoutApi] = useState(null);
   const { userLayout, firmwideLayout, saveLayout, isSaving } = useSavedSectionLayout("dashboard");
+
+  const { data: firms = [] } = useQuery({
+    queryKey: ["firms"],
+    queryFn: () => base44.entities.Firm.list("-created_date", 5000),
+    select: (data) => data.filter((f) => !f.deleted_at),
+  });
 
   const handleSelect = (key) => {
     const mod = DASHBOARD_MODULE_MAP[key];
@@ -165,6 +174,11 @@ export default function SectionDashboard() {
             Preview mode — click a card to open it. Switch to Edit to rearrange.
           </p>
         )}
+
+        {/* AUM & Net Flow trend chart for selected firms */}
+        <div className="mb-4">
+          <FirmAumTrendCard firms={firms} />
+        </div>
 
         <SectionModuleGrid
           modules={DASHBOARD_MODULES}

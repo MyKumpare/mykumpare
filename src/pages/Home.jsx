@@ -1080,11 +1080,6 @@ export default function Home() {
         {/* Dashboard section — link to Overview dashboard page */}
         <DashboardNavSection onOpenDashboard={() => navigate("/Dashboard")} />
 
-        {/* AUM & Net Flow trend chart for selected firms */}
-        <div className="mt-3">
-          <FirmAumTrendCard firms={activeFirms} />
-        </div>
-
         {/* Due Diligence section — with Documents, Forms, Templates nested as sub-items */}
         <div ref={formsRef} />
         <DueDiligenceNavSection
