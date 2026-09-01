@@ -249,7 +249,7 @@ export default function FirmGeographicMap() {
                       .map((f) => (
                         <Link
                           key={f.id}
-                          to="/"
+                          to={`/Home?openFirm=${f.id}`}
                           className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-muted transition-colors group"
                           title={f.name}
                         >
@@ -306,7 +306,7 @@ export default function FirmGeographicMap() {
                     {visibleFirms.slice(0, 200).map((f) => (
                       <Link
                         key={f.id}
-                        to="/"
+                        to={`/Home?openFirm=${f.id}`}
                         className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-muted transition-colors group"
                         title={f.name}
                       >
