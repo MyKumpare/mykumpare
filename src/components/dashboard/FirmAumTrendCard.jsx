@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import { TrendingUp, Download } from "lucide-react";
 import FirmMultiSelector from "@/components/firms/FirmMultiSelector";
+import PeerGroupTrendLoader from "@/components/dashboard/PeerGroupTrendLoader";
 import { Button } from "@/components/ui/button";
 import { usePersistentState } from "@/hooks/usePersistentState";
 
@@ -134,11 +135,18 @@ export default function FirmAumTrendCard({ firms = [] }) {
         </Button>
       </div>
 
-      <FirmMultiSelector
-        firms={firms}
-        selectedIds={selectedIds}
-        onChange={(ids) => setSelectedIds(ids.slice(0, MAX_FIRMS))}
-      />
+      <div className="flex items-center gap-2 flex-wrap">
+        <FirmMultiSelector
+          firms={firms}
+          selectedIds={selectedIds}
+          onChange={(ids) => setSelectedIds(ids.slice(0, MAX_FIRMS))}
+        />
+        <PeerGroupTrendLoader
+          firms={firms}
+          maxFirms={MAX_FIRMS}
+          onApply={(ids) => setSelectedIds(ids)}
+        />
+      </div>
 
       {selectedFirms.length === 0 ? (
         <div className="mt-4 text-sm text-gray-400 italic text-center py-8 border border-dashed border-gray-200 rounded-xl">
