@@ -9,6 +9,7 @@ import { toast } from "@/components/ui/use-toast";
 
 export default function VCardPreviewDialog({ contact, firms = [], open, onOpenChange }) {
   const [copied, setCopied] = useState(false);
+  const [copiedInfo, setCopiedInfo] = useState(false);
 
   const vcardText = useMemo(() => {
     if (!contact) return "";
@@ -19,12 +20,50 @@ export default function VCardPreviewDialog({ contact, firms = [], open, onOpenCh
     ? [contact.first_name, contact.last_name].filter(Boolean).join(" ") || "Contact"
     : "";
 
+  const readableInfo = useMemo(() => {
+    if (!contact) return "";
+    const {
+      salutation, first_name, middle_name, last_name, suffix,
+      title, email, linkedin_url, phones = [], addresses = [], firm_ids = [],
+    } = contact;
+    const firmNames = (firm_ids || [])
+      .map((id) => firms.find((f) => f.id === id)?.name)
+      .filter(Boolean);
+    const fullName = [salutation, first_name, middle_name, last_name, suffix].filter(Boolean).join(" ");
+    const lines = [];
+    if (fullName) lines.push(fullName);
+    if (title) lines.push(title);
+    if (firmNames.length > 0) lines.push(firmNames.join("; "));
+    if (email) lines.push(email);
+    (phones || []).forEach((p) => {
+      const num = [p.country_code ? `+${p.country_code}` : "", p.area_code, p.number_mid, p.number_last].filter(Boolean).join("-");
+      if (num) lines.push(`${p.phone_type ? p.phone_type + ": " : ""}${num}`);
+    });
+    (addresses || []).forEach((a) => {
+      const parts = [a.address_line1, a.address_line2, a.city, a.state, a.postal_code, a.country].filter(Boolean).join(", ");
+      if (parts) lines.push(parts);
+    });
+    if (linkedin_url) lines.push(linkedin_url);
+    return lines.join("\n");
+  }, [contact, firms]);
+
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(vcardText);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
       toast({ title: "vCard copied to clipboard" });
+    } catch {
+      toast({ title: "Failed to copy", variant: "destructive" });
+    }
+  };
+
+  const handleCopyInfo = async () => {
+    try {
+      await navigator.clipboard.writeText(readableInfo);
+      setCopiedInfo(true);
+      setTimeout(() => setCopiedInfo(false), 2000);
+      toast({ title: "Contact info copied to clipboard" });
     } catch {
       toast({ title: "Failed to copy", variant: "destructive" });
     }
@@ -68,6 +107,10 @@ export default function VCardPreviewDialog({ contact, firms = [], open, onOpenCh
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+          <Button variant="outline" onClick={handleCopyInfo} className="gap-1.5">
+            {copiedInfo ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            {copiedInfo ? "Copied" : "Copy Contact Info"}
+          </Button>
           <Button onClick={handleDownload} className="bg-primary hover:bg-primary/90 text-white">
             <Download className="w-4 h-4 mr-1" /> Download .vcf
           </Button>
