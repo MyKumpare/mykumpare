@@ -1,10 +1,11 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   ReferenceLine, ReferenceArea, Legend
 } from "recharts";
-import { TrendingUp, Minus } from "lucide-react";
+import { TrendingUp, Minus, Calendar, ZoomIn, RotateCcw } from "lucide-react";
 import { computeWeightedScoreMulti } from "@/components/templates/scoringWeightLogic";
+import { format, parseISO, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
 
 function fmt(n) {
   if (n == null || isNaN(n)) return "—";
@@ -27,6 +28,9 @@ function median(values) {
  * time. Uses the same weighted-score logic as the scorecard so values match.
  */
 export default function ScoringPeerTrendChart({ score, peerScores = [], representativeScores = [], phase }) {
+  const [dateRange, setDateRange] = useState({ from: "", to: "" });
+  const [showFilter, setShowFilter] = useState(false);
+
   // All scoring versions for the current product on this template
   const productVersions = useMemo(() => {
     const versions = (peerScores || [])
@@ -74,9 +78,24 @@ export default function ScoringPeerTrendChart({ score, peerScores = [], represen
     };
   }, [representativeScores, phase]);
 
-  const hasVersions = productVersions.length > 0;
+  // Filter versions by the selected date range
+  const filteredVersions = useMemo(() => {
+    if (!dateRange.from && !dateRange.to) return productVersions;
+    const fromDate = dateRange.from ? startOfDay(parseISO(dateRange.from)) : null;
+    const toDate = dateRange.to ? endOfDay(parseISO(dateRange.to)) : null;
+    return productVersions.filter((p) => {
+      if (!p.date) return false;
+      const d = parseISO(p.date);
+      if (fromDate && isBefore(d, fromDate)) return false;
+      if (toDate && isAfter(d, toDate)) return false;
+      return true;
+    });
+  }, [productVersions, dateRange]);
+
+  const hasVersions = filteredVersions.length > 0;
   const hasBenchmark = peerBenchmark.mean != null;
-  const scoredPoints = productVersions.filter((p) => p.score != null);
+  const scoredPoints = filteredVersions.filter((p) => p.score != null);
+  const isFiltered = !!(dateRange.from || dateRange.to);
   const trend = useMemo(() => {
     if (scoredPoints.length < 2) return null;
     const first = scoredPoints[0].score;
@@ -86,12 +105,43 @@ export default function ScoringPeerTrendChart({ score, peerScores = [], represen
     return { dir: diff > 0 ? "up" : "down", diff };
   }, [scoredPoints]);
 
-  if (!hasVersions) {
+  if (productVersions.length === 0) {
     return (
       <div className="border border-gray-200 rounded-lg p-6 text-center text-xs text-gray-400">
         <TrendingUp className="w-6 h-6 mx-auto mb-2 text-gray-300" />
         No scoring history yet for this product. Once re-scored over time, the
         trend will appear here.
+      </div>
+    );
+  }
+
+  if (!hasVersions && isFiltered) {
+    return (
+      <div className="border border-gray-200 rounded-lg p-4 bg-white">
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div>
+            <h4 className="text-sm font-semibold flex items-center gap-1.5">
+              <TrendingUp className="w-4 h-4 text-indigo-600" />
+              Score Trend Over Time ({phase.label})
+            </h4>
+            <p className="text-[11px] text-gray-500 mt-0.5">
+              No scoring cycles fall within the selected date range.
+            </p>
+          </div>
+        </div>
+        <div className="text-center text-xs text-gray-400 py-8">
+          <ZoomIn className="w-6 h-6 mx-auto mb-2 text-gray-300" />
+          No data in this period. Adjust or clear the date range to see more.
+        </div>
+        <div className="flex justify-center mt-2">
+          <button
+            type="button"
+            onClick={() => setDateRange({ from: "", to: "" })}
+            className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+          >
+            <RotateCcw className="w-3.5 h-3.5" /> Clear date range
+          </button>
+        </div>
       </div>
     );
   }
@@ -105,7 +155,8 @@ export default function ScoringPeerTrendChart({ score, peerScores = [], represen
             Score Trend Over Time ({phase.label})
           </h4>
           <p className="text-[11px] text-gray-500 mt-0.5">
-            This product's weighted {phase.label.toLowerCase()} across {productVersions.length} scoring
+            This product's weighted {phase.label.toLowerCase()} across {filteredVersions.length}
+            {" "}of {productVersions.length} scoring
             cycle{productVersions.length > 1 ? "s" : ""}.
             {hasBenchmark ? " Peer group benchmark shown as a shaded band with mean & median lines." : ""}
           </p>
@@ -136,8 +187,69 @@ export default function ScoringPeerTrendChart({ score, peerScores = [], represen
         )}
       </div>
 
+      {/* Date range filter */}
+      <div className="flex flex-wrap items-center gap-2 mb-3 pb-3 border-b border-gray-100">
+        <button
+          type="button"
+          onClick={() => setShowFilter(s => !s)}
+          className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-md border transition-colors ${
+            showFilter || isFiltered
+              ? "bg-indigo-50 text-indigo-700 border-indigo-200"
+              : "text-gray-600 hover:bg-gray-50 border-gray-200"
+          }`}
+        >
+          <Calendar className="w-3.5 h-3.5" />
+          Date Range
+          {isFiltered && (
+            <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-indigo-600 text-white text-[10px]">
+              Active
+            </span>
+          )}
+        </button>
+        {isFiltered && (
+          <span className="text-[11px] text-gray-500">
+            {dateRange.from ? format(parseISO(dateRange.from), "MMM d, yyyy") : "Start"}
+            {" → "}
+            {dateRange.to ? format(parseISO(dateRange.to), "MMM d, yyyy") : "End"}
+          </span>
+        )}
+        {showFilter && (
+          <div className="flex flex-wrap items-center gap-2 w-full mt-1">
+            <div className="flex items-center gap-1.5">
+              <label className="text-[11px] text-gray-500 font-medium">From</label>
+              <input
+                type="date"
+                value={dateRange.from}
+                max={dateRange.to || undefined}
+                onChange={(e) => setDateRange(r => ({ ...r, from: e.target.value }))}
+                className="h-8 text-xs border border-gray-200 rounded-md px-2 focus:outline-none focus:border-indigo-400"
+              />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <label className="text-[11px] text-gray-500 font-medium">To</label>
+              <input
+                type="date"
+                value={dateRange.to}
+                min={dateRange.from || undefined}
+                onChange={(e) => setDateRange(r => ({ ...r, to: e.target.value }))}
+                className="h-8 text-xs border border-gray-200 rounded-md px-2 focus:outline-none focus:border-indigo-400"
+              />
+            </div>
+            {isFiltered && (
+              <button
+                type="button"
+                onClick={() => { setDateRange({ from: "", to: "" }); }}
+                className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-red-600 font-medium px-2 py-1"
+              >
+                <RotateCcw className="w-3 h-3" /> Clear
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
       <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={productVersions} margin={{ top: 10, right: 20, bottom: 5, left: -10 }}>
+        <LineChart data={filteredVersions} margin={{ top: 10, right: 20, bottom: 5, left: -10 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
           <XAxis dataKey="label" tick={{ fontSize: 11 }} />
           <YAxis domain={[1, 5]} ticks={[1, 2, 3, 4, 5]} tick={{ fontSize: 11 }} />
