@@ -161,7 +161,7 @@ export default function FirmContactRelationshipMap({ firmId, onContactClick }) {
           <Share2 className="w-8 h-8 text-gray-300 mb-2" />
           <p className="text-sm text-gray-500 font-medium">No cross-firm connections yet</p>
           <p className="text-xs text-gray-400 mt-1 max-w-xs">
-            Connections appear when contacts at this firm also share another firm in common.
+            None of this firm's {stats.contactCount} contacts are linked to another firm. Link contacts to additional firms (via the contact form's firm associations) to see how they connect across firms.
           </p>
         </div>
       ) : (
