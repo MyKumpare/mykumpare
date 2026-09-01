@@ -4,12 +4,16 @@ import { base44 } from "@/api/base44Client";
 import { Link } from "react-router-dom";
 import {
   ArrowLeft, Globe, ShieldCheck, Building2, MapPin, Loader2, Landmark,
+  Search, X, Landmark as LandmarkIcon,
 } from "lucide-react";
 import {
   ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from "recharts";
 import { useAuth } from "@/lib/AuthContext";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 
 const REGION_ORDER = [
   "North America",
@@ -55,6 +59,8 @@ function firmCountry(f) {
 export default function FirmGeographicDashboard() {
   const { user } = useAuth();
   const [dataScope, setDataScope] = useState("my");
+  const [cityFilter, setCityFilter] = useState("__all__");
+  const [regulatorFilter, setRegulatorFilter] = useState("__all__");
   const linkedFirmId = user?.data?.linked_firm_id;
 
   const { data: firms = [], isLoading } = useQuery({
@@ -68,20 +74,64 @@ export default function FirmGeographicDashboard() {
     return active.filter((f) => f.tenant_id === linkedFirmId);
   }, [firms, dataScope, linkedFirmId]);
 
+  // Extract unique cities from firm addresses
+  const cityOptions = useMemo(() => {
+    const set = new Set();
+    for (const f of scopedFirms) {
+      for (const a of f.addresses || []) {
+        if (a.city) set.add(a.city);
+      }
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [scopedFirms]);
+
+  // Extract unique governing regulatory bodies from legal_compliance jurisdictions
+  const regulatorOptions = useMemo(() => {
+    const set = new Set();
+    for (const f of scopedFirms) {
+      const jurisdictions = f.legal_compliance?.jurisdictions || [];
+      for (const j of jurisdictions) {
+        if (j.entityJurisdiction) set.add(j.entityJurisdiction);
+      }
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [scopedFirms]);
+
+  const hasFilters = cityFilter !== "__all__" || regulatorFilter !== "__all__";
+
+  // Firms matching the selected city and/or regulatory body filters
+  const filteredFirms = useMemo(() => {
+    if (!hasFilters) return [];
+    return scopedFirms.filter((f) => {
+      const cityMatch =
+        cityFilter === "__all__" ||
+        (f.addresses || []).some((a) => a.city === cityFilter);
+      const regMatch =
+        regulatorFilter === "__all__" ||
+        (f.legal_compliance?.jurisdictions || []).some(
+          (j) => j.entityJurisdiction === regulatorFilter
+        );
+      return cityMatch && regMatch;
+    });
+  }, [scopedFirms, cityFilter, regulatorFilter, hasFilters]);
+
+  // Use filtered firms when filters are active, otherwise all scoped firms
+  const displayFirms = hasFilters ? filteredFirms : scopedFirms;
+
   // Firms by geographic region
   const byRegion = useMemo(() => {
     const map = {};
-    for (const f of scopedFirms) {
+    for (const f of displayFirms) {
       const region = f.geographic_region || "Undefined";
       map[region] = (map[region] || 0) + 1;
     }
     return REGION_ORDER.filter((r) => map[r]).map((r) => ({ name: r, value: map[r] }));
-  }, [scopedFirms]);
+  }, [displayFirms]);
 
   // Registration status breakdown
   const byStatus = useMemo(() => {
     const map = { Registered: 0, "Auto-verified": 0, Unregistered: 0 };
-    for (const f of scopedFirms) {
+    for (const f of displayFirms) {
       if (f.registration_number) {
         if (f.registration_source_url) map["Auto-verified"] += 1;
         else map["Registered"] += 1;
@@ -92,12 +142,12 @@ export default function FirmGeographicDashboard() {
     return Object.entries(map)
       .filter(([, v]) => v > 0)
       .map(([name, value]) => ({ name, value }));
-  }, [scopedFirms]);
+  }, [displayFirms]);
 
   // Region × registration status (stacked bar)
   const regionByStatus = useMemo(() => {
     const map = {};
-    for (const f of scopedFirms) {
+    for (const f of displayFirms) {
       const region = f.geographic_region || "Undefined";
       if (!map[region]) map[region] = { region, Registered: 0, "Auto-verified": 0, Unregistered: 0 };
       if (f.registration_number) {
@@ -108,12 +158,12 @@ export default function FirmGeographicDashboard() {
       }
     }
     return REGION_ORDER.filter((r) => map[r]).map((r) => map[r]);
-  }, [scopedFirms]);
+  }, [displayFirms]);
 
   // Top countries
   const byCountry = useMemo(() => {
     const map = {};
-    for (const f of scopedFirms) {
+    for (const f of displayFirms) {
       const country = firmCountry(f);
       if (!country) continue;
       map[country] = (map[country] || 0) + 1;
@@ -122,12 +172,12 @@ export default function FirmGeographicDashboard() {
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 10);
-  }, [scopedFirms]);
+  }, [displayFirms]);
 
   // Firms by type
   const byType = useMemo(() => {
     const map = {};
-    for (const f of scopedFirms) {
+    for (const f of displayFirms) {
       const types = getFirmTypes(f);
       const list = types.length ? types : ["Uncategorized"];
       for (const t of list) map[t] = (map[t] || 0) + 1;
@@ -135,13 +185,13 @@ export default function FirmGeographicDashboard() {
     return Object.entries(map)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
-  }, [scopedFirms]);
+  }, [displayFirms]);
 
-  const totalFirms = scopedFirms.length;
-  const registeredCount = scopedFirms.filter((f) => f.registration_number).length;
+  const totalFirms = displayFirms.length;
+  const registeredCount = displayFirms.filter((f) => f.registration_number).length;
   const registeredPct = totalFirms ? Math.round((registeredCount / totalFirms) * 100) : 0;
   const regionsCovered = byRegion.filter((r) => r.name !== "Undefined").length;
-  const countriesCovered = new Set(scopedFirms.map(firmCountry).filter(Boolean)).size;
+  const countriesCovered = new Set(displayFirms.map(firmCountry).filter(Boolean)).size;
 
   return (
     <div className="min-h-screen bg-gray-50/80">
@@ -181,11 +231,63 @@ export default function FirmGeographicDashboard() {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        {/* Filter bar — search by city or governing regulatory body */}
+        {!isLoading && scopedFirms.length > 0 && (
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Search className="w-4 h-4 text-indigo-600" />
+              <h3 className="text-sm font-semibold text-gray-800">Filter Firms</h3>
+              {hasFilters && (
+                <button
+                  onClick={() => { setCityFilter("__all__"); setRegulatorFilter("__all__"); }}
+                  className="ml-auto flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700"
+                >
+                  <X className="w-3 h-3" /> Clear filters
+                </button>
+              )}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-[11px] font-medium text-gray-500 mb-1 flex items-center gap-1">
+                  <MapPin className="w-3 h-3" /> City
+                </label>
+                <Select value={cityFilter} onValueChange={setCityFilter}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="All cities" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">All cities</SelectItem>
+                    {cityOptions.map((c) => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-[11px] font-medium text-gray-500 mb-1 flex items-center gap-1">
+                  <LandmarkIcon className="w-3 h-3" /> Governing Regulatory Body
+                </label>
+                <Select value={regulatorFilter} onValueChange={setRegulatorFilter}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="All regulators" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">All regulators</SelectItem>
+                    {regulatorOptions.map((r) => (
+                      <SelectItem key={r} value={r}>{r}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        )}
+
         {isLoading ? (
           <div className="flex items-center justify-center py-24 text-gray-400">
             <Loader2 className="w-7 h-7 animate-spin" />
           </div>
-        ) : totalFirms === 0 ? (
+        ) : totalFirms === 0 && !hasFilters ? (
           <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-500">
             No firms found for the selected scope.
           </div>
@@ -293,6 +395,70 @@ export default function FirmGeographicDashboard() {
                 </ResponsiveContainer>
               </ChartCard>
             </div>
+
+            {/* Filtered firm list — shown when city/regulator filters are active */}
+            {hasFilters && (
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Building2 className="w-4 h-4 text-indigo-600" />
+                  <h3 className="text-sm font-semibold text-gray-800">
+                    Matching Firms ({filteredFirms.length})
+                  </h3>
+                </div>
+                {filteredFirms.length === 0 ? (
+                  <div className="py-8 text-center text-sm text-gray-400">
+                    No firms match the selected filters.
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
+                    {filteredFirms.map((f) => {
+                      const hq = (f.addresses || []).find((a) => a.is_headquarters) || (f.addresses || [])[0];
+                      const city = hq?.city || "";
+                      const state = hq?.state || "";
+                      const country = hq?.country || "";
+                      const regulators = (f.legal_compliance?.jurisdictions || [])
+                        .map((j) => j.entityJurisdiction)
+                        .filter(Boolean);
+                      return (
+                        <Link
+                          key={f.id}
+                          to={`/?openFirm=${f.id}`}
+                          className="flex items-start gap-3 py-2.5 px-2 rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                          <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                            {f.logo_url ? (
+                              <img src={f.logo_url} alt="" className="w-full h-full object-contain" />
+                            ) : (
+                              <Building2 className="w-4 h-4 text-indigo-500" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">{f.name}</p>
+                            <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                              {city && (
+                                <span className="inline-flex items-center gap-0.5 text-[11px] text-gray-500">
+                                  <MapPin className="w-3 h-3" />{city}{state ? `, ${state}` : ""}{country ? `, ${country}` : ""}
+                                </span>
+                              )}
+                              {regulators.length > 0 && (
+                                <span className="inline-flex items-center gap-0.5 text-[11px] text-indigo-600">
+                                  <LandmarkIcon className="w-3 h-3" />{regulators.join(", ")}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          {f.registration_number && (
+                            <span className="inline-flex items-center gap-0.5 text-[11px] text-emerald-600 flex-shrink-0">
+                              <ShieldCheck className="w-3 h-3" />Registered
+                            </span>
+                          )}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </>
         )}
       </div>
