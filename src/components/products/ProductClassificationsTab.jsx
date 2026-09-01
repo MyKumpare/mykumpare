@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import XponancePeerGroupPicker from "./XponancePeerGroupPicker";
 
 const ASSET_CLASSES = ["Equity", "Fixed Income", "Private Equity", "Private Credit"];
 const GEOGRAPHIES = ["Global", "ACWI x US", "Developed Non-US", "Emerging Markets", "Frontier Markets", "US"];
@@ -51,13 +52,31 @@ function ReadOnlyMultiValue({ value = [] }) {
   );
 }
 
-export default function ProductClassificationsTab({ classifications, onChange, isEditing }) {
+export default function ProductClassificationsTab({ classifications, onChange, isEditing, productType }) {
   const set = (key, val) => onChange({ ...classifications, [key]: val });
 
   const assetClass = classifications?.asset_class || "";
 
   return (
     <div className="space-y-4 py-2">
+      {/* Xponance Peer Group assignment — Investment Manager Products only */}
+      {productType !== "Multi-Manager Product" && (
+        <FieldRow label="Xponance Peer Group">
+          {isEditing ? (
+            <XponancePeerGroupPicker
+              value={{ id: classifications?.xponance_peer_group_id || "", name: classifications?.xponance_peer_group_name || "" }}
+              onChange={(v) => {
+                set("xponance_peer_group_id", v.id);
+                set("xponance_peer_group_name", v.name);
+              }}
+              isEditing={isEditing}
+            />
+          ) : (
+            <ReadOnlyValue value={classifications?.xponance_peer_group_name} />
+          )}
+        </FieldRow>
+      )}
+
       {/* Asset Class */}
       <FieldRow label="Asset Class">
         {isEditing ? (

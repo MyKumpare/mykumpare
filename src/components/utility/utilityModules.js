@@ -1,7 +1,7 @@
 import {
   Gauge, Users, ArrowRightLeft, ScrollText, Ghost, Upload, Building, Package,
   Eraser, Tag, Briefcase, ClipboardCheck, UserX, Activity, Newspaper,
-  ShieldCheck, ExternalLink, TrendingUp, Network,
+  ShieldCheck, ExternalLink, TrendingUp, Network, UsersRound,
 } from "lucide-react";
 
 /**
@@ -14,6 +14,7 @@ import {
  * The key is used by the layout hook to track category membership and order.
  */
 export const UTILITY_MODULES = [
+  { key: "peer-groups", label: "Peer Groups", icon: UsersRound, color: "text-indigo-600", bg: "bg-indigo-50", border: "border-indigo-200" },
   { key: "benchmark", label: "Benchmark", icon: Gauge, color: "text-indigo-600", bg: "bg-indigo-50", border: "border-indigo-200" },
   { key: "cleanup", label: "Contact Cleanup", icon: Users, color: "text-rose-600", bg: "bg-rose-50", border: "border-rose-200" },
   { key: "bulk-merge", label: "Bulk Merge", icon: ArrowRightLeft, color: "text-rose-600", bg: "bg-rose-50", border: "border-rose-200" },
@@ -57,7 +58,7 @@ export function buildDefaultUtilityCategories({ isAdmin, isManagement }) {
   const cats = [
     { id: "data-cleanup", name: "Data Cleanup", items: ["cleanup", "bulk-merge", "orphans", "dd-cleanup", "orphaned-contacts", "placeholder-cleanup", "firm-type-validation", "experience-option-cleanup"] },
     { id: "imports", name: "Imports", items: ["import-contacts", "import-firms", "import-products", "import-jobs"] },
-    { id: "reference", name: "Reference", items: ["benchmark", "enrichment-logs"] },
+    { id: "reference", name: "Reference", items: ["peer-groups", "benchmark", "enrichment-logs"] },
     { id: "portal", name: "Portal", items: ["ext-portal"] },
   ];
   if (isAdmin) cats.push({ id: "admin-tools", name: "Admin", items: ["news-scrub-settings", "admin"] });

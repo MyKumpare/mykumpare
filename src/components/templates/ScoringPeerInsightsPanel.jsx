@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { Search, X, Users, BarChart3, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
+import { Search, X, Users, BarChart3, ChevronDown, ChevronRight, Loader2, UserCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   computeWeightedScoreMulti,
@@ -86,6 +86,23 @@ export default function ScoringPeerInsightsPanel({ score, template }) {
   const [expandedBlocks, setExpandedBlocks] = useState({});
 
   const phase = PHASES.find((p) => p.key === phaseKey) || PHASES[0];
+
+  // Fetch the current product to discover its assigned Xponance Peer Group
+  const { data: currentProduct } = useQuery({
+    queryKey: ["product", score?.product_id],
+    queryFn: () => base44.entities.Product.get(score.product_id),
+    enabled: !!score?.product_id,
+  });
+
+  const peerGroupId = currentProduct?.xponance_peer_group_id || "";
+  const peerGroupName = currentProduct?.xponance_peer_group_name || "";
+
+  // Fetch the peer group to get its member product IDs
+  const { data: peerGroup } = useQuery({
+    queryKey: ["xponancePeerGroup", peerGroupId],
+    queryFn: () => base44.entities.XponancePeerGroup.get(peerGroupId),
+    enabled: !!peerGroupId,
+  });
 
   // Fetch all scoring matrices for this template (peers + current)
   const { data: peerScores = [], isLoading } = useQuery({
@@ -228,6 +245,16 @@ export default function ScoringPeerInsightsPanel({ score, template }) {
     `${p.product_name} ${p.firm_name}`.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Load the product's assigned peer group: select all its members that have
+  // scores on this template (intersected with the available peer products).
+  const loadPeerGroup = () => {
+    const memberIds = peerGroup?.member_product_ids || [];
+    if (!memberIds.length) return;
+    const availableIds = new Set(peerProducts.map((p) => p.product_id));
+    const selectable = memberIds.filter((id) => availableIds.has(id));
+    setSelectedProductIds(selectable);
+  };
+
   const hasPeers = representativeScores.length > 0;
 
   return (
@@ -259,6 +286,22 @@ export default function ScoringPeerInsightsPanel({ score, template }) {
             ))}
           </select>
         </div>
+
+        {peerGroupId && (
+          <div className="flex flex-col gap-1">
+            <label className="text-[11px] font-medium text-gray-500">Assigned Peer Group</label>
+            <button
+              type="button"
+              onClick={loadPeerGroup}
+              className="h-9 inline-flex items-center gap-1.5 rounded-md border border-indigo-300 bg-indigo-50 px-3 text-xs font-medium text-indigo-700 hover:bg-indigo-100"
+              title="Select all members of this product's assigned peer group"
+            >
+              <UserCheck className="w-3.5 h-3.5" />
+              Load “{peerGroupName}”
+              <span className="text-indigo-400">({(peerGroup?.member_product_ids || []).length})</span>
+            </button>
+          </div>
+        )}
 
         <div className="flex flex-col gap-1 flex-1 min-w-[280px]">
           <label className="text-[11px] font-medium text-gray-500">

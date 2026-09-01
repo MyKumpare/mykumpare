@@ -121,6 +121,14 @@
         "type": "string"
       }
     },
+    "xponance_peer_group_id": {
+      "type": "string",
+      "description": "ID of the Xponance Peer Group this Investment Manager product belongs to. Used to pre-populate peer comparison during scoring. Set via the Xponance Peer Group picker on the product Classifications tab. Empty for Multi-Manager Products."
+    },
+    "xponance_peer_group_name": {
+      "type": "string",
+      "description": "Name of the assigned Xponance Peer Group (denormalized for display in badges and lists)."
+    },
     "evestment_id": {
       "type": "string",
       "description": "eVestment database identifier for this product (external third-party reference)."

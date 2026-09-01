@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import AddBenchmarkDialog from "./AddBenchmarkDialog";
+import PeerGroupManager from "./PeerGroupManager";
 import DuplicateContactsReview from "@/components/contacts/DuplicateContactsReview";
 import BulkMergeContacts from "./BulkMergeContacts";
 import EnrichmentLogsView from "./EnrichmentLogsView";
@@ -288,6 +289,11 @@ export default function UtilitySection({ deletedCount, forceExpanded = false, on
                 />
               </div>
             </div>
+          )}
+
+          {/* Peer Groups view */}
+          {view === "peer-groups" && (
+            <PeerGroupManager />
           )}
 
           {/* Benchmark view */}

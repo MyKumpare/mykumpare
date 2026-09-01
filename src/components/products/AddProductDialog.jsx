@@ -80,6 +80,8 @@ const EMPTY_CLASSIFICATIONS = {
   diversification_classification: "",
   aapryl_style: "",
   vehicle_offerings: [],
+  xponance_peer_group_id: "",
+  xponance_peer_group_name: "",
 };
 
 function classificationsFromProduct(p) {
@@ -94,6 +96,8 @@ function classificationsFromProduct(p) {
     diversification_classification: p.diversification_classification || "",
     aapryl_style: p.aapryl_style || "",
     vehicle_offerings: p.vehicle_offerings || [],
+    xponance_peer_group_id: p.xponance_peer_group_id || "",
+    xponance_peer_group_name: p.xponance_peer_group_name || "",
   };
 }
 
@@ -976,6 +980,7 @@ export default function AddProductDialog({
                 classifications={classifications}
                 onChange={setClassifications}
                 isEditing={activelyEditing}
+                productType={productType}
               />
             </TabsContent>
 

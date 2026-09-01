@@ -1,0 +1,131 @@
+{
+  "name": "XponancePeerGroup",
+  "type": "object",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "ID of the firm (tenant) that owns this peer group. Set on creation to the creator's linked_firm_id; drives tenant isolation via RLS."
+    },
+    "name": {
+      "type": "string",
+      "description": "Name of the Xponance peer group (e.g. 'US Large Cap Growth Peers'). Must be unique within the tenant \u2014 duplicate names are blocked before creation."
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional description of the peer group's purpose or composition criteria."
+    },
+    "member_product_ids": {
+      "type": "array",
+      "description": "IDs of the Investment Manager products that belong to this peer group. These are the products compared against each other during scoring peer analysis.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "member_product_names": {
+      "type": "array",
+      "description": "Denormalized member product names for display (mirrors member_product_ids).",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.linked_firm_id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_edit": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.linked_firm_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.firm_role": "admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.firm_role": "co-admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.can_delete": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
