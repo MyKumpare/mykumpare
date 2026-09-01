@@ -11,8 +11,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Upload, FileText, Trash2, Plus, X, Save, Loader2,
+  Upload, FileText, Trash2, Plus, X, Save, Loader2, FileDown,
 } from "lucide-react";
+import { generateOnsiteVisitPdf } from "./onsiteVisitPdf";
 import { format } from "date-fns";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -438,6 +439,27 @@ export default function OnsiteVisitDialog({ open, onOpenChange, firm, editingVis
         </div>
 
         <DialogFooter>
+          {editingVisit && (
+            <Button
+              variant="outline"
+              onClick={() => generateOnsiteVisitPdf({
+                firm_name: firm?.name,
+                target_visit_date: targetDate,
+                actual_visit_date: actualDate,
+                visiting_analyst_name: analystName || "",
+                onsite_type: onsiteType,
+                status,
+                agenda,
+                notes,
+                follow_up_items: followUpItems,
+                attachments,
+              })}
+              className="gap-1"
+            >
+              <FileDown className="w-4 h-4" />
+              Download PDF
+            </Button>
+          )}
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={handleSave} disabled={saving} className="bg-primary hover:bg-primary/90 text-white gap-1">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
