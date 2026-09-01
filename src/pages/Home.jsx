@@ -796,6 +796,7 @@ export default function Home() {
       { label: "Firm Picker", icon: Building, onClick: () => setFirmPickerOpen(true) },
       { label: "Xponance Dashboard", icon: Users, onClick: () => navigate("/XponanceDashboard") },
       { label: "Geographic Map", icon: Globe, onClick: () => navigate("/FirmGeographicMap") },
+      { label: "Geo & Regulatory Dashboard", icon: Globe, onClick: () => navigate("/FirmGeographicDashboard") },
       { label: "Compare Firms", icon: GitCompare, onClick: () => navigate("/FirmComparison") },
     ] },
     { label: "Products", icon: Package, ref: null, color: "text-violet-600", activeBg: "bg-violet-50", onClick: () => setProductPickerOpen(true) },
