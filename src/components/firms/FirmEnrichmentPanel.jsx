@@ -5,9 +5,13 @@ import { Loader2, Globe, Check, X, Sparkles, AlertTriangle, ShieldCheck } from "
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
-import { enrichFirmFromWeb, autoFillMissingLinkedInUrls } from "../ai/firmEnrichment";
 import { validateEnrichment } from "../ai/enrichmentValidation";
-import { logEnrichmentAttempt } from "../ai/enrichmentLogger";
+import {
+  getEnrichmentState,
+  subscribeEnrichment,
+  startEnrichment,
+  resetEnrichment,
+} from "./enrichmentStore";
 import TeamHierarchyView from "./TeamHierarchyView";
 import { Network as NetworkIcon, List as ListIcon } from "lucide-react";
 
@@ -203,19 +207,44 @@ function SimilarConfirmDialog({ open, onOpenChange, items, onConfirm }) {
 // ─── Main panel ───
 
 export default function FirmEnrichmentPanel({ firmName, website, onApply, onClose, onLoadingChange, existingFirm, existingContacts = [] }) {
-  const [loading, setLoading] = useState(false);
-  const [linkedinFilling, setLinkedinFilling] = useState(false);
-  const [linkedinProgress, setLinkedinProgress] = useState(null);
-  const [enrichedData, setEnrichedData] = useState(null);
-  const [error, setError] = useState(null);
+  // The enrichment async operation lives in a module-level store so it
+  // survives this component unmounting (dialog close, page navigation,
+  // tab backgrounding). We subscribe to the store and mirror its
+  // loading/linkedinFilling flags up to the parent dialog so it blocks
+  // closing while work is in flight.
+  const [storeState, setStoreState] = useState(getEnrichmentState);
   const [acceptedFields, setAcceptedFields] = useState({});
   const [statusMap, setStatusMap] = useState({});
   const [similarConfirm, setSimilarConfirm] = useState(null);
   const [teamView, setTeamView] = useState(false);
+  const lastRunIdRef = useRef(0);
+
+  useEffect(() => {
+    const unsub = subscribeEnrichment((s) => setStoreState(s));
+    return unsub;
+  }, []);
+
+  // Only use the store's data if it belongs to THIS firm. A stale result
+  // from a different firm (left over from a previous enrichment) is treated
+  // as idle so the panel shows the fresh "Search Web" button instead.
+  const storeMatchesThisFirm = storeState.firmName === firmName && storeState.website === website;
+  const loading = storeMatchesThisFirm && storeState.loading;
+  const linkedinFilling = storeMatchesThisFirm && storeState.linkedinFilling;
+  const linkedinProgress = storeMatchesThisFirm ? storeState.linkedinProgress : null;
+  const enrichedData = storeMatchesThisFirm ? storeState.enrichedData : null;
+  const error = storeMatchesThisFirm ? storeState.error : null;
+
+  // Push loading state (including background LinkedIn phase) up to the
+  // parent so the dialog blocks closing during ALL enrichment work.
+  useEffect(() => {
+    onLoadingChange?.(loading || linkedinFilling);
+  }, [loading, linkedinFilling, onLoadingChange]);
+
   const loadingProgress = useLoadingProgress(loading);
 
   // Re-run duplicate validation + accepted-fields initialization whenever the
   // enriched data changes (including when background LinkedIn lookups update it).
+  // Uses the store's runId to detect a fresh enrichment vs a background update.
   const initValidation = (data) => {
     try {
       const { items } = validateEnrichment(data, existingFirm || {}, existingContacts);
@@ -252,74 +281,42 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
     }
   };
 
-  const handleFetch = async () => {
-    setLoading(true);
-    onLoadingChange?.(true);
-    setError(null);
-    setEnrichedData(null);
-    try {
-      const data = await enrichFirmFromWeb(firmName, website);
-
-      // Persist a log entry so the user can review enrichment results later.
-      let validationItems = [];
+  // Re-run validation whenever the store's enriched data or runId changes.
+  // On a new run (runId changed), reset accepted fields; on a background
+  // LinkedIn update (same runId, new enrichedData ref), preserve selections.
+  useEffect(() => {
+    if (!enrichedData) return;
+    const isNewRun = storeState.runId !== lastRunIdRef.current;
+    if (isNewRun) {
+      lastRunIdRef.current = storeState.runId;
+      initValidation(enrichedData);
+    } else {
+      // Background update — re-run validation but preserve the user's
+      // accepted-field toggles by merging into existing selections.
       try {
-        ({ items: validationItems } = validateEnrichment(data, existingFirm || {}, existingContacts));
-      } catch (e) {
-        console.error("Enrichment log validation error:", e);
+        const { items } = validateEnrichment(enrichedData, existingFirm || {}, existingContacts);
+        const smap = {};
+        const initial = {};
+        for (const it of items) {
+          smap[it.key] = it.status;
+          // Preserve existing toggle if the key still exists; otherwise init.
+          initial[it.key] = acceptedFields[it.key] != null
+            ? (it.status === "exact" ? false : acceptedFields[it.key])
+            : it.status !== "exact";
+        }
+        setStatusMap(smap);
+        setAcceptedFields(initial);
+      } catch {
+        initValidation(enrichedData);
       }
-      try {
-        logEnrichmentAttempt({
-          firmName,
-          websiteUrl: website || data.website || "",
-          status: "success",
-          validationItems,
-        });
-      } catch { /* logging is non-fatal */ }
-
-      // Show the review panel immediately — the website scrape already found
-      // most LinkedIn URLs from the HTML. The slower web-search fallback for
-      // any remaining contacts runs in the background and updates the panel
-      // incrementally so the user isn't blocked waiting for it.
-      setEnrichedData(data);
-      initValidation(data);
-
-      // Background LinkedIn auto-fill: find URLs the website scrape missed for
-      // the firm and any contacts still without one. Runs non-blocking so the
-      // user can review the already-fetched data while lookups are in flight.
-      setLinkedinFilling(true);
-      setLinkedinProgress(null);
-      (async () => {
-        try {
-          await autoFillMissingLinkedInUrls(data, website || data.website || "", (p) => {
-            setLinkedinProgress(p);
-          });
-          // Re-run validation to pick up any newly-found LinkedIn URLs.
-          setEnrichedData((prev) => {
-            if (!prev) return prev;
-            // Shallow-merge so React sees a new reference.
-            const updated = { ...prev };
-            if (data.linkedin_url) updated.linkedin_url = data.linkedin_url;
-            if (data.people) updated.people = data.people.map((p) => ({ ...p }));
-            initValidation(updated);
-            return updated;
-          });
-        } catch { /* non-fatal — keep enrichment data as-is */ }
-        setLinkedinFilling(false);
-        setLinkedinProgress(null);
-      })();
-    } catch (err) {
-      const msg = err.message || "Failed to fetch data from the web";
-      setError(msg);
-      logEnrichmentAttempt({
-        firmName,
-        websiteUrl: website || "",
-        status: "error",
-        errorMessage: msg,
-      });
-    } finally {
-      setLoading(false);
-      onLoadingChange?.(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enrichedData, storeState.runId]);
+
+  const handleFetch = () => {
+    // Fire-and-forget: the store owns the async operation and continues
+    // running even if this component unmounts before it completes.
+    startEnrichment(firmName, website, existingFirm, existingContacts);
   };
 
   const toggleField = (key) => {
@@ -415,7 +412,7 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
           <Button size="sm" onClick={handleFetch} className="h-8 text-xs bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5">
             <Sparkles className="w-3.5 h-3.5" /> Search Web
           </Button>
-          <Button size="sm" variant="ghost" onClick={onClose} className="h-8 text-xs text-gray-500">
+          <Button size="sm" variant="ghost" onClick={() => { resetEnrichment(); onClose(); }} className="h-8 text-xs text-gray-500">
             Cancel
           </Button>
         </div>
@@ -453,7 +450,7 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
         <p className="text-xs text-gray-600">{error}</p>
         <div className="flex gap-2">
           <Button size="sm" variant="outline" onClick={handleFetch} className="h-8 text-xs">Retry</Button>
-          <Button size="sm" variant="ghost" onClick={onClose} className="h-8 text-xs text-gray-500">Close</Button>
+          <Button size="sm" variant="ghost" onClick={() => { resetEnrichment(); onClose(); }} className="h-8 text-xs text-gray-500">Close</Button>
         </div>
       </div>
     );
@@ -482,7 +479,7 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
         <p className="text-xs text-gray-600">Could not extract enough information for <strong>{firmName}</strong>{website ? ` from ${website}` : ""}. Please verify the website URL is correct, or try again.</p>
         <div className="flex gap-2">
           <Button size="sm" variant="outline" onClick={handleFetch} className="h-8 text-xs">Try Again</Button>
-          <Button size="sm" variant="ghost" onClick={onClose} className="h-8 text-xs text-gray-500">Close</Button>
+          <Button size="sm" variant="ghost" onClick={() => { resetEnrichment(); onClose(); }} className="h-8 text-xs text-gray-500">Close</Button>
         </div>
       </div>
     );
@@ -524,7 +521,7 @@ export default function FirmEnrichmentPanel({ firmName, website, onApply, onClos
           <Check className="w-4 h-4 text-green-600" />
           <p className="text-sm font-medium text-gray-800">Data found — review & select</p>
         </div>
-        <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+        <button onClick={() => { resetEnrichment(); onClose(); }} className="text-gray-400 hover:text-gray-600">
           <X className="w-4 h-4" />
         </button>
       </div>
