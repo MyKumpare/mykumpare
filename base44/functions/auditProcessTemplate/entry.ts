@@ -166,7 +166,7 @@ Return ONLY a JSON object with this exact shape:
       prompt,
       response_json_schema: responseSchema,
       add_context_from_internet: false,
-      model: "claude_opus_4_8"
+      model: "claude_sonnet_4_6"
     });
 
     return Response.json({ success: true, data: llmResponse });
