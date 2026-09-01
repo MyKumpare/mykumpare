@@ -54,6 +54,7 @@ import DdTimeline from './pages/DdTimeline';
 import VideoLibrary from './pages/VideoLibrary';
 import XponanceDashboard from './pages/XponanceDashboard';
 import FirmNetworkMapPage from './pages/FirmNetworkMapPage';
+import FirmAumTrends from './pages/FirmAumTrends';
 import QuickNotesDrawer from "@/components/quicknotes/QuickNotesDrawer";
 import ScreenshotCaptureTool from "@/components/videolibrary/ScreenshotCaptureTool";
 import ScreenRecorderTool from "@/components/videolibrary/ScreenRecorderTool";
@@ -162,6 +163,7 @@ const AuthenticatedApp = () => {
       <Route path="/VideoLibrary" element={<LayoutWrapper currentPageName="VideoLibrary"><VideoLibrary /></LayoutWrapper>} />
       <Route path="/XponanceDashboard" element={<LayoutWrapper currentPageName="XponanceDashboard"><XponanceDashboard /></LayoutWrapper>} />
       <Route path="/FirmNetworkMap" element={<LayoutWrapper currentPageName="FirmNetworkMap"><FirmNetworkMapPage /></LayoutWrapper>} />
+      <Route path="/FirmAumTrends" element={<LayoutWrapper currentPageName="FirmAumTrends"><FirmAumTrends /></LayoutWrapper>} />
       <Route path="/register" element={<ExternalPartyRegister />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>

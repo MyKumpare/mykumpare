@@ -27,4 +27,5 @@ export const DASHBOARD_DEFAULT_CATEGORIES = [
   { id: "overview", name: "Overview", items: ["executive", "overview", "activity-timeline"] },
   { id: "coverage", name: "Coverage", items: ["analyst-coverage", "firm-coverage"] },
   { id: "network", name: "Network", items: ["contact-network", "network-dashboard", "influence-dashboard", "degrees", "relationship-map", "firm-network-map"] },
+  { id: "trends", name: "Trends", items: ["aum-trends"] },
 ];
