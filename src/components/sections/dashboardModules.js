@@ -1,5 +1,5 @@
 import {
-  LayoutDashboard, Activity, Users, Globe, Network, GitBranch, Share2, UserCheck,
+  LayoutDashboard, Activity, Users, Globe, Network, GitBranch, Share2, UserCheck, TrendingUp,
 } from "lucide-react";
 
 /**
@@ -18,6 +18,7 @@ export const DASHBOARD_MODULES = [
   { key: "degrees", label: "Degrees of Separation", icon: GitBranch, color: "text-teal-600", bg: "bg-teal-50", border: "border-teal-200", to: "/DegreesOfSeparation" },
   { key: "relationship-map", label: "Relationship Network Map", icon: Network, color: "text-indigo-600", bg: "bg-indigo-50", border: "border-indigo-200", to: "/RelationshipNetworkMap" },
   { key: "firm-network-map", label: "Firm Network Map", icon: Share2, color: "text-cyan-600", bg: "bg-cyan-50", border: "border-cyan-200", to: "/FirmNetworkMap" },
+  { key: "aum-trends", label: "Firm AUM & Net Flow Trends", icon: TrendingUp, color: "text-indigo-600", bg: "bg-indigo-50", border: "border-indigo-200", to: "/FirmAumTrends" },
 ];
 
 export const DASHBOARD_MODULE_MAP = Object.fromEntries(DASHBOARD_MODULES.map((m) => [m.key, m]));
