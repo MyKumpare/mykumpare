@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Download, Printer, Plus, Trash2, GripVertical, Mail, Phone, MapPin, Globe, Building2, User, Award, Briefcase,
+  Download, Printer, Plus, Trash2, GripVertical, Mail, Phone, MapPin, Globe, Building2, User, Award, Briefcase, Contact,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import { base44 } from "@/api/base44Client";
 
 const FORMAT_STYLES = [
   { id: "classic", label: "Classic", accent: "#1e3a8a" },
@@ -142,6 +143,7 @@ export default function ContactCardDialog({ contact, firms = [], open, onOpenCha
   const [style, setStyle] = useState("classic");
   const [customLabel, setCustomLabel] = useState("");
   const [customValue, setCustomValue] = useState("");
+  const [syncing, setSyncing] = useState(false);
   const cardRef = useRef(null);
 
   // Rebuild fields when contact changes
@@ -196,6 +198,37 @@ export default function ContactCardDialog({ contact, firms = [], open, onOpenCha
       toast({ title: "✅ Contact card downloaded" });
     } catch (err) {
       toast({ title: "Download failed", description: err?.message || "Could not generate image.", variant: "destructive" });
+    }
+  };
+
+  const handleSyncToOutlook = async () => {
+    if (!contact?.id) {
+      toast({ title: "Save contact first", description: "The contact must be saved before syncing to Outlook.", variant: "destructive" });
+      return;
+    }
+    setSyncing(true);
+    try {
+      const res = await base44.functions.invoke("syncContactToOutlook", { contact_id: contact.id });
+      if (res.data?.notConnected) {
+        toast({
+          title: "Outlook not authorized",
+          description: res.data.scopeError
+            ? "Outlook needs the Contacts.ReadWrite permission to sync contacts. Please re-authorize Outlook with the additional scope."
+            : "Outlook is not connected. Please connect your Outlook account first.",
+          variant: "destructive",
+        });
+      } else if (res.data?.success) {
+        toast({
+          title: "✅ Contact synced to Outlook",
+          description: `${res.data.display_name || "Contact"} has been added to your Outlook address book.`,
+        });
+      } else {
+        throw new Error(res.data?.error || "Sync failed");
+      }
+    } catch (err) {
+      toast({ title: "Sync failed", description: err?.message || "Could not sync to Outlook.", variant: "destructive" });
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -335,6 +368,9 @@ export default function ContactCardDialog({ contact, firms = [], open, onOpenCha
           </Button>
           <Button variant="outline" size="sm" onClick={handleDownload}>
             <Download className="w-4 h-4 mr-1" /> Download PNG
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleSyncToOutlook} disabled={syncing}>
+            <Contact className="w-4 h-4 mr-1" /> {syncing ? "Syncing…" : "Sync to Outlook"}
           </Button>
           <div className="flex-1" />
           <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
