@@ -95,6 +95,65 @@ async function geocodeBatch(queries) {
   return results;
 }
 
+// Postal-code → city/state lookup via Nominatim structured search.
+// Works for any country (Nominatim supports postalcode + countrycodes).
+async function lookupPostalCode(postalCode, countryCode) {
+  if (!postalCode || !countryCode) return null;
+  const cc = countryCode.toLowerCase();
+  const url = `${NOMINATIM_URL}?postalcode=${encodeURIComponent(postalCode)}&countrycodes=${cc}&format=json&limit=1&addressdetails=1`;
+  try {
+    const resp = await fetch(url, { headers: { "User-Agent": "MyKumpare/1.0" } });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    if (!Array.isArray(data) || data.length === 0) return null;
+    const addr = data[0].address || {};
+    const city = addr.city || addr.town || addr.village || addr.municipality || addr.hamlet || "";
+    const state = addr.state || addr.state_district || addr.county || "";
+    if (!city) return null;
+    return { city, state, lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+  } catch {
+    return null;
+  }
+}
+
+// City typeahead search within a state/country via Nominatim free-text search.
+// Uses q="query, state, country" for better partial/prefix matching than the
+// structured city= parameter. Returns deduplicated city/town/village names.
+async function searchCitiesInState(query, stateName, countryCode) {
+  if (!query || query.trim().length < 2 || !countryCode) return [];
+  const cc = countryCode.toLowerCase();
+  const qParts = [query.trim()];
+  if (stateName) qParts.push(stateName);
+  const q = qParts.join(", ");
+  const params = new URLSearchParams({
+    q,
+    countrycodes: cc,
+    format: "json",
+    limit: "15",
+    addressdetails: "1",
+  });
+  const url = `${NOMINATIM_URL}?${params.toString()}`;
+  try {
+    const resp = await fetch(url, { headers: { "User-Agent": "MyKumpare/1.0" } });
+    if (!resp.ok) return [];
+    const data = await resp.json();
+    if (!Array.isArray(data)) return [];
+    const cities = [];
+    const seen = new Set();
+    for (const item of data) {
+      const addr = item.address || {};
+      const city = addr.city || addr.town || addr.village || addr.municipality || addr.hamlet || "";
+      if (city && !seen.has(city.toLowerCase())) {
+        seen.add(city.toLowerCase());
+        cities.push(city);
+      }
+    }
+    return cities;
+  } catch {
+    return [];
+  }
+}
+
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
@@ -102,9 +161,19 @@ export default async function(req) {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
-    const { centerQuery, locations = [], reverse } = body || {};
+    const { centerQuery, locations = [], reverse, postalLookup, citySearch } = body || {};
 
-    const result = { center: null, geocoded: {}, reverseResult: null };
+    const result = { center: null, geocoded: {}, reverseResult: null, postalResult: null, cityResults: [] };
+
+    // Postal-code → city/state lookup (any country)
+    if (postalLookup && postalLookup.postalCode && postalLookup.countryCode) {
+      result.postalResult = await lookupPostalCode(postalLookup.postalCode, postalLookup.countryCode);
+    }
+
+    // City typeahead search within a state/country
+    if (citySearch && citySearch.query && citySearch.countryCode) {
+      result.cityResults = await searchCitiesInState(citySearch.query, citySearch.stateName, citySearch.countryCode);
+    }
 
     // Reverse geocode a single lat/lon point into address components
     if (reverse && reverse.lat != null && reverse.lon != null) {

@@ -74,5 +74,39 @@ export function useZipCodeLookup() {
     }
   };
 
-  return { lookupZip, getCitiesForState, saveZipMapping };
+  // Async postal-code → city/state lookup that works for ANY country via the
+  // geocodeLocations backend (Nominatim postalcode search). Falls back to the
+  // static US prefix table + the ZipCode entity for instant local hits first.
+  const lookupPostalAsync = async (zip, country) => {
+    if (!zip || zip.length < 3 || !country) return null;
+    // Instant local lookups first (static US table + DB).
+    const local = lookupZip(zip, country);
+    if (local) return local;
+    try {
+      const resp = await base44.functions.invoke("geocodeLocations", {
+        postalLookup: { postalCode: zip, countryCode: country },
+      });
+      const data = resp?.data ?? resp ?? {};
+      return data.postalResult || null;
+    } catch {
+      return null;
+    }
+  };
+
+  // Async city typeahead within a state/country via the geocodeLocations
+  // backend (Nominatim structured city search). Returns matching city names.
+  const searchCitiesAsync = async (query, stateName, country) => {
+    if (!query || query.trim().length < 2 || !country) return [];
+    try {
+      const resp = await base44.functions.invoke("geocodeLocations", {
+        citySearch: { query, stateName, countryCode: country },
+      });
+      const data = resp?.data ?? resp ?? {};
+      return data.cityResults || [];
+    } catch {
+      return [];
+    }
+  };
+
+  return { lookupZip, getCitiesForState, saveZipMapping, lookupPostalAsync, searchCitiesAsync };
 }

@@ -6,11 +6,12 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { MapPin, Trash2, Star, ExternalLink, Loader2, LocateFixed, GripVertical, Map as MapIcon } from "lucide-react";
-import { COUNTRIES, getStatesForCountry } from "./geoData";
+import { COUNTRIES, getStatesForCountry, getStateDisplayName } from "./geoData";
 import { useZipCodeLookup } from "./useZipCodeLookup";
 import { base44 } from "@/api/base44Client";
 import AddressMapPickerDialog from "./AddressMapPickerDialog";
 import AddressMiniMap from "./AddressMiniMap";
+import CitySearchCombobox from "./CitySearchCombobox";
 
 function buildMapsUrl(address) {
   const parts = [
@@ -68,7 +69,9 @@ export default function AddressForm({ address, onChange, onDelete, onSetHeadquar
   const [autoGeocoding, setAutoGeocoding] = useState(false);
   const [geoError, setGeoError] = useState(null);
   const [mapPickerOpen, setMapPickerOpen] = useState(false);
-  const { lookupZip, getCitiesForState, saveZipMapping } = useZipCodeLookup();
+  const { lookupZip, getCitiesForState, saveZipMapping, lookupPostalAsync, searchCitiesAsync } = useZipCodeLookup();
+  const [postalLooking, setPostalLooking] = useState(false);
+  const postalTimerRef = useRef(null);
 
   // Track whether the user manually edited coordinates — if so, don't
   // auto-geocode over their manual values.
@@ -153,25 +156,46 @@ export default function AddressForm({ address, onChange, onDelete, onSetHeadquar
   const handlePostalChange = (e) => {
     const zip = e.target.value;
     const updated = { ...address, postal_code: zip };
+    // Instant local lookup (static US table + DB) for immediate feedback
     if (zip.length >= 3) {
-      const lookup = lookupZip(zip, address.country);
-      if (lookup) {
-        updated.city = lookup.city;
-        updated.state = lookup.state;
+      const local = lookupZip(zip, address.country);
+      if (local) {
+        updated.city = local.city;
+        updated.state = local.state || updated.state;
         setManualCity(false);
       }
     }
     onChange(updated);
+    // Debounced async lookup for any country (Nominatim postalcode search)
+    if (postalTimerRef.current) clearTimeout(postalTimerRef.current);
+    if (zip.length >= 4 && address.country) {
+      setPostalLooking(true);
+      postalTimerRef.current = setTimeout(async () => {
+        const result = await lookupPostalAsync(zip, address.country);
+        setPostalLooking(false);
+        if (result && result.city) {
+          onChange({
+            ...address,
+            postal_code: zip,
+            city: result.city,
+            state: result.state ? mapStateNameToCode(address.country, result.state) || address.state : address.state,
+          });
+          setManualCity(false);
+        }
+      }, 700);
+    } else {
+      setPostalLooking(false);
+    }
   };
 
-  const handleCitySelect = (val) => {
-    if (val === "__manual__") {
-      setManualCity(true);
-      onChange({ ...address, city: "" });
-    } else {
-      setManualCity(false);
-      onChange({ ...address, city: val });
-    }
+  // Map a Nominatim-returned state name back to our state code for the dropdown
+  const mapStateNameToCode = (countryCode, stateName) => {
+    if (!stateName || !countryCode) return null;
+    const states = getStatesForCountry(countryCode);
+    const match = states.find(
+      (s) => s.name.toLowerCase() === stateName.toLowerCase()
+    );
+    return match?.code || null;
   };
 
   const handleAutoLocate = async () => {
@@ -364,52 +388,32 @@ export default function AddressForm({ address, onChange, onDelete, onSetHeadquar
               )
             )}
             {field("Postal / Zip Code",
-              <Input
-                className="h-9 bg-white"
-                placeholder={address.country === "US" ? "e.g. 10001" : "Postal code"}
-                value={address.postal_code || ""}
-                onChange={handlePostalChange}
-              />
+              <div className="relative">
+                <Input
+                  className="h-9 bg-white pr-8"
+                  placeholder={address.country === "US" ? "e.g. 10001" : "Postal code"}
+                  value={address.postal_code || ""}
+                  onChange={handlePostalChange}
+                />
+                {postalLooking && (
+                  <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-indigo-400 animate-spin" />
+                )}
+              </div>
             )}
           </div>
 
-          {/* City */}
+          {/* City — searchable combobox with static + async (Nominatim) results */}
           {field("City",
-            cityOptions.length > 0 && !manualCity && (!address.city || cityOptions.includes(address.city)) ? (
-              <Select value={address.city || ""} onValueChange={handleCitySelect}>
-                <SelectTrigger className="h-9 bg-white">
-                  <SelectValue placeholder="Select city..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {cityOptions.map((city) => (
-                    <SelectItem key={city} value={city}>{city}</SelectItem>
-                  ))}
-                  <SelectItem value="__manual__">✏️ Enter manually...</SelectItem>
-                </SelectContent>
-              </Select>
-            ) : (
-              <div className="flex gap-1.5">
-                <Input
-                  className="h-9 bg-white"
-                  placeholder="City"
-                  value={address.city || ""}
-                  onChange={(e) => onChange({ ...address, city: e.target.value })}
-                  onBlur={handleCityBlur}
-                />
-                {cityOptions.length > 0 && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-9 px-2 text-xs shrink-0"
-                    onClick={() => setManualCity(false)}
-                    title="Choose from list"
-                  >
-                    List
-                  </Button>
-                )}
-              </div>
-            )
+            <CitySearchCombobox
+              value={address.city || ""}
+              onChange={(val) => onChange({ ...address, city: val })}
+              onCommit={handleCityBlur}
+              country={address.country}
+              stateName={getStateDisplayName(address.country, address.state)}
+              staticCities={cityOptions}
+              searchCitiesAsync={searchCitiesAsync}
+              placeholder="Type to search city..."
+            />
           )}
 
           {/* Address Line 1 */}
