@@ -69,7 +69,7 @@ export default function ContactQuickActions({ contact, onEdited }) {
                 }`}
               >
                 <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${r.dot}`} />
-                {r.label}
+                {r.value}
                 {contact.decision_role === r.value && <Check className="w-3 h-3 ml-auto" />}
               </button>
             ))}
