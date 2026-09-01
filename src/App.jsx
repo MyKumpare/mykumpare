@@ -56,6 +56,7 @@ import XponanceDashboard from './pages/XponanceDashboard';
 import FirmNetworkMapPage from './pages/FirmNetworkMapPage';
 import FirmAumTrends from './pages/FirmAumTrends';
 import OnsiteVisitReport from './pages/OnsiteVisitReport';
+import OnsiteVisitCalendar from './pages/OnsiteVisitCalendar';
 import QuickNotesDrawer from "@/components/quicknotes/QuickNotesDrawer";
 import ScreenshotCaptureTool from "@/components/videolibrary/ScreenshotCaptureTool";
 import ScreenRecorderTool from "@/components/videolibrary/ScreenRecorderTool";
@@ -166,6 +167,7 @@ const AuthenticatedApp = () => {
       <Route path="/FirmNetworkMap" element={<LayoutWrapper currentPageName="FirmNetworkMap"><FirmNetworkMapPage /></LayoutWrapper>} />
       <Route path="/FirmAumTrends" element={<LayoutWrapper currentPageName="FirmAumTrends"><FirmAumTrends /></LayoutWrapper>} />
       <Route path="/OnsiteVisitReport" element={<LayoutWrapper currentPageName="OnsiteVisitReport"><OnsiteVisitReport /></LayoutWrapper>} />
+      <Route path="/OnsiteVisitCalendar" element={<LayoutWrapper currentPageName="OnsiteVisitCalendar"><OnsiteVisitCalendar /></LayoutWrapper>} />
       <Route path="/register" element={<ExternalPartyRegister />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>

@@ -12,9 +12,10 @@ import {
 } from "@/components/ui/tabs";
 import {
   Calendar, MapPin, Video, CheckCircle2, Clock, XCircle, UserX,
-  Download, AlertTriangle, FileBarChart, Users,
+  Download, AlertTriangle, FileBarChart, Users, CalendarDays,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { Link } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 
 const fmtDate = (iso) => {
@@ -182,6 +183,11 @@ export default function OnsiteVisitReport() {
           </h1>
           <p className="text-sm text-gray-500">View visit logs by date range or check visit cycle compliance as of a date.</p>
         </div>
+        <Link to="/OnsiteVisitCalendar">
+          <Button variant="outline" size="sm" className="gap-1.5">
+            <CalendarDays className="w-4 h-4" /> Calendar View
+          </Button>
+        </Link>
       </div>
 
       <Tabs value={reportMode} onValueChange={setReportMode}>
