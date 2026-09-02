@@ -20,6 +20,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 import XponanceContactPicker from "@/components/xponance/XponanceContactPicker";
 import AttachmentSummary from "./AttachmentSummary";
+import VisitStatusStepper from "./VisitStatusStepper";
 
 const todayISO = () => format(new Date(), "yyyy-MM-dd");
 const newId = () => crypto.randomUUID();
@@ -299,12 +300,19 @@ export default function OnsiteVisitDialog({ open, onOpenChange, firm, editingVis
                 <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Scheduled">Scheduled</SelectItem>
+                  <SelectItem value="In-Progress">In-Progress</SelectItem>
                   <SelectItem value="Completed">Completed</SelectItem>
                   <SelectItem value="Cancelled">Cancelled</SelectItem>
                   <SelectItem value="No-show">No-show</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* Status tracker stepper */}
+          <div className="rounded-lg border border-gray-200 bg-gray-50/60 px-3 py-2.5">
+            <Label className="text-xs font-medium text-gray-600 mb-2 block">Visit Status Tracker</Label>
+            <VisitStatusStepper status={status} onStatusChange={setStatus} />
           </div>
 
           {/* Visiting analyst */}

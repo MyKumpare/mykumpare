@@ -11,7 +11,7 @@ import {
   Tabs, TabsContent, TabsList, TabsTrigger,
 } from "@/components/ui/tabs";
 import {
-  Calendar, MapPin, Video, CheckCircle2, Clock, XCircle, UserX,
+  Calendar, MapPin, Video, CheckCircle2, Clock, XCircle, UserX, Loader2,
   Download, AlertTriangle, FileBarChart, Users, CalendarDays, ClipboardList,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
@@ -25,6 +25,7 @@ const fmtDate = (iso) => {
 
 const STATUS_STYLES = {
   Scheduled: { icon: Clock, color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-200" },
+  "In-Progress": { icon: Loader2, color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-200" },
   Completed: { icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-200" },
   Cancelled: { icon: XCircle, color: "text-gray-500", bg: "bg-gray-50", border: "border-gray-200" },
   "No-show": { icon: UserX, color: "text-red-600", bg: "bg-red-50", border: "border-red-200" },
@@ -222,6 +223,7 @@ export default function OnsiteVisitReport() {
                   <SelectContent>
                     <SelectItem value="all">All statuses</SelectItem>
                     <SelectItem value="Scheduled">Scheduled</SelectItem>
+                    <SelectItem value="In-Progress">In-Progress</SelectItem>
                     <SelectItem value="Completed">Completed</SelectItem>
                     <SelectItem value="Cancelled">Cancelled</SelectItem>
                     <SelectItem value="No-show">No-show</SelectItem>

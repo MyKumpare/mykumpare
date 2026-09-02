@@ -10,7 +10,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   ChevronLeft, ChevronRight, CalendarDays, ArrowLeft, MapPin, Video,
-  Clock, CheckCircle2, XCircle, UserX, Plus, Building2,
+  Clock, CheckCircle2, XCircle, UserX, Plus, Building2, Loader2,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { lazyDialog } from "@/components/common/lazyDialog";
@@ -22,6 +22,7 @@ const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const STATUS_STYLES = {
   Scheduled: { icon: Clock, color: "text-blue-600", bg: "bg-blue-100", dot: "bg-blue-500", border: "border-blue-200" },
+  "In-Progress": { icon: Loader2, color: "text-amber-600", bg: "bg-amber-100", dot: "bg-amber-500", border: "border-amber-200" },
   Completed: { icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-100", dot: "bg-emerald-500", border: "border-emerald-200" },
   Cancelled: { icon: XCircle, color: "text-gray-500", bg: "bg-gray-100", dot: "bg-gray-400", border: "border-gray-200" },
   "No-show": { icon: UserX, color: "text-red-600", bg: "bg-red-100", dot: "bg-red-500", border: "border-red-200" },
@@ -30,6 +31,7 @@ const STATUS_STYLES = {
 const STATUS_FILTERS = [
   { key: "all", label: "All" },
   { key: "Scheduled", label: "Scheduled" },
+  { key: "In-Progress", label: "In-Progress" },
   { key: "Completed", label: "Completed" },
   { key: "Cancelled", label: "Cancelled" },
   { key: "No-show", label: "No-show" },
@@ -98,7 +100,7 @@ export default function OnsiteVisitCalendar() {
 
   // Month stats
   const monthStats = useMemo(() => {
-    const counts = { Scheduled: 0, Completed: 0, Cancelled: 0, "No-show": 0 };
+    const counts = { Scheduled: 0, "In-Progress": 0, Completed: 0, Cancelled: 0, "No-show": 0 };
     for (const day of days) {
       if (!isSameMonth(day, currentMonth)) continue;
       const key = format(day, "yyyy-MM-dd");

@@ -45,12 +45,13 @@
       "type": "string",
       "enum": [
         "Scheduled",
+        "In-Progress",
         "Completed",
         "Cancelled",
         "No-show"
       ],
       "default": "Scheduled",
-      "description": "Status of the onsite visit."
+      "description": "Status tracker for the onsite visit lifecycle. 'Scheduled' = visit is booked; 'In-Progress' = visit is underway (day-of); 'Completed' = visit finished; 'Cancelled' = visit was cancelled; 'No-show' = the firm did not attend."
     },
     "agenda": {
       "type": "string",
