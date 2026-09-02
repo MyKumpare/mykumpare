@@ -276,52 +276,179 @@ Return ONLY a JSON object with this exact shape:
       addContextFromInternet: false
     });
 
-    // Retry the LLM call up to 2 times — the model can intermittently time out
-    // or return an empty/unparseable response. We use gpt_5_mini for a fast,
-    // capable response (claude_sonnet_4_6 and gpt_5_4 time out on large rubrics;
-    // the "automatic" model sometimes returns empty results).
-    let llmResponse: any = null;
+    // Split the audit into TWO PARALLEL LLM calls so each produces less output
+    // and finishes well within the 120-second proxy timeout. A single call
+    // asking for findings + changes + the full recommended_blocks is too heavy
+    // and times out on large rubrics. Parallelizing halves the wall-clock time.
+    const findingsPrompt = `You are an expert consultant auditing the STRUCTURE of an investment-manager due-diligence scoring matrix rubric (blocks, weighted criteria, 1-5 level descriptors) — NOT filled-in scores.
+
+Analyze for: (1) Inherent Bias, (2) Redundancy, (3) Scoring Logic & Descriptor Quality, (4) Weight Balance, (5) Efficiency & Effectiveness.
+
+## Current Rubric
+${JSON.stringify(rubricData, null, 2)}
+
+## Instructions
+Produce AT LEAST 3 findings and AT LEAST 3 discrete changes. Each finding: {category (Bias|Redundancy|Scoring Logic|Weight Balance|Efficiency|Effectiveness), severity (high|medium|low), title, description}. Each change: {id, type (rename_block|adjust_weight|rename_criterion|improve_descriptor|add_criterion|remove_criterion|merge_criteria|add_block|remove_block), category, severity, title, rationale, block_id, criterion_id, criterion_ids, new_name, new_weight, level, new_text, category_label, descriptors, criteria}. Only include fields relevant to the change type.
+
+Return ONLY JSON: { "findings": [...], "changes": [...] }`;
+
+    const blocksPrompt = `You are an expert consultant redesigning an investment-manager due-diligence scoring matrix rubric to be more rigorous, fair, and efficient.
+
+## Current Rubric
+${JSON.stringify(rubricData, null, 2)}
+
+## Instructions
+Produce a COMPLETE improved "recommended_blocks" structure. Reuse existing block/criterion IDs where an item is kept or lightly edited; use new IDs (rec_b_<n>, rec_c_<n>) only for genuinely new items. Same schema as input. Weights must sum to 100. The result MUST differ from the input.
+
+Return ONLY JSON: { "recommended_blocks": [{ "id": "", "name": "", "weight": 0, "criteria": [{ "id": "", "number": 1, "name": "", "category": "", "descriptors": [{ "level": 1, "text": "" }] }] }] }`;
+
+    const findingsSchema = {
+      type: 'object',
+      properties: {
+        findings: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              category: { type: 'string' },
+              severity: { type: 'string' },
+              title: { type: 'string' },
+              description: { type: 'string' }
+            }
+          }
+        },
+        changes: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              type: { type: 'string' },
+              category: { type: 'string' },
+              severity: { type: 'string' },
+              title: { type: 'string' },
+              rationale: { type: 'string' },
+              block_id: { type: 'string' },
+              criterion_id: { type: 'string' },
+              criterion_ids: { type: 'array', items: { type: 'string' } },
+              new_name: { type: 'string' },
+              new_weight: { type: 'number' },
+              level: { type: 'integer' },
+              new_text: { type: 'string' },
+              category_label: { type: 'string' },
+              descriptors: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: { level: { type: 'integer' }, text: { type: 'string' } }
+                }
+              },
+              criteria: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string' },
+                    number: { type: 'integer' },
+                    name: { type: 'string' },
+                    category: { type: 'string' },
+                    descriptors: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: { level: { type: 'integer' }, text: { type: 'string' } }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    };
+
+    const blocksSchema = {
+      type: 'object',
+      properties: {
+        recommended_blocks: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              name: { type: 'string' },
+              weight: { type: 'number' },
+              criteria: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string' },
+                    number: { type: 'integer' },
+                    name: { type: 'string' },
+                    category: { type: 'string' },
+                    descriptors: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: { level: { type: 'integer' }, text: { type: 'string' } }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    };
+
+    console.log('[auditScoringMatrixTemplate] STEP 3: Invoking 2 LLM calls in parallel (findings+changes / recommended_blocks)');
+
+    let findingsResult: any = null;
+    let blocksResult: any = null;
     let lastError: string = '';
-    const maxRetries = 2;
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        console.log(`[auditScoringMatrixTemplate] STEP 3: Invoking LLM (attempt ${attempt}/${maxRetries})`, {
-          model: "gpt_5_mini",
-          promptLength: prompt.length,
-          hasJsonSchema: true
-        });
-        const attemptResponse = await base44.integrations.Core.InvokeLLM({
-          prompt,
-          response_json_schema: responseSchema,
+    try {
+      const [findingsRes, blocksRes] = await Promise.all([
+        base44.integrations.Core.InvokeLLM({
+          prompt: findingsPrompt,
+          response_json_schema: findingsSchema,
           add_context_from_internet: false,
           model: "gpt_5_mini"
-        });
-        const fCount = attemptResponse?.findings?.length || 0;
-        const cCount = attemptResponse?.changes?.length || 0;
-        const bCount = attemptResponse?.recommended_blocks?.length || 0;
-        console.log(`[auditScoringMatrixTemplate] Attempt ${attempt} response: ${fCount} findings, ${cCount} changes, ${bCount} blocks`);
-        if (fCount > 0 || cCount > 0 || bCount > 0) {
-          llmResponse = attemptResponse;
-          console.log(`[auditScoringMatrixTemplate] LLM succeeded on attempt ${attempt}`);
-          break;
-        }
-        console.log(`[auditScoringMatrixTemplate] Attempt ${attempt}: LLM returned empty result, retrying…`);
-        lastError = 'LLM returned empty result (no findings, changes, or blocks)';
-        llmResponse = attemptResponse; // keep last response as fallback
-      } catch (err: any) {
-        console.log(`[auditScoringMatrixTemplate] Attempt ${attempt} failed:`, err?.message || String(err));
-        lastError = err?.message || String(err);
-        if (attempt < maxRetries) await new Promise(r => setTimeout(r, 1000 * attempt));
-      }
+        }),
+        base44.integrations.Core.InvokeLLM({
+          prompt: blocksPrompt,
+          response_json_schema: blocksSchema,
+          add_context_from_internet: false,
+          model: "gpt_5_mini"
+        })
+      ]);
+      findingsResult = findingsRes;
+      blocksResult = blocksRes;
+      console.log('[auditScoringMatrixTemplate] Parallel LLM calls completed', {
+        findingsCount: findingsRes?.findings?.length || 0,
+        changesCount: findingsRes?.changes?.length || 0,
+        recBlocksCount: blocksRes?.recommended_blocks?.length || 0
+      });
+    } catch (err: any) {
+      console.log('[auditScoringMatrixTemplate] Parallel LLM call failed:', err?.message || String(err));
+      lastError = err?.message || String(err);
     }
 
-    if (!llmResponse || (!llmResponse.findings?.length && !llmResponse.changes?.length && !llmResponse.recommended_blocks?.length)) {
-      return Response.json({ error: `AI audit could not produce results after ${maxRetries} attempts: ${lastError}. Please try again.` }, { status: 500 });
+    const llmResponse: any = {
+      findings: findingsResult?.findings || [],
+      changes: findingsResult?.changes || [],
+      recommended_blocks: blocksResult?.recommended_blocks || []
+    };
+
+    if (!llmResponse.findings.length && !llmResponse.changes.length && !llmResponse.recommended_blocks.length) {
+      return Response.json({ error: `AI audit could not produce results: ${lastError || 'LLM returned empty results'}. Please try again.` }, { status: 500 });
     }
 
-    const findingsCount = llmResponse?.findings?.length || 0;
-    const changesCount = llmResponse?.changes?.length || 0;
-    const recBlocksCount = llmResponse?.recommended_blocks?.length || 0;
+    const findingsCount = llmResponse.findings.length;
+    const changesCount = llmResponse.changes.length;
+    const recBlocksCount = llmResponse.recommended_blocks.length;
 
     // Update the AI analysis step with the outcome
     const aiStep = processTrace.find((s: any) => s.step === 5);
