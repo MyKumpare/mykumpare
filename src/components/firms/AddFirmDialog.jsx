@@ -198,6 +198,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [yearFounded, setYearFounded] = useState("");
   const [description, setDescription] = useState("");
+  const [notes, setNotes] = useState("");
   const [addresses, setAddresses] = useState([]);
   const [phones, setPhones] = useState([]);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -259,6 +260,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         setLinkedinUrl(editingFirm.linkedin_url || "");
         setYearFounded(editingFirm.year_founded ? String(editingFirm.year_founded) : "");
         setDescription(editingFirm.description || "");
+        setNotes(editingFirm.notes || "");
         setAddresses(editingFirm.addresses?.length
           ? [...editingFirm.addresses].sort((a, b) => (b.is_headquarters ? 1 : 0) - (a.is_headquarters ? 1 : 0))
           : []);
@@ -288,6 +290,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         setLinkedinUrl("");
         setYearFounded("");
         setDescription("");
+        setNotes("");
         setAddresses([]);
         setPhones([]);
         setShowEnrichment(false);
@@ -481,6 +484,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
       linkedinUrl !== (editingFirm.linkedin_url || "") ||
       yearFounded !== (editingFirm.year_founded ? String(editingFirm.year_founded) : "") ||
       description !== (editingFirm.description || "") ||
+      notes !== (editingFirm.notes || "") ||
       JSON.stringify(addresses) !== JSON.stringify(editingFirm.addresses || []) ||
       JSON.stringify(phones) !== JSON.stringify(editingFirm.phones || []) ||
       JSON.stringify(sourcingSources) !== JSON.stringify(editingFirm.sourcing_sources || []) ||
@@ -497,7 +501,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const hasUnsavedChanges = editingFirm
     ? (hasChanges || aumDirty)
     : !!(firmName.trim() || firmTypes.length > 0 || logoUrl || website || email ||
-        linkedinUrl || yearFounded || description ||
+        linkedinUrl || yearFounded || description || notes ||
         addresses.some(a => a.address_line1 || a.city || a.state || a.postal_code) ||
         phones.some(p => p.area_code || p.number_mid || p.number_last) ||
         pendingContacts.length > 0 ||
@@ -649,7 +653,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   };
 
   const performSubmit = (addrs) => {
-    onSubmit({ firm_type: firmTypes[0] || "", firm_types: firmTypes, name: firmName.trim(), logo_url: logoUrl, website, email, linkedin_url: linkedinUrl, year_founded: yearFounded ? parseInt(yearFounded) : null, description, addresses: addrs, phones, pending_contacts: pendingContacts.length > 0 ? pendingContacts : undefined, sourcing_sources: sourcingSources, sourcing_date: sourcingDate || null, sourcing_contact_name: sourcingContactName, sourcing_notes: sourcingNotes, geographic_region: geographicRegion || "Undefined", location: location || "", location_lat: locationLat, location_lng: locationLng, primary_xponance_contact_id: primaryXponanceId || null, primary_xponance_contact_name: primaryXponanceName || null, secondary_xponance_contact_id: secondaryXponanceId || null, secondary_xponance_contact_name: secondaryXponanceName || null });
+    onSubmit({ firm_type: firmTypes[0] || "", firm_types: firmTypes, name: firmName.trim(), logo_url: logoUrl, website, email, linkedin_url: linkedinUrl, year_founded: yearFounded ? parseInt(yearFounded) : null, description, notes, addresses: addrs, phones, pending_contacts: pendingContacts.length > 0 ? pendingContacts : undefined, sourcing_sources: sourcingSources, sourcing_date: sourcingDate || null, sourcing_contact_name: sourcingContactName, sourcing_notes: sourcingNotes, geographic_region: geographicRegion || "Undefined", location: location || "", location_lat: locationLat, location_lng: locationLng, primary_xponance_contact_id: primaryXponanceId || null, primary_xponance_contact_name: primaryXponanceName || null, secondary_xponance_contact_id: secondaryXponanceId || null, secondary_xponance_contact_name: secondaryXponanceName || null });
     // Also save AUM history (including client type breakdown) if it has unsaved changes
     if (aumSaveRef.current && aumDirty) {
       aumSaveRef.current();
@@ -1060,6 +1064,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     setLinkedinUrl(editingFirm.linkedin_url || "");
     setYearFounded(editingFirm.year_founded ? String(editingFirm.year_founded) : "");
     setDescription(editingFirm.description || "");
+    setNotes(editingFirm.notes || "");
     setAddresses([...(editingFirm.addresses || [])].sort((a, b) => (b.is_headquarters ? 1 : 0) - (a.is_headquarters ? 1 : 0)));
     setPhones([...(editingFirm.phones || [])].sort((a, b) => (b.is_default ? 1 : 0) - (a.is_default ? 1 : 0)));
     setSourcingSources(editingFirm.sourcing_sources || []);
@@ -1441,6 +1446,23 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                     placeholder="Enter firm description..."
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
+                    className="min-h-20"
+                  />
+                )}
+              </div>
+
+              {/* Notes — quick observations and reminders */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Notes</Label>
+                {!activelyEditing ? (
+                  <div className="px-3 py-2 rounded-md border bg-amber-50 text-sm text-gray-700 min-h-20 whitespace-pre-wrap">
+                    {notes || <span className="text-gray-400">—</span>}
+                  </div>
+                ) : (
+                  <Textarea
+                    placeholder="Quick observations and reminders for this firm..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
                     className="min-h-20"
                   />
                 )}

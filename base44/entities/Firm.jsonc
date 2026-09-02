@@ -131,6 +131,10 @@
       "type": "string",
       "description": "Description of the firm"
     },
+    "notes": {
+      "type": "string",
+      "description": "Quick observations and reminders for this firm \u2014 free-text notes that don't belong in the formal description. Shown on the firm details page and persisted with the firm record."
+    },
     "meeting_summary": {
       "type": "string",
       "description": "AI-generated summary of this firm's meeting notes, produced on demand from Meeting-type activity logs via the 'Generate Meeting Summary' action in the interaction log. Stored directly on the firm profile so the team has a quick recap of recent meeting interactions without re-reading each activity."
