@@ -865,11 +865,9 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
                     {expandedBlocks[block.id] && (block.criteria || []).map((crit) => (
                       <tr key={crit.id} className="border-b hover:bg-gray-50">
                         <td className="p-2">
-                          <div className="flex items-start gap-1">
-                            <div className="flex-1">
-                              <div className="font-medium">{crit.name}</div>
-                              {crit.category && <div className="text-gray-400 text-[10px]">{crit.category}</div>}
-                            </div>
+                          <div className="flex flex-col gap-1">
+                            <div className="font-medium">{crit.name}</div>
+                            {crit.category && <div className="text-gray-400 text-[10px]">{crit.category}</div>}
                             <ScoringAttachmentsManager
                               attachments={score.attachments}
                               scope={crit.id}

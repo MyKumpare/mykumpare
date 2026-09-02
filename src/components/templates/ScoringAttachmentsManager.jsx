@@ -75,22 +75,51 @@ export default function ScoringAttachmentsManager({ attachments, scope, canEdit,
 
   if (compact) {
     return (
-      <div className="flex items-center gap-0.5">
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          disabled={!canEdit || uploading}
-          className="p-1 rounded hover:bg-gray-100 text-gray-500 disabled:opacity-40"
-          title={uploading && uploadingFile ? `Uploading ${uploadingFile.name}...` : (scoped.length ? `${scoped.length} attachment(s) — add more` : "Attach supporting document")}
-        >
-          {uploading ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <Paperclip className={`w-3.5 h-3.5 ${scoped.length ? "text-cyan-600" : ""}`} />
-          )}
-        </button>
-        {scoped.length > 0 && <span className="text-[10px] text-gray-500">{scoped.length}</span>}
-        <input ref={fileRef} type="file" className="hidden" onChange={handleFile} />
+      <div className="flex flex-col gap-1 items-start">
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={!canEdit || uploading}
+            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] border border-gray-200 hover:bg-gray-50 text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed"
+            title={uploading && uploadingFile ? `Uploading ${uploadingFile.name}...` : (scoped.length ? `${scoped.length} attachment(s) — add more` : "Attach supporting document")}
+          >
+            {uploading ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <Paperclip className={`w-3 h-3 ${scoped.length ? "text-cyan-600" : ""}`} />
+            )}
+            <span>{scoped.length > 0 ? `${scoped.length} file${scoped.length > 1 ? "s" : ""}` : "Attach"}</span>
+          </button>
+          <input ref={fileRef} type="file" className="hidden" onChange={handleFile} />
+        </div>
+        {scoped.length > 0 && (
+          <div className="flex flex-col gap-0.5 w-full">
+            {scoped.map((att) => (
+              <div key={att.id} className="flex items-center gap-1 text-[10px]">
+                <FileText className="w-3 h-3 text-gray-400 shrink-0" />
+                <a
+                  href={att.file_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-blue-600 hover:underline truncate flex-1 min-w-0"
+                  title={att.name}
+                >
+                  {att.name}
+                </a>
+                {canEdit && (
+                  <button
+                    onClick={() => removeAttachment(att.id)}
+                    className="p-0.5 rounded hover:bg-red-100 text-red-500 shrink-0"
+                    title="Remove"
+                  >
+                    <Trash2 className="w-2.5 h-2.5" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   }
