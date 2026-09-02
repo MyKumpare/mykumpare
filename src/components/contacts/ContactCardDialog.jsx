@@ -339,11 +339,39 @@ export default function ContactCardDialog({ contact, firms = [], open, onOpenCha
     setFields(reordered);
   };
 
+  // Convert an image URL to a same-origin data URL so html2canvas can render it without CORS taint.
+  const toDataUrl = (url) =>
+    new Promise((resolve) => {
+      fetch(url)
+        .then((r) => (r.ok ? r.blob() : Promise.reject(new Error("fetch failed"))))
+        .then((blob) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => resolve(null);
+          reader.readAsDataURL(blob);
+        })
+        .catch(() => resolve(null));
+    });
+
   const handleDownload = async () => {
     if (!cardRef.current) return;
     try {
       const html2canvas = (await import("html2canvas")).default;
-      const canvas = await html2canvas(cardRef.current, { backgroundColor: null, scale: 2 });
+      // Preload any <img> in the card as data URLs so the photo renders in the PNG (avoids cross-origin blank).
+      const imgs = Array.from(cardRef.current.querySelectorAll("img"));
+      const originals = imgs.map((img) => img.src);
+      await Promise.all(
+        imgs.map(async (img) => {
+          if (!img.src || img.src.startsWith("data:")) return;
+          const dataUrl = await toDataUrl(img.src);
+          if (dataUrl) img.src = dataUrl;
+        })
+      );
+      // Let the swapped data-URL images decode before capture
+      await Promise.all(imgs.map((img) => (img.decode ? img.decode().catch(() => {}) : Promise.resolve())));
+      const canvas = await html2canvas(cardRef.current, { backgroundColor: null, scale: 2, useCORS: true, allowTaint: false });
+      // Restore original srcs so the on-screen preview is unaffected
+      imgs.forEach((img, i) => { if (img.src !== originals[i]) img.src = originals[i]; });
       const link = document.createElement("a");
       const name = [contact?.first_name, contact?.last_name].filter(Boolean).join("_") || "contact";
       link.download = `${name}_contact_card.png`;
