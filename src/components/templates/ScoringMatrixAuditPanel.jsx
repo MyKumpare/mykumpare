@@ -280,6 +280,7 @@ export default function ScoringMatrixAuditPanel({ scoreId, score }) {
                   <th className="text-left p-2 font-medium text-gray-600">Block</th>
                   <th className="text-left p-2 font-medium text-gray-600">Criterion</th>
                   <th className="text-center p-2 font-medium text-gray-600">AI Score</th>
+                  <th className="text-left p-2 font-medium text-gray-600 min-w-[200px]">Score Description</th>
                   <th className="text-left p-2 font-medium text-gray-600 min-w-[300px]">Rationale</th>
                 </tr>
               </thead>
@@ -289,9 +290,20 @@ export default function ScoringMatrixAuditPanel({ scoreId, score }) {
                     <td className="p-2 text-gray-500">{s.block_name}</td>
                     <td className="p-2 font-medium">{s.criterion_name}</td>
                     <td className="p-2 text-center">
-                      <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold border ${SCORE_COLORS[s.ai_score] || "border-gray-200"}`}>
-                        {s.ai_score}
-                      </span>
+                      <div className="flex flex-col items-center gap-0.5">
+                        <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold border ${SCORE_COLORS[s.ai_score] || "border-gray-200"}`}>
+                          {s.ai_score}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="p-2">
+                      {s.ai_score_descriptor ? (
+                        <span className="text-xs text-purple-700 bg-purple-50 border border-purple-100 rounded px-1.5 py-1 leading-snug">
+                          {s.ai_score_descriptor}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-300 italic">No descriptor available</span>
+                      )}
                     </td>
                     <td className="p-2 text-gray-600">{s.ai_rationale}</td>
                   </tr>

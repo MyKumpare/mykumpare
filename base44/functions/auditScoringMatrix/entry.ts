@@ -260,6 +260,28 @@ Return a JSON object with this exact structure:
       model: 'claude_sonnet_4_6'
     });
 
+    // Enrich each independent score with the descriptor text for the AI score
+    // level and the full set of level descriptors so the UI can show what each
+    // score option means instead of just the number.
+    if (Array.isArray(llmResponse?.independent_scores) && template?.scoring_blocks) {
+      const descLookup: Record<string, any[]> = {};
+      (template.scoring_blocks as any[]).forEach((block: any) => {
+        (block.criteria || []).forEach((crit: any) => {
+          const key = `${block.name}::${crit.name}`;
+          descLookup[key] = crit.descriptors || [];
+        });
+      });
+      llmResponse.independent_scores = llmResponse.independent_scores.map((s: any) => {
+        const descs = descLookup[`${s.block_name}::${s.criterion_name}`] || [];
+        const matched = descs.find((d: any) => d.level === s.ai_score);
+        return {
+          ...s,
+          ai_score_descriptor: matched?.text || '',
+          descriptors: descs
+        };
+      });
+    }
+
     return Response.json({ success: true, data: llmResponse });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
