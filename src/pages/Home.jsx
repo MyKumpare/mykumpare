@@ -798,7 +798,6 @@ export default function Home() {
       { label: "Geographic Map", icon: Globe, onClick: () => navigate("/FirmGeographicMap") },
       { label: "Geo & Regulatory Dashboard", icon: Globe, onClick: () => navigate("/FirmGeographicDashboard") },
       { label: "Compliance & Renewals", icon: ShieldCheck, onClick: () => navigate("/ComplianceRenewalDashboard") },
-      { label: "Compare Firms", icon: GitCompare, onClick: () => navigate("/FirmComparison") },
     ] },
     { label: "Products", icon: Package, ref: null, color: "text-violet-600", activeBg: "bg-violet-50", onClick: () => setProductPickerOpen(true) },
     { label: "Contacts", icon: User, ref: null, color: "text-pink-600", activeBg: "bg-pink-50", onClick: () => setContactPickerOpen(true), submenu: [

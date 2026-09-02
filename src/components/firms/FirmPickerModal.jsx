@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Building, Plus, Search, ChevronRight, ChevronDown, Globe, MapPin, List, Users, Download } from "lucide-react";
+import { X, Building, Plus, Search, ChevronRight, ChevronDown, Globe, MapPin, List, Users, Download, GitCompare } from "lucide-react";
 import { exportFirmsToCsv } from "./firmListCsvExport";
 import { MapContainer, TileLayer, Marker, Popup, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
@@ -190,6 +190,14 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
               title="Firm Coverage"
             >
               <Users className="w-3.5 h-3.5" /> Firm Coverage
+            </button>
+            <button
+              type="button"
+              onClick={() => { onClose(); navigate("/FirmComparison"); }}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 transition-colors"
+              title="Compare Firms"
+            >
+              <GitCompare className="w-3.5 h-3.5" /> Compare Firms
             </button>
             <button type="button" onClick={onClose}>
               <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
