@@ -3,7 +3,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
-import { Search, Building, User, UserCircle2, ArrowUpDown, Filter, X, MapPin } from "lucide-react";
+import { Search, Building, User, UserCircle2, ArrowUpDown, Filter, X, MapPin, Download } from "lucide-react";
+import { exportFirmsToCsv, exportContactsToCsv } from "@/components/firms/firmListCsvExport";
 import XponanceContactBadges from "@/components/xponance/XponanceContactBadges";
 import XponanceAssignmentCell from "@/components/xponance/XponanceAssignmentCell";
 
@@ -309,9 +310,24 @@ export default function XponanceDashboard() {
                 Clear filters
               </button>
             )}
-            <span className="text-xs text-gray-400 ml-auto">
+            <span className="text-xs text-gray-400">
               Showing {viewMode === "firms" ? filteredFirms.length : filteredContacts.length} {viewMode === "firms" ? "firms" : "contacts"}
             </span>
+            <button
+              onClick={() => {
+                if (viewMode === "firms") {
+                  exportFirmsToCsv(filteredFirms, "firm-coverage-firms.csv");
+                } else {
+                  exportContactsToCsv(filteredContacts, firms, "firm-coverage-contacts.csv");
+                }
+              }}
+              disabled={viewMode === "firms" ? filteredFirms.length === 0 : filteredContacts.length === 0}
+              className="flex items-center gap-1.5 h-8 px-3 text-xs font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 border border-gray-200 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Export filtered list to CSV"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Export CSV
+            </button>
           </div>
         </div>
 

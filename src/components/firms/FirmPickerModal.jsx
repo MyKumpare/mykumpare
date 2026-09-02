@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Building, Plus, Search, ChevronRight, ChevronDown, Globe, MapPin, List, Users } from "lucide-react";
+import { X, Building, Plus, Search, ChevronRight, ChevronDown, Globe, MapPin, List, Users, Download } from "lucide-react";
+import { exportFirmsToCsv } from "./firmListCsvExport";
 import { MapContainer, TileLayer, Marker, Popup, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -173,6 +174,15 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
                 <Globe className="w-3.5 h-3.5" /> Geographic Map
               </button>
             </div>
+            <button
+              type="button"
+              onClick={() => exportFirmsToCsv(view === "map" ? geoFirms : filtered, "firm-picker-export.csv")}
+              disabled={(view === "map" ? geoFirms : filtered).length === 0}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Export filtered firms to CSV"
+            >
+              <Download className="w-3.5 h-3.5" /> Export CSV
+            </button>
             <button
               type="button"
               onClick={() => { onClose(); navigate("/XponanceDashboard"); }}
