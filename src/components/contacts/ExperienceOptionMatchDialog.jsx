@@ -15,6 +15,8 @@ export default function ExperienceOptionMatchDialog({ open, onOpenChange, items,
   const [loading, setLoading] = useState(false);
   const [conflicts, setConflicts] = useState([]);
   const [choices, setChoices] = useState({}); // conflictIndex -> 'new' | existingName
+  const [baseItems, setBaseItems] = useState([]); // items with 100% matches auto-applied
+  const [autoMatchCount, setAutoMatchCount] = useState(0);
 
   useEffect(() => {
     if (!open || !items || items.length === 0) return;
@@ -22,16 +24,36 @@ export default function ExperienceOptionMatchDialog({ open, onOpenChange, items,
     setLoading(true);
     setConflicts([]);
     setChoices({});
+    setBaseItems([]);
+    setAutoMatchCount(0);
     fetchExperienceOptionLists()
       .then(({ companyNames, titleNames }) => {
         if (!active) return;
         const found = buildExperienceConflicts(items, companyNames, titleNames);
-        setConflicts(found);
+        // Separate 100% matches (auto-apply) from those needing manual review
+        const autoApplied = [];
+        const reviewConflicts = [];
+        found.forEach((c) => {
+          const perfect = c.matches.find((m) => m.score >= 1);
+          if (perfect) {
+            autoApplied.push({ itemIndex: c.itemIndex, field: c.field, value: perfect.name });
+          } else {
+            reviewConflicts.push(c);
+          }
+        });
+        // Apply 100% matches to a copy of the items so they're always used
+        const applied = items.map((item) => ({ ...item }));
+        autoApplied.forEach((am) => {
+          applied[am.itemIndex][am.field] = am.value;
+        });
+        setBaseItems(applied);
+        setAutoMatchCount(autoApplied.length);
+        setConflicts(reviewConflicts);
         const initial = {};
-        found.forEach((_, i) => { initial[i] = "new"; });
+        reviewConflicts.forEach((_, i) => { initial[i] = "new"; });
         setChoices(initial);
         setLoading(false);
-        if (found.length === 0) onResolve(items);
+        if (reviewConflicts.length === 0) onResolve(titleCaseItems(applied));
       })
       .catch(() => { if (active) setLoading(false); });
     return () => { active = false; };
@@ -45,7 +67,7 @@ export default function ExperienceOptionMatchDialog({ open, onOpenChange, items,
     }));
 
   const handleApply = () => {
-    const resolved = items.map((item) => ({ ...item }));
+    const resolved = baseItems.map((item) => ({ ...item }));
     conflicts.forEach((c, i) => {
       const choice = choices[i];
       if (choice && choice !== "new") {
@@ -55,7 +77,7 @@ export default function ExperienceOptionMatchDialog({ open, onOpenChange, items,
     onResolve(titleCaseItems(resolved));
   };
 
-  const handleKeepAllNew = () => onResolve(titleCaseItems(items));
+  const handleKeepAllNew = () => onResolve(titleCaseItems(baseItems));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -73,9 +95,14 @@ export default function ExperienceOptionMatchDialog({ open, onOpenChange, items,
         ) : conflicts.length === 0 ? null : (
           <div className="space-y-3 max-h-[60vh] overflow-y-auto">
             <p className="text-sm text-gray-600">
-              Some extracted entries match existing company names or titles in the system.
-              Choose whether to use the existing entry or keep the new one.
+               Some extracted entries match existing company names or titles in the system.
+               Choose whether to use the existing entry or keep the new one.
             </p>
+            {autoMatchCount > 0 && (
+              <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-2.5 py-1.5">
+                {autoMatchCount} exact (100%) match{autoMatchCount > 1 ? "es" : ""} automatically applied.
+              </p>
+            )}
             {conflicts.map((c, i) => (
               <div key={i} className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
                 <p className="text-xs font-medium text-amber-800">
