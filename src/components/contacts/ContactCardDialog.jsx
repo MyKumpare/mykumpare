@@ -152,19 +152,96 @@ function CardPreview({ fields, style, contact, accent }) {
   );
 }
 
+// Apply a saved per-user format (style + field id/label/enabled) onto freshly-built fields for the current contact.
+function applySavedFormat(saved, contact, firms) {
+  const baseFields = buildDefaultFields(contact, firms);
+  if (!saved || !Array.isArray(saved.fields)) {
+    return { fields: baseFields, style: saved?.style || "classic" };
+  }
+  const byId = {};
+  baseFields.forEach((f) => { byId[f.id] = f; });
+  const ordered = [];
+  const seen = new Set();
+  saved.fields.forEach((s) => {
+    if (byId[s.id] && !seen.has(s.id)) {
+      seen.add(s.id);
+      ordered.push({
+        ...byId[s.id],
+        label: s.label || byId[s.id].label,
+        enabled: typeof s.enabled === "boolean" ? s.enabled : byId[s.id].enabled,
+      });
+    }
+  });
+  // Append any catalog fields not in the saved list (new fields added since last save)
+  baseFields.forEach((f) => {
+    if (!seen.has(f.id)) ordered.push(f);
+  });
+  return { fields: ordered, style: saved.style || "classic" };
+}
+
 export default function ContactCardDialog({ contact, firms = [], open, onOpenChange }) {
   const [fields, setFields] = useState(() => buildDefaultFields(contact, firms));
   const [style, setStyle] = useState("classic");
   const [selectedFieldId, setSelectedFieldId] = useState("");
   const [syncing, setSyncing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const cardRef = useRef(null);
+  const loadedRef = useRef(false);
 
-  // Rebuild fields when contact changes
+  // Load the per-user saved format on first open
   React.useEffect(() => {
-    if (open && contact) {
-      setFields(buildDefaultFields(contact, firms));
+    if (!open || loadedRef.current) return;
+    loadedRef.current = true;
+    (async () => {
+      try {
+        const me = await base44.auth.me();
+        const saved = me?.data?.contact_card_format;
+        if (saved) {
+          const { fields: applied, style: savedStyle } = applySavedFormat(saved, contact, firms);
+          setFields(applied);
+          setStyle(savedStyle);
+        }
+      } catch (e) {
+        // not logged in or no saved format — keep defaults
+      }
+    })();
+  }, [open]);
+
+  // Rebuild field values when contact changes, preserving the saved layout/order/enabled/labels
+  React.useEffect(() => {
+    if (!open || !contact) return;
+    setFields((prev) => {
+      const byId = {};
+      buildDefaultFields(contact, firms).forEach((f) => { byId[f.id] = f; });
+      return prev
+        .map((f) => (byId[f.id] ? { ...byId[f.id], label: f.label, enabled: f.enabled } : f))
+        .filter((f) => byId[f.id]);
+    });
+  }, [contact]);
+
+  // Persist the current format (style + field id/label/enabled) to the user's profile
+  const saveFormat = async (currentStyle, currentFields) => {
+    try {
+      setSaving(true);
+      await base44.auth.updateMe({
+        contact_card_format: {
+          style: currentStyle,
+          fields: currentFields.map((f) => ({ id: f.id, label: f.label, enabled: f.enabled })),
+        },
+      });
+    } catch (e) {
+      // non-fatal — format still works in-session
+    } finally {
+      setSaving(false);
     }
-  }, [open, contact]);
+  };
+
+  // Debounced auto-save whenever style or field layout/labels/enabled change
+  React.useEffect(() => {
+    if (!open || !loadedRef.current) return;
+    const t = setTimeout(() => { saveFormat(style, fields); }, 800);
+    return () => clearTimeout(t);
+  }, [style, fields, open]);
 
   const accent = FORMAT_STYLES.find((s) => s.id === style)?.accent || "#1e3a8a";
 
@@ -401,6 +478,8 @@ export default function ContactCardDialog({ contact, firms = [], open, onOpenCha
             <Contact className="w-4 h-4 mr-1" /> {syncing ? "Syncing…" : "Sync to Outlook"}
           </Button>
           <div className="flex-1" />
+          {saving && <span className="text-[11px] text-gray-400 self-center">Saving format…</span>}
+          {!saving && loadedRef.current && <span className="text-[11px] text-gray-400 self-center">Format saved to your profile</span>}
           <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
         </DialogFooter>
       </DialogContent>

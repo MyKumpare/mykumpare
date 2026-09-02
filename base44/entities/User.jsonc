@@ -66,6 +66,41 @@
       "type": "boolean",
       "description": "True if this user is part of management. Only management users can see the Management section and its functions (Activity Timeline, Analyst Coverage, Firm Coverage). Set by an admin from the User Management page or by the user themselves from their profile if they are already management or an admin.",
       "default": false
+    },
+    "contact_card_format": {
+      "type": "object",
+      "description": "Per-user saved Contact Card format. Stores the selected card style (classic/modern/minimal/bold) and the ordered list of field definitions (id, label, enabled) so the user's card layout persists across sessions and contacts. Field values are not saved \u2014 they are re-derived per contact.",
+      "properties": {
+        "style": {
+          "type": "string",
+          "enum": [
+            "classic",
+            "modern",
+            "minimal",
+            "bold"
+          ]
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "enabled": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        }
+      }
     }
   },
   "required": [
