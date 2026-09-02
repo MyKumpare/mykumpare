@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, Loader2, AlertTriangle, CheckCircle2, TrendingUp, TrendingDown, Lightbulb, FileText, Brain, RefreshCw } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import ScoringAuditStatusSummary from "./ScoringAuditStatusSummary";
 
 const SCORE_COLORS = {
   1: "bg-red-100 text-red-700 border-red-300",
@@ -38,6 +39,7 @@ export default function ScoringMatrixAuditPanel({ scoreId, score }) {
   if (!auditData) {
     return (
       <div className="space-y-4">
+        <ScoringAuditStatusSummary score={score} auditData={null} />
         <div className="border border-purple-200 rounded-lg p-6 bg-gradient-to-br from-purple-50 to-white">
           <div className="flex items-start gap-3">
             <div className="p-2 bg-purple-100 rounded-lg">
@@ -114,6 +116,7 @@ export default function ScoringMatrixAuditPanel({ scoreId, score }) {
 
   return (
     <div className="space-y-4">
+      <ScoringAuditStatusSummary score={score} auditData={auditData} />
       {/* Header with re-run button */}
       <div className="flex items-center justify-between border-b pb-2">
         <div className="flex items-center gap-2">
