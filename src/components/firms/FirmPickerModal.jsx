@@ -87,6 +87,7 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
   const [geoCountry, setGeoCountry] = useState("");
   const [geoState, setGeoState] = useState("");
   const [geoCity, setGeoCity] = useState("");
+  const [geoSearch, setGeoSearch] = useState("");
   const [hoveredFirmId, setHoveredFirmId] = useState(null);
   const [actionOrder, setActionOrder] = useActionOrder();
 
@@ -99,18 +100,29 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
   const activeFirms = useMemo(() =>
     firms.filter(f => !f.deleted_at), [firms]);
 
-  // ── Geographic drill-down: firms matching selected country/state/city ──
+  // ── Geographic drill-down + global search: firms matching selected country/state/city and/or text search ──
   const geoFirms = useMemo(() => {
-    if (!geoCountry && !geoState && !geoCity) return activeFirms;
+    const gq = geoSearch.trim().toLowerCase();
     return activeFirms.filter((f) => {
-      return (f.addresses || []).some((a) => {
+      // Drill-down filter (country/state/city)
+      const matchesDrill = (!geoCountry && !geoState && !geoCity) || (f.addresses || []).some((a) => {
         if (geoCountry && a.country !== geoCountry) return false;
         if (geoState && a.state !== geoState) return false;
         if (geoCity && (a.city || "").toLowerCase() !== geoCity.toLowerCase()) return false;
         return true;
       });
+      if (!matchesDrill) return false;
+      // Global text search across firm name, region, country, state, city
+      if (!gq) return true;
+      if ((f.name || "").toLowerCase().includes(gq)) return true;
+      if ((f.geographic_region || "").toLowerCase().includes(gq)) return true;
+      return (f.addresses || []).some((a) =>
+        (a.country || "").toLowerCase().includes(gq) ||
+        (a.state || "").toLowerCase().includes(gq) ||
+        (a.city || "").toLowerCase().includes(gq)
+      );
     });
-  }, [activeFirms, geoCountry, geoState, geoCity]);
+  }, [activeFirms, geoCountry, geoState, geoCity, geoSearch]);
 
   // Cities available for the selected country+state (from firm addresses + geoData)
   const geoCityOptions = useMemo(() => {
@@ -170,6 +182,7 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
     setGeoCountry("");
     setGeoState("");
     setGeoCity("");
+    setGeoSearch("");
   };
 
   const statesForGeoCountry = getStatesForCountry(geoCountry);
@@ -413,12 +426,27 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
           </>
         ) : (
           <>
-            {/* Geographic drill-down */}
+            {/* Geographic drill-down + global search */}
             <div className="px-4 py-3 border-b border-gray-100 space-y-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                <input
+                  type="text"
+                  value={geoSearch}
+                  onChange={e => setGeoSearch(e.target.value)}
+                  placeholder="Search by firm, region, country, state/province, or city..."
+                  className="w-full h-9 pl-9 pr-8 text-sm rounded-lg border border-gray-200 outline-none focus:border-indigo-400 bg-gray-50"
+                />
+                {geoSearch && (
+                  <button type="button" onClick={() => setGeoSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <X className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" />
+                  </button>
+                )}
+              </div>
               <div className="flex items-center gap-2 text-xs text-gray-500">
                 <MapPin className="w-3.5 h-3.5 text-indigo-500" />
                 <span className="font-medium">Drill down: Country → State/Province → City</span>
-                {(geoCountry || geoState || geoCity) && (
+                {(geoCountry || geoState || geoCity || geoSearch) && (
                   <button type="button" onClick={resetGeo} className="ml-auto text-indigo-600 hover:text-indigo-800 font-medium">
                     Reset
                   </button>
