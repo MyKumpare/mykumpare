@@ -62,7 +62,7 @@ function ScoreCell({ score, onChange, disabled, placeholder = "—", descriptors
         </SelectContent>
       </Select>
       {selectedDesc && (
-        <span className="text-[10px] text-gray-500 leading-tight text-center max-w-[140px] whitespace-normal" title={selectedDesc}>
+        <span className="text-[11px] text-gray-500 leading-snug text-center max-w-[240px] whitespace-normal px-1" title={selectedDesc}>
           {selectedDesc}
         </span>
       )}
@@ -839,16 +839,16 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
               <thead className="bg-gray-50 sticky top-0">
                 <tr className="border-b">
                   <th className="text-left p-2 font-medium text-gray-600 min-w-[200px]">Criterion</th>
-                  <th className="text-center p-2 font-medium text-gray-600">Primary</th>
-                  {showSecondary && <th className="text-center p-2 font-medium text-gray-600">Secondary</th>}
-                  {showTeam && <th className="text-center p-2 font-medium text-gray-600">Team Rec.</th>}
+                  <th className="text-center p-2 font-medium text-gray-600 min-w-[220px]">Primary</th>
+                  {showSecondary && <th className="text-center p-2 font-medium text-gray-600 min-w-[220px]">Secondary</th>}
+                  {showTeam && <th className="text-center p-2 font-medium text-gray-600 min-w-[180px]">Team Rec.</th>}
                   {showTeam && <th className="text-center p-2 font-medium text-gray-600">Δ</th>}
-                  {showAdjustedPrimary && <th className="text-center p-2 font-medium text-gray-600">Adj. Primary</th>}
-                  {showIC && <th className="text-center p-2 font-medium text-gray-600">IC Rec.</th>}
+                  {showAdjustedPrimary && <th className="text-center p-2 font-medium text-gray-600 min-w-[200px]">Adj. Primary</th>}
+                  {showIC && <th className="text-center p-2 font-medium text-gray-600 min-w-[180px]">IC Rec.</th>}
                   {showIC && <th className="text-center p-2 font-medium text-gray-600">Δ</th>}
-                  {showFinal && <th className="text-center p-2 font-medium text-gray-600">Final</th>}
+                  {showFinal && <th className="text-center p-2 font-medium text-gray-600 min-w-[220px]">Final</th>}
                   {showFinal && <th className="text-center p-2 font-medium text-gray-600">Bonus/Penalty</th>}
-                  <th className="text-left p-2 font-medium text-gray-600 min-w-[150px]">Notes</th>
+                  <th className="text-left p-2 font-medium text-gray-600 min-w-[180px]">Notes</th>
                 </tr>
               </thead>
               <tbody>
