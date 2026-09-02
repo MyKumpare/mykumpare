@@ -1,8 +1,10 @@
 import React, { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { Users, MapPin, CalendarClock, Building2, Video, User as UserIcon, Inbox } from "lucide-react";
+import { Users, MapPin, CalendarClock, Building2, Video, User as UserIcon, Inbox, FileDown } from "lucide-react";
 import { format } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { exportContactMeetingLogPdf } from "./contactMeetingLogPdf";
 
 const STATUS_STYLE = {
   Scheduled: "bg-blue-100 text-blue-700 border-blue-200",
@@ -180,6 +182,15 @@ export default function ContactMeetingLogTab({ contactId, contactName, firmIds }
         <span className="text-[11px] text-gray-400 ml-auto flex items-center gap-1">
           <CalendarClock className="w-3 h-3" /> Most recent first
         </span>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5"
+          disabled={loading || timeline.length === 0}
+          onClick={() => exportContactMeetingLogPdf({ contactName, timeline })}
+        >
+          <FileDown className="w-3.5 h-3.5" /> Export PDF
+        </Button>
       </div>
 
       {loading ? (
