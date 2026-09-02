@@ -56,7 +56,7 @@ function firmCountry(f) {
   return "";
 }
 
-export default function FirmGeographicDashboard() {
+export default function FirmGeographicDashboard({ inline = false }) {
   const { user } = useAuth();
   const [dataScope, setDataScope] = useState("my");
   const [cityFilter, setCityFilter] = useState("__all__");
@@ -194,8 +194,9 @@ export default function FirmGeographicDashboard() {
   const countriesCovered = new Set(displayFirms.map(firmCountry).filter(Boolean)).size;
 
   return (
-    <div className="min-h-screen bg-gray-50/80">
-      {/* Header */}
+    <div className={inline ? "" : "min-h-screen bg-gray-50/80"}>
+      {/* Header — hidden when rendered inline inside the Monitor page */}
+      {!inline && (
       <div className="bg-gradient-to-r from-indigo-600 via-indigo-700 to-violet-700 text-white shadow-md">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -229,8 +230,31 @@ export default function FirmGeographicDashboard() {
           </div>
         </div>
       </div>
+      )}
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+      <div className={inline ? "space-y-6" : "max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6"}>
+      {inline && (
+        <div className="flex items-center justify-end">
+          <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5">
+            <button
+              onClick={() => setDataScope("my")}
+              className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                dataScope === "my" ? "bg-white text-indigo-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              My Firm
+            </button>
+            <button
+              onClick={() => setDataScope("all")}
+              className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                dataScope === "all" ? "bg-white text-indigo-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              All Data
+            </button>
+          </div>
+        </div>
+      )}
         {/* Filter bar — search by city or governing regulatory body */}
         {!isLoading && scopedFirms.length > 0 && (
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">

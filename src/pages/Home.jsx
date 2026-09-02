@@ -787,7 +787,10 @@ export default function Home() {
     { label: "Dashboard", icon: LayoutDashboard, ref: null, color: "text-indigo-300", activeBg: "bg-indigo-50", onClick: () => navigate("/Dashboard") },
     { label: "AI Agents", icon: Bot, ref: null, color: "text-violet-300", activeBg: "bg-violet-50", onClick: () => navigate("/AiAgents") },
     { label: "Due Diligence", icon: ShieldCheck, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => navigate("/DueDiligence") },
-    { label: "Monitor", icon: Radar, ref: null, color: "text-rose-600", activeBg: "bg-rose-50", onClick: () => navigate("/Monitor") },
+    { label: "Monitor", icon: Radar, ref: null, color: "text-rose-600", activeBg: "bg-rose-50", onClick: () => navigate("/Monitor"), submenu: [
+      { label: "Geo & Regulatory", icon: Globe, onClick: () => navigate("/Monitor?tab=geo-regulatory") },
+      { label: "Compliance & Renewals", icon: ShieldCheck, onClick: () => navigate("/Monitor?tab=compliance-renewals") },
+    ] },
     { label: "Report", icon: FileBarChart, ref: null, color: "text-cyan-600", activeBg: "bg-cyan-50", onClick: () => navigate("/Reports"), submenu: [
       { label: "Analytics", icon: LineChart, onClick: () => setAnalyticsLaunchOpen(true) },
       { label: "Reports", icon: FileText, onClick: () => setReportsPickerOpen(true) },
@@ -800,8 +803,6 @@ export default function Home() {
     { label: "Firms", icon: Building, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => setFirmPickerOpen(true), submenu: [
       { label: "Firm Picker", icon: Building, onClick: () => setFirmPickerOpen(true) },
       { label: "Geographic Map", icon: Globe, onClick: () => navigate("/FirmGeographicMap") },
-      { label: "Geo & Regulatory Dashboard", icon: Globe, onClick: () => navigate("/FirmGeographicDashboard") },
-      { label: "Compliance & Renewals", icon: ShieldCheck, onClick: () => navigate("/ComplianceRenewalDashboard") },
     ] },
     { label: "Products", icon: Package, ref: null, color: "text-violet-600", activeBg: "bg-violet-50", onClick: () => setProductPickerOpen(true) },
     { label: "Contacts", icon: User, ref: null, color: "text-pink-600", activeBg: "bg-pink-50", onClick: () => setContactPickerOpen(true), submenu: [

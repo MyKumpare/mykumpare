@@ -1,7 +1,7 @@
 import {
   Newspaper, ClipboardList, LayoutList, BellRing, ClipboardCheck,
   LineChart, CalendarDays, Bell, UserCheck, Users, Activity as ActivityIcon, FileSearch,
-  TrendingUp, BarChart2,
+  TrendingUp, BarChart2, Globe, ShieldCheck,
 } from "lucide-react";
 
 /**
@@ -25,6 +25,8 @@ export const MONITOR_MODULES = [
   { key: "rfp-rfi", label: "RFP/RFI", icon: FileSearch, color: "text-rose-600", bg: "bg-rose-50", border: "border-rose-200" },
   { key: "firm-score-trends-6mo", label: "Score Trends (6mo)", icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-200" },
   { key: "benchmark-comparison", label: "Benchmark Comparison", icon: BarChart2, color: "text-fuchsia-600", bg: "bg-fuchsia-50", border: "border-fuchsia-200" },
+  { key: "geo-regulatory", label: "Geo & Regulatory", icon: Globe, color: "text-indigo-600", bg: "bg-indigo-50", border: "border-indigo-200" },
+  { key: "compliance-renewals", label: "Compliance & Renewals", icon: ShieldCheck, color: "text-slate-600", bg: "bg-slate-50", border: "border-slate-200" },
 ];
 
 export const MODULE_MAP = Object.fromEntries(MONITOR_MODULES.map((m) => [m.key, m]));

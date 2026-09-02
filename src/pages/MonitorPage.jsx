@@ -19,6 +19,8 @@ import RfpRfiDashboard from "@/pages/RfpRfiDashboard";
 import RfpRfiDueThisWeek from "@/components/firms/RfpRfiDueThisWeek";
 import CoverageTracker from "@/pages/CoverageTracker";
 import CoverageManagement from "@/pages/CoverageManagement";
+import FirmGeographicDashboard from "@/pages/FirmGeographicDashboard";
+import ComplianceRenewalDashboard from "@/pages/ComplianceRenewalDashboard";
 import StaleContactRemindersPanel from "@/components/contacts/StaleContactRemindersPanel";
 import ScoringAlertsTab from "@/components/templates/ScoringAlertsTab";
 import ScoreTrendAnalyticsTab from "@/components/templates/ScoreTrendAnalyticsTab";
@@ -220,6 +222,8 @@ export default function MonitorPage() {
             {activeModule === "coverage" && <CoverageTracker />}
             {activeModule === "coverage-mgmt" && <CoverageManagement />}
             {activeModule === "rfp-rfi" && <RfpRfiDashboard inline />}
+            {activeModule === "geo-regulatory" && <FirmGeographicDashboard inline />}
+            {activeModule === "compliance-renewals" && <ComplianceRenewalDashboard inline />}
           </div>
         )}
       </div>

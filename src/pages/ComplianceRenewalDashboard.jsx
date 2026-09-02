@@ -17,7 +17,7 @@ function contactDisplayName(c) {
   return name || c.email || "Unnamed";
 }
 
-export default function ComplianceRenewalDashboard() {
+export default function ComplianceRenewalDashboard({ inline = false }) {
   const { user } = useAuth();
   const [dataScope, setDataScope] = useState("my");
   const linkedFirmId = user?.data?.linked_firm_id;
@@ -103,8 +103,9 @@ export default function ComplianceRenewalDashboard() {
   const totalTracked = renewalRows.length;
 
   return (
-    <div className="min-h-screen bg-gray-50/80">
-      {/* Header */}
+    <div className={inline ? "" : "min-h-screen bg-gray-50/80"}>
+      {/* Header — hidden when rendered inline inside the Monitor page */}
+      {!inline && (
       <div className="bg-gradient-to-r from-slate-800 via-slate-900 to-indigo-900 text-white shadow-md">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -138,8 +139,31 @@ export default function ComplianceRenewalDashboard() {
           </div>
         </div>
       </div>
+      )}
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+      <div className={inline ? "space-y-6" : "max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6"}>
+      {inline && (
+        <div className="flex items-center justify-end">
+          <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5">
+            <button
+              onClick={() => setDataScope("my")}
+              className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                dataScope === "my" ? "bg-white text-slate-800 shadow-sm" : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              My Firm
+            </button>
+            <button
+              onClick={() => setDataScope("all")}
+              className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                dataScope === "all" ? "bg-white text-slate-800 shadow-sm" : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              All Data
+            </button>
+          </div>
+        </div>
+      )}
         {isLoading ? (
           <div className="flex items-center justify-center py-24 text-gray-400">
             <Loader2 className="w-7 h-7 animate-spin" />
