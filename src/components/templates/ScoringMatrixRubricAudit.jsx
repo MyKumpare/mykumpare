@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -56,16 +56,67 @@ function RubricTree({ blocks, title, accent }) {
   );
 }
 
+const AUDIT_STEPS = [
+  { label: "Validating rubric input", icon: ListChecks },
+  { label: "Normalizing rubric structure", icon: ShieldCheck },
+  { label: "Scanning descriptors for quality", icon: Sparkles },
+  { label: "Analyzing bias & redundancy", icon: AlertTriangle },
+  { label: "Evaluating weight balance", icon: ArrowRight },
+  { label: "Generating recommendations", icon: Check },
+];
+
 export default function ScoringMatrixRubricAudit({ blocks, onChange, templateId, templateName }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [activeStep, setActiveStep] = useState(0);
+  const progressTimer = useRef(null);
   const [result, setResult] = useState(null);
   const [processTrace, setProcessTrace] = useState([]);
   const [selected, setSelected] = useState({});
   const [applied, setApplied] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showTrace, setShowTrace] = useState(false);
+
+  // Simulated progress animation while the audit runs — gives the user
+  // visual feedback that the audit is working through its analysis stages.
+  useEffect(() => {
+    if (!loading) {
+      if (progressTimer.current) {
+        clearInterval(progressTimer.current);
+        progressTimer.current = null;
+      }
+      return;
+    }
+    setProgress(0);
+    setActiveStep(0);
+    // Advance progress gradually, slowing down as it approaches 90%
+    // (the final 10% completes when the response arrives).
+    progressTimer.current = setInterval(() => {
+      setProgress((p) => {
+        if (p >= 90) return p;
+        // Slow down as we get closer to 90
+        const increment = p < 30 ? 2 : p < 60 ? 1.5 : p < 80 ? 0.8 : 0.3;
+        return Math.min(90, p + increment);
+      });
+    }, 400);
+    return () => {
+      if (progressTimer.current) {
+        clearInterval(progressTimer.current);
+        progressTimer.current = null;
+      }
+    };
+  }, [loading]);
+
+  // Derive the active step from progress
+  useEffect(() => {
+    const stepIdx = Math.min(
+      AUDIT_STEPS.length - 1,
+      Math.floor((progress / 90) * AUDIT_STEPS.length)
+    );
+    setActiveStep(stepIdx);
+  }, [progress]);
 
   const runAudit = async () => {
     if (!blocks || blocks.length === 0) {
@@ -81,6 +132,7 @@ export default function ScoringMatrixRubricAudit({ blocks, onChange, templateId,
       const res = await base44.functions.invoke("auditScoringMatrixTemplate", { scoring_blocks: blocks });
       if (res?.error) throw new Error(res.error);
       const data = res?.data || res;
+      setProgress(100);
       setResult(data);
       setProcessTrace(res?.process_trace || []);
       // Default: all changes selected
@@ -88,7 +140,7 @@ export default function ScoringMatrixRubricAudit({ blocks, onChange, templateId,
       (data.changes || []).forEach((ch) => { sel[ch.id] = true; });
       setSelected(sel);
     } catch (err) {
-      toast({ title: "Audit failed", description: err?.message, variant: "destructive" });
+      toast({ title: "Audit failed", description: err?.message || "The AI audit timed out or encountered an error. Please try again.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -186,9 +238,52 @@ export default function ScoringMatrixRubricAudit({ blocks, onChange, templateId,
           )}
 
           {loading && (
-            <div className="py-12 text-center">
-              <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mx-auto mb-3" />
-              <p className="text-sm text-gray-500">Analyzing rubric for bias, redundancy, and improvements…</p>
+            <div className="py-8 px-4">
+              {/* Progress bar */}
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 text-indigo-500 animate-spin" />
+                    Auditing rubric…
+                  </span>
+                  <span className="text-xs font-semibold text-indigo-600">{Math.round(progress)}%</span>
+                </div>
+                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full transition-all duration-300 ease-out"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+              </div>
+              {/* Step list */}
+              <div className="space-y-1.5">
+                {AUDIT_STEPS.map((step, i) => {
+                  const StepIcon = step.icon;
+                  const isDone = i < activeStep || progress >= 100;
+                  const isActive = i === activeStep && progress < 100;
+                  const isPending = i > activeStep;
+                  return (
+                    <div
+                      key={i}
+                      className={`flex items-center gap-2 text-xs transition-colors ${
+                        isDone ? "text-green-600" : isActive ? "text-indigo-600 font-medium" : "text-gray-300"
+                      }`}
+                    >
+                      {isDone ? (
+                        <Check className="w-3.5 h-3.5 flex-shrink-0" />
+                      ) : isActive ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin flex-shrink-0" />
+                      ) : (
+                        <StepIcon className="w-3.5 h-3.5 flex-shrink-0" />
+                      )}
+                      <span>{step.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-[11px] text-gray-400 mt-3 text-center">
+                This may take up to 2 minutes for large rubrics. Please keep this dialog open.
+              </p>
             </div>
           )}
 

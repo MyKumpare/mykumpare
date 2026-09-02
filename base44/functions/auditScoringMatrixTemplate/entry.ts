@@ -264,13 +264,13 @@ Return ONLY a JSON object with this exact shape:
 
     processTrace.push({
       step: 5,
-      label: 'AI analysis (Claude Sonnet 4.6)',
+      label: 'AI analysis',
       detail: `Sent ${prompt.length}-char prompt with the full rubric structure and a JSON schema requiring findings, recommended blocks, and discrete changes. Waiting for AI response…`,
       status: 'pending'
     });
 
     console.log('[auditScoringMatrixTemplate] STEP 3: Invoking LLM', {
-      model: "claude_sonnet_4_6",
+      model: "automatic",
       promptLength: prompt.length,
       hasJsonSchema: true,
       addContextFromInternet: false
@@ -280,7 +280,7 @@ Return ONLY a JSON object with this exact shape:
       prompt,
       response_json_schema: responseSchema,
       add_context_from_internet: false,
-      model: "claude_sonnet_4_6"
+      model: "automatic"
     });
 
     const findingsCount = llmResponse?.findings?.length || 0;
