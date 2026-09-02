@@ -276,30 +276,38 @@ Return ONLY a JSON object with this exact shape:
       addContextFromInternet: false
     });
 
-    // Retry the LLM call up to 3 times — the "automatic" model can intermittently
-    // time out or return an unparseable response on large rubrics.
+    // Retry the LLM call up to 2 times — the model can intermittently time out
+    // or return an empty/unparseable response. We use gpt_5_mini for a fast,
+    // capable response (claude_sonnet_4_6 and gpt_5_4 time out on large rubrics;
+    // the "automatic" model sometimes returns empty results).
     let llmResponse: any = null;
     let lastError: string = '';
-    const maxRetries = 3;
+    const maxRetries = 2;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         console.log(`[auditScoringMatrixTemplate] STEP 3: Invoking LLM (attempt ${attempt}/${maxRetries})`, {
-          model: "automatic",
+          model: "gpt_5_mini",
           promptLength: prompt.length,
           hasJsonSchema: true
         });
-        llmResponse = await base44.integrations.Core.InvokeLLM({
+        const attemptResponse = await base44.integrations.Core.InvokeLLM({
           prompt,
           response_json_schema: responseSchema,
           add_context_from_internet: false,
-          model: "automatic"
+          model: "gpt_5_mini"
         });
-        if (llmResponse && (llmResponse.findings?.length || llmResponse.changes?.length)) {
+        const fCount = attemptResponse?.findings?.length || 0;
+        const cCount = attemptResponse?.changes?.length || 0;
+        const bCount = attemptResponse?.recommended_blocks?.length || 0;
+        console.log(`[auditScoringMatrixTemplate] Attempt ${attempt} response: ${fCount} findings, ${cCount} changes, ${bCount} blocks`);
+        if (fCount > 0 || cCount > 0 || bCount > 0) {
+          llmResponse = attemptResponse;
           console.log(`[auditScoringMatrixTemplate] LLM succeeded on attempt ${attempt}`);
           break;
         }
         console.log(`[auditScoringMatrixTemplate] Attempt ${attempt}: LLM returned empty result, retrying…`);
-        lastError = 'LLM returned empty result';
+        lastError = 'LLM returned empty result (no findings, changes, or blocks)';
+        llmResponse = attemptResponse; // keep last response as fallback
       } catch (err: any) {
         console.log(`[auditScoringMatrixTemplate] Attempt ${attempt} failed:`, err?.message || String(err));
         lastError = err?.message || String(err);
@@ -307,8 +315,8 @@ Return ONLY a JSON object with this exact shape:
       }
     }
 
-    if (!llmResponse) {
-      return Response.json({ error: `AI audit failed after ${maxRetries} attempts: ${lastError}` }, { status: 500 });
+    if (!llmResponse || (!llmResponse.findings?.length && !llmResponse.changes?.length && !llmResponse.recommended_blocks?.length)) {
+      return Response.json({ error: `AI audit could not produce results after ${maxRetries} attempts: ${lastError}. Please try again.` }, { status: 500 });
     }
 
     const findingsCount = llmResponse?.findings?.length || 0;
