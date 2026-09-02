@@ -795,7 +795,6 @@ export default function Home() {
     ] },
     { label: "Firms", icon: Building, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => setFirmPickerOpen(true), submenu: [
       { label: "Firm Picker", icon: Building, onClick: () => setFirmPickerOpen(true) },
-      { label: "Xponance Dashboard", icon: Users, onClick: () => navigate("/XponanceDashboard") },
       { label: "Geographic Map", icon: Globe, onClick: () => navigate("/FirmGeographicMap") },
       { label: "Geo & Regulatory Dashboard", icon: Globe, onClick: () => navigate("/FirmGeographicDashboard") },
       { label: "Compliance & Renewals", icon: ShieldCheck, onClick: () => navigate("/ComplianceRenewalDashboard") },

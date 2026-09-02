@@ -167,7 +167,7 @@ export default function XponanceDashboard() {
             <div>
               <h1 className="text-xl font-bold flex items-center gap-2">
                 <Building className="w-5 h-5" />
-                Xponance Dashboard
+                Firm Coverage
               </h1>
               <p className="text-xs text-white/70 mt-0.5">
                 Primary & secondary Xponance contact assignments across firms and contacts

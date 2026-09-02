@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
-import { X, Building, Plus, Search, ChevronRight, ChevronDown, Globe, MapPin, List } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { X, Building, Plus, Search, ChevronRight, ChevronDown, Globe, MapPin, List, Users } from "lucide-react";
 import { MapContainer, TileLayer, Marker, Popup, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -47,6 +48,7 @@ function firmPosition(firm) {
 }
 
 export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onAddFirm }) {
+  const navigate = useNavigate();
   const [view, setView] = useState("list"); // "list" | "map"
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
@@ -171,6 +173,14 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
                 <Globe className="w-3.5 h-3.5" /> Geographic Map
               </button>
             </div>
+            <button
+              type="button"
+              onClick={() => { onClose(); navigate("/XponanceDashboard"); }}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 transition-colors"
+              title="Firm Coverage"
+            >
+              <Users className="w-3.5 h-3.5" /> Firm Coverage
+            </button>
             <button type="button" onClick={onClose}>
               <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
             </button>
