@@ -157,6 +157,7 @@ export function getFieldDef(fieldId) {
 
 // Build the default card fields from a contact (name always first, then fields with values)
 export function buildDefaultFields(contact, firms) {
+  if (!contact) return [];
   const nameDef = getFieldDef("name");
   const nameVal = nameDef.getValue(contact, firms);
   const nameField = { id: "name", label: "Full Name", value: nameVal, enabled: true };
