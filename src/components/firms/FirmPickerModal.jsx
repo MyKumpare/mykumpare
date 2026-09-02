@@ -68,6 +68,25 @@ function MapInitializer() {
   return null;
 }
 
+// Auto-fits the map to the filtered firms' positions whenever the
+// geographic drill-down or text search changes.
+function MapAutoFit({ positions }) {
+  const map = useMap();
+  React.useEffect(() => {
+    if (!positions || positions.length === 0) {
+      map.setView([39.8283, -98.5795], 4);
+      return;
+    }
+    if (positions.length === 1) {
+      map.setView(positions[0], 8);
+      return;
+    }
+    const bounds = L.latLngBounds(positions);
+    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 10 });
+  }, [positions, map]);
+  return null;
+}
+
 function firmPosition(firm) {
   const addrs = firm.addresses || [];
   const hq = addrs.find((a) => a.is_headquarters && a.latitude != null && a.longitude != null);
@@ -502,6 +521,7 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                   />
                   <MapInitializer />
+                  <MapAutoFit positions={geoMapPoints.map((p) => p.pos)} />
                   {geoMapPoints.map(({ firm, pos }) => (
                     <Marker
                       key={firm.id}
