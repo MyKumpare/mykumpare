@@ -18,20 +18,34 @@ const SCORE_COLORS = {
   5: "bg-green-100 text-green-700 border-green-300"
 };
 
-function ScoreCell({ score, onChange, disabled, placeholder = "—" }) {
+function ScoreCell({ score, onChange, disabled, placeholder = "—", descriptors }) {
+  const hasDesc = Array.isArray(descriptors) && descriptors.some((d) => d && d.text);
+  const descFor = (n) => (hasDesc ? descriptors.find((d) => d.level === n)?.text : null);
+  const selectedDesc = score != null ? descFor(score) : null;
   return (
-    <Select value={score?.toString() || ""} onValueChange={(v) => onChange(parseInt(v))} disabled={disabled}>
-      <SelectTrigger className="h-8 w-16 text-xs">
-        <SelectValue placeholder={placeholder} />
-      </SelectTrigger>
-      <SelectContent>
-        {[1, 2, 3, 4, 5].map((n) => (
-          <SelectItem key={n} value={n.toString()}>
-            <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold border ${SCORE_COLORS[n]}`}>{n}</span>
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <div className="flex flex-col items-center gap-0.5">
+      <Select value={score?.toString() || ""} onValueChange={(v) => onChange(parseInt(v))} disabled={disabled}>
+        <SelectTrigger className="h-8 w-16 text-xs">
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent className={hasDesc ? "min-w-[300px] max-w-[360px]" : ""}>
+          {[1, 2, 3, 4, 5].map((n) => {
+            const text = descFor(n);
+            return (
+              <SelectItem key={n} value={n.toString()} className="items-start py-1.5">
+                <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold border shrink-0 ${SCORE_COLORS[n]}`}>{n}</span>
+                {text && <span className="text-[11px] text-gray-600 leading-snug flex-1 ml-2 whitespace-normal">{text}</span>}
+              </SelectItem>
+            );
+          })}
+        </SelectContent>
+      </Select>
+      {selectedDesc && (
+        <span className="text-[10px] text-gray-500 leading-tight text-center max-w-[140px] whitespace-normal" title={selectedDesc}>
+          {selectedDesc}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -404,6 +418,7 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
                               score={crit.primary_score}
                               onChange={(v) => updateCriterion(block.id, crit.id, { primary_score: v })}
                               disabled={score.primary_score_finalized}
+                              descriptors={crit.descriptors}
                             />
                           </td>
                           {/* Team recommended score */}
@@ -414,6 +429,7 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
                                   score={crit.team_score}
                                   onChange={(v) => updateCriterion(block.id, crit.id, { team_score: v })}
                                   disabled={score.team_review_status === "completed"}
+                                  descriptors={crit.descriptors}
                                 />
                               </td>
                               <td className="p-2 text-center">
@@ -450,6 +466,7 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
                                   score={crit.ic_score}
                                   onChange={(v) => updateCriterion(block.id, crit.id, { ic_score: v })}
                                   disabled={score.ic_review_status === "completed"}
+                                  descriptors={crit.descriptors}
                                 />
                               </td>
                               <td className="p-2 text-center">
