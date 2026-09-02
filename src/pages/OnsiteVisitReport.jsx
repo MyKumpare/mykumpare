@@ -12,10 +12,10 @@ import {
 } from "@/components/ui/tabs";
 import {
   Calendar, MapPin, Video, CheckCircle2, Clock, XCircle, UserX, Loader2,
-  Download, AlertTriangle, FileBarChart, Users, CalendarDays, ClipboardList,
+  Download, AlertTriangle, FileBarChart, Users, CalendarDays, ClipboardList, X,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 
 const fmtDate = (iso) => {
@@ -32,6 +32,7 @@ const STATUS_STYLES = {
 };
 
 export default function OnsiteVisitReport() {
+  const navigate = useNavigate();
   const [reportMode, setReportMode] = useState("logs");
   const [dateStart, setDateStart] = useState("");
   const [dateEnd, setDateEnd] = useState("");
@@ -195,6 +196,9 @@ export default function OnsiteVisitReport() {
               <CalendarDays className="w-4 h-4" /> Calendar View
             </Button>
           </Link>
+          <Button variant="ghost" size="sm" className="gap-1.5 text-gray-500 hover:text-gray-700" onClick={() => navigate(-1)}>
+            <X className="w-4 h-4" /> Close
+          </Button>
         </div>
       </div>
 
