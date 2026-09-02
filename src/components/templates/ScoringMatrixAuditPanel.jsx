@@ -3,9 +3,10 @@ import { useMutation } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Loader2, AlertTriangle, CheckCircle2, TrendingUp, TrendingDown, Lightbulb, FileText, Brain, RefreshCw } from "lucide-react";
+import { Sparkles, Loader2, AlertTriangle, CheckCircle2, TrendingUp, TrendingDown, Lightbulb, FileText, Brain, RefreshCw, FileDown } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import ScoringAuditStatusSummary from "./ScoringAuditStatusSummary";
+import { exportScoringAuditSummaryPdf } from "./scoringAuditPdfExport";
 
 const SCORE_COLORS = {
   1: "bg-red-100 text-red-700 border-red-300",
@@ -34,6 +35,19 @@ export default function ScoringMatrixAuditPanel({ scoreId, score }) {
 
   const runAudit = () => {
     auditMutation.mutate();
+  };
+
+  const [exporting, setExporting] = useState(false);
+  const handleExportPdf = async () => {
+    setExporting(true);
+    try {
+      await exportScoringAuditSummaryPdf({ score, auditData });
+      toast({ title: "PDF exported", description: "Audit summary report downloaded." });
+    } catch (err) {
+      toast({ title: "Export failed", description: err?.message, variant: "destructive" });
+    } finally {
+      setExporting(false);
+    }
   };
 
   if (!auditData) {
@@ -65,6 +79,10 @@ export default function ScoringMatrixAuditPanel({ scoreId, score }) {
                       Run AI Audit
                     </>
                   )}
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleExportPdf} disabled={exporting}>
+                  {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileDown className="w-3.5 h-3.5" />}
+                  Export PDF Summary
                 </Button>
                 {auditMutation.isPending && (
                   <span className="text-xs text-purple-500">This may take 30-60 seconds...</span>
@@ -128,10 +146,16 @@ export default function ScoringMatrixAuditPanel({ scoreId, score }) {
             </Badge>
           )}
         </div>
-        <Button size="sm" variant="outline" onClick={runAudit} disabled={auditMutation.isPending}>
-          {auditMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-          Re-run Audit
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={handleExportPdf} disabled={exporting}>
+            {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileDown className="w-3.5 h-3.5" />}
+            Export PDF Summary
+          </Button>
+          <Button size="sm" variant="outline" onClick={runAudit} disabled={auditMutation.isPending}>
+            {auditMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+            Re-run Audit
+          </Button>
+        </div>
       </div>
 
       {/* Overall AI Assessment */}
