@@ -1095,12 +1095,12 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                       )}
                       {contactRoles.length > 0 && (
                         <span className="inline-flex items-center gap-1 text-[9px] text-gray-400 font-medium">
-                          <span className="w-2 h-2 rounded-full bg-violet-200 border border-violet-300"></span> Contact Department
+                          <span className="w-2 h-2 rounded-full bg-violet-200 border border-violet-300"></span> Contact Roles
                         </span>
                       )}
                       {contactFirmRoles.length > 0 && (
                         <span className="inline-flex items-center gap-1 text-[9px] text-gray-400 font-medium">
-                          <span className="w-2 h-2 rounded-full bg-blue-200 border border-blue-300"></span> Contact Roles
+                          <span className="w-2 h-2 rounded-full bg-blue-200 border border-blue-300"></span> Contact Department
                         </span>
                       )}
                       {tags.length > 0 && (
