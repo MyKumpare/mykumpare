@@ -14,6 +14,7 @@ import {
   Upload, FileText, Trash2, Plus, X, Save, Loader2, FileDown,
 } from "lucide-react";
 import { generateOnsiteVisitPdf } from "./onsiteVisitPdf";
+import { generateOnsiteVisitOnePageSummaryPdf } from "./onsiteVisitOnePageSummaryPdf";
 import { format } from "date-fns";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -455,6 +456,24 @@ export default function OnsiteVisitDialog({ open, onOpenChange, firm, editingVis
           {editingVisit && (
             <Button
               variant="outline"
+              onClick={() => generateOnsiteVisitOnePageSummaryPdf({
+                firm_name: firm?.name,
+                target_visit_date: targetDate,
+                actual_visit_date: actualDate,
+                visiting_analyst_name: analystName || "",
+                onsite_type: onsiteType,
+                status,
+                attachments,
+              })}
+              className="gap-1"
+            >
+              <FileDown className="w-4 h-4" />
+              One-Page Summary
+            </Button>
+          )}
+          {editingVisit && (
+            <Button
+              variant="outline"
               onClick={() => generateOnsiteVisitPdf({
                 firm_name: firm?.name,
                 target_visit_date: targetDate,
@@ -469,7 +488,7 @@ export default function OnsiteVisitDialog({ open, onOpenChange, firm, editingVis
               })}
               className="gap-1"
             >
-              <FileDown className="w-4 h-4" />
+              <FileText className="w-4 h-4" />
               Download PDF
             </Button>
           )}
