@@ -146,7 +146,7 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 px-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className={`relative bg-white rounded-2xl shadow-2xl w-full ${view === "map" ? "max-w-4xl" : "max-w-md"} max-h-[78vh] overflow-hidden flex flex-col`}>
+      <div className={`relative bg-white rounded-2xl shadow-2xl w-full ${view === "map" ? "max-w-4xl" : "max-w-2xl"} max-h-[78vh] overflow-hidden flex flex-col`}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
