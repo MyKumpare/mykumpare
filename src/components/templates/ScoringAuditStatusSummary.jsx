@@ -1,5 +1,6 @@
 import React from "react";
 import { CheckCircle2, Circle, Clock, AlertTriangle } from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
 
 // Builds a progress summary of the scoring matrix evaluation so the user can
@@ -36,6 +37,15 @@ export default function ScoringAuditStatusSummary({ score, auditData }) {
   const overallScored = phases.filter((p) => p.scored === total && total > 0).length;
   const overallPct = total > 0 ? Math.round((phases.reduce((acc, p) => acc + p.scored, 0) / (phases.length * total)) * 100) : 0;
 
+  // Total tasks across all phases (each criterion in each phase is one task)
+  const totalTasks = phases.length * total;
+  const completedTasks = phases.reduce((acc, p) => acc + p.scored, 0);
+  const remainingTasks = Math.max(totalTasks - completedTasks, 0);
+  const pieData = [
+    { name: "Completed", value: completedTasks, color: "#22c55e" },
+    { name: "Remaining", value: remainingTasks, color: "#e2e8f0" },
+  ].filter((d) => d.value > 0);
+
   return (
     <div className="border border-slate-200 rounded-lg p-4 bg-slate-50/50">
       <div className="flex items-center justify-between mb-3">
@@ -47,6 +57,58 @@ export default function ScoringAuditStatusSummary({ score, auditData }) {
           {overallPct}% complete
         </span>
       </div>
+
+      {/* Donut chart: completed vs remaining tasks */}
+      {totalTasks > 0 && (
+        <div className="flex items-center gap-4 mb-4 pb-3 border-b border-slate-200">
+          <div className="relative w-24 h-24 flex-shrink-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={28}
+                  outerRadius={44}
+                  startAngle={90}
+                  endAngle={-270}
+                  stroke="none"
+                >
+                  {pieData.map((entry, idx) => (
+                    <Cell key={idx} fill={entry.color} />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <span className="text-lg font-bold text-slate-800 leading-none">{overallPct}%</span>
+              <span className="text-[10px] text-slate-500 mt-0.5">complete</span>
+            </div>
+          </div>
+          <div className="flex-1 space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="flex items-center gap-1.5 font-medium text-slate-700">
+                <span className="w-2.5 h-2.5 rounded-full bg-green-500" />
+                Completed
+              </span>
+              <span className="font-semibold text-slate-800">{completedTasks}</span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="flex items-center gap-1.5 font-medium text-slate-700">
+                <span className="w-2.5 h-2.5 rounded-full bg-slate-200" />
+                Remaining
+              </span>
+              <span className="font-semibold text-slate-800">{remainingTasks}</span>
+            </div>
+            <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-200">
+              <span className="font-medium text-slate-600">Total Tasks</span>
+              <span className="font-semibold text-slate-800">{totalTasks}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Phase completion bars */}
       <div className="space-y-2">
