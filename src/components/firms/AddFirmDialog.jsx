@@ -1355,26 +1355,12 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                   </div>
                 ) : (
                   <div className="space-y-1.5">
-                    <div className="flex gap-1.5">
-                      <Input
-                        placeholder="https://linkedin.com/company/..."
-                        value={linkedinUrl}
-                        onChange={(e) => setLinkedinUrl(e.target.value)}
-                        className="h-9 flex-1"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-9 px-2 text-[#0A66C2] border-[#0A66C2]/30 hover:bg-[#0A66C2]/10 gap-1"
-                        onClick={handleLinkedInLookup}
-                        disabled={linkedinLookupLoading || !firmName.trim()}
-                        title="Find LinkedIn page"
-                      >
-                        {linkedinLookupLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Linkedin className="w-4 h-4" />}
-                        <span className="text-xs">Find</span>
-                      </Button>
-                    </div>
+                    <Input
+                      placeholder="https://linkedin.com/company/..."
+                      value={linkedinUrl}
+                      onChange={(e) => setLinkedinUrl(e.target.value)}
+                      className="h-9"
+                    />
                     <LiveFieldConflictWarning conflicts={liveConflictsByField.linkedin_url} />
                   </div>
                 )}
@@ -1987,7 +1973,21 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               </Button>
             )}
           </div>
-          <div className="flex gap-2 justify-end">
+          <div className="flex gap-2 justify-end items-center">
+            {activelyEditing && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-9 px-3 text-[#0A66C2] border-[#0A66C2]/30 hover:bg-[#0A66C2]/10 gap-1.5"
+                onClick={handleLinkedInLookup}
+                disabled={linkedinLookupLoading || !firmName.trim()}
+                title="Find the firm's LinkedIn page"
+              >
+                {linkedinLookupLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Linkedin className="w-4 h-4" />}
+                <span className="text-xs">Find LinkedIn</span>
+              </Button>
+            )}
             {isEditing && !isAddMode ? (
               <>
                 <Button variant="outline" onClick={handleCancelEdit}>Cancel</Button>
