@@ -140,7 +140,15 @@ export default function ScoringMatrixRubricAudit({ blocks, onChange, templateId,
       (data.changes || []).forEach((ch) => { sel[ch.id] = true; });
       setSelected(sel);
     } catch (err) {
-      toast({ title: "Audit failed", description: err?.message || "The AI audit timed out or encountered an error. Please try again.", variant: "destructive" });
+      // Extract the real error message — the SDK throws a generic "Request failed
+      // with status code 500" but the actual error is in the response body.
+      const rawMsg = err?.message || String(err);
+      let detail = rawMsg;
+      try {
+        const respErr = err?.response?.data?.error || err?.response?.data?.message;
+        if (respErr) detail = respErr;
+      } catch (_) { /* ignore */ }
+      toast({ title: "Audit failed", description: detail || "The AI audit timed out or encountered an error. Please try again.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
