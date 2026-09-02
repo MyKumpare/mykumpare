@@ -126,7 +126,7 @@ export default function ContactPickerModal({ open, onClose, contacts, firms, pro
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 px-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[78vh] overflow-hidden flex flex-col">
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[82vh] overflow-hidden flex flex-col">
 
         {/* Header */}
         <div className="px-5 py-3 border-b border-gray-100">
