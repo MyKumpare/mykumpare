@@ -1,11 +1,12 @@
 import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Paperclip, Trash2, FileText, Download, Loader2 } from "lucide-react";
+import { Paperclip, Trash2, FileText, Download, Loader2, Eye } from "lucide-react";
 import UploadStatusCard, { formatFileSize } from "@/components/common/UploadStatusCard";
 import { base44 } from "@/api/base44Client";
 import { toast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
+import DocumentPreviewDialog from "./DocumentPreviewDialog";
 
 let _attId = 0;
 const nextAttId = () => `att_${Date.now()}_${++_attId}`;
@@ -29,6 +30,7 @@ export default function ScoringAttachmentsManager({ attachments, scope, canEdit,
   const [uploadError, setUploadError] = useState("");
   const [addingNote, setAddingNote] = useState(null);
   const [noteText, setNoteText] = useState("");
+  const [previewAtt, setPreviewAtt] = useState(null);
   const fileRef = useRef(null);
 
   const all = attachments || [];
@@ -98,15 +100,20 @@ export default function ScoringAttachmentsManager({ attachments, scope, canEdit,
             {scoped.map((att) => (
               <div key={att.id} className="flex items-center gap-1 text-[10px]">
                 <FileText className="w-3 h-3 text-gray-400 shrink-0" />
-                <a
-                  href={att.file_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-blue-600 hover:underline truncate flex-1 min-w-0"
-                  title={att.name}
+                <button
+                  onClick={() => setPreviewAtt(att)}
+                  className="text-blue-600 hover:underline truncate flex-1 min-w-0 text-left"
+                  title={`Preview ${att.name}`}
                 >
                   {att.name}
-                </a>
+                </button>
+                <button
+                  onClick={() => setPreviewAtt(att)}
+                  className="p-0.5 rounded hover:bg-blue-100 text-blue-500 shrink-0"
+                  title="Preview"
+                >
+                  <Eye className="w-2.5 h-2.5" />
+                </button>
                 {canEdit && (
                   <button
                     onClick={() => removeAttachment(att.id)}
@@ -213,6 +220,13 @@ export default function ScoringAttachmentsManager({ attachments, scope, canEdit,
                 )}
               </div>
               <div className="flex items-center gap-1 shrink-0">
+                <button
+                  onClick={() => setPreviewAtt(att)}
+                  className="p-1 rounded hover:bg-blue-100 text-blue-500"
+                  title="Preview"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                </button>
                 <a
                   href={att.file_url}
                   target="_blank"
@@ -236,6 +250,12 @@ export default function ScoringAttachmentsManager({ attachments, scope, canEdit,
           ))}
         </div>
       )}
+
+      <DocumentPreviewDialog
+        attachment={previewAtt}
+        open={!!previewAtt}
+        onOpenChange={(open) => { if (!open) setPreviewAtt(null); }}
+      />
     </div>
   );
 }
