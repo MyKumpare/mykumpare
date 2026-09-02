@@ -1,7 +1,36 @@
 import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Building, Plus, Search, ChevronRight, ChevronDown, Globe, MapPin, List, Users, Download, GitCompare } from "lucide-react";
+import { X, Building, Plus, Search, ChevronRight, ChevronDown, Globe, MapPin, List, Users, Download, GitCompare, GripVertical } from "lucide-react";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { exportFirmsToCsv } from "./firmListCsvExport";
+
+const HEADER_ACTION_ORDER_KEY = "firmPicker_actionOrder";
+const DEFAULT_ACTION_IDS = ["exportCsv", "firmCoverage", "compareFirms"];
+
+function useActionOrder() {
+  const [order, setOrder] = useState(() => {
+    try {
+      const saved = localStorage.getItem(HEADER_ACTION_ORDER_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Ensure all current actions are present (handles new actions added later)
+        const merged = [...parsed];
+        for (const id of DEFAULT_ACTION_IDS) {
+          if (!merged.includes(id)) merged.push(id);
+        }
+        return merged.filter((id) => DEFAULT_ACTION_IDS.includes(id));
+      }
+    } catch { /* ignore */ }
+    return DEFAULT_ACTION_IDS;
+  });
+
+  const updateOrder = (newOrder) => {
+    setOrder(newOrder);
+    try { localStorage.setItem(HEADER_ACTION_ORDER_KEY, JSON.stringify(newOrder)); } catch { /* ignore */ }
+  };
+
+  return [order, updateOrder];
+}
 import { MapContainer, TileLayer, Marker, Popup, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -59,6 +88,7 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
   const [geoState, setGeoState] = useState("");
   const [geoCity, setGeoCity] = useState("");
   const [hoveredFirmId, setHoveredFirmId] = useState(null);
+  const [actionOrder, setActionOrder] = useActionOrder();
 
   const toggleType = (type) => setCollapsedTypes(prev => ({ ...prev, [type]: !prev[type] }));
   const collapseAll = () => setCollapsedTypes(Object.fromEntries(types.map(t => [t, true])));
@@ -179,34 +209,86 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
               <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
             </button>
           </div>
-          {/* Row 2: action buttons */}
-          <div className="flex items-center gap-2 mt-2.5">
-            <button
-              type="button"
-              onClick={() => exportFirmsToCsv(view === "map" ? geoFirms : filtered, "firm-picker-export.csv")}
-              disabled={(view === "map" ? geoFirms : filtered).length === 0}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              title="Export filtered firms to CSV"
-            >
-              <Download className="w-3.5 h-3.5" /> Export CSV
-            </button>
-            <button
-              type="button"
-              onClick={() => { onClose(); navigate("/XponanceDashboard"); }}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 transition-colors"
-              title="Firm Coverage"
-            >
-              <Users className="w-3.5 h-3.5" /> Firm Coverage
-            </button>
-            <button
-              type="button"
-              onClick={() => { onClose(); navigate("/FirmComparison"); }}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 transition-colors"
-              title="Compare Firms"
-            >
-              <GitCompare className="w-3.5 h-3.5" /> Compare Firms
-            </button>
-          </div>
+          {/* Row 2: draggable action buttons */}
+          <DragDropContext
+            onDragEnd={(result) => {
+              if (!result.destination) return;
+              const newOrder = [...actionOrder];
+              const [moved] = newOrder.splice(result.source.index, 1);
+              newOrder.splice(result.destination.index, 0, moved);
+              setActionOrder(newOrder);
+            }}
+          >
+            <Droppable droppableId="header-actions" direction="horizontal">
+              {(provided) => (
+                <div
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                  className="flex items-center gap-1.5 mt-2.5"
+                >
+                  {actionOrder.map((actionId, index) => {
+                    const isExport = actionId === "exportCsv";
+                    const isCoverage = actionId === "firmCoverage";
+                    const isCompare = actionId === "compareFirms";
+                    const colorClasses = isExport
+                      ? "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                      : "text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50";
+                    return (
+                      <Draggable key={actionId} draggableId={actionId} index={index}>
+                        {(dragProvided, snapshot) => (
+                          <div
+                            ref={dragProvided.innerRef}
+                            {...dragProvided.draggableProps}
+                            className={`flex items-center gap-1 rounded-md transition-shadow ${snapshot.isDragging ? "shadow-md ring-1 ring-indigo-200 bg-white" : ""}`}
+                          >
+                            <span
+                              {...dragProvided.dragHandleProps}
+                              className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 flex items-center pr-0.5"
+                              title="Drag to reorder"
+                            >
+                              <GripVertical className="w-3 h-3" />
+                            </span>
+                            {isExport && (
+                              <button
+                                type="button"
+                                onClick={() => exportFirmsToCsv(view === "map" ? geoFirms : filtered, "firm-picker-export.csv")}
+                                disabled={(view === "map" ? geoFirms : filtered).length === 0}
+                                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${colorClasses} disabled:opacity-40 disabled:cursor-not-allowed`}
+                                title="Export filtered firms to CSV"
+                              >
+                                <Download className="w-3.5 h-3.5" /> Export CSV
+                              </button>
+                            )}
+                            {isCoverage && (
+                              <button
+                                type="button"
+                                onClick={() => { onClose(); navigate("/XponanceDashboard"); }}
+                                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${colorClasses}`}
+                                title="Firm Coverage"
+                              >
+                                <Users className="w-3.5 h-3.5" /> Firm Coverage
+                              </button>
+                            )}
+                            {isCompare && (
+                              <button
+                                type="button"
+                                onClick={() => { onClose(); navigate("/FirmComparison"); }}
+                                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${colorClasses}`}
+                                title="Compare Firms"
+                              >
+                                <GitCompare className="w-3.5 h-3.5" /> Compare Firms
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </Draggable>
+                    );
+                  })}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
         </div>
 
         {view === "list" ? (
