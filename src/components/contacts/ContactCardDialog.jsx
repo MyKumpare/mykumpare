@@ -265,7 +265,7 @@ export default function ContactCardDialog({ contact, firms = [], open, onOpenCha
     })();
   }, [open]);
 
-  // Rebuild field values when contact changes, preserving the saved layout/order/enabled/labels
+  // Rebuild field values when contact changes (or the dialog reopens), preserving the saved layout/order/enabled/labels
   React.useEffect(() => {
     if (!open || !contact) return;
     setFields((prev) => {
@@ -275,7 +275,7 @@ export default function ContactCardDialog({ contact, firms = [], open, onOpenCha
         .map((f) => (byId[f.id] ? { ...byId[f.id], label: f.label, enabled: f.enabled } : f))
         .filter((f) => byId[f.id]);
     });
-  }, [contact]);
+  }, [contact, open]);
 
   // Persist the current format (style + field id/label/enabled) to the user's profile
   const saveFormat = async (currentStyle, currentFields) => {
