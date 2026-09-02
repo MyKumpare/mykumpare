@@ -109,6 +109,35 @@
           "uploaded_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "summary": {
+            "type": "object",
+            "description": "AI-generated summary of the document with key takeaways and action items, produced on demand from the 'Generate Summary' button on the attachment.",
+            "properties": {
+              "overview": {
+                "type": "string",
+                "description": "2-3 sentence overview of the document"
+              },
+              "key_takeaways": {
+                "type": "array",
+                "description": "Key takeaways relevant to the onsite due diligence visit",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "action_items": {
+                "type": "array",
+                "description": "Action items / follow-ups the diligence team should pursue",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "generated_at": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Timestamp when the summary was generated (ISO-8601)"
+              }
+            }
           }
         }
       }

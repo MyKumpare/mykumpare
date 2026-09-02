@@ -19,6 +19,7 @@ import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 import XponanceContactPicker from "@/components/xponance/XponanceContactPicker";
+import AttachmentSummary from "./AttachmentSummary";
 
 const todayISO = () => format(new Date(), "yyyy-MM-dd");
 const newId = () => crypto.randomUUID();
@@ -104,6 +105,7 @@ export default function OnsiteVisitDialog({ open, onOpenChange, firm, editingVis
   };
 
   const removeAttachment = (id) => setAttachments((prev) => prev.filter((a) => a.id !== id));
+  const updateAttachment = (id, patch) => setAttachments((prev) => prev.map((a) => (a.id === id ? { ...a, ...patch } : a)));
 
   const addFollowUpItem = () => setFollowUpItems((prev) => [...prev, { id: newId(), description: "", collected: false }]);
   const updateFollowUpItem = (id, patch) => setFollowUpItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...patch } : i)));
@@ -343,10 +345,13 @@ export default function OnsiteVisitDialog({ open, onOpenChange, firm, editingVis
             {attachments.length > 0 && (
               <div className="space-y-1.5">
                 {attachments.map((att) => (
-                  <div key={att.id} className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-white">
-                    <FileText className="w-4 h-4 text-indigo-400 flex-shrink-0" />
-                    <a href={att.file_url} target="_blank" rel="noopener noreferrer" className="text-sm text-gray-700 hover:text-indigo-600 truncate flex-1">{att.name}</a>
-                    <button type="button" onClick={() => removeAttachment(att.id)} className="p-1 text-gray-400 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
+                  <div key={att.id} className="px-3 py-2 rounded-lg border border-gray-200 bg-white">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+                      <a href={att.file_url} target="_blank" rel="noopener noreferrer" className="text-sm text-gray-700 hover:text-indigo-600 truncate flex-1">{att.name}</a>
+                      <button type="button" onClick={() => removeAttachment(att.id)} className="p-1 text-gray-400 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
+                    </div>
+                    <AttachmentSummary attachment={att} onUpdate={updateAttachment} />
                   </div>
                 ))}
               </div>
