@@ -281,12 +281,20 @@ export default function InfluenceLevelDashboard() {
       <div className="bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-md">
         <div className="max-w-7xl xl:max-w-[1400px] mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
           <Trophy className="w-6 h-6 flex-shrink-0" />
-          <div>
+          <div className="min-w-0 flex-1">
             <h1 className="text-lg font-bold">Influence Level Dashboard</h1>
             <p className="text-xs text-white/70">
               Contacts categorized by influence level — breakdown of influential individuals across firms
             </p>
           </div>
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white text-sm font-medium transition-colors flex-shrink-0"
+            title="Close"
+          >
+            <X className="w-4 h-4" /> Close
+          </button>
         </div>
       </div>
 
