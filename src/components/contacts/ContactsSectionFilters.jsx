@@ -355,33 +355,6 @@ export default function ContactsSectionFilters({ contacts, firms, products, port
         </Button>
       </div>
 
-      {/* Tag quick-filter — always visible when tags are in use */}
-      {(() => {
-        const allTags = Array.from(new Set(contacts.flatMap((c) => c.tags || []))).filter(Boolean).sort();
-        if (allTags.length === 0) return null;
-        const activeTags = selected["tags"] || new Set();
-        return (
-          <div className="flex flex-wrap items-center gap-1 pt-1">
-            <span className="text-[11px] text-gray-500 font-medium mr-0.5 inline-flex items-center gap-0.5">
-              <Tag className="w-3 h-3" /> Tags:
-            </span>
-            {allTags.map((t) => {
-              const isActive = activeTags.has(t);
-              return (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => onToggle("tags", t)}
-                  className={`px-2 py-0.5 rounded-full text-xs border transition-colors ${isActive ? "bg-pink-600 text-white border-pink-600" : "bg-white text-gray-700 border-gray-300 hover:border-pink-400"}`}
-                >
-                  {t}
-                </button>
-              );
-            })}
-          </div>
-        );
-      })()}
-
       {showFilters && (
         <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-3 max-h-[28vh] overflow-y-auto">
           <div className="flex items-center justify-between">
