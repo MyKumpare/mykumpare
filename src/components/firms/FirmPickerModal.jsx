@@ -147,18 +147,19 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 px-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className={`relative bg-white rounded-2xl shadow-2xl w-full ${view === "map" ? "max-w-4xl" : "max-w-2xl"} max-h-[78vh] overflow-hidden flex flex-col`}>
+      <div className={`relative bg-white rounded-2xl shadow-2xl w-full ${view === "map" ? "max-w-6xl" : "max-w-4xl"} max-h-[82vh] overflow-hidden flex flex-col`}>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-            <Building className="w-4 h-4 text-indigo-600" />
-            Firms
-            <span className="text-xs text-gray-400 font-normal">
-              ({view === "map" ? geoFirms.length : filtered.length})
-            </span>
-          </h2>
-          <div className="flex items-center gap-2">
+        <div className="px-5 py-3 border-b border-gray-100">
+          {/* Row 1: title + toggle + close */}
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+              <Building className="w-4 h-4 text-indigo-600" />
+              Firms
+              <span className="text-xs text-gray-400 font-normal">
+                ({view === "map" ? geoFirms.length : filtered.length})
+              </span>
+            </h2>
             {/* View toggle */}
             <div className="flex items-center gap-0.5 bg-gray-100 rounded-lg p-0.5">
               <button
@@ -174,6 +175,12 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
                 <Globe className="w-3.5 h-3.5" /> Geographic Map
               </button>
             </div>
+            <button type="button" onClick={onClose}>
+              <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+            </button>
+          </div>
+          {/* Row 2: action buttons */}
+          <div className="flex items-center gap-2 mt-2.5">
             <button
               type="button"
               onClick={() => exportFirmsToCsv(view === "map" ? geoFirms : filtered, "firm-picker-export.csv")}
@@ -198,9 +205,6 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
               title="Compare Firms"
             >
               <GitCompare className="w-3.5 h-3.5" /> Compare Firms
-            </button>
-            <button type="button" onClick={onClose}>
-              <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
             </button>
           </div>
         </div>
