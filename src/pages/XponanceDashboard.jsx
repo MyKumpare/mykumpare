@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { Search, Building, User, UserCircle2, ArrowUpDown, Filter, X, MapPin } from "lucide-react";
@@ -24,6 +24,7 @@ const getContactName = (c) =>
 export default function XponanceDashboard() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const tenantFirmId = user?.linked_firm_id;
 
   const handleAssignmentSaved = () => {
@@ -182,13 +183,17 @@ export default function XponanceDashboard() {
                 <div className="text-white/60 text-[10px]">Firms w/ Primary</div>
               </div>
               <div className="bg-white/15 rounded-lg px-3 py-1.5 text-center">
-                <div className="font-bold text-lg">{firmsWithSecondary}</div>
-                <div className="text-white/60 text-[10px]">Firms w/ Secondary</div>
-              </div>
-              <div className="bg-white/15 rounded-lg px-3 py-1.5 text-center">
                 <div className="font-bold text-lg">{firmsUnassigned}</div>
                 <div className="text-white/60 text-[10px]">Unassigned</div>
               </div>
+              <button
+                onClick={() => navigate(-1)}
+                className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 rounded-lg px-3 py-2 text-sm font-medium transition-colors"
+                title="Close"
+              >
+                <X className="w-4 h-4" />
+                Close
+              </button>
             </div>
           </div>
         </div>
