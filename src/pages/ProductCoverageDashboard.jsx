@@ -5,6 +5,8 @@ import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { Search, Package, Building, UserCircle2, ArrowUpDown, Filter, X, Download } from "lucide-react";
 import XponanceAssignmentCell from "@/components/xponance/XponanceAssignmentCell";
+import AnalystAssignmentChart from "@/components/coverage/AnalystAssignmentChart";
+import { BarChart3 } from "lucide-react";
 
 const PRODUCT_TYPES = ["Investment Manager Product", "Multi-Manager Product"];
 
@@ -378,6 +380,15 @@ export default function ProductCoverageDashboard() {
             </div>
           </div>
         )}
+
+        {/* Analyst assignment chart */}
+        <div className="mt-6 bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+          <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-violet-600" />
+            Analyst Assignment Summary
+          </h3>
+          <AnalystAssignmentChart xponanceContacts={xponanceContacts} assignmentCounts={assignmentCounts} />
+        </div>
 
         {/* Xponance contacts summary */}
         <div className="mt-6 bg-white rounded-xl border border-gray-200 shadow-sm p-4">
