@@ -34,6 +34,7 @@ export default function XponanceDashboard() {
 
   const [search, setSearch] = useState("");
   const [firmTypeFilter, setFirmTypeFilter] = useState("");
+  const [firmNameFilter, setFirmNameFilter] = useState("");
   const [assignmentFilter, setAssignmentFilter] = useState(""); // "assigned" | "unassigned" | ""
   const [viewMode, setViewMode] = useState("firms"); // "firms" | "contacts"
   const [sortKey, setSortKey] = useState("name"); // "name" | "primary" | "secondary"
@@ -60,6 +61,12 @@ export default function XponanceDashboard() {
   const xponanceContactMap = useMemo(
     () => Object.fromEntries(xponanceContacts.map((c) => [c.id, c])),
     [xponanceContacts]
+  );
+
+  // Build a map of firm ID → firm for reverse lookup (used by contacts view filters)
+  const firmMap = useMemo(
+    () => Object.fromEntries(firms.map((f) => [f.id, f])),
+    [firms]
   );
 
   // Count how many firms/contacts each Xponance contact is assigned to
@@ -95,6 +102,9 @@ export default function XponanceDashboard() {
     if (firmTypeFilter) {
       list = list.filter((f) => getFirmTypes(f).includes(firmTypeFilter));
     }
+    if (firmNameFilter) {
+      list = list.filter((f) => f.id === firmNameFilter);
+    }
     if (assignmentFilter === "assigned") {
       list = list.filter((f) => f.primary_xponance_contact_id || f.secondary_xponance_contact_id);
     } else if (assignmentFilter === "unassigned") {
@@ -118,12 +128,20 @@ export default function XponanceDashboard() {
       sorted.sort((a, b) => (a.secondary_xponance_contact_name || "zzz").localeCompare(b.secondary_xponance_contact_name || "zzz"));
     }
     return sorted;
-  }, [firms, search, firmTypeFilter, assignmentFilter, sortKey]);
+  }, [firms, search, firmTypeFilter, firmNameFilter, assignmentFilter, sortKey]);
 
   // Filtered + sorted contacts (non-Xponance contacts that have Xponance assignments)
   const filteredContacts = useMemo(() => {
     const q = search.trim().toLowerCase();
     let list = contacts.filter((c) => !(c.firm_ids || []).includes(tenantFirmId)); // exclude Xponance's own contacts
+    if (firmTypeFilter) {
+      list = list.filter((c) =>
+        (c.firm_ids || []).some((fid) => getFirmTypes(firmMap[fid]).includes(firmTypeFilter))
+      );
+    }
+    if (firmNameFilter) {
+      list = list.filter((c) => (c.firm_ids || []).includes(firmNameFilter));
+    }
     if (assignmentFilter === "assigned") {
       list = list.filter((c) => c.primary_xponance_contact_id || c.secondary_xponance_contact_id);
     } else if (assignmentFilter === "unassigned") {
@@ -146,10 +164,10 @@ export default function XponanceDashboard() {
       sorted.sort((a, b) => (a.secondary_xponance_contact_name || "zzz").localeCompare(b.secondary_xponance_contact_name || "zzz"));
     }
     return sorted;
-  }, [contacts, tenantFirmId, search, assignmentFilter, sortKey]);
+  }, [contacts, tenantFirmId, firmMap, search, firmTypeFilter, firmNameFilter, assignmentFilter, sortKey]);
 
-  const hasFilters = search.trim() || firmTypeFilter || assignmentFilter;
-  const clearFilters = () => { setSearch(""); setFirmTypeFilter(""); setAssignmentFilter(""); };
+  const hasFilters = search.trim() || firmTypeFilter || firmNameFilter || assignmentFilter;
+  const clearFilters = () => { setSearch(""); setFirmTypeFilter(""); setFirmNameFilter(""); setAssignmentFilter(""); };
 
   const loading = firmsLoading || contactsLoading;
 
@@ -251,18 +269,28 @@ export default function XponanceDashboard() {
           {/* Filters row */}
           <div className="flex flex-wrap items-center gap-2 mt-3">
             <Filter className="w-3.5 h-3.5 text-gray-400" />
-            {viewMode === "firms" && (
-              <select
-                value={firmTypeFilter}
-                onChange={(e) => setFirmTypeFilter(e.target.value)}
-                className="h-8 rounded-lg border border-gray-200 text-xs px-2 focus:outline-none focus:ring-1 focus:ring-indigo-400"
-              >
-                <option value="">All Firm Types</option>
-                {FIRM_TYPES.map((t) => (
-                  <option key={t} value={t}>{t}</option>
+            <select
+              value={firmTypeFilter}
+              onChange={(e) => setFirmTypeFilter(e.target.value)}
+              className="h-8 rounded-lg border border-gray-200 text-xs px-2 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+            >
+              <option value="">All Firm Types</option>
+              {FIRM_TYPES.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+            <select
+              value={firmNameFilter}
+              onChange={(e) => setFirmNameFilter(e.target.value)}
+              className="h-8 rounded-lg border border-gray-200 text-xs px-2 max-w-[220px] focus:outline-none focus:ring-1 focus:ring-indigo-400"
+            >
+              <option value="">All Firms</option>
+              {[...firms]
+                .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+                .map((f) => (
+                  <option key={f.id} value={f.id}>{f.name}</option>
                 ))}
-              </select>
-            )}
+            </select>
             <select
               value={assignmentFilter}
               onChange={(e) => setAssignmentFilter(e.target.value)}
