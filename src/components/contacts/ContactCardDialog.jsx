@@ -9,12 +9,12 @@ import {
   Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Download, Printer, Plus, Trash2, GripVertical, Mail, Phone, MapPin, Globe, Building2, User, Award, Briefcase, Contact,
+  Download, Printer, Plus, Trash2, GripVertical, Mail, Phone, MapPin, Globe, Building2, User, Award, Briefcase, Contact, Upload,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { base44 } from "@/api/base44Client";
-import { AVAILABLE_FIELDS, FIELD_CATEGORIES, getFieldDef, buildDefaultFields } from "./contactCardFields";
+import { AVAILABLE_FIELDS, FIELD_CATEGORIES, getFieldDef, buildDefaultFields, getFieldHref } from "./contactCardFields";
 
 const FORMAT_STYLES = [
   { id: "classic", label: "Classic", accent: "#1e3a8a" },
@@ -74,6 +74,26 @@ function NameHeader({ nameField, contact, accent, layout = "left" }) {
   );
 }
 
+// Render a field value as a hyperlink when the field is linkable (email/phone/address/website).
+function FieldValue({ field, accent, light = false }) {
+  const href = getFieldHref(field.id, field.value);
+  if (href) {
+    const isWeb = href.startsWith("http");
+    return (
+      <a
+        href={href}
+        target={isWeb ? "_blank" : undefined}
+        rel={isWeb ? "noopener noreferrer" : undefined}
+        className="break-words hover:underline"
+        style={{ color: light ? "rgba(255,255,255,0.95)" : accent }}
+      >
+        {field.value}
+      </a>
+    );
+  }
+  return <span className="break-words">{field.value}</span>;
+}
+
 function CardPreview({ fields, style, contact, accent }) {
   const enabledFields = fields.filter((f) => f.enabled && f.value);
   const nameField = enabledFields.find((f) => f.id === "name");
@@ -90,7 +110,7 @@ function CardPreview({ fields, style, contact, accent }) {
             return (
               <div key={f.id} className="flex items-start gap-2 mt-2 text-sm text-gray-600">
                 <Icon className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style={{ color: accent }} />
-                <span className="break-words">{f.value}</span>
+                <FieldValue field={f} accent={accent} />
               </div>
             );
           })}
@@ -105,7 +125,9 @@ function CardPreview({ fields, style, contact, accent }) {
         <NameHeader nameField={nameField} contact={contact} accent={accent} />
         <div className="w-8 h-0.5 my-3" style={{ backgroundColor: accent }} />
         {otherFields.map((f) => (
-          <div key={f.id} className="text-sm text-gray-600 mt-1 break-words">{f.value}</div>
+          <div key={f.id} className="text-sm text-gray-600 mt-1">
+            <FieldValue field={f} accent={accent} />
+          </div>
         ))}
       </div>
     );
@@ -124,7 +146,7 @@ function CardPreview({ fields, style, contact, accent }) {
             return (
               <div key={f.id} className="flex items-start gap-2 mt-2 text-sm text-white/90">
                 <Icon className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-                <span className="break-words">{f.value}</span>
+                <FieldValue field={f} accent={accent} light />
               </div>
             );
           })}
@@ -143,7 +165,7 @@ function CardPreview({ fields, style, contact, accent }) {
           return (
             <div key={f.id} className="flex items-center gap-2 text-sm text-gray-600">
               <Icon className="w-3.5 h-3.5 flex-shrink-0" style={{ color: accent }} />
-              <span className="break-words">{f.value}</span>
+              <FieldValue field={f} accent={accent} />
             </div>
           );
         })}
@@ -185,8 +207,44 @@ export default function ContactCardDialog({ contact, firms = [], open, onOpenCha
   const [selectedFieldId, setSelectedFieldId] = useState("");
   const [syncing, setSyncing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState(contact?.photo_url || "");
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const cardRef = useRef(null);
   const loadedRef = useRef(false);
+
+  // Keep local photo in sync when the contact changes
+  React.useEffect(() => {
+    if (open) setPhotoUrl(contact?.photo_url || "");
+  }, [contact, open]);
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingPhoto(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setPhotoUrl(file_url);
+      if (contact?.id) {
+        await base44.entities.Contact.update(contact.id, { photo_url: file_url });
+      }
+      toast({ title: "✅ Photo updated" });
+    } catch (err) {
+      toast({ title: "Upload failed", description: err?.message || "Could not upload photo.", variant: "destructive" });
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const handlePhotoRemove = async () => {
+    setPhotoUrl("");
+    if (contact?.id) {
+      try {
+        await base44.entities.Contact.update(contact.id, { photo_url: "" });
+      } catch (e) {
+        // non-fatal
+      }
+    }
+  };
 
   // Load the per-user saved format on first open
   React.useEffect(() => {
@@ -372,6 +430,28 @@ export default function ContactCardDialog({ contact, firms = [], open, onOpenCha
               </div>
             </div>
 
+            {/* Photo */}
+            <div>
+              <Label className="text-xs font-medium text-gray-700 mb-1.5 block">Card Photo</Label>
+              <div className="flex items-center gap-3">
+                <PhotoBadge contact={{ ...contact, photo_url: photoUrl }} accent={accent} />
+                <div className="flex flex-col gap-1.5">
+                  <label className="cursor-pointer">
+                    <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} disabled={uploadingPhoto} />
+                    <div className="inline-flex items-center gap-1.5 text-xs text-primary hover:text-indigo-800 font-medium border border-indigo-200 rounded-md px-2.5 py-1.5 hover:bg-indigo-50 transition-colors">
+                      <Upload className="w-3.5 h-3.5" />
+                      {uploadingPhoto ? "Uploading…" : photoUrl ? "Change Photo" : "Upload Photo"}
+                    </div>
+                  </label>
+                  {photoUrl && (
+                    <button type="button" onClick={handlePhotoRemove} className="text-xs text-red-500 hover:text-red-700 text-left">
+                      Remove
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {/* Field management */}
             <div>
               <Label className="text-xs font-medium text-gray-700 mb-1.5 block">Contact Fields (drag to reorder)</Label>
@@ -462,7 +542,7 @@ export default function ContactCardDialog({ contact, firms = [], open, onOpenCha
           <div className="flex flex-col items-center justify-start gap-3 bg-gray-50 rounded-xl p-4 min-h-[300px]">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Preview</p>
             <div ref={cardRef} className="w-full">
-              <CardPreview fields={fields} style={style} contact={contact} accent={accent} />
+              <CardPreview fields={fields} style={style} contact={{ ...contact, photo_url: photoUrl }} accent={accent} />
             </div>
           </div>
         </div>

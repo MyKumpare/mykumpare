@@ -148,6 +148,31 @@ export const AVAILABLE_FIELDS = [
   { id: "notes", label: "Notes", category: "Notes", icon: FileText, getValue: (c) => c.notes || "" },
 ];
 
+// Returns an href for linkable fields (email, phone, address, website), or "" if not linkable.
+export function getFieldHref(fieldId, value) {
+  if (!value) return "";
+  const v = String(value).trim();
+  switch (fieldId) {
+    case "email":
+      return `mailto:${v}`;
+    case "phone_default":
+    case "phones_all": {
+      // Keep leading + and digits only
+      const digits = v.replace(/[^\d+]/g, "").replace(/(?!^)\+/g, "");
+      return digits ? `tel:${digits}` : "";
+    }
+    case "address_primary":
+    case "addresses_all":
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(v)}`;
+    case "firm_website": {
+      if (!v) return "";
+      return /^https?:\/\//i.test(v) ? v : `https://${v}`;
+    }
+    default:
+      return "";
+  }
+}
+
 // Group fields by category for the dropdown
 export const FIELD_CATEGORIES = [...new Set(AVAILABLE_FIELDS.map((f) => f.category))];
 
