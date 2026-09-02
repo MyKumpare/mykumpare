@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
-import { X, User, Plus, ChevronRight, ChevronDown, Building } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { X, User, Plus, ChevronRight, ChevronDown, Building, Users, GripVertical } from "lucide-react";
 import ContactsSectionFilters, { filterSectionContacts } from "./ContactsSectionFilters";
 
 const getFullName = (c) => {
@@ -20,6 +21,7 @@ const byFirstName = (a, b) => {
 };
 
 export default function ContactPickerModal({ open, onClose, contacts, firms, products = [], portfolios = [], onContactClick, onAddContact, onFirmClick }) {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [filterSelected, setFilterSelected] = useState({});
   const [collapsedTypes, setCollapsedTypes] = useState({});
@@ -127,15 +129,31 @@ export default function ContactPickerModal({ open, onClose, contacts, firms, pro
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[78vh] overflow-hidden flex flex-col">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-            <User className="w-4 h-4 text-pink-600" />
-            Contacts
-            <span className="text-xs text-gray-400 font-normal">({filtered.length})</span>
-          </h2>
-          <button type="button" onClick={onClose}>
-            <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
-          </button>
+        <div className="px-5 py-3 border-b border-gray-100">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+              <User className="w-4 h-4 text-pink-600" />
+              Contacts
+              <span className="text-xs text-gray-400 font-normal">({filtered.length})</span>
+            </h2>
+            <button type="button" onClick={onClose}>
+              <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+            </button>
+          </div>
+          {/* Action buttons row */}
+          <div className="flex items-center gap-1.5 mt-2.5">
+            <span className="text-gray-300 flex items-center pr-0.5" title="Drag to reorder">
+              <GripVertical className="w-3 h-3" />
+            </span>
+            <button
+              type="button"
+              onClick={() => { onClose(); navigate("/XponanceDashboard"); }}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 transition-colors"
+              title="Firm Coverage"
+            >
+              <Users className="w-3.5 h-3.5" /> Firm Coverage
+            </button>
+          </div>
         </div>
 
         {/* Filters */}
