@@ -324,13 +324,13 @@ export default function XponanceDashboard() {
           /* Firms table */
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full table-fixed">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Firm</th>
-                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Type</th>
-                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Primary Xponance Contact</th>
-                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Secondary Xponance Contact</th>
+                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[28%]">Firm</th>
+                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[20%]">Type</th>
+                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[26%]">Primary Xponance Contact</th>
+                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[26%]">Secondary Xponance Contact</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -408,13 +408,13 @@ export default function XponanceDashboard() {
           /* Contacts view */
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full table-fixed">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Contact</th>
-                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Firm</th>
-                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Primary Xponance Contact</th>
-                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Secondary Xponance Contact</th>
+                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[28%]">Contact</th>
+                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[20%]">Firm</th>
+                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[26%]">Primary Xponance Contact</th>
+                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[26%]">Secondary Xponance Contact</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
