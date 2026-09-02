@@ -17,6 +17,7 @@ import { toast } from "@/components/ui/use-toast";
 import ContactTagChips from "./ContactTagChips";
 import ContactsBulkActionsBar from "./ContactsBulkActionsBar";
 import BulkTagDialog from "./BulkTagDialog";
+import ContactQuickFilterChips from "./ContactQuickFilterChips";
 
 const ContactPipelineStageEditor = lazyDialog(() => import("./ContactPipelineStageEditor"));
 
@@ -103,6 +104,15 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
     return init;
   });
   const handleFilterChange = (key, value) => setFilterValues((prev) => ({ ...prev, [key]: value }));
+  // Toggle a single value within a Set-based filter (used by the quick filter chips).
+  const handleChipToggle = (key, value) =>
+    setFilterValues((prev) => {
+      const next = { ...prev };
+      const s = new Set(prev[key] || []);
+      if (s.has(value)) s.delete(value); else s.add(value);
+      next[key] = s;
+      return next;
+    });
   const clearAllSidebarFilters = () => setFilterValues(() => {
     const init = {};
     Object.keys(SIDEBAR_FILTER_CONFIG).forEach((k) => { init[k] = new Set(); });
@@ -570,6 +580,11 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
               </div>
             )}
             <div className="flex-1 min-w-0">
+              <ContactQuickFilterChips
+                contacts={contacts}
+                values={filterValues}
+                onChange={handleChipToggle}
+              />
               <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
                 <Button
                   variant="ghost"
