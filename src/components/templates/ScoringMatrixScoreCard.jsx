@@ -62,7 +62,7 @@ function ScoreCell({ score, onChange, disabled, placeholder = "—", descriptors
         </SelectContent>
       </Select>
       {selectedDesc && (
-        <p className="text-[11px] text-gray-500 leading-relaxed text-left w-full whitespace-normal px-0.5" title={selectedDesc}>
+        <p className="text-[11px] text-gray-500 leading-relaxed text-left w-full max-w-[260px] whitespace-normal px-0.5 mt-0.5" title={selectedDesc}>
           {selectedDesc}
         </p>
       )}
@@ -839,14 +839,14 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
               <thead className="bg-gray-50 sticky top-0">
                 <tr className="border-b">
                   <th className="text-left p-2 font-medium text-gray-600 min-w-[200px]">Criterion</th>
-                  <th className="text-center p-2 font-medium text-gray-600 min-w-[220px]">Primary</th>
-                  {showSecondary && <th className="text-center p-2 font-medium text-gray-600 min-w-[220px]">Secondary</th>}
+                  <th className="text-left p-2 font-medium text-gray-600 min-w-[280px]">Primary</th>
+                  {showSecondary && <th className="text-left p-2 font-medium text-gray-600 min-w-[280px]">Secondary</th>}
                   {showTeam && <th className="text-center p-2 font-medium text-gray-600 min-w-[180px]">Team Rec.</th>}
                   {showTeam && <th className="text-center p-2 font-medium text-gray-600">Δ</th>}
                   {showAdjustedPrimary && <th className="text-center p-2 font-medium text-gray-600 min-w-[200px]">Adj. Primary</th>}
                   {showIC && <th className="text-center p-2 font-medium text-gray-600 min-w-[180px]">IC Rec.</th>}
                   {showIC && <th className="text-center p-2 font-medium text-gray-600">Δ</th>}
-                  {showFinal && <th className="text-center p-2 font-medium text-gray-600 min-w-[220px]">Final</th>}
+                  {showFinal && <th className="text-center p-2 font-medium text-gray-600 min-w-[120px]">Final</th>}
                   {showFinal && <th className="text-center p-2 font-medium text-gray-600">Bonus/Penalty</th>}
                   <th className="text-left p-2 font-medium text-gray-600 min-w-[180px]">Notes</th>
                 </tr>
@@ -881,7 +881,7 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
                           </div>
                         </td>
                         {/* Primary score */}
-                        <td className="p-2 text-center">
+                        <td className="p-2 text-left align-top">
                           <ScoreCell
                             score={crit.primary_score}
                             onChange={(v) => updateCriterion(block.id, crit.id, { primary_score: v })}
@@ -891,7 +891,7 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
                         </td>
                         {/* Secondary score */}
                         {showSecondary && (
-                          <td className="p-2 text-center">
+                          <td className="p-2 text-left align-top">
                             <ScoreCell
                               score={crit.secondary_score}
                               onChange={(v) => updateCriterion(block.id, crit.id, { secondary_score: v })}
