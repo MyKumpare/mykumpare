@@ -1,5 +1,119 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
 
+let _newId = 0;
+const genId = (prefix: string) => `${prefix}_${Date.now()}_${++_newId}`;
+
+/**
+ * Apply a single discrete rubric-audit change to a blocks array (deep clone).
+ * Mirrors the frontend scoringRubricAuditApply.js logic so the backend can
+ * build recommended_blocks from the LLM's discrete changes without a second
+ * heavy LLM call.
+ */
+function applyChangeToBlocks(blocks: any[], change: any): any[] {
+  const cloneBlock = (b: any) => ({
+    ...b,
+    criteria: (b.criteria || []).map((c: any) => ({
+      ...c,
+      descriptors: (c.descriptors || []).map((d: any) => ({ ...d }))
+    }))
+  });
+  let next = blocks.map(cloneBlock);
+
+  switch (change.type) {
+    case 'rename_block':
+      next = next.map((b) => (b.id === change.block_id ? { ...b, name: change.new_name } : b));
+      break;
+    case 'adjust_weight':
+      next = next.map((b) => (b.id === change.block_id ? { ...b, weight: change.new_weight } : b));
+      break;
+    case 'remove_block':
+      next = next.filter((b) => b.id !== change.block_id);
+      break;
+    case 'add_block':
+      next = [...next, {
+        id: genId('smb'),
+        name: change.new_name || 'New Block',
+        weight: change.new_weight || 0,
+        criteria: (change.criteria || []).map((c: any) => ({
+          id: genId('smc'),
+          number: c.number || 0,
+          name: c.name || '',
+          category: c.category || '',
+          descriptors: (c.descriptors || []).map((d: any) => ({ level: d.level, text: d.text || '' })),
+          bonus_penalty_enabled: false,
+          bonus_penalty_range: { min: -1, max: 1 },
+          bonus_penalty_guidance: ''
+        }))
+      }];
+      break;
+    case 'rename_criterion':
+      next = next.map((b) => b.id === change.block_id ? {
+        ...b,
+        criteria: (b.criteria || []).map((c) => c.id === change.criterion_id ? { ...c, name: change.new_name } : c)
+      } : b);
+      break;
+    case 'remove_criterion':
+      next = next.map((b) => b.id === change.block_id ? {
+        ...b,
+        criteria: (b.criteria || []).filter((c) => c.id !== change.criterion_id)
+      } : b);
+      break;
+    case 'improve_descriptor':
+      next = next.map((b) => b.id === change.block_id ? {
+        ...b,
+        criteria: (b.criteria || []).map((c) => c.id === change.criterion_id ? {
+          ...c,
+          descriptors: (c.descriptors || []).map((d) => d.level === change.level ? { ...d, text: change.new_text } : d)
+        } : c)
+      } : b);
+      break;
+    case 'add_criterion':
+      next = next.map((b) => {
+        if (b.id !== change.block_id) return b;
+        const crits = b.criteria || [];
+        const newCrit = {
+          id: genId('smc'),
+          number: crits.length + 1,
+          name: change.new_name || 'New Criterion',
+          category: change.category_label || '',
+          descriptors: (change.descriptors || [1, 2, 3, 4, 5].map((level) => ({ level, text: '' }))).map((d: any) => ({ level: d.level, text: d.text || '' })),
+          bonus_penalty_enabled: false,
+          bonus_penalty_range: { min: -1, max: 1 },
+          bonus_penalty_guidance: ''
+        };
+        return { ...b, criteria: [...crits, newCrit] };
+      });
+      break;
+    case 'merge_criteria': {
+      const idsToMerge = new Set(change.criterion_ids || []);
+      next = next.map((b) => {
+        if (b.id !== change.block_id) return b;
+        const crits = b.criteria || [];
+        const remaining = crits.filter((c) => !idsToMerge.has(c.id));
+        const merged = {
+          id: genId('smc'),
+          number: remaining.length + 1,
+          name: change.new_name || 'Merged Criterion',
+          category: change.category_label || '',
+          descriptors: (change.descriptors || [1, 2, 3, 4, 5].map((level) => ({ level, text: '' }))).map((d: any) => ({ level: d.level, text: d.text || '' })),
+          bonus_penalty_enabled: false,
+          bonus_penalty_range: { min: -1, max: 1 },
+          bonus_penalty_guidance: ''
+        };
+        return { ...b, criteria: [...remaining, merged] };
+      });
+      break;
+    }
+    default:
+      break;
+  }
+  return next;
+}
+
+function applyChangesToBlocks(blocks: any[], changes: any[]): any[] {
+  return changes.reduce((acc, ch) => applyChangeToBlocks(acc, ch), blocks);
+}
+
 /**
  * Audits a scoring matrix TEMPLATE (the rubric structure: blocks, criteria, level
  * descriptors) — not the filled-in scores — for inherent biases, redundancy that
@@ -276,11 +390,11 @@ Return ONLY a JSON object with this exact shape:
       addContextFromInternet: false
     });
 
-    // Split the audit into TWO PARALLEL LLM calls so each produces less output
-    // and finishes well within the 120-second proxy timeout. A single call
-    // asking for findings + changes + the full recommended_blocks is too heavy
-    // and times out on large rubrics. Parallelizing halves the wall-clock time.
-    const findingsPrompt = `You are an expert consultant auditing the STRUCTURE of an investment-manager due-diligence scoring matrix rubric (blocks, weighted criteria, 1-5 level descriptors) — NOT filled-in scores.
+    // Single LLM call for findings + discrete changes only. The recommended
+    // rubric structure is built on the backend by applying those changes to
+    // the original blocks — no need for the LLM to reproduce the entire rubric
+    // (which was the heavy output causing 120s proxy timeouts on large rubrics).
+    const auditPrompt = `You are an expert consultant auditing the STRUCTURE of an investment-manager due-diligence scoring matrix rubric (blocks, weighted criteria, 1-5 level descriptors) — NOT filled-in scores.
 
 Analyze for: (1) Inherent Bias, (2) Redundancy, (3) Scoring Logic & Descriptor Quality, (4) Weight Balance, (5) Efficiency & Effectiveness.
 
@@ -292,17 +406,7 @@ Produce AT LEAST 3 findings and AT LEAST 3 discrete changes. Each finding: {cate
 
 Return ONLY JSON: { "findings": [...], "changes": [...] }`;
 
-    const blocksPrompt = `You are an expert consultant redesigning an investment-manager due-diligence scoring matrix rubric to be more rigorous, fair, and efficient.
-
-## Current Rubric
-${JSON.stringify(rubricData, null, 2)}
-
-## Instructions
-Produce a COMPLETE improved "recommended_blocks" structure. Reuse existing block/criterion IDs where an item is kept or lightly edited; use new IDs (rec_b_<n>, rec_c_<n>) only for genuinely new items. Same schema as input. Weights must sum to 100. The result MUST differ from the input.
-
-Return ONLY JSON: { "recommended_blocks": [{ "id": "", "name": "", "weight": 0, "criteria": [{ "id": "", "number": 1, "name": "", "category": "", "descriptors": [{ "level": 1, "text": "" }] }] }] }`;
-
-    const findingsSchema = {
+    const auditSchema = {
       type: 'object',
       properties: {
         findings: {
@@ -368,87 +472,46 @@ Return ONLY JSON: { "recommended_blocks": [{ "id": "", "name": "", "weight": 0, 
       }
     };
 
-    const blocksSchema = {
-      type: 'object',
-      properties: {
-        recommended_blocks: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'string' },
-              name: { type: 'string' },
-              weight: { type: 'number' },
-              criteria: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    id: { type: 'string' },
-                    number: { type: 'integer' },
-                    name: { type: 'string' },
-                    category: { type: 'string' },
-                    descriptors: {
-                      type: 'array',
-                      items: {
-                        type: 'object',
-                        properties: { level: { type: 'integer' }, text: { type: 'string' } }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    };
+    console.log('[auditScoringMatrixTemplate] STEP 3: Invoking single LLM call (findings + changes)');
 
-    console.log('[auditScoringMatrixTemplate] STEP 3: Invoking 2 LLM calls in parallel (findings+changes / recommended_blocks)');
-
-    let findingsResult: any = null;
-    let blocksResult: any = null;
+    let llmResponse: any = null;
     let lastError: string = '';
     try {
-      const [findingsRes, blocksRes] = await Promise.all([
-        base44.integrations.Core.InvokeLLM({
-          prompt: findingsPrompt,
-          response_json_schema: findingsSchema,
-          add_context_from_internet: false,
-          model: "gpt_5_mini"
-        }),
-        base44.integrations.Core.InvokeLLM({
-          prompt: blocksPrompt,
-          response_json_schema: blocksSchema,
-          add_context_from_internet: false,
-          model: "gpt_5_mini"
-        })
-      ]);
-      findingsResult = findingsRes;
-      blocksResult = blocksRes;
-      console.log('[auditScoringMatrixTemplate] Parallel LLM calls completed', {
-        findingsCount: findingsRes?.findings?.length || 0,
-        changesCount: findingsRes?.changes?.length || 0,
-        recBlocksCount: blocksRes?.recommended_blocks?.length || 0
+      llmResponse = await base44.integrations.Core.InvokeLLM({
+        prompt: auditPrompt,
+        response_json_schema: auditSchema,
+        add_context_from_internet: false,
+        model: "gpt_5_mini"
+      });
+      console.log('[auditScoringMatrixTemplate] LLM call completed', {
+        findingsCount: llmResponse?.findings?.length || 0,
+        changesCount: llmResponse?.changes?.length || 0
       });
     } catch (err: any) {
-      console.log('[auditScoringMatrixTemplate] Parallel LLM call failed:', err?.message || String(err));
+      console.log('[auditScoringMatrixTemplate] LLM call failed:', err?.message || String(err));
       lastError = err?.message || String(err);
     }
 
-    const llmResponse: any = {
-      findings: findingsResult?.findings || [],
-      changes: findingsResult?.changes || [],
-      recommended_blocks: blocksResult?.recommended_blocks || []
-    };
+    const findingsRaw = llmResponse?.findings || [];
+    const changesRaw = llmResponse?.changes || [];
 
-    if (!llmResponse.findings.length && !llmResponse.changes.length && !llmResponse.recommended_blocks.length) {
+    if (!findingsRaw.length && !changesRaw.length) {
       return Response.json({ error: `AI audit could not produce results: ${lastError || 'LLM returned empty results'}. Please try again.` }, { status: 500 });
     }
 
-    const findingsCount = llmResponse.findings.length;
-    const changesCount = llmResponse.changes.length;
-    const recBlocksCount = llmResponse.recommended_blocks.length;
+    // Build the recommended rubric by applying all discrete changes to the
+    // original blocks — no second LLM call needed.
+    const recommendedBlocks = applyChangesToBlocks(scoring_blocks, changesRaw);
+
+    const llmResponseFinal: any = {
+      findings: findingsRaw,
+      changes: changesRaw,
+      recommended_blocks: recommendedBlocks
+    };
+
+    const findingsCount = findingsRaw.length;
+    const changesCount = changesRaw.length;
+    const recBlocksCount = recommendedBlocks.length;
 
     // Update the AI analysis step with the outcome
     const aiStep = processTrace.find((s: any) => s.step === 5);
@@ -466,22 +529,14 @@ Return ONLY JSON: { "recommended_blocks": [{ "id": "", "name": "", "weight": 0, 
       status: findingsCount === 0 && changesCount === 0 ? 'warning' : 'ok'
     });
 
-    console.log('[auditScoringMatrixTemplate] STEP 4: LLM response received', {
-      responseType: typeof llmResponse,
-      hasFindings: Array.isArray(llmResponse?.findings),
+    console.log('[auditScoringMatrixTemplate] STEP 4: Audit complete', {
       findingsCount,
-      hasRecommendedBlocks: Array.isArray(llmResponse?.recommended_blocks),
-      recommendedBlocksCount: recBlocksCount,
-      hasChanges: Array.isArray(llmResponse?.changes),
       changesCount,
-      findingTitles: (llmResponse?.findings || []).map((f: any) => f?.title)
+      recommendedBlocksCount: recBlocksCount,
+      findingTitles: findingsRaw.map((f: any) => f?.title)
     });
 
-    if (!llmResponse || (!llmResponse.findings?.length && !llmResponse.changes?.length)) {
-      console.log('[auditScoringMatrixTemplate] WARNING: LLM returned no findings or changes — possible empty result');
-    }
-
-    return Response.json({ success: true, data: llmResponse, process_trace: processTrace });
+    return Response.json({ success: true, data: llmResponseFinal, process_trace: processTrace });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
