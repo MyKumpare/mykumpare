@@ -6,11 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
   Download, Printer, Plus, Trash2, GripVertical, Mail, Phone, MapPin, Globe, Building2, User, Award, Briefcase, Contact,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { base44 } from "@/api/base44Client";
+import { AVAILABLE_FIELDS, FIELD_CATEGORIES, getFieldDef, buildDefaultFields } from "./contactCardFields";
 
 const FORMAT_STYLES = [
   { id: "classic", label: "Classic", accent: "#1e3a8a" },
@@ -19,40 +23,55 @@ const FORMAT_STYLES = [
   { id: "bold", label: "Bold", accent: "#7c3aed" },
 ];
 
-const FIELD_ICONS = {
-  name: User,
-  designations: Award,
-  company: Building2,
-  title: Briefcase,
-  email: Mail,
-  phone: Phone,
-  address: MapPin,
-  website: Globe,
-};
+// Resolve the icon component for a field (from the catalog definition)
+function getIconForField(fieldId) {
+  const def = getFieldDef(fieldId);
+  return def?.icon || User;
+}
 
-function buildDefaultFields(contact, firms) {
-  const firm = firms?.find((f) => (contact.firm_ids || []).includes(f.id));
-  const defaultPhone = (contact.phones || []).find((p) => p.is_default) || (contact.phones || [])[0];
-  const phoneStr = defaultPhone
-    ? [defaultPhone.country_code ? `+${defaultPhone.country_code}` : null, defaultPhone.area_code ? `(${defaultPhone.area_code})` : null, [defaultPhone.number_mid, defaultPhone.number_last].filter(Boolean).join("-") || null].filter(Boolean).join(" ")
-    : "";
-  const primaryAddr = (contact.addresses || []).find((a) => a.is_primary) || (contact.addresses || [])[0];
-  const addrStr = primaryAddr
-    ? [primaryAddr.address_line1, primaryAddr.address_line2, [primaryAddr.city, primaryAddr.state].filter(Boolean).join(", "), [primaryAddr.postal_code, primaryAddr.country].filter(Boolean).join(" ")].filter(Boolean).join(", ")
-    : "";
-  const fullName = [contact.salutation, contact.first_name, contact.middle_name, contact.last_name].filter(Boolean).join(" ") + (contact.suffix ? `, ${contact.suffix}` : "");
-  const firmName = firm?.name || (contact.firm_ids || []).map((id) => firms?.find((f) => f.id === id)?.name).filter(Boolean).join(", ");
+function PhotoBadge({ contact, size = "md", accent, light = false }) {
+  const initials = [contact?.first_name?.[0], contact?.last_name?.[0]].filter(Boolean).join("").toUpperCase() || "?";
+  const sizeCls = size === "lg" ? "w-16 h-16 text-xl" : "w-12 h-12 text-base";
+  if (contact?.photo_url) {
+    return (
+      <img
+        src={contact.photo_url}
+        alt=""
+        className={`${sizeCls} rounded-full object-cover flex-shrink-0 border-2`}
+        style={{ borderColor: accent || "#e5e7eb" }}
+      />
+    );
+  }
+  return (
+    <div
+      className={`${sizeCls} rounded-full flex items-center justify-center flex-shrink-0 border-2 font-bold ${light ? "text-white/90 bg-white/10" : "text-white"}`}
+      style={{ backgroundColor: accent || "#9ca3af", borderColor: accent ? `${accent}55` : "#e5e7eb" }}
+    >
+      {initials}
+    </div>
+  );
+}
 
-  return [
-    { id: "name", label: "Full Name", value: fullName, enabled: true },
-    { id: "designations", label: "Designations", value: (contact.designations || []).join(", "), enabled: !!(contact.designations || []).length },
-    { id: "company", label: "Company", value: firmName, enabled: !!firmName },
-    { id: "title", label: "Title", value: contact.title || "", enabled: !!contact.title },
-    { id: "email", label: "Email", value: contact.email || "", enabled: !!contact.email },
-    { id: "phone", label: "Phone", value: phoneStr, enabled: !!phoneStr },
-    { id: "address", label: "Address", value: addrStr, enabled: !!addrStr },
-    { id: "website", label: "Website", value: firm?.website || "", enabled: !!firm?.website },
-  ].filter((f) => f.value || f.id === "name");
+function NameHeader({ nameField, contact, accent, layout = "left" }) {
+  if (!nameField && !contact?.photo_url) return null;
+  const photo = <PhotoBadge contact={contact} accent={accent} />;
+  const nameEl = nameField ? (
+    <h3 className="text-xl font-bold leading-tight text-gray-900">{nameField.value}</h3>
+  ) : null;
+  if (layout === "center") {
+    return (
+      <div className="flex items-center gap-3 justify-center">
+        {photo}
+        {nameEl}
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center gap-3">
+      {photo}
+      <div className="min-w-0">{nameEl}</div>
+    </div>
+  );
 }
 
 function CardPreview({ fields, style, contact, accent }) {
@@ -65,11 +84,9 @@ function CardPreview({ fields, style, contact, accent }) {
       <div className="w-full max-w-sm mx-auto bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
         <div className="h-2" style={{ backgroundColor: accent }} />
         <div className="p-6">
-          {nameField && (
-            <h3 className="text-xl font-bold text-gray-900 leading-tight">{nameField.value}</h3>
-          )}
+          <NameHeader nameField={nameField} contact={contact} accent={accent} />
           {otherFields.map((f) => {
-            const Icon = FIELD_ICONS[f.id] || User;
+            const Icon = getIconForField(f.id);
             return (
               <div key={f.id} className="flex items-start gap-2 mt-2 text-sm text-gray-600">
                 <Icon className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style={{ color: accent }} />
@@ -85,10 +102,8 @@ function CardPreview({ fields, style, contact, accent }) {
   if (style === "minimal") {
     return (
       <div className="w-full max-w-sm mx-auto bg-white rounded-xl shadow-md p-8 border border-gray-50">
-        {nameField && (
-          <h3 className="text-lg font-semibold text-gray-900 mb-1">{nameField.value}</h3>
-        )}
-        <div className="w-8 h-0.5 mb-3" style={{ backgroundColor: accent }} />
+        <NameHeader nameField={nameField} contact={contact} accent={accent} />
+        <div className="w-8 h-0.5 my-3" style={{ backgroundColor: accent }} />
         {otherFields.map((f) => (
           <div key={f.id} className="text-sm text-gray-600 mt-1 break-words">{f.value}</div>
         ))}
@@ -100,11 +115,12 @@ function CardPreview({ fields, style, contact, accent }) {
     return (
       <div className="w-full max-w-sm mx-auto rounded-2xl shadow-lg overflow-hidden" style={{ background: `linear-gradient(135deg, ${accent}, ${accent}dd)` }}>
         <div className="p-6 text-white">
-          {nameField && (
-            <h3 className="text-xl font-bold leading-tight">{nameField.value}</h3>
-          )}
+          <div className="flex items-center gap-3">
+            <PhotoBadge contact={contact} accent={accent} light />
+            {nameField && <h3 className="text-xl font-bold leading-tight">{nameField.value}</h3>}
+          </div>
           {otherFields.map((f) => {
-            const Icon = FIELD_ICONS[f.id] || User;
+            const Icon = getIconForField(f.id);
             return (
               <div key={f.id} className="flex items-start gap-2 mt-2 text-sm text-white/90">
                 <Icon className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
@@ -120,12 +136,10 @@ function CardPreview({ fields, style, contact, accent }) {
   // classic
   return (
     <div className="w-full max-w-sm mx-auto bg-white rounded-lg shadow-lg p-6 border-t-4" style={{ borderTopColor: accent }}>
-      {nameField && (
-        <h3 className="text-xl font-bold text-gray-900 text-center leading-tight">{nameField.value}</h3>
-      )}
+      <NameHeader nameField={nameField} contact={contact} accent={accent} layout="center" />
       <div className="mt-3 space-y-1.5">
         {otherFields.map((f) => {
-          const Icon = FIELD_ICONS[f.id] || User;
+          const Icon = getIconForField(f.id);
           return (
             <div key={f.id} className="flex items-center gap-2 text-sm text-gray-600">
               <Icon className="w-3.5 h-3.5 flex-shrink-0" style={{ color: accent }} />
@@ -141,8 +155,7 @@ function CardPreview({ fields, style, contact, accent }) {
 export default function ContactCardDialog({ contact, firms = [], open, onOpenChange }) {
   const [fields, setFields] = useState(() => buildDefaultFields(contact, firms));
   const [style, setStyle] = useState("classic");
-  const [customLabel, setCustomLabel] = useState("");
-  const [customValue, setCustomValue] = useState("");
+  const [selectedFieldId, setSelectedFieldId] = useState("");
   const [syncing, setSyncing] = useState(false);
   const cardRef = useRef(null);
 
@@ -163,14 +176,20 @@ export default function ContactCardDialog({ contact, firms = [], open, onOpenCha
     setFields((prev) => prev.map((f) => (f.id === id ? { ...f, value } : f)));
   };
 
-  const addCustomField = () => {
-    if (!customLabel.trim()) {
-      toast({ title: "Label required", description: "Enter a label for the custom field.", variant: "destructive" });
+  const addSelectedField = () => {
+    if (!selectedFieldId) {
+      toast({ title: "Select a field", description: "Choose a field from the dropdown to add.", variant: "destructive" });
       return;
     }
-    setFields((prev) => [...prev, { id: `custom-${crypto.randomUUID()}`, label: customLabel.trim(), value: customValue.trim(), enabled: true, custom: true }]);
-    setCustomLabel("");
-    setCustomValue("");
+    if (fields.some((f) => f.id === selectedFieldId)) {
+      toast({ title: "Already added", description: "That field is already on the card.", variant: "destructive" });
+      return;
+    }
+    const def = getFieldDef(selectedFieldId);
+    if (!def) return;
+    const value = def.getValue(contact, firms);
+    setFields((prev) => [...prev, { id: def.id, label: def.label, value: typeof value === "string" ? value : "", enabled: true }]);
+    setSelectedFieldId("");
   };
 
   const removeField = (id) => {
@@ -330,26 +349,35 @@ export default function ContactCardDialog({ contact, firms = [], open, onOpenCha
                 </Droppable>
               </DragDropContext>
 
-              {/* Add custom field */}
+              {/* Add field from existing contact fields */}
               <div className="mt-2 flex items-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-2 py-1.5">
-                <Plus className="w-4 h-4 text-gray-400" />
-                <Input
-                  value={customLabel}
-                  onChange={(e) => setCustomLabel(e.target.value)}
-                  className="h-7 w-28 text-xs"
-                  placeholder="Field label"
-                />
-                <Input
-                  value={customValue}
-                  onChange={(e) => setCustomValue(e.target.value)}
-                  className="h-7 flex-1 text-xs"
-                  placeholder="Field value"
-                  onKeyDown={(e) => { if (e.key === "Enter") addCustomField(); }}
-                />
-                <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={addCustomField}>
+                <Plus className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <Select value={selectedFieldId} onValueChange={setSelectedFieldId}>
+                  <SelectTrigger className="h-7 flex-1 text-xs">
+                    <SelectValue placeholder="Select a contact field to add…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {FIELD_CATEGORIES.map((cat) => {
+                      const catFields = AVAILABLE_FIELDS.filter((f) => f.category === cat && !fields.some((existing) => existing.id === f.id));
+                      if (!catFields.length) return null;
+                      return (
+                        <SelectGroup key={cat}>
+                          <SelectLabel className="text-xs font-semibold text-gray-500">{cat}</SelectLabel>
+                          {catFields.map((f) => (
+                            <SelectItem key={f.id} value={f.id} className="text-xs">
+                              {f.label}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+                <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs flex-shrink-0" onClick={addSelectedField}>
                   Add
                 </Button>
               </div>
+              <p className="mt-1 text-[11px] text-gray-400">Pick from any field across the contact form, tabs, and sub-forms.</p>
             </div>
           </div>
 
