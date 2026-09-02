@@ -23,6 +23,8 @@ export default function ProductCoverageDashboard() {
   const [productTypeFilter, setProductTypeFilter] = useState("");
   const [firmNameFilter, setFirmNameFilter] = useState("");
   const [assignmentFilter, setAssignmentFilter] = useState("");
+  const [primaryAnalystFilter, setPrimaryAnalystFilter] = useState("");
+  const [secondaryAnalystFilter, setSecondaryAnalystFilter] = useState("");
   const [sortKey, setSortKey] = useState("name");
 
   const { data: products = [], isLoading: productsLoading } = useQuery({
@@ -83,6 +85,12 @@ export default function ProductCoverageDashboard() {
     } else if (assignmentFilter === "unassigned") {
       list = list.filter((p) => !p.primary_xponance_contact_id && !p.secondary_xponance_contact_id);
     }
+    if (primaryAnalystFilter) {
+      list = list.filter((p) => p.primary_xponance_contact_id === primaryAnalystFilter);
+    }
+    if (secondaryAnalystFilter) {
+      list = list.filter((p) => p.secondary_xponance_contact_id === secondaryAnalystFilter);
+    }
     if (q) {
       list = list.filter((p) => {
         const nameMatch = (p.name || "").toLowerCase().includes(q);
@@ -103,10 +111,18 @@ export default function ProductCoverageDashboard() {
       sorted.sort((a, b) => (a.secondary_xponance_contact_name || "zzz").localeCompare(b.secondary_xponance_contact_name || "zzz"));
     }
     return sorted;
-  }, [products, search, productTypeFilter, firmNameFilter, assignmentFilter, sortKey]);
+  }, [products, search, productTypeFilter, firmNameFilter, assignmentFilter, primaryAnalystFilter, secondaryAnalystFilter, sortKey]);
 
-  const hasFilters = search.trim() || productTypeFilter || firmNameFilter || assignmentFilter;
-  const clearFilters = () => { setSearch(""); setProductTypeFilter(""); setFirmNameFilter(""); setAssignmentFilter(""); };
+  const hasFilters = search.trim() || productTypeFilter || firmNameFilter || assignmentFilter || primaryAnalystFilter || secondaryAnalystFilter;
+  const clearFilters = () => { setSearch(""); setProductTypeFilter(""); setFirmNameFilter(""); setAssignmentFilter(""); setPrimaryAnalystFilter(""); setSecondaryAnalystFilter(""); };
+
+  const sortedXponanceContacts = useMemo(() => {
+    return [...xponanceContacts].sort((a, b) => {
+      const an = [a.first_name, a.last_name].filter(Boolean).join(" ");
+      const bn = [b.first_name, b.last_name].filter(Boolean).join(" ");
+      return an.localeCompare(bn);
+    });
+  }, [xponanceContacts]);
 
   const loading = productsLoading || contactsLoading || firmsLoading;
 
@@ -237,6 +253,28 @@ export default function ProductCoverageDashboard() {
               <option value="">All Assignments</option>
               <option value="assigned">Has Assignment</option>
               <option value="unassigned">No Assignment</option>
+            </select>
+            <select
+              value={primaryAnalystFilter}
+              onChange={(e) => setPrimaryAnalystFilter(e.target.value)}
+              className="h-8 rounded-lg border border-gray-200 text-xs px-2 max-w-[200px] focus:outline-none focus:ring-1 focus:ring-violet-400"
+            >
+              <option value="">Primary Analyst: All</option>
+              {sortedXponanceContacts.map((c) => {
+                const name = [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ");
+                return <option key={c.id} value={c.id}>{name}</option>;
+              })}
+            </select>
+            <select
+              value={secondaryAnalystFilter}
+              onChange={(e) => setSecondaryAnalystFilter(e.target.value)}
+              className="h-8 rounded-lg border border-gray-200 text-xs px-2 max-w-[200px] focus:outline-none focus:ring-1 focus:ring-violet-400"
+            >
+              <option value="">Secondary Analyst: All</option>
+              {sortedXponanceContacts.map((c) => {
+                const name = [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ");
+                return <option key={c.id} value={c.id}>{name}</option>;
+              })}
             </select>
             {hasFilters && (
               <button
