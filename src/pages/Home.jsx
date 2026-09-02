@@ -76,6 +76,9 @@ import { useVoiceSearch } from "@/hooks/useVoiceSearch";
 import { triggerStartRecording } from "@/components/videolibrary/recorderStore";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import AumAlertsBell from "@/components/firms/AumAlertsBell";
+import { DragDropContext, Droppable } from "@hello-pangea/dnd";
+import { useNavOrder, reorderNavItems } from "@/hooks/useNavOrder";
+import DraggableNavItem from "@/components/DraggableNavItem";
 
 const FIRM_TYPES = [
   "Investment Manager",
@@ -95,6 +98,7 @@ export default function Home() {
   const navigate = useNavigate();
   const location = useLocation();
   const firmOwner = useFirmOwner();
+  const [navOrder, setNavOrder] = useNavOrder(user);
   // ─── Persistent dialog & edit state (survives app interruptions) ───
   // Dialog open/close states and editing data use usePersistentState so that
   // when the app is interrupted (notification, app switch, OS killing the
@@ -838,6 +842,15 @@ export default function Home() {
     ] },
   ];
 
+  const orderedNavItems = reorderNavItems(mobileNavItems, navOrder);
+  const handleNavDragEnd = (result) => {
+    if (!result.destination || result.destination.index === result.source.index) return;
+    const labels = orderedNavItems.map((it) => it.label);
+    const [moved] = labels.splice(result.source.index, 1);
+    labels.splice(result.destination.index, 0, moved);
+    setNavOrder(labels);
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col overflow-x-hidden">
       {/* Compact top bar — sticky so it stays visible while scrolling */}
@@ -973,41 +986,20 @@ export default function Home() {
             </div>
           )}
 
-          {/* Desktop nav — single row of icon buttons */}
+          {/* Desktop nav — single row of icon buttons (drag-and-drop reorderable) */}
           <div className="hidden sm:flex items-center gap-0.5 ml-2">
-            {mobileNavItems.map(({ label, icon: NavIcon, ref, onClick, submenu }) => (
-              submenu ? (
-                <DropdownMenu key={label}>
-                  <DropdownMenuTrigger asChild>
-                    <button title={label}
-                      className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg hover:bg-white/15 transition-colors group">
-                      <div className="relative">
-                        <NavIcon className="w-4 h-4 text-white/80 group-hover:text-white" />
-                        <ChevronDown className="w-2.5 h-2.5 text-white/50 group-hover:text-white absolute -bottom-1 -right-1" />
-                      </div>
-                      <span className="text-[9px] text-white/70 group-hover:text-white font-medium leading-none">{label}</span>
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="min-w-[10rem] max-h-[75vh] overflow-y-auto">
-                    {submenu.map((sub) => {
-                      const SubIcon = sub.icon;
-                      return (
-                        <DropdownMenuItem key={sub.label} onClick={sub.onClick} className="gap-2 cursor-pointer">
-                          <SubIcon className="w-4 h-4" />
-                          <span>{sub.label}</span>
-                        </DropdownMenuItem>
-                      );
-                    })}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <button key={label} onClick={() => onClick ? onClick() : scrollTo(ref)} title={label}
-                  className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg hover:bg-white/15 transition-colors group">
-                  <NavIcon className="w-4 h-4 text-white/80 group-hover:text-white" />
-                  <span className="text-[9px] text-white/70 group-hover:text-white font-medium leading-none">{label}</span>
-                </button>
-              )
-            ))}
+            <DragDropContext onDragEnd={handleNavDragEnd}>
+              <Droppable droppableId="nav-header" direction="horizontal">
+                {(provided) => (
+                  <div className="flex items-center gap-0.5" ref={provided.innerRef} {...provided.droppableProps}>
+                    {orderedNavItems.map((item, index) => (
+                      <DraggableNavItem key={item.label} item={item} index={index} />
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
             <AumAlertsBell onFirmClick={(firmId) => { const firm = firms.find(f => f.id === firmId); if (firm) handleEdit(firm); }} />
             <button
               onClick={() => setAllExpanded(v => !v)}
