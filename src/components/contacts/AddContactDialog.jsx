@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import {   X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload, TrendingUp, Tag, GraduationCap, Briefcase, Activity, Package, AlertTriangle, Linkedin, Loader2, ClipboardCheck, Image as ImageIcon, Bell, MessageSquare, Mail, Clock, Newspaper, Download, Users, Eye, Award } from "lucide-react";
+import {   X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload, TrendingUp, Tag, GraduationCap, Briefcase, Activity, Package, AlertTriangle, Linkedin, Loader2, ClipboardCheck, Image as ImageIcon, Bell, MessageSquare, Mail, Clock, Newspaper, Download, Users, Eye, Award, CalendarClock } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
@@ -23,6 +23,7 @@ import ContactEducationTab from "./ContactEducationTab";
 import ContactProfessionalExperienceTab from "./ContactProfessionalExperienceTab";
 import ContactBoardMembershipTab from "./ContactBoardMembershipTab";
 import ContactActivitiesTab from "./ContactActivitiesTab";
+import ContactMeetingLogTab from "./ContactMeetingLogTab";
 import ContactRelationshipsTab from "./ContactRelationshipsTab";
 import ContactTimeline from "./ContactTimeline";
 import ContactDueDiligenceTab from "./ContactDueDiligenceTab";
@@ -158,6 +159,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
     { key: "demographics", label: "Demographics", icon: null },
     { key: "ownership", label: "Ownership", icon: TrendingUp },
     { key: "activities", label: "Activities", icon: Activity },
+    { key: "meeting-log", label: "Meeting Log", icon: CalendarClock },
     { key: "relationships", label: "Relationships", icon: Users },
     { key: "timeline", label: "Timeline", icon: Clock },
     { key: "due-diligence", label: "Due Diligence", icon: ClipboardCheck },
@@ -2044,6 +2046,14 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                 contactName={[firstName, lastName].filter(Boolean).join(" ")}
                 contactFirmId={firmIds?.[0]}
                 contactFirmName={firmIds?.[0] ? firms?.find?.(f => f.id === firmIds[0])?.name : undefined}
+              />
+            </TabsContent>
+            {/* ── MEETING LOG TAB ── */}
+            <TabsContent value="meeting-log" className="mt-0">
+              <ContactMeetingLogTab
+                contactId={editingContact?.id}
+                contactName={[firstName, lastName].filter(Boolean).join(" ")}
+                firmIds={firmIds}
               />
             </TabsContent>
             {/* ── RELATIONSHIPS TAB ── */}
