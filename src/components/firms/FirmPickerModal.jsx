@@ -70,7 +70,7 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
 
   // ── Geographic drill-down: firms matching selected country/state/city ──
   const geoFirms = useMemo(() => {
-    if (!geoCountry && !geoState && !geoCity) return [];
+    if (!geoCountry && !geoState && !geoCity) return activeFirms;
     return activeFirms.filter((f) => {
       return (f.addresses || []).some((a) => {
         if (geoCountry && a.country !== geoCountry) return false;
@@ -403,7 +403,7 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
                 <div className="flex-1 overflow-y-auto p-2 space-y-1">
                   {geoFirms.length === 0 ? (
                     <p className="text-xs text-gray-400 italic text-center py-6">
-                      Select a country, state, or city to see matching firms.
+                      No firms match the selected location.
                     </p>
                   ) : (
                     geoFirms
