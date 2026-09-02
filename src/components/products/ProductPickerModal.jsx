@@ -1,9 +1,11 @@
 import React, { useState, useMemo } from "react";
-import { X, Package, Plus, Search, ChevronRight, ChevronDown, Building } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { X, Package, Plus, Search, ChevronRight, ChevronDown, Building, Users } from "lucide-react";
 
 const PRODUCT_TYPES = ["Investment Manager Product", "Multi-Manager Product"];
 
 export default function ProductPickerModal({ open, onClose, products, onProductClick, onAddProduct }) {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [collapsedTypes, setCollapsedTypes] = useState({});
   const [collapsedFirms, setCollapsedFirms] = useState({});
@@ -58,18 +60,31 @@ export default function ProductPickerModal({ open, onClose, products, onProductC
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 px-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[78vh] overflow-hidden flex flex-col">
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[82vh] overflow-hidden flex flex-col">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-            <Package className="w-4 h-4 text-violet-600" />
-            Products
-            <span className="text-xs text-gray-400 font-normal">({filtered.length})</span>
-          </h2>
-          <button type="button" onClick={onClose}>
-            <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
-          </button>
+        <div className="px-5 py-3 border-b border-gray-100">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+              <Package className="w-4 h-4 text-violet-600" />
+              Products
+              <span className="text-xs text-gray-400 font-normal">({filtered.length})</span>
+            </h2>
+            <button type="button" onClick={onClose}>
+              <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+            </button>
+          </div>
+          {/* Action buttons row */}
+          <div className="flex items-center gap-1.5 mt-2.5">
+            <button
+              type="button"
+              onClick={() => { onClose(); navigate("/ProductCoverage"); }}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium text-violet-600 hover:text-violet-800 hover:bg-violet-50 transition-colors"
+              title="Product Coverage"
+            >
+              <Users className="w-3.5 h-3.5" /> Firm Coverage
+            </button>
+          </div>
         </div>
 
         {/* Search */}

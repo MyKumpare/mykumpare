@@ -358,6 +358,22 @@
         }
       }
     },
+    "primary_xponance_contact_id": {
+      "type": "string",
+      "description": "ID of the primary Xponance analyst assigned to this product. The contact must belong to the Xponance (tenant) firm. Set via the Product Coverage dashboard."
+    },
+    "primary_xponance_contact_name": {
+      "type": "string",
+      "description": "Full name of the primary Xponance analyst (denormalized for display)."
+    },
+    "secondary_xponance_contact_id": {
+      "type": "string",
+      "description": "ID of the secondary Xponance analyst assigned to this product. The contact must belong to the Xponance (tenant) firm. Set via the Product Coverage dashboard."
+    },
+    "secondary_xponance_contact_name": {
+      "type": "string",
+      "description": "Full name of the secondary Xponance analyst (denormalized for display)."
+    },
     "audit_history": {
       "type": "array",
       "description": "Audit log of manual changes to this product record. Each entry records a single field change with its previous and new values, who made the change, and when. Appended automatically on save.",

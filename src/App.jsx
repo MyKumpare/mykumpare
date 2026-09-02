@@ -53,6 +53,7 @@ import ProcessTemplateKanban from './pages/ProcessTemplateKanban';
 import DdTimeline from './pages/DdTimeline';
 import VideoLibrary from './pages/VideoLibrary';
 import XponanceDashboard from './pages/XponanceDashboard';
+import ProductCoverageDashboard from './pages/ProductCoverageDashboard';
 import FirmNetworkMapPage from './pages/FirmNetworkMapPage';
 import FirmAumTrends from './pages/FirmAumTrends';
 import OnsiteVisitReport from './pages/OnsiteVisitReport';
@@ -165,6 +166,7 @@ const AuthenticatedApp = () => {
       <Route path="/DdTimeline" element={<LayoutWrapper currentPageName="DdTimeline"><DdTimeline /></LayoutWrapper>} />
       <Route path="/VideoLibrary" element={<LayoutWrapper currentPageName="VideoLibrary"><VideoLibrary /></LayoutWrapper>} />
       <Route path="/XponanceDashboard" element={<LayoutWrapper currentPageName="XponanceDashboard"><XponanceDashboard /></LayoutWrapper>} />
+      <Route path="/ProductCoverage" element={<LayoutWrapper currentPageName="ProductCoverage"><ProductCoverageDashboard /></LayoutWrapper>} />
       <Route path="/FirmNetworkMap" element={<LayoutWrapper currentPageName="FirmNetworkMap"><FirmNetworkMapPage /></LayoutWrapper>} />
       <Route path="/FirmAumTrends" element={<LayoutWrapper currentPageName="FirmAumTrends"><FirmAumTrends /></LayoutWrapper>} />
       <Route path="/OnsiteVisitReport" element={<LayoutWrapper currentPageName="OnsiteVisitReport"><OnsiteVisitReport /></LayoutWrapper>} />
