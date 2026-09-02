@@ -276,12 +276,40 @@ Return ONLY a JSON object with this exact shape:
       addContextFromInternet: false
     });
 
-    const llmResponse = await base44.integrations.Core.InvokeLLM({
-      prompt,
-      response_json_schema: responseSchema,
-      add_context_from_internet: false,
-      model: "automatic"
-    });
+    // Retry the LLM call up to 3 times — the "automatic" model can intermittently
+    // time out or return an unparseable response on large rubrics.
+    let llmResponse: any = null;
+    let lastError: string = '';
+    const maxRetries = 3;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`[auditScoringMatrixTemplate] STEP 3: Invoking LLM (attempt ${attempt}/${maxRetries})`, {
+          model: "automatic",
+          promptLength: prompt.length,
+          hasJsonSchema: true
+        });
+        llmResponse = await base44.integrations.Core.InvokeLLM({
+          prompt,
+          response_json_schema: responseSchema,
+          add_context_from_internet: false,
+          model: "automatic"
+        });
+        if (llmResponse && (llmResponse.findings?.length || llmResponse.changes?.length)) {
+          console.log(`[auditScoringMatrixTemplate] LLM succeeded on attempt ${attempt}`);
+          break;
+        }
+        console.log(`[auditScoringMatrixTemplate] Attempt ${attempt}: LLM returned empty result, retrying…`);
+        lastError = 'LLM returned empty result';
+      } catch (err: any) {
+        console.log(`[auditScoringMatrixTemplate] Attempt ${attempt} failed:`, err?.message || String(err));
+        lastError = err?.message || String(err);
+        if (attempt < maxRetries) await new Promise(r => setTimeout(r, 1000 * attempt));
+      }
+    }
+
+    if (!llmResponse) {
+      return Response.json({ error: `AI audit failed after ${maxRetries} attempts: ${lastError}` }, { status: 500 });
+    }
 
     const findingsCount = llmResponse?.findings?.length || 0;
     const changesCount = llmResponse?.changes?.length || 0;
