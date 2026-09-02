@@ -9,6 +9,7 @@ import { toast } from "@/components/ui/use-toast";
 import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend, Tooltip
 } from "recharts";
+import ScoringAttachmentsManager from "@/components/templates/ScoringAttachmentsManager";
 
 const SCORE_COLORS = {
   1: "bg-red-100 text-red-700 border-red-300",
@@ -99,7 +100,8 @@ function buildMockScore(template) {
     ic_review_status: "not_started",
     final_score_finalized: false,
     is_closed: false,
-    scoring_blocks: blocks
+    scoring_blocks: blocks,
+    attachments: []
   };
 }
 
@@ -142,6 +144,11 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
         criteria: (b.criteria || []).map((c) => ({ ...c, ...updatesFn(c) }))
       }))
     }));
+  };
+
+  // Update attachments (local state in test mode — no backend persistence)
+  const updateAttachments = (newAttachments) => {
+    setScore((prev) => ({ ...prev, attachments: newAttachments }));
   };
 
   // Phase transitions (local only)
@@ -411,6 +418,13 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
                           <td className="p-2">
                             <div className="font-medium">{crit.name}</div>
                             {crit.category && <div className="text-gray-400 text-[10px]">{crit.category}</div>}
+                            <ScoringAttachmentsManager
+                              attachments={score.attachments}
+                              scope={crit.id}
+                              canEdit={!score.primary_score_finalized || score.team_review_status === "in_progress" || score.ic_review_status === "in_progress"}
+                              onUpdate={updateAttachments}
+                              compact
+                            />
                           </td>
                           {/* Primary score */}
                           <td className="p-2 text-center">
