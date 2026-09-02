@@ -34,6 +34,7 @@ function formatContactName(c) {
 }
 
 export default function RelationshipNetworkMap() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
   const [selectedId, setSelectedId] = useState(null);
@@ -145,6 +146,14 @@ export default function RelationshipNetworkMap() {
             <h1 className="text-lg font-bold">Relationship Network Map</h1>
             <p className="text-xs text-white/70">Visualize the relationships you've defined between your contacts</p>
           </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate(-1)}
+            className="ml-auto bg-white/15 hover:bg-white/25 text-white border-none"
+          >
+            <X className="w-4 h-4" /> Close
+          </Button>
         </div>
       </div>
 
