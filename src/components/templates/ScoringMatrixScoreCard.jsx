@@ -44,12 +44,12 @@ function ScoreCell({ score, onChange, disabled, placeholder = "—", descriptors
   const descFor = (n) => (hasDesc ? descriptors.find((d) => d.level === n)?.text : null);
   const selectedDesc = score != null ? descFor(score) : null;
   return (
-    <div className="flex flex-col items-center gap-0.5">
+    <div className="flex flex-col items-start gap-1 w-full">
       <Select value={score?.toString() || ""} onValueChange={(v) => onChange(parseInt(v))} disabled={disabled}>
         <SelectTrigger className="h-8 w-16 text-xs">
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
-        <SelectContent className={hasDesc ? "min-w-[300px] max-w-[360px]" : ""}>
+        <SelectContent className={hasDesc ? "min-w-[320px] max-w-[420px]" : ""}>
           {[1, 2, 3, 4, 5].map((n) => {
             const text = descFor(n);
             return (
@@ -62,9 +62,9 @@ function ScoreCell({ score, onChange, disabled, placeholder = "—", descriptors
         </SelectContent>
       </Select>
       {selectedDesc && (
-        <span className="text-[11px] text-gray-500 leading-snug text-center max-w-[240px] whitespace-normal px-1" title={selectedDesc}>
+        <p className="text-[11px] text-gray-500 leading-relaxed text-left w-full whitespace-normal px-0.5" title={selectedDesc}>
           {selectedDesc}
-        </span>
+        </p>
       )}
     </div>
   );
