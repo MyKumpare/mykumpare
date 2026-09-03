@@ -6,6 +6,8 @@ import { useAuth } from "@/lib/AuthContext";
 import { Search, LayoutList, Building, UserCircle2, ArrowUpDown, Filter, X, Download } from "lucide-react";
 import XponanceAssignmentCell from "@/components/xponance/XponanceAssignmentCell";
 import AnalystBreakdownSection from "@/components/coverage/AnalystBreakdownSection";
+import AnalystCoverageMap from "@/components/coverage/AnalystCoverageMap";
+import { buildCoverageMapPoints } from "@/components/coverage/coverageGeo";
 import CoverageContactsTable from "@/components/coverage/CoverageContactsTable";
 
 const ADVISOR_TYPES = ["Investment Manager"];
@@ -89,6 +91,16 @@ export default function PortfolioCoverageDashboard() {
   }, [contacts, tenantFirmId]);
 
   const assignmentCounts = viewMode === "portfolios" ? portfolioAssignmentCounts : contactAssignmentCounts;
+
+  // Geographic map points — one pin per allocator firm with active assignments, sized by assignment count
+  const firmMap = useMemo(
+    () => Object.fromEntries(firms.map((f) => [f.id, f])),
+    [firms]
+  );
+  const coverageMapPoints = useMemo(
+    () => buildCoverageMapPoints(portfolios, (p) => p.firm_id, firmMap),
+    [portfolios, firmMap]
+  );
 
   const allocatorOptions = useMemo(
     () => Array.from(new Set(portfolios.map((p) => p.allocator_name).filter(Boolean))).sort(),
@@ -540,6 +552,13 @@ export default function PortfolioCoverageDashboard() {
             linkClass="text-emerald-600 hover:text-emerald-800"
           />
         )}
+
+        <AnalystCoverageMap
+          points={coverageMapPoints}
+          themeColor="#10b981"
+          title="Portfolio Coverage Map"
+          emptyText="No portfolios with active assignments have mapped allocator locations yet."
+        />
 
         <AnalystBreakdownSection
           title="Xponance Analysts"

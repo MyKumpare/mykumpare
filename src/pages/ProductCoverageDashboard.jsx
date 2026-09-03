@@ -7,6 +7,8 @@ import { Search, Package, Building, UserCircle2, ArrowUpDown, Filter, X, Downloa
 import XponanceAssignmentCell from "@/components/xponance/XponanceAssignmentCell";
 import AnalystBreakdownSection from "@/components/coverage/AnalystBreakdownSection";
 import AnalystRegionCoverageHeatmap from "@/components/coverage/AnalystRegionCoverageHeatmap";
+import AnalystCoverageMap from "@/components/coverage/AnalystCoverageMap";
+import { buildCoverageMapPoints } from "@/components/coverage/coverageGeo";
 import BulkReassignBar from "@/components/coverage/BulkReassignBar";
 import CoverageContactsTable from "@/components/coverage/CoverageContactsTable";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -97,6 +99,12 @@ export default function ProductCoverageDashboard() {
   }, [contacts, tenantFirmId]);
 
   const assignmentCounts = viewMode === "products" ? productAssignmentCounts : contactAssignmentCounts;
+
+  // Geographic map points — one pin per product firm with active assignments, sized by assignment count
+  const coverageMapPoints = useMemo(
+    () => buildCoverageMapPoints(products, (p) => p.firm_id, firmMap),
+    [products, firmMap]
+  );
 
   const filteredProducts = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -605,6 +613,13 @@ export default function ProductCoverageDashboard() {
           products={products}
           firmMap={firmMap}
           xponanceContacts={xponanceContacts}
+        />
+
+        <AnalystCoverageMap
+          points={coverageMapPoints}
+          themeColor="#8b5cf6"
+          title="Product Coverage Map"
+          emptyText="No products with active assignments have mapped firm locations yet."
         />
 
         <AnalystBreakdownSection

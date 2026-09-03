@@ -8,6 +8,8 @@ import { exportFirmsToCsv, exportContactsToCsv } from "@/components/firms/firmLi
 import XponanceContactBadges from "@/components/xponance/XponanceContactBadges";
 import XponanceAssignmentCell from "@/components/xponance/XponanceAssignmentCell";
 import AnalystBreakdownSection from "@/components/coverage/AnalystBreakdownSection";
+import AnalystCoverageMap from "@/components/coverage/AnalystCoverageMap";
+import { buildCoverageMapPoints } from "@/components/coverage/coverageGeo";
 
 const FIRM_TYPES = [
   "Investment Manager",
@@ -108,6 +110,12 @@ export default function XponanceDashboard() {
 
   // Show only the counts that match the active view so the cards line up with the table above
   const assignmentCounts = viewMode === "firms" ? firmAssignmentCounts : contactAssignmentCounts;
+
+  // Geographic map points — one pin per firm with active assignments, sized by assignment count
+  const coverageMapPoints = useMemo(
+    () => buildCoverageMapPoints(firms, (f) => f.id, firmMap),
+    [firms, firmMap]
+  );
 
   // Filtered + sorted firms
   const filteredFirms = useMemo(() => {
@@ -574,6 +582,13 @@ export default function XponanceDashboard() {
             </div>
           </div>
         )}
+
+        <AnalystCoverageMap
+          points={coverageMapPoints}
+          themeColor="#4f46e5"
+          title="Firm Coverage Map"
+          emptyText="No firms with active assignments have mapped locations yet."
+        />
 
         <AnalystBreakdownSection
           title="Xponance Contacts"
