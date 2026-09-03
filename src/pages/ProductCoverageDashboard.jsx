@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { Search, Package, Building, UserCircle2, ArrowUpDown, Filter, X, Download } from "lucide-react";
 import XponanceAssignmentCell from "@/components/xponance/XponanceAssignmentCell";
 import AnalystBreakdownSection from "@/components/coverage/AnalystBreakdownSection";
+import AnalystRegionCoverageHeatmap from "@/components/coverage/AnalystRegionCoverageHeatmap";
 import BulkReassignBar from "@/components/coverage/BulkReassignBar";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -482,6 +483,12 @@ export default function ProductCoverageDashboard() {
             onClear={clearSelection}
           />
         )}
+
+        <AnalystRegionCoverageHeatmap
+          products={products}
+          firmMap={firmMap}
+          xponanceContacts={xponanceContacts}
+        />
 
         <AnalystBreakdownSection
           title="Xponance Analysts"
