@@ -500,7 +500,11 @@ export default function ProductCoverageDashboard() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {xponanceContacts
+                .slice()
                 .sort((a, b) => {
+                  const ta = (assignmentCounts[a.id]?.primary || 0) + (assignmentCounts[a.id]?.secondary || 0);
+                  const tb = (assignmentCounts[b.id]?.primary || 0) + (assignmentCounts[b.id]?.secondary || 0);
+                  if (tb !== ta) return tb - ta;
                   const an = [a.first_name, a.last_name].filter(Boolean).join(" ");
                   const bn = [b.first_name, b.last_name].filter(Boolean).join(" ");
                   return an.localeCompare(bn);
