@@ -7,6 +7,7 @@ import { Search, Building, User, UserCircle2, ArrowUpDown, Filter, X, MapPin, Do
 import { exportFirmsToCsv, exportContactsToCsv } from "@/components/firms/firmListCsvExport";
 import XponanceContactBadges from "@/components/xponance/XponanceContactBadges";
 import XponanceAssignmentCell from "@/components/xponance/XponanceAssignmentCell";
+import AnalystBreakdownSection from "@/components/coverage/AnalystBreakdownSection";
 
 const FIRM_TYPES = [
   "Investment Manager",
@@ -546,67 +547,16 @@ export default function XponanceDashboard() {
           </div>
         )}
 
-        {/* Xponance contacts summary — shows all Xponance contacts and their assignment counts */}
-        <div className="mt-6 bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-          <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-            <UserCircle2 className="w-4 h-4 text-indigo-600" />
-            Xponance Contacts ({xponanceContacts.length})
-          </h3>
-          {xponanceContacts.length === 0 ? (
-            <p className="text-sm text-gray-400 italic">No contacts found related to the Xponance firm.</p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-              {xponanceContacts
-                .slice()
-                .sort((a, b) => {
-                  const ta = (assignmentCounts[a.id]?.primary || 0) + (assignmentCounts[a.id]?.secondary || 0);
-                  const tb = (assignmentCounts[b.id]?.primary || 0) + (assignmentCounts[b.id]?.secondary || 0);
-                  if (tb !== ta) return tb - ta;
-                  return getContactName(a).localeCompare(getContactName(b));
-                })
-                .map((c) => {
-                  const counts = assignmentCounts[c.id] || { primary: 0, secondary: 0 };
-                  const total = counts.primary + counts.secondary;
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => setCoveredAnalystId(coveredAnalystId === c.id ? "" : c.id)}
-                      title={coveredAnalystId === c.id ? "Click to clear filter" : "Click to show what this analyst covers"}
-                      className={`flex items-center gap-2 p-2 rounded-lg border transition-colors text-left w-full ${coveredAnalystId === c.id ? "border-indigo-400 bg-indigo-50 ring-2 ring-indigo-300" : "border-gray-100 hover:border-indigo-200 hover:bg-indigo-50/30"}`}
-                    >
-                      {c.photo_url ? (
-                        <img src={c.photo_url} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                          <UserCircle2 className="w-4 h-4 text-indigo-400" />
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-gray-800 truncate">{getContactName(c)}</p>
-                        {c.title && <p className="text-xs text-gray-400 truncate">{c.title}</p>}
-                      </div>
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        {counts.primary > 0 && (
-                          <span className="text-xs px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200" title={`${counts.primary} primary assignments`}>
-                            P: {counts.primary}
-                          </span>
-                        )}
-                        {counts.secondary > 0 && (
-                          <span className="text-xs px-1.5 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-200" title={`${counts.secondary} secondary assignments`}>
-                            S: {counts.secondary}
-                          </span>
-                        )}
-                        {total === 0 && (
-                          <span className="text-xs text-gray-300">No assignments</span>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
-            </div>
-          )}
-        </div>
+        <AnalystBreakdownSection
+          title="Xponance Contacts"
+          icon={<UserCircle2 className="w-4 h-4 text-indigo-600" />}
+          theme="indigo"
+          xponanceContacts={xponanceContacts}
+          assignmentCounts={assignmentCounts}
+          coveredAnalystId={coveredAnalystId}
+          onCoveredAnalystClick={(id) => setCoveredAnalystId(id)}
+          coveredLabel="Click to show firms/contacts this analyst covers"
+        />
       </div>
     </div>
   );

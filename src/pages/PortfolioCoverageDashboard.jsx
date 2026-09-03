@@ -3,9 +3,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
-import { Search, LayoutList, Building, UserCircle2, ArrowUpDown, Filter, X, Download, BarChart3 } from "lucide-react";
+import { Search, LayoutList, Building, UserCircle2, ArrowUpDown, Filter, X, Download } from "lucide-react";
 import XponanceAssignmentCell from "@/components/xponance/XponanceAssignmentCell";
-import AnalystAssignmentChart from "@/components/coverage/AnalystAssignmentChart";
+import AnalystBreakdownSection from "@/components/coverage/AnalystBreakdownSection";
 
 const ADVISOR_TYPES = ["Investment Manager"];
 
@@ -415,83 +415,16 @@ export default function PortfolioCoverageDashboard() {
           </div>
         )}
 
-        {/* Analyst assignment chart */}
-        <div className="mt-6 bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-          <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-            <BarChart3 className="w-4 h-4 text-emerald-600" />
-            Analyst Assignment Summary
-          </h3>
-          <AnalystAssignmentChart xponanceContacts={xponanceContacts} assignmentCounts={assignmentCounts} />
-        </div>
-
-        {/* Xponance contacts summary */}
-        <div className="mt-6 bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-          <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-            <UserCircle2 className="w-4 h-4 text-emerald-600" />
-            Xponance Analysts ({xponanceContacts.length})
-          </h3>
-          {xponanceContacts.length === 0 ? (
-            <p className="text-sm text-gray-400 italic">No contacts found related to the Xponance firm.</p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-              {xponanceContacts
-                .slice()
-                .sort((a, b) => {
-                  const ta = (assignmentCounts[a.id]?.primary || 0) + (assignmentCounts[a.id]?.secondary || 0);
-                  const tb = (assignmentCounts[b.id]?.primary || 0) + (assignmentCounts[b.id]?.secondary || 0);
-                  if (tb !== ta) return tb - ta;
-                  const an = [a.first_name, a.last_name].filter(Boolean).join(" ");
-                  const bn = [b.first_name, b.last_name].filter(Boolean).join(" ");
-                  return an.localeCompare(bn);
-                })
-                .map((c) => {
-                  const counts = assignmentCounts[c.id] || { primary: 0, secondary: 0 };
-                  const total = counts.primary + counts.secondary;
-                  const name = [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ");
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => {
-                        const id = coveredAnalystId === c.id ? "" : c.id;
-                        setCoveredAnalystId(id);
-                        if (id) { setPrimaryAnalystFilter(""); setSecondaryAnalystFilter(""); }
-                      }}
-                      title={coveredAnalystId === c.id ? "Click to clear filter" : "Click to show portfolios this analyst covers"}
-                      className={`flex items-center gap-2 p-2 rounded-lg border transition-colors text-left w-full ${coveredAnalystId === c.id ? "border-emerald-400 bg-emerald-50 ring-2 ring-emerald-300" : "border-gray-100 hover:border-emerald-200 hover:bg-emerald-50/30"}`}
-                    >
-                      {c.photo_url ? (
-                        <img src={c.photo_url} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                          <UserCircle2 className="w-4 h-4 text-emerald-400" />
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-gray-800 truncate">{name}</p>
-                        {c.title && <p className="text-xs text-gray-400 truncate">{c.title}</p>}
-                      </div>
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        {counts.primary > 0 && (
-                          <span className="text-xs px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200" title={`${counts.primary} primary assignments`}>
-                            P: {counts.primary}
-                          </span>
-                        )}
-                        {counts.secondary > 0 && (
-                          <span className="text-xs px-1.5 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-200" title={`${counts.secondary} secondary assignments`}>
-                            S: {counts.secondary}
-                          </span>
-                        )}
-                        {total === 0 && (
-                          <span className="text-xs text-gray-300">No assignments</span>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
-            </div>
-          )}
-        </div>
+        <AnalystBreakdownSection
+          title="Xponance Analysts"
+          icon={<UserCircle2 className="w-4 h-4 text-emerald-600" />}
+          theme="emerald"
+          xponanceContacts={xponanceContacts}
+          assignmentCounts={assignmentCounts}
+          coveredAnalystId={coveredAnalystId}
+          onCoveredAnalystClick={(id) => { setCoveredAnalystId(id); if (id) { setPrimaryAnalystFilter(""); setSecondaryAnalystFilter(""); } }}
+          coveredLabel="Click to show portfolios this analyst covers"
+        />
       </div>
     </div>
   );
