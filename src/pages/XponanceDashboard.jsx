@@ -110,6 +110,14 @@ export default function XponanceDashboard() {
       list = list.filter((f) => f.primary_xponance_contact_id || f.secondary_xponance_contact_id);
     } else if (assignmentFilter === "unassigned") {
       list = list.filter((f) => !f.primary_xponance_contact_id && !f.secondary_xponance_contact_id);
+    } else if (assignmentFilter === "has_primary") {
+      list = list.filter((f) => f.primary_xponance_contact_id);
+    } else if (assignmentFilter === "has_secondary") {
+      list = list.filter((f) => f.secondary_xponance_contact_id);
+    } else if (assignmentFilter === "unassigned_primary") {
+      list = list.filter((f) => !f.primary_xponance_contact_id);
+    } else if (assignmentFilter === "unassigned_secondary") {
+      list = list.filter((f) => !f.secondary_xponance_contact_id);
     }
     if (q) {
       list = list.filter((f) => {
@@ -147,6 +155,14 @@ export default function XponanceDashboard() {
       list = list.filter((c) => c.primary_xponance_contact_id || c.secondary_xponance_contact_id);
     } else if (assignmentFilter === "unassigned") {
       list = list.filter((c) => !c.primary_xponance_contact_id && !c.secondary_xponance_contact_id);
+    } else if (assignmentFilter === "has_primary") {
+      list = list.filter((c) => c.primary_xponance_contact_id);
+    } else if (assignmentFilter === "has_secondary") {
+      list = list.filter((c) => c.secondary_xponance_contact_id);
+    } else if (assignmentFilter === "unassigned_primary") {
+      list = list.filter((c) => !c.primary_xponance_contact_id);
+    } else if (assignmentFilter === "unassigned_secondary") {
+      list = list.filter((c) => !c.secondary_xponance_contact_id);
     }
     if (q) {
       list = list.filter((c) => {
@@ -198,22 +214,34 @@ export default function XponanceDashboard() {
                 <div className="font-bold text-lg">{xponanceContacts.length}</div>
                 <div className="text-white/60 text-[10px]">Xponance Contacts</div>
               </div>
-              <div className="bg-white/15 rounded-lg px-3 py-1.5 text-center">
+              <button
+                onClick={() => setAssignmentFilter(assignmentFilter === "has_primary" ? "" : "has_primary")}
+                className={`rounded-lg px-3 py-1.5 text-center transition-colors ${assignmentFilter === "has_primary" ? "bg-white/40 ring-2 ring-white/70" : "bg-white/15 hover:bg-white/25"}`}
+              >
                 <div className="font-bold text-lg">{firmsWithPrimary}</div>
                 <div className="text-white/60 text-[10px]">Firms w/ Primary</div>
-              </div>
-              <div className="bg-white/15 rounded-lg px-3 py-1.5 text-center">
+              </button>
+              <button
+                onClick={() => setAssignmentFilter(assignmentFilter === "has_secondary" ? "" : "has_secondary")}
+                className={`rounded-lg px-3 py-1.5 text-center transition-colors ${assignmentFilter === "has_secondary" ? "bg-white/40 ring-2 ring-white/70" : "bg-white/15 hover:bg-white/25"}`}
+              >
                 <div className="font-bold text-lg">{firmsWithSecondary}</div>
                 <div className="text-white/60 text-[10px]">Firms w/ Secondary</div>
-              </div>
-              <div className="bg-white/15 rounded-lg px-3 py-1.5 text-center">
+              </button>
+              <button
+                onClick={() => setAssignmentFilter(assignmentFilter === "unassigned_primary" ? "" : "unassigned_primary")}
+                className={`rounded-lg px-3 py-1.5 text-center transition-colors ${assignmentFilter === "unassigned_primary" ? "bg-white/40 ring-2 ring-white/70" : "bg-white/15 hover:bg-white/25"}`}
+              >
                 <div className="font-bold text-lg">{firmsUnassignedPrimary}</div>
                 <div className="text-white/60 text-[10px]">Unassigned Primary</div>
-              </div>
-              <div className="bg-white/15 rounded-lg px-3 py-1.5 text-center">
+              </button>
+              <button
+                onClick={() => setAssignmentFilter(assignmentFilter === "unassigned_secondary" ? "" : "unassigned_secondary")}
+                className={`rounded-lg px-3 py-1.5 text-center transition-colors ${assignmentFilter === "unassigned_secondary" ? "bg-white/40 ring-2 ring-white/70" : "bg-white/15 hover:bg-white/25"}`}
+              >
                 <div className="font-bold text-lg">{firmsUnassignedSecondary}</div>
                 <div className="text-white/60 text-[10px]">Unassigned Secondary</div>
-              </div>
+              </button>
               <button
                 onClick={() => navigate(-1)}
                 className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 rounded-lg px-3 py-2 text-sm font-medium transition-colors"
@@ -309,6 +337,10 @@ export default function XponanceDashboard() {
               <option value="">All Assignments</option>
               <option value="assigned">Has Assignment</option>
               <option value="unassigned">No Assignment</option>
+              <option value="has_primary">Has Primary</option>
+              <option value="has_secondary">Has Secondary</option>
+              <option value="unassigned_primary">Unassigned Primary</option>
+              <option value="unassigned_secondary">Unassigned Secondary</option>
             </select>
             {hasFilters && (
               <button
