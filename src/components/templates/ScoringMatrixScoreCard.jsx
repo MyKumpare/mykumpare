@@ -62,7 +62,7 @@ function ScoreCell({ score, onChange, disabled, placeholder = "—", descriptors
         </SelectContent>
       </Select>
       {selectedDesc && (
-        <p className="text-[11px] text-gray-500 leading-relaxed text-left w-full max-w-[260px] whitespace-normal px-0.5 mt-0.5" title={selectedDesc}>
+        <p className="text-[11px] text-gray-500 leading-relaxed text-left w-full whitespace-normal px-0.5 mt-0.5" title={selectedDesc}>
           {selectedDesc}
         </p>
       )}
