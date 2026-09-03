@@ -6,58 +6,36 @@ import ContactsSectionFilters, { filterSectionContacts } from "./ContactsSection
 import ContactGeographicMap from "./ContactGeographicMap";
 import { exportContactsToCSV } from "./exportContactsCsv";
 
-const VIEW_ORDER_KEY = "contactPicker_viewOrder";
-const ACTION_ORDER_KEY = "contactPicker_actionOrder";
-const DEFAULT_ACTION_IDS = ["firmCoverage", "exportCsv"];
-const VIEW_CONFIGS = [
-  { id: "list", label: "List", Icon: List },
-  { id: "geo", label: "Geographic Map", Icon: Globe },
-  { id: "network", label: "Network Map", Icon: Share2 },
-  { id: "relationship", label: "Relationship Map", Icon: Network },
-  { id: "influence", label: "Influence", Icon: Trophy },
+const HEADER_ORDER_KEY = "contactPicker_headerOrder";
+const HEADER_ITEMS = [
+  { id: "list", label: "List", Icon: List, kind: "view" },
+  { id: "geo", label: "Geographic Map", Icon: Globe, kind: "view" },
+  { id: "network", label: "Network Map", Icon: Share2, kind: "view" },
+  { id: "relationship", label: "Relationship Map", Icon: Network, kind: "view" },
+  { id: "influence", label: "Influence", Icon: Trophy, kind: "view" },
+  { id: "firmCoverage", label: "Firm Coverage", Icon: Users, kind: "action" },
+  { id: "exportCsv", label: "Export CSV", Icon: Download, kind: "action" },
 ];
-const DEFAULT_VIEW_IDS = VIEW_CONFIGS.map(v => v.id);
+const DEFAULT_HEADER_IDS = HEADER_ITEMS.map(i => i.id);
 
-function useViewOrder() {
+function useHeaderOrder() {
   const [order, setOrder] = useState(() => {
     try {
-      const saved = localStorage.getItem(VIEW_ORDER_KEY);
+      const saved = localStorage.getItem(HEADER_ORDER_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         const merged = [...parsed];
-        for (const id of DEFAULT_VIEW_IDS) {
+        for (const id of DEFAULT_HEADER_IDS) {
           if (!merged.includes(id)) merged.push(id);
         }
-        return merged.filter((id) => DEFAULT_VIEW_IDS.includes(id));
+        return merged.filter((id) => DEFAULT_HEADER_IDS.includes(id));
       }
     } catch { /* ignore */ }
-    return DEFAULT_VIEW_IDS;
+    return DEFAULT_HEADER_IDS;
   });
   const updateOrder = (newOrder) => {
     setOrder(newOrder);
-    try { localStorage.setItem(VIEW_ORDER_KEY, JSON.stringify(newOrder)); } catch { /* ignore */ }
-  };
-  return [order, updateOrder];
-}
-
-function useActionOrder() {
-  const [order, setOrder] = useState(() => {
-    try {
-      const saved = localStorage.getItem(ACTION_ORDER_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        const merged = [...parsed];
-        for (const id of DEFAULT_ACTION_IDS) {
-          if (!merged.includes(id)) merged.push(id);
-        }
-        return merged.filter((id) => DEFAULT_ACTION_IDS.includes(id));
-      }
-    } catch { /* ignore */ }
-    return DEFAULT_ACTION_IDS;
-  });
-  const updateOrder = (newOrder) => {
-    setOrder(newOrder);
-    try { localStorage.setItem(ACTION_ORDER_KEY, JSON.stringify(newOrder)); } catch { /* ignore */ }
+    try { localStorage.setItem(HEADER_ORDER_KEY, JSON.stringify(newOrder)); } catch { /* ignore */ }
   };
   return [order, updateOrder];
 }
@@ -86,8 +64,7 @@ export default function ContactPickerModal({ open, onClose, contacts, firms, pro
   const [collapsedTypes, setCollapsedTypes] = useState({});
   const [collapsedFirms, setCollapsedFirms] = useState({});
   const [view, setView] = useState("list"); // "list" | "geo" | "network" | "relationship" | "influence"
-  const [viewOrder, setViewOrder] = useViewOrder();
-  const [actionOrder, setActionOrder] = useActionOrder();
+  const [headerOrder, setHeaderOrder] = useHeaderOrder();
 
   const handleViewChange = (v) => {
     if (v === "list" || v === "geo") { setView(v); return; }
@@ -196,132 +173,89 @@ export default function ContactPickerModal({ open, onClose, contacts, firms, pro
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 px-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className={`relative bg-white rounded-2xl shadow-2xl w-full ${view === "geo" ? "max-w-6xl" : "max-w-2xl"} max-h-[82vh] overflow-hidden flex flex-col`}>
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[82vh] overflow-hidden flex flex-col">
 
         {/* Header */}
         <div className="px-5 py-3 border-b border-gray-100">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-                <User className="w-4 h-4 text-pink-600" />
-                Contacts
-                <span className="text-xs text-gray-400 font-normal">({filtered.length})</span>
-              </h2>
-              {/* View toggle — draggable to reorder */}
-              <DragDropContext
-                onDragEnd={(result) => {
-                  if (!result.destination) return;
-                  const newOrder = [...viewOrder];
-                  const [moved] = newOrder.splice(result.source.index, 1);
-                  newOrder.splice(result.destination.index, 0, moved);
-                  setViewOrder(newOrder);
-                }}
-              >
-                <Droppable droppableId="contact-view-toggle" direction="horizontal">
-                  {(provided) => (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.droppableProps}
-                      className="flex items-center gap-0.5 bg-gray-100 rounded-lg p-0.5"
-                    >
-                      {viewOrder.map((viewId, index) => {
-                        const cfg = VIEW_CONFIGS.find(v => v.id === viewId);
-                        if (!cfg) return null;
-                        const { Icon, label } = cfg;
-                        const isActive = view === viewId;
-                        return (
-                          <Draggable key={viewId} draggableId={viewId} index={index}>
-                            {(dragProvided, snapshot) => (
-                              <div
-                                ref={dragProvided.innerRef}
-                                {...dragProvided.draggableProps}
-                                className={`flex items-center gap-0.5 rounded-md transition-shadow ${snapshot.isDragging ? "shadow-md ring-1 ring-pink-200 bg-white" : ""}`}
-                              >
-                                <span
-                                  {...dragProvided.dragHandleProps}
-                                  className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 flex items-center pr-0.5"
-                                  title="Drag to reorder"
-                                >
-                                  <GripVertical className="w-3 h-3" />
-                                </span>
-                                <button
-                                  onClick={() => handleViewChange(viewId)}
-                                  className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors ${isActive ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
-                                >
-                                  <Icon className="w-3.5 h-3.5" /> {label}
-                                </button>
-                              </div>
-                            )}
-                          </Draggable>
-                        );
-                      })}
-                      {provided.placeholder}
-                    </div>
-                  )}
-                </Droppable>
-              </DragDropContext>
-            </div>
+          <div className="flex items-center justify-between mb-2.5">
+            <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+              <User className="w-4 h-4 text-pink-600" />
+              Contacts
+              <span className="text-xs text-gray-400 font-normal">({filtered.length})</span>
+            </h2>
             <button type="button" onClick={onClose}>
               <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
             </button>
           </div>
-          {/* Action buttons row — draggable to reorder */}
+          {/* Unified draggable header items — wrap across rows, move from any position */}
           <DragDropContext
             onDragEnd={(result) => {
               if (!result.destination) return;
-              const newOrder = [...actionOrder];
+              const newOrder = [...headerOrder];
               const [moved] = newOrder.splice(result.source.index, 1);
               newOrder.splice(result.destination.index, 0, moved);
-              setActionOrder(newOrder);
+              setHeaderOrder(newOrder);
             }}
           >
-            <Droppable droppableId="contact-header-actions" direction="horizontal">
+            <Droppable droppableId="contact-header-items" direction="horizontal">
               {(provided) => (
                 <div
                   ref={provided.innerRef}
                   {...provided.droppableProps}
-                  className="flex items-center gap-1.5 mt-2.5"
+                  className="flex flex-wrap items-center gap-1.5"
                 >
-                  {actionOrder.map((actionId, index) => (
-                    <Draggable key={actionId} draggableId={actionId} index={index}>
-                      {(dragProvided, snapshot) => (
-                        <div
-                          ref={dragProvided.innerRef}
-                          {...dragProvided.draggableProps}
-                          className={`flex items-center gap-1 rounded-md transition-shadow ${snapshot.isDragging ? "shadow-md ring-1 ring-pink-200 bg-white" : ""}`}
-                        >
-                          <span
-                            {...dragProvided.dragHandleProps}
-                            className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 flex items-center pr-0.5"
-                            title="Drag to reorder"
+                  {headerOrder.map((itemId, index) => {
+                    const cfg = HEADER_ITEMS.find(i => i.id === itemId);
+                    if (!cfg) return null;
+                    const { Icon, label, kind } = cfg;
+                    const isActive = kind === "view" && view === itemId;
+                    return (
+                      <Draggable key={itemId} draggableId={itemId} index={index}>
+                        {(dragProvided, snapshot) => (
+                          <div
+                            ref={dragProvided.innerRef}
+                            {...dragProvided.draggableProps}
+                            className={`flex items-center gap-0.5 rounded-md transition-shadow ${snapshot.isDragging ? "shadow-md ring-1 ring-pink-200 bg-white" : ""}`}
                           >
-                            <GripVertical className="w-3 h-3" />
-                          </span>
-                          {actionId === "firmCoverage" && (
-                            <button
-                              type="button"
-                              onClick={() => { onClose(); navigate("/XponanceDashboard"); }}
-                              className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 transition-colors"
-                              title="Firm Coverage"
+                            <span
+                              {...dragProvided.dragHandleProps}
+                              className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 flex items-center pr-0.5"
+                              title="Drag to reorder"
                             >
-                              <Users className="w-3.5 h-3.5" /> Firm Coverage
-                            </button>
-                          )}
-                          {actionId === "exportCsv" && (
-                            <button
-                              type="button"
-                              onClick={() => exportContactsToCSV(filtered, firms)}
-                              disabled={filtered.length === 0}
-                              className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                              title="Export filtered contacts to CSV"
-                            >
-                              <Download className="w-3.5 h-3.5" /> Export CSV
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </Draggable>
-                  ))}
+                              <GripVertical className="w-3 h-3" />
+                            </span>
+                            {kind === "view" ? (
+                              <button
+                                onClick={() => handleViewChange(itemId)}
+                                className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors ${isActive ? "bg-gray-100 text-gray-900" : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"}`}
+                              >
+                                <Icon className="w-3.5 h-3.5" /> {label}
+                              </button>
+                            ) : itemId === "firmCoverage" ? (
+                              <button
+                                type="button"
+                                onClick={() => { onClose(); navigate("/XponanceDashboard"); }}
+                                className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 transition-colors"
+                                title="Firm Coverage"
+                              >
+                                <Icon className="w-3.5 h-3.5" /> {label}
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => exportContactsToCSV(filtered, firms)}
+                                disabled={filtered.length === 0}
+                                className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                title="Export filtered contacts to CSV"
+                              >
+                                <Icon className="w-3.5 h-3.5" /> {label}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </Draggable>
+                    );
+                  })}
                   {provided.placeholder}
                 </div>
               )}
