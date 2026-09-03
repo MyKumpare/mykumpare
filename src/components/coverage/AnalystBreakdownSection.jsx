@@ -87,7 +87,7 @@ export default function AnalystBreakdownSection({
                 type="button"
                 onClick={() => {
                   onCoveredAnalystClick?.(isActive ? "" : c.id);
-                  if (!isActive) window.scrollTo({ top: 0, behavior: "smooth" });
+                  if (!isActive) window.scrollTo({ top: 0, behavior: "auto" });
                 }}
                 title={isActive ? "Click to clear filter" : coveredLabel}
                 className={`flex items-center gap-2 p-2 rounded-lg border transition-colors text-left w-full ${isActive ? t.active : t.hover}`}
