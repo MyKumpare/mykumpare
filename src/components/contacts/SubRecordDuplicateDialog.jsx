@@ -32,7 +32,7 @@ export default function SubRecordDuplicateDialog({ review, onApply, onCancel }) 
 
   const handleApply = () => {
     const resolved = resolveSubRecordDuplicates(review.arrays, pairs, decisions);
-    onApply(resolved);
+    onApply(resolved, decisions);
   };
 
   return (

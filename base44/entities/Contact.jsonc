@@ -395,6 +395,13 @@
       "type": "string",
       "description": "Additional notes about the contact"
     },
+    "accepted_duplicate_pairs": {
+      "type": "array",
+      "description": "Content-based keys for contact sub-record duplicate pairs (education / professional experience / phones) that the user has accepted (keep both). Stored on the contact record so the Review Duplicate Records dialog does not reappear for already-accepted pairs across sessions, browsers, and users (systemwide). Each key is a normalized content signature (e.g. 'edu::fordhamuniversity'), not a record-id-based key, so it stays stable across record reordering and ID changes.",
+      "items": {
+        "type": "string"
+      }
+    },
     "primary_xponance_contact_id": {
       "type": "string",
       "description": "ID of the primary Xponance contact assigned to this contact. The assigned contact must belong to the Xponance (tenant) firm. Set via the Xponance Contact Picker in the contact edit form."
