@@ -72,31 +72,7 @@ export default function XponanceDashboard() {
     [firms]
   );
 
-  // Count how many firms/contacts each Xponance contact is assigned to
-  const assignmentCounts = useMemo(() => {
-    const counts = {};
-    for (const f of firms) {
-      if (f.primary_xponance_contact_id) {
-        counts[f.primary_xponance_contact_id] = counts[f.primary_xponance_contact_id] || { primary: 0, secondary: 0 };
-        counts[f.primary_xponance_contact_id].primary++;
-      }
-      if (f.secondary_xponance_contact_id) {
-        counts[f.secondary_xponance_contact_id] = counts[f.secondary_xponance_contact_id] || { primary: 0, secondary: 0 };
-        counts[f.secondary_xponance_contact_id].secondary++;
-      }
-    }
-    for (const c of contacts) {
-      if (c.primary_xponance_contact_id) {
-        counts[c.primary_xponance_contact_id] = counts[c.primary_xponance_contact_id] || { primary: 0, secondary: 0 };
-        counts[c.primary_xponance_contact_id].primary++;
-      }
-      if (c.secondary_xponance_contact_id) {
-        counts[c.secondary_xponance_contact_id] = counts[c.secondary_xponance_contact_id] || { primary: 0, secondary: 0 };
-        counts[c.secondary_xponance_contact_id].secondary++;
-      }
-    }
-    return counts;
-  }, [firms, contacts]);
+  // assignment counts moved below (computed from the filtered set)
 
   // Filtered + sorted firms
   const filteredFirms = useMemo(() => {
@@ -196,11 +172,28 @@ export default function XponanceDashboard() {
 
   const loading = firmsLoading || contactsLoading;
 
-  // Stats
-  const firmsWithPrimary = firms.filter((f) => f.primary_xponance_contact_id).length;
-  const firmsWithSecondary = firms.filter((f) => f.secondary_xponance_contact_id).length;
-  const firmsUnassignedPrimary = firms.filter((f) => !f.primary_xponance_contact_id).length;
-  const firmsUnassignedSecondary = firms.filter((f) => !f.secondary_xponance_contact_id).length;
+  // Stats + analyst breakdown reflect the currently filtered set (firms or contacts view)
+  const activeList = viewMode === "firms" ? filteredFirms : filteredContacts;
+  const entityLabel = viewMode === "firms" ? "Firms" : "Contacts";
+  const firmsWithPrimary = activeList.filter((x) => x.primary_xponance_contact_id).length;
+  const firmsWithSecondary = activeList.filter((x) => x.secondary_xponance_contact_id).length;
+  const firmsUnassignedPrimary = activeList.filter((x) => !x.primary_xponance_contact_id).length;
+  const firmsUnassignedSecondary = activeList.filter((x) => !x.secondary_xponance_contact_id).length;
+
+  const assignmentCounts = useMemo(() => {
+    const counts = {};
+    for (const x of activeList) {
+      if (x.primary_xponance_contact_id) {
+        counts[x.primary_xponance_contact_id] = counts[x.primary_xponance_contact_id] || { primary: 0, secondary: 0 };
+        counts[x.primary_xponance_contact_id].primary++;
+      }
+      if (x.secondary_xponance_contact_id) {
+        counts[x.secondary_xponance_contact_id] = counts[x.secondary_xponance_contact_id] || { primary: 0, secondary: 0 };
+        counts[x.secondary_xponance_contact_id].secondary++;
+      }
+    }
+    return counts;
+  }, [activeList]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -227,14 +220,14 @@ export default function XponanceDashboard() {
                 className={`rounded-lg px-3 py-1.5 text-center transition-colors ${assignmentFilter === "has_primary" ? "bg-white/40 ring-2 ring-white/70" : "bg-white/15 hover:bg-white/25"}`}
               >
                 <div className="font-bold text-lg">{firmsWithPrimary}</div>
-                <div className="text-white/60 text-[10px]">Firms w/ Primary</div>
+                <div className="text-white/60 text-[10px]">{entityLabel} w/ Primary</div>
               </button>
               <button
                 onClick={() => setAssignmentFilter(assignmentFilter === "has_secondary" ? "" : "has_secondary")}
                 className={`rounded-lg px-3 py-1.5 text-center transition-colors ${assignmentFilter === "has_secondary" ? "bg-white/40 ring-2 ring-white/70" : "bg-white/15 hover:bg-white/25"}`}
               >
                 <div className="font-bold text-lg">{firmsWithSecondary}</div>
-                <div className="text-white/60 text-[10px]">Firms w/ Secondary</div>
+                <div className="text-white/60 text-[10px]">{entityLabel} w/ Secondary</div>
               </button>
               <button
                 onClick={() => setAssignmentFilter(assignmentFilter === "unassigned_primary" ? "" : "unassigned_primary")}

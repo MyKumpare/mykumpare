@@ -47,21 +47,7 @@ export default function PortfolioCoverageDashboard() {
     return contacts.filter((c) => (c.firm_ids || []).includes(tenantFirmId));
   }, [contacts, tenantFirmId]);
 
-  // Count how many portfolios each Xponance contact is assigned to
-  const assignmentCounts = useMemo(() => {
-    const counts = {};
-    for (const p of portfolios) {
-      if (p.primary_xponance_contact_id) {
-        counts[p.primary_xponance_contact_id] = counts[p.primary_xponance_contact_id] || { primary: 0, secondary: 0 };
-        counts[p.primary_xponance_contact_id].primary++;
-      }
-      if (p.secondary_xponance_contact_id) {
-        counts[p.secondary_xponance_contact_id] = counts[p.secondary_xponance_contact_id] || { primary: 0, secondary: 0 };
-        counts[p.secondary_xponance_contact_id].secondary++;
-      }
-    }
-    return counts;
-  }, [portfolios]);
+  // assignment counts moved below (computed from the filtered set)
 
   const allocatorOptions = useMemo(
     () => Array.from(new Set(portfolios.map((p) => p.allocator_name).filter(Boolean))).sort(),
@@ -138,10 +124,26 @@ export default function PortfolioCoverageDashboard() {
 
   const loading = portfoliosLoading || contactsLoading;
 
-  const portfoliosWithPrimary = portfolios.filter((p) => p.primary_xponance_contact_id).length;
-  const portfoliosWithSecondary = portfolios.filter((p) => p.secondary_xponance_contact_id).length;
-  const portfoliosUnassignedPrimary = portfolios.filter((p) => !p.primary_xponance_contact_id).length;
-  const portfoliosUnassignedSecondary = portfolios.filter((p) => !p.secondary_xponance_contact_id).length;
+  const portfoliosWithPrimary = filteredPortfolios.filter((p) => p.primary_xponance_contact_id).length;
+  const portfoliosWithSecondary = filteredPortfolios.filter((p) => p.secondary_xponance_contact_id).length;
+  const portfoliosUnassignedPrimary = filteredPortfolios.filter((p) => !p.primary_xponance_contact_id).length;
+  const portfoliosUnassignedSecondary = filteredPortfolios.filter((p) => !p.secondary_xponance_contact_id).length;
+
+  // Analyst breakdown counts reflect the currently filtered portfolios
+  const assignmentCounts = useMemo(() => {
+    const counts = {};
+    for (const p of filteredPortfolios) {
+      if (p.primary_xponance_contact_id) {
+        counts[p.primary_xponance_contact_id] = counts[p.primary_xponance_contact_id] || { primary: 0, secondary: 0 };
+        counts[p.primary_xponance_contact_id].primary++;
+      }
+      if (p.secondary_xponance_contact_id) {
+        counts[p.secondary_xponance_contact_id] = counts[p.secondary_xponance_contact_id] || { primary: 0, secondary: 0 };
+        counts[p.secondary_xponance_contact_id].secondary++;
+      }
+    }
+    return counts;
+  }, [filteredPortfolios]);
 
   const handleExportCsv = () => {
     const rows = [
