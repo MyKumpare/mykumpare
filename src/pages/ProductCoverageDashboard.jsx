@@ -31,6 +31,7 @@ export default function ProductCoverageDashboard() {
   const [secondaryAnalystFilter, setSecondaryAnalystFilter] = useState("");
   const [sortKey, setSortKey] = useState("name");
   const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [coveredAnalystId, setCoveredAnalystId] = useState("");
 
   const { data: products = [], isLoading: productsLoading } = useQuery({
     queryKey: ["products"],
@@ -104,6 +105,9 @@ export default function ProductCoverageDashboard() {
     if (secondaryAnalystFilter) {
       list = list.filter((p) => p.secondary_xponance_contact_id === secondaryAnalystFilter);
     }
+    if (coveredAnalystId) {
+      list = list.filter((p) => p.primary_xponance_contact_id === coveredAnalystId || p.secondary_xponance_contact_id === coveredAnalystId);
+    }
     if (q) {
       list = list.filter((p) => {
         const nameMatch = (p.name || "").toLowerCase().includes(q);
@@ -124,10 +128,10 @@ export default function ProductCoverageDashboard() {
       sorted.sort((a, b) => (a.secondary_xponance_contact_name || "zzz").localeCompare(b.secondary_xponance_contact_name || "zzz"));
     }
     return sorted;
-  }, [products, search, productTypeFilter, firmNameFilter, assignmentFilter, primaryAnalystFilter, secondaryAnalystFilter, sortKey]);
+  }, [products, search, productTypeFilter, firmNameFilter, assignmentFilter, primaryAnalystFilter, secondaryAnalystFilter, sortKey, coveredAnalystId]);
 
-  const hasFilters = search.trim() || productTypeFilter || firmNameFilter || assignmentFilter || primaryAnalystFilter || secondaryAnalystFilter;
-  const clearFilters = () => { setSearch(""); setProductTypeFilter(""); setFirmNameFilter(""); setAssignmentFilter(""); setPrimaryAnalystFilter(""); setSecondaryAnalystFilter(""); };
+  const hasFilters = search.trim() || productTypeFilter || firmNameFilter || assignmentFilter || primaryAnalystFilter || secondaryAnalystFilter || coveredAnalystId;
+  const clearFilters = () => { setSearch(""); setProductTypeFilter(""); setFirmNameFilter(""); setAssignmentFilter(""); setPrimaryAnalystFilter(""); setSecondaryAnalystFilter(""); setCoveredAnalystId(""); };
 
   const sortedXponanceContacts = useMemo(() => {
     return [...xponanceContacts].sort((a, b) => {
@@ -514,7 +518,17 @@ export default function ProductCoverageDashboard() {
                   const total = counts.primary + counts.secondary;
                   const name = [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ");
                   return (
-                    <div key={c.id} className="flex items-center gap-2 p-2 rounded-lg border border-gray-100 hover:border-violet-200 hover:bg-violet-50/30 transition-colors">
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => {
+                        const id = coveredAnalystId === c.id ? "" : c.id;
+                        setCoveredAnalystId(id);
+                        if (id) { setPrimaryAnalystFilter(""); setSecondaryAnalystFilter(""); }
+                      }}
+                      title={coveredAnalystId === c.id ? "Click to clear filter" : "Click to show products this analyst covers"}
+                      className={`flex items-center gap-2 p-2 rounded-lg border transition-colors text-left w-full ${coveredAnalystId === c.id ? "border-violet-400 bg-violet-50 ring-2 ring-violet-300" : "border-gray-100 hover:border-violet-200 hover:bg-violet-50/30"}`}
+                    >
                       {c.photo_url ? (
                         <img src={c.photo_url} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
                       ) : (
@@ -541,7 +555,7 @@ export default function ProductCoverageDashboard() {
                           <span className="text-xs text-gray-300">No assignments</span>
                         )}
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
             </div>

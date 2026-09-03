@@ -39,6 +39,7 @@ export default function XponanceDashboard() {
   const [assignmentFilter, setAssignmentFilter] = useState(""); // "assigned" | "unassigned" | ""
   const [viewMode, setViewMode] = useState("firms"); // "firms" | "contacts"
   const [sortKey, setSortKey] = useState("name"); // "name" | "primary" | "secondary"
+  const [coveredAnalystId, setCoveredAnalystId] = useState(""); // clicked analyst card → filter list to what they cover
 
   const { data: firms = [], isLoading: firmsLoading } = useQuery({
     queryKey: ["firms"],
@@ -119,6 +120,9 @@ export default function XponanceDashboard() {
     } else if (assignmentFilter === "unassigned_secondary") {
       list = list.filter((f) => !f.secondary_xponance_contact_id);
     }
+    if (coveredAnalystId) {
+      list = list.filter((f) => f.primary_xponance_contact_id === coveredAnalystId || f.secondary_xponance_contact_id === coveredAnalystId);
+    }
     if (q) {
       list = list.filter((f) => {
         const nameMatch = f.name.toLowerCase().includes(q);
@@ -137,7 +141,7 @@ export default function XponanceDashboard() {
       sorted.sort((a, b) => (a.secondary_xponance_contact_name || "zzz").localeCompare(b.secondary_xponance_contact_name || "zzz"));
     }
     return sorted;
-  }, [firms, search, firmTypeFilter, firmNameFilter, assignmentFilter, sortKey]);
+  }, [firms, search, firmTypeFilter, firmNameFilter, assignmentFilter, sortKey, coveredAnalystId]);
 
   // Filtered + sorted contacts (non-Xponance contacts that have Xponance assignments)
   const filteredContacts = useMemo(() => {
@@ -164,6 +168,9 @@ export default function XponanceDashboard() {
     } else if (assignmentFilter === "unassigned_secondary") {
       list = list.filter((c) => !c.secondary_xponance_contact_id);
     }
+    if (coveredAnalystId) {
+      list = list.filter((c) => c.primary_xponance_contact_id === coveredAnalystId || c.secondary_xponance_contact_id === coveredAnalystId);
+    }
     if (q) {
       list = list.filter((c) => {
         const name = getContactName(c).toLowerCase();
@@ -181,10 +188,10 @@ export default function XponanceDashboard() {
       sorted.sort((a, b) => (a.secondary_xponance_contact_name || "zzz").localeCompare(b.secondary_xponance_contact_name || "zzz"));
     }
     return sorted;
-  }, [contacts, tenantFirmId, firmMap, search, firmTypeFilter, firmNameFilter, assignmentFilter, sortKey]);
+  }, [contacts, tenantFirmId, firmMap, search, firmTypeFilter, firmNameFilter, assignmentFilter, sortKey, coveredAnalystId]);
 
-  const hasFilters = search.trim() || firmTypeFilter || firmNameFilter || assignmentFilter;
-  const clearFilters = () => { setSearch(""); setFirmTypeFilter(""); setFirmNameFilter(""); setAssignmentFilter(""); };
+  const hasFilters = search.trim() || firmTypeFilter || firmNameFilter || assignmentFilter || coveredAnalystId;
+  const clearFilters = () => { setSearch(""); setFirmTypeFilter(""); setFirmNameFilter(""); setAssignmentFilter(""); setCoveredAnalystId(""); };
 
   const loading = firmsLoading || contactsLoading;
 
@@ -561,7 +568,13 @@ export default function XponanceDashboard() {
                   const counts = assignmentCounts[c.id] || { primary: 0, secondary: 0 };
                   const total = counts.primary + counts.secondary;
                   return (
-                    <div key={c.id} className="flex items-center gap-2 p-2 rounded-lg border border-gray-100 hover:border-indigo-200 hover:bg-indigo-50/30 transition-colors">
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setCoveredAnalystId(coveredAnalystId === c.id ? "" : c.id)}
+                      title={coveredAnalystId === c.id ? "Click to clear filter" : "Click to show what this analyst covers"}
+                      className={`flex items-center gap-2 p-2 rounded-lg border transition-colors text-left w-full ${coveredAnalystId === c.id ? "border-indigo-400 bg-indigo-50 ring-2 ring-indigo-300" : "border-gray-100 hover:border-indigo-200 hover:bg-indigo-50/30"}`}
+                    >
                       {c.photo_url ? (
                         <img src={c.photo_url} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
                       ) : (
@@ -588,7 +601,7 @@ export default function XponanceDashboard() {
                           <span className="text-xs text-gray-300">No assignments</span>
                         )}
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
             </div>

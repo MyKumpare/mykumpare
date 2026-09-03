@@ -28,6 +28,7 @@ export default function PortfolioCoverageDashboard() {
   const [primaryAnalystFilter, setPrimaryAnalystFilter] = useState("");
   const [secondaryAnalystFilter, setSecondaryAnalystFilter] = useState("");
   const [sortKey, setSortKey] = useState("name");
+  const [coveredAnalystId, setCoveredAnalystId] = useState("");
 
   const { data: portfolios = [], isLoading: portfoliosLoading } = useQuery({
     queryKey: ["portfolios-all"],
@@ -95,6 +96,9 @@ export default function PortfolioCoverageDashboard() {
     if (secondaryAnalystFilter) {
       list = list.filter((p) => p.secondary_xponance_contact_id === secondaryAnalystFilter);
     }
+    if (coveredAnalystId) {
+      list = list.filter((p) => p.primary_xponance_contact_id === coveredAnalystId || p.secondary_xponance_contact_id === coveredAnalystId);
+    }
     if (q) {
       list = list.filter((p) => {
         const nameMatch = (p.portfolio_name || "").toLowerCase().includes(q);
@@ -116,12 +120,12 @@ export default function PortfolioCoverageDashboard() {
       sorted.sort((a, b) => (a.secondary_xponance_contact_name || "zzz").localeCompare(b.secondary_xponance_contact_name || "zzz"));
     }
     return sorted;
-  }, [portfolios, search, advisorTypeFilter, allocatorFilter, assignmentFilter, primaryAnalystFilter, secondaryAnalystFilter, sortKey]);
+  }, [portfolios, search, advisorTypeFilter, allocatorFilter, assignmentFilter, primaryAnalystFilter, secondaryAnalystFilter, sortKey, coveredAnalystId]);
 
-  const hasFilters = search.trim() || advisorTypeFilter || allocatorFilter || assignmentFilter || primaryAnalystFilter || secondaryAnalystFilter;
+  const hasFilters = search.trim() || advisorTypeFilter || allocatorFilter || assignmentFilter || primaryAnalystFilter || secondaryAnalystFilter || coveredAnalystId;
   const clearFilters = () => {
     setSearch(""); setAdvisorTypeFilter(""); setAllocatorFilter(""); setAssignmentFilter("");
-    setPrimaryAnalystFilter(""); setSecondaryAnalystFilter("");
+    setPrimaryAnalystFilter(""); setSecondaryAnalystFilter(""); setCoveredAnalystId("");
   };
 
   const sortedXponanceContacts = useMemo(() => {
@@ -445,7 +449,17 @@ export default function PortfolioCoverageDashboard() {
                   const total = counts.primary + counts.secondary;
                   const name = [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ");
                   return (
-                    <div key={c.id} className="flex items-center gap-2 p-2 rounded-lg border border-gray-100 hover:border-emerald-200 hover:bg-emerald-50/30 transition-colors">
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => {
+                        const id = coveredAnalystId === c.id ? "" : c.id;
+                        setCoveredAnalystId(id);
+                        if (id) { setPrimaryAnalystFilter(""); setSecondaryAnalystFilter(""); }
+                      }}
+                      title={coveredAnalystId === c.id ? "Click to clear filter" : "Click to show portfolios this analyst covers"}
+                      className={`flex items-center gap-2 p-2 rounded-lg border transition-colors text-left w-full ${coveredAnalystId === c.id ? "border-emerald-400 bg-emerald-50 ring-2 ring-emerald-300" : "border-gray-100 hover:border-emerald-200 hover:bg-emerald-50/30"}`}
+                    >
                       {c.photo_url ? (
                         <img src={c.photo_url} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
                       ) : (
@@ -472,7 +486,7 @@ export default function PortfolioCoverageDashboard() {
                           <span className="text-xs text-gray-300">No assignments</span>
                         )}
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
             </div>
