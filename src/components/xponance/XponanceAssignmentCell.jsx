@@ -5,6 +5,10 @@ import { Search, X, Plus, Check, UserCircle2, Pencil } from "lucide-react";
 const getFullName = (c) =>
   [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ");
 
+// Sort key based on first name then last name, excluding salutation/suffix.
+const getSortName = (c) =>
+  [c.first_name, c.last_name].filter(Boolean).join(" ").trim() || getFullName(c);
+
 /**
  * Inline primary/secondary Xponance-contact assignment cell for dashboard rows.
  * Shows the current assignment with change/clear controls, or an "Assign" button.
@@ -52,7 +56,7 @@ export default function XponanceAssignmentCell({
         return name.includes(q) || title.includes(q);
       });
     }
-    return [...list].sort((a, b) => getFullName(a).localeCompare(getFullName(b)));
+    return [...list].sort((a, b) => getSortName(a).localeCompare(getSortName(b)));
   }, [xponanceContacts, search, excludeId]);
 
   const openPanel = () => {
