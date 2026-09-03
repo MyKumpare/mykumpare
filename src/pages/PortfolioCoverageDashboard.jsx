@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { Search, LayoutList, Building, UserCircle2, ArrowUpDown, Filter, X, Download } from "lucide-react";
 import XponanceAssignmentCell from "@/components/xponance/XponanceAssignmentCell";
 import AnalystBreakdownSection from "@/components/coverage/AnalystBreakdownSection";
+import CoverageContactsTable from "@/components/coverage/CoverageContactsTable";
 
 const ADVISOR_TYPES = ["Investment Manager"];
 
@@ -29,6 +30,7 @@ export default function PortfolioCoverageDashboard() {
   const [secondaryAnalystFilter, setSecondaryAnalystFilter] = useState("");
   const [sortKey, setSortKey] = useState("name");
   const [coveredAnalystId, setCoveredAnalystId] = useState("");
+  const [viewMode, setViewMode] = useState("portfolios"); // "portfolios" | "contacts"
 
   const { data: portfolios = [], isLoading: portfoliosLoading } = useQuery({
     queryKey: ["portfolios-all"],
@@ -42,13 +44,19 @@ export default function PortfolioCoverageDashboard() {
     select: (data) => data.filter((c) => !c.deleted_at),
   });
 
+  const { data: firms = [], isLoading: firmsLoading } = useQuery({
+    queryKey: ["firms"],
+    queryFn: () => base44.entities.Firm.list("-created_date", 5000),
+    select: (data) => data.filter((f) => !f.deleted_at),
+  });
+
   const xponanceContacts = useMemo(() => {
     if (!tenantFirmId) return [];
     return contacts.filter((c) => (c.firm_ids || []).includes(tenantFirmId));
   }, [contacts, tenantFirmId]);
 
-  // Count how many portfolios each Xponance contact is assigned to
-  const assignmentCounts = useMemo(() => {
+  // Count how many portfolios each Xponance contact is assigned to (Portfolios view)
+  const portfolioAssignmentCounts = useMemo(() => {
     const counts = {};
     for (const p of portfolios) {
       if (p.primary_xponance_contact_id) {
@@ -62,6 +70,25 @@ export default function PortfolioCoverageDashboard() {
     }
     return counts;
   }, [portfolios]);
+
+  // Count how many (non-Xponance) contacts each Xponance contact is assigned to (Contacts view)
+  const contactAssignmentCounts = useMemo(() => {
+    const counts = {};
+    const nonXponance = contacts.filter((c) => !(c.firm_ids || []).includes(tenantFirmId));
+    for (const c of nonXponance) {
+      if (c.primary_xponance_contact_id) {
+        counts[c.primary_xponance_contact_id] = counts[c.primary_xponance_contact_id] || { primary: 0, secondary: 0 };
+        counts[c.primary_xponance_contact_id].primary++;
+      }
+      if (c.secondary_xponance_contact_id) {
+        counts[c.secondary_xponance_contact_id] = counts[c.secondary_xponance_contact_id] || { primary: 0, secondary: 0 };
+        counts[c.secondary_xponance_contact_id].secondary++;
+      }
+    }
+    return counts;
+  }, [contacts, tenantFirmId]);
+
+  const assignmentCounts = viewMode === "portfolios" ? portfolioAssignmentCounts : contactAssignmentCounts;
 
   const allocatorOptions = useMemo(
     () => Array.from(new Set(portfolios.map((p) => p.allocator_name).filter(Boolean))).sort(),
@@ -136,12 +163,66 @@ export default function PortfolioCoverageDashboard() {
     });
   }, [xponanceContacts]);
 
-  const loading = portfoliosLoading || contactsLoading;
+  const loading = portfoliosLoading || contactsLoading || firmsLoading;
 
   const portfoliosWithPrimary = portfolios.filter((p) => p.primary_xponance_contact_id).length;
   const portfoliosWithSecondary = portfolios.filter((p) => p.secondary_xponance_contact_id).length;
   const portfoliosUnassignedPrimary = portfolios.filter((p) => !p.primary_xponance_contact_id).length;
   const portfoliosUnassignedSecondary = portfolios.filter((p) => !p.secondary_xponance_contact_id).length;
+
+  // Contacts view: non-Xponance contacts with Xponance assignments, filtered to match the active filters
+  const nonXponanceContacts = useMemo(
+    () => contacts.filter((c) => !(c.firm_ids || []).includes(tenantFirmId)),
+    [contacts, tenantFirmId]
+  );
+  const filteredContacts = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    let list = nonXponanceContacts;
+    if (allocatorFilter) {
+      list = list.filter((c) =>
+        (c.firm_ids || []).some((fid) => firms.find((f) => f.id === fid)?.name === allocatorFilter)
+      );
+    }
+    if (assignmentFilter === "assigned") {
+      list = list.filter((c) => c.primary_xponance_contact_id || c.secondary_xponance_contact_id);
+    } else if (assignmentFilter === "unassigned") {
+      list = list.filter((c) => !c.primary_xponance_contact_id && !c.secondary_xponance_contact_id);
+    } else if (assignmentFilter === "has_primary") {
+      list = list.filter((c) => c.primary_xponance_contact_id);
+    } else if (assignmentFilter === "has_secondary") {
+      list = list.filter((c) => c.secondary_xponance_contact_id);
+    } else if (assignmentFilter === "unassigned_primary") {
+      list = list.filter((c) => !c.primary_xponance_contact_id);
+    } else if (assignmentFilter === "unassigned_secondary") {
+      list = list.filter((c) => !c.secondary_xponance_contact_id);
+    }
+    if (coveredAnalystId) {
+      list = list.filter((c) => c.primary_xponance_contact_id === coveredAnalystId || c.secondary_xponance_contact_id === coveredAnalystId);
+    }
+    if (q) {
+      list = list.filter((c) => {
+        const name = [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ").toLowerCase();
+        const primaryMatch = (c.primary_xponance_contact_name || "").toLowerCase().includes(q);
+        const secondaryMatch = (c.secondary_xponance_contact_name || "").toLowerCase().includes(q);
+        return name.includes(q) || primaryMatch || secondaryMatch;
+      });
+    }
+    return [...list].sort((a, b) =>
+      [a.first_name, a.last_name].filter(Boolean).join(" ").localeCompare([b.first_name, b.last_name].filter(Boolean).join(" "))
+    );
+  }, [nonXponanceContacts, firms, allocatorFilter, assignmentFilter, coveredAnalystId, search]);
+
+  const contactsWithPrimary = nonXponanceContacts.filter((c) => c.primary_xponance_contact_id).length;
+  const contactsWithSecondary = nonXponanceContacts.filter((c) => c.secondary_xponance_contact_id).length;
+  const contactsUnassignedPrimary = nonXponanceContacts.filter((c) => !c.primary_xponance_contact_id).length;
+  const contactsUnassignedSecondary = nonXponanceContacts.filter((c) => !c.secondary_xponance_contact_id).length;
+
+  // View-aware header stats
+  const statsWithPrimary = viewMode === "portfolios" ? portfoliosWithPrimary : contactsWithPrimary;
+  const statsWithSecondary = viewMode === "portfolios" ? portfoliosWithSecondary : contactsWithSecondary;
+  const statsUnassignedPrimary = viewMode === "portfolios" ? portfoliosUnassignedPrimary : contactsUnassignedPrimary;
+  const statsUnassignedSecondary = viewMode === "portfolios" ? portfoliosUnassignedSecondary : contactsUnassignedSecondary;
+  const entityLabel = viewMode === "portfolios" ? "Portfolios" : "Contacts";
 
   const handleExportCsv = () => {
     const rows = [
@@ -160,6 +241,26 @@ export default function PortfolioCoverageDashboard() {
     const a = document.createElement("a");
     a.href = url;
     a.download = `portfolio-coverage-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportContactsCsv = () => {
+    const firmMap = Object.fromEntries(firms.map((f) => [f.id, f]));
+    const rows = [
+      ["Contact", "Firm", "Primary Analyst", "Secondary Analyst"],
+      ...filteredContacts.map((c) => {
+        const name = [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ");
+        const firmName = (c.firm_ids || []).map((fid) => firmMap[fid]?.name).filter(Boolean).join(", ");
+        return [name, firmName, c.primary_xponance_contact_name || "", c.secondary_xponance_contact_name || ""];
+      }),
+    ];
+    const csv = rows.map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `portfolio-coverage-contacts-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -188,28 +289,28 @@ export default function PortfolioCoverageDashboard() {
                 onClick={() => setAssignmentFilter(assignmentFilter === "has_primary" ? "" : "has_primary")}
                 className={`rounded-lg px-3 py-1.5 text-center transition-colors ${assignmentFilter === "has_primary" ? "bg-white/40 ring-2 ring-white/70" : "bg-white/15 hover:bg-white/25"}`}
               >
-                <div className="font-bold text-lg">{portfoliosWithPrimary}</div>
-                <div className="text-white/60 text-[10px]">Portfolios w/ Primary</div>
+                <div className="font-bold text-lg">{statsWithPrimary}</div>
+                <div className="text-white/60 text-[10px]">{entityLabel} w/ Primary</div>
               </button>
               <button
                 onClick={() => setAssignmentFilter(assignmentFilter === "has_secondary" ? "" : "has_secondary")}
                 className={`rounded-lg px-3 py-1.5 text-center transition-colors ${assignmentFilter === "has_secondary" ? "bg-white/40 ring-2 ring-white/70" : "bg-white/15 hover:bg-white/25"}`}
               >
-                <div className="font-bold text-lg">{portfoliosWithSecondary}</div>
-                <div className="text-white/60 text-[10px]">Portfolios w/ Secondary</div>
+                <div className="font-bold text-lg">{statsWithSecondary}</div>
+                <div className="text-white/60 text-[10px]">{entityLabel} w/ Secondary</div>
               </button>
               <button
                 onClick={() => setAssignmentFilter(assignmentFilter === "unassigned_primary" ? "" : "unassigned_primary")}
                 className={`rounded-lg px-3 py-1.5 text-center transition-colors ${assignmentFilter === "unassigned_primary" ? "bg-white/40 ring-2 ring-white/70" : "bg-white/15 hover:bg-white/25"}`}
               >
-                <div className="font-bold text-lg">{portfoliosUnassignedPrimary}</div>
+                <div className="font-bold text-lg">{statsUnassignedPrimary}</div>
                 <div className="text-white/60 text-[10px]">Unassigned Primary</div>
               </button>
               <button
                 onClick={() => setAssignmentFilter(assignmentFilter === "unassigned_secondary" ? "" : "unassigned_secondary")}
                 className={`rounded-lg px-3 py-1.5 text-center transition-colors ${assignmentFilter === "unassigned_secondary" ? "bg-white/40 ring-2 ring-white/70" : "bg-white/15 hover:bg-white/25"}`}
               >
-                <div className="font-bold text-lg">{portfoliosUnassignedSecondary}</div>
+                <div className="font-bold text-lg">{statsUnassignedSecondary}</div>
                 <div className="text-white/60 text-[10px]">Unassigned Secondary</div>
               </button>
               <button
@@ -238,6 +339,22 @@ export default function PortfolioCoverageDashboard() {
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full pl-10 pr-4 h-10 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
               />
+            </div>
+            <div className="flex items-center bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode("portfolios")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === "portfolios" ? "bg-white text-emerald-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+              >
+                <LayoutList className="w-4 h-4" />
+                Portfolios
+              </button>
+              <button
+                onClick={() => setViewMode("contacts")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === "contacts" ? "bg-white text-emerald-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+              >
+                <UserCircle2 className="w-4 h-4" />
+                Contacts
+              </button>
             </div>
             <div className="flex items-center gap-2">
               <ArrowUpDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
@@ -322,11 +439,11 @@ export default function PortfolioCoverageDashboard() {
               </button>
             )}
             <span className="text-xs text-gray-400">
-              Showing {filteredPortfolios.length} portfolios
+              Showing {viewMode === "portfolios" ? filteredPortfolios.length : filteredContacts.length} {viewMode === "portfolios" ? "portfolios" : "contacts"}
             </span>
             <button
-              onClick={handleExportCsv}
-              disabled={filteredPortfolios.length === 0}
+              onClick={viewMode === "portfolios" ? handleExportCsv : handleExportContactsCsv}
+              disabled={(viewMode === "portfolios" ? filteredPortfolios : filteredContacts).length === 0}
               className="flex items-center gap-1.5 h-8 px-3 text-xs font-medium text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 border border-gray-200 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               title="Export filtered list to CSV"
             >
@@ -341,7 +458,7 @@ export default function PortfolioCoverageDashboard() {
           <div className="flex items-center justify-center py-20">
             <div className="w-8 h-8 border-4 border-gray-200 border-t-emerald-600 rounded-full animate-spin" />
           </div>
-        ) : (
+        ) : viewMode === "portfolios" ? (
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full table-fixed">
@@ -413,6 +530,15 @@ export default function PortfolioCoverageDashboard() {
               </table>
             </div>
           </div>
+        ) : (
+          <CoverageContactsTable
+            contacts={filteredContacts}
+            firms={firms}
+            xponanceContacts={xponanceContacts}
+            onSaved={handleAssignmentSaved}
+            rowHoverClass="hover:bg-emerald-50/30"
+            linkClass="text-emerald-600 hover:text-emerald-800"
+          />
         )}
 
         <AnalystBreakdownSection
