@@ -7,7 +7,6 @@ import { Search, Package, Building, UserCircle2, ArrowUpDown, Filter, X, Downloa
 import XponanceAssignmentCell from "@/components/xponance/XponanceAssignmentCell";
 import AnalystAssignmentChart from "@/components/coverage/AnalystAssignmentChart";
 import BulkReassignBar from "@/components/coverage/BulkReassignBar";
-import CoverageStatusBadge, { getCoverageStatus, COVERAGE_STATUS_META } from "@/components/coverage/CoverageStatusBadge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { BarChart3 } from "lucide-react";
 
@@ -30,7 +29,6 @@ export default function ProductCoverageDashboard() {
   const [assignmentFilter, setAssignmentFilter] = useState("");
   const [primaryAnalystFilter, setPrimaryAnalystFilter] = useState("");
   const [secondaryAnalystFilter, setSecondaryAnalystFilter] = useState("");
-  const [coverageStatusFilter, setCoverageStatusFilter] = useState("");
   const [sortKey, setSortKey] = useState("name");
   const [selectedIds, setSelectedIds] = useState(() => new Set());
 
@@ -98,9 +96,6 @@ export default function ProductCoverageDashboard() {
     if (secondaryAnalystFilter) {
       list = list.filter((p) => p.secondary_xponance_contact_id === secondaryAnalystFilter);
     }
-    if (coverageStatusFilter) {
-      list = list.filter((p) => getCoverageStatus(p) === coverageStatusFilter);
-    }
     if (q) {
       list = list.filter((p) => {
         const nameMatch = (p.name || "").toLowerCase().includes(q);
@@ -123,8 +118,8 @@ export default function ProductCoverageDashboard() {
     return sorted;
   }, [products, search, productTypeFilter, firmNameFilter, assignmentFilter, primaryAnalystFilter, secondaryAnalystFilter, sortKey]);
 
-  const hasFilters = search.trim() || productTypeFilter || firmNameFilter || assignmentFilter || primaryAnalystFilter || secondaryAnalystFilter || coverageStatusFilter;
-  const clearFilters = () => { setSearch(""); setProductTypeFilter(""); setFirmNameFilter(""); setAssignmentFilter(""); setPrimaryAnalystFilter(""); setSecondaryAnalystFilter(""); setCoverageStatusFilter(""); };
+  const hasFilters = search.trim() || productTypeFilter || firmNameFilter || assignmentFilter || primaryAnalystFilter || secondaryAnalystFilter;
+  const clearFilters = () => { setSearch(""); setProductTypeFilter(""); setFirmNameFilter(""); setAssignmentFilter(""); setPrimaryAnalystFilter(""); setSecondaryAnalystFilter(""); };
 
   const sortedXponanceContacts = useMemo(() => {
     return [...xponanceContacts].sort((a, b) => {
@@ -138,12 +133,6 @@ export default function ProductCoverageDashboard() {
 
   const productsWithPrimary = products.filter((p) => p.primary_xponance_contact_id).length;
   const productsUnassigned = products.filter((p) => !p.primary_xponance_contact_id && !p.secondary_xponance_contact_id).length;
-
-  const coverageStatusCounts = useMemo(() => {
-    const counts = { active: 0, pending: 0, under_review: 0 };
-    for (const p of products) counts[getCoverageStatus(p)]++;
-    return counts;
-  }, [products]);
 
   const selectedProducts = useMemo(
     () => filteredProducts.filter((p) => selectedIds.has(p.id)),
@@ -231,18 +220,6 @@ export default function ProductCoverageDashboard() {
               <div className="bg-white/15 rounded-lg px-3 py-1.5 text-center">
                 <div className="font-bold text-lg">{productsUnassigned}</div>
                 <div className="text-white/60 text-[10px]">Unassigned</div>
-              </div>
-              <div className="hidden sm:flex items-center gap-2 bg-white/10 rounded-lg px-3 py-1.5">
-                {Object.entries(coverageStatusCounts).map(([key, count]) => {
-                  const meta = COVERAGE_STATUS_META[key];
-                  return (
-                    <div key={key} className="flex items-center gap-1.5" title={`${meta.label}: ${count} products`}>
-                      <span className={`w-2 h-2 rounded-full ${meta.dot}`} />
-                      <span className="text-xs font-semibold">{count}</span>
-                      <span className="text-white/60 text-[10px]">{meta.label}</span>
-                    </div>
-                  );
-                })}
               </div>
               <button
                 onClick={() => navigate(-1)}
@@ -342,16 +319,6 @@ export default function ProductCoverageDashboard() {
                 return <option key={c.id} value={c.id}>{name}</option>;
               })}
             </select>
-            <select
-              value={coverageStatusFilter}
-              onChange={(e) => setCoverageStatusFilter(e.target.value)}
-              className="h-8 rounded-lg border border-gray-200 text-xs px-2 focus:outline-none focus:ring-1 focus:ring-violet-400"
-            >
-              <option value="">Coverage Status: All</option>
-              <option value="active">Active</option>
-              <option value="pending">Pending</option>
-              <option value="under_review">Under Review</option>
-            </select>
             {hasFilters && (
               <button
                 onClick={clearFilters}
@@ -394,17 +361,16 @@ export default function ProductCoverageDashboard() {
                         aria-label="Select all products"
                       />
                     </th>
-                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[26%]">Product</th>
-                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[16%]">Firm</th>
-                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[21%]">Primary Analyst</th>
-                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[21%]">Secondary Analyst</th>
-                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[12%]">Coverage Status</th>
+                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[28%]">Product</th>
+                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[18%]">Firm</th>
+                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[24%]">Primary Analyst</th>
+                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[24%]">Secondary Analyst</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {filteredProducts.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="text-center py-12 text-sm text-gray-400 italic">
+                      <td colSpan={5} className="text-center py-12 text-sm text-gray-400 italic">
                         No products match your filters.
                       </td>
                     </tr>
@@ -460,9 +426,6 @@ export default function ProductCoverageDashboard() {
                             xponanceContacts={xponanceContacts}
                             onSaved={handleAssignmentSaved}
                           />
-                        </td>
-                        <td className="px-4 py-3">
-                          <CoverageStatusBadge product={product} />
                         </td>
                       </tr>
                     ))

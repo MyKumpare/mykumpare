@@ -48,7 +48,6 @@ import SimilarAddressDialog from "../SimilarAddressDialog";
 import { findAddressIssues } from "../addressDuplicateCheck";
 import SubRecordDuplicateDialog from "./SubRecordDuplicateDialog";
 import { findEducationDuplicates, findExperienceDuplicates, findPhoneDuplicates } from "./subRecordDuplicateCheck";
-import { filterUnacceptedPairs, addAcceptedPairs } from "./subRecordAcceptedDuplicates";
 import InviteToPortalDialog from "../external/InviteToPortalDialog";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
@@ -433,13 +432,9 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
       const eduPairs = findEducationDuplicates(ed);
       const expPairs = findExperienceDuplicates(ex);
       const phonePairs = findPhoneDuplicates(ph);
-      // Skip pairs the user has already accepted (keep both) for this contact
-      // so the review dialog doesn't reappear every time they save.
-      const contactId = editingContact?.id;
-      const unaccepted = filterUnacceptedPairs(contactId, [...eduPairs, ...expPairs, ...phonePairs]);
-      if (unaccepted.length) {
+      if (eduPairs.length || expPairs.length || phonePairs.length) {
         setSubRecordReview({
-          pairs: unaccepted,
+          pairs: [...eduPairs, ...expPairs, ...phonePairs],
           arrays: { education: ed, professional_experience: ex, phones: ph },
           submitAfter: { addresses: addrs },
         });
@@ -555,22 +550,11 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   };
 
   // Apply the user's accept/merge/delete decisions from the sub-record review.
-  // "Accept" (keep both) decisions are persisted per contact so the same pairs
-  // don't re-trigger the review on future saves. If the review was triggered
-  // from Save, re-enter the validator to finish.
-  const handleApplySubRecordReview = (resolvedArrays, decisions = {}) => {
+  // If the review was triggered from Save, re-enter the validator to finish.
+  const handleApplySubRecordReview = (resolvedArrays) => {
     setEducation(resolvedArrays.education);
     setProfessionalExperience(resolvedArrays.professional_experience);
     setPhones(resolvedArrays.phones);
-    const pairs = subRecordReview?.pairs || [];
-    const contactId = editingContact?.id;
-    if (contactId && pairs.length) {
-      const acceptedPairs = pairs.filter((p) => {
-        const key = `${p.type}::${p.aId}::${p.bId}`;
-        return (decisions[key] || "accept") === "accept";
-      });
-      if (acceptedPairs.length) addAcceptedPairs(contactId, acceptedPairs);
-    }
     const submitAfter = subRecordReview?.submitAfter;
     setSubRecordReview(null);
     if (submitAfter) {
