@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -845,7 +845,7 @@ export default function MapSearchModal({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
-      <DialogContent className="max-w-6xl w-[95vw] h-[88vh] p-0 overflow-hidden flex flex-col">
+      <DialogContent className="map-search-dialog max-w-6xl w-[95vw] h-[88vh] p-0 overflow-hidden flex flex-col">
         <DialogHeader className="px-5 pt-5 pb-3 border-b border-gray-200 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -1313,6 +1313,12 @@ export default function MapSearchModal({
             </div>
           )}
         </div>
+
+        {/* Close button — bottom-right corner */}
+        <DialogClose className="absolute bottom-4 right-4 z-[1100] flex h-9 items-center gap-1.5 rounded-full bg-white/95 border border-gray-200 px-4 text-sm font-medium text-gray-700 shadow-md transition-colors hover:bg-gray-50 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-ring">
+          <span>Close</span>
+          <X className="h-4 w-4" />
+        </DialogClose>
       </DialogContent>
     </Dialog>
   );

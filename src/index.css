@@ -145,6 +145,12 @@ textarea {
 /* Ensure leaflet panes stay within dialog stacking context */
 .leaflet-container { z-index: 0; }
 
+/* Map Search dialog — hide the default top-right close button;
+   a custom close button is rendered at the bottom-right corner instead. */
+.map-search-dialog > button {
+  display: none;
+}
+
 /* Leaflet tooltips — wrap content so long names/addresses are fully visible within the map */
 .leaflet-tooltip {
   white-space: normal !important;
