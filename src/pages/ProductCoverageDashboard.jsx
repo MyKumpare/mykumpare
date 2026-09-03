@@ -89,6 +89,14 @@ export default function ProductCoverageDashboard() {
       list = list.filter((p) => p.primary_xponance_contact_id || p.secondary_xponance_contact_id);
     } else if (assignmentFilter === "unassigned") {
       list = list.filter((p) => !p.primary_xponance_contact_id && !p.secondary_xponance_contact_id);
+    } else if (assignmentFilter === "has_primary") {
+      list = list.filter((p) => p.primary_xponance_contact_id);
+    } else if (assignmentFilter === "has_secondary") {
+      list = list.filter((p) => p.secondary_xponance_contact_id);
+    } else if (assignmentFilter === "unassigned_primary") {
+      list = list.filter((p) => !p.primary_xponance_contact_id);
+    } else if (assignmentFilter === "unassigned_secondary") {
+      list = list.filter((p) => !p.secondary_xponance_contact_id);
     }
     if (primaryAnalystFilter) {
       list = list.filter((p) => p.primary_xponance_contact_id === primaryAnalystFilter);
@@ -133,7 +141,8 @@ export default function ProductCoverageDashboard() {
 
   const productsWithPrimary = products.filter((p) => p.primary_xponance_contact_id).length;
   const productsWithSecondary = products.filter((p) => p.secondary_xponance_contact_id).length;
-  const productsUnassigned = products.filter((p) => !p.primary_xponance_contact_id && !p.secondary_xponance_contact_id).length;
+  const productsUnassignedPrimary = products.filter((p) => !p.primary_xponance_contact_id).length;
+  const productsUnassignedSecondary = products.filter((p) => !p.secondary_xponance_contact_id).length;
 
   const selectedProducts = useMemo(
     () => filteredProducts.filter((p) => selectedIds.has(p.id)),
@@ -214,18 +223,34 @@ export default function ProductCoverageDashboard() {
                 <div className="font-bold text-lg">{xponanceContacts.length}</div>
                 <div className="text-white/60 text-[10px]">Xponance Contacts</div>
               </div>
-              <div className="bg-white/15 rounded-lg px-3 py-1.5 text-center">
+              <button
+                onClick={() => setAssignmentFilter(assignmentFilter === "has_primary" ? "" : "has_primary")}
+                className={`rounded-lg px-3 py-1.5 text-center transition-colors ${assignmentFilter === "has_primary" ? "bg-white/40 ring-2 ring-white/70" : "bg-white/15 hover:bg-white/25"}`}
+              >
                 <div className="font-bold text-lg">{productsWithPrimary}</div>
                 <div className="text-white/60 text-[10px]">Products w/ Primary</div>
-              </div>
-              <div className="bg-white/15 rounded-lg px-3 py-1.5 text-center">
+              </button>
+              <button
+                onClick={() => setAssignmentFilter(assignmentFilter === "has_secondary" ? "" : "has_secondary")}
+                className={`rounded-lg px-3 py-1.5 text-center transition-colors ${assignmentFilter === "has_secondary" ? "bg-white/40 ring-2 ring-white/70" : "bg-white/15 hover:bg-white/25"}`}
+              >
                 <div className="font-bold text-lg">{productsWithSecondary}</div>
                 <div className="text-white/60 text-[10px]">Products w/ Secondary</div>
-              </div>
-              <div className="bg-white/15 rounded-lg px-3 py-1.5 text-center">
-                <div className="font-bold text-lg">{productsUnassigned}</div>
-                <div className="text-white/60 text-[10px]">Unassigned</div>
-              </div>
+              </button>
+              <button
+                onClick={() => setAssignmentFilter(assignmentFilter === "unassigned_primary" ? "" : "unassigned_primary")}
+                className={`rounded-lg px-3 py-1.5 text-center transition-colors ${assignmentFilter === "unassigned_primary" ? "bg-white/40 ring-2 ring-white/70" : "bg-white/15 hover:bg-white/25"}`}
+              >
+                <div className="font-bold text-lg">{productsUnassignedPrimary}</div>
+                <div className="text-white/60 text-[10px]">Unassigned Primary</div>
+              </button>
+              <button
+                onClick={() => setAssignmentFilter(assignmentFilter === "unassigned_secondary" ? "" : "unassigned_secondary")}
+                className={`rounded-lg px-3 py-1.5 text-center transition-colors ${assignmentFilter === "unassigned_secondary" ? "bg-white/40 ring-2 ring-white/70" : "bg-white/15 hover:bg-white/25"}`}
+              >
+                <div className="font-bold text-lg">{productsUnassignedSecondary}</div>
+                <div className="text-white/60 text-[10px]">Unassigned Secondary</div>
+              </button>
               <button
                 onClick={() => navigate(-1)}
                 className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 rounded-lg px-3 py-2 text-sm font-medium transition-colors"
@@ -301,6 +326,10 @@ export default function ProductCoverageDashboard() {
               <option value="">All Assignments</option>
               <option value="assigned">Has Assignment</option>
               <option value="unassigned">No Assignment</option>
+              <option value="has_primary">Has Primary</option>
+              <option value="has_secondary">Has Secondary</option>
+              <option value="unassigned_primary">Unassigned Primary</option>
+              <option value="unassigned_secondary">Unassigned Secondary</option>
             </select>
             <select
               value={primaryAnalystFilter}
