@@ -61,7 +61,21 @@ export default function ProductCoverageDashboard() {
     [firms]
   );
 
-  // assignment counts moved below (computed from the filtered set)
+  // Count how many products each Xponance contact is assigned to
+  const assignmentCounts = useMemo(() => {
+    const counts = {};
+    for (const p of products) {
+      if (p.primary_xponance_contact_id) {
+        counts[p.primary_xponance_contact_id] = counts[p.primary_xponance_contact_id] || { primary: 0, secondary: 0 };
+        counts[p.primary_xponance_contact_id].primary++;
+      }
+      if (p.secondary_xponance_contact_id) {
+        counts[p.secondary_xponance_contact_id] = counts[p.secondary_xponance_contact_id] || { primary: 0, secondary: 0 };
+        counts[p.secondary_xponance_contact_id].secondary++;
+      }
+    }
+    return counts;
+  }, [products]);
 
   const filteredProducts = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -129,26 +143,10 @@ export default function ProductCoverageDashboard() {
 
   const loading = productsLoading || contactsLoading || firmsLoading;
 
-  const productsWithPrimary = filteredProducts.filter((p) => p.primary_xponance_contact_id).length;
-  const productsWithSecondary = filteredProducts.filter((p) => p.secondary_xponance_contact_id).length;
-  const productsUnassignedPrimary = filteredProducts.filter((p) => !p.primary_xponance_contact_id).length;
-  const productsUnassignedSecondary = filteredProducts.filter((p) => !p.secondary_xponance_contact_id).length;
-
-  // Analyst breakdown counts reflect the currently filtered products
-  const assignmentCounts = useMemo(() => {
-    const counts = {};
-    for (const p of filteredProducts) {
-      if (p.primary_xponance_contact_id) {
-        counts[p.primary_xponance_contact_id] = counts[p.primary_xponance_contact_id] || { primary: 0, secondary: 0 };
-        counts[p.primary_xponance_contact_id].primary++;
-      }
-      if (p.secondary_xponance_contact_id) {
-        counts[p.secondary_xponance_contact_id] = counts[p.secondary_xponance_contact_id] || { primary: 0, secondary: 0 };
-        counts[p.secondary_xponance_contact_id].secondary++;
-      }
-    }
-    return counts;
-  }, [filteredProducts]);
+  const productsWithPrimary = products.filter((p) => p.primary_xponance_contact_id).length;
+  const productsWithSecondary = products.filter((p) => p.secondary_xponance_contact_id).length;
+  const productsUnassignedPrimary = products.filter((p) => !p.primary_xponance_contact_id).length;
+  const productsUnassignedSecondary = products.filter((p) => !p.secondary_xponance_contact_id).length;
 
   const selectedProducts = useMemo(
     () => filteredProducts.filter((p) => selectedIds.has(p.id)),
@@ -487,7 +485,7 @@ export default function ProductCoverageDashboard() {
         )}
 
         <AnalystRegionCoverageHeatmap
-          products={filteredProducts}
+          products={products}
           firmMap={firmMap}
           xponanceContacts={xponanceContacts}
         />
