@@ -175,7 +175,8 @@ export default function XponanceDashboard() {
   // Stats
   const firmsWithPrimary = firms.filter((f) => f.primary_xponance_contact_id).length;
   const firmsWithSecondary = firms.filter((f) => f.secondary_xponance_contact_id).length;
-  const firmsUnassigned = firms.filter((f) => !f.primary_xponance_contact_id && !f.secondary_xponance_contact_id).length;
+  const firmsUnassignedPrimary = firms.filter((f) => !f.primary_xponance_contact_id).length;
+  const firmsUnassignedSecondary = firms.filter((f) => !f.secondary_xponance_contact_id).length;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -206,8 +207,12 @@ export default function XponanceDashboard() {
                 <div className="text-white/60 text-[10px]">Firms w/ Secondary</div>
               </div>
               <div className="bg-white/15 rounded-lg px-3 py-1.5 text-center">
-                <div className="font-bold text-lg">{firmsUnassigned}</div>
-                <div className="text-white/60 text-[10px]">Unassigned</div>
+                <div className="font-bold text-lg">{firmsUnassignedPrimary}</div>
+                <div className="text-white/60 text-[10px]">Unassigned Primary</div>
+              </div>
+              <div className="bg-white/15 rounded-lg px-3 py-1.5 text-center">
+                <div className="font-bold text-lg">{firmsUnassignedSecondary}</div>
+                <div className="text-white/60 text-[10px]">Unassigned Secondary</div>
               </div>
               <button
                 onClick={() => navigate(-1)}
