@@ -6,6 +6,8 @@ import { useAuth } from "@/lib/AuthContext";
 import { Search, Package, Building, UserCircle2, ArrowUpDown, Filter, X, Download } from "lucide-react";
 import XponanceAssignmentCell from "@/components/xponance/XponanceAssignmentCell";
 import AnalystAssignmentChart from "@/components/coverage/AnalystAssignmentChart";
+import BulkReassignBar from "@/components/coverage/BulkReassignBar";
+import { Checkbox } from "@/components/ui/checkbox";
 import { BarChart3 } from "lucide-react";
 
 const PRODUCT_TYPES = ["Investment Manager Product", "Multi-Manager Product"];
@@ -28,6 +30,7 @@ export default function ProductCoverageDashboard() {
   const [primaryAnalystFilter, setPrimaryAnalystFilter] = useState("");
   const [secondaryAnalystFilter, setSecondaryAnalystFilter] = useState("");
   const [sortKey, setSortKey] = useState("name");
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
 
   const { data: products = [], isLoading: productsLoading } = useQuery({
     queryKey: ["products"],
@@ -130,6 +133,44 @@ export default function ProductCoverageDashboard() {
 
   const productsWithPrimary = products.filter((p) => p.primary_xponance_contact_id).length;
   const productsUnassigned = products.filter((p) => !p.primary_xponance_contact_id && !p.secondary_xponance_contact_id).length;
+
+  const selectedProducts = useMemo(
+    () => filteredProducts.filter((p) => selectedIds.has(p.id)),
+    [filteredProducts, selectedIds]
+  );
+
+  const allFilteredSelected =
+    filteredProducts.length > 0 && filteredProducts.every((p) => selectedIds.has(p.id));
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    setSelectedIds((prev) => {
+      if (filteredProducts.every((p) => prev.has(p.id))) {
+        const next = new Set(prev);
+        filteredProducts.forEach((p) => next.delete(p.id));
+        return next;
+      }
+      const next = new Set(prev);
+      filteredProducts.forEach((p) => next.add(p.id));
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const handleBulkDone = () => {
+    clearSelection();
+    queryClient.invalidateQueries({ queryKey: ["products"] });
+    queryClient.invalidateQueries({ queryKey: ["contacts"] });
+  };
 
   const handleExportCsv = () => {
     const rows = [
@@ -313,22 +354,36 @@ export default function ProductCoverageDashboard() {
               <table className="w-full table-fixed">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[30%]">Product</th>
-                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[20%]">Firm</th>
-                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[25%]">Primary Analyst</th>
-                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[25%]">Secondary Analyst</th>
+                    <th className="text-left px-4 py-3 w-[44px]">
+                      <Checkbox
+                        checked={allFilteredSelected}
+                        onCheckedChange={toggleSelectAll}
+                        aria-label="Select all products"
+                      />
+                    </th>
+                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[28%]">Product</th>
+                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[18%]">Firm</th>
+                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[24%]">Primary Analyst</th>
+                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[24%]">Secondary Analyst</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {filteredProducts.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="text-center py-12 text-sm text-gray-400 italic">
+                      <td colSpan={5} className="text-center py-12 text-sm text-gray-400 italic">
                         No products match your filters.
                       </td>
                     </tr>
                   ) : (
                     filteredProducts.map((product) => (
                       <tr key={product.id} className="hover:bg-violet-50/30 transition-colors">
+                        <td className="px-4 py-3">
+                          <Checkbox
+                            checked={selectedIds.has(product.id)}
+                            onCheckedChange={() => toggleSelect(product.id)}
+                            aria-label={`Select ${product.name}`}
+                          />
+                        </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             <div className="w-7 h-7 rounded bg-violet-50 flex items-center justify-center flex-shrink-0">
@@ -379,6 +434,16 @@ export default function ProductCoverageDashboard() {
               </table>
             </div>
           </div>
+        )}
+
+        {/* Bulk reassign bar */}
+        {selectedProducts.length > 0 && (
+          <BulkReassignBar
+            selectedProducts={selectedProducts}
+            xponanceContacts={xponanceContacts}
+            onDone={handleBulkDone}
+            onClear={clearSelection}
+          />
         )}
 
         {/* Analyst assignment chart */}
