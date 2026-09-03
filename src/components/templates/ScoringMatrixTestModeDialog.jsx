@@ -264,6 +264,31 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
     return totalWeight > 0 ? (total / totalWeight).toFixed(2) : "—";
   };
 
+  // Count criteria still missing a score for a given phase field.
+  // Finalize is blocked until this reaches zero, mirroring the real scorecard's guard.
+  const unscoredCount = (scoreField) => {
+    let count = 0;
+    blocks.forEach((block) => {
+      (block.criteria || []).forEach((crit) => {
+        if (crit[scoreField] == null) count++;
+      });
+    });
+    return count;
+  };
+
+  const guardFinalize = (scoreField, label, fn) => {
+    const missing = unscoredCount(scoreField);
+    if (missing > 0) {
+      toast({
+        title: `Cannot finalize ${label}`,
+        description: `${missing} ${missing === 1 ? "item still needs" : "items still need"} a ${label.toLowerCase()} score.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    fn();
+  };
+
   const columns = [
     { key: "primary_score", label: "Primary", color: "#3b82f6", getValue: (c) => c.primary_score },
     { key: "team_score", label: "Team", color: "#f59e0b", getValue: (c) => c.team_score },
@@ -360,8 +385,18 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
             {/* Phase action buttons */}
             <div className="flex flex-wrap gap-2 items-center">
               {!score.primary_score_finalized && (
-                <Button size="sm" onClick={finalizePrimary}>
+                <Button
+                  size="sm"
+                  onClick={() => guardFinalize("primary_score", "Primary", finalizePrimary)}
+                  disabled={unscoredCount("primary_score") > 0}
+                  title={unscoredCount("primary_score") > 0 ? `${unscoredCount("primary_score")} unscored item(s)` : undefined}
+                >
                   <CheckCircle2 className="w-3.5 h-3.5" /> Finalize Primary Scores
+                  {unscoredCount("primary_score") > 0 && (
+                    <Badge variant="outline" className="ml-1 text-[10px] bg-amber-50 border-amber-300 text-amber-700">
+                      {unscoredCount("primary_score")} unscored
+                    </Badge>
+                  )}
                 </Button>
               )}
               {score.primary_score_finalized && !showIC && score.team_review_status !== "completed" && (
@@ -370,8 +405,18 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
                 </Button>
               )}
               {showTeam && score.team_review_status === "in_progress" && (
-                <Button size="sm" onClick={finalizeTeamReview}>
+                <Button
+                  size="sm"
+                  onClick={() => guardFinalize("team_score", "Team", finalizeTeamReview)}
+                  disabled={unscoredCount("team_score") > 0}
+                  title={unscoredCount("team_score") > 0 ? `${unscoredCount("team_score")} unscored item(s)` : undefined}
+                >
                   Finalize Adjusted Primary (End Team Review)
+                  {unscoredCount("team_score") > 0 && (
+                    <Badge variant="outline" className="ml-1 text-[10px] bg-amber-50 border-amber-300 text-amber-700">
+                      {unscoredCount("team_score")} unscored
+                    </Badge>
+                  )}
                 </Button>
               )}
               {score.adjusted_primary_finalized && !score.final_score_finalized && score.ic_review_status !== "in_progress" && (
@@ -380,8 +425,18 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
                 </Button>
               )}
               {showIC && score.ic_review_status === "in_progress" && (
-                <Button size="sm" onClick={finalizeICReview}>
+                <Button
+                  size="sm"
+                  onClick={() => guardFinalize("ic_score", "IC", finalizeICReview)}
+                  disabled={unscoredCount("ic_score") > 0}
+                  title={unscoredCount("ic_score") > 0 ? `${unscoredCount("ic_score")} unscored item(s)` : undefined}
+                >
                   Finalize Scoring Matrix
+                  {unscoredCount("ic_score") > 0 && (
+                    <Badge variant="outline" className="ml-1 text-[10px] bg-amber-50 border-amber-300 text-amber-700">
+                      {unscoredCount("ic_score")} unscored
+                    </Badge>
+                  )}
                 </Button>
               )}
             </div>
