@@ -202,6 +202,10 @@ export default function XponanceDashboard() {
                 <div className="text-white/60 text-[10px]">Firms w/ Primary</div>
               </div>
               <div className="bg-white/15 rounded-lg px-3 py-1.5 text-center">
+                <div className="font-bold text-lg">{firmsWithSecondary}</div>
+                <div className="text-white/60 text-[10px]">Firms w/ Secondary</div>
+              </div>
+              <div className="bg-white/15 rounded-lg px-3 py-1.5 text-center">
                 <div className="font-bold text-lg">{firmsUnassigned}</div>
                 <div className="text-white/60 text-[10px]">Unassigned</div>
               </div>
