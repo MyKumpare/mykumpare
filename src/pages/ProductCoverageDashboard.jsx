@@ -132,6 +132,7 @@ export default function ProductCoverageDashboard() {
   const loading = productsLoading || contactsLoading || firmsLoading;
 
   const productsWithPrimary = products.filter((p) => p.primary_xponance_contact_id).length;
+  const productsWithSecondary = products.filter((p) => p.secondary_xponance_contact_id).length;
   const productsUnassigned = products.filter((p) => !p.primary_xponance_contact_id && !p.secondary_xponance_contact_id).length;
 
   const selectedProducts = useMemo(
@@ -216,6 +217,10 @@ export default function ProductCoverageDashboard() {
               <div className="bg-white/15 rounded-lg px-3 py-1.5 text-center">
                 <div className="font-bold text-lg">{productsWithPrimary}</div>
                 <div className="text-white/60 text-[10px]">Products w/ Primary</div>
+              </div>
+              <div className="bg-white/15 rounded-lg px-3 py-1.5 text-center">
+                <div className="font-bold text-lg">{productsWithSecondary}</div>
+                <div className="text-white/60 text-[10px]">Products w/ Secondary</div>
               </div>
               <div className="bg-white/15 rounded-lg px-3 py-1.5 text-center">
                 <div className="font-bold text-lg">{productsUnassigned}</div>
