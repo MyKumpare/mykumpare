@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, User, Plus, ChevronRight, ChevronDown, Building, Users, GripVertical } from "lucide-react";
+import { X, User, Plus, ChevronRight, ChevronDown, Building, Users, GripVertical, List, Share2, Network, Trophy } from "lucide-react";
 import ContactsSectionFilters, { filterSectionContacts } from "./ContactsSectionFilters";
 
 const getFullName = (c) => {
@@ -26,6 +26,15 @@ export default function ContactPickerModal({ open, onClose, contacts, firms, pro
   const [filterSelected, setFilterSelected] = useState({});
   const [collapsedTypes, setCollapsedTypes] = useState({});
   const [collapsedFirms, setCollapsedFirms] = useState({});
+  const [view, setView] = useState("list"); // "list" | "network" | "relationship" | "influence"
+
+  const handleViewChange = (v) => {
+    if (v === "list") { setView("list"); return; }
+    onClose();
+    if (v === "network") navigate("/ContactNetwork");
+    else if (v === "relationship") navigate("/RelationshipNetworkMap");
+    else if (v === "influence") navigate("/InfluenceLevelDashboard");
+  };
 
   const toggleType = (type) => setCollapsedTypes(prev => ({ ...prev, [type]: !prev[type] }));
   const toggleFirm = (key) => setCollapsedFirms(prev => ({ ...prev, [key]: !prev[key] }));
@@ -131,11 +140,28 @@ export default function ContactPickerModal({ open, onClose, contacts, firms, pro
         {/* Header */}
         <div className="px-5 py-3 border-b border-gray-100">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-              <User className="w-4 h-4 text-pink-600" />
-              Contacts
-              <span className="text-xs text-gray-400 font-normal">({filtered.length})</span>
-            </h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                <User className="w-4 h-4 text-pink-600" />
+                Contacts
+                <span className="text-xs text-gray-400 font-normal">({filtered.length})</span>
+              </h2>
+              {/* View toggle */}
+              <div className="flex items-center gap-0.5 bg-gray-100 rounded-lg p-0.5">
+                <button onClick={() => handleViewChange("list")} className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors ${view === "list" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+                  <List className="w-3.5 h-3.5" /> List
+                </button>
+                <button onClick={() => handleViewChange("network")} className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors">
+                  <Share2 className="w-3.5 h-3.5" /> Network Map
+                </button>
+                <button onClick={() => handleViewChange("relationship")} className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors">
+                  <Network className="w-3.5 h-3.5" /> Relationship Map
+                </button>
+                <button onClick={() => handleViewChange("influence")} className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors">
+                  <Trophy className="w-3.5 h-3.5" /> Influence
+                </button>
+              </div>
+            </div>
             <button type="button" onClick={onClose}>
               <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
             </button>
