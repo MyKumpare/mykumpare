@@ -81,6 +81,8 @@ export default function XponanceAssignmentCell({
         await base44.entities.Firm.update(entityId, payload);
       } else if (entityType === "Product") {
         await base44.entities.Product.update(entityId, payload);
+      } else if (entityType === "Portfolio") {
+        await base44.entities.Portfolio.update(entityId, payload);
       } else {
         await base44.entities.Contact.update(entityId, payload);
       }

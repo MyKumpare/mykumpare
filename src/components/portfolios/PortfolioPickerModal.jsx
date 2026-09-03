@@ -1,8 +1,10 @@
 import React, { useState, useMemo } from "react";
-import { X, LayoutList, Plus, Search, ChevronRight, ChevronDown } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { X, LayoutList, Plus, Search, ChevronRight, ChevronDown, Users } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
 export default function PortfolioPickerModal({ open, onClose, portfolios, onPortfolioClick, onAddPortfolio }) {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [collapsedFirms, setCollapsedFirms] = useState({});
   const [collapsedTypes, setCollapsedTypes] = useState({});
@@ -66,6 +68,18 @@ export default function PortfolioPickerModal({ open, onClose, portfolios, onPort
           </h2>
           <button type="button" onClick={onClose}>
             <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+          </button>
+        </div>
+
+        {/* Action buttons row */}
+        <div className="flex items-center gap-1.5 px-5 py-2 border-b border-gray-100">
+          <button
+            type="button"
+            onClick={() => { onClose(); navigate("/PortfolioCoverage"); }}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 transition-colors"
+            title="Portfolio Coverage"
+          >
+            <Users className="w-3.5 h-3.5" /> Firm Coverage
           </button>
         </div>
 
