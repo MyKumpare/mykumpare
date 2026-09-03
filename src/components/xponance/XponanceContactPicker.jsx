@@ -25,7 +25,7 @@ const getFullName = (c) =>
  *  - editing: boolean — whether the parent form is in edit mode
  *  - excludeId: optional contact ID to exclude (e.g. the primary contact when picking secondary)
  */
-export default function XponanceContactPicker({ label, value, onChange, onClear, editing = true, excludeId }) {
+export default function XponanceContactPicker({ label, value, onChange, onClear, editing = true, excludeId, assignmentScope }) {
   const { user } = useAuth();
   const tenantFirmId = user?.linked_firm_id;
 
@@ -51,6 +51,32 @@ export default function XponanceContactPicker({ label, value, onChange, onClear,
     if (!tenantFirmId) return active;
     return active.filter((c) => (c.firm_ids || []).includes(tenantFirmId));
   }, [allContacts, tenantFirmId]);
+
+  // When an assignmentScope is provided, fetch that entity type so we can show each
+  // Xponance contact's current coverage count (P/S) for the same entity type being edited.
+  const { data: firms = [] } = useQuery({
+    queryKey: ["firms"],
+    queryFn: () => base44.entities.Firm.list("-created_date", 5000),
+    enabled: assignmentScope === "Firm",
+  });
+
+  const assignmentCounts = useMemo(() => {
+    if (!assignmentScope) return {};
+    const source = assignmentScope === "Firm" ? firms : assignmentScope === "Contact" ? allContacts : [];
+    const counts = {};
+    for (const e of source) {
+      if (e.deleted_at) continue;
+      if (e.primary_xponance_contact_id) {
+        counts[e.primary_xponance_contact_id] = counts[e.primary_xponance_contact_id] || { primary: 0, secondary: 0 };
+        counts[e.primary_xponance_contact_id].primary++;
+      }
+      if (e.secondary_xponance_contact_id) {
+        counts[e.secondary_xponance_contact_id] = counts[e.secondary_xponance_contact_id] || { primary: 0, secondary: 0 };
+        counts[e.secondary_xponance_contact_id].secondary++;
+      }
+    }
+    return counts;
+  }, [firms, allContacts, assignmentScope]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -190,6 +216,14 @@ export default function XponanceContactPicker({ label, value, onChange, onClear,
             </button>
           </div>
 
+          {assignmentScope && (
+            <div className="px-3 py-1 bg-gray-50 border-b text-[10px] text-gray-400 flex items-center gap-1.5 flex-wrap">
+              <span className="font-medium text-gray-500">{assignmentScope === "Firm" ? "Firm" : "Contact"} coverage:</span>
+              <span className="px-1 rounded bg-indigo-100 text-indigo-700 font-medium">P</span> primary
+              <span className="px-1 rounded bg-violet-100 text-violet-700 font-medium">S</span> secondary
+            </div>
+          )}
+
           {/* Contact list */}
           <div className="max-h-48 overflow-y-auto">
             {filtered.length === 0 && !showAddForm ? (
@@ -217,6 +251,16 @@ export default function XponanceContactPicker({ label, value, onChange, onClear,
                     </p>
                     {c.title && <p className="text-xs text-gray-400 truncate">{c.title}</p>}
                   </div>
+                  {assignmentScope && (() => {
+                    const ac = assignmentCounts[c.id];
+                    if (!ac || (ac.primary === 0 && ac.secondary === 0)) return null;
+                    return (
+                      <span className="flex items-center gap-1 text-[10px] flex-shrink-0">
+                        {ac.primary > 0 && <span className="px-1 rounded bg-indigo-100 text-indigo-700 font-medium">P:{ac.primary}</span>}
+                        {ac.secondary > 0 && <span className="px-1 rounded bg-violet-100 text-violet-700 font-medium">S:{ac.secondary}</span>}
+                      </span>
+                    );
+                  })()}
                   {value?.contact_id === c.id && <Check className="w-4 h-4 text-indigo-600 flex-shrink-0" />}
                 </button>
               ))

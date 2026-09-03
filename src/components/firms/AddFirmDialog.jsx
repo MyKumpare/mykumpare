@@ -1477,6 +1477,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                   onChange={(id, name) => { setPrimaryXponanceId(id); setPrimaryXponanceName(name); }}
                   onClear={() => { setPrimaryXponanceId(""); setPrimaryXponanceName(""); }}
                   editing={activelyEditing}
+                  assignmentScope="Firm"
                   excludeId={secondaryXponanceId}
                 />
                 <XponanceContactPicker
@@ -1485,6 +1486,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                   onChange={(id, name) => { setSecondaryXponanceId(id); setSecondaryXponanceName(name); }}
                   onClear={() => { setSecondaryXponanceId(""); setSecondaryXponanceName(""); }}
                   editing={activelyEditing}
+                  assignmentScope="Firm"
                   excludeId={primaryXponanceId}
                 />
               </div>

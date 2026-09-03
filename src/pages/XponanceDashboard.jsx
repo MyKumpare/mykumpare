@@ -72,8 +72,11 @@ export default function XponanceDashboard() {
     [firms]
   );
 
-  // Count how many firms/contacts each Xponance contact is assigned to
-  const assignmentCounts = useMemo(() => {
+  // Per-entity-type assignment counts, kept separate so the analyst cards match the
+  // active view (firm counts in Firms view, contact counts in Contacts view) and don't
+  // mix the two — which previously made a contact-only assignment show up as a "P: 1"
+  // card with no matching row in the firms table.
+  const firmAssignmentCounts = useMemo(() => {
     const counts = {};
     for (const f of firms) {
       if (f.primary_xponance_contact_id) {
@@ -85,6 +88,11 @@ export default function XponanceDashboard() {
         counts[f.secondary_xponance_contact_id].secondary++;
       }
     }
+    return counts;
+  }, [firms]);
+
+  const contactAssignmentCounts = useMemo(() => {
+    const counts = {};
     for (const c of contacts) {
       if (c.primary_xponance_contact_id) {
         counts[c.primary_xponance_contact_id] = counts[c.primary_xponance_contact_id] || { primary: 0, secondary: 0 };
@@ -96,7 +104,10 @@ export default function XponanceDashboard() {
       }
     }
     return counts;
-  }, [firms, contacts]);
+  }, [contacts]);
+
+  // Show only the counts that match the active view so the cards line up with the table above
+  const assignmentCounts = viewMode === "firms" ? firmAssignmentCounts : contactAssignmentCounts;
 
   // Filtered + sorted firms
   const filteredFirms = useMemo(() => {

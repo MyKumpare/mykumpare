@@ -1506,6 +1506,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                   onChange={(id, name) => { setPrimaryXponanceId(id); setPrimaryXponanceName(name); }}
                   onClear={() => { setPrimaryXponanceId(""); setPrimaryXponanceName(""); }}
                   editing={!viewMode}
+                  assignmentScope="Contact"
                   excludeId={secondaryXponanceId}
                 />
                 <XponanceContactPicker
@@ -1514,6 +1515,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                   onChange={(id, name) => { setSecondaryXponanceId(id); setSecondaryXponanceName(name); }}
                   onClear={() => { setSecondaryXponanceId(""); setSecondaryXponanceName(""); }}
                   editing={!viewMode}
+                  assignmentScope="Contact"
                   excludeId={primaryXponanceId}
                 />
               </div>
