@@ -8,6 +8,7 @@ import XponanceAssignmentCell from "@/components/xponance/XponanceAssignmentCell
 import AnalystBreakdownSection from "@/components/coverage/AnalystBreakdownSection";
 import AnalystRegionCoverageHeatmap from "@/components/coverage/AnalystRegionCoverageHeatmap";
 import BulkReassignBar from "@/components/coverage/BulkReassignBar";
+import CoverageContactsTable from "@/components/coverage/CoverageContactsTable";
 import { Checkbox } from "@/components/ui/checkbox";
 
 const PRODUCT_TYPES = ["Investment Manager Product", "Multi-Manager Product"];
@@ -32,6 +33,7 @@ export default function ProductCoverageDashboard() {
   const [sortKey, setSortKey] = useState("name");
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [coveredAnalystId, setCoveredAnalystId] = useState("");
+  const [viewMode, setViewMode] = useState("products"); // "products" | "contacts"
 
   const { data: products = [], isLoading: productsLoading } = useQuery({
     queryKey: ["products"],
@@ -61,8 +63,8 @@ export default function ProductCoverageDashboard() {
     [firms]
   );
 
-  // Count how many products each Xponance contact is assigned to
-  const assignmentCounts = useMemo(() => {
+  // Count how many products each Xponance contact is assigned to (Products view)
+  const productAssignmentCounts = useMemo(() => {
     const counts = {};
     for (const p of products) {
       if (p.primary_xponance_contact_id) {
@@ -76,6 +78,25 @@ export default function ProductCoverageDashboard() {
     }
     return counts;
   }, [products]);
+
+  // Count how many (non-Xponance) contacts each Xponance contact is assigned to (Contacts view)
+  const contactAssignmentCounts = useMemo(() => {
+    const counts = {};
+    const nonXponance = contacts.filter((c) => !(c.firm_ids || []).includes(tenantFirmId));
+    for (const c of nonXponance) {
+      if (c.primary_xponance_contact_id) {
+        counts[c.primary_xponance_contact_id] = counts[c.primary_xponance_contact_id] || { primary: 0, secondary: 0 };
+        counts[c.primary_xponance_contact_id].primary++;
+      }
+      if (c.secondary_xponance_contact_id) {
+        counts[c.secondary_xponance_contact_id] = counts[c.secondary_xponance_contact_id] || { primary: 0, secondary: 0 };
+        counts[c.secondary_xponance_contact_id].secondary++;
+      }
+    }
+    return counts;
+  }, [contacts, tenantFirmId]);
+
+  const assignmentCounts = viewMode === "products" ? productAssignmentCounts : contactAssignmentCounts;
 
   const filteredProducts = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -148,6 +169,58 @@ export default function ProductCoverageDashboard() {
   const productsUnassignedPrimary = products.filter((p) => !p.primary_xponance_contact_id).length;
   const productsUnassignedSecondary = products.filter((p) => !p.secondary_xponance_contact_id).length;
 
+  // Contacts view: non-Xponance contacts with Xponance assignments, filtered to match the active filters
+  const nonXponanceContacts = useMemo(
+    () => contacts.filter((c) => !(c.firm_ids || []).includes(tenantFirmId)),
+    [contacts, tenantFirmId]
+  );
+  const filteredContacts = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    let list = nonXponanceContacts;
+    if (firmNameFilter) {
+      list = list.filter((c) => (c.firm_ids || []).includes(firmNameFilter));
+    }
+    if (assignmentFilter === "assigned") {
+      list = list.filter((c) => c.primary_xponance_contact_id || c.secondary_xponance_contact_id);
+    } else if (assignmentFilter === "unassigned") {
+      list = list.filter((c) => !c.primary_xponance_contact_id && !c.secondary_xponance_contact_id);
+    } else if (assignmentFilter === "has_primary") {
+      list = list.filter((c) => c.primary_xponance_contact_id);
+    } else if (assignmentFilter === "has_secondary") {
+      list = list.filter((c) => c.secondary_xponance_contact_id);
+    } else if (assignmentFilter === "unassigned_primary") {
+      list = list.filter((c) => !c.primary_xponance_contact_id);
+    } else if (assignmentFilter === "unassigned_secondary") {
+      list = list.filter((c) => !c.secondary_xponance_contact_id);
+    }
+    if (coveredAnalystId) {
+      list = list.filter((c) => c.primary_xponance_contact_id === coveredAnalystId || c.secondary_xponance_contact_id === coveredAnalystId);
+    }
+    if (q) {
+      list = list.filter((c) => {
+        const name = [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ").toLowerCase();
+        const primaryMatch = (c.primary_xponance_contact_name || "").toLowerCase().includes(q);
+        const secondaryMatch = (c.secondary_xponance_contact_name || "").toLowerCase().includes(q);
+        return name.includes(q) || primaryMatch || secondaryMatch;
+      });
+    }
+    return [...list].sort((a, b) =>
+      [a.first_name, a.last_name].filter(Boolean).join(" ").localeCompare([b.first_name, b.last_name].filter(Boolean).join(" "))
+    );
+  }, [nonXponanceContacts, search, firmNameFilter, assignmentFilter, coveredAnalystId]);
+
+  const contactsWithPrimary = nonXponanceContacts.filter((c) => c.primary_xponance_contact_id).length;
+  const contactsWithSecondary = nonXponanceContacts.filter((c) => c.secondary_xponance_contact_id).length;
+  const contactsUnassignedPrimary = nonXponanceContacts.filter((c) => !c.primary_xponance_contact_id).length;
+  const contactsUnassignedSecondary = nonXponanceContacts.filter((c) => !c.secondary_xponance_contact_id).length;
+
+  // View-aware header stats
+  const statsWithPrimary = viewMode === "products" ? productsWithPrimary : contactsWithPrimary;
+  const statsWithSecondary = viewMode === "products" ? productsWithSecondary : contactsWithSecondary;
+  const statsUnassignedPrimary = viewMode === "products" ? productsUnassignedPrimary : contactsUnassignedPrimary;
+  const statsUnassignedSecondary = viewMode === "products" ? productsUnassignedSecondary : contactsUnassignedSecondary;
+  const entityLabel = viewMode === "products" ? "Products" : "Contacts";
+
   const selectedProducts = useMemo(
     () => filteredProducts.filter((p) => selectedIds.has(p.id)),
     [filteredProducts, selectedIds]
@@ -207,6 +280,25 @@ export default function ProductCoverageDashboard() {
     URL.revokeObjectURL(url);
   };
 
+  const handleExportContactsCsv = () => {
+    const rows = [
+      ["Contact", "Firm", "Primary Analyst", "Secondary Analyst"],
+      ...filteredContacts.map((c) => {
+        const name = [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ");
+        const firmName = (c.firm_ids || []).map((fid) => firmMap[fid]?.name).filter(Boolean).join(", ");
+        return [name, firmName, c.primary_xponance_contact_name || "", c.secondary_xponance_contact_name || ""];
+      }),
+    ];
+    const csv = rows.map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `product-coverage-contacts-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -231,28 +323,28 @@ export default function ProductCoverageDashboard() {
                 onClick={() => setAssignmentFilter(assignmentFilter === "has_primary" ? "" : "has_primary")}
                 className={`rounded-lg px-3 py-1.5 text-center transition-colors ${assignmentFilter === "has_primary" ? "bg-white/40 ring-2 ring-white/70" : "bg-white/15 hover:bg-white/25"}`}
               >
-                <div className="font-bold text-lg">{productsWithPrimary}</div>
-                <div className="text-white/60 text-[10px]">Products w/ Primary</div>
+                <div className="font-bold text-lg">{statsWithPrimary}</div>
+                <div className="text-white/60 text-[10px]">{entityLabel} w/ Primary</div>
               </button>
               <button
                 onClick={() => setAssignmentFilter(assignmentFilter === "has_secondary" ? "" : "has_secondary")}
                 className={`rounded-lg px-3 py-1.5 text-center transition-colors ${assignmentFilter === "has_secondary" ? "bg-white/40 ring-2 ring-white/70" : "bg-white/15 hover:bg-white/25"}`}
               >
-                <div className="font-bold text-lg">{productsWithSecondary}</div>
-                <div className="text-white/60 text-[10px]">Products w/ Secondary</div>
+                <div className="font-bold text-lg">{statsWithSecondary}</div>
+                <div className="text-white/60 text-[10px]">{entityLabel} w/ Secondary</div>
               </button>
               <button
                 onClick={() => setAssignmentFilter(assignmentFilter === "unassigned_primary" ? "" : "unassigned_primary")}
                 className={`rounded-lg px-3 py-1.5 text-center transition-colors ${assignmentFilter === "unassigned_primary" ? "bg-white/40 ring-2 ring-white/70" : "bg-white/15 hover:bg-white/25"}`}
               >
-                <div className="font-bold text-lg">{productsUnassignedPrimary}</div>
+                <div className="font-bold text-lg">{statsUnassignedPrimary}</div>
                 <div className="text-white/60 text-[10px]">Unassigned Primary</div>
               </button>
               <button
                 onClick={() => setAssignmentFilter(assignmentFilter === "unassigned_secondary" ? "" : "unassigned_secondary")}
                 className={`rounded-lg px-3 py-1.5 text-center transition-colors ${assignmentFilter === "unassigned_secondary" ? "bg-white/40 ring-2 ring-white/70" : "bg-white/15 hover:bg-white/25"}`}
               >
-                <div className="font-bold text-lg">{productsUnassignedSecondary}</div>
+                <div className="font-bold text-lg">{statsUnassignedSecondary}</div>
                 <div className="text-white/60 text-[10px]">Unassigned Secondary</div>
               </button>
               <button
@@ -281,6 +373,22 @@ export default function ProductCoverageDashboard() {
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full pl-10 pr-4 h-10 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
               />
+            </div>
+            <div className="flex items-center bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode("products")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === "products" ? "bg-white text-violet-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+              >
+                <Package className="w-4 h-4" />
+                Products
+              </button>
+              <button
+                onClick={() => setViewMode("contacts")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === "contacts" ? "bg-white text-violet-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+              >
+                <UserCircle2 className="w-4 h-4" />
+                Contacts
+              </button>
             </div>
             <div className="flex items-center gap-2">
               <ArrowUpDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
@@ -367,11 +475,11 @@ export default function ProductCoverageDashboard() {
               </button>
             )}
             <span className="text-xs text-gray-400">
-              Showing {filteredProducts.length} products
+              Showing {viewMode === "products" ? filteredProducts.length : filteredContacts.length} {viewMode === "products" ? "products" : "contacts"}
             </span>
             <button
-              onClick={handleExportCsv}
-              disabled={filteredProducts.length === 0}
+              onClick={viewMode === "products" ? handleExportCsv : handleExportContactsCsv}
+              disabled={(viewMode === "products" ? filteredProducts : filteredContacts).length === 0}
               className="flex items-center gap-1.5 h-8 px-3 text-xs font-medium text-gray-600 hover:text-violet-600 hover:bg-violet-50 border border-gray-200 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               title="Export filtered list to CSV"
             >
@@ -386,7 +494,7 @@ export default function ProductCoverageDashboard() {
           <div className="flex items-center justify-center py-20">
             <div className="w-8 h-8 border-4 border-gray-200 border-t-violet-600 rounded-full animate-spin" />
           </div>
-        ) : (
+        ) : viewMode === "products" ? (
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full table-fixed">
@@ -472,6 +580,15 @@ export default function ProductCoverageDashboard() {
               </table>
             </div>
           </div>
+        ) : (
+          <CoverageContactsTable
+            contacts={filteredContacts}
+            firms={firms}
+            xponanceContacts={xponanceContacts}
+            onSaved={handleAssignmentSaved}
+            rowHoverClass="hover:bg-violet-50/30"
+            linkClass="text-violet-600 hover:text-violet-800"
+          />
         )}
 
         {/* Bulk reassign bar */}

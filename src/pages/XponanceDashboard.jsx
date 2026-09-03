@@ -207,11 +207,28 @@ export default function XponanceDashboard() {
 
   const loading = firmsLoading || contactsLoading;
 
-  // Stats
+  // Stats — firm-based (Firms view)
   const firmsWithPrimary = firms.filter((f) => f.primary_xponance_contact_id).length;
   const firmsWithSecondary = firms.filter((f) => f.secondary_xponance_contact_id).length;
   const firmsUnassignedPrimary = firms.filter((f) => !f.primary_xponance_contact_id).length;
   const firmsUnassignedSecondary = firms.filter((f) => !f.secondary_xponance_contact_id).length;
+
+  // Stats — contact-based (Contacts view). Excludes Xponance's own contacts.
+  const nonXponanceContacts = useMemo(
+    () => contacts.filter((c) => !(c.firm_ids || []).includes(tenantFirmId)),
+    [contacts, tenantFirmId]
+  );
+  const contactsWithPrimary = nonXponanceContacts.filter((c) => c.primary_xponance_contact_id).length;
+  const contactsWithSecondary = nonXponanceContacts.filter((c) => c.secondary_xponance_contact_id).length;
+  const contactsUnassignedPrimary = nonXponanceContacts.filter((c) => !c.primary_xponance_contact_id).length;
+  const contactsUnassignedSecondary = nonXponanceContacts.filter((c) => !c.secondary_xponance_contact_id).length;
+
+  // View-aware stats + label for the header cards
+  const statsWithPrimary = viewMode === "firms" ? firmsWithPrimary : contactsWithPrimary;
+  const statsWithSecondary = viewMode === "firms" ? firmsWithSecondary : contactsWithSecondary;
+  const statsUnassignedPrimary = viewMode === "firms" ? firmsUnassignedPrimary : contactsUnassignedPrimary;
+  const statsUnassignedSecondary = viewMode === "firms" ? firmsUnassignedSecondary : contactsUnassignedSecondary;
+  const entityLabel = viewMode === "firms" ? "Firms" : "Contacts";
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -237,28 +254,28 @@ export default function XponanceDashboard() {
                 onClick={() => setAssignmentFilter(assignmentFilter === "has_primary" ? "" : "has_primary")}
                 className={`rounded-lg px-3 py-1.5 text-center transition-colors ${assignmentFilter === "has_primary" ? "bg-white/40 ring-2 ring-white/70" : "bg-white/15 hover:bg-white/25"}`}
               >
-                <div className="font-bold text-lg">{firmsWithPrimary}</div>
-                <div className="text-white/60 text-[10px]">Firms w/ Primary</div>
+                <div className="font-bold text-lg">{statsWithPrimary}</div>
+                <div className="text-white/60 text-[10px]">{entityLabel} w/ Primary</div>
               </button>
               <button
                 onClick={() => setAssignmentFilter(assignmentFilter === "has_secondary" ? "" : "has_secondary")}
                 className={`rounded-lg px-3 py-1.5 text-center transition-colors ${assignmentFilter === "has_secondary" ? "bg-white/40 ring-2 ring-white/70" : "bg-white/15 hover:bg-white/25"}`}
               >
-                <div className="font-bold text-lg">{firmsWithSecondary}</div>
-                <div className="text-white/60 text-[10px]">Firms w/ Secondary</div>
+                <div className="font-bold text-lg">{statsWithSecondary}</div>
+                <div className="text-white/60 text-[10px]">{entityLabel} w/ Secondary</div>
               </button>
               <button
                 onClick={() => setAssignmentFilter(assignmentFilter === "unassigned_primary" ? "" : "unassigned_primary")}
                 className={`rounded-lg px-3 py-1.5 text-center transition-colors ${assignmentFilter === "unassigned_primary" ? "bg-white/40 ring-2 ring-white/70" : "bg-white/15 hover:bg-white/25"}`}
               >
-                <div className="font-bold text-lg">{firmsUnassignedPrimary}</div>
+                <div className="font-bold text-lg">{statsUnassignedPrimary}</div>
                 <div className="text-white/60 text-[10px]">Unassigned Primary</div>
               </button>
               <button
                 onClick={() => setAssignmentFilter(assignmentFilter === "unassigned_secondary" ? "" : "unassigned_secondary")}
                 className={`rounded-lg px-3 py-1.5 text-center transition-colors ${assignmentFilter === "unassigned_secondary" ? "bg-white/40 ring-2 ring-white/70" : "bg-white/15 hover:bg-white/25"}`}
               >
-                <div className="font-bold text-lg">{firmsUnassignedSecondary}</div>
+                <div className="font-bold text-lg">{statsUnassignedSecondary}</div>
                 <div className="text-white/60 text-[10px]">Unassigned Secondary</div>
               </button>
               <button
