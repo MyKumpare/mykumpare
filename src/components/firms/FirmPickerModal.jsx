@@ -31,6 +31,33 @@ function useActionOrder() {
 
   return [order, updateOrder];
 }
+
+const HEADER_VIEW_ORDER_KEY = "firmPicker_viewOrder";
+const DEFAULT_VIEW_IDS = ["list", "map"];
+
+function useViewOrder() {
+  const [order, setOrder] = useState(() => {
+    try {
+      const saved = localStorage.getItem(HEADER_VIEW_ORDER_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const merged = [...parsed];
+        for (const id of DEFAULT_VIEW_IDS) {
+          if (!merged.includes(id)) merged.push(id);
+        }
+        return merged.filter((id) => DEFAULT_VIEW_IDS.includes(id));
+      }
+    } catch { /* ignore */ }
+    return DEFAULT_VIEW_IDS;
+  });
+
+  const updateOrder = (newOrder) => {
+    setOrder(newOrder);
+    try { localStorage.setItem(HEADER_VIEW_ORDER_KEY, JSON.stringify(newOrder)); } catch { /* ignore */ }
+  };
+
+  return [order, updateOrder];
+}
 import { MapContainer, TileLayer, Marker, Popup, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -109,6 +136,7 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
   const [geoSearch, setGeoSearch] = useState("");
   const [hoveredFirmId, setHoveredFirmId] = useState(null);
   const [actionOrder, setActionOrder] = useActionOrder();
+  const [viewOrder, setViewOrder] = useViewOrder();
 
   const toggleType = (type) => setCollapsedTypes(prev => ({ ...prev, [type]: !prev[type] }));
   const collapseAll = () => setCollapsedTypes(Object.fromEntries(types.map(t => [t, true])));
@@ -222,21 +250,63 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
                 ({view === "map" ? geoFirms.length : filtered.length})
               </span>
             </h2>
-            {/* View toggle */}
-            <div className="flex items-center gap-0.5 bg-gray-100 rounded-lg p-0.5">
-              <button
-                onClick={() => setView("list")}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${view === "list" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
-              >
-                <List className="w-3.5 h-3.5" /> List
-              </button>
-              <button
-                onClick={() => setView("map")}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${view === "map" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
-              >
-                <Globe className="w-3.5 h-3.5" /> Geographic Map
-              </button>
-            </div>
+            {/* View toggle — drag-and-drop reorderable, just like the action buttons below */}
+            <DragDropContext
+              onDragEnd={(result) => {
+                if (!result.destination) return;
+                const newOrder = [...viewOrder];
+                const [moved] = newOrder.splice(result.source.index, 1);
+                newOrder.splice(result.destination.index, 0, moved);
+                setViewOrder(newOrder);
+              }}
+            >
+              <Droppable droppableId="header-views" direction="horizontal">
+                {(provided) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className="flex items-center gap-0.5 bg-gray-100 rounded-lg p-0.5"
+                  >
+                    {viewOrder.map((viewId, index) => (
+                      <Draggable key={viewId} draggableId={viewId} index={index}>
+                        {(dragProvided, snapshot) => (
+                          <div
+                            ref={dragProvided.innerRef}
+                            {...dragProvided.draggableProps}
+                            className={`flex items-center gap-0.5 rounded-md transition-shadow ${snapshot.isDragging ? "shadow-md ring-1 ring-indigo-200 bg-white" : ""}`}
+                          >
+                            <span
+                              {...dragProvided.dragHandleProps}
+                              className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 flex items-center pr-0.5"
+                              title="Drag to reorder"
+                            >
+                              <GripVertical className="w-3 h-3" />
+                            </span>
+                            {viewId === "list" && (
+                              <button
+                                onClick={() => setView("list")}
+                                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${view === "list" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+                              >
+                                <List className="w-3.5 h-3.5" /> List
+                              </button>
+                            )}
+                            {viewId === "map" && (
+                              <button
+                                onClick={() => setView("map")}
+                                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${view === "map" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+                              >
+                                <Globe className="w-3.5 h-3.5" /> Geographic Map
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
             <button type="button" onClick={onClose}>
               <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
             </button>
