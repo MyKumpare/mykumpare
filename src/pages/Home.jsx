@@ -800,10 +800,7 @@ export default function Home() {
       { label: "Funding Dashboard", icon: PieChart, onClick: () => navigate("/PortfolioFundingDashboard") },
       { label: "Funding Report", icon: FileBarChart, onClick: () => navigate("/PortfolioFundingReport") },
     ] },
-    { label: "Firms", icon: Building, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => setFirmPickerOpen(true), submenu: [
-      { label: "Firm Picker", icon: Building, onClick: () => setFirmPickerOpen(true) },
-      { label: "Geographic Map", icon: Globe, onClick: () => navigate("/FirmGeographicMap") },
-    ] },
+    { label: "Firms", icon: Building, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => setFirmPickerOpen(true) },
     { label: "Products", icon: Package, ref: null, color: "text-violet-600", activeBg: "bg-violet-50", onClick: () => setProductPickerOpen(true) },
     { label: "Contacts", icon: User, ref: null, color: "text-pink-600", activeBg: "bg-pink-50", onClick: () => setContactPickerOpen(true), submenu: [
       { label: "Contact Picker", icon: User, onClick: () => setContactPickerOpen(true) },
