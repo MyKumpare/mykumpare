@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, LayoutList, ChevronDown, ChevronRight, BarChart3, SlidersHorizontal, AlertTriangle, DollarSign, RefreshCw } from "lucide-react";
+import { Plus, LayoutList, ChevronDown, ChevronRight, BarChart3, SlidersHorizontal, AlertTriangle, DollarSign, RefreshCw, CheckSquare, Check, X, Loader2, UserCheck } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
 import SectionSearch from "@/components/common/SectionSearch";
@@ -13,6 +13,7 @@ import EntityFilterSidebar from "@/components/common/EntityFilterSidebar";
 import { portfolioFilterGroups } from "./portfolioFilterGroups";
 import { reconcilePortfolioAllocationHistory, hasOutstandingReconciliation } from "./reconcileAllocations";
 import { useToast } from "@/components/ui/use-toast";
+import BulkAssignXponanceContactDialog from "@/components/xponance/BulkAssignXponanceContactDialog";
 
 const ADVISOR_TYPES = ["Investment Manager"];
 
@@ -20,6 +21,46 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [reconcilingAll, setReconcilingAll] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [bulkXponanceOpen, setBulkXponanceOpen] = useState(false);
+  const [bulkXponanceBusy, setBulkXponanceBusy] = useState(false);
+
+  const toggleSelectMode = () => {
+    setSelectMode((v) => {
+      if (v) setSelectedIds(new Set());
+      return !v;
+    });
+  };
+  const toggleSelectPortfolio = (id) => {
+    setSelectedIds((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  };
+  const clearSelection = () => { setSelectedIds(new Set()); setSelectMode(false); };
+
+  const handleBulkAssignXponance = async ({ contact_id, contact_name, role }) => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setBulkXponanceBusy(true);
+    try {
+      const idField = role === "primary" ? "primary_xponance_contact_id" : "secondary_xponance_contact_id";
+      const nameField = role === "primary" ? "primary_xponance_contact_name" : "secondary_xponance_contact_name";
+      await base44.entities.Portfolio.bulkUpdate(ids.map((id) => ({ id, [idField]: contact_id, [nameField]: contact_name })));
+      queryClient.invalidateQueries({ queryKey: ["portfolios"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolios-all"] });
+      toast({ title: `✅ ${contact_name} assigned as ${role} for ${ids.length} portfolio${ids.length === 1 ? "" : "s"}` });
+      setBulkXponanceOpen(false);
+      clearSelection();
+    } catch (err) {
+      toast({ title: "Bulk assign failed", description: err?.message, variant: "destructive" });
+    } finally {
+      setBulkXponanceBusy(false);
+    }
+  };
   const [expanded, setExpanded] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState({});
   const [expandedAdvisorTypes, setExpandedAdvisorTypes] = useState({});
@@ -275,12 +316,18 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
   };
 
   function PortfolioMiniCard({ portfolio }) {
+    const isSel = selectedIds.has(portfolio.id);
     return (
       <button
-        onClick={() => onPortfolioClick(portfolio)}
-        className="text-left p-3 rounded-xl border border-gray-100 bg-white hover:bg-emerald-50 hover:border-emerald-200 transition-colors w-full"
-      >
+        onClick={() => selectMode ? toggleSelectPortfolio(portfolio.id) : onPortfolioClick(portfolio)}
+        className={`text-left p-3 rounded-xl border transition-colors w-full ${selectMode ? (isSel ? "border-emerald-400 bg-emerald-50" : "border-gray-100 bg-white hover:bg-emerald-50") : "border-gray-100 bg-white hover:bg-emerald-50 hover:border-emerald-200"}`}
+        >
         <div className="flex items-center gap-2 mb-1">
+          {selectMode && (
+            <span className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center ${isSel ? "bg-emerald-600 border-emerald-600" : "border-gray-300 bg-white"}`}>
+              {isSel && <Check className="w-3 h-3 text-white" />}
+            </span>
+          )}
           <div className="w-7 h-7 rounded-md bg-emerald-50 flex items-center justify-center flex-shrink-0">
             <LayoutList className="w-3.5 h-3.5 text-emerald-500" />
           </div>
@@ -317,6 +364,16 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
         </button>
         <div className="flex items-center gap-2">
           <ViewModeToggle value={viewMode} onChange={(m) => { setViewMode(m); setExpanded(true); }} />
+          <Button
+            variant={selectMode ? "default" : "ghost"}
+            size="sm"
+            className={`h-7 px-2 gap-1 text-xs ${selectMode ? "bg-emerald-600 text-white hover:bg-emerald-700" : "text-gray-600 hover:text-gray-700 hover:bg-gray-100"}`}
+            onClick={toggleSelectMode}
+            title="Select multiple portfolios for bulk actions"
+          >
+            <CheckSquare className="w-3.5 h-3.5" />
+            {selectMode ? "Done" : "Select"}
+          </Button>
           {portfoliosToReconcile.length > 0 && (
             <Button
               variant="ghost"
@@ -340,6 +397,45 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
           </Button>
         </div>
       </div>
+
+      {/* Bulk action bar — visible when portfolios are selected */}
+      {selectMode && selectedIds.size > 0 && (
+        <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 shadow-sm mb-2">
+          <span className="text-sm font-medium text-emerald-800">
+            {selectedIds.size} portfolio{selectedIds.size !== 1 ? "s" : ""} selected
+          </span>
+          <div className="h-4 w-px bg-emerald-200" />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 gap-1 text-xs bg-white text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700"
+            onClick={() => setBulkXponanceOpen(true)}
+            disabled={bulkXponanceBusy}
+          >
+            {bulkXponanceBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserCheck className="w-3.5 h-3.5" />}
+            Assign Xponance
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1 text-xs ml-auto text-gray-500 hover:text-gray-700"
+            onClick={clearSelection}
+            disabled={bulkXponanceBusy}
+          >
+            <X className="w-3.5 h-3.5" />
+            Clear
+          </Button>
+        </div>
+      )}
+      {selectMode && (
+        <div className="text-xs text-gray-500 px-1 mb-2">
+          {selectedIds.size > 0
+            ? `${selectedIds.size} selected — tap portfolios to add or remove them.`
+            : "Tap portfolios to select them for bulk actions."}
+        </div>
+      )}
 
       {/* Portfolio groups */}
       {expanded && (
@@ -485,13 +581,20 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
                                 </span>
                               </div>
                             )}
-                            {portfolioList.map((portfolio) => (
+                            {portfolioList.map((portfolio) => {
+                              const isSel = selectedIds.has(portfolio.id);
+                              return (
                               <button
                                 key={portfolio.id}
-                                onClick={() => onPortfolioClick(portfolio)}
-                                className="w-full text-left bg-white rounded-lg border border-gray-100 px-3 py-2 hover:border-emerald-200 hover:shadow-sm transition-all group"
+                                onClick={() => selectMode ? toggleSelectPortfolio(portfolio.id) : onPortfolioClick(portfolio)}
+                                className={`w-full text-left bg-white rounded-lg border px-3 py-2 transition-all group ${selectMode ? (isSel ? "border-emerald-400 bg-emerald-50" : "border-gray-100 hover:bg-emerald-50") : "border-gray-100 hover:border-emerald-200 hover:shadow-sm"}`}
                               >
                                 <div className="flex items-center gap-2">
+                                  {selectMode && (
+                                    <span className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center ${isSel ? "bg-emerald-600 border-emerald-600" : "border-gray-300 bg-white"}`}>
+                                      {isSel && <Check className="w-3 h-3 text-white" />}
+                                    </span>
+                                  )}
                                   <div className="w-6 h-6 rounded-md bg-emerald-50 flex items-center justify-center flex-shrink-0">
                                     <LayoutList className="w-3 h-3 text-emerald-500" />
                                   </div>
@@ -508,7 +611,8 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
                                   </div>
                                 </div>
                               </button>
-                            ))}
+                              );
+                            })}
                           </div>
                         )}
                       </div>
@@ -523,6 +627,15 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
           </div>
         </div>
       )}
+      <BulkAssignXponanceContactDialog
+        open={bulkXponanceOpen}
+        onOpenChange={setBulkXponanceOpen}
+        entityType="Portfolio"
+        entityLabel="portfolios"
+        selectedCount={selectedIds.size}
+        onAssign={handleBulkAssignXponance}
+        busy={bulkXponanceBusy}
+      />
     </div>
   );
 }

@@ -578,6 +578,7 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
               onSetActive={() => handleBulkSetActive("Active")}
               onSetInactive={() => handleBulkSetActive("Inactive")}
               onTag={() => setBulkTagOpen(true)}
+              onAssignXponance={() => setBulkXponanceOpen(true)}
               onDelete={handleBulkDelete}
               busy={bulkBusy}
             />
@@ -811,6 +812,15 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
 
       <ContactPipelineStageEditor open={stageEditorOpen} onOpenChange={setStageEditorOpen} defaultFirmType={kanbanFirmType === "all" ? "" : kanbanFirmType} />
       <BulkTagDialog open={bulkTagOpen} onOpenChange={setBulkTagOpen} selectedCount={selectedIds.size} onApply={handleBulkApplyTags} />
+      <BulkAssignXponanceContactDialog
+        open={bulkXponanceOpen}
+        onOpenChange={setBulkXponanceOpen}
+        entityType="Contact"
+        entityLabel="contacts"
+        selectedCount={selectedIds.size}
+        onAssign={handleBulkAssignXponance}
+        busy={bulkXponanceBusy}
+      />
     </div>
   );
 }
