@@ -216,7 +216,10 @@ export default function ContactCardDialog({ contact, firms = [], open, onOpenCha
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [extraFields, setExtraFields] = useState([]);
   const cardRef = useRef(null);
-  const loadedRef = useRef(false);
+  // True only after the per-user saved format has finished loading (or been
+  // confirmed absent). Guards the auto-save so initial defaults can't be
+  // written back before the saved format is applied.
+  const formatLoadedRef = useRef(false);
 
   // Auto-discover any Contact fields that exist on real records but are not in
   // the curated catalog, so the picker stays in sync when new fields are added
@@ -277,28 +280,36 @@ export default function ContactCardDialog({ contact, firms = [], open, onOpenCha
     }
   };
 
-  // Load the per-user saved format on first open
+  // Load the per-user saved format on first open. The format is stored on the
+  // user record at the top level (me.contact_card_format), not under me.data.
   React.useEffect(() => {
-    if (!open || loadedRef.current) return;
-    loadedRef.current = true;
+    if (!open || formatLoadedRef.current) return;
+    let cancelled = false;
     (async () => {
       try {
         const me = await base44.auth.me();
-        const saved = me?.data?.contact_card_format;
+        const saved = me?.contact_card_format;
         if (saved) {
           const { fields: applied, style: savedStyle } = applySavedFormat(saved, contact, firms);
-          setFields(applied);
-          setStyle(savedStyle);
+          if (!cancelled) {
+            setFields(applied);
+            setStyle(savedStyle);
+          }
         }
       } catch (e) {
         // not logged in or no saved format — keep defaults
+      } finally {
+        if (!cancelled) formatLoadedRef.current = true;
       }
     })();
+    return () => { cancelled = true; };
   }, [open]);
 
-  // Rebuild field values when contact changes (or the dialog reopens), preserving the saved layout/order/enabled/labels
+  // Rebuild field values when contact changes (after the saved format has
+  // loaded), preserving the saved layout/order/enabled/labels and only
+  // refreshing the values for the current contact.
   React.useEffect(() => {
-    if (!open || !contact) return;
+    if (!open || !contact || !formatLoadedRef.current) return;
     setFields((prev) => {
       const byId = {};
       buildDefaultFields(contact, firms).forEach((f) => { byId[f.id] = f; });
@@ -325,9 +336,11 @@ export default function ContactCardDialog({ contact, firms = [], open, onOpenCha
     }
   };
 
-  // Debounced auto-save whenever style or field layout/labels/enabled change
+  // Debounced auto-save whenever style or field layout/labels/enabled change.
+  // Only fires after the saved format has loaded so defaults are never written
+  // back over a real saved format during the initial load.
   React.useEffect(() => {
-    if (!open || !loadedRef.current) return;
+    if (!open || !formatLoadedRef.current) return;
     const t = setTimeout(() => { saveFormat(style, fields); }, 800);
     return () => clearTimeout(t);
   }, [style, fields, open]);
@@ -645,7 +658,7 @@ export default function ContactCardDialog({ contact, firms = [], open, onOpenCha
           </Button>
           <div className="flex-1" />
           {saving && <span className="text-[11px] text-gray-400 self-center">Saving format…</span>}
-          {!saving && loadedRef.current && <span className="text-[11px] text-gray-400 self-center">Format saved to your profile</span>}
+          {!saving && formatLoadedRef.current && <span className="text-[11px] text-gray-400 self-center">Format saved to your profile</span>}
           <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
         </DialogFooter>
       </DialogContent>
