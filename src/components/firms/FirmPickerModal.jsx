@@ -106,6 +106,7 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
   const [geoCountry, setGeoCountry] = useState("");
   const [geoState, setGeoState] = useState("");
   const [geoCity, setGeoCity] = useState("");
+  const [geoTypeFilter, setGeoTypeFilter] = useState("");
   const [geoSearch, setGeoSearch] = useState("");
   const [hoveredFirmId, setHoveredFirmId] = useState(null);
   const [headerOrder, setHeaderOrder] = useHeaderOrder();
@@ -123,6 +124,8 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
   const geoFirms = useMemo(() => {
     const gq = geoSearch.trim().toLowerCase();
     return activeFirms.filter((f) => {
+      // Firm type filter
+      if (geoTypeFilter && !getFirmTypes(f).includes(geoTypeFilter)) return false;
       // Drill-down filter (country/state/city)
       const matchesDrill = (!geoCountry && !geoState && !geoCity) || (f.addresses || []).some((a) => {
         if (geoCountry && a.country !== geoCountry) return false;
@@ -141,7 +144,7 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
         (a.city || "").toLowerCase().includes(gq)
       );
     });
-  }, [activeFirms, geoCountry, geoState, geoCity, geoSearch]);
+  }, [activeFirms, geoCountry, geoState, geoCity, geoTypeFilter, geoSearch]);
 
   // Cities available for the selected country+state (from firm addresses + geoData)
   const geoCityOptions = useMemo(() => {
@@ -201,6 +204,7 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
     setGeoCountry("");
     setGeoState("");
     setGeoCity("");
+    setGeoTypeFilter("");
     setGeoSearch("");
   };
 
@@ -472,13 +476,13 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
               <div className="flex items-center gap-2 text-xs text-gray-500">
                 <MapPin className="w-3.5 h-3.5 text-indigo-500" />
                 <span className="font-medium">Drill down: Country → State/Province → City</span>
-                {(geoCountry || geoState || geoCity || geoSearch) && (
+                {(geoCountry || geoState || geoCity || geoTypeFilter || geoSearch) && (
                   <button type="button" onClick={resetGeo} className="ml-auto text-indigo-600 hover:text-indigo-800 font-medium">
                     Reset
                   </button>
                 )}
               </div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <select
                   value={geoCountry}
                   onChange={(e) => { setGeoCountry(e.target.value); setGeoState(""); setGeoCity(""); }}
@@ -509,6 +513,16 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
                   <option value="">All Cities</option>
                   {geoCityOptions.map((city) => (
                     <option key={city} value={city}>{city}</option>
+                  ))}
+                </select>
+                <select
+                  value={geoTypeFilter}
+                  onChange={(e) => setGeoTypeFilter(e.target.value)}
+                  className="h-8 text-xs rounded-lg border border-gray-200 bg-gray-50 px-2 outline-none focus:border-indigo-400 cursor-pointer"
+                >
+                  <option value="">All Firm Types</option>
+                  {FIRM_TYPES.map((type) => (
+                    <option key={type} value={type}>{type}</option>
                   ))}
                 </select>
               </div>
