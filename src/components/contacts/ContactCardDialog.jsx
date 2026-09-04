@@ -285,7 +285,18 @@ export default function ContactCardDialog({ contact, firms = [], open, onOpenCha
     }
   };
 
-  // Load the per-user saved format on first open. The format is stored on the
+  // Reset the loaded flag whenever the dialog closes so the saved format is
+  // re-applied from the user profile on the next open. Without this, the flag
+  // stays true for the lifetime of the (always-mounted) dialog and the load
+  // effect is skipped on reopen — so any state reset leaves the user looking
+  // at defaults instead of their saved format.
+  React.useEffect(() => {
+    if (!open) {
+      formatLoadedRef.current = false;
+    }
+  }, [open]);
+
+  // Load the per-user saved format on open. The format is stored on the
   // user record at the top level (me.contact_card_format), not under me.data.
   // Waits until a contact is available before applying, so the saved field set
   // maps onto real field values (and isn't dropped when contact arrives late).
