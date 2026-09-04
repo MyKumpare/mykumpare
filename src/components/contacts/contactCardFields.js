@@ -281,3 +281,20 @@ export function buildDefaultFields(contact, firms) {
   }).filter((f) => f.value);
   return [nameField, ...rest];
 }
+
+// Build card field entries for EVERY catalog field (including those without a
+// value for this contact). Used when applying a saved format so the user's
+// selected field set/order/labels is preserved even when a particular contact
+// lacks a value for some fields (or when the contact arrives after the load).
+export function buildAllFields(contact, firms) {
+  if (!contact) return [];
+  return AVAILABLE_FIELDS.map((f) => {
+    const value = f.getValue(contact, firms);
+    return {
+      id: f.id,
+      label: f.label,
+      value: typeof value === "string" ? value : "",
+      enabled: !!value,
+    };
+  });
+}

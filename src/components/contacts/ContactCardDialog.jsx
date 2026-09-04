@@ -14,7 +14,7 @@ import {
 import { toast } from "@/components/ui/use-toast";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { base44 } from "@/api/base44Client";
-import { AVAILABLE_FIELDS, FIELD_CATEGORIES, getFieldDef, buildDefaultFields, getFieldHref, discoverExtraFields } from "./contactCardFields";
+import { AVAILABLE_FIELDS, FIELD_CATEGORIES, getFieldDef, buildDefaultFields, buildAllFields, getFieldHref, discoverExtraFields } from "./contactCardFields";
 
 const FORMAT_STYLES = [
   { id: "classic", label: "Classic", accent: "#1e3a8a" },
@@ -179,11 +179,16 @@ function CardPreview({ fields, style, contact, accent }) {
   );
 }
 
-// Apply a saved per-user format (style + field id/label/enabled) onto freshly-built fields for the current contact.
+// Apply a saved per-user format (style + field id/label/enabled) onto the full
+// catalog of fields for the current contact. Uses buildAllFields (every catalog
+// field, even ones without a value for this contact) so the user's saved
+// selection/order/labels is preserved regardless of which values the contact has.
 function applySavedFormat(saved, contact, firms) {
-  const baseFields = buildDefaultFields(contact, firms);
+  if (!contact) return { fields: [], style: saved?.style || "classic" };
+  const baseFields = buildAllFields(contact, firms);
   if (!saved || !Array.isArray(saved.fields)) {
-    return { fields: baseFields, style: saved?.style || "classic" };
+    // No saved format — fall back to the default (only fields with values)
+    return { fields: buildDefaultFields(contact, firms), style: saved?.style || "classic" };
   }
   const byId = {};
   baseFields.forEach((f) => { byId[f.id] = f; });
@@ -199,9 +204,9 @@ function applySavedFormat(saved, contact, firms) {
       });
     }
   });
-  // Append any catalog fields not in the saved list (new fields added since last save)
+  // Append any catalog fields not in the saved list (new fields added since last save) — only if they have a value
   baseFields.forEach((f) => {
-    if (!seen.has(f.id)) ordered.push(f);
+    if (!seen.has(f.id) && f.value) ordered.push(f);
   });
   return { fields: ordered, style: saved.style || "classic" };
 }
@@ -282,37 +287,45 @@ export default function ContactCardDialog({ contact, firms = [], open, onOpenCha
 
   // Load the per-user saved format on first open. The format is stored on the
   // user record at the top level (me.contact_card_format), not under me.data.
+  // Waits until a contact is available before applying, so the saved field set
+  // maps onto real field values (and isn't dropped when contact arrives late).
   React.useEffect(() => {
-    if (!open || formatLoadedRef.current) return;
+    if (!open || formatLoadedRef.current || !contact) return;
     let cancelled = false;
     (async () => {
       try {
         const me = await base44.auth.me();
         const saved = me?.contact_card_format;
-        if (saved) {
-          const { fields: applied, style: savedStyle } = applySavedFormat(saved, contact, firms);
-          if (!cancelled) {
+        if (!cancelled) {
+          if (saved) {
+            const { fields: applied, style: savedStyle } = applySavedFormat(saved, contact, firms);
             setFields(applied);
             setStyle(savedStyle);
+          } else {
+            // No saved format — use the defaults for this contact
+            setFields(buildDefaultFields(contact, firms));
           }
         }
       } catch (e) {
-        // not logged in or no saved format — keep defaults
+        // not logged in — keep defaults
+        if (!cancelled) setFields(buildDefaultFields(contact, firms));
       } finally {
         if (!cancelled) formatLoadedRef.current = true;
       }
     })();
     return () => { cancelled = true; };
-  }, [open]);
+  }, [open, contact]);
 
   // Rebuild field values when contact changes (after the saved format has
   // loaded), preserving the saved layout/order/enabled/labels and only
-  // refreshing the values for the current contact.
+  // refreshing the values for the current contact. Uses buildAllFields so saved
+  // fields are kept even when the new contact has no value for them.
   React.useEffect(() => {
     if (!open || !contact || !formatLoadedRef.current) return;
     setFields((prev) => {
+      if (!prev.length) return buildDefaultFields(contact, firms);
       const byId = {};
-      buildDefaultFields(contact, firms).forEach((f) => { byId[f.id] = f; });
+      buildAllFields(contact, firms).forEach((f) => { byId[f.id] = f; });
       return prev
         .map((f) => (byId[f.id] ? { ...byId[f.id], label: f.label, enabled: f.enabled } : f))
         .filter((f) => byId[f.id]);
