@@ -168,6 +168,12 @@ export function getFieldHref(fieldId, value) {
       if (!v) return "";
       return /^https?:\/\//i.test(v) ? v : `https://${v}`;
     }
+    case "linkedin_url":
+    case "bio_url":
+    case "firm_linkedin": {
+      if (!v) return "";
+      return /^https?:\/\//i.test(v) ? v : `https://${v}`;
+    }
     default:
       return "";
   }
