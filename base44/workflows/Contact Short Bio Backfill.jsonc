@@ -1,0 +1,48 @@
+{
+  "name": "Contact Short Bio Backfill",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "*/5 * * * *",
+      "one_time_date": null,
+      "timezone": "America/New_York",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "after_count",
+      "ends_on_date": null,
+      "ends_after_count": 40
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "contact_short_bio_backfill",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "backfill": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "backfillContactShortBios",
+            "args": {
+              "batch_size": 75,
+              "concurrency": 6
+            }
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Generate short bios batch",
+            "description": "Up to 75 contacts per run"
+          }
+        }
+      }
+    ]
+  },
+  "description": "Backfills AI-generated short biographies for all contacts that have a full biography but no short bio yet. Runs a batch each cycle until all contacts have a short bio, then auto-archives."
+}
