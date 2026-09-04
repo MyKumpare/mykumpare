@@ -1,0 +1,41 @@
+{
+  "name": "Auto Short Bio on Bio Create",
+  "description": "When a contact's full biography is added or created and no short bio exists yet, automatically generates a short bio via AI.",
+  "trigger": {
+    "config": {
+      "trigger_type": "entity",
+      "entity_name": "Contact",
+      "events": [
+        "create",
+        "update"
+      ]
+    },
+    "condition": "${ (.trigger.data.biography // \"\") != \"\" and (.trigger.data.short_biography // \"\") == \"\" }"
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "auto_short_bio",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "generate": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "generateContactShortBio",
+            "args": {
+              "contact_id": "${ .trigger.entity_id }"
+            }
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Generate short bio",
+            "description": "Auto-generate from full biography"
+          }
+        }
+      }
+    ]
+  }
+}
