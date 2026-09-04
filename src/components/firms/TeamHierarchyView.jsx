@@ -220,7 +220,7 @@ function PersonCard({ person, colorClass, onClick, canEdit, categories, assigned
       >
         <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 overflow-hidden border-2 border-white mb-1.5">
           {person.photo_url ? (
-            <img src={person.photo_url} alt="" className="w-full h-full object-cover" onError={(e) => { e.target.style.display = "none"; }} />
+            <img src={person.photo_url} alt="" loading="lazy" decoding="async" className="contact-photo w-full h-full object-cover" onError={(e) => { e.target.style.display = "none"; }} />
           ) : null}
         </div>
         <p className="text-[11px] font-semibold text-gray-800 text-center leading-tight break-words whitespace-normal" style={{ wordBreak: "break-word" }}>

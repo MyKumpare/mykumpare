@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, ChevronDown, ChevronRight, User, Camera, Download, Settings2, ClipboardPaste, CheckSquare, Check, SlidersHorizontal } from "lucide-react";
+import { Plus, ChevronDown, ChevronRight, User, Camera, Download, Settings2, ClipboardPaste, CheckSquare, Check, SlidersHorizontal, EyeOff } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
 import SectionTypeFilter from "@/components/common/SectionTypeFilter";
 import SectionExpandCollapse from "@/components/common/SectionExpandCollapse";
@@ -71,7 +72,9 @@ function ContactAvatar({ contact }) {
       <img
         src={contact.photo_url}
         alt={contact.first_name}
-        className="w-6 h-6 rounded-full object-cover flex-shrink-0"
+        loading="lazy"
+        decoding="async"
+        className="contact-photo w-6 h-6 rounded-full object-cover flex-shrink-0"
       />
     );
   }
@@ -101,6 +104,7 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
   const [bulkXponanceBusy, setBulkXponanceBusy] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(null);
   const [showFilters, setShowFilters] = useState(true);
+  const [activeOnly, setActiveOnly] = useState(true);
   const [filterValues, setFilterValues] = useState(() => {
     const init = {};
     Object.keys(SIDEBAR_FILTER_CONFIG).forEach((k) => { init[k] = new Set(); });
@@ -345,8 +349,13 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
         return sel.has(val);
       });
     }
+    // "Active Only" toggle: hide inactive contacts (defaults to on so the list
+    // shows active people by default; toggle off to include inactive contacts).
+    if (activeOnly) {
+      result = result.filter((c) => c.contact_status !== "Inactive");
+    }
     return result;
-  }, [contacts, hasFilters, filterText, filterSelected, firmMap, contactProductMap, contactPortfolioMap, filterDateRange, filterValues]);
+  }, [contacts, hasFilters, filterText, filterSelected, firmMap, contactProductMap, contactPortfolioMap, filterDateRange, filterValues, activeOnly]);
 
   const sidebarFilterCounts = useMemo(() => {
     const counts = {};
@@ -479,6 +488,15 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
           <span className="text-xs text-gray-400 font-normal">({totalAllContacts})</span>
         </button>
         <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 h-7 px-2 rounded-md bg-gray-50 border border-gray-200" title="Show only active contacts in the list">
+            <EyeOff className="w-3.5 h-3.5 text-gray-500" />
+            <span className="text-xs text-gray-600 font-medium">Active Only</span>
+            <Switch
+              checked={activeOnly}
+              onCheckedChange={setActiveOnly}
+              className="scale-75 origin-left"
+            />
+          </div>
           <Button
             variant={selectMode ? "default" : "ghost"}
             size="sm"

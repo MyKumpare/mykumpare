@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Plus, User, AlertTriangle, Trash2, Check, ArrowRightLeft, Loader2, Eye, EyeOff, Network as NetworkIcon, List as ListIcon, Link2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import TeamHierarchyView from "../firms/TeamHierarchyView";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -38,6 +39,7 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [scrapeOpen, setScrapeOpen] = useState(false);
   const [assignFirmOpen, setAssignFirmOpen] = useState(false);
+  const [activeOnly, setActiveOnly] = useState(true);
 
   const handleToggleFilter = (fieldKey, value) => {
     setFilterSelected((prev) => {
@@ -113,10 +115,13 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
     });
   }, [allFirmContacts]);
 
-  const filteredContacts = useMemo(
-    () => filterContacts(firmContacts, filterText, filterSelected),
-    [firmContacts, filterText, filterSelected]
-  );
+  const filteredContacts = useMemo(() => {
+    let result = filterContacts(firmContacts, filterText, filterSelected);
+    // "Active Only" toggle: hide inactive contacts by default so the list
+    // shows active people; toggle off to include inactive contacts.
+    if (activeOnly) result = result.filter((c) => c.contact_status !== "Inactive");
+    return result;
+  }, [firmContacts, filterText, filterSelected, activeOnly]);
 
   // Count breakdown by employee status for a quick at-a-glance summary.
   const contactCounts = useMemo(() => {
@@ -438,6 +443,15 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
           )}
           {firmContacts.length > 0 && (
             <div className="flex items-center gap-1.5 text-xs">
+              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-gray-50 border border-gray-200" title="Hide inactive contacts">
+                <EyeOff className="w-3 h-3 text-gray-500" />
+                <span className="text-gray-600 font-medium">Active Only</span>
+                <Switch
+                  checked={activeOnly}
+                  onCheckedChange={setActiveOnly}
+                  className="scale-75 origin-left"
+                />
+              </div>
               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-medium">
                 <User className="w-3 h-3" />
                 {contactCounts.total} total
@@ -503,7 +517,7 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
                         {contact.photo_url ? (
-                          <img src={contact.photo_url} alt="" className="w-full h-full object-cover" />
+                          <img src={contact.photo_url} alt="" loading="lazy" decoding="async" className="contact-photo w-full h-full object-cover" />
                         ) : null}
                       </div>
                       <div className="min-w-0">
@@ -544,7 +558,7 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
                       <div className="flex items-center gap-2 min-w-0 flex-1">
                         <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
                           {contact.photo_url ? (
-                            <img src={contact.photo_url} alt="" className="w-full h-full object-cover" />
+                            <img src={contact.photo_url} alt="" loading="lazy" decoding="async" className="contact-photo w-full h-full object-cover" />
                           ) : null}
                         </div>
                         <div className="min-w-0">
@@ -669,7 +683,7 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
                   />
                   <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
                     {contact.photo_url ? (
-                      <img src={contact.photo_url} alt={contact.first_name} className="w-full h-full object-cover" />
+                      <img src={contact.photo_url} alt={contact.first_name} loading="lazy" decoding="async" className="contact-photo w-full h-full object-cover" />
                     ) : null}
                   </div>
                   <div className="flex-1 min-w-0">

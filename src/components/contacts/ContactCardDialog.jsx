@@ -42,7 +42,9 @@ function PhotoBadge({ contact, size = "md", accent, light = false }) {
       <img
         src={contact.photo_url}
         alt=""
-        className={`${sizeCls} rounded-full object-cover flex-shrink-0 border-2`}
+        loading="lazy"
+        decoding="async"
+        className={`contact-photo ${sizeCls} rounded-full object-cover flex-shrink-0 border-2`}
         style={{ borderColor: accent || "#e5e7eb" }}
       />
     );
