@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Trash2, CheckCircle2, XCircle, X, Loader2, DollarSign, ArrowRightLeft, Globe } from "lucide-react";
+import { Trash2, CheckCircle2, XCircle, X, Loader2, DollarSign, ArrowRightLeft, Globe, UserCheck } from "lucide-react";
 
 const FUNDING_STATUSES = ["Funded", "Terminated"];
 
@@ -37,7 +37,7 @@ const GEOGRAPHIC_REGIONS = [
  *   onDelete       - () => Promise       — bulk soft-delete selected firms
  *   busy           - string | null       - which action is in flight
  */
-export default function FirmsBulkActionsBar({ selectedCount, onClear, onMoveType, onSetStatus, onSetRegion, onDelete, busy }) {
+export default function FirmsBulkActionsBar({ selectedCount, onClear, onMoveType, onSetStatus, onSetRegion, onAssignXponance, onDelete, busy }) {
   const [openMenu, setOpenMenu] = useState(null); // "type" | "status" | "region" | null
 
   const toggleMenu = (menu) => setOpenMenu((cur) => (cur === menu ? null : menu));
@@ -119,6 +119,20 @@ export default function FirmsBulkActionsBar({ selectedCount, onClear, onMoveType
         options={GEOGRAPHIC_REGIONS}
         onSelect={onSetRegion}
       />
+
+      {onAssignXponance && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 gap-1 text-xs bg-white text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700"
+          onClick={onAssignXponance}
+          disabled={!!busy}
+        >
+          {busy === "xponance" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserCheck className="w-3.5 h-3.5" />}
+          Assign Xponance
+        </Button>
+      )}
 
       <Button
         type="button"

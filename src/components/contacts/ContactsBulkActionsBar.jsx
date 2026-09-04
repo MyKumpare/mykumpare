@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Trash2, CheckCircle2, XCircle, X, Loader2, Tag, Crown, Building2 } from "lucide-react";
+import { Trash2, CheckCircle2, XCircle, X, Loader2, Tag, Crown, Building2, UserCheck } from "lucide-react";
 
 const INFLUENCE_LEVELS = [
   "Final Decision Maker",
@@ -27,6 +27,7 @@ export default function ContactsBulkActionsBar({
   onDelete,
   onBulkInfluence,
   onBulkAssignFirm,
+  onAssignXponance,
   busy,
 }) {
   const [showInfluence, setShowInfluence] = useState(false);
@@ -110,6 +111,20 @@ export default function ContactsBulkActionsBar({
         >
           {busy === "assignFirm" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Building2 className="w-3.5 h-3.5" />}
           Assign to Firm
+        </Button>
+      )}
+
+      {onAssignXponance && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 gap-1 text-xs bg-white text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700"
+          onClick={onAssignXponance}
+          disabled={!!busy}
+        >
+          {busy === "xponance" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserCheck className="w-3.5 h-3.5" />}
+          Assign Xponance
         </Button>
       )}
 

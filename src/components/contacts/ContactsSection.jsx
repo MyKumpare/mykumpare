@@ -17,6 +17,7 @@ import { toast } from "@/components/ui/use-toast";
 import ContactTagChips from "./ContactTagChips";
 import ContactsBulkActionsBar from "./ContactsBulkActionsBar";
 import BulkTagDialog from "./BulkTagDialog";
+import BulkAssignXponanceContactDialog from "@/components/xponance/BulkAssignXponanceContactDialog";
 import ContactQuickFilterChips from "./ContactQuickFilterChips";
 
 const ContactPipelineStageEditor = lazyDialog(() => import("./ContactPipelineStageEditor"));
@@ -96,6 +97,8 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkTagOpen, setBulkTagOpen] = useState(false);
+  const [bulkXponanceOpen, setBulkXponanceOpen] = useState(false);
+  const [bulkXponanceBusy, setBulkXponanceBusy] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(null);
   const [showFilters, setShowFilters] = useState(true);
   const [filterValues, setFilterValues] = useState(() => {
@@ -213,6 +216,27 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
     } catch (err) {
       toast({ title: "Update failed", description: err?.message, variant: "destructive" });
     } finally {
+      setBulkBusy(null);
+    }
+  };
+
+  const handleBulkAssignXponance = async ({ contact_id, contact_name, role }) => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setBulkXponanceBusy(true);
+    setBulkBusy("xponance");
+    try {
+      const idField = role === "primary" ? "primary_xponance_contact_id" : "secondary_xponance_contact_id";
+      const nameField = role === "primary" ? "primary_xponance_contact_name" : "secondary_xponance_contact_name";
+      await base44.entities.Contact.bulkUpdate(ids.map((id) => ({ id, [idField]: contact_id, [nameField]: contact_name })));
+      await queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      toast({ title: `✅ ${contact_name} assigned as ${role} for ${ids.length} contact${ids.length === 1 ? "" : "s"}` });
+      setBulkXponanceOpen(false);
+      clearSelection();
+    } catch (err) {
+      toast({ title: "Bulk assign failed", description: err?.message, variant: "destructive" });
+    } finally {
+      setBulkXponanceBusy(false);
       setBulkBusy(null);
     }
   };

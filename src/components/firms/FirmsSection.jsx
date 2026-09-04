@@ -10,6 +10,7 @@ import FirmsBulkActionsBar from "./FirmsBulkActionsBar";
 import EntityFilterSidebar from "@/components/common/EntityFilterSidebar";
 import { firmFilterGroups } from "./firmFilterGroups";
 import { exportFirmsToCSV, exportFirmsToExcel } from "./firmListExport";
+import BulkAssignXponanceContactDialog from "@/components/xponance/BulkAssignXponanceContactDialog";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
 import SectionSearch from "@/components/common/SectionSearch";
 import SectionExpandCollapse from "@/components/common/SectionExpandCollapse";
@@ -62,6 +63,8 @@ export default function FirmsSection({
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [bulkBusy, setBulkBusy] = useState(null);
   const [exportOpen, setExportOpen] = useState(false);
+  const [showBulkXponance, setShowBulkXponance] = useState(false);
+  const [bulkXponanceBusy, setBulkXponanceBusy] = useState(false);
 
   const searchLower = search.toLowerCase().trim();
   const locationSearchLower = (filterValues.geographic_region_search || "").toLowerCase().trim();
@@ -349,6 +352,30 @@ export default function FirmsSection({
     }
   };
 
+  const handleBulkAssignXponance = async ({ contact_id, contact_name, role }) => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setBulkXponanceBusy(true);
+    setBulkBusy("xponance");
+    try {
+      const idField = role === "primary" ? "primary_xponance_contact_id" : "secondary_xponance_contact_id";
+      const nameField = role === "primary" ? "primary_xponance_contact_name" : "secondary_xponance_contact_name";
+      await base44.entities.Firm.bulkUpdate(ids.map((id) => ({ id, [idField]: contact_id, [nameField]: contact_name })));
+      queryClient.invalidateQueries({ queryKey: ["firms"] });
+      toast({
+        title: "Xponance contact assigned",
+        description: `${contact_name} set as ${role} for ${ids.length} firm${ids.length !== 1 ? "s" : ""}.`,
+      });
+      setShowBulkXponance(false);
+      clearSelection();
+    } catch (err) {
+      toast({ title: "Bulk assign failed", description: err?.message, variant: "destructive" });
+    } finally {
+      setBulkXponanceBusy(false);
+      setBulkBusy(null);
+    }
+  };
+
   const handleBulkDelete = async () => {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
@@ -470,10 +497,21 @@ export default function FirmsSection({
           onMoveType={handleBulkMoveType}
           onSetStatus={handleBulkSetStatus}
           onSetRegion={handleBulkSetRegion}
+          onAssignXponance={() => setShowBulkXponance(true)}
           onDelete={handleBulkDelete}
           busy={bulkBusy}
         />
       )}
+
+      <BulkAssignXponanceContactDialog
+        open={showBulkXponance}
+        onOpenChange={setShowBulkXponance}
+        entityType="Firm"
+        entityLabel="firms"
+        selectedCount={selectedCount}
+        onAssign={handleBulkAssignXponance}
+        busy={bulkXponanceBusy}
+      />
 
       {/* Firm type sub-sections */}
       {expanded && (
