@@ -602,7 +602,8 @@ export default function ProductCoverageDashboard() {
         {/* Bulk reassign bar */}
         {selectedProducts.length > 0 && (
           <BulkReassignBar
-            selectedProducts={selectedProducts}
+            selectedItems={selectedProducts}
+            entityType="Product"
             xponanceContacts={xponanceContacts}
             onDone={handleBulkDone}
             onClear={clearSelection}

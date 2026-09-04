@@ -9,7 +9,9 @@ import XponanceContactBadges from "@/components/xponance/XponanceContactBadges";
 import XponanceAssignmentCell from "@/components/xponance/XponanceAssignmentCell";
 import AnalystBreakdownSection from "@/components/coverage/AnalystBreakdownSection";
 import AnalystCoverageMap from "@/components/coverage/AnalystCoverageMap";
+import BulkReassignBar from "@/components/coverage/BulkReassignBar";
 import { buildCoverageMapPoints } from "@/components/coverage/coverageGeo";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const FIRM_TYPES = [
   "Investment Manager",
@@ -43,6 +45,7 @@ export default function XponanceDashboard() {
   const [viewMode, setViewMode] = useState("firms"); // "firms" | "contacts"
   const [sortKey, setSortKey] = useState("name"); // "name" | "primary" | "secondary"
   const [coveredAnalystId, setCoveredAnalystId] = useState(""); // clicked analyst card → filter list to what they cover
+  const [selectedIds, setSelectedIds] = useState(() => new Set()); // multi-select for bulk firm assignment
 
   const { data: firms = [], isLoading: firmsLoading } = useQuery({
     queryKey: ["firms"],
@@ -212,6 +215,40 @@ export default function XponanceDashboard() {
 
   const hasFilters = search.trim() || firmTypeFilter || firmNameFilter || assignmentFilter || coveredAnalystId;
   const clearFilters = () => { setSearch(""); setFirmTypeFilter(""); setFirmNameFilter(""); setAssignmentFilter(""); setCoveredAnalystId(""); };
+
+  // Multi-select for bulk firm assignment
+  const selectedFirms = useMemo(
+    () => filteredFirms.filter((f) => selectedIds.has(f.id)),
+    [filteredFirms, selectedIds]
+  );
+  const allFilteredSelected =
+    filteredFirms.length > 0 && filteredFirms.every((f) => selectedIds.has(f.id));
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+  const toggleSelectAll = () => {
+    setSelectedIds((prev) => {
+      if (filteredFirms.every((f) => prev.has(f.id))) {
+        const next = new Set(prev);
+        filteredFirms.forEach((f) => next.delete(f.id));
+        return next;
+      }
+      const next = new Set(prev);
+      filteredFirms.forEach((f) => next.add(f.id));
+      return next;
+    });
+  };
+  const clearSelection = () => setSelectedIds(new Set());
+  const handleBulkDone = () => {
+    clearSelection();
+    queryClient.invalidateQueries({ queryKey: ["firms"] });
+    queryClient.invalidateQueries({ queryKey: ["contacts"] });
+  };
 
   const loading = firmsLoading || contactsLoading;
 
@@ -428,6 +465,13 @@ export default function XponanceDashboard() {
               <table className="w-full table-fixed">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
+                    <th className="text-left px-4 py-3 w-[44px]">
+                      <Checkbox
+                        checked={allFilteredSelected}
+                        onCheckedChange={toggleSelectAll}
+                        aria-label="Select all firms"
+                      />
+                    </th>
                     <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[28%]">Firm</th>
                     <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[20%]">Type</th>
                     <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[26%]">Primary Xponance Contact</th>
@@ -437,7 +481,7 @@ export default function XponanceDashboard() {
                 <tbody className="divide-y divide-gray-100">
                   {filteredFirms.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="text-center py-12 text-sm text-gray-400 italic">
+                      <td colSpan={5} className="text-center py-12 text-sm text-gray-400 italic">
                         No firms match your filters.
                       </td>
                     </tr>
@@ -446,6 +490,13 @@ export default function XponanceDashboard() {
                       const types = getFirmTypes(firm);
                       return (
                         <tr key={firm.id} className="hover:bg-indigo-50/30 transition-colors">
+                          <td className="px-4 py-3">
+                            <Checkbox
+                              checked={selectedIds.has(firm.id)}
+                              onCheckedChange={() => toggleSelect(firm.id)}
+                              aria-label={`Select ${firm.name}`}
+                            />
+                          </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
                               {firm.logo_url ? (
@@ -581,6 +632,17 @@ export default function XponanceDashboard() {
               </table>
             </div>
           </div>
+        )}
+
+        {/* Bulk reassign bar for selected firms */}
+        {viewMode === "firms" && selectedFirms.length > 0 && (
+          <BulkReassignBar
+            selectedItems={selectedFirms}
+            entityType="Firm"
+            xponanceContacts={xponanceContacts}
+            onDone={handleBulkDone}
+            onClear={clearSelection}
+          />
         )}
 
         <AnalystCoverageMap
