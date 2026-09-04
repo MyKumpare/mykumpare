@@ -943,6 +943,7 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
         email.trim() !== (e.email || "").trim() ||
         linkedinUrl.trim() !== (e.linkedin_url || "").trim() ||
         biography.trim() !== (e.biography || "").trim() ||
+        shortBiography.trim() !== (e.short_biography || "").trim() ||
         notes.trim() !== (e.notes || "").trim() ||
         employeeStatus !== (e.employee_status || "") ||
         contactStatus !== (e.contact_status || "Active") ||
@@ -976,6 +977,48 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
   })();
 
   const { guardedClose, guardDialog } = useUnsavedChangesGuard(hasContactChanges, () => onOpenChange(false), handleSubmit);
+
+  // Generate a short summary of the full biography using AI and persist it
+  // to the contact's short_biography field. The full biography is preserved.
+  const handleGenerateShortBio = async () => {
+    if (!editingContact) return;
+    const fullBio = biography.trim();
+    if (!fullBio) {
+      toast({ title: "No biography", description: "Add a full biography first, then generate a short bio.", variant: "destructive" });
+      return;
+    }
+    setGeneratingShortBio(true);
+    try {
+      const doc = new DOMParser().parseFromString(fullBio, "text/html");
+      const plainBio = (doc.body.textContent || "").replace(/\s+/g, " ").trim();
+      const res = await base44.integrations.Core.InvokeLLM({
+        prompt: `Summarize the following professional biography into a concise 2-3 sentence overview. Capture the person's current role, key experience, and notable achievements. Write in third person. Do not add information that is not in the original text.
+
+Biography:
+"""
+${plainBio.substring(0, 8000)}
+"""`,
+        response_json_schema: {
+          type: "object",
+          properties: {
+            short_bio: { type: "string", description: "A concise 2-3 sentence summary of the biography" }
+          }
+        }
+      });
+      const shortBio = res.short_bio || res.data?.short_bio || "";
+      if (shortBio) {
+        setShortBiography(shortBio);
+        await base44.entities.Contact.update(editingContact.id, { short_biography: shortBio });
+        queryClient.invalidateQueries({ queryKey: ["contacts"] });
+        toast({ title: "✅ Short bio generated", description: "The short summary has been saved. Use the toggle to switch between full and short bio." });
+      } else {
+        toast({ title: "Generation failed", description: "Could not generate a short bio. Please try again.", variant: "destructive" });
+      }
+    } catch (err) {
+      toast({ title: "Generation failed", description: err.message || "Could not generate a short bio.", variant: "destructive" });
+    }
+    setGeneratingShortBio(false);
+  };
 
   return (
     <>
@@ -1412,6 +1455,9 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
                   value={biography}
                   onChange={setBiography}
                   viewMode={viewMode}
+                  shortBiography={shortBiography}
+                  onGenerateShortBio={handleGenerateShortBio}
+                  generatingShortBio={generatingShortBio}
                   onPersist={async (cleaned) => {
                     if (!editingContact) return;
                     await base44.entities.Contact.update(editingContact.id, { biography: cleaned });
