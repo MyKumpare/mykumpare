@@ -18,6 +18,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { findContactDuplicates, findContactsByNormalizedName } from "@/components/contacts/contactDuplicateCheck";
 import { detectDesignations } from "@/components/contacts/designationDetector";
 import FirmTypePicker from "./FirmTypePicker";
+import AllocatorTypePicker from "./AllocatorTypePicker";
 import FirmEnrichmentPanel from "./FirmEnrichmentPanel";
 import AddressForm from "./AddressForm";
 import PhoneForm from "./PhoneForm";
@@ -191,6 +192,7 @@ const newAddress = () => ({
 export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, editingFirm, preselectedType, existingFirms = [], defaultTab, defaultOwnershipId, defaultBoardMeetingId, onProductClick, onPortfolioClick, onFirmClick, onContactClick }) {
   const [isEditing, setIsEditing] = useState(false);
   const [firmTypes, setFirmTypes] = useState([]);
+  const [allocatorTypes, setAllocatorTypes] = useState([]);
   const [firmName, setFirmName] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [website, setWebsite] = useState("");
@@ -253,6 +255,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
           ? editingFirm.firm_types
           : editingFirm.firm_type ? [editingFirm.firm_type] : [];
         setFirmTypes(types);
+        setAllocatorTypes(editingFirm.allocator_types || []);
         setFirmName(editingFirm.name || "");
         setLogoUrl(editingFirm.logo_url || "");
         setWebsite(editingFirm.website || "");
@@ -283,6 +286,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
         setIsEditing(false);
       } else {
         setFirmTypes(preselectedType ? [preselectedType] : []);
+        setAllocatorTypes([]);
         setFirmName("");
         setLogoUrl("");
         setWebsite("");
@@ -478,6 +482,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const hasChanges = editingFirm
     ? firmName.trim() !== editingFirm.name ||
       JSON.stringify([...firmTypes].sort()) !== JSON.stringify([...existingTypes].sort()) ||
+      JSON.stringify([...allocatorTypes].sort()) !== JSON.stringify([...(editingFirm.allocator_types || [])].sort()) ||
       logoUrl !== (editingFirm.logo_url || "") ||
       website !== (editingFirm.website || "") ||
       email !== (editingFirm.email || "") ||
@@ -653,7 +658,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   };
 
   const performSubmit = (addrs) => {
-    onSubmit({ firm_type: firmTypes[0] || "", firm_types: firmTypes, name: firmName.trim(), logo_url: logoUrl, website, email, linkedin_url: linkedinUrl, year_founded: yearFounded ? parseInt(yearFounded) : null, description, notes, addresses: addrs, phones, pending_contacts: pendingContacts.length > 0 ? pendingContacts : undefined, sourcing_sources: sourcingSources, sourcing_date: sourcingDate || null, sourcing_contact_name: sourcingContactName, sourcing_notes: sourcingNotes, geographic_region: geographicRegion || "Undefined", location: location || "", location_lat: locationLat, location_lng: locationLng, primary_xponance_contact_id: primaryXponanceId || null, primary_xponance_contact_name: primaryXponanceName || null, secondary_xponance_contact_id: secondaryXponanceId || null, secondary_xponance_contact_name: secondaryXponanceName || null });
+    onSubmit({ firm_type: firmTypes[0] || "", firm_types: firmTypes, allocator_types: firmTypes.includes("Allocator") ? allocatorTypes : [], name: firmName.trim(), logo_url: logoUrl, website, email, linkedin_url: linkedinUrl, year_founded: yearFounded ? parseInt(yearFounded) : null, description, notes, addresses: addrs, phones, pending_contacts: pendingContacts.length > 0 ? pendingContacts : undefined, sourcing_sources: sourcingSources, sourcing_date: sourcingDate || null, sourcing_contact_name: sourcingContactName, sourcing_notes: sourcingNotes, geographic_region: geographicRegion || "Undefined", location: location || "", location_lat: locationLat, location_lng: locationLng, primary_xponance_contact_id: primaryXponanceId || null, primary_xponance_contact_name: primaryXponanceName || null, secondary_xponance_contact_id: secondaryXponanceId || null, secondary_xponance_contact_name: secondaryXponanceName || null });
     // Also save AUM history (including client type breakdown) if it has unsaved changes
     if (aumSaveRef.current && aumDirty) {
       aumSaveRef.current();
@@ -715,7 +720,9 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     if (selected.linkedin_url && !linkedinUrl) { setLinkedinUrl(selected.linkedin_url); applied.push("LinkedIn"); }
     if (selected.year_founded && !yearFounded) { setYearFounded(String(selected.year_founded)); applied.push("Year Founded"); }
     if (selected.firm_types?.length && firmTypes.length === 0) {
-      setFirmTypes([selected.firm_types[0]]);
+      const enrichedType = selected.firm_types[0];
+      setFirmTypes([enrichedType]);
+      if (enrichedType !== "Allocator") setAllocatorTypes([]);
       applied.push("Firm Type");
     }
     let finalAddrs = addresses;
@@ -1057,6 +1064,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
 
   const handleCancelEdit = () => {
     setFirmTypes(editingFirm.firm_types?.length ? editingFirm.firm_types : editingFirm.firm_type ? [editingFirm.firm_type] : []);
+    setAllocatorTypes(editingFirm.allocator_types || []);
     setFirmName(editingFirm.name);
     setLogoUrl(editingFirm.logo_url || "");
     setWebsite(editingFirm.website || "");
@@ -1240,10 +1248,35 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                 ) : (
                   <FirmTypePicker
                     value={firmTypes[0] || ""}
-                    onChange={(type) => setFirmTypes(type ? [type] : [])}
+                    onChange={(type) => {
+                      setFirmTypes(type ? [type] : []);
+                      if (type !== "Allocator") setAllocatorTypes([]);
+                    }}
                   />
                 )}
               </div>
+
+              {/* Allocator Type — only shown when the firm type is Allocator */}
+              {firmTypes.includes("Allocator") && (
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium text-gray-700">Allocator Type</Label>
+                  {!activelyEditing ? (
+                    <div className="px-3 py-2 flex flex-wrap gap-1 rounded-md border bg-gray-50 min-h-9">
+                      {allocatorTypes.length > 0
+                        ? allocatorTypes.map((t) => (
+                            <span key={t} className="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium bg-teal-100 text-teal-700">{t}</span>
+                          ))
+                        : <span className="text-sm text-gray-400">—</span>
+                      }
+                    </div>
+                  ) : (
+                    <AllocatorTypePicker
+                      value={allocatorTypes}
+                      onChange={setAllocatorTypes}
+                    />
+                  )}
+                </div>
+              )}
 
               {/* Firm Name */}
               <div className="space-y-1.5">

@@ -21,6 +21,13 @@
         "type": "string"
       }
     },
+    "allocator_types": {
+      "type": "array",
+      "description": "Allocator sub-types (multi-select) shown only when the firm type is 'Allocator'. Free-text values drawn from the AllocatorType master list (e.g. Public Funds, Endowment, Family Offices, RIAs); users can add, rename, or delete types via the firm form multi-select dropdown, with duplicate names blocked before creation.",
+      "items": {
+        "type": "string"
+      }
+    },
     "logo_url": {
       "type": "string",
       "description": "URL of the firm's logo"
