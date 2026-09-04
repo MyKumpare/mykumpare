@@ -429,6 +429,12 @@ export default function TeamHierarchyView({ people, firmName, firmId, editable, 
   const [printing, setPrinting] = useState(false);
   const hierarchyRef = useRef(null);
 
+  // Only show active contacts in the team structure.
+  const activePeople = useMemo(
+    () => (people || []).filter((p) => p.contact_status !== "Inactive"),
+    [people],
+  );
+
   // Persist on change
   const updateCategories = (next) => {
     setCategories(next);
@@ -471,7 +477,7 @@ export default function TeamHierarchyView({ people, firmName, firmId, editable, 
 
   const grouped = useMemo(() => {
     const buckets = categories.map(c => ({ ...c, people: [] }));
-    for (const person of people) {
+    for (const person of activePeople) {
       const manual = manualAssignments[person.id];
       const matchedIds = Array.isArray(manual)
         ? manual.filter((id) => categories.some((c) => c.id === id))
@@ -502,9 +508,9 @@ export default function TeamHierarchyView({ people, firmName, firmId, editable, 
       bucket.people = [...ordered.map((x) => x.p), ...rest];
     }
     return buckets.filter(b => b.people.length > 0);
-  }, [people, categories, manualAssignments, categoryOrders]);
+  }, [activePeople, categories, manualAssignments, categoryOrders]);
 
-  const totalPeople = people.length;
+  const totalPeople = activePeople.length;
 
   // ── Category management handlers ──
   const handleCatChange = (idx, updated) => {
