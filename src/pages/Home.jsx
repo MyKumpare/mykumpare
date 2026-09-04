@@ -803,6 +803,7 @@ export default function Home() {
     { label: "Firms", icon: Building, ref: null, color: "text-indigo-600", activeBg: "bg-indigo-50", onClick: () => setFirmPickerOpen(true) },
     { label: "Products", icon: Package, ref: null, color: "text-violet-600", activeBg: "bg-violet-50", onClick: () => setProductPickerOpen(true) },
     { label: "Contacts", icon: User, ref: null, color: "text-pink-600", activeBg: "bg-pink-50", onClick: () => setContactPickerOpen(true) },
+    { label: "Bio Tracker", icon: FileText, ref: null, color: "text-teal-600", activeBg: "bg-teal-50", onClick: () => navigate("/ContactShortBioDashboard") },
     { label: "Videos", icon: Video, ref: null, color: "text-orange-600", activeBg: "bg-orange-50", onClick: () => navigate("/VideoLibrary") },
     { label: "Record", icon: Circle, ref: null, color: "text-red-500", activeBg: "bg-red-50", onClick: triggerStartRecording },
     { label: "Utilities", icon: Wrench, ref: utilityRef, color: "text-gray-600", activeBg: "bg-gray-100", onClick: () => { setUtilityDefaultView(null); setUtilityModalOpen(true); }, submenu: [
