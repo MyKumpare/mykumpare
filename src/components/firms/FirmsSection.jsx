@@ -53,6 +53,7 @@ export default function FirmsSection({
     funding_status: new Set(),
     year_founded: new Set(),
     sourcing_source: new Set(),
+    coverage_status: "all",
   });
   const [showFilters, setShowFilters] = useState(true);
   const [dateRange, setDateRange] = useState({ start: "", end: "" });
@@ -166,6 +167,17 @@ export default function FirmsSection({
       }
       result = sourced;
     }
+    if (filterValues.coverage_status !== "all") {
+      const coverageFiltered = {};
+      for (const [type, firms] of Object.entries(result)) {
+        const filtered = firms.filter((f) => {
+          const hasCoverage = !!(f.primary_xponance_contact_id || f.secondary_xponance_contact_id);
+          return filterValues.coverage_status === "covered" ? hasCoverage : !hasCoverage;
+        });
+        if (filtered.length) coverageFiltered[type] = filtered;
+      }
+      result = coverageFiltered;
+    }
     if (dateRange.start || dateRange.end) {
       const start = dateRange.start ? new Date(dateRange.start + "T00:00:00") : null;
       const end = dateRange.end ? new Date(dateRange.end + "T23:59:59") : null;
@@ -214,12 +226,20 @@ export default function FirmsSection({
         }
       }
     }
+    const coverageStatus = { covered: 0, uncovered: 0 };
+    for (const [, firms] of Object.entries(groupedFirms)) {
+      for (const f of firms) {
+        const hasCoverage = !!(f.primary_xponance_contact_id || f.secondary_xponance_contact_id);
+        coverageStatus[hasCoverage ? "covered" : "uncovered"]++;
+      }
+    }
     return {
       firm_type: types,
       geographic_region: regions,
       funding_status: fundingStatus,
       year_founded: yearFounded,
       sourcing_source: sourcingSource,
+      coverage_status: coverageStatus,
     };
   }, [groupedFirms]);
 
@@ -236,6 +256,7 @@ export default function FirmsSection({
       funding_status: new Set(),
       year_founded: new Set(),
       sourcing_source: new Set(),
+      coverage_status: "all",
     });
   };
 
@@ -534,7 +555,8 @@ export default function FirmsSection({
                     locationSearchLower ||
                     filterValues.funding_status.size > 0 ||
                     filterValues.year_founded.size > 0 ||
-                    filterValues.sourcing_source.size > 0
+                    filterValues.sourcing_source.size > 0 ||
+                    filterValues.coverage_status !== "all"
                   }
                 />
               </div>

@@ -5,6 +5,7 @@ import {
   DollarSign,
   Calendar,
   Search,
+  Users,
 } from "lucide-react";
 
 export const FIRM_TYPES = [
@@ -51,6 +52,12 @@ export const SOURCING_SOURCE_OPTIONS = [
   { value: "Network/Referral", label: "Network / Referral" },
   { value: "Direct Outreach", label: "Direct Outreach" },
   { value: "Existing Relationship", label: "Existing Relationship" },
+];
+
+export const COVERAGE_STATUS_OPTIONS = [
+  { value: "all", label: "All firms" },
+  { value: "covered", label: "Covered" },
+  { value: "uncovered", label: "Uncovered" },
 ];
 
 /**
@@ -103,6 +110,14 @@ export const firmFilterGroups = [
     icon: Search,
     type: "checkbox",
     options: SOURCING_SOURCE_OPTIONS,
+    defaultOpen: false,
+  },
+  {
+    key: "coverage_status",
+    label: "Coverage Status",
+    icon: Users,
+    type: "radio",
+    options: COVERAGE_STATUS_OPTIONS,
     defaultOpen: false,
   },
 ];

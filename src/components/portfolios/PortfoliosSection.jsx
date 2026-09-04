@@ -77,16 +77,20 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
     primary_benchmark_name: new Set(),
     advisor_firm_name: new Set(),
     portfolio_name_search: "",
+    geographic_region: new Set(),
+    coverage_status: "all",
   });
   const handleFilterChange = (key, value) => setFilterValues((prev) => ({ ...prev, [key]: value }));
   const clearAllFilters = () => setFilterValues({
     advisor_type: new Set(), allocator_name: new Set(), primary_benchmark_name: new Set(),
     advisor_firm_name: new Set(), portfolio_name_search: "",
+    geographic_region: new Set(), coverage_status: "all",
   });
   const hasActiveSidebarFilters =
     filterValues.advisor_type.size > 0 || filterValues.allocator_name.size > 0 ||
     filterValues.primary_benchmark_name.size > 0 || filterValues.advisor_firm_name.size > 0 ||
-    (filterValues.portfolio_name_search || "").trim();
+    (filterValues.portfolio_name_search || "").trim() ||
+    filterValues.geographic_region.size > 0 || filterValues.coverage_status !== "all";
 
   useEffect(() => {
     if (forceExpanded !== undefined) setExpanded(forceExpanded);
@@ -177,6 +181,14 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
     }
   };
 
+  // Map allocator firm IDs to their geographic region so portfolios can be
+  // filtered by the region of their parent allocator firm.
+  const firmRegionMap = useMemo(() => {
+    const map = new Map();
+    for (const f of firms) map.set(f.id, f.geographic_region || "Undefined");
+    return map;
+  }, [firms]);
+
   // Derive unique filter options from the loaded portfolios
   const allocatorOptions = useMemo(
     () => Array.from(new Set(portfolios.map((p) => p.allocator_name).filter(Boolean))).sort(),
@@ -213,8 +225,17 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
       const fn = p.advisor_firm_name || "Unknown";
       firmName[fn] = (firmName[fn] || 0) + 1;
     }
-    return { advisor_type: advisorType, allocator_name: allocatorName, primary_benchmark_name: benchmarkName, advisor_firm_name: firmName };
-  }, [portfolios]);
+    const geographicRegion = {};
+    const coverageStatus = { covered: 0, uncovered: 0 };
+    for (const p of portfolios) {
+      if (p.deleted_at) continue;
+      const region = firmRegionMap.get(p.firm_id) || "Undefined";
+      geographicRegion[region] = (geographicRegion[region] || 0) + 1;
+      const hasCoverage = !!(p.primary_xponance_contact_id || p.secondary_xponance_contact_id);
+      coverageStatus[hasCoverage ? "covered" : "uncovered"]++;
+    }
+    return { advisor_type: advisorType, allocator_name: allocatorName, primary_benchmark_name: benchmarkName, advisor_firm_name: firmName, geographic_region: geographicRegion, coverage_status: coverageStatus };
+  }, [portfolios, firmRegionMap]);
 
   const searchLower = search.toLowerCase().trim();
   const filteredPortfolios = useMemo(() => {
@@ -251,8 +272,17 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
       const q = filterValues.portfolio_name_search.toLowerCase().trim();
       result = result.filter((p) => (p.portfolio_name || "").toLowerCase().includes(q));
     }
+    if (filterValues.geographic_region.size > 0) {
+      result = result.filter((p) => filterValues.geographic_region.has(firmRegionMap.get(p.firm_id) || "Undefined"));
+    }
+    if (filterValues.coverage_status !== "all") {
+      result = result.filter((p) => {
+        const hasCoverage = !!(p.primary_xponance_contact_id || p.secondary_xponance_contact_id);
+        return filterValues.coverage_status === "covered" ? hasCoverage : !hasCoverage;
+      });
+    }
     return result;
-  }, [portfolios, searchLower, typeFilter, allocatorFilter, benchmarkFilter, managerFilter, filterValues]);
+  }, [portfolios, searchLower, typeFilter, allocatorFilter, benchmarkFilter, managerFilter, filterValues, firmRegionMap]);
 
   // Group portfolios by advisor type → allocator → portfolio name
   const grouped = useMemo(() => {

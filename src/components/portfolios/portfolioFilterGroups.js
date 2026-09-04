@@ -1,4 +1,20 @@
-import { BarChart3, Building, Globe, Award, Calendar, TrendingUp } from "lucide-react";
+import { BarChart3, Building, Globe, Award, Calendar, TrendingUp, MapPin, Users } from "lucide-react";
+
+export const PORTFOLIO_REGIONS = [
+  "North America",
+  "Europe",
+  "Asia-Pacific",
+  "Latin America",
+  "Middle East & Africa",
+  "Global",
+  "Undefined",
+];
+
+export const COVERAGE_STATUS_OPTIONS = [
+  { value: "all", label: "All portfolios" },
+  { value: "covered", label: "Covered" },
+  { value: "uncovered", label: "Uncovered" },
+];
 
 /**
  * Filter group config for the Portfolios section.
@@ -47,6 +63,22 @@ export const portfolioFilterGroups = [
     icon: Globe,
     type: "search",
     placeholder: "Search portfolio name...",
+    defaultOpen: false,
+  },
+  {
+    key: "geographic_region",
+    label: "Region",
+    icon: MapPin,
+    type: "checkbox",
+    options: PORTFOLIO_REGIONS.map((r) => ({ value: r, label: r })),
+    defaultOpen: false,
+  },
+  {
+    key: "coverage_status",
+    label: "Coverage Status",
+    icon: Users,
+    type: "radio",
+    options: COVERAGE_STATUS_OPTIONS,
     defaultOpen: false,
   },
 ];
