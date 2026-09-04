@@ -91,7 +91,16 @@ export const AVAILABLE_FIELDS = [
   { id: "ethnicity", label: "Ethnicity", category: "Personal", icon: Users, getValue: (c) => (c.ethnicity || []).join(", ") },
   { id: "veteran_status", label: "Veteran Status", category: "Personal", icon: Flag, getValue: (c) => c.veteran_status || "" },
   { id: "disability_status", label: "Disability Status", category: "Personal", icon: Heart, getValue: (c) => c.disability_status || "" },
-  { id: "biography", label: "Biography", category: "Personal", icon: FileText, getValue: (c) => c.biography || "" },
+  { id: "biography", label: "Biography", category: "Personal", icon: FileText, getValue: (c) => {
+    const bio = c.biography || "";
+    if (!bio) return "";
+    // Strip HTML tags for clean plain-text display in the contact card
+    if (typeof document !== "undefined" && /<[a-z][\s\S]*>/i.test(bio)) {
+      const doc = new DOMParser().parseFromString(bio, "text/html");
+      return (doc.body.textContent || "").replace(/\s+/g, " ").trim();
+    }
+    return bio.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+  } },
   { id: "bio_url", label: "Bio URL", category: "Personal", icon: Link2, getValue: (c) => c.bio_url || "" },
 
   // === Contact Info ===
