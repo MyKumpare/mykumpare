@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { generateWeeklyCoverageReportPdf } from "@/components/coverage/weeklyCoverageReportPdf";
 import { DEFAULT_ANALYST_CAPACITY_TARGET } from "@/components/firms/geographicRegions";
+import CoverageBurdenSummary from "@/components/coverage/CoverageBurdenSummary";
 
 const LIFECYCLE_STYLES = {
   Pipeline: "bg-blue-50 text-blue-700 border-blue-200",
@@ -41,7 +42,7 @@ function StatCard({ icon: Icon, label, value, color }) {
 
 export default function CoverageManagement() {
   const navigate = useNavigate();
-  const { isLoading, ddRecords, firms, analysts, uncoveredFirms, contacts } = useCoverageData();
+  const { isLoading, ddRecords, firms, analysts, uncoveredFirms, contacts, analystBurden } = useCoverageData();
   const [firmFilter, setFirmFilter] = useState("all");
   const [primaryFilter, setPrimaryFilter] = useState("all");
   const [secondaryFilter, setSecondaryFilter] = useState("all");
@@ -258,6 +259,9 @@ export default function CoverageManagement() {
         <StatCard icon={UserCheck} label="Primary Analysts" value={primaryAnalystCount} color="bg-blue-600" />
         <StatCard icon={Users} label="Secondary Analysts" value={secondaryAnalystCount} color="bg-violet-600" />
       </div>
+
+      {/* Coverage burden summary — aggregates all primary/secondary assignments per analyst */}
+      <CoverageBurdenSummary analystBurden={analystBurden} />
 
       {/* Analyst workload chart — total firms per analyst */}
       <Card>

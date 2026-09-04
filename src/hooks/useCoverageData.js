@@ -70,11 +70,16 @@ export function useCoverageData() {
     queryKey: ["contacts"],
     queryFn: () => base44.entities.Contact.list("-created_date", 5000),
   });
+  const { data: portfolios = [] } = useQuery({
+    queryKey: ["portfolios"],
+    queryFn: () => base44.entities.Portfolio.list("-created_date", 5000),
+  });
 
   const activeDD = useMemo(() => ddRecords.filter((r) => !r.deleted_at), [ddRecords]);
   const activeFirms = useMemo(() => firms.filter((f) => !f.deleted_at), [firms]);
   const activeProducts = useMemo(() => products.filter((p) => !p.deleted_at), [products]);
   const activeContacts = useMemo(() => contacts.filter((c) => !c.deleted_at), [contacts]);
+  const activePortfolios = useMemo(() => portfolios.filter((p) => !p.deleted_at), [portfolios]);
 
   const productById = useMemo(() => new Map(activeProducts.map((p) => [p.id, p])), [activeProducts]);
   const contactById = useMemo(() => new Map(activeContacts.map((c) => [c.id, c])), [activeContacts]);
@@ -160,14 +165,104 @@ export function useCoverageData() {
     return Array.from(map.values());
   }, [enrichedDD, contactById]);
 
+  // Comprehensive per-analyst coverage burden across ALL assignment surfaces:
+  // Xponance contact assignments on firms, products, portfolios, plus due
+  // diligence primary/secondary analyst assignments. Each analyst entry holds
+  // sets of primary/secondary assignments per entity type and a total burden
+  // count, so the Coverage Management summary can show a full breakdown.
+  const analystBurden = useMemo(() => {
+    const map = new Map();
+    const ensure = (id, name) => {
+      if (!id) return null;
+      if (!map.has(id)) {
+        map.set(id, {
+          id,
+          name: name || "—",
+          contact: contactById.get(id) || null,
+          firms: { primary: new Set(), secondary: new Set() },
+          products: { primary: new Set(), secondary: new Set() },
+          portfolios: { primary: new Set(), secondary: new Set() },
+          dueDiligence: { primary: new Set(), secondary: new Set() },
+        });
+      }
+      return map.get(id);
+    };
+
+    // Firm-level Xponance contact assignments.
+    for (const f of activeFirms) {
+      if (f.primary_xponance_contact_id) {
+        const a = ensure(f.primary_xponance_contact_id, f.primary_xponance_contact_name);
+        if (a) a.firms.primary.add(f.id);
+      }
+      if (f.secondary_xponance_contact_id) {
+        const a = ensure(f.secondary_xponance_contact_id, f.secondary_xponance_contact_name);
+        if (a) a.firms.secondary.add(f.id);
+      }
+    }
+    // Product-level Xponance contact assignments.
+    for (const p of activeProducts) {
+      if (p.primary_xponance_contact_id) {
+        const a = ensure(p.primary_xponance_contact_id, p.primary_xponance_contact_name);
+        if (a) a.products.primary.add(p.id);
+      }
+      if (p.secondary_xponance_contact_id) {
+        const a = ensure(p.secondary_xponance_contact_id, p.secondary_xponance_contact_name);
+        if (a) a.products.secondary.add(p.id);
+      }
+    }
+    // Portfolio-level Xponance contact assignments.
+    for (const p of activePortfolios) {
+      if (p.primary_xponance_contact_id) {
+        const a = ensure(p.primary_xponance_contact_id, p.primary_xponance_contact_name);
+        if (a) a.portfolios.primary.add(p.id);
+      }
+      if (p.secondary_xponance_contact_id) {
+        const a = ensure(p.secondary_xponance_contact_id, p.secondary_xponance_contact_name);
+        if (a) a.portfolios.secondary.add(p.id);
+      }
+    }
+    // Due diligence primary/secondary analyst assignments.
+    for (const dd of enrichedDD) {
+      if (dd.primaryAnalyst) {
+        const a = ensure(dd.primaryAnalyst.id, dd.primaryAnalyst.name);
+        if (a) a.dueDiligence.primary.add(dd.id);
+      }
+      if (dd.secondaryAnalyst) {
+        const a = ensure(dd.secondaryAnalyst.id, dd.secondaryAnalyst.name);
+        if (a) a.dueDiligence.secondary.add(dd.id);
+      }
+    }
+
+    return Array.from(map.values())
+      .map((a) => ({
+        ...a,
+        firmsPrimary: a.firms.primary.size,
+        firmsSecondary: a.firms.secondary.size,
+        productsPrimary: a.products.primary.size,
+        productsSecondary: a.products.secondary.size,
+        portfoliosPrimary: a.portfolios.primary.size,
+        portfoliosSecondary: a.portfolios.secondary.size,
+        ddPrimary: a.dueDiligence.primary.size,
+        ddSecondary: a.dueDiligence.secondary.size,
+        total:
+          a.firms.primary.size + a.firms.secondary.size +
+          a.products.primary.size + a.products.secondary.size +
+          a.portfolios.primary.size + a.portfolios.secondary.size +
+          a.dueDiligence.primary.size + a.dueDiligence.secondary.size,
+      }))
+      .sort((a, b) => b.total - a.total);
+  }, [activeFirms, activeProducts, activePortfolios, enrichedDD, contactById]);
+
   return {
     isLoading: ddLoading,
     ddRecords: enrichedDD,
     firms: activeFirms,
     products: activeProducts,
     contacts: activeContacts,
+    portfolios: activePortfolios,
     firmCoverage,
     uncoveredFirms,
     analysts,
+    analystBurden,
   };
 }

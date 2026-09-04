@@ -204,10 +204,12 @@ function applySavedFormat(saved, contact, firms) {
       });
     }
   });
-  // Append any catalog fields not in the saved list (new fields added since last save) — only if they have a value
-  baseFields.forEach((f) => {
-    if (!seen.has(f.id) && f.value) ordered.push(f);
-  });
+  // Do NOT auto-append other populated fields: appending them (and the
+  // debounced auto-save that follows) would gradually overwrite the user's
+  // saved selection with every field that happens to have a value on the
+  // most-recently-viewed contact, so the saved format would drift depending
+  // on which contact was opened last. The user's saved field set is the
+  // single source of truth; new fields are added explicitly via the picker.
   return { fields: ordered, style: saved.style || "classic" };
 }
 
