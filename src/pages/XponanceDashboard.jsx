@@ -158,6 +158,8 @@ export default function XponanceDashboard() {
     const sorted = [...list];
     if (sortKey === "name") {
       sorted.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sortKey === "name_desc") {
+      sorted.sort((a, b) => b.name.localeCompare(a.name));
     } else if (sortKey === "primary") {
       sorted.sort((a, b) => (a.primary_xponance_contact_name || "zzz").localeCompare(b.primary_xponance_contact_name || "zzz"));
     } else if (sortKey === "secondary") {
@@ -205,6 +207,8 @@ export default function XponanceDashboard() {
     const sorted = [...list];
     if (sortKey === "name") {
       sorted.sort((a, b) => getContactName(a).localeCompare(getContactName(b)));
+    } else if (sortKey === "name_desc") {
+      sorted.sort((a, b) => getContactName(b).localeCompare(getContactName(a)));
     } else if (sortKey === "primary") {
       sorted.sort((a, b) => (a.primary_xponance_contact_name || "zzz").localeCompare(b.primary_xponance_contact_name || "zzz"));
     } else if (sortKey === "secondary") {
@@ -379,6 +383,7 @@ export default function XponanceDashboard() {
                 className="h-10 rounded-lg border border-gray-200 text-sm px-3 focus:outline-none focus:ring-2 focus:ring-indigo-400"
               >
                 <option value="name">Sort: Name (A-Z)</option>
+                <option value="name_desc">Sort: Name (Z-A)</option>
                 <option value="primary">Sort: Primary Contact</option>
                 <option value="secondary">Sort: Secondary Contact</option>
               </select>
@@ -472,7 +477,16 @@ export default function XponanceDashboard() {
                         aria-label="Select all firms"
                       />
                     </th>
-                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[28%]">Firm</th>
+                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[28%]">
+                      <button
+                        onClick={() => setSortKey(sortKey === "name" ? "name_desc" : "name")}
+                        className="flex items-center gap-1 hover:text-indigo-600 transition-colors"
+                        title="Sort by firm name"
+                      >
+                        Firm
+                        <ArrowUpDown className="w-3 h-3" />
+                      </button>
+                    </th>
                     <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[20%]">Type</th>
                     <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[26%]">Primary Xponance Contact</th>
                     <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[26%]">Secondary Xponance Contact</th>
