@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, AlertCircle, Search, FileText, RefreshCw } from "lucide-react";
+import { CheckCircle2, AlertCircle, Search, FileText, RefreshCw, X } from "lucide-react";
 
 function formatContactName(c) {
   const name = [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ");
@@ -12,6 +13,7 @@ function formatContactName(c) {
 }
 
 export default function ContactShortBioDashboard() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("missing"); // all | missing | has
   const [hideInactive, setHideInactive] = useState(true);
@@ -66,9 +68,18 @@ export default function ContactShortBioDashboard() {
     <div className="p-4 md:p-6 max-w-6xl mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <div className="flex items-center gap-2 mb-1">
-          <FileText className="w-5 h-5 text-indigo-600" />
-          <h1 className="text-xl font-bold text-gray-800">Short Bio Tracker</h1>
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <FileText className="w-5 h-5 text-indigo-600" />
+            <h1 className="text-xl font-bold text-gray-800">Short Bio Tracker</h1>
+          </div>
+          <button
+            onClick={() => navigate("/")}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+            title="Close"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
         <p className="text-sm text-gray-500">
           Track which contact profiles still need a short biography generated.
