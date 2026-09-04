@@ -17,6 +17,7 @@ import EmployeeStatusChart from "./EmployeeStatusChart";
 import ContactsBulkActionsBar from "./ContactsBulkActionsBar";
 import ContactsBulkAssignFirmDialog from "./ContactsBulkAssignFirmDialog";
 import ContactCompletenessBadge, { getMissingEssentialFields } from "./ContactCompletenessBadge";
+import ContactBioSnippet from "./ContactBioSnippet";
 import { useDuplicateReviews } from "./useDuplicateReviews";
 import { isExactMatchGroup } from "./contactDuplicateCheck";
 
@@ -704,6 +705,7 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
                     {contact.email && (
                       <a href={`mailto:${contact.email}`} className="text-xs text-indigo-600 hover:underline" onClick={(e) => e.stopPropagation()}>{contact.email}</a>
                     )}
+                    <ContactBioSnippet biography={contact.biography} />
                   </div>
                   <button
                     type="button"
