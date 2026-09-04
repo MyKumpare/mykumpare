@@ -101,6 +101,7 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
   const [bulkXponanceBusy, setBulkXponanceBusy] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(null);
   const [showFilters, setShowFilters] = useState(true);
+  const [hideInactive, setHideInactive] = useState(true);
   const [filterValues, setFilterValues] = useState(() => {
     const init = {};
     Object.keys(SIDEBAR_FILTER_CONFIG).forEach((k) => { init[k] = new Set(); });
@@ -345,8 +346,9 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
         return sel.has(val);
       });
     }
+    if (hideInactive) result = result.filter((c) => c.contact_status !== "Inactive");
     return result;
-  }, [contacts, hasFilters, filterText, filterSelected, firmMap, contactProductMap, contactPortfolioMap, filterDateRange, filterValues]);
+  }, [contacts, hasFilters, filterText, filterSelected, firmMap, contactProductMap, contactPortfolioMap, filterDateRange, filterValues, hideInactive]);
 
   const sidebarFilterCounts = useMemo(() => {
     const counts = {};
@@ -619,6 +621,16 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
                 >
                   <SlidersHorizontal className="w-3.5 h-3.5" />
                   {showFilters ? "Hide Filters" : "Filters"}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`h-7 px-2 gap-1 text-xs ${hideInactive ? "text-green-700 bg-green-50" : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"}`}
+                  onClick={() => setHideInactive((v) => !v)}
+                  title={hideInactive ? "Inactive contacts are hidden — click to show them" : "Showing all contacts — click to hide inactive"}
+                >
+                  <span className={`w-2 h-2 rounded-full ${hideInactive ? "bg-green-500" : "bg-gray-300"}`} />
+                  {hideInactive ? "Active Only" : "Show Inactive"}
                 </Button>
                 {viewMode === "list" && (
                   <SectionTypeFilter
