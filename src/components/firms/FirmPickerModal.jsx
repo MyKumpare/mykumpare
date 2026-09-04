@@ -244,22 +244,25 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
                  className="flex items-center gap-1.5 mt-2.5 flex-wrap"
                >
                  {headerOrder.map((itemId, index) => {
-                   const isView = itemId === "list" || itemId === "map";
+                   const isListView = itemId === "list";
+                   const isMapView = itemId === "map";
+                   const isView = isListView || isMapView;
                    const isExport = itemId === "exportCsv";
                    const isCoverage = itemId === "firmCoverage";
                    const isCompare = itemId === "compareFirms";
-                   const colorClasses = isView
-                     ? ""
+                   const isActiveView = isView && ((isListView && view === "list") || (isMapView && view === "map"));
+                   const buttonClasses = isActiveView
+                     ? "bg-indigo-50 text-indigo-700"
                      : isExport
-                       ? "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                       : "text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50";
+                       ? "text-gray-600 hover:bg-gray-100"
+                       : "text-indigo-600 hover:bg-indigo-50";
                    return (
                      <Draggable key={itemId} draggableId={itemId} index={index}>
                        {(dragProvided, snapshot) => (
                          <div
                            ref={dragProvided.innerRef}
                            {...dragProvided.draggableProps}
-                           className={`flex items-center gap-0.5 rounded-md transition-shadow ${snapshot.isDragging ? "shadow-md ring-1 ring-indigo-200 bg-white" : ""} ${isView ? "bg-gray-100 p-0.5" : ""}`}
+                           className={`flex items-center gap-0.5 rounded-md transition-shadow ${snapshot.isDragging ? "shadow-md ring-1 ring-indigo-200 bg-white" : ""}`}
                          >
                            <span
                              {...dragProvided.dragHandleProps}
@@ -268,18 +271,18 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
                            >
                              <GripVertical className="w-3 h-3" />
                            </span>
-                           {itemId === "list" && (
+                           {isListView && (
                              <button
                                onClick={() => setView("list")}
-                               className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${view === "list" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+                               className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${buttonClasses}`}
                              >
                                <List className="w-3.5 h-3.5" /> List
                              </button>
                            )}
-                           {itemId === "map" && (
+                           {isMapView && (
                              <button
                                onClick={() => setView("map")}
-                               className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${view === "map" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+                               className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${buttonClasses}`}
                              >
                                <Globe className="w-3.5 h-3.5" /> Geographic Map
                              </button>
@@ -289,7 +292,7 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
                                type="button"
                                onClick={() => exportFirmsToCsv(view === "map" ? geoFirms : filtered, "firm-picker-export.csv")}
                                disabled={(view === "map" ? geoFirms : filtered).length === 0}
-                               className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${colorClasses} disabled:opacity-40 disabled:cursor-not-allowed`}
+                               className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${buttonClasses} disabled:opacity-40 disabled:cursor-not-allowed`}
                                title="Export filtered firms to CSV"
                              >
                                <Download className="w-3.5 h-3.5" /> Export CSV
@@ -299,7 +302,7 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
                              <button
                                type="button"
                                onClick={() => { onClose(); navigate("/XponanceDashboard"); }}
-                               className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${colorClasses}`}
+                               className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${buttonClasses}`}
                                title="Firm Coverage"
                              >
                                <Users className="w-3.5 h-3.5" /> Firm Coverage
@@ -309,7 +312,7 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
                              <button
                                type="button"
                                onClick={() => { onClose(); navigate("/FirmComparison"); }}
-                               className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${colorClasses}`}
+                               className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${buttonClasses}`}
                                title="Compare Firms"
                              >
                                <GitCompare className="w-3.5 h-3.5" /> Compare Firms
