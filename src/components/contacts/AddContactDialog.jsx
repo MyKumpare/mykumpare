@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import {   X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload, TrendingUp, Tag, GraduationCap, Briefcase, Activity, Package, AlertTriangle, Linkedin, Loader2, ClipboardCheck, Image as ImageIcon, Bell, MessageSquare, Mail, Clock, Newspaper, Download, Users, Eye, Award, CalendarClock } from "lucide-react";
+import {   X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload, TrendingUp, Tag, GraduationCap, Briefcase, Activity, Package, AlertTriangle, Linkedin, Loader2, ClipboardCheck, Image as ImageIcon, Bell, MessageSquare, Mail, Clock, Newspaper, Download, Users, Eye, Award, CalendarClock, ShieldCheck } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
@@ -27,6 +27,7 @@ import ContactMeetingLogTab from "./ContactMeetingLogTab";
 import ContactRelationshipsTab from "./ContactRelationshipsTab";
 import ContactTimeline from "./ContactTimeline";
 import ContactDueDiligenceTab from "./ContactDueDiligenceTab";
+import ContactCoverageTab from "./ContactCoverageTab";
 import ContactNotificationsTab from "./ContactNotificationsTab";
 import ContactChatTab from "./ContactChatTab";
 import ContactProductsTab from "./ContactProductsTab";
@@ -164,6 +165,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
     { key: "meeting-log", label: "Meeting Log", icon: CalendarClock },
     { key: "relationships", label: "Relationships", icon: Users },
     { key: "timeline", label: "Timeline", icon: Clock },
+    { key: "coverage", label: "Coverage", icon: ShieldCheck },
     { key: "due-diligence", label: "Due Diligence", icon: ClipboardCheck },
     { key: "chat", label: "Chat", icon: MessageSquare },
     { key: "news", label: "News", icon: Newspaper },
@@ -2122,6 +2124,17 @@ ${plainBio.substring(0, 8000)}
               <ContactTimeline
                 contactId={editingContact?.id}
                 contactNotes={notes}
+              />
+            </TabsContent>
+            {/* ── COVERAGE TAB ── */}
+            <TabsContent value="coverage" className="mt-0">
+              <ContactCoverageTab
+                contactId={editingContact?.id}
+                contactName={[firstName, lastName].filter(Boolean).join(" ")}
+                firms={firms}
+                onFirmClick={onFirmClick ? (firm) => { onOpenChange(false); onFirmClick(firm); } : undefined}
+                onContactClick={onContactClick ? (contact) => { onOpenChange(false); onContactClick(contact); } : undefined}
+                onProductClick={onProductClick ? (product) => { onOpenChange(false); onProductClick(product); } : undefined}
               />
             </TabsContent>
             {/* ── DUE DILIGENCE TAB ── */}
