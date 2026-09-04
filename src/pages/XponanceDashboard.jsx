@@ -27,6 +27,12 @@ const getFirmTypes = (f) =>
 const getContactName = (c) =>
   [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ");
 
+// Primary firm name for a contact (first associated firm), used for sorting contacts by firm
+const getContactFirmName = (c, firmMap) => {
+  const fid = (c.firm_ids || [])[0];
+  return (fid && firmMap?.[fid]?.name) || "zzz";
+};
+
 export default function XponanceDashboard() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -209,6 +215,10 @@ export default function XponanceDashboard() {
       sorted.sort((a, b) => getContactName(a).localeCompare(getContactName(b)));
     } else if (sortKey === "name_desc") {
       sorted.sort((a, b) => getContactName(b).localeCompare(getContactName(a)));
+    } else if (sortKey === "firm_name") {
+      sorted.sort((a, b) => getContactFirmName(a, firmMap).localeCompare(getContactFirmName(b, firmMap)));
+    } else if (sortKey === "firm_name_desc") {
+      sorted.sort((a, b) => getContactFirmName(b, firmMap).localeCompare(getContactFirmName(a, firmMap)));
     } else if (sortKey === "primary") {
       sorted.sort((a, b) => (a.primary_xponance_contact_name || "zzz").localeCompare(b.primary_xponance_contact_name || "zzz"));
     } else if (sortKey === "secondary") {
@@ -384,6 +394,8 @@ export default function XponanceDashboard() {
               >
                 <option value="name">Sort: Name (A-Z)</option>
                 <option value="name_desc">Sort: Name (Z-A)</option>
+                <option value="firm_name">Sort: Firm Name (A-Z)</option>
+                <option value="firm_name_desc">Sort: Firm Name (Z-A)</option>
                 <option value="primary">Sort: Primary Contact</option>
                 <option value="secondary">Sort: Secondary Contact</option>
               </select>
@@ -578,7 +590,16 @@ export default function XponanceDashboard() {
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
                     <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[28%]">Contact</th>
-                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[20%]">Firm</th>
+                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[20%]">
+                      <button
+                        onClick={() => setSortKey(sortKey === "firm_name" ? "firm_name_desc" : "firm_name")}
+                        className="flex items-center gap-1 hover:text-indigo-600 transition-colors"
+                        title="Sort by firm name"
+                      >
+                        Firm
+                        <ArrowUpDown className="w-3 h-3" />
+                      </button>
+                    </th>
                     <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[26%]">Primary Xponance Contact</th>
                     <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap w-[26%]">Secondary Xponance Contact</th>
                   </tr>
