@@ -482,27 +482,54 @@ export default function ContactCardDialog({ contact, firms = [], open, onOpenCha
 
             {/* Field management */}
             <div>
-              <Label className="text-xs font-medium text-gray-700 mb-1.5 block">Contact Fields (drag to reorder)</Label>
+              <div className="flex items-center justify-between mb-1.5">
+                <Label className="text-xs font-medium text-gray-700">Contact Fields (drag to reorder)</Label>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setFields((prev) => prev.map((f) => ({ ...f, enabled: true })))}
+                    className="text-[11px] font-medium text-primary hover:text-indigo-800 px-1.5 py-0.5 rounded hover:bg-indigo-50 transition-colors"
+                  >
+                    Select All
+                  </button>
+                  <span className="text-gray-300 text-xs">|</span>
+                  <button
+                    type="button"
+                    onClick={() => setFields((prev) => prev.map((f) => ({ ...f, enabled: false })))}
+                    className="text-[11px] font-medium text-gray-500 hover:text-gray-700 px-1.5 py-0.5 rounded hover:bg-gray-100 transition-colors"
+                  >
+                    Unselect All
+                  </button>
+                </div>
+              </div>
               <DragDropContext onDragEnd={onDragEnd}>
                 <Droppable droppableId="contact-card-fields">
                   {(provided) => (
                     <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-1.5">
                       {fields.map((f, idx) => (
                         <Draggable key={f.id} draggableId={f.id} index={idx}>
-                          {(prov) => (
+                          {(prov, snapshot) => (
                             <div
                               ref={prov.innerRef}
                               {...prov.draggableProps}
-                              className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2 py-1.5"
+                              className={`flex items-center gap-1.5 rounded-lg border bg-white px-2 py-1.5 transition-shadow ${
+                                snapshot.isDragging
+                                  ? "border-indigo-400 shadow-lg ring-2 ring-indigo-200 z-50"
+                                  : "border-gray-200"
+                              }`}
                             >
-                              <span {...prov.dragHandleProps} className="cursor-grab text-gray-300 hover:text-gray-500">
+                              <span
+                                {...prov.dragHandleProps}
+                                className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 flex items-center justify-center w-6 h-6 rounded hover:bg-gray-100 transition-colors flex-shrink-0"
+                                title="Drag to reorder"
+                              >
                                 <GripVertical className="w-4 h-4" />
                               </span>
                               <input
                                 type="checkbox"
                                 checked={f.enabled}
                                 onChange={() => toggleField(f.id)}
-                                className="w-4 h-4 rounded"
+                                className="w-4 h-4 rounded flex-shrink-0"
                               />
                               <Input
                                 value={f.label}
@@ -519,7 +546,7 @@ export default function ContactCardDialog({ contact, firms = [], open, onOpenCha
                               <button
                                 type="button"
                                 onClick={() => removeField(f.id)}
-                                className="text-gray-400 hover:text-red-500 transition-colors p-0.5"
+                                className="text-gray-400 hover:text-red-500 transition-colors p-0.5 flex-shrink-0"
                                 title="Remove field"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
