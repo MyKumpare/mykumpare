@@ -1,7 +1,7 @@
 import React, { useRef, useState } from "react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
-import { Wand2 } from "lucide-react";
+import { Wand2, Sparkles, FileText, AlignLeft } from "lucide-react";
 
 const QUILL_MODULES = {
   toolbar: [
@@ -141,13 +141,26 @@ function cleanBiographyHtml(html) {
  * Rich-text biography editor (edit mode) and formatted preview (view mode).
  *
  * Props:
- *   value: string (plain text or HTML)
+ *   value: string (plain text or HTML) — full biography
  *   onChange: (html) => void
+ *   onPersist: (html) => Promise — persists cleaned bio to DB (view mode)
  *   viewMode: boolean
+ *   shortBiography: string — stored short bio (plain text)
+ *   onGenerateShortBio: () => Promise — generates and persists short bio from full bio
+ *   generatingShortBio: boolean — loading state for generation
  */
-export default function BiographyEditor({ value = "", onChange, onPersist, viewMode = false }) {
+export default function BiographyEditor({
+  value = "",
+  onChange,
+  onPersist,
+  viewMode = false,
+  shortBiography = "",
+  onGenerateShortBio,
+  generatingShortBio = false,
+}) {
   const quillRef = useRef(null);
   const [cleaning, setCleaning] = useState(false);
+  const [bioMode, setBioMode] = useState("full"); // "full" | "short"
 
   const handleCleanFormatting = async () => {
     let current;
@@ -184,28 +197,95 @@ export default function BiographyEditor({ value = "", onChange, onPersist, viewM
   };
 
   if (viewMode) {
-    const html = toHtmlIfPlain(value);
-    if (!html || html === "<p></p>" || html === "<p><br></p>") {
+    const fullHtml = toHtmlIfPlain(value);
+    const hasFullBio = fullHtml && fullHtml !== "<p></p>" && fullHtml !== "<p><br></p>";
+    const hasShortBio = !!(shortBiography && shortBiography.trim());
+
+    // If no bio at all
+    if (!hasFullBio && !hasShortBio) {
       return <div className="text-sm text-gray-400 italic px-1">—</div>;
     }
+
+    // Determine which bio to display
+    const showShort = bioMode === "short" && hasShortBio;
+    const displayHtml = showShort
+      ? toHtmlIfPlain(shortBiography)
+      : fullHtml;
+
     return (
       <div className="space-y-1">
-        <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={handleCleanFormatting}
-            disabled={cleaning}
-            className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50 transition-colors disabled:opacity-50"
-            title="Normalize paragraph breaks, remove extra whitespace, and strip messy formatting from scraped bios"
-          >
-            <Wand2 className={`h-3.5 w-3.5 ${cleaning ? "animate-pulse" : ""}`} />
-            {cleaning ? "Cleaning…" : "Clean Formatting"}
-          </button>
+        {/* Toolbar: bio toggle + clean formatting */}
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          {/* Full / Short toggle */}
+          <div className="inline-flex items-center rounded-md border border-gray-200 overflow-hidden text-xs">
+            <button
+              type="button"
+              onClick={() => setBioMode("full")}
+              className={`inline-flex items-center gap-1 px-2.5 py-1 font-medium transition-colors ${
+                bioMode === "full"
+                  ? "bg-indigo-100 text-indigo-700"
+                  : "bg-white text-gray-500 hover:bg-gray-50"
+              }`}
+              title="Show the full biography"
+            >
+              <AlignLeft className="w-3 h-3" />
+              Full Bio
+            </button>
+            <button
+              type="button"
+              onClick={() => setBioMode("short")}
+              disabled={!hasShortBio && !hasFullBio}
+              className={`inline-flex items-center gap-1 px-2.5 py-1 font-medium transition-colors border-l border-gray-200 ${
+                bioMode === "short"
+                  ? "bg-indigo-100 text-indigo-700"
+                  : "bg-white text-gray-500 hover:bg-gray-50"
+              } ${(!hasShortBio && !hasFullBio) ? "opacity-40 cursor-not-allowed" : ""}`}
+              title={hasShortBio ? "Show the short bio" : "Generate a short bio first"}
+            >
+              <FileText className="w-3 h-3" />
+              Short Bio
+            </button>
+          </div>
+
+          <div className="flex items-center gap-1">
+            {/* Generate Short Bio button */}
+            {onGenerateShortBio && hasFullBio && (
+              <button
+                type="button"
+                onClick={onGenerateShortBio}
+                disabled={generatingShortBio}
+                className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-amber-600 hover:bg-amber-50 transition-colors disabled:opacity-50"
+                title="Generate a short summary from the full biography using AI"
+              >
+                <Sparkles className={`h-3.5 w-3.5 ${generatingShortBio ? "animate-pulse" : ""}`} />
+                {generatingShortBio ? "Generating…" : hasShortBio ? "Regenerate Short Bio" : "Generate Short Bio"}
+              </button>
+            )}
+            {/* Clean Formatting button */}
+            <button
+              type="button"
+              onClick={handleCleanFormatting}
+              disabled={cleaning}
+              className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50 transition-colors disabled:opacity-50"
+              title="Normalize paragraph breaks, remove extra whitespace, and strip messy formatting from scraped bios"
+            >
+              <Wand2 className={`h-3.5 w-3.5 ${cleaning ? "animate-pulse" : ""}`} />
+              {cleaning ? "Cleaning…" : "Clean Formatting"}
+            </button>
+          </div>
         </div>
-        <div
-          className="quill-preview text-sm text-gray-900 px-1 prose prose-sm max-w-none"
-          dangerouslySetInnerHTML={{ __html: html }}
-        />
+
+        {/* Bio content */}
+        {showShort && !hasShortBio ? (
+          <div className="text-sm text-gray-400 italic px-1 py-2">
+            No short bio has been generated yet. Click "Generate Short Bio" to create one from the full biography.
+          </div>
+        ) : (
+          <div
+            className="quill-preview text-sm text-gray-900 px-1 prose prose-sm max-w-none"
+            dangerouslySetInnerHTML={{ __html: displayHtml }}
+          />
+        )}
       </div>
     );
   }

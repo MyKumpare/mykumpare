@@ -99,6 +99,8 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [email, setEmail] = useState("");
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [biography, setBiography] = useState("");
+  const [shortBiography, setShortBiography] = useState("");
+  const [generatingShortBio, setGeneratingShortBio] = useState(false);
   const [bioUrl, setBioUrl] = useState("");
   const [designations, setDesignations] = useState([]);
   const [employeeStatus, setEmployeeStatus] = useState("Employee");
@@ -214,6 +216,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setVeteranStatus(editingContact.veteran_status || "Undetermined");
         setDisabilityStatus(editingContact.disability_status || "Undetermined");
         setBiography(editingContact.biography || "");
+        setShortBiography(editingContact.short_biography || "");
         setBioUrl(editingContact.bio_url || "");
         setNotes(editingContact.notes || "");
         setPrimaryXponanceId(editingContact.primary_xponance_contact_id || "");
@@ -258,6 +261,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
         setDisabilityStatus("Undetermined");
         setShowUndeterminedWarning(false);
         setBiography("");
+        setShortBiography("");
         setBioUrl("");
         setNotes("");
         setPrimaryXponanceId("");
@@ -491,6 +495,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
       veteran_status: veteranStatus,
       disability_status: disabilityStatus,
       biography: biography.trim(),
+      short_biography: shortBiography.trim(),
       bio_url: bioUrl.trim(),
       notes: notes.trim(),
       primary_xponance_contact_id: primaryXponanceId || null,

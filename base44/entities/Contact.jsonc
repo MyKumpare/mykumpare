@@ -214,7 +214,11 @@
     },
     "biography": {
       "type": "string",
-      "description": "Biography of the contact"
+      "description": "Full biography of the contact (rich text HTML or plain text)."
+    },
+    "short_biography": {
+      "type": "string",
+      "description": "AI-generated short summary of the contact's full biography (plain text, ~2-3 sentences). Stored separately so the full biography is preserved. Generated on demand via the 'Generate Short Bio' button in the biography editor."
     },
     "bio_url": {
       "type": "string",
