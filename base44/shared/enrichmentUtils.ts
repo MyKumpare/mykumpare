@@ -53,13 +53,42 @@ export function parsePhone(raw: string): any {
 // section content is not merged into a single block.
 export function htmlToText(html: string, baseUrl: string): string {
   let result = html.replace(/<img[^>]*>/gi, (match) => {
-    const srcMatch = match.match(/\ssrc\s*=\s*["']([^"']+)["']/i) ||
-      match.match(/\sdata-src\s*=\s*["']([^"']+)["']/i);
     const altMatch = match.match(/\salt\s*=\s*["']([^"']*)["']/i);
-    let src = srcMatch ? srcMatch[1].trim() : '';
-    if (!src || src.startsWith('data:')) return '';
-    try { src = new URL(src, baseUrl).href; } catch { return ''; }
-    return `\n[IMAGE: alt="${altMatch ? altMatch[1] : ''}" src="${src}"]\n`;
+    // Parse srcset / data-srcset to find the highest-resolution image URL.
+    // Modern firm websites serve small thumbnails in `src` but list larger
+    // variants in `srcset` (e.g. "photo-150.jpg 150w, photo-600.jpg 600w").
+    // Picking the highest-descriptor URL gives sharper contact headshots.
+    const srcsetMatch = match.match(/\ssrcset\s*=\s*["']([^"']+)["']/i) ||
+      match.match(/\sdata-srcset\s*=\s*["']([^"']+)["']/i);
+    let bestSrc = '';
+    if (srcsetMatch) {
+      const entries = srcsetMatch[1].split(',').map((e) => e.trim()).filter(Boolean);
+      let bestWidth = 0;
+      for (const entry of entries) {
+        const parts = entry.split(/\s+/);
+        const url = parts[0];
+        const w = parts[1] ? parseInt(parts[1].replace(/[^\d]/g, ''), 10) || 0 : 0;
+        if (url && !url.startsWith('data:') && w > bestWidth) {
+          bestWidth = w;
+          bestSrc = url;
+        }
+      }
+      // If no width descriptors were found, just take the last entry (often
+      // the largest in left-to-right ascending order).
+      if (!bestSrc && entries.length > 0) {
+        const lastUrl = entries[entries.length - 1].split(/\s+/)[0];
+        if (lastUrl && !lastUrl.startsWith('data:')) bestSrc = lastUrl;
+      }
+    }
+    // Fall back to src / data-src if no srcset or srcset URLs failed to resolve.
+    if (!bestSrc) {
+      const srcMatch = match.match(/\ssrc\s*=\s*["']([^"']+)["']/i) ||
+        match.match(/\sdata-src\s*=\s*["']([^"']+)["']/i);
+      bestSrc = srcMatch ? srcMatch[1].trim() : '';
+    }
+    if (!bestSrc || bestSrc.startsWith('data:')) return '';
+    try { bestSrc = new URL(bestSrc, baseUrl).href; } catch { return ''; }
+    return `\n[IMAGE: alt="${altMatch ? altMatch[1] : ''}" src="${bestSrc}"]\n`;
   });
   let baseHost = '';
   try { baseHost = new URL(baseUrl).host.toLowerCase(); } catch { /* ignore */ }
