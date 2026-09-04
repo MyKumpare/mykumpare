@@ -14,7 +14,7 @@ import {
 import { toast } from "@/components/ui/use-toast";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { base44 } from "@/api/base44Client";
-import { AVAILABLE_FIELDS, FIELD_CATEGORIES, getFieldDef, buildDefaultFields, getFieldHref } from "./contactCardFields";
+import { AVAILABLE_FIELDS, FIELD_CATEGORIES, getFieldDef, buildDefaultFields, getFieldHref, discoverExtraFields } from "./contactCardFields";
 
 const FORMAT_STYLES = [
   { id: "classic", label: "Classic", accent: "#1e3a8a" },
@@ -22,6 +22,11 @@ const FORMAT_STYLES = [
   { id: "minimal", label: "Minimal", accent: "#374151" },
   { id: "bold", label: "Bold", accent: "#7c3aed" },
 ];
+
+// Module-level cache of auto-discovered Contact fields (fields on real records
+// that aren't in the curated catalog). Fetched once per session so every contact
+// card dialog reuses it.
+let extraFieldsCache = null;
 
 // Resolve the icon component for a field (from the catalog definition)
 function getIconForField(fieldId) {
@@ -209,8 +214,34 @@ export default function ContactCardDialog({ contact, firms = [], open, onOpenCha
   const [saving, setSaving] = useState(false);
   const [photoUrl, setPhotoUrl] = useState(contact?.photo_url || "");
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [extraFields, setExtraFields] = useState([]);
   const cardRef = useRef(null);
   const loadedRef = useRef(false);
+
+  // Auto-discover any Contact fields that exist on real records but are not in
+  // the curated catalog, so the picker stays in sync when new fields are added
+  // to the Contact entity. Cached module-level so it only fetches once per session.
+  const allAvailableFields = useMemo(() => [...AVAILABLE_FIELDS, ...extraFields], [extraFields]);
+  const allCategories = useMemo(() => [...new Set(allAvailableFields.map((f) => f.category))], [allAvailableFields]);
+
+  React.useEffect(() => {
+    if (!open || extraFieldsCache) {
+      if (extraFieldsCache) setExtraFields(extraFieldsCache);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const records = await base44.entities.Contact.list("-updated_date", 100);
+        const extra = discoverExtraFields(records);
+        extraFieldsCache = extra;
+        if (!cancelled) setExtraFields(extra);
+      } catch (e) {
+        // ignore — curated catalog still works
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [open]);
 
   // Keep local photo in sync when the contact changes
   React.useEffect(() => {
@@ -320,7 +351,7 @@ export default function ContactCardDialog({ contact, firms = [], open, onOpenCha
       toast({ title: "Already added", description: "That field is already on the card.", variant: "destructive" });
       return;
     }
-    const def = getFieldDef(selectedFieldId);
+    const def = allAvailableFields.find((f) => f.id === selectedFieldId) || getFieldDef(selectedFieldId);
     if (!def) return;
     const value = def.getValue(contact, firms);
     setFields((prev) => [...prev, { id: def.id, label: def.label, value: typeof value === "string" ? value : "", enabled: true }]);
@@ -569,8 +600,8 @@ export default function ContactCardDialog({ contact, firms = [], open, onOpenCha
                     <SelectValue placeholder="Select a contact field to add…" />
                   </SelectTrigger>
                   <SelectContent>
-                    {FIELD_CATEGORIES.map((cat) => {
-                      const catFields = AVAILABLE_FIELDS.filter((f) => f.category === cat && !fields.some((existing) => existing.id === f.id));
+                    {allCategories.map((cat) => {
+                      const catFields = allAvailableFields.filter((f) => f.category === cat && !fields.some((existing) => existing.id === f.id));
                       if (!catFields.length) return null;
                       return (
                         <SelectGroup key={cat}>

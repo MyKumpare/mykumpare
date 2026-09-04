@@ -188,6 +188,66 @@ export function getFieldHref(fieldId, value) {
   }
 }
 
+// Keys that are internal/system and should never appear as card fields.
+const SKIP_SCHEMA_KEYS = new Set(["tenant_id", "deleted_at"]);
+
+// Convert a snake_case key into a readable label (e.g. "short_biography" -> "Short Biography").
+function prettifyLabel(key) {
+  return key.replace(/_/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
+}
+
+// Build a field definition for a Contact key that is not part of the curated
+// AVAILABLE_FIELDS catalog. Uses a generic getter that reads the raw value with
+// basic formatting for arrays/objects, so it works for any field type without
+// needing schema metadata. This is what makes the picker automatically pick up
+// any new field added to the Contact entity once it has data on a record.
+function makeDynamicFieldDef(key) {
+  return {
+    id: key,
+    label: prettifyLabel(key),
+    category: "More Fields",
+    icon: FileText,
+    schemaAuto: true,
+    getValue: (c) => {
+      const v = c[key];
+      if (v == null || v === "") return "";
+      if (Array.isArray(v)) {
+        return v
+          .map((item) =>
+            typeof item === "object" && item !== null
+              ? Object.values(item).filter((x) => x != null && x !== "").join(" ")
+              : String(item)
+          )
+          .filter(Boolean)
+          .join("; ");
+      }
+      if (typeof v === "object") return "";
+      return String(v);
+    },
+  };
+}
+
+// Discover Contact fields that exist on real records but are not in the curated
+// catalog. Unions the top-level keys across the given contact records and
+// returns a field def for each unknown, non-internal key. Called with a batch
+// of recent contact records so newly added fields auto-appear in the picker.
+export function discoverExtraFields(records) {
+  const known = new Set(AVAILABLE_FIELDS.map((f) => f.id));
+  const seen = new Set();
+  const extra = [];
+  for (const rec of records || []) {
+    if (!rec || typeof rec !== "object") continue;
+    for (const key of Object.keys(rec)) {
+      if (known.has(key) || seen.has(key)) continue;
+      if (SKIP_SCHEMA_KEYS.has(key)) continue;
+      if (key.endsWith("_id")) continue; // internal reference IDs — denormalized _name fields are curated
+      seen.add(key);
+      extra.push(makeDynamicFieldDef(key));
+    }
+  }
+  return extra;
+}
+
 // Group fields by category for the dropdown
 export const FIELD_CATEGORIES = [...new Set(AVAILABLE_FIELDS.map((f) => f.category))];
 
