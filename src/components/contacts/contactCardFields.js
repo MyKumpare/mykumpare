@@ -102,6 +102,15 @@ export const AVAILABLE_FIELDS = [
     return bio.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
   } },
   { id: "bio_url", label: "Bio URL", category: "Personal", icon: Link2, getValue: (c) => c.bio_url || "" },
+  { id: "short_biography", label: "Short Bio", category: "Personal", icon: FileText, getValue: (c) => {
+    const bio = c.short_biography || "";
+    if (!bio) return "";
+    if (typeof document !== "undefined" && /<[a-z][\s\S]*>/i.test(bio)) {
+      const doc = new DOMParser().parseFromString(bio, "text/html");
+      return (doc.body.textContent || "").replace(/\s+/g, " ").trim();
+    }
+    return bio.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+  } },
 
   // === Contact Info ===
   { id: "email", label: "Email", category: "Contact Info", icon: Mail, getValue: (c) => c.email || "" },
@@ -112,7 +121,7 @@ export const AVAILABLE_FIELDS = [
     getValue: (c) => formatAddress((c.addresses || []).find((a) => a.is_primary) || (c.addresses || [])[0]) },
 
   // === Professional ===
-  { id: "company", label: "Company / Firm", category: "Professional", icon: Building2,
+  { id: "company", label: "Firm Name", category: "Professional", icon: Building2,
     getValue: (c, firms) => {
       const firm = firms?.find((f) => (c.firm_ids || []).includes(f.id));
       return firm?.name || (c.firm_ids || []).map((id) => firms?.find((f) => f.id === id)?.name).filter(Boolean).join(", ");
