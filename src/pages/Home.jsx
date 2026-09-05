@@ -339,7 +339,11 @@ export default function Home() {
 
   const { data: contacts = [] } = useQuery({
     queryKey: ["contacts"],
-    queryFn: () => base44.entities.Contact.list("-created_date", 5000),
+    queryFn: async () => {
+      const res = await base44.functions.invoke("fetchAllContacts", {});
+      return res?.records || [];
+    },
+    staleTime: 300000,
     select: (data) => data.filter((c) => !c.deleted_at),
   });
 
