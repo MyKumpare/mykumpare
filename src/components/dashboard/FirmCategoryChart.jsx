@@ -80,6 +80,12 @@ export default function FirmCategoryChart({ firms, onClickCategory }) {
         <div className="flex items-center gap-2 mb-3">
           <Building className="w-4 h-4 text-primary" />
           <h3 className="text-sm font-semibold text-foreground">Firms by Category</h3>
+          {onClickCategory && (
+            <span className="inline-flex items-center gap-1 text-[10px] text-indigo-500 font-medium">
+              <MousePointerClick className="w-3 h-3" />
+              Click a bar to filter
+            </span>
+          )}
           <span className="ml-auto text-xs text-muted-foreground">{totalFirms} total</span>
         </div>
         <ResponsiveContainer width="100%" height={220}>
@@ -106,22 +112,53 @@ export default function FirmCategoryChart({ firms, onClickCategory }) {
               }}
               formatter={(value, _name, props) => [value, props?.payload?.name || "Firms"]}
             />
-            <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-              {categoryData.map((_, idx) => (
-                <Cell key={idx} fill={CHART_COLORS[idx % CHART_COLORS.length]} />
+            <Bar
+              dataKey="value"
+              radius={[4, 4, 0, 0]}
+              onClick={(data) => {
+                const name = data?.payload?.name;
+                if (!name || !onClickCategory) return;
+                // "Uncategorized" firms have no type to filter by — skip
+                if (name === "Uncategorized") return;
+                setActiveCategory(name);
+                onClickCategory(name);
+              }}
+            >
+              {categoryData.map((entry, idx) => (
+                <Cell
+                  key={idx}
+                  fill={CHART_COLORS[idx % CHART_COLORS.length]}
+                  opacity={activeCategory && activeCategory !== entry.name ? 0.35 : 1}
+                  style={{ cursor: entry.name === "Uncategorized" ? "default" : onClickCategory ? "pointer" : "default" }}
+                />
               ))}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
-        {/* Legend pills below the chart */}
+        {/* Legend pills below the chart — clickable to filter */}
         <div className="flex flex-wrap gap-2 mt-2">
-          {categoryData.map((cat, idx) => (
-            <div key={cat.name} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }} />
-              <span>{cat.name}</span>
-              <span className="font-medium text-foreground">{cat.value}</span>
-            </div>
-          ))}
+          {categoryData.map((cat, idx) => {
+            const clickable = onClickCategory && cat.name !== "Uncategorized";
+            return (
+              <button
+                key={cat.name}
+                type="button"
+                disabled={!clickable}
+                onClick={() => {
+                  if (!clickable) return;
+                  setActiveCategory(cat.name);
+                  onClickCategory(cat.name);
+                }}
+                className={`flex items-center gap-1.5 text-xs text-muted-foreground rounded-md px-1.5 py-0.5 transition-colors ${
+                  clickable ? "hover:bg-accent cursor-pointer" : "cursor-default"
+                } ${activeCategory === cat.name ? "bg-indigo-50 text-indigo-700" : ""}`}
+              >
+                <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }} />
+                <span>{cat.name}</span>
+                <span className="font-medium text-foreground">{cat.value}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 

@@ -16,7 +16,7 @@ const CHART_OPTIONS = [
   { key: "firm-category", label: "Firms by Category", icon: BarChart3, description: "Firm distribution by type and database growth" },
 ];
 
-export default function DashboardChartsPanel({ firms }) {
+export default function DashboardChartsPanel({ firms, onClickCategory }) {
   const [visibleCharts, setVisibleCharts] = usePersistentState("dashboard_charts_visible", {
     "aum-trends": true,
     "firm-category": true,
@@ -85,7 +85,7 @@ export default function DashboardChartsPanel({ firms }) {
       ) : (
         <>
           {visibleCharts["aum-trends"] && <FirmAumTrendCard firms={firms} />}
-          {visibleCharts["firm-category"] && <FirmCategoryChart firms={firms} />}
+          {visibleCharts["firm-category"] && <FirmCategoryChart firms={firms} onClickCategory={onClickCategory} />}
         </>
       )}
     </div>

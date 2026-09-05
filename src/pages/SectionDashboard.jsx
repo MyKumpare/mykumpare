@@ -30,6 +30,13 @@ export default function SectionDashboard() {
     if (mod?.to) navigate(mod.to);
   };
 
+  // Click a category bar in the FirmCategoryChart → navigate to Home with
+  // a firmType query param so the Firms section opens pre-filtered.
+  const handleCategoryClick = (category) => {
+    if (!category) return;
+    navigate(`/?firmType=${encodeURIComponent(category)}`);
+  };
+
   const handleLayoutApi = useCallback((api) => {
     setLayoutApi(api);
   }, []);
@@ -176,7 +183,7 @@ export default function SectionDashboard() {
         )}
 
         {/* Toggleable dashboard charts — users select which to display */}
-        <DashboardChartsPanel firms={firms} />
+        <DashboardChartsPanel firms={firms} onClickCategory={handleCategoryClick} />
 
         <SectionModuleGrid
           modules={DASHBOARD_MODULES}

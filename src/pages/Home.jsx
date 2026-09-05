@@ -171,6 +171,7 @@ export default function Home() {
   const [addContactPhotoUrl, setAddContactPhotoUrl] = usePersistentState("home_addContactPhotoUrl", null);
   const [pasteContactOpen, setPasteContactOpen] = usePersistentState("home_pasteContactOpen", false);
   const [pasteInitialData, setPasteInitialData] = usePersistentState("home_pasteInitialData", null);
+  const [initialFirmTypeFilter, setInitialFirmTypeFilter] = useState(null);
 
   // Voice search — routes spoken commands to app search, photo search, or map search.
   const handleVoiceResult = (transcript) => {
@@ -453,6 +454,20 @@ export default function Home() {
       }
     }
   }, [location.search, firms, contacts, products, navigate]);
+
+  // Deep-link from the Dashboard's Firm Category chart: ?firmType=Allocator
+  // opens the Firms section pre-filtered to that category and scrolls to it.
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const firmType = params.get("firmType");
+    if (!firmType) return;
+    setInitialFirmTypeFilter(firmType);
+    setAllExpanded(true);
+    // Scroll to the Firms section after it renders
+    setTimeout(() => scrollTo(firmsRef), 100);
+    // Clear the param so a refresh doesn't re-trigger
+    navigate(location.pathname, { replace: true });
+  }, [location.search, navigate]);
 
   const deletedCount = deletedFirms.length + deletedProducts.length + deletedContacts.length + deletedPortfolios.length;
 
@@ -1188,6 +1203,7 @@ export default function Home() {
             onAddPortfolio={(firm) => { setPreselectedAllocatorId(firm.id); setPortfolioDialogOpen(true); }}
             onOpenExportWizard={() => setFirmScoringExportOpen(true)}
             forceExpanded={allExpanded}
+            initialFirmTypeFilter={initialFirmTypeFilter}
           />
         )}
 

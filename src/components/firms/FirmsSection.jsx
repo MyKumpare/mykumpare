@@ -41,13 +41,14 @@ export default function FirmsSection({
   onAddPortfolio,
   onOpenExportWizard,
   forceExpanded,
+  initialFirmTypeFilter,
 }) {
   const queryClient = useQueryClient();
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(!!initialFirmTypeFilter);
   const [viewMode, setViewMode] = useViewMode("firms");
   const [search, setSearch] = useState("");
   const [filterValues, setFilterValues] = useState({
-    firm_type: new Set(),
+    firm_type: initialFirmTypeFilter ? new Set([initialFirmTypeFilter]) : new Set(),
     allocator_type: new Set(),
     geographic_region: new Set(),
     geographic_region_search: "",
@@ -84,6 +85,13 @@ export default function FirmsSection({
       setExpandedTypes(allOpen);
     }
   }, [searchLower]);
+
+  // Auto-expand the type section when an initial filter is provided (deep-link)
+  useEffect(() => {
+    if (initialFirmTypeFilter) {
+      setExpandedTypes((prev) => ({ ...prev, [initialFirmTypeFilter]: true }));
+    }
+  }, [initialFirmTypeFilter]);
 
   const filteredGrouped = React.useMemo(() => {
     let result = groupedFirms;
