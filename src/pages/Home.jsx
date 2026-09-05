@@ -43,6 +43,7 @@ import DueDiligenceNavSection from "../components/firms/DueDiligenceNavSection";
 import MonitorNavSection from "../components/activity/MonitorNavSection";
 import ReportingNavSection from "../components/reports/ReportingNavSection";
 import DashboardNavSection from "../components/dashboard/DashboardNavSection";
+import FirmCategoryChart from "../components/dashboard/FirmCategoryChart";
 import DashboardTimelineSection from "../components/dashboard/DashboardTimelineSection";
 import FirmAumTrendCard from "../components/dashboard/FirmAumTrendCard";
 import DashboardAnalystCoverageSection from "../components/dashboard/DashboardAnalystCoverageSection";
@@ -1069,6 +1070,9 @@ export default function Home() {
         )}
         {/* Dashboard section — link to Overview dashboard page */}
         <DashboardNavSection onOpenDashboard={() => navigate("/Dashboard")} />
+
+        {/* Visual dashboard — firms by category + database growth at a glance */}
+        <FirmCategoryChart firms={activeFirms} />
 
         {/* Due Diligence section — with Documents, Forms, Templates nested as sub-items */}
         <div ref={formsRef} />
