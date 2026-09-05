@@ -11,6 +11,8 @@ import { LayoutDashboard, Pencil, Eye, Save, Users, Building2, Upload, Check } f
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import DashboardReportDialog from "@/components/dashboard/DashboardReportDialog";
+import PinnedDashboardReports from "@/components/dashboard/PinnedDashboardReports";
+import { usePinnedReports } from "@/components/dashboard/usePinnedReports";
 
 export default function SectionDashboard() {
   const navigate = useNavigate();
@@ -19,6 +21,7 @@ export default function SectionDashboard() {
   const [layoutApi, setLayoutApi] = useState(null);
   const [reportKey, setReportKey] = useState(null);
   const { userLayout, firmwideLayout, saveLayout, isSaving } = useSavedSectionLayout("dashboard");
+  const { pinnedKeys, togglePin, reorderPinned } = usePinnedReports();
 
   const { data: firms = [] } = useQuery({
     queryKey: ["firms"],
@@ -187,6 +190,15 @@ export default function SectionDashboard() {
           </p>
         )}
 
+        <PinnedDashboardReports
+          pinnedKeys={pinnedKeys}
+          firms={firms}
+          onClickCategory={handleCategoryClick}
+          onReorder={reorderPinned}
+          onUnpin={togglePin}
+          readOnly={mode === "preview"}
+        />
+
         <SectionModuleGrid
           modules={DASHBOARD_MODULES}
           moduleMap={DASHBOARD_MODULE_MAP}
@@ -196,6 +208,8 @@ export default function SectionDashboard() {
           accentRing="ring-indigo-300"
           readOnly={mode === "preview"}
           onLayoutApi={handleLayoutApi}
+          pinnedKeys={pinnedKeys}
+          onTogglePin={togglePin}
         />
 
         <DashboardReportDialog

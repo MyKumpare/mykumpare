@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, GripVertical, Pin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSectionLayout, UNCAT_ID } from "./useSectionLayout";
 import CategoryNameDialog from "@/components/common/CategoryNameDialog";
@@ -19,7 +19,7 @@ import CategoryNameDialog from "@/components/common/CategoryNameDialog";
  *  - onSelect(key): called when a card is clicked
  *  - accentRing: tailwind ring color class applied while dragging (e.g. "ring-indigo-300")
  */
-export default function SectionModuleGrid({ modules, moduleMap, defaultCategories, storageKey, onSelect, accentRing = "ring-indigo-300", readOnly = false, onLayoutApi }) {
+export default function SectionModuleGrid({ modules, moduleMap, defaultCategories, storageKey, onSelect, accentRing = "ring-indigo-300", readOnly = false, onLayoutApi, pinnedKeys, onTogglePin }) {
   const layout = useSectionLayout(modules, defaultCategories, storageKey);
   const { categories, setCategories, addCategory, renameCategory, deleteCategory, moveCategory, onDragEnd } = layout;
   const [dialog, setDialog] = useState({ open: false, mode: "create", id: null, name: "" });
@@ -52,17 +52,33 @@ export default function SectionModuleGrid({ modules, moduleMap, defaultCategorie
                   const mod = moduleMap[itemKey];
                   if (!mod) return null;
                   const Icon = mod.icon;
+                  const isPinned = pinnedKeys && pinnedKeys.includes(itemKey);
+                  const canPin = pinnedKeys && mod.report;
                   return (
-                    <button
+                    <div
                       key={itemKey}
-                      onClick={() => onSelect(itemKey)}
-                      className="group flex items-center gap-3 p-3 rounded-lg border bg-white text-left transition-all hover:shadow-md hover:border-gray-300"
+                      className="group relative flex items-center gap-3 p-3 rounded-lg border bg-white transition-all hover:shadow-md hover:border-gray-300"
                     >
-                      <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${mod.bg}`}>
-                        <Icon className={`w-5 h-5 ${mod.color}`} />
-                      </span>
-                      <span className="text-sm font-semibold text-gray-800 group-hover:text-gray-900">{mod.label}</span>
-                    </button>
+                      <button onClick={() => onSelect(itemKey)} className="flex items-center gap-3 flex-1 text-left">
+                        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${mod.bg}`}>
+                          <Icon className={`w-5 h-5 ${mod.color}`} />
+                        </span>
+                        <span className="text-sm font-semibold text-gray-800 group-hover:text-gray-900">{mod.label}</span>
+                      </button>
+                      {canPin && (
+                        <button
+                          onClick={() => onTogglePin(itemKey)}
+                          className={`p-1.5 rounded-md transition-colors ${
+                            isPinned
+                              ? "text-indigo-600 bg-indigo-50 hover:bg-indigo-100"
+                              : "text-gray-300 hover:text-indigo-600 hover:bg-gray-50"
+                          }`}
+                          title={isPinned ? "Unpin from dashboard top" : "Pin to dashboard top"}
+                        >
+                          <Pin className={`w-3.5 h-3.5 ${isPinned ? "fill-current" : ""}`} />
+                        </button>
+                      )}
+                    </div>
                   );
                 })}
               </div>
@@ -157,13 +173,15 @@ export default function SectionModuleGrid({ modules, moduleMap, defaultCategorie
                       const mod = moduleMap[itemKey];
                       if (!mod) return null;
                       const Icon = mod.icon;
+                      const isPinned = pinnedKeys && pinnedKeys.includes(itemKey);
+                      const canPin = pinnedKeys && mod.report;
                       return (
                         <Draggable draggableId={itemKey} index={index} key={itemKey}>
                           {(p, s) => (
                             <div
                               ref={p.innerRef}
                               {...p.draggableProps}
-                              className={`group relative flex items-stretch rounded-lg border ${mod.border} bg-white overflow-hidden transition-all hover:shadow-md ${s.isDragging ? `shadow-lg ring-2 ${accentRing}` : ""}`}
+                              className={`group relative flex items-stretch rounded-lg border ${mod.border} bg-white overflow-hidden transition-all hover:shadow-md ${s.isDragging ? `shadow-lg ring-2 ${accentRing}` : ""} ${isPinned ? "ring-1 ring-indigo-200" : ""}`}
                             >
                               <button
                                 onClick={() => onSelect(itemKey)}
@@ -174,6 +192,19 @@ export default function SectionModuleGrid({ modules, moduleMap, defaultCategorie
                                 </span>
                                 <span className="text-sm font-semibold text-gray-800">{mod.label}</span>
                               </button>
+                              {canPin && (
+                                <button
+                                  onClick={() => onTogglePin(itemKey)}
+                                  className={`flex items-center justify-center px-1.5 border-l border-gray-100 transition-colors ${
+                                    isPinned
+                                      ? "text-indigo-600 bg-indigo-50 hover:bg-indigo-100"
+                                      : "text-gray-300 hover:text-indigo-600 hover:bg-gray-50"
+                                  }`}
+                                  title={isPinned ? "Unpin from dashboard top" : "Pin to dashboard top"}
+                                >
+                                  <Pin className={`w-3.5 h-3.5 ${isPinned ? "fill-current" : ""}`} />
+                                </button>
+                              )}
                               <span
                                 {...p.dragHandleProps}
                                 className="flex items-center justify-center px-2 cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 border-l border-gray-100"
