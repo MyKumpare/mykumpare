@@ -56,7 +56,7 @@ export default async function(req: Request): Promise<Response> {
           const firm = await svc.entities.Firm.create({
             tenant_id: tenantId,
             name: it.firmName,
-            firm_types: Array.isArray(it.firmType) ? it.firmType : (it.firmType ? [it.firmType] : []),
+            firm_type: it.firmType || '',
           });
           newFirmMap[key] = firm;
         } catch (err: any) {
@@ -144,7 +144,7 @@ export default async function(req: Request): Promise<Response> {
     const mergedItems = items.filter((it: any) => it?.mergeTargetId);
     const duplicateSkipped = items
       .filter((it: any) => !it?.accept && !it?.mergeTargetId)
-      .map((it: any) => ({ row: it?.row, error: 'Skipped — duplicate firm name', name: it?.firm?.name || '', firm_types: (it?.firm?.firm_types || []).join('; ') }));
+      .map((it: any) => ({ row: it?.row, error: 'Skipped — duplicate firm name', name: it?.firm?.name || '', firm_type: it?.firm?.firm_type || '' }));
     const failed: any[] = [];
     const createdFirms: any[] = [];
     const createdItems: any[] = [];
@@ -161,7 +161,7 @@ export default async function(req: Request): Promise<Response> {
           createdItems.push({ row: batch[idx]?.row, name: f.name });
         });
       } catch (err: any) {
-        batch.forEach((b: any) => failed.push({ row: b.row, error: err?.message || 'Create failed', name: b?.firm?.name || '', firm_types: (b?.firm?.firm_types || []).join('; ') }));
+        batch.forEach((b: any) => failed.push({ row: b.row, error: err?.message || 'Create failed', name: b?.firm?.name || '', firm_type: b?.firm?.firm_type || '' }));
       }
     }
 
@@ -171,7 +171,7 @@ export default async function(req: Request): Promise<Response> {
       try {
         const target = await svc.entities.Firm.get(it.mergeTargetId);
         if (!target) {
-          failed.push({ row: it.row, error: 'Merge target firm not found', name: it?.firm?.name || '', firm_types: (it?.firm?.firm_types || []).join('; ') });
+          failed.push({ row: it.row, error: 'Merge target firm not found', name: it?.firm?.name || '', firm_type: it?.firm?.firm_type || '' });
           continue;
         }
         const updates = buildCsvMergeUpdates(target, it.firm || {});
@@ -185,7 +185,7 @@ export default async function(req: Request): Promise<Response> {
         }
         mergedCount++;
       } catch (err: any) {
-        failed.push({ row: it.row, error: err?.message || 'Merge failed', name: it?.firm?.name || '', firm_types: (it?.firm?.firm_types || []).join('; ') });
+        failed.push({ row: it.row, error: err?.message || 'Merge failed', name: it?.firm?.name || '', firm_type: it?.firm?.firm_type || '' });
       }
     }
 

@@ -316,7 +316,7 @@ export default function CsvFirmImport({ onStageChange } = {}) {
   };
 
   const downloadTemplate = () => {
-    const headers = "name,firm_types";
+    const headers = "name,firm_type";
     const sample = "Example Capital,Investment Manager";
     const blob = new Blob([headers + "\n" + sample + "\n"], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -362,7 +362,7 @@ export default function CsvFirmImport({ onStageChange } = {}) {
         </div>
         <div className="text-xs text-gray-500 bg-gray-50 rounded-lg p-3 space-y-1">
           <p className="font-semibold text-gray-600">Only two columns are required:</p>
-          <p><strong>Firm Name</strong> and <strong>Firm Types</strong> (semicolon-separated for multiple).</p>
+          <p><strong>Firm Name</strong> and <strong>Firm Type</strong> (one per firm).</p>
           <p className="text-gray-400 mt-1">After import, each firm is automatically enriched from its public website — logo, description, address, phone, LinkedIn, and key personnel are filled in for you. This takes ~30-90 seconds per firm.</p>
         </div>
       </div>
@@ -429,7 +429,7 @@ export default function CsvFirmImport({ onStageChange } = {}) {
                     const fk = mapping[i];
                     if (fk) raw[fk] = (row[i] || "").trim();
                   });
-                  const missing = !raw.name || !raw.firm_types;
+                  const missing = !raw.name || !raw.firm_type;
                   return (
                     <tr key={ri} className={missing ? "bg-red-50" : ri % 2 ? "bg-gray-50/50" : ""}>
                       {activeFields.map((f) => (
@@ -557,7 +557,7 @@ export default function CsvFirmImport({ onStageChange } = {}) {
                   <div className="flex items-start gap-3">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-800">{it.firm.name}</p>
-                      <p className="text-[11px] text-gray-400">Row {it.row} · {(it.firm.firm_types || []).join(", ")}</p>
+                      <p className="text-[11px] text-gray-400">Row {it.row} · {it.firm.firm_type || ""}</p>
                       <div className="mt-1.5 space-y-1">
                         {it.duplicates.map((d, di) => (
                           <div key={di} className="text-xs text-amber-700 flex items-start gap-1">

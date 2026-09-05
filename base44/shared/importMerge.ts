@@ -13,10 +13,8 @@ export function buildCsvMergeUpdates(existingFirm: any, csvFirm: any): Record<st
   fillIfEmpty("email");
   fillIfEmpty("description");
   if (csvFirm.year_founded && !existingFirm.year_founded) updates.year_founded = csvFirm.year_founded;
-  if (csvFirm.firm_types && csvFirm.firm_types.length > 0) {
-    const existing = existingFirm.firm_types || [];
-    const mergedTypes = [...new Set([...existing, ...csvFirm.firm_types])];
-    if (mergedTypes.length > existing.length) updates.firm_types = mergedTypes;
+  if (csvFirm.firm_type && !existingFirm.firm_type) {
+    updates.firm_type = csvFirm.firm_type;
   }
   if (csvFirm.allocator_types && csvFirm.allocator_types.length > 0) {
     const existing = existingFirm.allocator_types || [];
