@@ -48,6 +48,7 @@ export default function FirmsSection({
   const [search, setSearch] = useState("");
   const [filterValues, setFilterValues] = useState({
     firm_type: new Set(),
+    allocator_type: new Set(),
     geographic_region: new Set(),
     geographic_region_search: "",
     recent_activity: "all",
@@ -100,6 +101,16 @@ export default function FirmsSection({
         if (result[t]) typed[t] = result[t];
       }
       result = typed;
+    }
+    if (filterValues.allocator_type.size > 0) {
+      const atFiltered = {};
+      for (const [type, firms] of Object.entries(result)) {
+        const filtered = firms.filter((f) =>
+          (f.allocator_types || []).some((at) => filterValues.allocator_type.has(at))
+        );
+        if (filtered.length) atFiltered[type] = filtered;
+      }
+      result = atFiltered;
     }
     if (filterValues.geographic_region.size > 0) {
       const regioned = {};
@@ -234,8 +245,15 @@ export default function FirmsSection({
         coverageStatus[hasCoverage ? "covered" : "uncovered"]++;
       }
     }
+    const allocatorTypes = {};
+    for (const f of groupedFirms["Allocator"] || []) {
+      for (const at of f.allocator_types || []) {
+        allocatorTypes[at] = (allocatorTypes[at] || 0) + 1;
+      }
+    }
     return {
       firm_type: types,
+      allocator_type: allocatorTypes,
       geographic_region: regions,
       funding_status: fundingStatus,
       year_founded: yearFounded,
@@ -251,6 +269,7 @@ export default function FirmsSection({
   const clearAllFilters = () => {
     setFilterValues({
       firm_type: new Set(),
+      allocator_type: new Set(),
       geographic_region: new Set(),
       geographic_region_search: "",
       recent_activity: "all",
@@ -579,6 +598,48 @@ export default function FirmsSection({
             })}
           </div>
 
+          {/* Allocator sub-type filter pills — shown when Allocator firms are in view */}
+          {filteredGrouped["Allocator"] && Object.keys(filterCounts.allocator_type || {}).length > 0 && (
+            <div className="flex items-center gap-1.5 flex-wrap mb-2 pl-1">
+              <span className="text-[11px] text-gray-400 font-medium uppercase tracking-wide mr-0.5">Allocator Type:</span>
+              <button
+                type="button"
+                onClick={() => handleFilterChange("allocator_type", new Set())}
+                className={`text-xs px-2 py-0.5 rounded-full font-medium transition-colors border ${
+                  filterValues.allocator_type.size === 0
+                    ? "bg-violet-600 text-white border-violet-600"
+                    : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
+                }`}
+              >
+                All ({(groupedFirms["Allocator"] || []).length})
+              </button>
+              {Object.entries(filterCounts.allocator_type)
+                .sort((a, b) => b[1] - a[1])
+                .map(([at, count]) => {
+                  const active = filterValues.allocator_type.has(at);
+                  return (
+                    <button
+                      key={at}
+                      type="button"
+                      onClick={() => {
+                        const next = new Set(filterValues.allocator_type);
+                        if (next.has(at)) next.delete(at);
+                        else next.add(at);
+                        handleFilterChange("allocator_type", next);
+                      }}
+                      className={`text-xs px-2 py-0.5 rounded-full font-medium transition-colors border ${
+                        active
+                          ? "bg-violet-600 text-white border-violet-600"
+                          : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
+                      }`}
+                    >
+                      {at} ({count})
+                    </button>
+                  );
+                })}
+            </div>
+          )}
+
           <div className="flex flex-col md:flex-row gap-3">
             {showFilters && (
               <div className="w-full md:w-56 flex-shrink-0">
@@ -591,6 +652,7 @@ export default function FirmsSection({
                   onClearAll={clearAllFilters}
                   hasActiveFilters={
                     filterValues.firm_type.size > 0 ||
+                    filterValues.allocator_type.size > 0 ||
                     filterValues.geographic_region.size > 0 ||
                     filterValues.recent_activity !== "all" ||
                     locationSearchLower ||
