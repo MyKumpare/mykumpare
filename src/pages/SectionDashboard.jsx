@@ -10,13 +10,14 @@ import { useSavedSectionLayout } from "@/components/shared/useSavedSectionLayout
 import { LayoutDashboard, Pencil, Eye, Save, Users, Building2, Upload, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import DashboardChartsPanel from "@/components/dashboard/DashboardChartsPanel";
+import DashboardReportDialog from "@/components/dashboard/DashboardReportDialog";
 
 export default function SectionDashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [mode, setMode] = usePersistentState("dash_mode", "edit");
   const [layoutApi, setLayoutApi] = useState(null);
+  const [reportKey, setReportKey] = useState(null);
   const { userLayout, firmwideLayout, saveLayout, isSaving } = useSavedSectionLayout("dashboard");
 
   const { data: firms = [] } = useQuery({
@@ -27,7 +28,11 @@ export default function SectionDashboard() {
 
   const handleSelect = (key) => {
     const mod = DASHBOARD_MODULE_MAP[key];
-    if (mod?.to) navigate(mod.to);
+    if (mod?.to) {
+      navigate(mod.to);
+    } else if (mod?.report) {
+      setReportKey(key);
+    }
   };
 
   // Click a category bar in the FirmCategoryChart → navigate to Home with
@@ -182,9 +187,6 @@ export default function SectionDashboard() {
           </p>
         )}
 
-        {/* Toggleable dashboard charts — users select which to display */}
-        <DashboardChartsPanel firms={firms} onClickCategory={handleCategoryClick} />
-
         <SectionModuleGrid
           modules={DASHBOARD_MODULES}
           moduleMap={DASHBOARD_MODULE_MAP}
@@ -194,6 +196,13 @@ export default function SectionDashboard() {
           accentRing="ring-indigo-300"
           readOnly={mode === "preview"}
           onLayoutApi={handleLayoutApi}
+        />
+
+        <DashboardReportDialog
+          reportKey={reportKey}
+          firms={firms}
+          onClickCategory={handleCategoryClick}
+          onClose={() => setReportKey(null)}
         />
       </div>
     </div>
