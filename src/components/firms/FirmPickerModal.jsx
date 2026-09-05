@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { X, Building, Plus, Search, ChevronRight, ChevronDown, Globe, MapPin, List, Users, Download, GitCompare, GripVertical } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { exportFirmsToCsv } from "./firmListCsvExport";
+import { base44 } from "@/api/base44Client";
 
 const HEADER_ORDER_KEY = "firmPicker_headerOrder";
 const DEFAULT_HEADER_IDS = ["list", "map", "compareFirms", "firmCoverage", "exportCsv"];
@@ -100,7 +101,25 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
   const [view, setView] = useState("list"); // "list" | "map"
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
+  const [allocatorTypeFilter, setAllocatorTypeFilter] = useState(new Set());
+  const [allocatorTypeOptions, setAllocatorTypeOptions] = useState([]);
   const [collapsedTypes, setCollapsedTypes] = useState({});
+
+  // Fetch AllocatorType master list so the sub-filter shows all available types
+  React.useEffect(() => {
+    let cancelled = false;
+    base44.entities.AllocatorType.list()
+      .then((rows) => { if (!cancelled) setAllocatorTypeOptions(rows.map((r) => r.name)); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  // Clear the allocator_type sub-filter when Allocator is deselected
+  React.useEffect(() => {
+    if (typeFilter !== "Allocator" && allocatorTypeFilter.size > 0) {
+      setAllocatorTypeFilter(new Set());
+    }
+  }, [typeFilter]);
   // Geographic drill-down
   const [geoCountry, setGeoCountry] = useState("");
   const [geoState, setGeoState] = useState("");
@@ -170,8 +189,20 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
         (f.firm_type || "").toLowerCase().includes(q) ||
         (f.firm_types || []).some(t => t.toLowerCase().includes(q));
       const matchesType = !typeFilter || getFirmTypes(f).includes(typeFilter);
-      return matchesSearch && matchesType;
-    }), [activeFirms, q, typeFilter]);
+      const matchesAllocatorType = allocatorTypeFilter.size === 0 ||
+        (f.allocator_types || []).some(at => allocatorTypeFilter.has(at));
+      return matchesSearch && matchesType && matchesAllocatorType;
+    }), [activeFirms, q, typeFilter, allocatorTypeFilter]);
+
+  // Allocator type counts — from all Allocator firms (before sub-filter), merged with master list
+  const allocatorTypeCounts = useMemo(() => {
+    const counts = {};
+    allocatorTypeOptions.forEach((at) => { counts[at] = 0; });
+    activeFirms
+      .filter(f => getFirmTypes(f).includes("Allocator"))
+      .forEach(f => (f.allocator_types || []).forEach(at => { counts[at] = (counts[at] || 0) + 1; }));
+    return counts;
+  }, [activeFirms, allocatorTypeOptions]);
 
   const grouped = useMemo(() => {
     const result = {};
@@ -419,6 +450,50 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
                   </button>
                 )}
               </div>
+
+              {/* Allocator sub-type filter pills — drill-down shown only when Allocator is selected */}
+              {typeFilter === "Allocator" && (
+                <div className="flex items-center gap-1.5 flex-wrap mt-2 pl-1">
+                  <span className="text-[11px] text-gray-400 font-medium uppercase tracking-wide mr-0.5">Allocator Type:</span>
+                  <button
+                    type="button"
+                    onClick={() => setAllocatorTypeFilter(new Set())}
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium transition-colors border ${
+                      allocatorTypeFilter.size === 0
+                        ? "bg-violet-600 text-white border-violet-600"
+                        : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
+                    }`}
+                  >
+                    All ({(grouped["Allocator"] || []).length || (typeCounts["Allocator"] || 0)})
+                  </button>
+                  {Object.entries(allocatorTypeCounts)
+                    .filter(([, count]) => count > 0)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([at, count]) => {
+                      const active = allocatorTypeFilter.has(at);
+                      return (
+                        <button
+                          key={at}
+                          type="button"
+                          onClick={() => {
+                            const next = new Set(allocatorTypeFilter);
+                            if (next.has(at)) next.delete(at);
+                            else next.add(at);
+                            setAllocatorTypeFilter(next);
+                          }}
+                          className={`text-xs px-2 py-0.5 rounded-full font-medium transition-colors border ${
+                            active
+                              ? "bg-violet-600 text-white border-violet-600"
+                              : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
+                          }`}
+                        >
+                          {at} ({count})
+                        </button>
+                      );
+                    })}
+                </div>
+              )}
+
               <div className="flex items-center justify-end gap-3 mt-1.5">
                 <button
                   type="button"
