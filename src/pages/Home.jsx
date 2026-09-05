@@ -323,13 +323,34 @@ export default function Home() {
     staleTime: 60000,
   });
 
-  // Merge supplementary search results into the firms list (dedup by id)
+  // Supplementary fetch for Allocator firms: fetchAllFirms paginates in
+  // batches of 5,000 by -created_date, and allocators are older firms that
+  // fall in the second (smaller) batch. If that batch fails due to rate
+  // limiting, allocators silently disappear. This small targeted query
+  // (only ~50 records) ensures allocators are always present.
+  const { data: supplementaryAllocators = [] } = useQuery({
+    queryKey: ["firms-allocators-supplement"],
+    queryFn: async () => {
+      const res = await base44.functions.invoke("searchAppData", {
+        action: "search",
+        entity_name: "Firm",
+        filter: { firm_type: "Allocator", deleted_at: null },
+        limit: 500,
+        sort: "-created_date",
+      });
+      return res?.records || [];
+    },
+    staleTime: 300000,
+  });
+
+  // Merge supplementary search results and allocators into the firms list (dedup by id)
   const allLoadedFirms = useMemo(() => {
-    if (!supplementaryFirms.length) return firms;
+    const extras = [...supplementaryFirms, ...supplementaryAllocators];
+    if (!extras.length) return firms;
     const existingIds = new Set(firms.map((f) => f.id));
-    const newOnes = supplementaryFirms.filter((f) => !existingIds.has(f.id));
+    const newOnes = extras.filter((f) => !existingIds.has(f.id) && !f.deleted_at);
     return newOnes.length ? [...firms, ...newOnes] : firms;
-  }, [firms, supplementaryFirms]);
+  }, [firms, supplementaryFirms, supplementaryAllocators]);
 
   const { data: products = [] } = useQuery({
     queryKey: ["products"],
@@ -804,8 +825,9 @@ export default function Home() {
   const q = searchQuery.toLowerCase();
 
   // Firms that match by name, OR have a matching product, OR have a matching contact
-  // Exclude soft-deleted firms
-  const activeFirms = firms.filter(f => !f.deleted_at);
+  // Exclude soft-deleted firms. Use allLoadedFirms (which includes supplementary
+  // allocator fetch) so allocators appear even when fetchAllFirms returns partial data.
+  const activeFirms = allLoadedFirms.filter(f => !f.deleted_at);
   const activeProducts = products.filter(p => !p.deleted_at);
   const activeContacts = contacts.filter(c => !c.deleted_at);
   
