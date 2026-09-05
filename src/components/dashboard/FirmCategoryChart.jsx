@@ -1,9 +1,9 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend, AreaChart, Area,
 } from "recharts";
-import { Building, TrendingUp } from "lucide-react";
+import { Building, TrendingUp, MousePointerClick } from "lucide-react";
 import { getFirmTypes } from "@/components/firms/firmTypeUtils";
 
 const CHART_COLORS = [
@@ -26,7 +26,8 @@ function formatMonth(dateStr) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-export default function FirmCategoryChart({ firms }) {
+export default function FirmCategoryChart({ firms, onClickCategory }) {
+  const [activeCategory, setActiveCategory] = useState(null);
   const activeFirms = useMemo(() => (firms || []).filter((f) => !f.deleted_at), [firms]);
 
   // ── Category breakdown (bar + pie) ──
