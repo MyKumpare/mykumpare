@@ -17,8 +17,25 @@ async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
   throw new Error('max retries exceeded');
 }
 
-async function deleteAll(svc: any, entity: string, filter: any): Promise<number> {
+// Hard-deletes all records matching the filter. For entities that support
+// trash (have deleted_at), deleteMany skips soft-deleted records — so we
+// first un-delete them (clear deleted_at via updateMany $unset), then
+// deleteMany to permanently remove them.
+async function purgeRecords(svc: any, entity: string, filter: any, hasTrash: boolean): Promise<number> {
   let count = 0;
+
+  if (hasTrash) {
+    // Step 1: Un-delete (clear deleted_at) so deleteMany can find them
+    let more = true;
+    while (more) {
+      const r: any = await withRetry(() =>
+        svc.entities[entity].updateMany(filter, { $unset: { deleted_at: '' } })
+      );
+      more = r.has_more;
+    }
+  }
+
+  // Step 2: Hard-delete
   let more = true;
   while (more) {
     const r: any = await withRetry(() => svc.entities[entity].deleteMany(filter));
@@ -57,71 +74,69 @@ export default async function (req: Request): Promise<Response> {
       for (const p of products) productIds.push(p.id);
     }
 
-    // --- 2. Hard-delete ReturnSeries ---
+    // --- 2. Hard-delete ReturnSeries (no trash) ---
     if (productIds.length) {
       let rsCount = 0;
       for (let i = 0; i < productIds.length; i += CHUNK) {
         const chunk = productIds.slice(i, i + CHUNK);
-        rsCount += await deleteAll(svc, 'ReturnSeries', { product_id: { $in: chunk } });
+        rsCount += await purgeRecords(svc, 'ReturnSeries', { product_id: { $in: chunk } }, false);
       }
       if (rsCount > 0) counts.return_series = rsCount;
     }
 
     // --- 3. Hard-delete related entities with direct firm_id ---
-    const relatedEntities: [string, string][] = [
-      ['Product', 'firm_id'],
-      ['FirmDocument', 'firm_id'],
-      ['DueDiligence', 'firm_id'],
-      ['Ownership', 'firm_id'],
-      ['OrgChart', 'firm_id'],
-      ['FirmConsultant', 'firm_id'],
-      ['FirmNews', 'firm_id'],
-      ['BoardMeeting', 'firm_id'],
-      ['OnsiteVisit', 'firm_id'],
-      ['OnsiteVisitRule', 'firm_id'],
-      ['FirmAumThreshold', 'firm_id'],
-      ['FirmAumAlert', 'firm_id'],
-      ['StalledDdAlert', 'firm_id'],
-      ['FirmRfpRfi', 'firm_id'],
-      ['FirmConference', 'firm_id'],
-      ['FirmOwner', 'firm_id'],
+    // [entity, field, hasTrash]
+    const relatedEntities: [string, string, boolean][] = [
+      ['Product', 'firm_id', true],
+      ['FirmDocument', 'firm_id', false],
+      ['DueDiligence', 'firm_id', false],
+      ['Ownership', 'firm_id', false],
+      ['OrgChart', 'firm_id', false],
+      ['FirmConsultant', 'firm_id', false],
+      ['FirmNews', 'firm_id', false],
+      ['BoardMeeting', 'firm_id', true],
+      ['OnsiteVisit', 'firm_id', false],
+      ['OnsiteVisitRule', 'firm_id', false],
+      ['FirmAumThreshold', 'firm_id', false],
+      ['FirmAumAlert', 'firm_id', false],
+      ['StalledDdAlert', 'firm_id', false],
+      ['FirmRfpRfi', 'firm_id', false],
+      ['FirmConference', 'firm_id', false],
+      ['FirmOwner', 'firm_id', false],
     ];
 
-    for (const [entity, field] of relatedEntities) {
+    for (const [entity, field, hasTrash] of relatedEntities) {
       let count = 0;
       for (let i = 0; i < firmIds.length; i += CHUNK) {
         const chunk = firmIds.slice(i, i + CHUNK);
-        count += await deleteAll(svc, entity, { [field]: { $in: chunk } });
+        count += await purgeRecords(svc, entity, { [field]: { $in: chunk } }, hasTrash);
       }
       if (count > 0) counts[entity] = count;
     }
 
-    // --- 4. Hard-delete Contacts (already soft-deleted) ---
+    // --- 4. Hard-delete Contacts (firm_ids array, has trash) ---
     let contactCount = 0;
     for (let i = 0; i < firmIds.length; i += CHUNK) {
       const chunk = firmIds.slice(i, i + CHUNK);
-      contactCount += await deleteAll(svc, 'Contact', {
-        firm_ids: { $in: chunk },
-        deleted_at: { $exists: true },
-      });
+      contactCount += await purgeRecords(svc, 'Contact', { firm_ids: { $in: chunk } }, true);
     }
     if (contactCount > 0) counts.contacts = contactCount;
 
-    // --- 5. Hard-delete Portfolios (firm_id OR advisor_firm_id) ---
+    // --- 5. Hard-delete Portfolios (firm_id OR advisor_firm_id, has trash) ---
     let portCount = 0;
     for (const field of ['firm_id', 'advisor_firm_id']) {
       for (let i = 0; i < firmIds.length; i += CHUNK) {
         const chunk = firmIds.slice(i, i + CHUNK);
-        portCount += await deleteAll(svc, 'Portfolio', { [field]: { $in: chunk } });
+        portCount += await purgeRecords(svc, 'Portfolio', { [field]: { $in: chunk } }, true);
       }
     }
     if (portCount > 0) counts.portfolios = portCount;
 
-    // --- 6. Hard-delete the firms themselves ---
+    // --- 6. Hard-delete the firms themselves (has trash) ---
     let firmCount = 0;
     for (let i = 0; i < firmIds.length; i += CHUNK) {
       const chunk = firmIds.slice(i, i + CHUNK);
-      firmCount += await deleteAll(svc, 'Firm', { id: { $in: chunk } });
+      firmCount += await purgeRecords(svc, 'Firm', { id: { $in: chunk } }, true);
     }
     counts.firms_deleted = firmCount;
 
