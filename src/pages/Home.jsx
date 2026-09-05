@@ -292,12 +292,14 @@ export default function Home() {
     queryKey: ["firms"],
     queryFn: async () => {
       const all = [];
-      let offset = 0;
+      let lastDate = null;
       while (true) {
-        const batch = await base44.entities.Firm.filter({}, "-created_date", 5000, offset);
+        const query = lastDate ? { created_date: { $lt: lastDate } } : {};
+        const batch = await base44.entities.Firm.filter(query, "-created_date", 5000);
         all.push(...batch);
         if (batch.length < 5000) break;
-        offset += 5000;
+        lastDate = batch[batch.length - 1]?.created_date;
+        if (!lastDate) break;
       }
       return all;
     },
