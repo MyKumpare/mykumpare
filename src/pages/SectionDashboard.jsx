@@ -10,7 +10,7 @@ import { useSavedSectionLayout } from "@/components/shared/useSavedSectionLayout
 import { LayoutDashboard, Pencil, Eye, Save, Users, Building2, Upload, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import FirmAumTrendCard from "@/components/dashboard/FirmAumTrendCard";
+import DashboardChartsPanel from "@/components/dashboard/DashboardChartsPanel";
 
 export default function SectionDashboard() {
   const navigate = useNavigate();
@@ -175,10 +175,8 @@ export default function SectionDashboard() {
           </p>
         )}
 
-        {/* AUM & Net Flow trend chart for selected firms */}
-        <div className="mb-4">
-          <FirmAumTrendCard firms={firms} />
-        </div>
+        {/* Toggleable dashboard charts — users select which to display */}
+        <DashboardChartsPanel firms={firms} />
 
         <SectionModuleGrid
           modules={DASHBOARD_MODULES}
