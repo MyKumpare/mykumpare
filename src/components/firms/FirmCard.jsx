@@ -89,6 +89,11 @@ export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditP
               {firmType}
             </span>
           )}
+          {isAllocator && firm.allocator_types && firm.allocator_types.length > 0 && (
+            <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded-full bg-violet-50 text-violet-600 text-[11px] font-medium flex-shrink-0">
+              {firm.allocator_types.join(", ")}
+            </span>
+          )}
           {contactCount > 0 && (
             <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-50 text-gray-500 text-[11px] font-medium flex-shrink-0">
               <Users className="w-3 h-3" />
