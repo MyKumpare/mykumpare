@@ -190,6 +190,7 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
         (f.firm_types || []).some(t => t.toLowerCase().includes(q));
       const matchesType = !typeFilter || getFirmTypes(f).includes(typeFilter);
       const matchesAllocatorType = allocatorTypeFilter.size === 0 ||
+        (allocatorTypeFilter.has("__no_type__") && (!f.allocator_types || f.allocator_types.length === 0)) ||
         (f.allocator_types || []).some(at => allocatorTypeFilter.has(at));
       return matchesSearch && matchesType && matchesAllocatorType;
     }), [activeFirms, q, typeFilter, allocatorTypeFilter]);
@@ -203,6 +204,12 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
       .forEach(f => (f.allocator_types || []).forEach(at => { counts[at] = (counts[at] || 0) + 1; }));
     return counts;
   }, [activeFirms, allocatorTypeOptions]);
+
+  // Count of Allocator firms with no allocator type assigned
+  const allocatorNoTypeCount = useMemo(() =>
+    activeFirms.filter(f => getFirmTypes(f).includes("Allocator") && (!f.allocator_types || f.allocator_types.length === 0)).length,
+    [activeFirms]
+  );
 
   const grouped = useMemo(() => {
     const result = {};
@@ -466,6 +473,24 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
                   >
                     All ({(grouped["Allocator"] || []).length || (typeCounts["Allocator"] || 0)})
                   </button>
+                  {allocatorNoTypeCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = new Set(allocatorTypeFilter);
+                        if (next.has("__no_type__")) next.delete("__no_type__");
+                        else next.add("__no_type__");
+                        setAllocatorTypeFilter(next);
+                      }}
+                      className={`text-xs px-2 py-0.5 rounded-full font-medium transition-colors border ${
+                        allocatorTypeFilter.has("__no_type__")
+                          ? "bg-violet-600 text-white border-violet-600"
+                          : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
+                      }`}
+                    >
+                      No Type ({allocatorNoTypeCount})
+                    </button>
+                  )}
                   {Object.entries(allocatorTypeCounts)
                     .filter(([, count]) => count > 0)
                     .sort((a, b) => b[1] - a[1])

@@ -133,6 +133,7 @@ export default function FirmsSection({
       const atFiltered = {};
       for (const [type, firms] of Object.entries(result)) {
         const filtered = firms.filter((f) =>
+          (filterValues.allocator_type.has("__no_type__") && (!f.allocator_types || f.allocator_types.length === 0)) ||
           (f.allocator_types || []).some((at) => filterValues.allocator_type.has(at))
         );
         if (filtered.length) atFiltered[type] = filtered;
@@ -275,7 +276,9 @@ export default function FirmsSection({
     const allocatorTypes = {};
     // Seed from the master list so every known allocator type appears (count 0 if unassigned)
     for (const name of allocatorTypeOptions) allocatorTypes[name] = 0;
+    let allocatorNoType = 0;
     for (const f of groupedFirms["Allocator"] || []) {
+      if (!f.allocator_types || f.allocator_types.length === 0) allocatorNoType++;
       for (const at of f.allocator_types || []) {
         allocatorTypes[at] = (allocatorTypes[at] || 0) + 1;
       }
@@ -288,6 +291,7 @@ export default function FirmsSection({
       year_founded: yearFounded,
       sourcing_source: sourcingSource,
       coverage_status: coverageStatus,
+      allocator_no_type: allocatorNoType,
     };
   }, [groupedFirms, allocatorTypeOptions]);
 
@@ -642,6 +646,24 @@ export default function FirmsSection({
               >
                 All ({(groupedFirms["Allocator"] || []).length})
               </button>
+              {filterCounts.allocator_no_type > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = new Set(filterValues.allocator_type);
+                    if (next.has("__no_type__")) next.delete("__no_type__");
+                    else next.add("__no_type__");
+                    handleFilterChange("allocator_type", next);
+                  }}
+                  className={`text-xs px-2 py-0.5 rounded-full font-medium transition-colors border ${
+                    filterValues.allocator_type.has("__no_type__")
+                      ? "bg-violet-600 text-white border-violet-600"
+                      : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
+                  }`}
+                >
+                  No Type ({filterCounts.allocator_no_type})
+                </button>
+              )}
               {Object.entries(filterCounts.allocator_type)
                 .sort((a, b) => b[1] - a[1])
                 .map(([at, count]) => {
