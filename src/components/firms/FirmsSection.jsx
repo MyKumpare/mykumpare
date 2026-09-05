@@ -61,6 +61,17 @@ export default function FirmsSection({
   const [showFilters, setShowFilters] = useState(true);
   const [dateRange, setDateRange] = useState({ start: "", end: "" });
   const [expandedTypes, setExpandedTypes] = useState({});
+  const [allocatorTypeOptions, setAllocatorTypeOptions] = useState([]);
+
+  // Fetch AllocatorType master list so the sub-filter shows all available types,
+  // not just the ones already assigned to firms.
+  useEffect(() => {
+    let cancelled = false;
+    base44.entities.AllocatorType.list()
+      .then((rows) => { if (!cancelled) setAllocatorTypeOptions(rows.map((r) => r.name)); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   // Bulk selection state
   const [selectionMode, setSelectionMode] = useState(false);
@@ -254,6 +265,8 @@ export default function FirmsSection({
       }
     }
     const allocatorTypes = {};
+    // Seed from the master list so every known allocator type appears (count 0 if unassigned)
+    for (const name of allocatorTypeOptions) allocatorTypes[name] = 0;
     for (const f of groupedFirms["Allocator"] || []) {
       for (const at of f.allocator_types || []) {
         allocatorTypes[at] = (allocatorTypes[at] || 0) + 1;
@@ -268,7 +281,7 @@ export default function FirmsSection({
       sourcing_source: sourcingSource,
       coverage_status: coverageStatus,
     };
-  }, [groupedFirms]);
+  }, [groupedFirms, allocatorTypeOptions]);
 
   const handleFilterChange = (key, value) => {
     setFilterValues((prev) => ({ ...prev, [key]: value }));
@@ -606,8 +619,8 @@ export default function FirmsSection({
             })}
           </div>
 
-          {/* Allocator sub-type filter pills — shown when Allocator firms are in view */}
-          {filteredGrouped["Allocator"] && Object.keys(filterCounts.allocator_type || {}).length > 0 && (
+          {/* Allocator sub-type filter pills — shown whenever Allocator firms are in view */}
+          {filteredGrouped["Allocator"] && (
             <div className="flex items-center gap-1.5 flex-wrap mb-2 pl-1">
               <span className="text-[11px] text-gray-400 font-medium uppercase tracking-wide mr-0.5">Allocator Type:</span>
               <button
