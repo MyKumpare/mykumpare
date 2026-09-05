@@ -28,10 +28,10 @@ const EXPORT_HEADERS = [
   "Date Added",
 ];
 
+import { getFirmType } from "./firmTypeUtils";
+
 function buildRow(firm) {
-  const types = Array.isArray(firm.firm_types) && firm.firm_types.length
-    ? firm.firm_types.join("; ")
-    : firm.firm_type || "";
+  const types = getFirmType(firm);
   const hq = (firm.addresses || []).find((a) => a.is_headquarters) || (firm.addresses || [])[0];
   const hqStr = hq
     ? [hq.address_line1, hq.address_line2, hq.city, hq.state, hq.postal_code, hq.country]

@@ -5,6 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import FirmStatusBadges from "./FirmStatusBadges";
 import XponanceContactBadges from "@/components/xponance/XponanceContactBadges";
 import { exportFirmProfilePdf } from "@/components/reports/firmProfilePdfExport";
+import { getFirmType } from "./firmTypeUtils";
 
 const FIRM_TYPE_TO_PRODUCT_TYPE = {
   "Investment Manager": "Investment Manager Product",
@@ -12,7 +13,8 @@ const FIRM_TYPE_TO_PRODUCT_TYPE = {
 
 export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditProduct, onAddPortfolio, products = [], forceExpand = false, selectionMode = false, selected = false, onToggleSelect }) {
   const ALLOWED_FIRM_TYPES = ["Investment Manager"];
-  const effectiveTypes = firm.firm_types?.length > 0 ? firm.firm_types : (firm.firm_type ? [firm.firm_type] : []);
+  const firmType = getFirmType(firm);
+  const effectiveTypes = firmType ? [firmType] : [];
   const allowedType = effectiveTypes.find(t => ALLOWED_FIRM_TYPES.includes(t));
   const productType = allowedType ? FIRM_TYPE_TO_PRODUCT_TYPE[allowedType] : null;
   const isAllocator = effectiveTypes.includes("Allocator");

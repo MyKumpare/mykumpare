@@ -23,8 +23,7 @@ function downloadCsv(filename, rows) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-const getFirmTypes = (f) =>
-  f.firm_types?.length ? f.firm_types : f.firm_type ? [f.firm_type] : [];
+import { getFirmTypes } from "./firmTypeUtils";
 
 /**
  * Export a list of firms to CSV.

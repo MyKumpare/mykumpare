@@ -44,8 +44,7 @@ const FIRM_TYPES = [
   "Trade Organizations",
 ];
 
-const getFirmTypes = (f) =>
-  f.firm_types?.length ? f.firm_types : f.firm_type ? [f.firm_type] : ["Other"];
+import { getFirmTypes } from "./firmTypeUtils";
 
 function makeFirmIcon(highlighted) {
   const size = highlighted ? 32 : 24;

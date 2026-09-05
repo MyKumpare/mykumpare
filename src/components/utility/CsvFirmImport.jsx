@@ -38,7 +38,7 @@ const FIRM_TYPES = [
 // still mappable if a user happens to include them in their file.
 const IMPORTABLE_FIELDS = [
   { key: "name", label: "Firm Name", required: true },
-  { key: "firm_types", label: "Firm Types (semicolon-separated)", required: true, isArray: true, enum: FIRM_TYPES },
+  { key: "firm_type", label: "Firm Type", required: true, enum: FIRM_TYPES },
   { key: "allocator_types", label: "Allocator Types (semicolon-separated)", isArray: true },
   { key: "logo_url", label: "Logo URL" },
   { key: "website", label: "Website" },
@@ -50,7 +50,7 @@ const IMPORTABLE_FIELDS = [
 
 const FIELD_ALIASES = {
   name: ["name", "firmname", "company", "companyname", "organization", "org", "firm"],
-  firm_types: ["firmtypes", "firmtype", "types", "type", "category", "categories"],
+  firm_type: ["firmtype", "firmtypes", "type", "types", "category", "categories"],
   allocator_types: ["allocatortypes", "allocatortype", "allocatortypes", "allocatortype"],
   logo_url: ["logourl", "logo", "logoimage", "logoimageurl"],
   website: ["website", "site", "url", "web", "webpage", "homepage"],
@@ -144,10 +144,8 @@ function buildCsvMergeUpdates(existingFirm, csvFirm) {
   fillIfEmpty("email");
   fillIfEmpty("description");
   if (csvFirm.year_founded && !existingFirm.year_founded) updates.year_founded = csvFirm.year_founded;
-  if (csvFirm.firm_types && csvFirm.firm_types.length > 0) {
-    const existing = existingFirm.firm_types || [];
-    const mergedTypes = [...new Set([...existing, ...csvFirm.firm_types])];
-    if (mergedTypes.length > existing.length) updates.firm_types = mergedTypes;
+  if (csvFirm.firm_type && !existingFirm.firm_type) {
+    updates.firm_type = csvFirm.firm_type;
   }
   if (csvFirm.allocator_types && csvFirm.allocator_types.length > 0) {
     const existing = existingFirm.allocator_types || [];
@@ -231,23 +229,21 @@ export default function CsvFirmImport({ onStageChange } = {}) {
       });
 
       if (!raw.name) {
-        skipped.push({ row: rowIdx + 2, reason: "Missing firm name", name: "", firm_types: raw.firm_types || "" });
+        skipped.push({ row: rowIdx + 2, reason: "Missing firm name", name: "", firm_type: raw.firm_type || "" });
         return;
       }
-      if (!raw.firm_types) {
-        skipped.push({ row: rowIdx + 2, reason: "Missing firm type(s)", name: raw.name || "", firm_types: "" });
-        return;
-      }
-
-      const types = raw.firm_types
-        .split(/[;|]/).map((t) => t.trim()).filter(Boolean)
-        .map((t) => validateEnum(t, FIRM_TYPES)).filter(Boolean);
-      if (types.length === 0) {
-        skipped.push({ row: rowIdx + 2, reason: `Invalid firm type: ${raw.firm_types}`, name: raw.name || "", firm_types: raw.firm_types || "" });
+      if (!raw.firm_type) {
+        skipped.push({ row: rowIdx + 2, reason: "Missing firm type", name: raw.name || "", firm_type: "" });
         return;
       }
 
-      const firm = { tenant_id, name: raw.name, firm_types: [...new Set(types)] };
+      const type = validateEnum(raw.firm_type, FIRM_TYPES);
+      if (!type) {
+        skipped.push({ row: rowIdx + 2, reason: `Invalid firm type: ${raw.firm_type}`, name: raw.name || "", firm_type: raw.firm_type || "" });
+        return;
+      }
+
+      const firm = { tenant_id, name: raw.name, firm_type: type };
       if (raw.allocator_types) {
         const allocTypes = raw.allocator_types
           .split(/[;|]/).map((t) => t.trim()).filter(Boolean);

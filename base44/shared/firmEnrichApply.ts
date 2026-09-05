@@ -138,10 +138,9 @@ export async function applyFirmEnrichment(
   fillIfEmpty('email');
   fillIfEmpty('linkedin_url');
   if (enriched.year_founded && !firm.year_founded) updates.year_founded = enriched.year_founded;
-  if (Array.isArray(enriched.firm_types) && enriched.firm_types.length > 0) {
-    const existing = firm.firm_types || [];
-    const merged = [...new Set([...existing, ...enriched.firm_types])];
-    if (merged.length > existing.length) updates.firm_types = merged;
+  const enrichedType: string = enriched.firm_type || (Array.isArray(enriched.firm_types) && enriched.firm_types.length > 0 ? enriched.firm_types[0] : '');
+  if (enrichedType && !firm.firm_type) {
+    updates.firm_type = enrichedType;
   }
   if (Array.isArray(enriched.addresses) && enriched.addresses.length > 0 && (!firm.addresses || firm.addresses.length === 0)) {
     const addrs = enriched.addresses.filter((a: any) => a.address_line1 || a.city);

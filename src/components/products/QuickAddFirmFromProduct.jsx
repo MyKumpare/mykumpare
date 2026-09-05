@@ -68,7 +68,6 @@ export default function QuickAddFirmFromProduct({
       const newFirm = await base44.entities.Firm.create({
         name: firmName.trim(),
         firm_type: firmType,
-        firm_types: [firmType],
         tenant_id: user?.linked_firm_id,
       });
       queryClient.invalidateQueries({ queryKey: ["firms"] });

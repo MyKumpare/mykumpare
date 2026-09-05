@@ -25,7 +25,6 @@ export default async function(req) {
     const firm = await base44.asServiceRole.entities.Firm.create({
       name,
       firm_type: firmType,
-      firm_types: [firmType],
       website: website || undefined,
     });
     await base44.asServiceRole.entities.Firm.update(firm.id, { tenant_id: firm.id });

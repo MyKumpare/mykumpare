@@ -12,6 +12,7 @@ import { parsePhoneString } from "@/components/ai/firmEnrichment";
 import { detectDesignations } from "@/components/contacts/designationDetector";
 import { toast } from "@/components/ui/use-toast";
 import { withAuditHistory } from "@/components/shared/auditHistory";
+import { getFirmTypes } from "@/components/firms/firmTypeUtils";
 
 import { lazyDialog } from "@/components/common/lazyDialog";
 import SearchResults from "../components/search/SearchResults";
@@ -770,9 +771,6 @@ export default function Home() {
   const filteredFirms = activeFirms.filter((f) =>
     f.name.toLowerCase().includes(q) || matchingProductFirmIds.has(f.id) || matchingContactFirmIds.has(f.id)
   );
-
-  const getFirmTypes = (f) =>
-    f.firm_types?.length ? f.firm_types : f.firm_type ? [f.firm_type] : [];
 
   const groupedFirms = FIRM_TYPES.reduce((acc, type) => {
     const typeFirms = filteredFirms

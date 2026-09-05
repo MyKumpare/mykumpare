@@ -54,7 +54,7 @@ export default function QuickAddFirmForm({ onFirmCreated, onCancel }) {
         return;
       }
     }
-    createMutation.mutate({ name: name.trim(), firm_type: firmType, firm_types: [firmType], tenant_id: user?.linked_firm_id });
+    createMutation.mutate({ name: name.trim(), firm_type: firmType, tenant_id: user?.linked_firm_id });
   };
 
   return (

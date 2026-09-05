@@ -12,14 +12,7 @@
     },
     "firm_type": {
       "type": "string",
-      "description": "Primary type of firm (legacy single value). Free-text value drawn from the FirmType master list; users can add new types via the firm form dropdown."
-    },
-    "firm_types": {
-      "type": "array",
-      "description": "Types of firm (multi-select). Free-text values drawn from the FirmType master list; users can add new types via the firm form dropdown.",
-      "items": {
-        "type": "string"
-      }
+      "description": "Type of firm (single value). Free-text value drawn from the FirmType master list; users can add new types via the firm form dropdown."
     },
     "allocator_types": {
       "type": "array",
