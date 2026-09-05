@@ -11,6 +11,7 @@ import { lazyDialog } from "@/components/common/lazyDialog";
 import { useAuth } from "@/lib/AuthContext";
 import EntityFilterSidebar from "@/components/common/EntityFilterSidebar";
 import { Button } from "@/components/ui/button";
+import DdProductsListDialog from "@/components/firms/DdProductsListDialog";
 
 const DocumentsDashboardModal = lazyDialog(() => import("@/components/firms/DocumentsDashboardModal"));
 const TemplatePickerModal = lazyDialog(() => import("@/components/templates/TemplatePickerModal"));
@@ -55,6 +56,7 @@ export default function SectionDueDiligence() {
     return DD_DEFAULT_CATEGORIES.filter((c) => filterValues.category.has(c.id));
   }, [filterValues]);
 
+  const [ddProductsDialog, setDdProductsDialog] = useState(null);
   const { data: ddRecords = [], isLoading } = useQuery({
     queryKey: ["dd_section_count"],
     queryFn: () => base44.entities.DueDiligence.list("-created_date", 5000),
@@ -63,6 +65,9 @@ export default function SectionDueDiligence() {
   const pendingApprovals = activeDd.reduce(
     (sum, dd) => sum + (dd.stages || []).filter((s) => s.supervisor_status === "pending" && s.supervisor_contact_id).length,
     0
+  );
+  const pendingDd = activeDd.filter((dd) =>
+    (dd.stages || []).some((s) => s.supervisor_status === "pending" && s.supervisor_contact_id)
   );
 
   const handleSelect = (key) => {
@@ -87,8 +92,8 @@ export default function SectionDueDiligence() {
 
       <div className="max-w-7xl xl:max-w-[1400px] mx-auto px-4 sm:px-6 pt-4 pb-12">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
-          <SectionStatusCard label="Due Diligence Records" value={activeDd.length} icon={ListChecks} color="bg-indigo-500" loading={isLoading} />
-          <SectionStatusCard label="Pending Approvals" value={pendingApprovals} icon={Clock} color="bg-amber-500" loading={isLoading} />
+          <SectionStatusCard label="Due Diligence Records" value={activeDd.length} icon={ListChecks} color="bg-indigo-500" loading={isLoading} onClick={() => setDdProductsDialog("all")} />
+          <SectionStatusCard label="Pending Approvals" value={pendingApprovals} icon={Clock} color="bg-amber-500" loading={isLoading} onClick={() => setDdProductsDialog("pending")} />
         </div>
 
         <div className="flex flex-col md:flex-row gap-4">
@@ -129,6 +134,12 @@ export default function SectionDueDiligence() {
         </div>
       </div>
 
+      <DdProductsListDialog
+        open={!!ddProductsDialog}
+        onOpenChange={(o) => !o && setDdProductsDialog(null)}
+        title={ddProductsDialog === "pending" ? "Pending Approvals — Products" : "Due Diligence Records — Products"}
+        ddRecords={ddProductsDialog === "pending" ? pendingDd : activeDd}
+      />
       <DocumentsDashboardModal open={documentsOpen} onClose={() => setDocumentsOpen(false)} />
       <TemplatePickerModal open={templatesOpen} onClose={() => setTemplatesOpen(false)} />
       <QuestionnairePickerModal

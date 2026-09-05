@@ -55,9 +55,13 @@ export function SectionBackButton({ label, onClick }) {
  * Shared summary status card for section landing pages. Mirrors the compact
  * stat cards used on the Monitor / Overview dashboards.
  */
-export function SectionStatusCard({ label, value, icon: Icon, color = "bg-indigo-500", loading }) {
+export function SectionStatusCard({ label, value, icon: Icon, color = "bg-indigo-500", loading, onClick }) {
+  const clickable = !!onClick;
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center gap-3">
+    <div
+      onClick={onClick}
+      className={`bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center gap-3 ${clickable ? "cursor-pointer hover:shadow-md hover:border-indigo-200 transition-all" : ""}`}
+    >
       <div className={`w-10 h-10 rounded-lg ${color} flex items-center justify-center flex-shrink-0`}>
         <Icon className="w-5 h-5 text-white" />
       </div>
