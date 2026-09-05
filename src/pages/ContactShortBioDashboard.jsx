@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, AlertCircle, Search, FileText, RefreshCw, X } from "lucide-react";
+import { CheckCircle2, AlertCircle, Search, FileText, RefreshCw, X, Sparkles } from "lucide-react";
 
 function formatContactName(c) {
   const name = [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ");
@@ -14,9 +14,12 @@ function formatContactName(c) {
 
 export default function ContactShortBioDashboard() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("missing"); // all | missing | has
   const [hideInactive, setHideInactive] = useState(true);
+  const [generating, setGenerating] = useState(false);
+  const [genResult, setGenResult] = useState(null);
 
   const { data: contacts = [], isLoading } = useQuery({
     queryKey: ["contacts", "short-bio-dashboard"],
@@ -64,6 +67,30 @@ export default function ContactShortBioDashboard() {
 
   const pct = stats.total > 0 ? Math.round((stats.withBio / stats.total) * 100) : 0;
 
+  // IDs of contacts missing a short bio (respecting active/inactive toggle)
+  const missingIds = useMemo(
+    () => enriched.filter((c) => !c.hasBio).map((c) => c.id),
+    [enriched]
+  );
+
+  const handleGenerateMissing = async () => {
+    if (missingIds.length === 0) return;
+    setGenerating(true);
+    setGenResult(null);
+    try {
+      const res = await base44.functions.invoke("generateMissingShortBios", {
+        contact_ids: missingIds,
+        batch_size: Math.min(missingIds.length, 150),
+      });
+      setGenResult(res?.data || res);
+      await queryClient.invalidateQueries({ queryKey: ["contacts", "short-bio-dashboard"] });
+    } catch (err) {
+      setGenResult({ error: err.message || "Failed to generate bios" });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto">
       {/* Header */}
@@ -73,17 +100,60 @@ export default function ContactShortBioDashboard() {
             <FileText className="w-5 h-5 text-indigo-600" />
             <h1 className="text-xl font-bold text-gray-800">Short Bio Tracker</h1>
           </div>
-          <button
-            onClick={() => navigate("/")}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-            title="Close"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              className="bg-indigo-600 hover:bg-indigo-700 gap-1.5"
+              disabled={generating || missingIds.length === 0}
+              onClick={handleGenerateMissing}
+              title={missingIds.length === 0 ? "No contacts missing a short bio" : `Generate short bios for ${missingIds.length} contact${missingIds.length === 1 ? "" : "s"} using firm & role info`}
+            >
+              {generating ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Generate Missing Bios
+                </>
+              )}
+            </Button>
+            <button
+              onClick={() => navigate("/")}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+              title="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
         <p className="text-sm text-gray-500">
           Track which contact profiles still need a short biography generated.
         </p>
+        {genResult && !genResult.error && (
+          <div className="mt-3 flex items-center gap-2 text-sm bg-green-50 text-green-700 border border-green-200 rounded-lg px-3 py-2">
+            <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+            <span>
+              Generated <strong>{genResult.processed}</strong> short bio{genResult.processed === 1 ? "" : "s"}
+              {genResult.remaining > 0 && <> — {genResult.remaining} remaining (run again to continue)</>}
+              {genResult.errors?.length > 0 && <> · {genResult.errors.length} skipped</>}
+            </span>
+            <button onClick={() => setGenResult(null)} className="ml-auto text-green-600 hover:text-green-800">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+        {genResult?.error && (
+          <div className="mt-3 flex items-center gap-2 text-sm bg-red-50 text-red-700 border border-red-200 rounded-lg px-3 py-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span>{genResult.error}</span>
+            <button onClick={() => setGenResult(null)} className="ml-auto text-red-600 hover:text-red-800">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Summary cards */}
