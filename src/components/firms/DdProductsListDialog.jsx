@@ -1,14 +1,23 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Building, Package, Clock, ShieldCheck } from "lucide-react";
+import { Building, Package, Clock, ShieldCheck, ExternalLink } from "lucide-react";
 
 /**
  * Dialog showing the products included in a Due Diligence category
  * (all DD records, or only those with pending supervisor approvals).
- * Each row shows the product name, firm name, DD status, and (for
- * pending approvals) the stages awaiting approval.
+ * Each row shows the product name (as a hyperlink to open the product
+ * record), firm name, DD status, and (for pending approvals) the stages
+ * awaiting approval.
  */
 export default function DdProductsListDialog({ open, onOpenChange, title, ddRecords }) {
+  const navigate = useNavigate();
+
+  const openProduct = (productId) => {
+    onOpenChange(false);
+    navigate(`/?openProduct=${productId}`);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
@@ -33,7 +42,15 @@ export default function DdProductsListDialog({ open, onOpenChange, title, ddReco
                       <Package className="w-4 h-4 text-violet-600" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-800 truncate">{dd.product_name || "—"}</p>
+                      <button
+                        type="button"
+                        onClick={() => dd.product_id && openProduct(dd.product_id)}
+                        disabled={!dd.product_id}
+                        className="text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:underline inline-flex items-center gap-1 text-left disabled:text-gray-800 disabled:no-underline disabled:cursor-default"
+                      >
+                        {dd.product_name || "—"}
+                        {dd.product_id && <ExternalLink className="w-3 h-3 flex-shrink-0" />}
+                      </button>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         <Building className="w-3 h-3 text-gray-400" />
                         <span className="text-xs text-gray-500 truncate">{dd.firm_name || "—"}</span>

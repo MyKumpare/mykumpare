@@ -420,7 +420,8 @@ export default function Home() {
     const params = new URLSearchParams(location.search);
     const openFirmId = params.get("openFirm");
     const openContactId = params.get("openContact");
-    const key = openFirmId || openContactId;
+    const openProductId = params.get("openProduct");
+    const key = openFirmId || openContactId || openProductId;
     if (!key || openedFromQueryRef.current === key) return;
     if (openFirmId) {
       const firm = firms.find((f) => f.id === openFirmId && !f.deleted_at);
@@ -442,8 +443,15 @@ export default function Home() {
         setViewingContact(contact);
         navigate(location.pathname, { replace: true });
       }
+    } else if (openProductId) {
+      const product = products.find((p) => p.id === openProductId && !p.deleted_at);
+      if (product) {
+        openedFromQueryRef.current = key;
+        handleEditProduct(product);
+        navigate(location.pathname, { replace: true });
+      }
     }
-  }, [location.search, firms, contacts, navigate]);
+  }, [location.search, firms, contacts, products, navigate]);
 
   const deletedCount = deletedFirms.length + deletedProducts.length + deletedContacts.length + deletedPortfolios.length;
 
