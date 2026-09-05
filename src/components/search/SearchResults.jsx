@@ -2,17 +2,6 @@ import React, { useMemo } from "react";
 import { Building2, User, Package, LayoutList, LineChart, ClipboardList, Clock, AlertCircle, CheckCircle2, XCircle, Calendar, Files, ClipboardCheck, FileText, BarChart2 } from "lucide-react";
 import { format } from "date-fns";
 
-// Fuzzy token matcher: returns true if ALL query tokens appear as substrings
-// in ANY of the provided field strings (case-insensitive). This catches
-// multi-word firm names like "New York State Common Retirement Fund" even
-// when the user types partial tokens.
-function fuzzyMatchAllTokens(query, fields) {
-  const tokens = query.toLowerCase().trim().split(/\s+/).filter((t) => t.length >= 2);
-  if (tokens.length === 0) return false;
-  const haystack = fields.filter(Boolean).join(" ").toLowerCase();
-  return tokens.every((tok) => haystack.includes(tok));
-}
-
 function getContactFullName(c) {
   return [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix]
     .filter(Boolean).join(" ") +

@@ -309,11 +309,11 @@ export default function Home() {
       if (searchKeywords.length === 0) return [];
       // Use the searchAppData backend function (service role) to bypass
       // user-level entity read rate limits that block the paginated load.
-      const escaped = searchKeywords.map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(".*");
+      const escaped = searchKeywords.map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(" ");
       const res = await base44.functions.invoke("searchAppData", {
         action: "search",
         entity_name: "Firm",
-        filter: { name: { $regex: escaped, $options: "i" }, deleted_at: { $exists: false } },
+        filter: { name: { $regex: escaped, $options: "i" }, deleted_at: null },
         limit: 50,
         sort: "-created_date",
       });
@@ -986,8 +986,7 @@ export default function Home() {
                 <div className="relative mt-2">
                   {searchQuery.trim() ? (
                     <SearchResults
-                              query={searchQuery}
-                              firms={[...firms, ...supplementaryFirms]}
+                      query={searchQuery}
                       firms={allLoadedFirms}
                       products={products}
                       contacts={contacts}
