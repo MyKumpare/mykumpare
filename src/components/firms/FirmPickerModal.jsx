@@ -354,25 +354,48 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
                   </button>
                 )}
               </div>
-              <div className="flex items-center gap-2 mt-2">
-                <span className="text-xs text-gray-400 font-medium whitespace-nowrap">Filter by type:</span>
-                <select
-                  value={typeFilter}
-                  onChange={e => setTypeFilter(e.target.value)}
-                  className="flex-1 h-8 text-xs rounded-lg border border-gray-200 bg-gray-50 px-2 outline-none focus:border-indigo-400 cursor-pointer"
+              <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setTypeFilter("")}
+                  className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors border ${
+                    !typeFilter
+                      ? "bg-indigo-600 text-white border-indigo-600"
+                      : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                  }`}
                 >
-                  <option value="">All Types</option>
-                  {FIRM_TYPES.map(type => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
-                {typeFilter && (
+                  All ({activeFirms.length})
+                </button>
+                {FIRM_TYPES.map(type => {
+                  const count = (grouped[type] || []).length;
+                  if (count === 0 && typeFilter !== type) return null;
+                  const active = typeFilter === type;
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setTypeFilter(active ? "" : type)}
+                      className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors border ${
+                        active
+                          ? "bg-indigo-600 text-white border-indigo-600"
+                          : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                      }`}
+                    >
+                      {type} ({count})
+                    </button>
+                  );
+                })}
+                {grouped["Other"] && grouped["Other"].length > 0 && (
                   <button
                     type="button"
-                    onClick={() => setTypeFilter("")}
-                    className="text-xs text-indigo-600 hover:text-indigo-800 font-medium whitespace-nowrap"
+                    onClick={() => setTypeFilter(typeFilter === "Other" ? "" : "Other")}
+                    className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors border ${
+                      typeFilter === "Other"
+                        ? "bg-indigo-600 text-white border-indigo-600"
+                        : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                    }`}
                   >
-                    Clear
+                    Other ({grouped["Other"].length})
                   </button>
                 )}
               </div>

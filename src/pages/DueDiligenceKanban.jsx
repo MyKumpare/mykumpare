@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import DueDiligenceKanbanBoard, { computeApprovalStatus } from "@/components/firms/DueDiligenceKanbanBoard";
 import DdSummaryChart from "@/components/firms/DdSummaryChart";
 import AddDueDiligenceDialog from "@/components/firms/AddDueDiligenceDialog";
+import DueDiligenceDetailDialog from "@/components/firms/DueDiligenceDetailDialog";
 import DdFilterTabs, { getDdCounts, filterDdRecords } from "@/components/firms/DdFilterTabs";
 import { LayoutDashboard, List, Loader2, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -23,6 +24,8 @@ export default function DueDiligenceKanban() {
   const [groupMode, setGroupMode] = usePersistentState("ddKanban_groupMode", "approval_status");
   const [showDialog, setShowDialog] = usePersistentState("ddKanban_showDialog", false);
   const [editing, setEditing] = usePersistentState("ddKanban_editing", null);
+  const [viewing, setViewing] = useState(null);
+  const [showDetail, setShowDetail] = useState(false);
   const [activeTab, setActiveTab] = usePersistentState("ddKanban_activeTab", "active");
 
   const { data: records = [], isLoading } = useQuery({
@@ -73,8 +76,8 @@ export default function DueDiligenceKanban() {
   const findContact = (id) => contacts.find((c) => c.id === id && !c.deleted_at);
 
   const handleCardClick = (rec) => {
-    setEditing(rec);
-    setShowDialog(true);
+    setViewing(rec);
+    setShowDetail(true);
   };
 
   const handleFirmClick = (firmId) => {
@@ -207,6 +210,13 @@ export default function DueDiligenceKanban() {
           setShowDialog(false);
           setEditing(null);
         }}
+      />
+
+      <DueDiligenceDetailDialog
+        open={showDetail}
+        onOpenChange={(v) => { setShowDetail(v); if (!v) setViewing(null); }}
+        record={viewing}
+        onEdit={(rec) => { setEditing(rec); setShowDialog(true); }}
       />
     </div>
   );

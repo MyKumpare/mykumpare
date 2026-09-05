@@ -538,6 +538,46 @@ export default function FirmsSection({
       {expanded && (
         <div className="pl-2 border-l-2 border-gray-100">
           <SectionSearch value={search} onChange={setSearch} placeholder="Search by firm name or type..." />
+
+          {/* Quick firm-type filter bar */}
+          <div className="flex items-center gap-1.5 flex-wrap mb-2">
+            <button
+              type="button"
+              onClick={() => handleFilterChange("firm_type", new Set())}
+              className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors border ${
+                filterValues.firm_type.size === 0
+                  ? "bg-indigo-600 text-white border-indigo-600"
+                  : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              All ({totalFirms})
+            </button>
+            {FIRM_TYPES.map((type) => {
+              const count = filterCounts.firm_type[type] || 0;
+              if (count === 0) return null;
+              const active = filterValues.firm_type.has(type);
+              return (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => {
+                    const next = new Set(filterValues.firm_type);
+                    if (next.has(type)) next.delete(type);
+                    else next.add(type);
+                    handleFilterChange("firm_type", next);
+                  }}
+                  className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors border ${
+                    active
+                      ? "bg-indigo-600 text-white border-indigo-600"
+                      : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                  }`}
+                >
+                  {type} ({count})
+                </button>
+              );
+            })}
+          </div>
+
           <div className="flex flex-col md:flex-row gap-3">
             {showFilters && (
               <div className="w-full md:w-56 flex-shrink-0">
