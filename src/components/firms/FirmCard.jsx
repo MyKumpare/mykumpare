@@ -85,7 +85,7 @@ export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditP
 
           {/* Firm type + contact count summary chips */}
           {firmType && (
-            <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 text-[11px] font-medium flex-shrink-0">
+            <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[11px] font-semibold flex-shrink-0">
               {firmType}
             </span>
           )}
