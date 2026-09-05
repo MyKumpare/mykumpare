@@ -191,6 +191,22 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
     return result;
   }, [filtered]);
 
+  // Type counts computed from ALL active firms (not the filtered list) so the
+  // filter pills always show every available type, even when one is selected.
+  const typeCounts = useMemo(() => {
+    const counts = {};
+    FIRM_TYPES.forEach(type => { counts[type] = 0; });
+    counts["Other"] = 0;
+    activeFirms.forEach(f => {
+      const types = getFirmTypes(f);
+      types.forEach(type => {
+        if (counts[type] != null) counts[type]++;
+        else counts["Other"]++;
+      });
+    });
+    return counts;
+  }, [activeFirms]);
+
   if (!open) return null;
 
   const types = Object.keys(grouped);
@@ -367,7 +383,7 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
                   All ({activeFirms.length})
                 </button>
                 {FIRM_TYPES.map(type => {
-                  const count = (grouped[type] || []).length;
+                  const count = typeCounts[type] || 0;
                   if (count === 0 && typeFilter !== type) return null;
                   const active = typeFilter === type;
                   return (
@@ -385,7 +401,7 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
                     </button>
                   );
                 })}
-                {grouped["Other"] && grouped["Other"].length > 0 && (
+                {typeCounts["Other"] > 0 && (
                   <button
                     type="button"
                     onClick={() => setTypeFilter(typeFilter === "Other" ? "" : "Other")}
@@ -395,7 +411,7 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
                         : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
                     }`}
                   >
-                    Other ({grouped["Other"].length})
+                    Other ({typeCounts["Other"]})
                   </button>
                 )}
               </div>
