@@ -3,6 +3,7 @@ import { BarChart3, TrendingUp, PieChart, Eye, EyeOff } from "lucide-react";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import FirmAumTrendCard from "@/components/dashboard/FirmAumTrendCard";
 import FirmCategoryChart from "@/components/dashboard/FirmCategoryChart";
+import RecentlyAddedFirms from "@/components/dashboard/RecentlyAddedFirms";
 
 /**
  * Toggleable dashboard charts panel. Users select which chart widgets to
@@ -86,6 +87,7 @@ export default function DashboardChartsPanel({ firms, onClickCategory }) {
         <>
           {visibleCharts["aum-trends"] && <FirmAumTrendCard firms={firms} />}
           {visibleCharts["firm-category"] && <FirmCategoryChart firms={firms} onClickCategory={onClickCategory} />}
+          <RecentlyAddedFirms firms={firms} />
         </>
       )}
     </div>
