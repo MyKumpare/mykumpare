@@ -290,7 +290,11 @@ export default function Home() {
 
   const { data: firms = [], isLoading } = useQuery({
     queryKey: ["firms"],
-    queryFn: () => base44.entities.Firm.filter({}, "-created_date", 5000),
+    queryFn: async () => {
+      const res = await base44.functions.invoke("fetchAllFirms", {});
+      return res?.records || [];
+    },
+    staleTime: 300000,
     select: (data) => data.filter((f) => !f.deleted_at),
   });
 
@@ -982,7 +986,8 @@ export default function Home() {
                 <div className="relative mt-2">
                   {searchQuery.trim() ? (
                     <SearchResults
-                      query={searchQuery}
+                              query={searchQuery}
+                              firms={[...firms, ...supplementaryFirms]}
                       firms={allLoadedFirms}
                       products={products}
                       contacts={contacts}
