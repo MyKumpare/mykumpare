@@ -578,6 +578,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     ...(!hideProductTabs ? [{ key: "due-diligence", label: "Due Diligence" }] : []),
     ...(!hideProductTabs ? [{ key: "onsite-dd", label: "Onsite Due Diligence" }] : []),
     ...(!hideProductTabs ? [{ key: "documents", label: "Documents" }] : []),
+    { key: "notes", label: "Notes" },
     { key: "activity-log", label: "Activity Log" },
     ...(!hideProductTabs ? [{ key: "ownership", label: "Ownership" }] : []),
     { key: "orgchart", label: "Org Chart" },
@@ -1484,23 +1485,6 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                 )}
               </div>
 
-              {/* Notes — quick observations and reminders */}
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-gray-700">Notes</Label>
-                {!activelyEditing ? (
-                  <div className="px-3 py-2 rounded-md border bg-amber-50 text-sm text-gray-700 min-h-20 whitespace-pre-wrap">
-                    {notes || <span className="text-gray-400">—</span>}
-                  </div>
-                ) : (
-                  <Textarea
-                    placeholder="Quick observations and reminders for this firm..."
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    className="min-h-20"
-                  />
-                )}
-              </div>
-
               {/* Xponance Contacts — Primary & Secondary */}
               <div className="space-y-3 p-3 rounded-lg bg-indigo-50/30 border border-indigo-100">
                 <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wider">Xponance Contacts</p>
@@ -1865,6 +1849,24 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
                   Save the firm first to add documents
                 </div>
               )}
+              </TabsContent>
+
+              <TabsContent value="notes" className="space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Notes</Label>
+                {!activelyEditing ? (
+                  <div className="px-3 py-2 rounded-md border bg-amber-50 text-sm text-gray-700 min-h-32 whitespace-pre-wrap">
+                    {notes || <span className="text-gray-400">No notes recorded yet.</span>}
+                  </div>
+                ) : (
+                  <Textarea
+                    placeholder="Record qualitative insights, observations, and reminders for this firm during the due diligence process..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    className="min-h-40"
+                  />
+                )}
+              </div>
               </TabsContent>
 
               <TabsContent value="activity-log" className="space-y-3">
