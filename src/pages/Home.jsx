@@ -790,8 +790,8 @@ export default function Home() {
     { label: "Monitor", icon: Radar, ref: null, color: "text-rose-600", activeBg: "bg-rose-50", onClick: () => navigate("/Monitor"), submenu: [
       { label: "Geo & Regulatory", icon: Globe, onClick: () => navigate("/Monitor?tab=geo-regulatory") },
       { label: "Compliance & Renewals", icon: ShieldCheck, onClick: () => navigate("/Monitor?tab=compliance-renewals") },
+      { label: "Bio Tracker", icon: FileText, onClick: () => navigate("/ContactShortBioDashboard") },
     ] },
-    { label: "Bio Tracker", icon: FileText, ref: null, color: "text-teal-600", activeBg: "bg-teal-50", onClick: () => navigate("/ContactShortBioDashboard") },
     { label: "Report", icon: FileBarChart, ref: null, color: "text-cyan-600", activeBg: "bg-cyan-50", onClick: () => navigate("/Reports"), submenu: [
       { label: "Analytics", icon: LineChart, onClick: () => setAnalyticsLaunchOpen(true) },
       { label: "Reports", icon: FileText, onClick: () => setReportsPickerOpen(true) },
@@ -1093,6 +1093,7 @@ export default function Home() {
           onOpenBoardMeetingDashboard={() => navigate("/BoardMeetingDashboard")}
           onOpenActionItemsKanban={() => navigate("/ActionItemsKanban")}
           onOpenRfpRfiDashboard={() => navigate("/Monitor?tab=rfp-rfi")}
+          onOpenBioTracker={() => navigate("/ContactShortBioDashboard")}
           actionItemsCount={actionItemsCount}
           onOpenMonitor={() => navigate("/Monitor")}
           onOpenActivity={() => setActivityPickerOpen(true)}

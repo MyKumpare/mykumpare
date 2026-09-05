@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  Radar, ClipboardList, CalendarDays, LayoutList, Plus, ChevronRight, ChevronDown, ExternalLink, Newspaper, GitBranch, ClipboardCheck, Bell, LayoutDashboard, KanbanSquare, FileSearch,
+  Radar, ClipboardList, CalendarDays, LayoutList, Plus, ChevronRight, ChevronDown, ExternalLink, Newspaper, GitBranch, ClipboardCheck, Bell, LayoutDashboard, KanbanSquare, FileSearch, FileText,
 } from "lucide-react";
 
 /**
@@ -23,6 +23,7 @@ export default function MonitorNavSection({
   onOpenBoardMeetingDashboard,
   onOpenActionItemsKanban,
   onOpenRfpRfiDashboard,
+  onOpenBioTracker,
   onOpenMonitor,
   onOpenActivity,
   onAddActivity,
@@ -141,6 +142,14 @@ export default function MonitorNavSection({
       iconColor: "text-rose-500",
       count: null,
       onOpen: onOpenRfpRfiDashboard,
+      onAdd: null,
+    },
+    {
+      label: "Bio Tracker",
+      icon: FileText,
+      iconColor: "text-teal-500",
+      count: null,
+      onOpen: onOpenBioTracker,
       onAdd: null,
     },
   ];
