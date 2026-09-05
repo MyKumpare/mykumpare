@@ -47,6 +47,7 @@ import FirmContactPhotoGallery from "./FirmContactPhotoGallery";
 import FirmContactRelationshipMap from "./FirmContactRelationshipMap";
 import FirmNetworkMap from "./FirmNetworkMap";
 import FirmNetworkMapModal from "./FirmNetworkMapModal";
+import FirmRelationshipViewer from "./FirmRelationshipViewer";
 import { GEOGRAPHIC_REGIONS, deriveGeographicRegionFromAddresses, deriveLocationFromAddresses } from "./geographicRegions";
 import FirmLocationField from "./FirmLocationField";
 import EnrichmentApprovalDialog from "./EnrichmentApprovalDialog";
@@ -568,6 +569,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     { key: "contacts", label: "Contacts" },
     { key: "photo-gallery", label: "Photo Gallery" },
     { key: "relationship-map", label: "Relationship Map" },
+    { key: "relationship-viewer", label: "Relationship Viewer" },
     { key: "firm-network", label: "Firm Network" },
     { key: "addresses", label: "Addresses" },
     { key: "phones", label: "Phones" },
@@ -1583,6 +1585,22 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
               ) : (
                 <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
                   Save the firm first to view the relationship map
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="relationship-viewer" className="space-y-3">
+              {editingFirm ? (
+                <FirmRelationshipViewer
+                  firmId={editingFirm.id}
+                  onContactClick={onContactClick ? (c) => { handleClose(); onContactClick(c); } : undefined}
+                  onFirmClick={onFirmClick ? (f) => { handleClose(); onFirmClick(f); } : undefined}
+                  onProductClick={onProductClick ? (p) => { handleClose(); onProductClick(p); } : undefined}
+                  onPortfolioClick={onPortfolioClick ? (p) => { handleClose(); onPortfolioClick(p); } : undefined}
+                />
+              ) : (
+                <div className="text-sm text-gray-400 italic py-2 text-center border border-dashed border-gray-200 rounded-xl">
+                  Save the firm first to view the relationship viewer
                 </div>
               )}
             </TabsContent>
