@@ -39,6 +39,7 @@ const FIRM_TYPES = [
 const IMPORTABLE_FIELDS = [
   { key: "name", label: "Firm Name", required: true },
   { key: "firm_types", label: "Firm Types (semicolon-separated)", required: true, isArray: true, enum: FIRM_TYPES },
+  { key: "allocator_types", label: "Allocator Types (semicolon-separated)", isArray: true },
   { key: "logo_url", label: "Logo URL" },
   { key: "website", label: "Website" },
   { key: "linkedin_url", label: "LinkedIn URL" },
@@ -50,6 +51,7 @@ const IMPORTABLE_FIELDS = [
 const FIELD_ALIASES = {
   name: ["name", "firmname", "company", "companyname", "organization", "org", "firm"],
   firm_types: ["firmtypes", "firmtype", "types", "type", "category", "categories"],
+  allocator_types: ["allocatortypes", "allocatortype", "allocatortypes", "allocatortype"],
   logo_url: ["logourl", "logo", "logoimage", "logoimageurl"],
   website: ["website", "site", "url", "web", "webpage", "homepage"],
   linkedin_url: ["linkedin", "linkedinurl", "linkedinprofile"],
@@ -147,6 +149,11 @@ function buildCsvMergeUpdates(existingFirm, csvFirm) {
     const mergedTypes = [...new Set([...existing, ...csvFirm.firm_types])];
     if (mergedTypes.length > existing.length) updates.firm_types = mergedTypes;
   }
+  if (csvFirm.allocator_types && csvFirm.allocator_types.length > 0) {
+    const existing = existingFirm.allocator_types || [];
+    const mergedAlloc = [...new Set([...existing, ...csvFirm.allocator_types])];
+    if (mergedAlloc.length > existing.length) updates.allocator_types = mergedAlloc;
+  }
   return updates;
 }
 
@@ -241,6 +248,11 @@ export default function CsvFirmImport({ onStageChange } = {}) {
       }
 
       const firm = { tenant_id, name: raw.name, firm_types: [...new Set(types)] };
+      if (raw.allocator_types) {
+        const allocTypes = raw.allocator_types
+          .split(/[;|]/).map((t) => t.trim()).filter(Boolean);
+        if (allocTypes.length > 0) firm.allocator_types = [...new Set(allocTypes)];
+      }
       if (raw.logo_url) firm.logo_url = raw.logo_url;
       if (raw.website) firm.website = raw.website;
       if (raw.linkedin_url) firm.linkedin_url = raw.linkedin_url;

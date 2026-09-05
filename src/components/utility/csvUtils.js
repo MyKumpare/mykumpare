@@ -51,10 +51,27 @@ export function normalizeKey(s) {
 
 export function autoMapHeader(header, fieldAliases) {
   const norm = normalizeKey(header);
+  // 1. Exact match (fast path)
   for (const [fieldKey, aliases] of Object.entries(fieldAliases)) {
     if (aliases.some((a) => normalizeKey(a) === norm)) return fieldKey;
   }
-  return "";
+  // 2. Contains fallback: find the longest alias that is a substring of the
+  //    normalized header. This catches headers with extra words or hidden
+  //    characters (e.g. "Allocator Type" → "allocatortype" contains "allocatortype").
+  //    Longest-match-first prevents "type" (firm_types) from winning over
+  //    "allocatortype" (allocator_types).
+  let bestField = "";
+  let bestLen = 0;
+  for (const [fieldKey, aliases] of Object.entries(fieldAliases)) {
+    for (const alias of aliases) {
+      const a = normalizeKey(alias);
+      if (a.length > bestLen && norm.includes(a)) {
+        bestField = fieldKey;
+        bestLen = a.length;
+      }
+    }
+  }
+  return bestField;
 }
 
 export function validateEnum(value, options) {

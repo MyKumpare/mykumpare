@@ -18,5 +18,10 @@ export function buildCsvMergeUpdates(existingFirm: any, csvFirm: any): Record<st
     const mergedTypes = [...new Set([...existing, ...csvFirm.firm_types])];
     if (mergedTypes.length > existing.length) updates.firm_types = mergedTypes;
   }
+  if (csvFirm.allocator_types && csvFirm.allocator_types.length > 0) {
+    const existing = existingFirm.allocator_types || [];
+    const mergedAlloc = [...new Set([...existing, ...csvFirm.allocator_types])];
+    if (mergedAlloc.length > existing.length) updates.allocator_types = mergedAlloc;
+  }
   return updates;
 }
