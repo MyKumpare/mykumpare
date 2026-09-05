@@ -1,17 +1,4 @@
 {
-  "name": "Process Import Jobs",
-  "description": "Drives server-side import jobs in the background. Whenever an ImportJob is created or updated while still 'enriching' (progress < total), it runs the next chunk \u2014 enriching one pending firm per run. The job's own progress updates re-trigger this workflow, so it self-drives to completion and survives navigation/close.",
-  "trigger": {
-    "config": {
-      "trigger_type": "entity",
-      "entity_name": "ImportJob",
-      "events": [
-        "create",
-        "update"
-      ]
-    },
-    "condition": "${ .trigger.data.status == \"enriching\" and ((.trigger.data.progress // 0) < (.trigger.data.total // 0)) }"
-  },
   "definition": {
     "document": {
       "dsl": "1.0.0",
@@ -25,17 +12,34 @@
           "call": "invoke_backend_function",
           "with": {
             "function_name": "processImportJobChunk",
-            "args": {
-              "job_id": "${ .trigger.entity_id }"
-            }
+            "args": {}
           },
           "then": "end",
           "x-base44": {
-            "title": "Process next import item",
-            "description": "Enriches one pending record"
+            "title": "Process pending import items",
+            "description": "Enriches pending records across all active jobs"
           }
         }
       }
     ]
+  },
+  "name": "Process Import Jobs",
+  "description": "Drives server-side import jobs in the background. Runs every 5 minutes and processes pending enrichment items for all active import jobs. Each run enriches as many pending firms as possible within the function timeout, then the next scheduled run continues until all jobs are complete.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "*/5 * * * *",
+      "one_time_date": null,
+      "timezone": "America/New_York",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
   }
 }
