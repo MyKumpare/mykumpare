@@ -1,10 +1,10 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Radar, CalendarDays, X, FileDown, Loader2, ChevronLeft, SlidersHorizontal, Search, LayoutDashboard } from "lucide-react";
+import { Radar, CalendarDays, X, FileDown, Loader2, ChevronLeft, SlidersHorizontal, Search, LayoutDashboard, Users, Building2, Upload, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { base44 } from "@/api/base44Client";
-import { toast } from "@/components/ui/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { generateWeeklyMonitorReportPdf } from "@/components/news/weeklyMonitorReportPdf";
 import NewsAlertsModal from "@/components/firms/NewsAlertsModal";
 import FollowUpTaskPickerModal from "@/components/activity/FollowUpTaskPickerModal";
@@ -30,9 +30,11 @@ import MonitorModuleGrid from "@/components/monitor/MonitorModuleGrid";
 import EntityFilterSidebar from "@/components/common/EntityFilterSidebar";
 import { MODULE_MAP } from "@/components/monitor/monitorModules";
 import TopScoredFirmsSummary from "@/components/dashboard/TopScoredFirmsSummary";
+import { useSavedSectionLayout } from "@/components/shared/useSavedSectionLayout";
 
 export default function MonitorPage() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const initialModule = new URLSearchParams(window.location.hash.split("?")[1] || "").get("tab") || null;
   const [activeModule, setActiveModule] = usePersistentState("monitor_activeModule", initialModule);
   const [viewingTask, setViewingTask] = usePersistentState("monitor_viewingTask", null);
@@ -40,9 +42,65 @@ export default function MonitorPage() {
   const [generatingReport, setGeneratingReport] = useState(false);
   const [showFilters, setShowFilters] = useState(true);
   const [filterValues, setFilterValues] = useState({ module_search: "" });
+  const [layoutApi, setLayoutApi] = useState(null);
+  const { userLayout, firmwideLayout, saveLayout, isSaving } = useSavedSectionLayout("monitor");
   const handleFilterChange = (key, value) => setFilterValues((prev) => ({ ...prev, [key]: value }));
   const clearAllFilters = () => setFilterValues({ module_search: "" });
   const hasActiveSidebarFilters = (filterValues.module_search || "").trim();
+
+  const handleLayoutApi = useCallback((api) => setLayoutApi(api), []);
+
+  const handleSaveUser = () => {
+    try {
+      const raw = localStorage.getItem("monitor_layout_v1");
+      const categories = raw ? JSON.parse(raw).categories : null;
+      if (!categories) {
+        toast({ title: "Nothing to save", description: "Adjust the layout first, then save.", variant: "destructive" });
+        return;
+      }
+      saveLayout(
+        { scope: "user", categories },
+        {
+          onSuccess: () => toast({ title: "Layout saved", description: "Your personal monitor layout has been saved." }),
+          onError: (err) => toast({ title: "Save failed", description: err?.message || "Please try again.", variant: "destructive" }),
+        }
+      );
+    } catch {
+      toast({ title: "Save failed", description: "Could not read the current layout.", variant: "destructive" });
+    }
+  };
+
+  const handleSaveFirm = () => {
+    try {
+      const raw = localStorage.getItem("monitor_layout_v1");
+      const categories = raw ? JSON.parse(raw).categories : null;
+      if (!categories) {
+        toast({ title: "Nothing to save", description: "Adjust the layout first, then save.", variant: "destructive" });
+        return;
+      }
+      saveLayout(
+        { scope: "firmwide", categories },
+        {
+          onSuccess: () => toast({ title: "Firmwide layout saved", description: "All users in your firm will see this layout." }),
+          onError: (err) => toast({ title: "Save failed", description: err?.message || "Please try again.", variant: "destructive" }),
+        }
+      );
+    } catch {
+      toast({ title: "Save failed", description: "Could not read the current layout.", variant: "destructive" });
+    }
+  };
+
+  const handleLoadUser = () => {
+    if (!layoutApi?.setCategories || !userLayout) return;
+    layoutApi.setCategories(userLayout.categories);
+    toast({ title: "Layout loaded", description: "Your saved personal layout has been loaded." });
+  };
+
+  const handleLoadFirm = () => {
+    if (!layoutApi?.setCategories || !firmwideLayout) return;
+    layoutApi.setCategories(firmwideLayout.categories);
+    toast({ title: "Firmwide layout loaded", description: "The firmwide layout has been loaded." });
+  };
 
   const monitorSidebarGroups = [
     { key: "module_search", label: "Search Modules", icon: Search, type: "search", placeholder: "Search module name..." },
@@ -126,6 +184,50 @@ export default function MonitorPage() {
         )}
 
         {!activeModule ? (
+          <>
+          <div className="mb-4 flex items-center justify-between gap-3 flex-wrap bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <span className="font-medium text-gray-700">Layout Management:</span>
+              {userLayout && (
+                <span className="inline-flex items-center gap-1 text-emerald-600">
+                  <Check className="w-3 h-3" />
+                  Personal layout saved {userLayout.updated_at_label ? `· ${userLayout.updated_at_label}` : ""}
+                </span>
+              )}
+              {firmwideLayout && (
+                <span className="inline-flex items-center gap-1 text-indigo-600">
+                  <Check className="w-3 h-3" />
+                  Firmwide layout saved {firmwideLayout.updated_at_label ? `· ${firmwideLayout.updated_at_label}` : ""}
+                </span>
+              )}
+              {!userLayout && !firmwideLayout && (
+                <span>No saved layouts yet — arrange modules and save below.</span>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {userLayout && (
+                <Button size="sm" variant="outline" onClick={handleLoadUser} disabled={isSaving}>
+                  <Upload className="w-3.5 h-3.5" />
+                  Load My Layout
+                </Button>
+              )}
+              {firmwideLayout && (
+                <Button size="sm" variant="outline" onClick={handleLoadFirm} disabled={isSaving}>
+                  <Upload className="w-3.5 h-3.5" />
+                  Load Firm Layout
+                </Button>
+              )}
+              <Button size="sm" variant="outline" onClick={handleSaveUser} disabled={isSaving}>
+                <Users className="w-3.5 h-3.5" />
+                {isSaving ? "Saving..." : "Save for Me"}
+              </Button>
+              <Button size="sm" onClick={handleSaveFirm} disabled={isSaving}>
+                <Building2 className="w-3.5 h-3.5" />
+                {isSaving ? "Saving..." : "Save for Firm"}
+              </Button>
+            </div>
+          </div>
+
           <div className="flex flex-col md:flex-row gap-4">
             {showFilters && (
               <div className="w-full md:w-56 flex-shrink-0">
@@ -151,9 +253,10 @@ export default function MonitorPage() {
                   {showFilters ? "Hide Filters" : "Filters"}
                 </Button>
               </div>
-              <MonitorModuleGrid onSelect={setActiveModule} />
+              <MonitorModuleGrid onSelect={setActiveModule} onLayoutApi={handleLayoutApi} />
             </div>
           </div>
+          </>
         ) : (
           <div>
             <div className="flex items-center gap-3 mb-4">

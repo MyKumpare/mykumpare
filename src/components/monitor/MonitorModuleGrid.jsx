@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,10 +11,17 @@ import CategoryNameDialog from "@/components/common/CategoryNameDialog";
  * Cards can be reordered within a category or dragged across categories.
  * Categories can be created, renamed, reordered, and deleted (items fall back
  * to the system "Uncategorized" bucket).
+ *
+ * onLayoutApi: optional callback invoked with { setCategories } so the parent
+ * can load a saved layout into the grid.
  */
-export default function MonitorModuleGrid({ onSelect }) {
-  const { categories, addCategory, renameCategory, deleteCategory, moveCategory, onDragEnd } = useMonitorLayout();
+export default function MonitorModuleGrid({ onSelect, onLayoutApi }) {
+  const { categories, setCategories, addCategory, renameCategory, deleteCategory, moveCategory, onDragEnd } = useMonitorLayout();
   const [dialog, setDialog] = useState({ open: false, mode: "create", id: null, name: "" });
+
+  useEffect(() => {
+    if (onLayoutApi) onLayoutApi({ setCategories });
+  }, [onLayoutApi, setCategories]);
 
   const isLastUserCategory = (idx) => idx >= categories.length - 2; // last before uncat
 

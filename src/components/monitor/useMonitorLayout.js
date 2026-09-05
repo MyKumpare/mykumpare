@@ -117,5 +117,5 @@ export function useMonitorLayout() {
     });
   }, []);
 
-  return { categories, addCategory, renameCategory, deleteCategory, moveCategory, onDragEnd };
+  return { categories, setCategories, addCategory, renameCategory, deleteCategory, moveCategory, onDragEnd };
 }
