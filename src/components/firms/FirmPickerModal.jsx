@@ -177,7 +177,10 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
   const grouped = useMemo(() => {
     const result = {};
     const seen = {};
-    FIRM_TYPES.forEach(type => {
+    // When a type filter is active, only group firms under the selected type
+    // so multi-type firms don't bleed into other sections.
+    const typesToGroup = typeFilter ? [typeFilter] : FIRM_TYPES;
+    typesToGroup.forEach(type => {
       const typeFirms = filtered
         .filter(f => getFirmTypes(f).includes(type))
         .sort((a, b) => a.name.localeCompare(b.name));
@@ -186,10 +189,12 @@ export default function FirmPickerModal({ open, onClose, firms, onFirmClick, onA
         typeFirms.forEach(f => { seen[f.id] = true; });
       }
     });
-    const other = filtered.filter(f => !seen[f.id]).sort((a, b) => a.name.localeCompare(b.name));
-    if (other.length > 0) result["Other"] = other;
+    if (!typeFilter) {
+      const other = filtered.filter(f => !seen[f.id]).sort((a, b) => a.name.localeCompare(b.name));
+      if (other.length > 0) result["Other"] = other;
+    }
     return result;
-  }, [filtered]);
+  }, [filtered, typeFilter]);
 
   // Type counts computed from ALL active firms (not the filtered list) so the
   // filter pills always show every available type, even when one is selected.
