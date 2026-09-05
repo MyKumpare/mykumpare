@@ -132,6 +132,12 @@ export default function FirmsSection({
     if (filterValues.allocator_type.size > 0) {
       const atFiltered = {};
       for (const [type, firms] of Object.entries(result)) {
+        // The allocator_type sub-filter only applies to Allocator firms;
+        // non-Allocator firms pass through unchanged.
+        if (type !== "Allocator") {
+          if (firms.length) atFiltered[type] = firms;
+          continue;
+        }
         const filtered = firms.filter((f) =>
           (filterValues.allocator_type.has("__no_type__") && (!f.allocator_types || f.allocator_types.length === 0)) ||
           (f.allocator_types || []).some((at) => filterValues.allocator_type.has(at))
