@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Package, ChevronDown, ChevronRight, LayoutList, MapPin, FileDown, Loader2 } from "lucide-react";
+import { Plus, Package, ChevronDown, ChevronRight, LayoutList, MapPin, FileDown, Loader2, Users } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import FirmStatusBadges from "./FirmStatusBadges";
 import XponanceContactBadges from "@/components/xponance/XponanceContactBadges";
@@ -11,7 +11,7 @@ const FIRM_TYPE_TO_PRODUCT_TYPE = {
   "Investment Manager": "Investment Manager Product",
 };
 
-export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditProduct, onAddPortfolio, products = [], forceExpand = false, selectionMode = false, selected = false, onToggleSelect }) {
+export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditProduct, onAddPortfolio, products = [], contacts = [], forceExpand = false, selectionMode = false, selected = false, onToggleSelect }) {
   const ALLOWED_FIRM_TYPES = ["Investment Manager"];
   const firmType = getFirmType(firm);
   const effectiveTypes = firmType ? [firmType] : [];
@@ -38,6 +38,7 @@ export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditP
 
   const firmProducts = products.filter((p) => p.firm_id === firm.id).sort((a, b) => a.name.localeCompare(b.name));
   const showProducts = !!productType;
+  const contactCount = contacts.filter((c) => !c.deleted_at && Array.isArray(c.firm_ids) && c.firm_ids.includes(firm.id)).length;
 
   return (
     <motion.div
@@ -79,6 +80,19 @@ export default function FirmCard({ firm, onEdit, onDelete, onAddProduct, onEditP
             <span className="hidden sm:flex items-center gap-0.5 text-xs text-gray-400 flex-shrink-0">
               <MapPin className="w-3 h-3" />
               <span className="truncate max-w-[140px]">{firm.location}</span>
+            </span>
+          )}
+
+          {/* Firm type + contact count summary chips */}
+          {firmType && (
+            <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 text-[11px] font-medium flex-shrink-0">
+              {firmType}
+            </span>
+          )}
+          {contactCount > 0 && (
+            <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-50 text-gray-500 text-[11px] font-medium flex-shrink-0">
+              <Users className="w-3 h-3" />
+              {contactCount}
             </span>
           )}
 

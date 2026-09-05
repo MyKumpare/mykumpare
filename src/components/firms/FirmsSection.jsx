@@ -30,6 +30,7 @@ export default function FirmsSection({
   groupedFirms,
   totalFirms,
   products,
+  contacts = [],
   searchQuery,
   onEdit,
   onDelete,
@@ -657,6 +658,7 @@ export default function FirmsSection({
                       onEditProduct={onEditProduct}
                       onAddPortfolio={onAddPortfolio}
                       products={products}
+                      contacts={contacts}
                       forceExpand={false}
                       selectionMode={selectionMode}
                       selected={selectedIds.has(firm.id)}
@@ -685,6 +687,7 @@ export default function FirmsSection({
                             onEditProduct={onEditProduct}
                             onAddPortfolio={onAddPortfolio}
                             products={products}
+                            contacts={contacts}
                             forceExpand={false}
                             selectionMode={selectionMode}
                             selected={selectedIds.has(firm.id)}

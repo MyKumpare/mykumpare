@@ -1177,6 +1177,7 @@ export default function Home() {
             groupedFirms={groupedFirms}
             totalFirms={totalFirms}
             products={activeProducts}
+            contacts={activeContacts}
             searchQuery={searchQuery}
             onEdit={handleEdit}
             onDelete={setDeletingFirm}
