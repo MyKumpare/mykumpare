@@ -104,6 +104,14 @@ export default function FirmsSection({
     }
   }, [initialFirmTypeFilter]);
 
+  // Clear the allocator_type sub-filter when Allocator is deselected,
+  // so stale sub-filter values don't silently exclude non-Allocator firms.
+  useEffect(() => {
+    if (!filterValues.firm_type.has("Allocator") && filterValues.allocator_type.size > 0) {
+      setFilterValues((prev) => ({ ...prev, allocator_type: new Set() }));
+    }
+  }, [filterValues.firm_type]);
+
   const filteredGrouped = React.useMemo(() => {
     let result = groupedFirms;
     if (searchLower) {
@@ -619,8 +627,8 @@ export default function FirmsSection({
             })}
           </div>
 
-          {/* Allocator sub-type filter pills — shown whenever Allocator firms are in view */}
-          {filteredGrouped["Allocator"] && (
+          {/* Allocator sub-type filter pills — drill-down shown only when Allocator is selected */}
+          {filterValues.firm_type.has("Allocator") && filteredGrouped["Allocator"] && (
             <div className="flex items-center gap-1.5 flex-wrap mb-2 pl-1">
               <span className="text-[11px] text-gray-400 font-medium uppercase tracking-wide mr-0.5">Allocator Type:</span>
               <button
