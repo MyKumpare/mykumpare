@@ -290,7 +290,17 @@ export default function Home() {
 
   const { data: firms = [], isLoading } = useQuery({
     queryKey: ["firms"],
-    queryFn: () => base44.entities.Firm.list("-created_date", 5000),
+    queryFn: async () => {
+      const all = [];
+      let offset = 0;
+      while (true) {
+        const batch = await base44.entities.Firm.filter({}, "-created_date", 5000, offset);
+        all.push(...batch);
+        if (batch.length < 5000) break;
+        offset += 5000;
+      }
+      return all;
+    },
     select: (data) => data.filter((f) => !f.deleted_at),
   });
 
