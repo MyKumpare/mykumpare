@@ -4,6 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { ClipboardCheck, Pencil, Plus } from "lucide-react";
 import AddDueDiligenceDialog from "../firms/AddDueDiligenceDialog";
+import DueDiligenceDetailDialog from "../firms/DueDiligenceDetailDialog";
 import { syncDdNotifications, syncProductStatusFromDd } from "../firms/ddNotificationSync";
 
 const STATUS_STYLES = {
@@ -23,6 +24,8 @@ const PROCESS_STYLES = {
 export default function ProductDueDiligenceTab({ productId, productName, firmId, firmName, onFirmClick }) {
   const queryClient = useQueryClient();
   const [showDialog, setShowDialog] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
+  const [viewing, setViewing] = useState(null);
   const [editing, setEditing] = useState(null);
 
   const { data: records = [], isLoading } = useQuery({
@@ -104,8 +107,8 @@ export default function ProductDueDiligenceTab({ productId, productName, firmId,
               key={rec.id}
               role="button"
               tabIndex={0}
-              onClick={() => { setEditing(rec); setShowDialog(true); }}
-              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setEditing(rec); setShowDialog(true); } }}
+              onClick={() => { setViewing(rec); setShowDetail(true); }}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setViewing(rec); setShowDetail(true); } }}
               className="flex items-start gap-3 px-3 py-2.5 rounded-lg border border-gray-200 bg-white hover:border-indigo-200 hover:bg-indigo-50/30 cursor-pointer transition-colors"
             >
               <ClipboardCheck className="w-4 h-4 text-indigo-400 flex-shrink-0 mt-0.5" />
@@ -147,6 +150,7 @@ export default function ProductDueDiligenceTab({ productId, productName, firmId,
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
               </div>
+
             </div>
           ))}
         </div>
@@ -162,6 +166,13 @@ export default function ProductDueDiligenceTab({ productId, productName, firmId,
         editingRecord={editing}
         onSubmit={handleSubmit}
         preselectProductId={editing ? undefined : productId}
+      />
+
+      <DueDiligenceDetailDialog
+        open={showDetail}
+        onOpenChange={(v) => { setShowDetail(v); if (!v) setViewing(null); }}
+        record={viewing}
+        onEdit={(rec) => { setEditing(rec); setShowDialog(true); }}
       />
     </div>
   );
