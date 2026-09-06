@@ -394,6 +394,13 @@ export default function Home() {
     [contactsQuery.data]
   );
 
+  // Auto-load all contact batches on mount so the user sees every contact.
+  useEffect(() => {
+    if (contactsQuery.hasNextPage && !contactsQuery.isFetchingNextPage && !contactsQuery.isLoading) {
+      contactsQuery.fetchNextPage();
+    }
+  }, [contactsQuery.hasNextPage, contactsQuery.isFetchingNextPage, contactsQuery.isLoading, contactsQuery.fetchNextPage]);
+
   const { data: portfolios = [] } = useQuery({
     queryKey: ["portfolios"],
     queryFn: () => base44.entities.Portfolio.filter({ deleted_at: null }, "-created_date", 5000),
