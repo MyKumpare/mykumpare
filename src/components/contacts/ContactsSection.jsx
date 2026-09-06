@@ -454,11 +454,9 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
           )}
           <ContactAvatar contact={contact} />
           <span className="text-sm font-medium text-gray-800 truncate">{formatContactName(contact)}</span>
-          {contact.contact_status === "Active" ? (
-            <span className="ml-auto w-2 h-2 rounded-full bg-green-500 flex-shrink-0" title="Active" />
-          ) : contact.contact_status === "Inactive" ? (
-            <span className="ml-auto w-2 h-2 rounded-full bg-red-500 flex-shrink-0" title="Inactive" />
-          ) : null}
+          <span className={`ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 ${contact.contact_status === "Inactive" ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"}`}>
+            {contact.contact_status || "Active"}
+          </span>
         </div>
         {contact.title && <p className="text-xs text-gray-400 truncate pl-8">{contact.title}</p>}
         <div className="pl-8 pt-1"><ContactTagChips tags={contact.tags} max={4} /></div>
@@ -721,9 +719,14 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
                                )}
                                <ContactAvatar contact={contact} />
                                <div className="min-w-0 flex-1">
-                                 <span className="text-sm text-gray-800 group-hover:text-pink-700 font-medium truncate block">
-                                   {formatContactName(contact)}
-                                 </span>
+                                 <div className="flex items-center gap-1.5 min-w-0">
+                                   <span className="text-sm text-gray-800 group-hover:text-pink-700 font-medium truncate">
+                                     {formatContactName(contact)}
+                                   </span>
+                                   <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 ${contact.contact_status === "Inactive" ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"}`}>
+                                     {contact.contact_status || "Active"}
+                                   </span>
+                                 </div>
                                  <ContactTagChips tags={contact.tags} max={3} />
                                </div>
                                {contact.title && (
