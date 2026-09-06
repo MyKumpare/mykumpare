@@ -25,7 +25,7 @@ export default function SectionDashboard() {
 
   const { data: firms = [] } = useQuery({
     queryKey: ["firms"],
-    queryFn: () => base44.entities.Firm.list("-created_date", 5000),
+    queryFn: () => base44.entities.Firm.filter({ deleted_at: null }, "-created_date", 5000),
     select: (data) => data.filter((f) => !f.deleted_at),
   });
 

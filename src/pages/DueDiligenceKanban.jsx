@@ -30,22 +30,22 @@ export default function DueDiligenceKanban() {
 
   const { data: records = [], isLoading } = useQuery({
     queryKey: ["due-diligence-all"],
-    queryFn: () => base44.entities.DueDiligence.list("-created_date", 500),
+    queryFn: () => base44.entities.DueDiligence.filter({ deleted_at: null }, "-created_date", 500),
   });
 
   const { data: firms = [] } = useQuery({
     queryKey: ["firms-all"],
-    queryFn: () => base44.entities.Firm.list("-created_date", 500),
+    queryFn: () => base44.entities.Firm.filter({ deleted_at: null }, "-created_date", 500),
   });
 
   const { data: products = [] } = useQuery({
     queryKey: ["products-all"],
-    queryFn: () => base44.entities.Product.list("-created_date", 500),
+    queryFn: () => base44.entities.Product.filter({ deleted_at: null }, "-created_date", 500),
   });
 
   const { data: contacts = [] } = useQuery({
     queryKey: ["contacts-all"],
-    queryFn: () => base44.entities.Contact.list("-created_date", 500),
+    queryFn: () => base44.entities.Contact.filter({ deleted_at: null }, "-created_date", 500),
   });
 
   const activeRecords = useMemo(

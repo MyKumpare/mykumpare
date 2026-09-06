@@ -365,7 +365,7 @@ export default function Home() {
 
   const { data: products = [] } = useQuery({
     queryKey: ["products"],
-    queryFn: () => base44.entities.Product.list("-created_date", 5000),
+    queryFn: () => base44.entities.Product.filter({ deleted_at: null }, "-created_date", 5000),
     select: (data) => data.filter((p) => !p.deleted_at),
   });
 
@@ -388,7 +388,7 @@ export default function Home() {
 
   const { data: portfolios = [] } = useQuery({
     queryKey: ["portfolios"],
-    queryFn: () => base44.entities.Portfolio.list("-created_date", 5000),
+    queryFn: () => base44.entities.Portfolio.filter({ deleted_at: null }, "-created_date", 5000),
     select: (data) => data.filter((p) => !p.deleted_at),
   });
 
@@ -414,65 +414,65 @@ export default function Home() {
 
   const { data: analyses = [] } = useQuery({
     queryKey: ["analyses"],
-    queryFn: () => base44.entities.Analysis.list("-created_date", 500),
+    queryFn: () => base44.entities.Analysis.filter({ deleted_at: null }, "-created_date", 500),
   });
 
   const { data: benchmarks = [] } = useQuery({
     queryKey: ["benchmarks"],
-    queryFn: () => base44.entities.Benchmark.list("-created_date", 500),
+    queryFn: () => base44.entities.Benchmark.filter({ deleted_at: null }, "-created_date", 500),
   });
 
   const { data: activities = [] } = useQuery({
     queryKey: ["contact_activities_search"],
-    queryFn: () => base44.entities.ContactActivity.list("-activity_date", 2000),
+    queryFn: () => base44.entities.ContactActivity.filter({ deleted_at: null }, "-activity_date", 2000),
     enabled: searchFocused,
   });
 
   const { data: followUpTasks = [] } = useQuery({
     queryKey: ["follow_up_tasks_search"],
-    queryFn: () => base44.entities.FollowUpTask.list("-due_date", 2000),
+    queryFn: () => base44.entities.FollowUpTask.filter({ deleted_at: null }, "-due_date", 2000),
     enabled: searchFocused,
   });
 
   const { data: pinnedNews = [] } = useQuery({
     queryKey: ["pinned_news_alerts"],
-    queryFn: () => base44.entities.FirmNews.list("-news_date", 500),
+    queryFn: () => base44.entities.FirmNews.filter({ deleted_at: null }, "-news_date", 500),
   });
   const pinnedNewsCount = pinnedNews.filter(n => !n.deleted_at && n.is_pinned).length;
 
   const { data: boardMeetings = [] } = useQuery({
     queryKey: ["board-meetings-all"],
-    queryFn: () => base44.entities.BoardMeeting.list("-meeting_date", 1000),
+    queryFn: () => base44.entities.BoardMeeting.filter({ deleted_at: null }, "-meeting_date", 1000),
   });
   const upcomingBoardMeetingsCount = boardMeetings.filter(b => !b.deleted_at && (b.meeting_date || "9999") >= new Date().toISOString().slice(0, 10)).length;
 
   const { data: boardMeetingAlerts = [] } = useQuery({
     queryKey: ["board-meeting-alerts"],
-    queryFn: () => base44.entities.BoardMeetingAlert.list("-created_date", 500),
+    queryFn: () => base44.entities.BoardMeetingAlert.filter({ deleted_at: null }, "-created_date", 500),
   });
   const unreadBoardMeetingAlertsCount = boardMeetingAlerts.filter(a => !a.deleted_at && !a.is_dismissed && !a.is_read).length;
 
   const { data: actionItems = [] } = useQuery({
     queryKey: ["action_items_kanban_count"],
-    queryFn: () => base44.entities.FollowUpTask.list("-due_date", 2000),
+    queryFn: () => base44.entities.FollowUpTask.filter({ deleted_at: null }, "-due_date", 2000),
   });
   const actionItemsCount = actionItems.filter(t => !t.deleted_at && t.board_meeting_id && t.status !== "Completed" && t.status !== "Cancelled").length;
 
   const { data: documents = [] } = useQuery({
     queryKey: ["firm_documents_search"],
-    queryFn: () => base44.entities.FirmDocument.list("-entry_date", 1000),
+    queryFn: () => base44.entities.FirmDocument.filter({ deleted_at: null }, "-entry_date", 1000),
     enabled: searchFocused,
   });
 
   const { data: dueDiligences = [] } = useQuery({
     queryKey: ["due-diligence-search"],
-    queryFn: () => base44.entities.DueDiligence.list("-created_date", 5000),
+    queryFn: () => base44.entities.DueDiligence.filter({ deleted_at: null }, "-created_date", 5000),
     enabled: searchFocused,
   });
 
   const { data: customReports = [] } = useQuery({
     queryKey: ["custom_reports_search"],
-    queryFn: () => base44.entities.CustomReport.list("-created_date", 500),
+    queryFn: () => base44.entities.CustomReport.filter({ deleted_at: null }, "-created_date", 500),
     enabled: searchFocused,
   });
 

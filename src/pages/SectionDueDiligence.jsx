@@ -59,7 +59,7 @@ export default function SectionDueDiligence() {
   const [ddProductsDialog, setDdProductsDialog] = useState(null);
   const { data: ddRecords = [], isLoading } = useQuery({
     queryKey: ["dd_section_count"],
-    queryFn: () => base44.entities.DueDiligence.list("-created_date", 5000),
+    queryFn: () => base44.entities.DueDiligence.filter({ deleted_at: null }, "-created_date", 5000),
   });
   const activeDd = ddRecords.filter((r) => !r.deleted_at);
   const pendingApprovals = activeDd.reduce(

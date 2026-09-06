@@ -17,7 +17,7 @@ export default function SectionPortfolios() {
 
   const { data: portfolios = [], isLoading } = useQuery({
     queryKey: ["portfolios_section_list"],
-    queryFn: () => base44.entities.Portfolio.list("-created_date", 5000),
+    queryFn: () => base44.entities.Portfolio.filter({ deleted_at: null }, "-created_date", 5000),
   });
   const activePortfolios = portfolios.filter((p) => !p.deleted_at && p.funding_status === "Active");
 
