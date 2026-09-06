@@ -2,14 +2,15 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 
 /**
  * Generic infinite-scroll hook for any Base44 entity, built on useInfiniteQuery.
+ * Uses cursor-based pagination via a backend function to avoid client-side rate limits.
  *
  * @param {Object}   opts
  * @param {Array}    opts.queryKey   - React Query cache key (e.g. ["firms"])
- * @param {Function} opts.fetchFn    - (skip, limit) => Promise<items[]>
- * @param {number}   opts.batchSize  - items per page (default 500; max 5000 per request)
+ * @param {Function} opts.fetchFn    - (cursor, limit) => Promise<{ records, nextCursor, hasMore }>
+ * @param {number}   opts.batchSize  - items per page (default 500)
  * @param {number}   opts.staleTime  - React Query stale time in ms (default 300000)
  * @param {boolean}  opts.enabled    - whether the query is enabled (default true)
- * @returns {Object} useInfiniteQuery result plus a convenience `items` flat array
+ * @returns {Object} useInfiniteQuery result
  */
 export function useInfiniteEntity({
   queryKey,
@@ -20,12 +21,9 @@ export function useInfiniteEntity({
 }) {
   const query = useInfiniteQuery({
     queryKey,
-    queryFn: async ({ pageParam = 0 }) => fetchFn(pageParam, batchSize),
-    initialPageParam: 0,
-    getNextPageParam: (lastPage, allPages) => {
-      const totalLoaded = allPages.reduce((sum, page) => sum + page.length, 0);
-      return lastPage.length < batchSize ? undefined : totalLoaded;
-    },
+    queryFn: async ({ pageParam }) => fetchFn(pageParam, batchSize),
+    initialPageParam: null,
+    getNextPageParam: (lastPage) => (lastPage?.hasMore ? lastPage.nextCursor : undefined),
     staleTime,
     enabled,
   });

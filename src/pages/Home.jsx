@@ -289,16 +289,22 @@ export default function Home() {
 
   const queryClient = useQueryClient();
 
-  // Infinite-scroll firm loading: fetches in batches of 500 as the user scrolls,
-  // giving a fast initial load and naturally bypassing the 5000-item per-request limit.
+  // Infinite-scroll firm loading: fetches in batches of 500 via the
+  // fetchAllFirms backend function (service role with 429 retry backoff),
+  // giving a fast initial load and bypassing both the 5000-item limit and
+  // user-level entity read rate limits.
   const firmsQuery = useInfiniteEntity({
-    queryKey: ["firms"],
-    fetchFn: (skip, limit) => base44.entities.Firm.list("-created_date", limit, skip),
+    queryKey: ["firms-infinite"],
+    fetchFn: async (cursor, limit) => {
+      const res = await base44.functions.invoke("fetchAllFirms", { cursor, limit });
+      const data = res?.data ?? res ?? {};
+      return { records: data.records || [], nextCursor: data.nextCursor ?? null, hasMore: !!data.hasMore };
+    },
     batchSize: 500,
     staleTime: 300000,
   });
   const firms = useMemo(
-    () => (firmsQuery.data ? firmsQuery.data.pages.flat().filter((f) => !f.deleted_at) : []),
+    () => (firmsQuery.data ? firmsQuery.data.pages.flatMap((p) => (p.records || []).filter((f) => !f.deleted_at)) : []),
     [firmsQuery.data]
   );
   const isLoading = firmsQuery.isLoading;
@@ -363,15 +369,20 @@ export default function Home() {
     select: (data) => data.filter((p) => !p.deleted_at),
   });
 
-  // Infinite-scroll contact loading: fetches in batches of 500 as the user scrolls.
+  // Infinite-scroll contact loading: fetches in batches of 500 via the
+  // fetchAllContacts backend function (service role with 429 retry backoff).
   const contactsQuery = useInfiniteEntity({
-    queryKey: ["contacts"],
-    fetchFn: (skip, limit) => base44.entities.Contact.list("-created_date", limit, skip),
+    queryKey: ["contacts-infinite"],
+    fetchFn: async (cursor, limit) => {
+      const res = await base44.functions.invoke("fetchAllContacts", { cursor, limit });
+      const data = res?.data ?? res ?? {};
+      return { records: data.records || [], nextCursor: data.nextCursor ?? null, hasMore: !!data.hasMore };
+    },
     batchSize: 500,
     staleTime: 300000,
   });
   const contacts = useMemo(
-    () => (contactsQuery.data ? contactsQuery.data.pages.flat().filter((c) => !c.deleted_at) : []),
+    () => (contactsQuery.data ? contactsQuery.data.pages.flatMap((p) => (p.records || []).filter((c) => !c.deleted_at)) : []),
     [contactsQuery.data]
   );
 
@@ -547,9 +558,9 @@ export default function Home() {
   useEffect(() => {
     const invalidate = (keys) => keys.forEach((k) => queryClient.invalidateQueries({ queryKey: k }));
     const subs = [
-      base44.entities.Firm.subscribe(() => invalidate([["firms"], ["deletedFirms"]])),
+      base44.entities.Firm.subscribe(() => invalidate([["firms-infinite"], ["firms"], ["deletedFirms"]])),
       base44.entities.Product.subscribe(() => invalidate([["products"], ["deletedProducts"]])),
-      base44.entities.Contact.subscribe(() => invalidate([["contacts"], ["deletedContacts"]])),
+      base44.entities.Contact.subscribe(() => invalidate([["contacts-infinite"], ["contacts"], ["deletedContacts"]])),
       base44.entities.Portfolio.subscribe(() => invalidate([["portfolios"], ["deletedPortfolios"]])),
       base44.entities.ContactActivity.subscribe(() => invalidate([["contact_activities_search"]])),
       base44.entities.FollowUpTask.subscribe(() => invalidate([["follow_up_tasks_search"]])),
@@ -660,8 +671,8 @@ export default function Home() {
       return firm;
     },
     onSuccess: (createdFirm) => {
-      queryClient.invalidateQueries({ queryKey: ["firms"] });
-      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-infinite"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-infinite"] });
       // Keep the dialog open and switch to view mode after creating a firm
       // (instead of closing it). Setting editingFirm to the newly-created firm
       // object makes AddFirmDialog's init effect re-run, re-initializing the
@@ -682,7 +693,7 @@ export default function Home() {
       return base44.entities.Firm.update(id, payload);
     },
     onSuccess: (updatedFirm) => {
-      queryClient.invalidateQueries({ queryKey: ["firms"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-infinite"] });
       // Keep the dialog open and switch to view mode after a successful save
       // (instead of closing it). Setting editingFirm to the freshly-saved firm
       // object (a new ref) makes AddFirmDialog's init effect re-run, which
@@ -700,7 +711,7 @@ export default function Home() {
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Firm.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["firms"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-infinite"] });
       setDeletingFirm(null);
     },
   });
@@ -788,9 +799,9 @@ export default function Home() {
       const res = await base44.functions.invoke('deleteFirmCascade', { firm_id: deletingFirm.id });
       const data = res?.data ?? res ?? {};
       // Realtime subscriptions auto-invalidate most lists, but refresh explicitly too.
-      queryClient.invalidateQueries({ queryKey: ["firms"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-infinite"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
-      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-infinite"] });
       queryClient.invalidateQueries({ queryKey: ["portfolios"] });
       queryClient.invalidateQueries({ queryKey: ["deletedFirms"] });
       queryClient.invalidateQueries({ queryKey: ["deletedProducts"] });
