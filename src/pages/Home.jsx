@@ -76,6 +76,7 @@ import { useFirmOwner } from "@/components/admin/useFirmOwner";
 import { useVoiceSearch } from "@/hooks/useVoiceSearch";
 import { triggerStartRecording } from "@/components/videolibrary/recorderStore";
 import { usePersistentState } from "@/hooks/usePersistentState";
+import { useInfiniteEntity } from "@/hooks/useInfiniteEntity";
 import AumAlertsBell from "@/components/firms/AumAlertsBell";
 import { DragDropContext, Droppable } from "@hello-pangea/dnd";
 import { useNavOrder, reorderNavItems } from "@/hooks/useNavOrder";
@@ -288,15 +289,19 @@ export default function Home() {
 
   const queryClient = useQueryClient();
 
-  const { data: firms = [], isLoading } = useQuery({
+  // Infinite-scroll firm loading: fetches in batches of 500 as the user scrolls,
+  // giving a fast initial load and naturally bypassing the 5000-item per-request limit.
+  const firmsQuery = useInfiniteEntity({
     queryKey: ["firms"],
-    queryFn: async () => {
-      const res = await base44.functions.invoke("fetchAllFirms", {});
-      return res?.records || [];
-    },
+    fetchFn: (skip, limit) => base44.entities.Firm.list("-created_date", limit, skip),
+    batchSize: 500,
     staleTime: 300000,
-    select: (data) => data.filter((f) => !f.deleted_at),
   });
+  const firms = useMemo(
+    () => (firmsQuery.data ? firmsQuery.data.pages.flat().filter((f) => !f.deleted_at) : []),
+    [firmsQuery.data]
+  );
+  const isLoading = firmsQuery.isLoading;
 
   // Supplementary backend search: when the user types in the search box,
   // fetch firms matching the query directly from the database. This ensures
@@ -358,15 +363,17 @@ export default function Home() {
     select: (data) => data.filter((p) => !p.deleted_at),
   });
 
-  const { data: contacts = [] } = useQuery({
+  // Infinite-scroll contact loading: fetches in batches of 500 as the user scrolls.
+  const contactsQuery = useInfiniteEntity({
     queryKey: ["contacts"],
-    queryFn: async () => {
-      const res = await base44.functions.invoke("fetchAllContacts", {});
-      return res?.records || [];
-    },
+    fetchFn: (skip, limit) => base44.entities.Contact.list("-created_date", limit, skip),
+    batchSize: 500,
     staleTime: 300000,
-    select: (data) => data.filter((c) => !c.deleted_at),
   });
+  const contacts = useMemo(
+    () => (contactsQuery.data ? contactsQuery.data.pages.flat().filter((c) => !c.deleted_at) : []),
+    [contactsQuery.data]
+  );
 
   const { data: portfolios = [] } = useQuery({
     queryKey: ["portfolios"],
@@ -1267,6 +1274,9 @@ export default function Home() {
             onOpenExportWizard={() => setFirmScoringExportOpen(true)}
             forceExpanded={allExpanded}
             initialFirmTypeFilter={initialFirmTypeFilter}
+            hasMoreFirms={firmsQuery.hasNextPage}
+            isLoadingMoreFirms={firmsQuery.isFetchingNextPage}
+            onLoadMoreFirms={firmsQuery.fetchNextPage}
           />
         )}
 
@@ -1294,6 +1304,9 @@ export default function Home() {
           onPasteContact={() => setPasteContactOpen(true)}
           onPhotoSearch={() => setPhotoCaptureOpen(true)}
           forceExpanded={allExpanded}
+          hasMoreContacts={contactsQuery.hasNextPage}
+          isLoadingMoreContacts={contactsQuery.isFetchingNextPage}
+          onLoadMoreContacts={contactsQuery.fetchNextPage}
         />
 
         {/* Utility section — now includes Management tools (Activity Timeline, Coverage, etc.) */}

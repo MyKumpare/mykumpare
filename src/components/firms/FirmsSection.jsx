@@ -15,6 +15,7 @@ import ViewModeToggle from "@/components/common/ViewModeToggle";
 import SectionSearch from "@/components/common/SectionSearch";
 import SectionExpandCollapse from "@/components/common/SectionExpandCollapse";
 import DateRangeFilter from "@/components/common/DateRangeFilter";
+import InfiniteScrollSentinel from "@/components/common/InfiniteScrollSentinel";
 import { useViewMode } from "@/hooks/useViewMode";
 
 const FIRM_TYPES = [
@@ -42,6 +43,9 @@ export default function FirmsSection({
   onOpenExportWizard,
   forceExpanded,
   initialFirmTypeFilter,
+  hasMoreFirms = false,
+  isLoadingMoreFirms = false,
+  onLoadMoreFirms,
 }) {
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(!!initialFirmTypeFilter);
@@ -824,6 +828,13 @@ export default function FirmsSection({
                   {searchQuery ? "No firms found" : 'Click "Add Firm" to create your first firm'}
                 </div>
               )}
+
+              <InfiniteScrollSentinel
+                hasMore={hasMoreFirms}
+                isLoadingMore={isLoadingMoreFirms}
+                onLoadMore={onLoadMoreFirms}
+                label="firms"
+              />
             </div>
           </div>
         </div>

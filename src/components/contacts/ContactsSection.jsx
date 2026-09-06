@@ -19,6 +19,7 @@ import ContactsBulkActionsBar from "./ContactsBulkActionsBar";
 import BulkTagDialog from "./BulkTagDialog";
 import BulkAssignXponanceContactDialog from "@/components/xponance/BulkAssignXponanceContactDialog";
 import ContactQuickFilterChips from "./ContactQuickFilterChips";
+import InfiniteScrollSentinel from "@/components/common/InfiniteScrollSentinel";
 
 const ContactPipelineStageEditor = lazyDialog(() => import("./ContactPipelineStageEditor"));
 
@@ -83,7 +84,7 @@ function ContactAvatar({ contact }) {
   );
 }
 
-export default function ContactsSection({ contacts, firms, products, portfolios, onContactClick, onAddContact, onPasteContact, onPhotoSearch, onFirmClick, forceExpanded }) {
+export default function ContactsSection({ contacts, firms, products, portfolios, onContactClick, onAddContact, onPasteContact, onPhotoSearch, onFirmClick, forceExpanded, hasMoreContacts = false, isLoadingMoreContacts = false, onLoadMoreContacts }) {
   const [expanded, setExpanded] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState({});
   const [expandedFirms, setExpandedFirms] = useState({});
@@ -817,6 +818,13 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
               {hasFilters ? "No contacts match your filters." : 'No contacts yet. Click "Add Contact" to create one.'}
             </div>
           )}
+
+          <InfiniteScrollSentinel
+            hasMore={hasMoreContacts}
+            isLoadingMore={isLoadingMoreContacts}
+            onLoadMore={onLoadMoreContacts}
+            label="contacts"
+          />
             </div>
           </div>
         </div>
