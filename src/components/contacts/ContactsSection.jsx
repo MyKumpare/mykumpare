@@ -347,7 +347,11 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
         return sel.has(val);
       });
     }
-    if (hideInactive) result = result.filter((c) => c.contact_status !== "Inactive");
+    // The "Active Only" toggle hides inactive contacts — but it must yield
+    // when the user explicitly selects "Inactive" in the sidebar contact_status
+    // filter, otherwise the sidebar selection gets filtered back out to empty.
+    const inactiveSelected = (filterValues.contact_status || new Set()).has("Inactive");
+    if (hideInactive && !inactiveSelected) result = result.filter((c) => c.contact_status !== "Inactive");
     return result;
   }, [contacts, hasFilters, filterText, filterSelected, firmMap, contactProductMap, contactPortfolioMap, filterDateRange, filterValues, hideInactive]);
 
