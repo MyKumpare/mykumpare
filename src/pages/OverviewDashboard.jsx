@@ -60,32 +60,32 @@ export default function OverviewDashboard() {
 
   const { data: firms = [], isLoading: firmsLoading } = useQuery({
     queryKey: ["firms"],
-    queryFn: () => base44.entities.Firm.list("-created_date"),
+    queryFn: () => base44.entities.Firm.filter({ deleted_at: null }, "-created_date"),
   });
 
   const { data: tasks = [], isLoading: tasksLoading } = useQuery({
     queryKey: ["follow_up_tasks_search"],
-    queryFn: () => base44.entities.FollowUpTask.list("-due_date"),
+    queryFn: () => base44.entities.FollowUpTask.filter({ deleted_at: null }, "-due_date"),
   });
 
   const { data: dueDiligences = [], isLoading: ddLoading } = useQuery({
     queryKey: ["due-diligence-search"],
-    queryFn: () => base44.entities.DueDiligence.list("-created_date", 5000),
+    queryFn: () => base44.entities.DueDiligence.filter({ deleted_at: null }, "-created_date", 5000),
   });
 
   const { data: activities = [], isLoading: activitiesLoading } = useQuery({
     queryKey: ["overview_activities"],
-    queryFn: () => base44.entities.ContactActivity.list("-activity_date", 5000),
+    queryFn: () => base44.entities.ContactActivity.filter({ deleted_at: null }, "-activity_date", 5000),
   });
 
   const { data: questionnaires = [], isLoading: questionnairesLoading } = useQuery({
     queryKey: ["overview_questionnaires"],
-    queryFn: () => base44.entities.Questionnaire.list("-created_date", 5000),
+    queryFn: () => base44.entities.Questionnaire.filter({ deleted_at: null }, "-created_date", 5000),
   });
 
   const { data: allContacts = [], isLoading: contactsLoading } = useQuery({
     queryKey: ["overview_contacts_pipeline"],
-    queryFn: () => base44.entities.Contact.list("-created_date", 5000),
+    queryFn: () => base44.entities.Contact.filter({ deleted_at: null }, "-created_date", 5000),
   });
 
   const { data: pipelineStages = [] } = useQuery({
@@ -95,7 +95,7 @@ export default function OverviewDashboard() {
 
   const { data: allProducts = [], isLoading: productsLoading } = useQuery({
     queryKey: ["overview_products"],
-    queryFn: () => base44.entities.Product.list("-created_date", 5000),
+    queryFn: () => base44.entities.Product.filter({ deleted_at: null }, "-created_date", 5000),
   });
 
   const [kpiConfigOpen, setKpiConfigOpen] = useState(false);

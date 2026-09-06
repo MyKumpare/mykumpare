@@ -53,7 +53,7 @@ export default function SectionReports() {
 
   const { data: savedReports = [], isLoading } = useQuery({
     queryKey: ["reports_section_count"],
-    queryFn: () => base44.entities.CustomReport.list("-created_date"),
+    queryFn: () => base44.entities.CustomReport.filter({ deleted_at: null }, "-created_date"),
   });
 
   const handleSelect = (key) => {
