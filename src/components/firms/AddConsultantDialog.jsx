@@ -104,9 +104,12 @@ export default function AddConsultantDialog({ open, onOpenChange, firmId, firmNa
   }, [open, editingConsultant]);
 
   const firmSearchResults = useMemo(() => {
-    if (!firmSearch.trim()) return consultantFirms;
+    const sorted = [...consultantFirms].sort((a, b) =>
+      (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })
+    );
+    if (!firmSearch.trim()) return sorted;
     const q = firmSearch.trim().toLowerCase();
-    return consultantFirms.filter((f) => (f.name || "").toLowerCase().includes(q));
+    return sorted.filter((f) => (f.name || "").toLowerCase().includes(q));
   }, [firmSearch, consultantFirms]);
 
   const handleSelectFirm = (firm) => {
