@@ -309,6 +309,14 @@ export default function Home() {
   );
   const isLoading = firmsQuery.isLoading;
 
+  // Auto-load all firm batches on mount so the user sees every firm without
+  // needing to scroll. Keeps fetching next pages until hasMore is false.
+  useEffect(() => {
+    if (firmsQuery.hasNextPage && !firmsQuery.isFetchingNextPage && !firmsQuery.isLoading) {
+      firmsQuery.fetchNextPage();
+    }
+  }, [firmsQuery.hasNextPage, firmsQuery.isFetchingNextPage, firmsQuery.isLoading, firmsQuery.fetchNextPage]);
+
   // Supplementary backend search: when the user types in the search box,
   // fetch firms matching the query directly from the database. This ensures
   // the search always finds firms even when the full firm list isn't fully
