@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { Button } from "@/components/ui/button";
 import { Plus, ChevronDown, ChevronRight, User, Camera, Download, Settings2, ClipboardPaste, CheckSquare, Check, SlidersHorizontal } from "lucide-react";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
@@ -130,6 +131,45 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
     queryKey: ["contact_pipeline_stages"],
     queryFn: () => base44.entities.ContactPipelineStage.list("order", 500),
   });
+
+  // Server-side contact search: when the user types in the filter text box,
+  // fetch matching contacts directly from the database so contacts beyond the
+  // first 500 loaded batch are findable. Debounced to avoid excessive calls.
+  const debouncedFilterText = useDebouncedValue(filterText, 400);
+  const filterKeywords = debouncedFilterText.trim().split(/\s+/).filter((k) => k.length >= 2);
+  const { data: searchedContacts = [] } = useQuery({
+    queryKey: ["contacts-section-search", filterKeywords.join(" ")],
+    queryFn: async () => {
+      if (filterKeywords.length === 0) return [];
+      const escaped = filterKeywords.map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(" ");
+      const res = await base44.functions.invoke("searchAppData", {
+        action: "search",
+        entity_name: "Contact",
+        filter: {
+          $or: [
+            { first_name: { $regex: escaped, $options: "i" } },
+            { last_name: { $regex: escaped, $options: "i" } },
+            { email: { $regex: escaped, $options: "i" } },
+            { title: { $regex: escaped, $options: "i" } },
+          ],
+          deleted_at: null,
+        },
+        limit: 100,
+        sort: "-created_date",
+      });
+      return res?.records || [];
+    },
+    enabled: filterKeywords.length > 0,
+    staleTime: 30000,
+  });
+
+  // Merge server-side search results into the contacts list (dedup by id)
+  const allContacts = useMemo(() => {
+    if (!searchedContacts.length) return contacts;
+    const existingIds = new Set(contacts.map((c) => c.id));
+    const newOnes = searchedContacts.filter((c) => !existingIds.has(c.id) && !c.deleted_at);
+    return newOnes.length ? [...contacts, ...newOnes] : contacts;
+  }, [contacts, searchedContacts]);
 
   const handleMoveContact = (contact, newStage) => {
     base44.entities.Contact.update(contact.id, { pipeline_stage: newStage })
@@ -333,8 +373,8 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
   const hasFilters = filterText.trim() || Object.keys(filterSelected).length > 0 || filterDateRange.start || filterDateRange.end;
   const filteredContacts = useMemo(() => {
     let result = hasFilters
-      ? filterSectionContacts(contacts, filterText, filterSelected, firmMap, contactProductMap, contactPortfolioMap, filterDateRange)
-      : contacts;
+      ? filterSectionContacts(allContacts, filterText, filterSelected, firmMap, contactProductMap, contactPortfolioMap, filterDateRange)
+      : allContacts;
     for (const [key, cfg] of Object.entries(SIDEBAR_FILTER_CONFIG)) {
       const sel = filterValues[key];
       if (!sel || sel.size === 0) continue;

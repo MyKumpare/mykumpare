@@ -223,7 +223,7 @@ export default function Home() {
     // their info is available) and show the full-size photo on top.
     if (hasPhoto && target) {
       const tokens = target.toLowerCase().split(/\s+/).filter((t) => t.length > 1);
-      const active = contacts.filter((c) => !c.deleted_at);
+      const active = allLoadedContacts.filter((c) => !c.deleted_at);
       let best = null;
       let bestScore = 0;
       for (const c of active) {
@@ -570,7 +570,7 @@ export default function Home() {
         navigate(location.pathname, { replace: true });
       }
     } else if (openContactId) {
-      const contact = contacts.find((c) => c.id === openContactId && !c.deleted_at);
+      const contact = allLoadedContacts.find((c) => c.id === openContactId && !c.deleted_at);
       if (contact) {
         openedFromQueryRef.current = key;
         setDialogOpen(false);
@@ -585,7 +585,7 @@ export default function Home() {
         navigate(location.pathname, { replace: true });
       }
     }
-  }, [location.search, firms, contacts, products, navigate]);
+  }, [location.search, firms, allLoadedContacts, products, navigate]);
 
   // Deep-link from the Dashboard's Firm Category chart: ?firmType=Allocator
   // opens the Firms section pre-filtered to that category and scrolls to it.
@@ -633,10 +633,10 @@ export default function Home() {
   // Resolve the signed-in user's contact: prefer the explicitly linked record,
   // fall back to an email match. Used for the header photo + display name.
   const linkedContact = user?.linked_contact_id
-    ? contacts.find(c => c.id === user.linked_contact_id && !c.deleted_at)
+    ? allLoadedContacts.find(c => c.id === user.linked_contact_id && !c.deleted_at)
     : null;
   const emailContact = user?.email
-    ? contacts.find(c => !c.deleted_at && (c.email || "").toLowerCase() === user.email.toLowerCase())
+    ? allLoadedContacts.find(c => !c.deleted_at && (c.email || "").toLowerCase() === user.email.toLowerCase())
     : null;
   const myContact = linkedContact || emailContact;
   const userPhoto = myContact?.photo_url;
@@ -1085,7 +1085,7 @@ export default function Home() {
                       query={searchQuery}
                       firms={allLoadedFirms}
                       products={products}
-                      contacts={contacts}
+                      contacts={allLoadedContacts}
                       portfolios={portfolios}
                       analyses={analyses}
                       activities={activities}
