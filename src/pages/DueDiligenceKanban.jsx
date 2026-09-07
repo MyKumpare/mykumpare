@@ -203,7 +203,7 @@ export default function DueDiligenceKanban() {
           setShowDialog(false);
         }}
         onDelete={(id) => {
-          base44.entities.DueDiligence.delete(id);
+          base44.entities.DueDiligence.update(id, { deleted_at: new Date().toISOString() });
           queryClient.invalidateQueries({ queryKey: ["due-diligence-all"] });
           queryClient.invalidateQueries({ queryKey: ["due-diligence-search"] });
           queryClient.invalidateQueries({ queryKey: ["due-diligence"] });

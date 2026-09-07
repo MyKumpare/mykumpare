@@ -17,6 +17,7 @@ export default function DeletedRecordsModal({ open, onOpenChange, deletedRecords
     { key: "products", label: "Products", entity: "Product" },
     { key: "contacts", label: "Contacts", entity: "Contact" },
     { key: "portfolios", label: "Portfolios", entity: "Portfolio" },
+    { key: "due_diligence", label: "Due Diligence", entity: "DueDiligence" },
   ];
 
   const handleRestore = async (record) => {
@@ -45,6 +46,7 @@ export default function DeletedRecordsModal({ open, onOpenChange, deletedRecords
   const getDisplayName = (record) => {
     if (record.name) return record.name;
     if (record.portfolio_name) return record.portfolio_name;
+    if (record.product_name) return record.product_name;
     if (record.first_name || record.last_name) {
       return `${record.first_name || ""} ${record.last_name || ""}`.trim();
     }
@@ -71,7 +73,7 @@ export default function DeletedRecordsModal({ open, onOpenChange, deletedRecords
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             {entityTypes.map(type => (
               <TabsTrigger key={type.key} value={type.key}>
                 {type.label}

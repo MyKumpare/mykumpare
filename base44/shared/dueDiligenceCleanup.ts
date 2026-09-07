@@ -27,8 +27,8 @@ export async function cascadeDeleteDueDiligence(svc: any, ddId: string) {
   }
   counts.notifications = notifications.length;
 
-  // --- Delete the DD record itself ---
-  await svc.entities.DueDiligence.delete(ddId);
+  // --- Soft-delete the DD record (recoverable from trash) ---
+  await svc.entities.DueDiligence.update(ddId, { deleted_at: new Date().toISOString() });
 
   // --- Recompute the product's product_status now that this DD is gone ---
   if (dd.product_id) {

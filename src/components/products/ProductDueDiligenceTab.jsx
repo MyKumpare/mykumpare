@@ -30,7 +30,7 @@ export default function ProductDueDiligenceTab({ productId, productName, firmId,
 
   const { data: records = [], isLoading } = useQuery({
     queryKey: ["due-diligence", "product", productId],
-    queryFn: () => base44.entities.DueDiligence.filter({ product_id: productId }, "-created_date", 500),
+    queryFn: () => base44.entities.DueDiligence.filter({ product_id: productId, deleted_at: null }, "-created_date", 500),
     enabled: !!productId,
   });
 

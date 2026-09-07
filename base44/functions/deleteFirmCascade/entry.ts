@@ -84,10 +84,13 @@ Deno.serve(async (req) => {
     if (docs.length) await svc.entities.FirmDocument.deleteMany({ firm_id: firmId });
     counts.documents = docs.length;
 
-    // --- Due diligence records (hard delete) ---
+    // --- Due diligence records (soft delete — recoverable when firm is restored) ---
     const dd = await svc.entities.DueDiligence.filter({ firm_id: firmId });
-    if (dd.length) await svc.entities.DueDiligence.deleteMany({ firm_id: firmId });
-    counts.due_diligence = dd.length;
+    const activeDd = dd.filter((d) => !d.deleted_at);
+    for (const d of activeDd) {
+      await svc.entities.DueDiligence.update(d.id, { deleted_at: now });
+    }
+    counts.due_diligence = activeDd.length;
 
     // --- Portfolios where the firm is allocator OR advisor (soft delete) ---
     const portAllocator = await svc.entities.Portfolio.filter({ firm_id: firmId });

@@ -28,11 +28,17 @@ export default function DeletedRecords() {
     queryFn: () => base44.entities.Portfolio.filter({ deleted_at: { $exists: true } }),
   });
 
+  const { data: deletedDueDiligence = [] } = useQuery({
+    queryKey: ["deletedDueDiligence"],
+    queryFn: () => base44.entities.DueDiligence.filter({ deleted_at: { $exists: true } }),
+  });
+
   const deletedRecords = {
     firms: deletedFirms,
     products: deletedProducts,
     contacts: deletedContacts,
     portfolios: deletedPortfolios,
+    due_diligence: deletedDueDiligence,
   };
 
   return (
