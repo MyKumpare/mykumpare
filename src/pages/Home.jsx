@@ -394,12 +394,49 @@ export default function Home() {
     [contactsQuery.data]
   );
 
-  // Auto-load all contact batches on mount so the user sees every contact.
-  useEffect(() => {
-    if (contactsQuery.hasNextPage && !contactsQuery.isFetchingNextPage && !contactsQuery.isLoading) {
-      contactsQuery.fetchNextPage();
-    }
-  }, [contactsQuery.hasNextPage, contactsQuery.isFetchingNextPage, contactsQuery.isLoading, contactsQuery.fetchNextPage]);
+  // Contacts: load only the first batch on mount for fast initial render.
+  // Infinite scroll (InfiniteScrollSentinel in ContactsSection) loads more
+  // as the user scrolls. Server-side search (below) finds contacts that
+  // haven't been loaded yet, so the user never needs to wait for all 13k+
+  // records to load before finding someone.
+
+  // Supplementary backend search for contacts: when the user types in the
+  // global search bar, fetch contacts matching the query directly from the
+  // database. This ensures the search always finds contacts even when the
+  // full contact list isn't fully loaded (only the first 500 are loaded on
+  // mount; the rest come via infinite scroll or this server-side search).
+  const { data: supplementaryContacts = [] } = useQuery({
+    queryKey: ["contacts-search", searchKeywords.join(" ")],
+    queryFn: async () => {
+      if (searchKeywords.length === 0) return [];
+      const escaped = searchKeywords.map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(" ");
+      const res = await base44.functions.invoke("searchAppData", {
+        action: "search",
+        entity_name: "Contact",
+        filter: {
+          $or: [
+            { first_name: { $regex: escaped, $options: "i" } },
+            { last_name: { $regex: escaped, $options: "i" } },
+            { email: { $regex: escaped, $options: "i" } },
+          ],
+          deleted_at: null,
+        },
+        limit: 50,
+        sort: "-created_date",
+      });
+      return res?.records || [];
+    },
+    enabled: searchKeywords.length > 0,
+    staleTime: 60000,
+  });
+
+  // Merge supplementary contact search results into the contacts list (dedup by id)
+  const allLoadedContacts = useMemo(() => {
+    if (!supplementaryContacts.length) return contacts;
+    const existingIds = new Set(contacts.map((c) => c.id));
+    const newOnes = supplementaryContacts.filter((c) => !existingIds.has(c.id) && !c.deleted_at);
+    return newOnes.length ? [...contacts, ...newOnes] : contacts;
+  }, [contacts, supplementaryContacts]);
 
   const { data: portfolios = [] } = useQuery({
     queryKey: ["portfolios"],
@@ -862,7 +899,7 @@ export default function Home() {
   // allocator fetch) so allocators appear even when fetchAllFirms returns partial data.
   const activeFirms = allLoadedFirms.filter(f => !f.deleted_at);
   const activeProducts = products.filter(p => !p.deleted_at);
-  const activeContacts = contacts.filter(c => !c.deleted_at);
+  const activeContacts = allLoadedContacts.filter(c => !c.deleted_at);
   
   const matchingProductFirmIds = q
     ? new Set(activeProducts.filter((p) => p.name.toLowerCase().includes(q)).map((p) => p.firm_id))
@@ -1481,7 +1518,7 @@ export default function Home() {
       <ContactsListModal
         open={contactsModalOpen}
         onOpenChange={setContactsModalOpen}
-        contacts={contacts}
+        contacts={allLoadedContacts}
         firms={firms}
         products={products}
         portfolios={portfolios}
@@ -1489,7 +1526,7 @@ export default function Home() {
         onProductClick={(product) => handleEditProduct(product, true)}
         onFirmClick={(firm) => firm && handleEdit(firm, false, true)}
         onContactClick={(contact) => setViewingContact(contact)}
-      />
+        />
 
       <AddContactDialog
         open={addContactOpen || !!addContactPhotoUrl || !!pasteInitialData}
@@ -1630,7 +1667,7 @@ export default function Home() {
       <ContactPickerModal
         open={contactPickerOpen}
         onClose={() => setContactPickerOpen(false)}
-        contacts={contacts}
+        contacts={allLoadedContacts}
         firms={firms}
         products={products}
         portfolios={portfolios}
@@ -1665,7 +1702,7 @@ export default function Home() {
         open={mapSearchOpen}
         onClose={() => setMapSearchOpen(false)}
         firms={firms}
-        contacts={contacts}
+        contacts={allLoadedContacts}
         onFirmClick={(firm) => handleEdit(firm)}
         onContactClick={(contact) => setViewingContact(contact)}
       />
@@ -1686,7 +1723,7 @@ export default function Home() {
         onClose={() => setQuestionnairePickerOpen(false)}
         user={user}
         firms={firms}
-        contacts={contacts}
+        contacts={allLoadedContacts}
         products={products}
         onFirmClick={(firmId) => { const full = firms.find(x => x.id === firmId); if (full) handleEdit(full); }}
         onContactClick={(contact) => setViewingContact(contact)}
@@ -1699,7 +1736,7 @@ export default function Home() {
         editQuestionnaire={null}
         user={user}
         firms={firms}
-        contacts={contacts}
+        contacts={allLoadedContacts}
         products={products}
         onFirmClick={(firmId) => { const full = firms.find(x => x.id === firmId); if (full) handleEdit(full); }}
         onContactClick={(contact) => setViewingContact(contact)}
@@ -1761,7 +1798,7 @@ export default function Home() {
         onOpenChange={setProfileOpen}
         user={user}
         firms={firms}
-        contacts={contacts}
+        contacts={allLoadedContacts}
         onSaveLinked={handleSaveProfileLink}
         onLogout={() => { setProfileOpen(false); logout(); }}
       />
