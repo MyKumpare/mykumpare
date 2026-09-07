@@ -230,7 +230,7 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
     try {
       const ids = Array.from(selectedIds);
       const updates = ids.map((id) => {
-        const c = contacts.find((x) => x.id === id);
+        const c = allContacts.find((x) => x.id === id);
         const existing = c?.tags || [];
         const merged = Array.from(new Set([...existing, ...tagsToAdd]));
         return { id, tags: merged };
@@ -351,7 +351,7 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
   // Build contactId -> portfolio names map via firm associations
   const contactPortfolioMap = useMemo(() => {
     const map = {};
-    if (!portfolios || !contacts) return map;
+    if (!portfolios || !allContacts) return map;
     const firmPortfolioMap = {};
     for (const p of portfolios) {
       if (p.deleted_at) continue;
@@ -360,7 +360,7 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
         if (!firmPortfolioMap[fid].includes(p.portfolio_name)) firmPortfolioMap[fid].push(p.portfolio_name);
       }
     }
-    for (const c of contacts) {
+    for (const c of allContacts) {
       const names = new Set();
       for (const fid of c.firm_ids || []) {
         for (const name of firmPortfolioMap[fid] || []) names.add(name);
@@ -368,7 +368,7 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
       if (names.size > 0) map[c.id] = Array.from(names);
     }
     return map;
-  }, [portfolios, contacts]);
+  }, [portfolios, allContacts]);
 
   const hasFilters = filterText.trim() || Object.keys(filterSelected).length > 0 || filterDateRange.start || filterDateRange.end;
   const filteredContacts = useMemo(() => {
@@ -393,13 +393,13 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
     const inactiveSelected = (filterValues.contact_status || new Set()).has("Inactive");
     if (hideInactive && !inactiveSelected) result = result.filter((c) => c.contact_status !== "Inactive");
     return result;
-  }, [contacts, hasFilters, filterText, filterSelected, firmMap, contactProductMap, contactPortfolioMap, filterDateRange, filterValues, hideInactive]);
+  }, [allContacts, hasFilters, filterText, filterSelected, firmMap, contactProductMap, contactPortfolioMap, filterDateRange, filterValues, hideInactive]);
 
   const sidebarFilterCounts = useMemo(() => {
     const counts = {};
     for (const [key, cfg] of Object.entries(SIDEBAR_FILTER_CONFIG)) {
       const count = {};
-      for (const c of contacts) {
+      for (const c of allContacts) {
         if (c.deleted_at) continue;
         if (cfg.isArray) {
           const val = c[cfg.field] || [];
@@ -414,7 +414,7 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
       counts[key] = count;
     }
     return counts;
-  }, [contacts]);
+  }, [allContacts]);
 
   // Build sidebar filter groups with dynamic options computed from loaded contacts
   // (for groups whose options array is empty — e.g. tags, contact_type, pipeline_stage).
@@ -423,7 +423,7 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
     const dynamicOpts = {};
     for (const key of dynamicKeys) {
       const set = new Set();
-      for (const c of contacts) {
+      for (const c of allContacts) {
         if (c.deleted_at) continue;
         const val = c[key];
         if (Array.isArray(val)) val.forEach((v) => v && set.add(v));
@@ -436,7 +436,7 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
         ? { ...g, options: dynamicOpts[g.key] }
         : g
     );
-  }, [contacts]);
+  }, [allContacts]);
 
   // Contacts shown on the Kanban: "all" → everyone; a specific firm type → only contacts of that firm type.
   const kanbanContacts = useMemo(() => {
@@ -475,7 +475,7 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
     .sort((a, b) => (a.last_name || "").localeCompare(b.last_name || "")) : [];
 
   const totalContacts = filteredContacts.length;
-  const totalAllContacts = contacts.length;
+  const totalAllContacts = allContacts.length;
 
   const contactColor = (gt) => GROUP_COLORS[gt] || "bg-gray-100 text-gray-700";
 
