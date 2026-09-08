@@ -52,8 +52,7 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
       const idField = role === "primary" ? "primary_xponance_contact_id" : "secondary_xponance_contact_id";
       const nameField = role === "primary" ? "primary_xponance_contact_name" : "secondary_xponance_contact_name";
       await base44.entities.Portfolio.bulkUpdate(ids.map((id) => ({ id, [idField]: contact_id, [nameField]: contact_name })));
-      queryClient.invalidateQueries({ queryKey: ["portfolios"] });
-      queryClient.invalidateQueries({ queryKey: ["portfolios-all"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolios-infinite"] });
       toast({ title: `✅ ${contact_name} assigned as ${role} for ${ids.length} portfolio${ids.length === 1 ? "" : "s"}` });
       setBulkXponanceOpen(false);
       clearSelection();
@@ -171,8 +170,7 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
         successCount++;
         totalRecords += result.reconciledCount;
       }
-      queryClient.invalidateQueries({ queryKey: ["portfolios"] });
-      queryClient.invalidateQueries({ queryKey: ["portfolios-all"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolios-infinite"] });
       toast({
         title: `Reconciled ${totalRecords} record${totalRecords !== 1 ? "s" : ""} across ${successCount} portfolio${successCount !== 1 ? "s" : ""}`,
       });
