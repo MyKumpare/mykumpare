@@ -28,7 +28,9 @@ const GROUP_COLORS = {
   "Investment Manager": "bg-blue-100 text-blue-700",
 };
 
-export default function ProductsSection({ products, firms, onProductClick, onAddProduct, onFirmClick, forceExpanded }) {
+import InfiniteScrollSentinel from "@/components/common/InfiniteScrollSentinel";
+
+export default function ProductsSection({ products, firms, onProductClick, onAddProduct, onFirmClick, forceExpanded, hasMoreProducts = false, isLoadingMoreProducts = false, onLoadMoreProducts }) {
   const { user: currentUser } = useAuth();
   const [expanded, setExpanded] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState({});
@@ -460,6 +462,13 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
           </div>
         </div>
       )}
+
+      <InfiniteScrollSentinel
+        hasMore={hasMoreProducts}
+        isLoadingMore={isLoadingMoreProducts}
+        onLoadMore={onLoadMoreProducts}
+        label="products"
+      />
 
       {showBulkScoring && (
         <BulkScoringDialog

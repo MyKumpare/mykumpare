@@ -300,7 +300,7 @@ export default function Home() {
       const data = res?.data ?? res ?? {};
       return { records: data.records || [], nextCursor: data.nextCursor ?? null, hasMore: !!data.hasMore };
     },
-    batchSize: 500,
+    batchSize: 50,
     staleTime: 300000,
   });
   const firms = useMemo(
@@ -308,14 +308,6 @@ export default function Home() {
     [firmsQuery.data]
   );
   const isLoading = firmsQuery.isLoading;
-
-  // Auto-load all firm batches on mount so the user sees every firm without
-  // needing to scroll. Keeps fetching next pages until hasMore is false.
-  useEffect(() => {
-    if (firmsQuery.hasNextPage && !firmsQuery.isFetchingNextPage && !firmsQuery.isLoading) {
-      firmsQuery.fetchNextPage();
-    }
-  }, [firmsQuery.hasNextPage, firmsQuery.isFetchingNextPage, firmsQuery.isLoading, firmsQuery.fetchNextPage]);
 
   // Supplementary backend search: when the user types in the search box,
   // fetch firms matching the query directly from the database. This ensures
@@ -371,11 +363,51 @@ export default function Home() {
     return newOnes.length ? [...firms, ...newOnes] : firms;
   }, [firms, supplementaryFirms, supplementaryAllocators]);
 
-  const { data: products = [] } = useQuery({
-    queryKey: ["products"],
-    queryFn: () => base44.entities.Product.filter({ deleted_at: null }, "-created_date", 5000),
-    select: (data) => data.filter((p) => !p.deleted_at),
+  // Infinite-scroll product loading: fetches in batches of 50 via the
+  // fetchAllProducts backend function (service role with 429 retry backoff).
+  const productsQuery = useInfiniteEntity({
+    queryKey: ["products-infinite"],
+    fetchFn: async (cursor, limit) => {
+      const res = await base44.functions.invoke("fetchAllProducts", { cursor, limit });
+      const data = res?.data ?? res ?? {};
+      return { records: data.records || [], nextCursor: data.nextCursor ?? null, hasMore: !!data.hasMore };
+    },
+    batchSize: 50,
+    staleTime: 300000,
   });
+  const products = useMemo(
+    () => (productsQuery.data ? productsQuery.data.pages.flatMap((p) => (p.records || []).filter((p) => !p.deleted_at)) : []),
+    [productsQuery.data]
+  );
+
+  // Supplementary backend search for products: when the user types in the
+  // global search bar, fetch products matching the query directly from the
+  // database so results are found even before they scroll into view.
+  const { data: supplementaryProducts = [] } = useQuery({
+    queryKey: ["products-search", searchKeywords.join(" ")],
+    queryFn: async () => {
+      if (searchKeywords.length === 0) return [];
+      const escaped = searchKeywords.map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(" ");
+      const res = await base44.functions.invoke("searchAppData", {
+        action: "search",
+        entity_name: "Product",
+        filter: { name: { $regex: escaped, $options: "i" }, deleted_at: null },
+        limit: 50,
+        sort: "-created_date",
+      });
+      return res?.records || [];
+    },
+    enabled: searchKeywords.length > 0,
+    staleTime: 60000,
+  });
+
+  // Merge supplementary product search results into the products list (dedup by id)
+  const allLoadedProducts = useMemo(() => {
+    if (!supplementaryProducts.length) return products;
+    const existingIds = new Set(products.map((p) => p.id));
+    const newOnes = supplementaryProducts.filter((p) => !existingIds.has(p.id) && !p.deleted_at);
+    return newOnes.length ? [...products, ...newOnes] : products;
+  }, [products, supplementaryProducts]);
 
   // Infinite-scroll contact loading: fetches in batches of 500 via the
   // fetchAllContacts backend function (service role with 429 retry backoff).
@@ -386,7 +418,7 @@ export default function Home() {
       const data = res?.data ?? res ?? {};
       return { records: data.records || [], nextCursor: data.nextCursor ?? null, hasMore: !!data.hasMore };
     },
-    batchSize: 500,
+    batchSize: 50,
     staleTime: 300000,
   });
   const contacts = useMemo(
@@ -438,11 +470,51 @@ export default function Home() {
     return newOnes.length ? [...contacts, ...newOnes] : contacts;
   }, [contacts, supplementaryContacts]);
 
-  const { data: portfolios = [] } = useQuery({
-    queryKey: ["portfolios"],
-    queryFn: () => base44.entities.Portfolio.filter({ deleted_at: null }, "-created_date", 5000),
-    select: (data) => data.filter((p) => !p.deleted_at),
+  // Infinite-scroll portfolio loading: fetches in batches of 50 via the
+  // fetchAllPortfolios backend function (service role with 429 retry backoff).
+  const portfoliosQuery = useInfiniteEntity({
+    queryKey: ["portfolios-infinite"],
+    fetchFn: async (cursor, limit) => {
+      const res = await base44.functions.invoke("fetchAllPortfolios", { cursor, limit });
+      const data = res?.data ?? res ?? {};
+      return { records: data.records || [], nextCursor: data.nextCursor ?? null, hasMore: !!data.hasMore };
+    },
+    batchSize: 50,
+    staleTime: 300000,
   });
+  const portfolios = useMemo(
+    () => (portfoliosQuery.data ? portfoliosQuery.data.pages.flatMap((p) => (p.records || []).filter((p) => !p.deleted_at)) : []),
+    [portfoliosQuery.data]
+  );
+
+  // Supplementary backend search for portfolios: when the user types in the
+  // global search bar, fetch portfolios matching the query directly from the
+  // database so results are found even before they scroll into view.
+  const { data: supplementaryPortfolios = [] } = useQuery({
+    queryKey: ["portfolios-search", searchKeywords.join(" ")],
+    queryFn: async () => {
+      if (searchKeywords.length === 0) return [];
+      const escaped = searchKeywords.map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(" ");
+      const res = await base44.functions.invoke("searchAppData", {
+        action: "search",
+        entity_name: "Portfolio",
+        filter: { portfolio_name: { $regex: escaped, $options: "i" }, deleted_at: null },
+        limit: 50,
+        sort: "-created_date",
+      });
+      return res?.records || [];
+    },
+    enabled: searchKeywords.length > 0,
+    staleTime: 60000,
+  });
+
+  // Merge supplementary portfolio search results into the portfolios list (dedup by id)
+  const allLoadedPortfolios = useMemo(() => {
+    if (!supplementaryPortfolios.length) return portfolios;
+    const existingIds = new Set(portfolios.map((p) => p.id));
+    const newOnes = supplementaryPortfolios.filter((p) => !existingIds.has(p.id) && !p.deleted_at);
+    return newOnes.length ? [...portfolios, ...newOnes] : portfolios;
+  }, [portfolios, supplementaryPortfolios]);
 
   const { data: deletedFirms = [] } = useQuery({
     queryKey: ["deletedFirms"],
@@ -611,9 +683,9 @@ export default function Home() {
     const invalidate = (keys) => keys.forEach((k) => queryClient.invalidateQueries({ queryKey: k }));
     const subs = [
       base44.entities.Firm.subscribe(() => invalidate([["firms-infinite"], ["firms"], ["deletedFirms"]])),
-      base44.entities.Product.subscribe(() => invalidate([["products"], ["deletedProducts"]])),
+      base44.entities.Product.subscribe(() => invalidate([["products-infinite"], ["deletedProducts"]])),
       base44.entities.Contact.subscribe(() => invalidate([["contacts-infinite"], ["contacts"], ["deletedContacts"]])),
-      base44.entities.Portfolio.subscribe(() => invalidate([["portfolios"], ["deletedPortfolios"]])),
+      base44.entities.Portfolio.subscribe(() => invalidate([["portfolios-infinite"], ["deletedPortfolios"]])),
       base44.entities.ContactActivity.subscribe(() => invalidate([["contact_activities_search"]])),
       base44.entities.FollowUpTask.subscribe(() => invalidate([["follow_up_tasks_search"]])),
       base44.entities.FirmDocument.subscribe(() => invalidate([["firm_documents_search"]])),
@@ -655,7 +727,7 @@ export default function Home() {
   const createProductMutation = useMutation({
     mutationFn: (data) => base44.entities.Product.create({ ...data, tenant_id: user?.linked_firm_id }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["products-infinite"] });
       setProductDialogOpen(false);
     },
   });
@@ -667,7 +739,7 @@ export default function Home() {
       return base44.entities.Product.update(id, payload);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["products-infinite"] });
       setProductDialogOpen(false);
       setEditingProduct(null);
     },
@@ -679,7 +751,7 @@ export default function Home() {
   const deleteProductMutation = useMutation({
     mutationFn: (id) => base44.entities.Product.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["products-infinite"] });
       setDeletingProduct(null);
     },
   });
@@ -852,9 +924,9 @@ export default function Home() {
       const data = res?.data ?? res ?? {};
       // Realtime subscriptions auto-invalidate most lists, but refresh explicitly too.
       queryClient.invalidateQueries({ queryKey: ["firms-infinite"] });
-      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["products-infinite"] });
       queryClient.invalidateQueries({ queryKey: ["contacts-infinite"] });
-      queryClient.invalidateQueries({ queryKey: ["portfolios"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolios-infinite"] });
       queryClient.invalidateQueries({ queryKey: ["deletedFirms"] });
       queryClient.invalidateQueries({ queryKey: ["deletedProducts"] });
       queryClient.invalidateQueries({ queryKey: ["deletedContacts"] });
@@ -898,7 +970,7 @@ export default function Home() {
   // Exclude soft-deleted firms. Use allLoadedFirms (which includes supplementary
   // allocator fetch) so allocators appear even when fetchAllFirms returns partial data.
   const activeFirms = allLoadedFirms.filter(f => !f.deleted_at);
-  const activeProducts = products.filter(p => !p.deleted_at);
+  const activeProducts = allLoadedProducts.filter(p => !p.deleted_at);
   const activeContacts = allLoadedContacts.filter(c => !c.deleted_at);
   
   const matchingProductFirmIds = q
@@ -931,7 +1003,7 @@ export default function Home() {
   const totalFirms = activeFirms.length;
   const totalProducts = activeProducts.length;
   const totalContacts = activeContacts.length;
-  const totalPortfolios = portfolios.filter(p => !p.deleted_at).length;
+  const totalPortfolios = allLoadedPortfolios.filter(p => !p.deleted_at).length;
   const totalAnalyses = analyses.length;
   const hasResults = Object.keys(groupedFirms).length > 0;
 
@@ -1084,9 +1156,9 @@ export default function Home() {
                     <SearchResults
                       query={searchQuery}
                       firms={allLoadedFirms}
-                      products={products}
+                      products={allLoadedProducts}
                       contacts={allLoadedContacts}
-                      portfolios={portfolios}
+                      portfolios={allLoadedPortfolios}
                       analyses={analyses}
                       activities={activities}
                       followUpTasks={followUpTasks}
@@ -1302,10 +1374,13 @@ export default function Home() {
         {/* Portfolios section */}
         <div ref={portfoliosRef} />
         <PortfoliosSection
-          portfolios={portfolios.filter(p => !p.deleted_at)}
+          portfolios={allLoadedPortfolios.filter(p => !p.deleted_at)}
           onPortfolioClick={(portfolio) => { setEditingPortfolio(portfolio); setPreselectedAllocatorId(null); setPortfolioDialogOpen(true); }}
           onAddPortfolio={() => { setEditingPortfolio(null); setPreselectedAllocatorId(null); setPortfolioDialogOpen(true); }}
           forceExpanded={allExpanded}
+          hasMorePortfolios={portfoliosQuery.hasNextPage}
+          isLoadingMorePortfolios={portfoliosQuery.isFetchingNextPage}
+          onLoadMorePortfolios={portfoliosQuery.fetchNextPage}
         />
 
         {/* Firms section */}
@@ -1352,6 +1427,9 @@ export default function Home() {
           onFirmClick={(firm) => handleEdit(firm)}
           onAddProduct={() => { setEditingProduct(null); setPreselectedProductType(null); setPreselectedFirmId(null); setProductDialogOpen(true); }}
           forceExpanded={allExpanded}
+          hasMoreProducts={productsQuery.hasNextPage}
+          isLoadingMoreProducts={productsQuery.isFetchingNextPage}
+          onLoadMoreProducts={productsQuery.fetchNextPage}
         />
 
         {/* Contacts section */}
@@ -1360,7 +1438,7 @@ export default function Home() {
           contacts={activeContacts}
           firms={activeFirms}
           products={activeProducts}
-          portfolios={portfolios.filter(p => !p.deleted_at)}
+          portfolios={allLoadedPortfolios.filter(p => !p.deleted_at)}
           onContactClick={(contact) => setViewingContact(contact)}
           onFirmClick={(firm) => handleEdit(firm, false, false)}
           onAddContact={() => setAddContactOpen(true)}
@@ -1508,8 +1586,8 @@ export default function Home() {
         onOpenChange={(open) => !open && setStatsModal(null)}
         mode={statsModal}
         firms={firms}
-        products={products}
-        portfolios={portfolios}
+        products={allLoadedProducts}
+        portfolios={allLoadedPortfolios}
         onFirmClick={handleEdit}
         onProductClick={handleEditProduct}
         onPortfolioClick={(portfolio) => { setEditingPortfolio(portfolio); setPreselectedAllocatorId(null); setPortfolioDialogOpen(true); }}
@@ -1520,8 +1598,8 @@ export default function Home() {
         onOpenChange={setContactsModalOpen}
         contacts={allLoadedContacts}
         firms={firms}
-        products={products}
-        portfolios={portfolios}
+        products={allLoadedProducts}
+        portfolios={allLoadedPortfolios}
         onNavigateToOwnership={handleNavigateToOwnership}
         onProductClick={(product) => handleEditProduct(product, true)}
         onFirmClick={(firm) => firm && handleEdit(firm, false, true)}
@@ -1583,7 +1661,7 @@ export default function Home() {
         editingPortfolio={editingPortfolio}
         onDelete={(portfolio) => {
           base44.entities.Portfolio.delete(portfolio.id).then(() => {
-            queryClient.invalidateQueries({ queryKey: ["portfolios"] });
+            queryClient.invalidateQueries({ queryKey: ["portfolios-infinite"] });
           });
         }}
         onFirmClick={handleEdit}
@@ -1635,7 +1713,7 @@ export default function Home() {
       <PortfolioPickerModal
         open={portfolioPickerOpen}
         onClose={() => setPortfolioPickerOpen(false)}
-        portfolios={portfolios}
+        portfolios={allLoadedPortfolios}
         onPortfolioClick={(portfolio) => { setEditingPortfolio(portfolio); setPreselectedAllocatorId(null); setPortfolioDialogOpen(true); }}
         onAddPortfolio={() => { setEditingPortfolio(null); setPreselectedAllocatorId(null); setPortfolioDialogOpen(true); }}
       />
@@ -1659,7 +1737,7 @@ export default function Home() {
       <ProductPickerModal
         open={productPickerOpen}
         onClose={() => setProductPickerOpen(false)}
-        products={products}
+        products={allLoadedProducts}
         onProductClick={(product) => handleEditProduct(product)}
         onAddProduct={() => { setEditingProduct(null); setPreselectedProductType(null); setPreselectedFirmId(null); setProductDialogOpen(true); }}
       />
@@ -1669,8 +1747,8 @@ export default function Home() {
         onClose={() => setContactPickerOpen(false)}
         contacts={allLoadedContacts}
         firms={firms}
-        products={products}
-        portfolios={portfolios}
+        products={allLoadedProducts}
+        portfolios={allLoadedPortfolios}
         onContactClick={(contact) => setViewingContact(contact)}
         onAddContact={() => setAddContactOpen(true)}
         onFirmClick={(firm) => firm && handleEdit(firm, false, true)}
@@ -1724,7 +1802,7 @@ export default function Home() {
         user={user}
         firms={firms}
         contacts={allLoadedContacts}
-        products={products}
+        products={allLoadedProducts}
         onFirmClick={(firmId) => { const full = firms.find(x => x.id === firmId); if (full) handleEdit(full); }}
         onContactClick={(contact) => setViewingContact(contact)}
         onProductClick={(product) => handleEditProduct(product)}
@@ -1737,7 +1815,7 @@ export default function Home() {
         user={user}
         firms={firms}
         contacts={allLoadedContacts}
-        products={products}
+        products={allLoadedProducts}
         onFirmClick={(firmId) => { const full = firms.find(x => x.id === firmId); if (full) handleEdit(full); }}
         onContactClick={(contact) => setViewingContact(contact)}
         onProductClick={(product) => handleEditProduct(product)}

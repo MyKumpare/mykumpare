@@ -17,7 +17,9 @@ import BulkAssignXponanceContactDialog from "@/components/xponance/BulkAssignXpo
 
 const ADVISOR_TYPES = ["Investment Manager"];
 
-export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddPortfolio, forceExpanded }) {
+import InfiniteScrollSentinel from "@/components/common/InfiniteScrollSentinel";
+
+export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddPortfolio, forceExpanded, hasMorePortfolios = false, isLoadingMorePortfolios = false, onLoadMorePortfolios }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [reconcilingAll, setReconcilingAll] = useState(false);
@@ -657,6 +659,12 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
           </div>
         </div>
       )}
+      <InfiniteScrollSentinel
+        hasMore={hasMorePortfolios}
+        isLoadingMore={isLoadingMorePortfolios}
+        onLoadMore={onLoadMorePortfolios}
+        label="portfolios"
+      />
       <BulkAssignXponanceContactDialog
         open={bulkXponanceOpen}
         onOpenChange={setBulkXponanceOpen}
