@@ -61,6 +61,7 @@ import OnsiteVisitReport from './pages/OnsiteVisitReport';
 import OnsiteVisitCalendar from './pages/OnsiteVisitCalendar';
 import OnsiteVisitFollowUpTasks from './pages/OnsiteVisitFollowUpTasks';
 import ContactShortBioDashboard from './pages/ContactShortBioDashboard';
+import FirmCategoryDashboard from './pages/FirmCategoryDashboard';
 import QuickNotesDrawer from "@/components/quicknotes/QuickNotesDrawer";
 import ScreenshotCaptureTool from "@/components/videolibrary/ScreenshotCaptureTool";
 import ScreenRecorderTool from "@/components/videolibrary/ScreenRecorderTool";
@@ -176,6 +177,7 @@ const AuthenticatedApp = () => {
       <Route path="/OnsiteVisitCalendar" element={<LayoutWrapper currentPageName="OnsiteVisitCalendar"><OnsiteVisitCalendar /></LayoutWrapper>} />
       <Route path="/OnsiteVisitFollowUpTasks" element={<LayoutWrapper currentPageName="OnsiteVisitFollowUpTasks"><OnsiteVisitFollowUpTasks /></LayoutWrapper>} />
       <Route path="/ContactShortBioDashboard" element={<LayoutWrapper currentPageName="ContactShortBioDashboard"><ContactShortBioDashboard /></LayoutWrapper>} />
+      <Route path="/FirmCategoryDashboard" element={<LayoutWrapper currentPageName="FirmCategoryDashboard"><FirmCategoryDashboard /></LayoutWrapper>} />
       <Route path="/register" element={<ExternalPartyRegister />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
