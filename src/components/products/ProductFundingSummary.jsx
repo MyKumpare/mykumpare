@@ -2,6 +2,7 @@ import React, { useMemo, useState, useRef } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import FundingStatusBadge from "@/components/products/FundingStatusBadge";
 import ProductStatusBadge from "@/components/products/ProductStatusBadge";
+import FirmTypeProductListDialog from "@/components/products/FirmTypeProductListDialog";
 import { Package, TrendingUp, TrendingDown, Building2, ChevronRight } from "lucide-react";
 
 const FIRM_TYPES = [
@@ -115,6 +116,7 @@ function FirmProductCount({ firmId, productsByFirm, onProductClick }) {
  * detail cards so overall health is visible at a glance.
  */
 export default function ProductFundingSummary({ products, firms, onProductClick }) {
+  const [dialogState, setDialogState] = useState({ open: false, firmType: null, fundingStatus: "all" });
   const firmMap = useMemo(() => Object.fromEntries(firms.map((f) => [f.id, f])), [firms]);
 
   const productsByFirm = useMemo(() => {
@@ -216,9 +218,29 @@ export default function ProductFundingSummary({ products, firms, onProductClick 
                   <span className="text-[10px] text-gray-400 ml-auto">{r.firms} firm{r.firms !== 1 ? "s" : ""}</span>
                 </div>
                 <div className="flex items-center gap-3 text-[11px] text-gray-600">
-                  <span>{r.total} product{r.total !== 1 ? "s" : ""}</span>
-                  <span className="text-emerald-700 font-medium">{r.funded} funded</span>
-                  {r.terminated > 0 && <span className="text-red-600 font-medium">{r.terminated} terminated</span>}
+                  <button
+                    type="button"
+                    onClick={() => setDialogState({ open: true, firmType: r.type, fundingStatus: "all" })}
+                    className="hover:text-violet-700 hover:underline cursor-pointer transition-colors"
+                  >
+                    {r.total} product{r.total !== 1 ? "s" : ""}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDialogState({ open: true, firmType: r.type, fundingStatus: "Funded" })}
+                    className="text-emerald-700 font-medium hover:underline cursor-pointer transition-colors"
+                  >
+                    {r.funded} funded
+                  </button>
+                  {r.terminated > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setDialogState({ open: true, firmType: r.type, fundingStatus: "Terminated" })}
+                      className="text-red-600 font-medium hover:underline cursor-pointer transition-colors"
+                    >
+                      {r.terminated} terminated
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -254,6 +276,17 @@ export default function ProductFundingSummary({ products, firms, onProductClick 
           ))}
         </div>
       </div>
+
+      {/* Click-through dialog for firm-type product lists */}
+      <FirmTypeProductListDialog
+        open={dialogState.open}
+        onOpenChange={(open) => setDialogState((prev) => ({ ...prev, open }))}
+        firmType={dialogState.firmType}
+        fundingStatus={dialogState.fundingStatus}
+        products={products}
+        firms={firms}
+        onProductClick={onProductClick}
+      />
     </div>
   );
 }
