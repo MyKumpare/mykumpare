@@ -83,9 +83,15 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [viewMode, setViewMode] = useState(initialViewMode);
   const [activeTab, setActiveTab] = useState("info");
   const [highlightChatId, setHighlightChatId] = useState(null);
+  // Use backend function to fetch ALL firms (bypasses default list limit).
   const { data: liveFirms = [] } = useQuery({
-    queryKey: ["firms"],
-    queryFn: () => base44.entities.Firm.list("-created_date"),
+    queryKey: ["firms-all-dialog"],
+    queryFn: async () => {
+      const res = await base44.functions.invoke("fetchAllFirms", {});
+      const data = res?.data ?? res ?? {};
+      return (data.records || []).filter((f) => !f.deleted_at);
+    },
+    staleTime: 300000,
   });
   const firms = liveFirms.length > 0 ? liveFirms : firmsProp;
 

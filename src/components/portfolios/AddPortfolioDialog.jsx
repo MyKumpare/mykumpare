@@ -405,14 +405,27 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
   // Add product dialog (for adding a new IM product)
   const [addProductOpen, setAddProductOpen] = useState(false);
 
+  // Use backend functions to fetch ALL firms/products (bypasses the default
+  // list limit of ~100-500 records, which caused firms like "Sample Client"
+  // to be missing from the dropdown when there are 5000+ firms).
   const { data: firms = [] } = useQuery({
-    queryKey: ["firms"],
-    queryFn: () => base44.entities.Firm.list("-created_date"),
+    queryKey: ["firms-all-dialog"],
+    queryFn: async () => {
+      const res = await base44.functions.invoke("fetchAllFirms", {});
+      const data = res?.data ?? res ?? {};
+      return (data.records || []).filter((f) => !f.deleted_at);
+    },
+    staleTime: 300000,
   });
 
   const { data: products = [] } = useQuery({
-    queryKey: ["products"],
-    queryFn: () => base44.entities.Product.list("-created_date"),
+    queryKey: ["products-all-dialog"],
+    queryFn: async () => {
+      const res = await base44.functions.invoke("fetchAllProducts", {});
+      const data = res?.data ?? res ?? {};
+      return (data.records || []).filter((p) => !p.deleted_at);
+    },
+    staleTime: 300000,
   });
 
   // Reset on open

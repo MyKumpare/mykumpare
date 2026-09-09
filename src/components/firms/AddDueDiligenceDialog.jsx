@@ -386,9 +386,15 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
     queryKey: ["me"],
     queryFn: () => base44.auth.me(),
   });
+  // Use backend function to fetch ALL firms (bypasses default list limit).
   const { data: allFirms = [] } = useQuery({
-    queryKey: ["firms"],
-    queryFn: () => base44.entities.Firm.list("-created_date"),
+    queryKey: ["firms-all-dialog"],
+    queryFn: async () => {
+      const res = await base44.functions.invoke("fetchAllFirms", {});
+      const data = res?.data ?? res ?? {};
+      return (data.records || []).filter((f) => !f.deleted_at);
+    },
+    staleTime: 300000,
   });
   const { data: ownerContactsRaw = [] } = useQuery({
     queryKey: ["contacts"],
