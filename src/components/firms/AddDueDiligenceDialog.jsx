@@ -551,13 +551,12 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
   const allProducts = useMemo(() => {
     const ids = new Set(localProducts.map((p) => p.id));
     const merged = [...localProducts];
-    if (firmSelectionMode) {
-      firmProducts.forEach((p) => { if (!ids.has(p.id)) { merged.push(p); ids.add(p.id); } });
-    } else {
-      products.forEach((p) => { if (!ids.has(p.id)) merged.push(p); });
-    }
+    // Always use backend-fetched products filtered by firm, so all products
+    // appear regardless of whether the firm was passed as a prop or selected
+    // in firm-selection mode.
+    firmProducts.forEach((p) => { if (!ids.has(p.id)) { merged.push(p); ids.add(p.id); } });
     return merged.filter((p) => !p.deleted_at);
-  }, [localProducts, products, firmProducts, firmSelectionMode]);
+  }, [localProducts, firmProducts]);
 
   const allContacts = useMemo(() => {
     const ids = new Set(localContacts.map((c) => c.id));

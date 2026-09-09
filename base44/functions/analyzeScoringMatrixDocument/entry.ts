@@ -48,7 +48,12 @@ Extract:
 1. ALL main weighted blocks/sections and their percentage weights (should sum to 100). Include every section header found in the document (e.g. "Section 1", "Section 2", "Section 3", etc.)
 2. ALL individual criteria within each block (with numbers and names). Include every numbered criterion (e.g. 1.a, 1.b, 1.c, 1.d, 2.a, 2.b, etc.)
 3. Sub-categories within each criterion
-4. ALL level descriptors for each criterion - the text describing what each score level means. Include every numbered level (e.g. (1), (2), (3), (4), (5))
+4. ONLY the level descriptors that explicitly appear in the document for each criterion. The number of descriptors MUST match the scoring range stated in the criterion label. For example:
+   - If the label says "(1-3)", include EXACTLY 3 descriptors (levels 1, 2, 3) — NOT 5.
+   - If the label says "(1-5)", include EXACTLY 5 descriptors (levels 1, 2, 3, 4, 5).
+   - If the label says "(-10-5)", include only the levels explicitly described in the text.
+   - If the label says "(0-2)", include EXACTLY the levels described (e.g. 0, 1, 2 or just 0 and 2).
+   Do NOT invent, fabricate, or pad descriptors that are not present in the source document. If only 3 levels are described, return only 3 descriptors. If 5 are described, return 5. The descriptors array length must equal the number of explicitly described score levels in the document text for that criterion.
 5. BONUS/PENALTY detection: if a criterion is labeled as BONUS or PENALTY (e.g. "Alignment of Interests (BONUS) (0-2)", "Market Insights (BONUS) (0-3)", "Financial Solvency/Burnrate (-10-5)", "Is the Firm GIPS Compliance (-1-3)"), set bonus_penalty_enabled=true and extract the min/max range from the label (e.g. (0-2) → min:0, max:2; (-1-3) → min:-1, max:3; (-5-5) → min:-5, max:5). For BONUS-labeled criteria, descriptors use levels starting from 0 or +1. For PENALTY-labeled criteria, descriptors may include negative values. Always populate the descriptors array with all levels described in the document. Include a bonus_penalty_guidance string summarizing when/how to apply the adjustment.
 
 Return a JSON object with this exact structure:
