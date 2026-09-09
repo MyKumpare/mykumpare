@@ -236,9 +236,24 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   const [locationLat, setLocationLat] = useState(undefined);
   const [locationLng, setLocationLng] = useState(undefined);
 
+  // When editing, fetch contacts for this firm via backend function so the
+  // enrichment duplicate-check and child tabs see the full list (the default
+  // list() call is capped at 5,000 rows, which misses contacts on large datasets).
+  // In add mode there is no firm yet, so fall back to the limited list for
+  // best-effort duplicate detection.
   const { data: allContacts = [] } = useQuery({
-    queryKey: ["contacts"],
-    queryFn: () => base44.entities.Contact.list("-created_date", 5000),
+    queryKey: editingFirm
+      ? ["contacts", "byFirm", editingFirm.id]
+      : ["contacts"],
+    queryFn: async () => {
+      if (editingFirm) {
+        const res = await base44.functions.invoke("fetchContactsByFirm", { firm_id: editingFirm.id });
+        const data = res?.data ?? res ?? {};
+        return data.records || [];
+      }
+      return base44.entities.Contact.list("-created_date", 5000);
+    },
+    staleTime: 60000,
   });
   const logoInputRef = useRef(null);
   const { user } = useAuth();

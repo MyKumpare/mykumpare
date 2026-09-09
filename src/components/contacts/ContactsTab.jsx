@@ -53,14 +53,23 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
   const queryClient = useQueryClient();
   const { isGroupAccepted, acceptGroup } = useDuplicateReviews();
 
+  // Fetch contacts for this firm via backend function — bypasses the 5,000-row
+  // list limit so contacts linked to the firm always appear, even when the total
+  // contact count far exceeds the limit. Query key is prefixed with ["contacts"]
+  // so existing invalidateQueries({ queryKey: ["contacts"] }) calls still refresh it.
   const { data: contacts = [], isFetching } = useQuery({
-    queryKey: ["contacts"],
-    queryFn: () => base44.entities.Contact.list("-created_date", 5000),
+    queryKey: ["contacts", "byFirm", firmId],
+    queryFn: async () => {
+      const res = await base44.functions.invoke("fetchContactsByFirm", { firm_id: firmId });
+      const data = res?.data ?? res ?? {};
+      return data.records || [];
+    },
+    staleTime: 60000,
   });
 
   const allFirmContacts = useMemo(
-    () => contacts.filter((c) => c.firm_ids?.includes(firmId) && !c.deleted_at),
-    [contacts, firmId]
+    () => contacts.filter((c) => !c.deleted_at),
+    [contacts]
   );
 
   const firmName = useMemo(
