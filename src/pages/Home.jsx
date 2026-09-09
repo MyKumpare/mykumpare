@@ -516,6 +516,39 @@ export default function Home() {
     return newOnes.length ? [...portfolios, ...newOnes] : portfolios;
   }, [portfolios, supplementaryPortfolios]);
 
+  // ─── Proactive background loading ───
+  // Auto-fetch all remaining pages for each entity in the background so the
+  // user never has to wait for a section to load after clicking/scrolling.
+  // Each query independently paginates through its own pages with a small delay
+  // between batches. Backend functions handle 429 retry backoff.
+  useEffect(() => {
+    if (firmsQuery.hasNextPage && !firmsQuery.isFetchingNextPage && !firmsQuery.isLoading) {
+      const t = setTimeout(() => firmsQuery.fetchNextPage(), 300);
+      return () => clearTimeout(t);
+    }
+  }, [firmsQuery.hasNextPage, firmsQuery.isFetchingNextPage, firmsQuery.isLoading]);
+
+  useEffect(() => {
+    if (productsQuery.hasNextPage && !productsQuery.isFetchingNextPage && !productsQuery.isLoading) {
+      const t = setTimeout(() => productsQuery.fetchNextPage(), 300);
+      return () => clearTimeout(t);
+    }
+  }, [productsQuery.hasNextPage, productsQuery.isFetchingNextPage, productsQuery.isLoading]);
+
+  useEffect(() => {
+    if (contactsQuery.hasNextPage && !contactsQuery.isFetchingNextPage && !contactsQuery.isLoading) {
+      const t = setTimeout(() => contactsQuery.fetchNextPage(), 300);
+      return () => clearTimeout(t);
+    }
+  }, [contactsQuery.hasNextPage, contactsQuery.isFetchingNextPage, contactsQuery.isLoading]);
+
+  useEffect(() => {
+    if (portfoliosQuery.hasNextPage && !portfoliosQuery.isFetchingNextPage && !portfoliosQuery.isLoading) {
+      const t = setTimeout(() => portfoliosQuery.fetchNextPage(), 300);
+      return () => clearTimeout(t);
+    }
+  }, [portfoliosQuery.hasNextPage, portfoliosQuery.isFetchingNextPage, portfoliosQuery.isLoading]);
+
   const { data: deletedFirms = [] } = useQuery({
     queryKey: ["deletedFirms"],
     queryFn: () => base44.entities.Firm.filter({ deleted_at: { $exists: true } }, "-created_date", 1000),
