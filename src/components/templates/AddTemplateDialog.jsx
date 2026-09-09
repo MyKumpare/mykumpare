@@ -350,6 +350,22 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
                       }))
                     })));
                   }
+                  // Apply extracted rating config (only if the document defined one)
+                  if (data.ratingConfig) {
+                    const DEFAULT_COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
+                    setRatingConfig({
+                      pass_fail_enabled: data.ratingConfig.pass_fail_enabled === true,
+                      pass_threshold: data.ratingConfig.pass_threshold ?? 3,
+                      rating_enabled: data.ratingConfig.rating_enabled === true,
+                      rating_options: (data.ratingConfig.rating_options || []).map((opt, i) => ({
+                        id: `sro_${Date.now()}_${i}`,
+                        label: opt.label || "",
+                        min_score: opt.min_score ?? 0,
+                        max_score: opt.max_score ?? 0,
+                        color: opt.color || DEFAULT_COLORS[i % DEFAULT_COLORS.length],
+                      })),
+                    });
+                  }
                 }}
               />
               <ScoringMatrixTemplateEditor blocks={scoringBlocks} onChange={setScoringBlocks} templateId={editTemplate?.id} templateName={editTemplate?.name} ratingConfig={ratingConfig} onRatingConfigChange={setRatingConfig} />

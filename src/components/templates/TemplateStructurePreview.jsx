@@ -18,6 +18,7 @@ export default function TemplateStructurePreview({ structure, onApply, onDiscard
   const isScoring = structure.type === "scoring";
   const blocks = structure.blocks || [];
   const stages = structure.stages || [];
+  const ratingConfig = structure.ratingConfig || null;
 
   const totalWeight = blocks.reduce((sum, b) => sum + (b.weight || 0), 0);
 
@@ -95,6 +96,34 @@ export default function TemplateStructurePreview({ structure, onApply, onDiscard
             {blocks.length > 0 && (
               <div className={`text-xs font-medium text-center pt-1 ${totalWeight === 100 ? "text-green-600" : "text-orange-600"}`}>
                 Total Weight: {totalWeight}% {totalWeight !== 100 && "(should be 100%)"}
+              </div>
+            )}
+
+            {/* Extracted overall rating options */}
+            {ratingConfig && (ratingConfig.pass_fail_enabled || (ratingConfig.rating_enabled && (ratingConfig.rating_options || []).length > 0)) && (
+              <div className="border border-cyan-200 rounded-md p-2 bg-cyan-50/30 space-y-1.5">
+                <div className="text-xs font-semibold text-cyan-800 flex items-center gap-1">
+                  <Zap className="w-3 h-3" /> Overall Rating Options (from document)
+                </div>
+                {ratingConfig.pass_fail_enabled && (
+                  <div className="text-[11px] text-gray-600">
+                    Pass/Fail: Pass threshold ≥ <span className="font-medium">{ratingConfig.pass_threshold ?? "—"}</span>
+                  </div>
+                )}
+                {ratingConfig.rating_enabled && (ratingConfig.rating_options || []).length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {ratingConfig.rating_options.map((opt, i) => (
+                      <span key={i} className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full border"
+                        style={{
+                          backgroundColor: (opt.color || "#10b981") + "15",
+                          borderColor: (opt.color || "#10b981") + "60",
+                          color: opt.color || "#10b981",
+                        }}>
+                        {opt.label || "—"} ({opt.min_score ?? "—"}–{opt.max_score ?? "—"})
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>

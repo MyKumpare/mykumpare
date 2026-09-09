@@ -55,6 +55,7 @@ Extract:
    - If the label says "(0-2)", include EXACTLY the levels described (e.g. 0, 1, 2 or just 0 and 2).
    Do NOT invent, fabricate, or pad descriptors that are not present in the source document. If only 3 levels are described, return only 3 descriptors. If 5 are described, return 5. The descriptors array length must equal the number of explicitly described score levels in the document text for that criterion.
 5. BONUS/PENALTY detection: if a criterion is labeled as BONUS or PENALTY (e.g. "Alignment of Interests (BONUS) (0-2)", "Market Insights (BONUS) (0-3)", "Financial Solvency/Burnrate (-10-5)", "Is the Firm GIPS Compliance (-1-3)"), set bonus_penalty_enabled=true and extract the min/max range from the label (e.g. (0-2) → min:0, max:2; (-1-3) → min:-1, max:3; (-5-5) → min:-5, max:5). For BONUS-labeled criteria, descriptors use levels starting from 0 or +1. For PENALTY-labeled criteria, descriptors may include negative values. Always populate the descriptors array with all levels described in the document. Include a bonus_penalty_guidance string summarizing when/how to apply the adjustment.
+6. OVERALL RATING OPTIONS: If the document defines an overall rating/grading scale (e.g. "A", "B", "C", "Buy", "Hold", "Sell", "1", "2", "3", "Pass", "Fail", or any named tiers with associated score ranges), extract ONLY the rating options that explicitly appear in the document. Each rating option must include its exact label and the exact min/max score range as stated in the document. Do NOT invent rating options that are not present. If the document mentions a Pass/Fail threshold, extract that as pass_fail_enabled=true and pass_threshold=<the stated threshold>. If the document does NOT define any overall rating scale or pass/fail threshold, return rating_config as null. The score range for each rating option must match EXACTLY what the document states — do not adjust, round, or pad the ranges.
 
 Return a JSON object with this exact structure:
 {
@@ -80,10 +81,20 @@ Return a JSON object with this exact structure:
         }
       ]
     }
-  ]
+  ],
+  "rating_config": {
+    "pass_fail_enabled": false,
+    "pass_threshold": 0,
+    "rating_enabled": true,
+    "rating_options": [
+      {"label": "A", "min_score": 4.5, "max_score": 5.0},
+      {"label": "B", "min_score": 3.5, "max_score": 4.4},
+      {"label": "C", "min_score": 2.5, "max_score": 3.4}
+    ]
+  }
 }
 
-IMPORTANT: For regular (non-bonus/penalty) criteria set bonus_penalty_enabled=false and omit bonus_penalty_range/bonus_penalty_guidance. For bonus/penalty criteria set bonus_penalty_enabled=true and populate bonus_penalty_range with the actual min/max values from the document label.`
+IMPORTANT: For regular (non-bonus/penalty) criteria set bonus_penalty_enabled=false and omit bonus_penalty_range/bonus_penalty_guidance. For bonus/penalty criteria set bonus_penalty_enabled=true and populate bonus_penalty_range with the actual min/max values from the document label. Set rating_config to null if the document does not define any overall rating scale or pass/fail threshold. Only include rating_options that explicitly appear in the document with their exact score ranges.`
       : `Analyze this document and extract the complete process template / due diligence structure.
 Extract:
 1. Main stages/sections (ordered)
@@ -144,6 +155,25 @@ Return a JSON object with this exact structure:
                           }
                         }
                       }
+                    }
+                  }
+                }
+              }
+            },
+            rating_config: {
+              type: 'object',
+              properties: {
+                pass_fail_enabled: { type: 'boolean' },
+                pass_threshold: { type: 'number' },
+                rating_enabled: { type: 'boolean' },
+                rating_options: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      label: { type: 'string' },
+                      min_score: { type: 'number' },
+                      max_score: { type: 'number' }
                     }
                   }
                 }

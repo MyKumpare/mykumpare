@@ -77,7 +77,9 @@ export default function ScoringMatrixDocumentAnalyzer({ templateCategory, onAnal
             bonus_penalty_guidance: c.bonus_penalty_enabled ? (c.bonus_penalty_guidance || "") : undefined,
           }))
         }));
-        setPreviewStructure({ type: "scoring", blocks });
+        // Extract rating config from the document if present
+        const ratingConfig = data.rating_config || null;
+        setPreviewStructure({ type: "scoring", blocks, ratingConfig });
         toast({ title: "Analysis complete", description: "Review the generated structure below before applying." });
       }
     } catch (err) {
@@ -196,7 +198,7 @@ export default function ScoringMatrixDocumentAnalyzer({ templateCategory, onAnal
         <TemplateStructurePreview
           structure={previewStructure}
           onApply={() => {
-            onAnalyzed({ blocks: previewStructure.blocks });
+            onAnalyzed({ blocks: previewStructure.blocks, ratingConfig: previewStructure.ratingConfig || null });
             setPreviewStructure(null);
             setPastedText("");
             setUploadedFile(null);
