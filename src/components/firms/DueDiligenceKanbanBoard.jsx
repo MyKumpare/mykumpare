@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useEffect } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { ClipboardCheck, Plus, Flag } from "lucide-react";
+import { ClipboardCheck, Plus, Flag, Check } from "lucide-react";
 import DdProgressBar from "@/components/firms/DdProgressBar";
 
 const COLUMN_DEFS = {
@@ -78,7 +78,7 @@ const OTHER_BADGE = {
   },
 };
 
-function Card({ rec, columnField, onCardClick }) {
+function Card({ rec, columnField, onCardClick, selectionMode, selected, onToggleSelect }) {
   const other = OTHER_BADGE[columnField];
   const otherVal = rec[other.key];
   const cardRef = useRef(null);
@@ -87,22 +87,37 @@ function Card({ rec, columnField, onCardClick }) {
   // which intercepts React synthetic onClick events on the parent draggable div.
   useEffect(() => {
     const el = cardRef.current;
-    if (!el || !onCardClick) return;
+    if (!el) return;
     const handler = (e) => {
       if (e.detail === 0) return; // skip programmatic clicks
       e.stopPropagation();
-      onCardClick(rec);
+      if (selectionMode) {
+        onToggleSelect?.(rec.id);
+      } else {
+        onCardClick?.(rec);
+      }
     };
     el.addEventListener("click", handler);
     return () => el.removeEventListener("click", handler);
-  }, [rec, onCardClick]);
+  }, [rec, onCardClick, selectionMode, onToggleSelect]);
 
   return (
     <div
       ref={cardRef}
-      className="bg-white rounded-lg border border-gray-200 shadow-sm p-2.5 hover:border-indigo-300 hover:shadow-md transition-all cursor-pointer"
+      className={`bg-white rounded-lg border shadow-sm p-2.5 transition-all cursor-pointer ${
+        selectionMode && selected
+          ? "border-indigo-400 ring-1 ring-indigo-300"
+          : "border-gray-200 hover:border-indigo-300 hover:shadow-md"
+      }`}
     >
       <div className="flex items-start gap-2">
+        {selectionMode && (
+          <span className={`w-4 h-4 rounded border flex-shrink-0 mt-0.5 flex items-center justify-center ${
+            selected ? "bg-indigo-600 border-indigo-600" : "border-gray-300 bg-white"
+          }`}>
+            {selected && <Check className="w-3 h-3 text-white" />}
+          </span>
+        )}
         <ClipboardCheck className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0 mt-0.5" />
         <div className="flex-1 min-w-0">
           <p className="text-xs font-semibold text-gray-800 truncate">{rec.product_name || "—"}</p>
@@ -147,6 +162,9 @@ export default function DueDiligenceKanbanBoard({
   onProductClick,
   onFirmClick,
   onContactClick,
+  selectionMode = false,
+  selectedIds,
+  onToggleSelect,
 }) {
   const def = COLUMN_DEFS[columnField];
 
@@ -206,6 +224,9 @@ export default function DueDiligenceKanbanBoard({
                                 rec={rec}
                                 columnField={columnField}
                                 onCardClick={onCardClick}
+                                selectionMode={selectionMode}
+                                selected={selectedIds?.has(rec.id)}
+                                onToggleSelect={onToggleSelect}
                               />
                             </div>
                           )}

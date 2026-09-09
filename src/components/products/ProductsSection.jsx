@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, ChevronDown, ChevronRight, Package, ClipboardCheck, X } from "lucide-react";
+import { Plus, ChevronDown, ChevronRight, Package, ClipboardCheck, X, Trash2, Loader2, CheckCircle2 } from "lucide-react";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
 import SectionSearch from "@/components/common/SectionSearch";
 import SectionTypeFilter from "@/components/common/SectionTypeFilter";
@@ -21,6 +21,9 @@ import {
   applyProductSidebarFilters,
 } from "./productSidebarFilter";
 import { SlidersHorizontal } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import { toast } from "@/components/ui/use-toast";
 
 const PRODUCT_GROUP_TYPES = ["Investment Manager"];
 
@@ -32,6 +35,7 @@ import InfiniteScrollSentinel from "@/components/common/InfiniteScrollSentinel";
 
 export default function ProductsSection({ products, firms, onProductClick, onAddProduct, onFirmClick, forceExpanded, hasMoreProducts = false, isLoadingMoreProducts = false, onLoadMoreProducts }) {
   const { user: currentUser } = useAuth();
+  const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState({});
   const [expandedFirms, setExpandedFirms] = useState({});
@@ -41,6 +45,8 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [showBulkScoring, setShowBulkScoring] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(null);
+  const [statusMenuOpen, setStatusMenuOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(true);
   const [filterValues, setFilterValues] = useState(() => buildInitialProductFilterValues());
   const handleFilterChange = (key, value) => setFilterValues((prev) => ({ ...prev, [key]: value }));
@@ -75,6 +81,46 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
   const exitSelectMode = () => {
     setSelectMode(false);
     clearSelection();
+  };
+
+  const PRODUCT_STATUSES = ["Not Reviewed", "In-Process", "On-Hold", "Rejected", "Approved", "Removed"];
+
+  const handleBulkSetStatus = async (status) => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setBulkBusy("status");
+    setStatusMenuOpen(false);
+    try {
+      await base44.entities.Product.bulkUpdate(ids.map((id) => ({ id, product_status: status })));
+      queryClient.invalidateQueries({ queryKey: ["products-infinite"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      toast({ title: `✅ ${ids.length} product${ids.length === 1 ? "" : "s"} set to "${status}"` });
+      clearSelection();
+    } catch (err) {
+      toast({ title: "Bulk update failed", description: err?.message, variant: "destructive" });
+    } finally {
+      setBulkBusy(null);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    if (!window.confirm(`Delete ${ids.length} product${ids.length !== 1 ? "s" : ""}? They will be moved to Deleted Records and can be restored.`)) return;
+    setBulkBusy("delete");
+    try {
+      const nowIso = new Date().toISOString();
+      await base44.entities.Product.bulkUpdate(ids.map((id) => ({ id, deleted_at: nowIso })));
+      queryClient.invalidateQueries({ queryKey: ["products-infinite"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["deletedProducts"] });
+      toast({ title: `✅ ${ids.length} product${ids.length !== 1 ? "s" : ""} deleted` });
+      clearSelection();
+    } catch (err) {
+      toast({ title: "Bulk delete failed", description: err?.message, variant: "destructive" });
+    } finally {
+      setBulkBusy(null);
+    }
   };
 
   const toggleFirm = (firmId) =>
@@ -243,6 +289,45 @@ export default function ProductsSection({ products, firms, onProductClick, onAdd
                 onClick={selectAllVisible}
               >
                 Select All
+              </Button>
+              <div className="relative">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50 gap-1 text-xs"
+                  onClick={() => setStatusMenuOpen((v) => !v)}
+                  disabled={selectedIds.size === 0 || !!bulkBusy}
+                >
+                  {bulkBusy === "status" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                  Set Status
+                </Button>
+                {statusMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-20" onClick={() => setStatusMenuOpen(false)} />
+                    <div className="absolute top-full right-0 mt-1 z-30 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[170px]">
+                      {PRODUCT_STATUSES.map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => handleBulkSetStatus(s)}
+                          className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 text-gray-700"
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-red-600 hover:text-red-700 hover:bg-red-50 gap-1 text-xs"
+                onClick={handleBulkDelete}
+                disabled={selectedIds.size === 0 || !!bulkBusy}
+              >
+                {bulkBusy === "delete" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                Delete
               </Button>
               <Button
                 size="sm"

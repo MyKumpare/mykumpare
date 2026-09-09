@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, LayoutList, ChevronDown, ChevronRight, BarChart3, SlidersHorizontal, AlertTriangle, DollarSign, RefreshCw, CheckSquare, Check, X, Loader2, UserCheck } from "lucide-react";
+import { Plus, LayoutList, ChevronDown, ChevronRight, BarChart3, SlidersHorizontal, AlertTriangle, DollarSign, RefreshCw, CheckSquare, Check, X, Loader2, UserCheck, Trash2, CheckCircle2, XCircle } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import ViewModeToggle from "@/components/common/ViewModeToggle";
 import SectionSearch from "@/components/common/SectionSearch";
@@ -27,6 +27,7 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkXponanceOpen, setBulkXponanceOpen] = useState(false);
   const [bulkXponanceBusy, setBulkXponanceBusy] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(null);
 
   const toggleSelectMode = () => {
     setSelectMode((v) => {
@@ -62,6 +63,42 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
       setBulkXponanceBusy(false);
     }
   };
+
+  const handleBulkSetFundingStatus = async (status) => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setBulkBusy(status === "Active" ? "active" : "terminated");
+    try {
+      await base44.entities.Portfolio.bulkUpdate(ids.map((id) => ({ id, funding_status: status })));
+      queryClient.invalidateQueries({ queryKey: ["portfolios-infinite"] });
+      toast({ title: `✅ ${ids.length} portfolio${ids.length === 1 ? "" : "s"} set to ${status}` });
+      clearSelection();
+    } catch (err) {
+      toast({ title: "Bulk update failed", description: err?.message, variant: "destructive" });
+    } finally {
+      setBulkBusy(null);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    if (!window.confirm(`Delete ${ids.length} portfolio${ids.length !== 1 ? "s" : ""}? They will be moved to Deleted Records and can be restored.`)) return;
+    setBulkBusy("delete");
+    try {
+      const nowIso = new Date().toISOString();
+      await base44.entities.Portfolio.bulkUpdate(ids.map((id) => ({ id, deleted_at: nowIso })));
+      queryClient.invalidateQueries({ queryKey: ["portfolios-infinite"] });
+      queryClient.invalidateQueries({ queryKey: ["deletedPortfolios"] });
+      toast({ title: `✅ ${ids.length} portfolio${ids.length !== 1 ? "s" : ""} deleted` });
+      clearSelection();
+    } catch (err) {
+      toast({ title: "Bulk delete failed", description: err?.message, variant: "destructive" });
+    } finally {
+      setBulkBusy(null);
+    }
+  };
+
   const [expanded, setExpanded] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState({});
   const [expandedAdvisorTypes, setExpandedAdvisorTypes] = useState({});
@@ -448,11 +485,44 @@ export default function PortfoliosSection({ portfolios, onPortfolioClick, onAddP
           </Button>
           <Button
             type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 gap-1 text-xs bg-white text-green-600 hover:bg-green-50 hover:text-green-700"
+            onClick={() => handleBulkSetFundingStatus("Active")}
+            disabled={!!bulkBusy || bulkXponanceBusy}
+          >
+            {bulkBusy === "active" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+            Set Active
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 gap-1 text-xs bg-white text-red-500 hover:bg-red-50 hover:text-red-600"
+            onClick={() => handleBulkSetFundingStatus("Terminated")}
+            disabled={!!bulkBusy || bulkXponanceBusy}
+          >
+            {bulkBusy === "terminated" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
+            Set Terminated
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 gap-1 text-xs bg-white text-red-600 hover:bg-red-50 hover:text-red-700"
+            onClick={handleBulkDelete}
+            disabled={!!bulkBusy || bulkXponanceBusy}
+          >
+            {bulkBusy === "delete" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+            Delete
+          </Button>
+          <Button
+            type="button"
             variant="ghost"
             size="sm"
             className="h-7 gap-1 text-xs ml-auto text-gray-500 hover:text-gray-700"
             onClick={clearSelection}
-            disabled={bulkXponanceBusy}
+            disabled={!!bulkBusy || bulkXponanceBusy}
           >
             <X className="w-3.5 h-3.5" />
             Clear

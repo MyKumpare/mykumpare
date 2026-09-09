@@ -8,7 +8,8 @@ import DdSummaryChart from "@/components/firms/DdSummaryChart";
 import AddDueDiligenceDialog from "@/components/firms/AddDueDiligenceDialog";
 import DueDiligenceDetailDialog from "@/components/firms/DueDiligenceDetailDialog";
 import DdFilterTabs, { getDdCounts, filterDdRecords } from "@/components/firms/DdFilterTabs";
-import { LayoutDashboard, List, Loader2, X } from "lucide-react";
+import DdBulkActionsBar from "@/components/firms/DdBulkActionsBar";
+import { LayoutDashboard, List, Loader2, X, CheckSquare } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +28,9 @@ export default function DueDiligenceKanban() {
   const [viewing, setViewing] = useState(null);
   const [showDetail, setShowDetail] = useState(false);
   const [activeTab, setActiveTab] = usePersistentState("ddKanban_activeTab", "active");
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [bulkBusy, setBulkBusy] = useState(null);
 
   const { data: records = [], isLoading } = useQuery({
     queryKey: ["due-diligence-all"],
@@ -95,6 +99,51 @@ export default function DueDiligenceKanban() {
     if (contact) window.location.hash = `#/Home`;
   };
 
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  };
+
+  const clearSelection = () => { setSelectedIds(new Set()); setSelectMode(false); };
+
+  const handleBulkSetStatus = async (status) => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setBulkBusy("status");
+    try {
+      await base44.entities.DueDiligence.bulkUpdate(ids.map((id) => ({ id, status })));
+      queryClient.invalidateQueries({ queryKey: ["due-diligence-all"] });
+      queryClient.invalidateQueries({ queryKey: ["due-diligence"] });
+      clearSelection();
+    } catch (err) {
+      console.error("Bulk status update failed:", err);
+    } finally {
+      setBulkBusy(null);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    if (!window.confirm(`Delete ${ids.length} due diligence record${ids.length !== 1 ? "s" : ""}?`)) return;
+    setBulkBusy("delete");
+    try {
+      const nowIso = new Date().toISOString();
+      await base44.entities.DueDiligence.bulkUpdate(ids.map((id) => ({ id, deleted_at: nowIso })));
+      queryClient.invalidateQueries({ queryKey: ["due-diligence-all"] });
+      queryClient.invalidateQueries({ queryKey: ["due-diligence"] });
+      clearSelection();
+    } catch (err) {
+      console.error("Bulk delete failed:", err);
+    } finally {
+      setBulkBusy(null);
+    }
+  };
+
   return (
     <div className="space-y-4 p-4">
       {/* Header */}
@@ -104,6 +153,21 @@ export default function DueDiligenceKanban() {
           <h2 className="text-lg font-bold text-gray-800">Due Diligence Pipeline</h2>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant={selectMode ? "default" : "ghost"}
+            size="sm"
+            className={`gap-1 ${selectMode ? "bg-indigo-600 text-white hover:bg-indigo-700" : "text-gray-600 hover:text-gray-700"}`}
+            onClick={() => {
+              setSelectMode((v) => {
+                if (v) setSelectedIds(new Set());
+                return !v;
+              });
+            }}
+          >
+            <CheckSquare className="w-4 h-4" />
+            {selectMode ? "Done" : "Select"}
+          </Button>
           <Button
             type="button"
             size="sm"
@@ -160,6 +224,17 @@ export default function DueDiligenceKanban() {
         />
       )}
 
+      {/* Bulk action bar */}
+      {selectMode && selectedIds.size > 0 && (
+        <DdBulkActionsBar
+          selectedCount={selectedIds.size}
+          onClear={clearSelection}
+          onSetStatus={handleBulkSetStatus}
+          onDelete={handleBulkDelete}
+          busy={bulkBusy}
+        />
+      )}
+
       {/* Kanban board */}
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
@@ -179,6 +254,9 @@ export default function DueDiligenceKanban() {
             onProductClick={handleProductClick}
             onFirmClick={handleFirmClick}
             onContactClick={handleContactClick}
+            selectionMode={selectMode}
+            selectedIds={selectedIds}
+            onToggleSelect={toggleSelect}
           />
         </div>
       )}
