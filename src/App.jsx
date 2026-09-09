@@ -57,6 +57,7 @@ import ProductCoverageDashboard from './pages/ProductCoverageDashboard';
 import PortfolioCoverageDashboard from './pages/PortfolioCoverageDashboard';
 import FirmNetworkMapPage from './pages/FirmNetworkMapPage';
 import FirmAumTrends from './pages/FirmAumTrends';
+import FirmAumSummary from './pages/FirmAumSummary';
 import OnsiteVisitReport from './pages/OnsiteVisitReport';
 import OnsiteVisitCalendar from './pages/OnsiteVisitCalendar';
 import OnsiteVisitFollowUpTasks from './pages/OnsiteVisitFollowUpTasks';
@@ -173,6 +174,7 @@ const AuthenticatedApp = () => {
       <Route path="/PortfolioCoverage" element={<LayoutWrapper currentPageName="PortfolioCoverage"><PortfolioCoverageDashboard /></LayoutWrapper>} />
       <Route path="/FirmNetworkMap" element={<LayoutWrapper currentPageName="FirmNetworkMap"><FirmNetworkMapPage /></LayoutWrapper>} />
       <Route path="/FirmAumTrends" element={<LayoutWrapper currentPageName="FirmAumTrends"><FirmAumTrends /></LayoutWrapper>} />
+      <Route path="/FirmAumSummary" element={<LayoutWrapper currentPageName="FirmAumSummary"><FirmAumSummary /></LayoutWrapper>} />
       <Route path="/OnsiteVisitReport" element={<LayoutWrapper currentPageName="OnsiteVisitReport"><OnsiteVisitReport /></LayoutWrapper>} />
       <Route path="/OnsiteVisitCalendar" element={<LayoutWrapper currentPageName="OnsiteVisitCalendar"><OnsiteVisitCalendar /></LayoutWrapper>} />
       <Route path="/OnsiteVisitFollowUpTasks" element={<LayoutWrapper currentPageName="OnsiteVisitFollowUpTasks"><OnsiteVisitFollowUpTasks /></LayoutWrapper>} />

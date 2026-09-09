@@ -49,7 +49,6 @@ import DashboardAnalystCoverageSection from "../components/dashboard/DashboardAn
 import DashboardFirmCoverageSection from "../components/dashboard/DashboardFirmCoverageSection";
 import ManagementNavSection from "../components/dashboard/ManagementNavSection";
 import AnalyticsSection from "../components/analytics/AnalyticsSection";
-import FirmAumSummarySection from "../components/firms/FirmAumSummarySection";
 
 
 const ReportsPickerModal = lazyDialog(() => import("../components/reports/ReportsPickerModal"));
@@ -277,7 +276,6 @@ export default function Home() {
   const managementRef = useRef(null);
   const firmsRef = useRef(null);
   const productsRef = useRef(null);
-  const firmAumRef = useRef(null);
   const contactsRef = useRef(null);
   const analyticsRef = useRef(null);
   const reportsRef = useRef(null);
@@ -1465,15 +1463,6 @@ export default function Home() {
           hasMoreProducts={productsQuery.hasNextPage}
           isLoadingMoreProducts={productsQuery.isFetchingNextPage}
           onLoadMoreProducts={productsQuery.fetchNextPage}
-        />
-
-        {/* Firm AUM Summary section — automated total AUM per firm from linked products */}
-        <div ref={firmAumRef} />
-        <FirmAumSummarySection
-          firms={activeFirms}
-          products={activeProducts}
-          onFirmClick={handleEdit}
-          forceExpanded={allExpanded}
         />
 
         {/* Contacts section */}
