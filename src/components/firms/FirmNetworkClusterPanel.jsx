@@ -7,18 +7,21 @@ const EDGE_LABELS = {
   sub_manager: "Sub-manager",
   consultant: "Consultant",
   shared_contact: "Shared contact",
+  shared_product: "Shared product",
 };
 
 const EDGE_COLORS = {
   sub_manager: "bg-indigo-100 text-indigo-700",
   consultant: "bg-amber-100 text-amber-700",
   shared_contact: "bg-pink-100 text-pink-700",
+  shared_product: "bg-sky-100 text-sky-700",
 };
 
 const EDGE_DOT_COLORS = {
   sub_manager: "#6366f1",
   consultant: "#f59e0b",
   shared_contact: "#ec4899",
+  shared_product: "#0ea5e9",
 };
 
 export default function FirmNetworkClusterPanel({ firms, adjacency, centralityMap, relMap, activeTypes, onClusterFocus }) {
@@ -78,7 +81,7 @@ export default function FirmNetworkClusterPanel({ firms, adjacency, centralityMa
 
       // Cluster-level stats
       const totalConnections = ranked.reduce((acc, f) => acc + f.connectionCount, 0) / 2;
-      const relTypeCounts = { sub_manager: 0, consultant: 0, shared_contact: 0 };
+      const relTypeCounts = { sub_manager: 0, consultant: 0, shared_contact: 0, shared_product: 0 };
       for (const id of cluster.memberIds) {
         const neighbors = adjacency.get(id);
         if (!neighbors) continue;

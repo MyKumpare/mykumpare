@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Search, X, Route, ArrowRight, Building2, Users, Link2 } from "lucide-react";
+import { Search, X, Route, ArrowRight, Building2, Users, Link2, Briefcase, Package } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,12 +9,14 @@ const EDGE_LABELS = {
   sub_manager: "Sub-manager",
   consultant: "Consultant",
   shared_contact: "Shared contact",
+  shared_product: "Shared product",
 };
 
 const EDGE_COLORS = {
   sub_manager: "bg-indigo-100 text-indigo-700",
   consultant: "bg-amber-100 text-amber-700",
   shared_contact: "bg-pink-100 text-pink-700",
+  shared_product: "bg-sky-100 text-sky-700",
 };
 
 function FirmSearchSelect({ firms, value, onChange, placeholder, excludeId }) {
@@ -78,7 +80,7 @@ function FirmSearchSelect({ firms, value, onChange, placeholder, excludeId }) {
   );
 }
 
-export default function FirmNetworkPathFinder({ firms, adjacency, relMap, contacts, activeTypes, onPathHighlight }) {
+export default function FirmNetworkPathFinder({ firms, adjacency, relMap, edgeDetails, contacts, activeTypes, onPathHighlight }) {
   const [sourceId, setSourceId] = useState(null);
   const [targetId, setTargetId] = useState(null);
   const [pathResult, setPathResult] = useState(null);
@@ -101,6 +103,8 @@ export default function FirmNetworkPathFinder({ firms, adjacency, relMap, contac
       const shared = typeList.includes("shared_contact")
         ? getSharedContacts(a, b, contacts)
         : [];
+      const pairKey = [a, b].sort().join(":");
+      const details = edgeDetails?.get(pairKey);
       steps.push({
         fromId: a,
         toId: b,
@@ -108,6 +112,8 @@ export default function FirmNetworkPathFinder({ firms, adjacency, relMap, contac
         toName: firms.find(f => f.id === b)?.name || b,
         types: typeList,
         sharedContacts: shared,
+        consultantRoles: details ? [...details.consultant_roles] : [],
+        sharedProducts: details ? details.shared_products : [],
       });
     }
     setPathResult({ path, steps, length: path.length - 1 });
@@ -222,6 +228,41 @@ export default function FirmNetworkPathFinder({ firms, adjacency, relMap, contac
                           {step.sharedContacts.length > 5 && (
                             <span className="text-[10px] text-gray-400">
                               +{step.sharedContacts.length - 5} more
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {step.consultantRoles.length > 0 && (
+                      <div className="pl-7 pb-1">
+                        <div className="flex items-center gap-1 text-[10px] text-gray-500 mb-0.5">
+                          <Briefcase className="w-2.5 h-2.5" />
+                          Consultant role{step.consultantRoles.length !== 1 ? "s" : ""}:
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {step.consultantRoles.map(r => (
+                            <span key={r} className="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">
+                              {r}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {step.sharedProducts.length > 0 && (
+                      <div className="pl-7 pb-1">
+                        <div className="flex items-center gap-1 text-[10px] text-gray-500 mb-0.5">
+                          <Package className="w-2.5 h-2.5" />
+                          Shared product{step.sharedProducts.length !== 1 ? "s" : ""}:
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {step.sharedProducts.slice(0, 4).map((p, i) => (
+                            <span key={i} className="text-[10px] bg-sky-50 text-sky-700 px-1.5 py-0.5 rounded truncate max-w-[160px]">
+                              {p}
+                            </span>
+                          ))}
+                          {step.sharedProducts.length > 4 && (
+                            <span className="text-[10px] text-gray-400">
+                              +{step.sharedProducts.length - 4} more
                             </span>
                           )}
                         </div>

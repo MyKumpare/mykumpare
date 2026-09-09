@@ -24,12 +24,14 @@ const EDGE_COLORS = {
   sub_manager: "#6366f1",
   consultant: "#f59e0b",
   shared_contact: "#ec4899",
+  shared_product: "#0ea5e9",
 };
 
 const EDGE_LABELS = {
   sub_manager: "Sub-manager",
   consultant: "Consultant",
   shared_contact: "Shared contact",
+  shared_product: "Shared product",
 };
 
 function getFirmTypes(f) {
@@ -58,6 +60,7 @@ export default function FirmNetworkMapPage() {
     sub_manager: true,
     consultant: true,
     shared_contact: true,
+    shared_product: true,
   });
   const [onlyConnected, setOnlyConnected] = useState(true);
   const [vizMode, setVizMode] = useState("type"); // "type" | "strength"
@@ -83,19 +86,36 @@ export default function FirmNetworkMapPage() {
     queryFn: () => base44.entities.FirmConsultant.list("-created_date", 3000),
   });
 
+  const { data: allPortfolios = [] } = useQuery({
+    queryKey: ["portfolios"],
+    queryFn: () => base44.entities.Portfolio.list("-created_date", 3000),
+  });
+
   const { data: allContacts = [] } = useQuery({
     queryKey: ["contacts"],
     queryFn: () => base44.entities.Contact.list("-created_date", 5000),
   });
 
-  const { nodes, edges, stats, relMap, adjacency, centralityMap, visibleFirms } = useMemo(() => {
+  const { nodes, edges, stats, relMap, edgeDetails, adjacency, centralityMap, visibleFirms } = useMemo(() => {
     const firmMap = new Map(allFirms.filter(f => !f.deleted_at).map(f => [f.id, f]));
     const liveProducts = allProducts.filter(p => !p.deleted_at);
     const liveConsultants = consultants.filter(c => !c.deleted_at);
     const liveContacts = allContacts.filter(c => !c.deleted_at);
+    const livePortfolios = (allPortfolios || []).filter(p => !p.deleted_at);
+    const productMap = new Map(liveProducts.map(p => [p.id, p]));
 
     // adjacency: firmId -> Map<otherFirmId, Set<relType>>
     const adjacency = new Map();
+    // edgeDetails: "idA:idB" (sorted) -> { consultant_roles: Set, shared_products: [] }
+    const edgeDetails = new Map();
+    const pairKey = (a, b) => [a, b].sort().join(":");
+    const addDetail = (a, b, field, value) => {
+      const key = pairKey(a, b);
+      if (!edgeDetails.has(key)) edgeDetails.set(key, { consultant_roles: new Set(), shared_products: [] });
+      const d = edgeDetails.get(key);
+      if (field === "consultant_roles") d.consultant_roles.add(value);
+      else if (field === "shared_products" && value && !d.shared_products.includes(value)) d.shared_products.push(value);
+    };
 
     const addLink = (a, b, type) => {
       if (!a || !b || a === b || !firmMap.has(a) || !firmMap.has(b)) return;
@@ -115,9 +135,42 @@ export default function FirmNetworkMapPage() {
       subIds.forEach(sid => addLink(p.firm_id, sid, "sub_manager"));
     }
 
-    // 2. Consultant relationships
+    // 2. Consultant relationships (with role details)
     for (const c of liveConsultants) {
       addLink(c.firm_id, c.consultant_firm_id, "consultant");
+      (c.roles || []).forEach(r => addDetail(c.firm_id, c.consultant_firm_id, "consultant_roles", r));
+    }
+
+    // 3. Shared product relationships via portfolios (allocator ↔ advisor IM)
+    for (const p of livePortfolios) {
+      if (p.firm_id && p.advisor_firm_id && p.firm_id !== p.advisor_firm_id) {
+        addLink(p.firm_id, p.advisor_firm_id, "shared_product");
+        const label = p.advisor_product_name || p.portfolio_name || "Portfolio allocation";
+        addDetail(p.firm_id, p.advisor_firm_id, "shared_products", label);
+      }
+      // Sub-manager products within portfolios
+      for (const sm of (p.sub_managers || [])) {
+        if (sm.product_id) {
+          const smProduct = productMap.get(sm.product_id);
+          if (smProduct?.firm_id && p.firm_id !== smProduct.firm_id) {
+            addLink(p.firm_id, smProduct.firm_id, "shared_product");
+            addDetail(p.firm_id, smProduct.firm_id, "shared_products", smProduct.name || sm.product_name || "Sub-manager product");
+          }
+        }
+      }
+    }
+
+    // 3b. Shared product relationships via MM constituent products
+    for (const p of liveProducts) {
+      if (p.product_type === "Multi-Manager Product" && p.constituent_product_ids?.length) {
+        for (const cpId of p.constituent_product_ids) {
+          const cp = productMap.get(cpId);
+          if (cp?.firm_id && cp.firm_id !== p.firm_id) {
+            addLink(p.firm_id, cp.firm_id, "shared_product");
+            addDetail(p.firm_id, cp.firm_id, "shared_products", `${p.name} → ${cp.name}`);
+          }
+        }
+      }
     }
 
     // 3. Shared contact relationships — firms sharing contacts
@@ -148,6 +201,7 @@ export default function FirmNetworkMapPage() {
       if (types.has("shared_contact")) s += sharedContactCounts.get([a, b].sort().join(":")) || 1;
       if (types.has("sub_manager")) s += 1;
       if (types.has("consultant")) s += 1;
+      if (types.has("shared_product")) s += 1;
       return s;
     };
 
@@ -256,10 +310,15 @@ export default function FirmNetworkMapPage() {
           for (const types of m.values()) if (types.has("shared_contact")) acc++;
           return acc;
         }, 0) / 2,
+        shared_product: [...adjacency.values()].reduce((acc, m) => {
+          for (const types of m.values()) if (types.has("shared_product")) acc++;
+          return acc;
+        }, 0) / 2,
       },
       relMap: builtRelMap,
+      edgeDetails,
     };
-  }, [allFirms, allProducts, consultants, allContacts, activeTypes, onlyConnected, search, vizMode]);
+  }, [allFirms, allProducts, consultants, allPortfolios, allContacts, activeTypes, onlyConnected, search, vizMode]);
 
   const selectedNode = nodes.find(n => n.id === selectedId);
 
@@ -305,7 +364,7 @@ export default function FirmNetworkMapPage() {
           Firm Network Map
         </h1>
         <p className="text-sm text-gray-500 mt-1">
-          Visualizes how investment firms are linked to each other through shared contacts, sub-manager products, and consultant relationships.
+          Visualizes how investment firms are linked to each other through consultant roles, shared products (portfolio allocations and multi-manager constituents), sub-manager structures, and shared contacts.
         </p>
       </div>
 
@@ -337,6 +396,7 @@ export default function FirmNetworkMapPage() {
             { key: "sub_manager", label: "Sub-manager", color: "bg-indigo-100 text-indigo-700" },
             { key: "consultant", label: "Consultant", color: "bg-amber-100 text-amber-700" },
             { key: "shared_contact", label: "Shared contact", color: "bg-pink-100 text-pink-700" },
+            { key: "shared_product", label: "Shared product", color: "bg-sky-100 text-sky-700" },
           ].map(t => (
             <button
               key={t.key}
@@ -398,7 +458,7 @@ export default function FirmNetworkMapPage() {
             {firmsLoading ? "Loading firms..." : "No firms match the current filters"}
           </p>
           <p className="text-xs text-gray-400 mt-1 max-w-sm">
-            Connections appear when firms share sub-manager products, consultants, or contacts with other firms. Try enabling more relationship types or clearing the search.
+            Connections appear when firms share products, consultants, sub-manager structures, or contacts with other firms. Try enabling more relationship types or clearing the search.
           </p>
         </div>
       ) : (
@@ -421,7 +481,7 @@ export default function FirmNetworkMapPage() {
             )}
 
             {selectedNode && (
-              <div className="absolute bottom-3 left-3 max-w-xs bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-10">
+              <div className="absolute bottom-3 left-3 max-w-sm bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-10 max-h-[60vh] overflow-y-auto">
                 <div className="flex items-start gap-3">
                   <div
                     className="w-10 h-10 rounded-lg flex items-center justify-center text-white shrink-0"
@@ -440,6 +500,71 @@ export default function FirmNetworkMapPage() {
                   </div>
                   <button onClick={() => setSelectedId(null)} className="text-gray-400 hover:text-gray-600 text-sm">✕</button>
                 </div>
+
+                {/* Relationship details for each connected firm */}
+                {(() => {
+                  const firmId = selectedNode._entity.id;
+                  const neighbors = adjacency.get(firmId);
+                  if (!neighbors || neighbors.size === 0) return null;
+                  const detailEntries = [];
+                  for (const [otherId, types] of neighbors) {
+                    const otherFirm = visibleFirms.find(f => f.id === otherId);
+                    if (!otherFirm) continue;
+                    const activeRels = [...types].filter(t => activeTypes[t]);
+                    if (activeRels.length === 0) continue;
+                    const key = [firmId, otherId].sort().join(":");
+                    const details = edgeDetails.get(key);
+                    detailEntries.push({ otherFirm, activeRels, details });
+                  }
+                  if (detailEntries.length === 0) return null;
+                  return (
+                    <div className="mt-2 pt-2 border-t border-gray-100 space-y-1.5">
+                      <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Connections</p>
+                      {detailEntries.slice(0, 12).map(({ otherFirm, activeRels, details }) => (
+                        <div key={otherFirm.id} className="border border-gray-100 rounded-md p-1.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-medium text-gray-700 truncate flex-1">{otherFirm.name}</span>
+                            <div className="flex gap-0.5 shrink-0">
+                              {activeRels.map(t => (
+                                <span key={t} className="text-[8px] px-1 py-0 rounded font-medium"
+                                  style={{ background: `${EDGE_COLORS[t]}20`, color: EDGE_COLORS[t] }}>
+                                  {EDGE_LABELS[t]}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          {/* Consultant roles */}
+                          {details?.consultant_roles?.size > 0 && (
+                            <div className="flex flex-wrap gap-0.5 mt-1">
+                              {[...details.consultant_roles].map(r => (
+                                <span key={r} className="text-[9px] bg-amber-50 text-amber-700 px-1 py-0 rounded">
+                                  {r}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {/* Shared product names */}
+                          {details?.shared_products?.length > 0 && (
+                            <div className="flex flex-wrap gap-0.5 mt-1">
+                              {details.shared_products.slice(0, 4).map((p, i) => (
+                                <span key={i} className="text-[9px] bg-sky-50 text-sky-700 px-1 py-0 rounded truncate max-w-[140px]">
+                                  {p}
+                                </span>
+                              ))}
+                              {details.shared_products.length > 4 && (
+                                <span className="text-[9px] text-gray-400">+{details.shared_products.length - 4} more</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {detailEntries.length > 12 && (
+                        <p className="text-[10px] text-gray-400 text-center">+{detailEntries.length - 12} more connections</p>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 <button
                   type="button"
                   onClick={() => openFirmProfile(selectedNode._entity)}
@@ -526,6 +651,7 @@ export default function FirmNetworkMapPage() {
                     firms={visibleFirms}
                     adjacency={adjacency}
                     relMap={relMap}
+                    edgeDetails={edgeDetails}
                     contacts={allContacts}
                     activeTypes={activeTypes}
                     onPathHighlight={setPathHighlight}
