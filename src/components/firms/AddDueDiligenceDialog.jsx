@@ -396,9 +396,16 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
     },
     staleTime: 300000,
   });
+  // Use backend function to fetch ALL contacts (bypasses default list limit
+  // of 5000, which excluded older contacts like Sample Client entries).
   const { data: ownerContactsRaw = [] } = useQuery({
-    queryKey: ["contacts"],
-    queryFn: () => base44.entities.Contact.list("-created_date", 5000),
+    queryKey: ["contacts-all-dialog"],
+    queryFn: async () => {
+      const res = await base44.functions.invoke("fetchAllContacts", {});
+      const data = res?.data ?? res ?? {};
+      return (data.records || []).filter((c) => !c.deleted_at);
+    },
+    staleTime: 300000,
   });
   // Analysts (primary & secondary) may only come from "Xponance, Inc." — the
   // firm that performs due diligence. Resolve that firm by name (case-insensitive).
@@ -428,14 +435,22 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
       ? selectedFirmName
       : firmName;
 
-  // Products for the effective firm (only in firm-selection mode where we don't
-  // get a pre-filtered list from the parent).
-  const { data: firmProducts = [] } = useQuery({
-    queryKey: ["products", effectiveFirmId],
-    queryFn: () => base44.entities.Product.filter({ firm_id: effectiveFirmId }),
-    enabled: !!effectiveFirmId && firmSelectionMode,
-    select: (data) => data.filter((p) => !p.deleted_at),
+  // Use backend function to fetch ALL products, then filter client-side by
+  // firm. This bypasses the default list limit and ensures all products
+  // (including older Sample Client entries) appear in the dropdown.
+  const { data: allFetchedProducts = [] } = useQuery({
+    queryKey: ["products-all-dialog"],
+    queryFn: async () => {
+      const res = await base44.functions.invoke("fetchAllProducts", {});
+      const data = res?.data ?? res ?? {};
+      return (data.records || []).filter((p) => !p.deleted_at);
+    },
+    staleTime: 300000,
   });
+  const firmProducts = useMemo(
+    () => allFetchedProducts.filter((p) => p.firm_id === effectiveFirmId),
+    [allFetchedProducts, effectiveFirmId]
+  );
 
   // All DD records — used to check if the selected product already has DD.
   const { data: allDueDiligences = [] } = useQuery({

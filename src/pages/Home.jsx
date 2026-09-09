@@ -1568,7 +1568,7 @@ export default function Home() {
       <AddFirmDialog
         onProductClick={(product) => handleEditProduct(product, false)}
         onPortfolioClick={(portfolio) => { setDialogOpen(false); setEditingPortfolio(portfolio); setPreselectedAllocatorId(null); setPortfolioDialogOpen(true); }}
-        onFirmClick={(f) => { const full = firms.find(x => x.id === f?.id) || f; if (full) handleEdit(full); }}
+        onFirmClick={(f) => { const full = allLoadedFirms.find(x => x.id === f?.id) || f; if (full) handleEdit(full); }}
         onContactClick={(c) => { if (c) setViewingContact(c); }}
         open={dialogOpen}
         onOpenChange={(open) => {
@@ -1618,7 +1618,7 @@ export default function Home() {
         open={!!statsModal}
         onOpenChange={(open) => !open && setStatsModal(null)}
         mode={statsModal}
-        firms={firms}
+        firms={allLoadedFirms}
         products={allLoadedProducts}
         portfolios={allLoadedPortfolios}
         onFirmClick={handleEdit}
@@ -1630,7 +1630,7 @@ export default function Home() {
         open={contactsModalOpen}
         onOpenChange={setContactsModalOpen}
         contacts={allLoadedContacts}
-        firms={firms}
+        firms={allLoadedFirms}
         products={allLoadedProducts}
         portfolios={allLoadedPortfolios}
         onNavigateToOwnership={handleNavigateToOwnership}
@@ -1644,7 +1644,7 @@ export default function Home() {
         onOpenChange={(open) => { if (!open) { setAddContactOpen(false); setAddContactPhotoUrl(null); setPasteInitialData(null); } }}
         editingContact={null}
         currentFirmId={null}
-        firms={firms}
+        firms={allLoadedFirms}
         initialPhotoUrl={addContactPhotoUrl}
         initialData={pasteInitialData}
       />
@@ -1652,7 +1652,7 @@ export default function Home() {
       <PasteContactDialog
         open={pasteContactOpen}
         onClose={() => setPasteContactOpen(false)}
-        firms={firms}
+        firms={allLoadedFirms}
         onReady={(initialData) => {
           setPasteInitialData(initialData);
           setPasteContactOpen(false);
@@ -1679,7 +1679,7 @@ export default function Home() {
           }
         }}
         editingContact={viewingContact}
-        firms={firms}
+        firms={allLoadedFirms}
         viewMode={true}
         onNavigateToOwnership={handleNavigateToOwnership}
         onProductClick={(product) => handleEditProduct(product, true)}
@@ -1739,7 +1739,7 @@ export default function Home() {
         open={activityLogModalOpen}
         onClose={() => setActivityLogModalOpen(false)}
         defaultTab={activityLogDefaultTab}
-        onFirmClick={(f) => { setActivityLogModalOpen(false); const full = firms.find(x => x.id === f?.id) || f; if (full) handleEdit(full); }}
+        onFirmClick={(f) => { setActivityLogModalOpen(false); const full = allLoadedFirms.find(x => x.id === f?.id) || f; if (full) handleEdit(full); }}
         onContactClick={(c) => { if (c) setViewingContact(c); }}
       />
 
@@ -1762,7 +1762,7 @@ export default function Home() {
       <DueDiligencePickerModal
         open={dueDiligencePickerOpen}
         onClose={() => setDueDiligencePickerOpen(false)}
-        onFirmClick={(firmId) => { const full = firms.find(x => x.id === firmId); if (full) handleEdit(full); }}
+        onFirmClick={(firmId) => { const full = allLoadedFirms.find(x => x.id === firmId); if (full) handleEdit(full); }}
         onContactClick={(contact) => setViewingContact(contact)}
         onProductClick={(product) => handleEditProduct(product)}
       />
@@ -1908,7 +1908,7 @@ export default function Home() {
         open={profileOpen}
         onOpenChange={setProfileOpen}
         user={user}
-        firms={firms}
+        firms={allLoadedFirms}
         contacts={allLoadedContacts}
         onSaveLinked={handleSaveProfileLink}
         onLogout={() => { setProfileOpen(false); logout(); }}
@@ -1923,7 +1923,7 @@ export default function Home() {
       <FirmScoringExportWizard
         open={firmScoringExportOpen}
         onClose={() => setFirmScoringExportOpen(false)}
-        firms={firms}
+        firms={allLoadedFirms}
       />
 
       {/* Utility full-screen modal — opened from the header Utilities icon */}
