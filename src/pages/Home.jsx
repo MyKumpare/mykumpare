@@ -623,9 +623,55 @@ export default function Home() {
 
   const { data: dueDiligences = [] } = useQuery({
     queryKey: ["due-diligence-search"],
-    queryFn: () => base44.entities.DueDiligence.filter({ deleted_at: null }, "-created_date", 5000),
+    queryFn: async () => {
+      const res = await base44.functions.invoke("searchAppData", {
+        action: "search",
+        entity_name: "DueDiligence",
+        filter: { deleted_at: null },
+        limit: 5000,
+        sort: "-created_date",
+      });
+      return res?.records || [];
+    },
     enabled: searchFocused,
   });
+
+  // Supplementary backend search for due diligence: when the user types in the
+  // global search bar, fetch DD records matching the query directly from the
+  // database so results appear even before the full list loads.
+  const { data: supplementaryDueDiligences = [] } = useQuery({
+    queryKey: ["due-diligence-search-supplement", searchKeywords.join(" ")],
+    queryFn: async () => {
+      if (searchKeywords.length === 0) return [];
+      const escaped = searchKeywords.map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(" ");
+      const res = await base44.functions.invoke("searchAppData", {
+        action: "search",
+        entity_name: "DueDiligence",
+        filter: {
+          $or: [
+            { firm_name: { $regex: escaped, $options: "i" } },
+            { product_name: { $regex: escaped, $options: "i" } },
+            { primary_analyst_name: { $regex: escaped, $options: "i" } },
+            { secondary_analyst_name: { $regex: escaped, $options: "i" } },
+          ],
+          deleted_at: null,
+        },
+        limit: 50,
+        sort: "-created_date",
+      });
+      return res?.records || [];
+    },
+    enabled: searchKeywords.length > 0,
+    staleTime: 60000,
+  });
+
+  // Merge supplementary DD search results into the due diligence list (dedup by id)
+  const allLoadedDueDiligences = useMemo(() => {
+    if (!supplementaryDueDiligences.length) return dueDiligences;
+    const existingIds = new Set(dueDiligences.map((d) => d.id));
+    const newOnes = supplementaryDueDiligences.filter((d) => !existingIds.has(d.id) && !d.deleted_at);
+    return newOnes.length ? [...dueDiligences, ...newOnes] : dueDiligences;
+  }, [dueDiligences, supplementaryDueDiligences]);
 
   const { data: customReports = [] } = useQuery({
     queryKey: ["custom_reports_search"],
@@ -1196,7 +1242,7 @@ export default function Home() {
                       activities={activities}
                       followUpTasks={followUpTasks}
                       documents={documents}
-                      dueDiligences={dueDiligences}
+                      dueDiligences={allLoadedDueDiligences}
                       customReports={customReports}
                       benchmarks={benchmarks}
                       onFirmClick={(firm) => { setSearchQuery(""); setSearchFocused(false); handleEdit(firm); }}
