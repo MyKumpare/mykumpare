@@ -1754,7 +1754,7 @@ export default function Home() {
       <FirmPickerModal
         open={firmPickerOpen}
         onClose={() => setFirmPickerOpen(false)}
-        firms={firms}
+        firms={allLoadedFirms}
         onFirmClick={(firm) => handleEdit(firm)}
         onAddFirm={() => { setEditingFirm(null); setPreselectedType(null); setDialogOpen(true); }}
       />
@@ -1779,7 +1779,7 @@ export default function Home() {
         open={contactPickerOpen}
         onClose={() => setContactPickerOpen(false)}
         contacts={allLoadedContacts}
-        firms={firms}
+        firms={allLoadedFirms}
         products={allLoadedProducts}
         portfolios={allLoadedPortfolios}
         onContactClick={(contact) => setViewingContact(contact)}
@@ -1812,7 +1812,7 @@ export default function Home() {
       <MapSearchModal
         open={mapSearchOpen}
         onClose={() => setMapSearchOpen(false)}
-        firms={firms}
+        firms={allLoadedFirms}
         contacts={allLoadedContacts}
         onFirmClick={(firm) => handleEdit(firm)}
         onContactClick={(contact) => setViewingContact(contact)}
@@ -1833,10 +1833,10 @@ export default function Home() {
         open={questionnairePickerOpen}
         onClose={() => setQuestionnairePickerOpen(false)}
         user={user}
-        firms={firms}
+        firms={allLoadedFirms}
         contacts={allLoadedContacts}
         products={allLoadedProducts}
-        onFirmClick={(firmId) => { const full = firms.find(x => x.id === firmId); if (full) handleEdit(full); }}
+        onFirmClick={(firmId) => { const full = allLoadedFirms.find(x => x.id === firmId); if (full) handleEdit(full); }}
         onContactClick={(contact) => setViewingContact(contact)}
         onProductClick={(product) => handleEditProduct(product)}
       />
@@ -1846,10 +1846,10 @@ export default function Home() {
         onOpenChange={setQuestionnaireAddOpen}
         editQuestionnaire={null}
         user={user}
-        firms={firms}
+        firms={allLoadedFirms}
         contacts={allLoadedContacts}
         products={allLoadedProducts}
-        onFirmClick={(firmId) => { const full = firms.find(x => x.id === firmId); if (full) handleEdit(full); }}
+        onFirmClick={(firmId) => { const full = allLoadedFirms.find(x => x.id === firmId); if (full) handleEdit(full); }}
         onContactClick={(contact) => setViewingContact(contact)}
         onProductClick={(product) => handleEditProduct(product)}
       />
