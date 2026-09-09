@@ -13,6 +13,16 @@
         "Due Diligence Process Status"
       ],
       "description": "Which dropdown this option belongs to"
+    },
+    "sort_order": {
+      "type": "integer",
+      "default": 0,
+      "description": "Display order for this option within its category. Lower values appear first. Managed via the reorder controls in the status dropdown's manage mode."
+    },
+    "is_hidden": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true, this option is hidden from the dropdown. Used to hide built-in default options that the user has removed via manage mode (defaults cannot be permanently deleted, only hidden)."
     }
   },
   "required": [
