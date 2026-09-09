@@ -2,9 +2,11 @@ import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import SectionPageHeader from "@/components/shared/SectionPageHeader";
 import FirmAumSummarySection from "@/components/firms/FirmAumSummarySection";
+import { exportFirmAumSummaryCsv } from "@/components/firms/firmAumSummaryExport";
 
 /**
  * Full-page view of the Firm AUM Summary (total product AUM per firm).
@@ -34,6 +36,19 @@ export default function FirmAumSummary() {
         icon={TrendingUp}
         title="Firm AUM Summary"
         gradient="from-emerald-600 via-emerald-700 to-teal-800"
+        actions={
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-white hover:bg-white/15"
+            disabled={isLoading || firms.length === 0}
+            onClick={() => exportFirmAumSummaryCsv(firms, products)}
+            title="Export firm AUM summary as CSV"
+          >
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Export CSV</span>
+          </Button>
+        }
       />
       <div className="max-w-7xl xl:max-w-[1400px] mx-auto px-4 sm:px-6 pt-4 pb-12">
         {isLoading ? (
