@@ -39,10 +39,35 @@ const SCORE_COLORS = {
   5: "bg-green-100 text-green-700 border-green-300"
 };
 
-function ScoreCell({ score, onChange, disabled, placeholder = "—", descriptors }) {
+function ScoreCell({ score, onChange, disabled, placeholder = "—", descriptors, scoringMode, singleMin, singleMax }) {
   const hasDesc = Array.isArray(descriptors) && descriptors.some((d) => d && d.text);
   const descFor = (n) => (hasDesc ? descriptors.find((d) => d.level === n)?.text : null);
   const selectedDesc = score != null ? descFor(score) : null;
+
+  // Single-score mode: build a dropdown of integers from min to max
+  if (scoringMode === "single") {
+    const min = Number.isFinite(singleMin) ? singleMin : 0;
+    const max = Number.isFinite(singleMax) ? singleMax : 100;
+    const options = [];
+    for (let n = min; n <= max; n++) options.push(n);
+    return (
+      <div className="flex flex-col items-start gap-1 w-full">
+        <Select value={score != null ? score.toString() : ""} onValueChange={(v) => onChange(parseInt(v))} disabled={disabled}>
+          <SelectTrigger className="h-8 w-20 text-xs">
+            <SelectValue placeholder={placeholder} />
+          </SelectTrigger>
+          <SelectContent className="max-h-60">
+            {options.map((n) => (
+              <SelectItem key={n} value={n.toString()} className="text-xs">
+                {n}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col items-start gap-1 w-full">
       <Select value={score?.toString() || ""} onValueChange={(v) => onChange(parseInt(v))} disabled={disabled}>
@@ -885,6 +910,9 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
                             onChange={(v) => updateCriterion(block.id, crit.id, { primary_score: v })}
                             disabled={!isPrimaryAnalyst || score.primary_score_finalized}
                             descriptors={templateCriteria[crit.id]?.descriptors}
+                            scoringMode={templateCriteria[crit.id]?.scoring_mode}
+                            singleMin={templateCriteria[crit.id]?.single_score_min}
+                            singleMax={templateCriteria[crit.id]?.single_score_max}
                           />
                         </td>
                         {/* Secondary score */}
@@ -895,6 +923,9 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
                               onChange={(v) => updateCriterion(block.id, crit.id, { secondary_score: v })}
                               disabled={!isSecondaryAnalyst || score.secondary_scoring_status === "completed"}
                               descriptors={templateCriteria[crit.id]?.descriptors}
+                              scoringMode={templateCriteria[crit.id]?.scoring_mode}
+                              singleMin={templateCriteria[crit.id]?.single_score_min}
+                              singleMax={templateCriteria[crit.id]?.single_score_max}
                             />
                           </td>
                         )}
@@ -908,6 +939,9 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
                                   onChange={(v) => updateCriterion(block.id, crit.id, { team_score: v })}
                                   disabled={score.team_review_status === "completed"}
                                   descriptors={templateCriteria[crit.id]?.descriptors}
+                                  scoringMode={templateCriteria[crit.id]?.scoring_mode}
+                                  singleMin={templateCriteria[crit.id]?.single_score_min}
+                                  singleMax={templateCriteria[crit.id]?.single_score_max}
                                 />
                               ) : (
                                 <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold border ${crit.team_score ? SCORE_COLORS[crit.team_score] : "border-gray-200"}`}>
@@ -956,6 +990,9 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
                                   onChange={(v) => updateCriterion(block.id, crit.id, { ic_score: v })}
                                   disabled={score.ic_review_status === "completed"}
                                   descriptors={templateCriteria[crit.id]?.descriptors}
+                                  scoringMode={templateCriteria[crit.id]?.scoring_mode}
+                                  singleMin={templateCriteria[crit.id]?.single_score_min}
+                                  singleMax={templateCriteria[crit.id]?.single_score_max}
                                 />
                               ) : (
                                 <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold border ${crit.ic_score ? SCORE_COLORS[crit.ic_score] : "border-gray-200"}`}>

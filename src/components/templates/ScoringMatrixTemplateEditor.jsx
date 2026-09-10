@@ -416,44 +416,95 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange, template
                       </button>
                     </div>
                   </div>
-                  <div className="pl-8">
-                    <ScoringLevelRangeGenerator
-                      descriptors={crit.descriptors || []}
-                      onGenerate={(newDescriptors) => setDescriptors(block.id, crit.id, newDescriptors)}
-                    />
+                  <div className="pl-8 flex items-center gap-1.5 mb-1.5">
+                    <span className="text-[10px] text-gray-500 font-medium">Scoring:</span>
+                    <button
+                      type="button"
+                      onClick={() => updateCriterion(block.id, crit.id, "scoring_mode", "levels")}
+                      className={`text-[10px] px-2 py-0.5 rounded border ${
+                        (crit.scoring_mode || "levels") === "levels"
+                          ? "bg-cyan-50 border-cyan-300 text-cyan-700 font-medium"
+                          : "bg-white border-gray-200 text-gray-500 hover:text-gray-700"
+                      }`}
+                    >
+                      Levels
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateCriterion(block.id, crit.id, "scoring_mode", "single")}
+                      className={`text-[10px] px-2 py-0.5 rounded border ${
+                        crit.scoring_mode === "single"
+                          ? "bg-violet-50 border-violet-300 text-violet-700 font-medium"
+                          : "bg-white border-gray-200 text-gray-500 hover:text-gray-700"
+                      }`}
+                    >
+                      Single Score
+                    </button>
                   </div>
-                  <div className="grid grid-cols-1 gap-1.5 pl-8">
-                    {(crit.descriptors || []).map((desc) => (
-                      <div key={desc.level} className="flex items-start gap-2 group">
-                        <Input
-                          type="number"
-                          value={desc.level}
-                          onChange={(e) => updateDescriptorLevel(block.id, crit.id, desc.level, parseFloat(e.target.value))}
-                          className={`text-xs font-bold w-14 h-7 text-center flex-shrink-0 px-1 ${
-                            desc.level === 1 ? "bg-red-50 text-red-700 border-red-200" :
-                            desc.level === 2 ? "bg-orange-50 text-orange-700 border-orange-200" :
-                            desc.level === 3 ? "bg-yellow-50 text-yellow-700 border-yellow-200" :
-                            desc.level === 4 ? "bg-lime-50 text-lime-700 border-lime-200" :
-                            "bg-green-50 text-green-700 border-green-200"
-                          }`}
+                  {crit.scoring_mode === "single" ? (
+                    <div className="pl-8 flex items-center gap-2 bg-violet-50/30 border border-violet-100 rounded-md p-2">
+                      <Label className="text-xs text-gray-600 whitespace-nowrap">Score range:</Label>
+                      <Input
+                        type="number"
+                        value={crit.single_score_min ?? 0}
+                        onChange={(e) => updateCriterion(block.id, crit.id, "single_score_min", parseFloat(e.target.value) || 0)}
+                        className="h-7 w-16 text-xs text-center"
+                        placeholder="min"
+                      />
+                      <span className="text-gray-400 text-xs">to</span>
+                      <Input
+                        type="number"
+                        value={crit.single_score_max ?? 100}
+                        onChange={(e) => updateCriterion(block.id, crit.id, "single_score_max", parseFloat(e.target.value) || 0)}
+                        className="h-7 w-16 text-xs text-center"
+                        placeholder="max"
+                      />
+                      <span className="text-[10px] text-gray-400">
+                        (analyst picks one value from a dropdown of {Math.max(0, Math.round((crit.single_score_max ?? 100) - (crit.single_score_min ?? 0)))} options)
+                      </span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="pl-8">
+                        <ScoringLevelRangeGenerator
+                          descriptors={crit.descriptors || []}
+                          onGenerate={(newDescriptors) => setDescriptors(block.id, crit.id, newDescriptors)}
                         />
-                        <Textarea
-                          value={desc.text}
-                          onChange={(e) => updateDescriptor(block.id, crit.id, desc.level, e.target.value)}
-                          className="text-xs min-h-[40px] flex-1"
-                          placeholder={`Level ${desc.level} descriptor...`}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => deleteDescriptor(block.id, crit.id, desc.level)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-600 flex-shrink-0 mt-1"
-                          title="Delete level"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
                       </div>
-                    ))}
-                  </div>
+                      <div className="grid grid-cols-1 gap-1.5 pl-8">
+                        {(crit.descriptors || []).map((desc) => (
+                          <div key={desc.level} className="flex items-start gap-2 group">
+                            <Input
+                              type="number"
+                              value={desc.level}
+                              onChange={(e) => updateDescriptorLevel(block.id, crit.id, desc.level, parseFloat(e.target.value))}
+                              className={`text-xs font-bold w-14 h-7 text-center flex-shrink-0 px-1 ${
+                                desc.level === 1 ? "bg-red-50 text-red-700 border-red-200" :
+                                desc.level === 2 ? "bg-orange-50 text-orange-700 border-orange-200" :
+                                desc.level === 3 ? "bg-yellow-50 text-yellow-700 border-yellow-200" :
+                                desc.level === 4 ? "bg-lime-50 text-lime-700 border-lime-200" :
+                                "bg-green-50 text-green-700 border-green-200"
+                              }`}
+                            />
+                            <Textarea
+                              value={desc.text}
+                              onChange={(e) => updateDescriptor(block.id, crit.id, desc.level, e.target.value)}
+                              className="text-xs min-h-[40px] flex-1"
+                              placeholder={`Level ${desc.level} descriptor...`}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => deleteDescriptor(block.id, crit.id, desc.level)}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-600 flex-shrink-0 mt-1"
+                              title="Delete level"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
 
                   {/* Bonus / Penalty configuration */}
                   <div className="pl-8 border-t border-gray-100 pt-2 mt-1">
