@@ -195,19 +195,15 @@ export default async function(req: Request): Promise<Response> {
     }
     counts.portfolios = portCount;
 
-    // 8. Finally, soft-delete the firms themselves
+    // 8. Finally, soft-delete the firms themselves.
+    //    Use bulkUpdate (explicit IDs) instead of updateMany with _id filter,
+    //    because the SDK's updateMany doesn't reliably filter by the built-in _id field.
     let firmCount = 0;
     for (let i = 0; i < targetFirmIds.length; i += CHUNK) {
       const chunk = targetFirmIds.slice(i, i + CHUNK);
-      let hasMore = true;
-      while (hasMore) {
-        const r: any = await svc.entities.Firm.updateMany(
-          { _id: { $in: chunk }, deleted_at: { $exists: false } },
-          { $set: { deleted_at: now } },
-        );
-        firmCount += r.updated || 0;
-        hasMore = r.has_more;
-      }
+      const updates = chunk.map((id) => ({ id, deleted_at: now }));
+      const r: any = await svc.entities.Firm.bulkUpdate(updates);
+      firmCount += (r.updated || r.updated_count || chunk.length);
     }
     counts.firms_deleted = firmCount;
 
