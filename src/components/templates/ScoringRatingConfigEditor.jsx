@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Trash2, ChevronDown, ChevronRight, ToggleLeft, ToggleRight } from "lucide-react";
+import ScoringRatingPreview from "./ScoringRatingPreview";
 
 let _optId = 0;
 const nextOptId = () => `sro_${Date.now()}_${++_optId}`;
@@ -220,6 +221,9 @@ export default function ScoringRatingConfigEditor({ ratingConfig, onChange }) {
               </div>
             )}
           </div>
+
+          {/* Live preview of Pass/Fail + rating for a sample score */}
+          <ScoringRatingPreview ratingConfig={cfg} />
         </div>
       )}
     </div>
