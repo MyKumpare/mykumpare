@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { exportFirmNetworkMapPdf, strengthColorHex } from "@/components/firms/firmNetworkMapPdf";
 import FirmNetworkPathFinder from "@/components/firms/FirmNetworkPathFinder";
 import FirmNetworkClusterPanel from "@/components/firms/FirmNetworkClusterPanel";
+import { dedupeAndMergeContacts } from "@/components/contacts/contactDedupe";
 
 const FIRM_TYPE_COLORS = {
   "Investment Manager": "#6366f1",
@@ -100,7 +101,9 @@ export default function FirmNetworkMapPage() {
     const firmMap = new Map(allFirms.filter(f => !f.deleted_at).map(f => [f.id, f]));
     const liveProducts = allProducts.filter(p => !p.deleted_at);
     const liveConsultants = consultants.filter(c => !c.deleted_at);
-    const liveContacts = allContacts.filter(c => !c.deleted_at);
+    // Deduplicate contacts so shared-contact edges aren't split across
+    // duplicate records; merge firm_ids so all associations are preserved.
+    const liveContacts = dedupeAndMergeContacts(allContacts.filter(c => !c.deleted_at));
     const livePortfolios = (allPortfolios || []).filter(p => !p.deleted_at);
     const productMap = new Map(liveProducts.map(p => [p.id, p]));
 

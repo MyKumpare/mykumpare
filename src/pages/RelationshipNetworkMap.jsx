@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Network, Loader2, User, Filter, Maximize2, X } from "lucide-react";
 import ContactNetworkGraph from "@/components/network/ContactNetworkGraph";
+import { buildContactIdMap } from "@/components/contacts/contactDedupe";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -53,6 +54,9 @@ export default function RelationshipNetworkMap() {
   const { nodes, edges, stats } = useMemo(() => {
     const activeContacts = contacts.filter((c) => !c.deleted_at);
     const contactMap = new Map(activeContacts.map((c) => [c.id, c]));
+    // Map every contact ID to its canonical (deduplicated) ID so duplicate
+    // records for the same person collapse into a single node.
+    const idMap = buildContactIdMap(contacts);
 
     // Filter by relationship type
     let rels = typeFilter === "All" ? relationships : relationships.filter((r) => r.relationship_type === typeFilter);
@@ -69,19 +73,33 @@ export default function RelationshipNetworkMap() {
       });
     }
 
-    // Collect unique contact IDs
+    // Remap relationship endpoints to canonical IDs and deduplicate edges
+    // so the same person only appears once even with multiple records.
+    const seenEdgePairs = new Set();
+    const remappedRels = [];
+    for (const r of rels) {
+      const aId = idMap.get(r.contact_a_id) || r.contact_a_id;
+      const bId = idMap.get(r.contact_b_id) || r.contact_b_id;
+      if (aId === bId) continue; // self-loop after dedup — skip
+      const pairKey = [aId, bId].sort().join(":");
+      if (seenEdgePairs.has(pairKey)) continue;
+      seenEdgePairs.add(pairKey);
+      remappedRels.push({ ...r, _canonicalA: aId, _canonicalB: bId });
+    }
+
+    // Collect unique canonical contact IDs
     const contactIds = new Set();
-    rels.forEach((r) => {
-      contactIds.add(r.contact_a_id);
-      contactIds.add(r.contact_b_id);
+    remappedRels.forEach((r) => {
+      contactIds.add(r._canonicalA);
+      contactIds.add(r._canonicalB);
     });
 
     // Build nodes
     const contactNodes = Array.from(contactIds).map((id) => {
       const c = contactMap.get(id);
       const fallbackName =
-        relationships.find((r) => r.contact_a_id === id)?.contact_a_name ||
-        relationships.find((r) => r.contact_b_id === id)?.contact_b_name ||
+        relationships.find((r) => (idMap.get(r.contact_a_id) || r.contact_a_id) === id)?.contact_a_name ||
+        relationships.find((r) => (idMap.get(r.contact_b_id) || r.contact_b_id) === id)?.contact_b_name ||
         "Unknown";
       const name = c ? formatContactName(c) : fallbackName;
       const initials = c ? [c.first_name?.[0], c.last_name?.[0]].filter(Boolean).join("").toUpperCase() : "?";
@@ -102,10 +120,10 @@ export default function RelationshipNetworkMap() {
       };
     });
 
-    // Build edges with relationship-type colors
-    const allEdges = rels.map((r) => ({
-      source: `contact-${r.contact_a_id}`,
-      target: `contact-${r.contact_b_id}`,
+    // Build edges with relationship-type colors (using canonical IDs)
+    const allEdges = remappedRels.map((r) => ({
+      source: `contact-${r._canonicalA}`,
+      target: `contact-${r._canonicalB}`,
       color: RELATIONSHIP_COLORS[r.relationship_type] || "#cbd5e1",
       width: 2,
       relationshipType: r.relationship_type,

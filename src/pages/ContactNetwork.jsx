@@ -6,6 +6,7 @@ import { Share2, Loader2, Building, User, Filter, ZoomIn, ZoomOut, Maximize2, X 
 import ContactNetworkGraph from "@/components/network/ContactNetworkGraph";
 import ContactNetworkBulkEditList from "@/components/network/ContactNetworkBulkEditList";
 import ContactNetworkSidebar from "@/components/network/ContactNetworkSidebar";
+import { dedupeAndMergeContacts } from "@/components/contacts/contactDedupe";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { List, Share2 as GraphIcon } from "lucide-react";
@@ -52,7 +53,11 @@ export default function ContactNetwork() {
   // When highlightFirmId is set, show only that firm + its Final Decision Makers.
   const { nodes, edges, stats } = useMemo(() => {
     const activeFirms = firms.filter((f) => !f.deleted_at);
-    const activeContacts = contacts.filter((c) => !c.deleted_at && c.firm_ids?.length);
+    // Deduplicate contacts so each person appears as one node even when
+    // duplicate records exist; merge firm_ids so no associations are lost.
+    const activeContacts = dedupeAndMergeContacts(
+      contacts.filter((c) => !c.deleted_at && c.firm_ids?.length)
+    );
 
     const firmMap = new Map(activeFirms.map((f) => [f.id, f]));
 
