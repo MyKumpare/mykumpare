@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Check, ArrowRightLeft, Trash2, Loader2, User, ScanSearch } from "lucide-react";
-import { findContactDuplicates } from "@/components/contacts/contactDuplicateCheck";
+import { findContactDuplicates, findExactDuplicateClusters } from "@/components/contacts/contactDuplicateCheck";
 import { useDuplicateReviews } from "@/components/contacts/useDuplicateReviews";
 import MergeDuplicateContactsDialog from "@/components/contacts/MergeDuplicateContactsDialog";
 
@@ -41,6 +41,8 @@ export default function DuplicateContactsReview() {
   const [busy, setBusy] = useState(false);
   const [mergeCluster, setMergeCluster] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [autoMerging, setAutoMerging] = useState(false);
+  const [autoMergeResult, setAutoMergeResult] = useState(null);
 
   const { data: contacts = [] } = useQuery({
     queryKey: ["contacts"],
@@ -109,6 +111,67 @@ export default function DuplicateContactsReview() {
     }
   };
 
+  // Auto-merge contacts that are 100% identical (same signature on all fields).
+  // For each cluster of exact duplicates, keeps the most complete record and
+  // merges the rest into it via the mergeContacts backend function.
+  const handleAutoMergeExact = async () => {
+    const clusters = findExactDuplicateClusters(activeContacts);
+    if (clusters.length === 0) {
+      setAutoMergeResult({ merged: 0, clusters: 0, skipped: 0 });
+      return;
+    }
+    setAutoMerging(true);
+    setAutoMergeResult(null);
+    let totalMerged = 0;
+    let totalClusters = 0;
+    let skipped = 0;
+    const errors = [];
+    for (const cluster of clusters) {
+      // Keep the most complete record (longest full name, tiebreak by most recently updated)
+      const fullNameLen = (c) =>
+        [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix]
+          .filter(Boolean).join(" ").length;
+      let primary = cluster[0];
+      for (let i = 1; i < cluster.length; i++) {
+        const c = cluster[i];
+        if (
+          fullNameLen(c) > fullNameLen(primary) ||
+          (fullNameLen(c) === fullNameLen(primary) &&
+            new Date(c.updated_date || c.created_date || 0).getTime() >
+              new Date(primary.updated_date || primary.created_date || 0).getTime())
+        ) {
+          primary = c;
+        }
+      }
+      const secondaries = cluster.filter((c) => c.id !== primary.id);
+      let clusterMerged = 0;
+      for (const sec of secondaries) {
+        try {
+          const res = await base44.functions.invoke("mergeContacts", {
+            primary_id: primary.id,
+            secondary_id: sec.id,
+          });
+          if (res?.success) {
+            clusterMerged++;
+            totalMerged++;
+          } else {
+            skipped++;
+            errors.push(`${contactName(sec)}: ${res?.error || "unknown error"}`);
+          }
+        } catch (err) {
+          skipped++;
+          errors.push(`${contactName(sec)}: ${err.message}`);
+        }
+      }
+      if (clusterMerged > 0) totalClusters++;
+    }
+    await queryClient.invalidateQueries({ queryKey: ["contacts"] });
+    await queryClient.invalidateQueries({ queryKey: ["duplicateReviews"] });
+    setAutoMergeResult({ merged: totalMerged, clusters: totalClusters, skipped, errors });
+    setAutoMerging(false);
+    setScanned(true);
+  };
+
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-3 space-y-3">
       <div className="flex items-center justify-between">
@@ -121,11 +184,44 @@ export default function DuplicateContactsReview() {
             </span>
           )}
         </div>
-        <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={runScan} disabled={busy}>
-          {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ScanSearch className="w-3.5 h-3.5" />}
-          {scanned ? "Re-scan" : "Scan Now"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 gap-1 text-xs border-green-300 text-green-700 hover:bg-green-50"
+            onClick={handleAutoMergeExact}
+            disabled={busy || autoMerging || activeContacts.length === 0}
+          >
+            {autoMerging ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+            {autoMerging ? "Merging…" : "Auto-merge 100% duplicates"}
+          </Button>
+          <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={runScan} disabled={busy || autoMerging}>
+            {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ScanSearch className="w-3.5 h-3.5" />}
+            {scanned ? "Re-scan" : "Scan Now"}
+          </Button>
+        </div>
       </div>
+
+      {autoMergeResult && (
+        <div className={`rounded-lg border p-2.5 text-xs ${autoMergeResult.merged > 0 ? "border-green-200 bg-green-50 text-green-800" : "border-gray-200 bg-gray-50 text-gray-600"}`}>
+          {autoMergeResult.merged > 0 ? (
+            <p>
+              ✅ Auto-merged <strong>{autoMergeResult.merged}</strong> exact duplicate contact{autoMergeResult.merged === 1 ? "" : "s"} across <strong>{autoMergeResult.clusters}</strong> set{autoMergeResult.clusters === 1 ? "" : "s"}.
+              {autoMergeResult.skipped > 0 && ` ${autoMergeResult.skipped} skipped due to errors.`}
+            </p>
+          ) : (
+            <p>No 100% identical duplicate contacts found — all potential duplicates have at least some differing data and need manual review.</p>
+          )}
+          {autoMergeResult.errors?.length > 0 && (
+            <details className="mt-1 text-[10px] text-gray-500">
+              <summary className="cursor-pointer">View errors ({autoMergeResult.errors.length})</summary>
+              <ul className="list-disc pl-4 mt-1 space-y-0.5">
+                {autoMergeResult.errors.map((e, i) => <li key={i}>{e}</li>)}
+              </ul>
+            </details>
+          )}
+        </div>
+      )}
 
       {!scanned ? (
         <p className="text-xs text-gray-500 py-2">

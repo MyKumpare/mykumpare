@@ -277,6 +277,23 @@ export function isExactMatch(a, b) {
 }
 
 /**
+ * Group contacts into clusters where every member has an identical signature
+ * (100% match — all fields are the same). Returns only clusters with 2+ members.
+ * @param {Array} contacts - Contact records (soft-deleted are skipped)
+ * @returns {Array<Array>} clusters of identical contacts
+ */
+export function findExactDuplicateClusters(contacts) {
+  const groups = new Map();
+  for (const c of contacts || []) {
+    if (c.deleted_at) continue;
+    const sig = contactSignature(c);
+    if (!groups.has(sig)) groups.set(sig, []);
+    groups.get(sig).push(c);
+  }
+  return Array.from(groups.values()).filter((g) => g.length > 1);
+}
+
+/**
  * Check if all contacts in a group have identical information.
  */
 export function isExactMatchGroup(group) {

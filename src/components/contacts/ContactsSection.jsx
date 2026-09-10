@@ -459,7 +459,13 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
     return filteredContacts.filter((c) => contactFirmTypes(c).includes(kanbanFirmType));
   }, [filteredContacts, kanbanFirmType, contactFirmTypes]);
 
-  const visibleFirmTypes = FIRM_TYPES.filter((t) => typeFilter === "all" || t === typeFilter);
+  // Sidebar firm_type filter takes precedence over the legacy "Filter by type" dropdown:
+  // when the user selects firm type(s) in the sidebar, only those groups are shown.
+  const sidebarFirmTypeSel = filterValues.firm_type || new Set();
+  const visibleFirmTypes = FIRM_TYPES.filter((t) => {
+    if (sidebarFirmTypeSel.size > 0) return sidebarFirmTypeSel.has(t);
+    return typeFilter === "all" || t === typeFilter;
+  });
 
   // Group contacts: by firm type → by firm → sorted by last name
   const grouped = visibleFirmTypes.reduce((acc, groupType) => {
@@ -485,7 +491,8 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
   }, {});
 
   // Contacts not associated with any firm (only shown when no type filter is active)
-  const unassignedContacts = typeFilter === "all" ? filteredContacts
+  const noTypeFilterActive = typeFilter === "all" && sidebarFirmTypeSel.size === 0;
+  const unassignedContacts = noTypeFilterActive ? filteredContacts
     .filter((c) => !c.firm_ids?.length)
     .sort((a, b) => (a.last_name || "").localeCompare(b.last_name || "")) : [];
 
