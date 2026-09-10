@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Plus, User, AlertTriangle, Trash2, Check, ArrowRightLeft, Loader2, Eye, EyeOff, Network as NetworkIcon, List as ListIcon, Link2 } from "lucide-react";
+import { Plus, User, AlertTriangle, Trash2, Check, ArrowRightLeft, Loader2, Eye, EyeOff, Network as NetworkIcon, List as ListIcon, Link2, Download } from "lucide-react";
 import TeamHierarchyView from "../firms/TeamHierarchyView";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -16,6 +16,7 @@ import MergeDuplicateContactsDialog from "./MergeDuplicateContactsDialog";
 import EmployeeStatusChart from "./EmployeeStatusChart";
 import ContactsBulkActionsBar from "./ContactsBulkActionsBar";
 import ContactsBulkAssignFirmDialog from "./ContactsBulkAssignFirmDialog";
+import { exportContactsToCSV } from "./exportContactsCsv";
 import ContactCompletenessBadge, { getMissingEssentialFields } from "./ContactCompletenessBadge";
 import ContactBioSnippet from "./ContactBioSnippet";
 import { useDuplicateReviews } from "./useDuplicateReviews";
@@ -426,6 +427,20 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
   const formatName = (c) =>
     [c.salutation, c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(" ") + (c.designations?.length ? `, ${c.designations.join(", ")}` : "");
 
+  // Export selected contacts if any are selected, otherwise all filtered contacts.
+  const handleExport = () => {
+    const targets = selectedIds.size > 0 ? selectedArray : filteredContacts;
+    if (targets.length === 0) {
+      toast({ title: "No contacts to export", description: "There are no contacts to export.", variant: "destructive" });
+      return;
+    }
+    const filename = firmName
+      ? `${firmName.replace(/[^a-z0-9]+/gi, "_")}_contacts_${new Date().toISOString().slice(0, 10)}.csv`
+      : undefined;
+    exportContactsToCSV(targets, firms, filename);
+    toast({ title: "✅ Export ready", description: `${targets.length} contact${targets.length > 1 ? "s" : ""} exported to CSV.` });
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -464,6 +479,17 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
           )}
         </div>
         <div className="flex items-center gap-1 ml-auto">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 gap-1 text-xs"
+            onClick={handleExport}
+            disabled={firmContacts.length === 0}
+          >
+            <Download className="w-3.5 h-3.5" />
+            Export
+          </Button>
           <Button
             type="button"
             variant="ghost"
@@ -619,6 +645,7 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
         onBulkInfluence={handleBulkInfluence}
         onBulkAssignFirm={() => setAssignFirmOpen(true)}
         onDelete={() => setBulkDeleteOpen(true)}
+        onExport={handleExport}
         busy={bulkBusy}
       />
 

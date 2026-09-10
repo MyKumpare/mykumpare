@@ -301,6 +301,19 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
     }
   };
 
+  const handleBulkExport = () => {
+    const ids = Array.from(selectedIds);
+    const targets = ids.length > 0
+      ? allContacts.filter((c) => ids.includes(c.id))
+      : filteredContacts;
+    if (targets.length === 0) {
+      toast({ title: "No contacts to export", variant: "destructive" });
+      return;
+    }
+    exportContactsToCSV(targets, firms);
+    toast({ title: `✅ ${targets.length} contact${targets.length === 1 ? "" : "s"} exported` });
+  };
+
   useEffect(() => {
     if (forceExpanded !== undefined) setExpanded(forceExpanded);
   }, [forceExpanded]);
@@ -647,6 +660,7 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
               onTag={() => setBulkTagOpen(true)}
               onAssignXponance={() => setBulkXponanceOpen(true)}
               onDelete={handleBulkDelete}
+              onExport={handleBulkExport}
               busy={bulkBusy}
             />
           )}

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Trash2, CheckCircle2, XCircle, X, Loader2, Tag, Crown, Building2, UserCheck } from "lucide-react";
+import { Trash2, CheckCircle2, XCircle, X, Loader2, Tag, Crown, Building2, UserCheck, Download } from "lucide-react";
 
 const INFLUENCE_LEVELS = [
   "Final Decision Maker",
@@ -28,6 +28,7 @@ export default function ContactsBulkActionsBar({
   onBulkInfluence,
   onBulkAssignFirm,
   onAssignXponance,
+  onExport,
   busy,
 }) {
   const [showInfluence, setShowInfluence] = useState(false);
@@ -150,11 +151,24 @@ export default function ContactsBulkActionsBar({
         {busy === "delete" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
         Delete
       </Button>
+      {onExport && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 gap-1 text-xs bg-white text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 ml-auto"
+          onClick={onExport}
+          disabled={!!busy}
+        >
+          <Download className="w-3.5 h-3.5" />
+          Export
+        </Button>
+      )}
       <Button
         type="button"
         variant="ghost"
         size="sm"
-        className="h-7 gap-1 text-xs ml-auto text-gray-500 hover:text-gray-700"
+        className="h-7 gap-1 text-xs text-gray-500 hover:text-gray-700"
         onClick={onClear}
         disabled={!!busy}
       >
