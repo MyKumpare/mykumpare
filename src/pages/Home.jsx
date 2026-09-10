@@ -293,6 +293,9 @@ export default function Home() {
   // fetchAllFirms backend function (service role with 429 retry backoff),
   // giving a fast initial load and bypassing both the 5000-item limit and
   // user-level entity read rate limits.
+  // clearOnMount wipes the React Query cache on every mount so stale data
+  // (e.g. from before a bulk deletion) is never displayed — the list always
+  // reflects the current database state when the user visits the page.
   const firmsQuery = useInfiniteEntity({
     queryKey: ["firms-infinite"],
     fetchFn: async (cursor, limit) => {
@@ -301,8 +304,8 @@ export default function Home() {
       return { records: data.records || [], nextCursor: data.nextCursor ?? null, hasMore: !!data.hasMore };
     },
     batchSize: 50,
-    staleTime: 0,
-    refetchOnMount: "always",
+    staleTime: 300000,
+    clearOnMount: true,
   });
   const firms = useMemo(
     () => (firmsQuery.data ? firmsQuery.data.pages.flatMap((p) => (p.records || []).filter((f) => !f.deleted_at)) : []),

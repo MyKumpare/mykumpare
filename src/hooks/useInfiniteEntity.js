@@ -1,4 +1,5 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 
 /**
  * Generic infinite-scroll hook for any Base44 entity, built on useInfiniteQuery.
@@ -10,6 +11,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
  * @param {number}   opts.batchSize  - items per page (default 500)
  * @param {number}   opts.staleTime  - React Query stale time in ms (default 300000)
  * @param {boolean}  opts.enabled    - whether the query is enabled (default true)
+ * @param {boolean}  opts.clearOnMount - if true, removes cached data on mount so a fresh fetch is forced (default false)
  * @returns {Object} useInfiniteQuery result
  */
 export function useInfiniteEntity({
@@ -18,8 +20,20 @@ export function useInfiniteEntity({
   batchSize = 500,
   staleTime = 300000,
   enabled = true,
-  refetchOnMount = true,
+  clearOnMount = false,
 }) {
+  const queryClient = useQueryClient();
+
+  // When clearOnMount is true, invalidate the cached pages on mount so stale
+  // data (e.g. from before a bulk deletion) triggers an immediate refetch.
+  // invalidateQueries marks the query as stale AND refetches active queries.
+  useEffect(() => {
+    if (clearOnMount) {
+      queryClient.invalidateQueries({ queryKey, refetchType: 'all' });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const query = useInfiniteQuery({
     queryKey,
     queryFn: async ({ pageParam }) => fetchFn(pageParam, batchSize),
@@ -27,7 +41,7 @@ export function useInfiniteEntity({
     getNextPageParam: (lastPage) => (lastPage?.hasMore ? lastPage.nextCursor : undefined),
     staleTime,
     enabled,
-    refetchOnMount,
+    refetchOnMount: clearOnMount ? "always" : true,
   });
 
   return query;
