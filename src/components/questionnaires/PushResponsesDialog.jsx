@@ -222,7 +222,9 @@ export default function PushResponsesDialog({ open, onOpenChange, questionnaire,
 
       queryClient.invalidateQueries({ queryKey: ["response-mappings", questionnaire.id] });
       queryClient.invalidateQueries({ queryKey: [targetType.toLowerCase() + "s"] });
-      queryClient.invalidateQueries({ queryKey: ["firms"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-infinite"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-allocators-supplement"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-search"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
 

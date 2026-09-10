@@ -104,7 +104,9 @@ export default function ReImportRowDialog({ rowData, source = "product", onClose
           tenant_id,
         });
       }
-      queryClient.invalidateQueries({ queryKey: ["firms"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-infinite"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-allocators-supplement"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-search"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["import-jobs"] });
       toast({ title: "✅ Row re-imported" });

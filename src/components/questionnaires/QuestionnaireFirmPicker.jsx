@@ -81,7 +81,9 @@ export default function QuestionnaireFirmPicker({
         name,
         tenant_id: user?.linked_firm_id,
       });
-      queryClient.invalidateQueries({ queryKey: ["firms"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-infinite"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-allocators-supplement"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-search"] });
       toast({ title: "Firm created", description: `"${name}" was added.` });
       onChange(created.id, created);
       setOpen(false);

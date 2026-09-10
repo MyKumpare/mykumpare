@@ -323,7 +323,9 @@ export default function AIAssistant() {
     try {
       if (pendingCreation.type === "create_firm") {
         const createdFirm = await createFirmFromEnrichment(pendingCreation.data, user?.linked_firm_id);
-        queryClient.invalidateQueries({ queryKey: ["firms"] });
+        queryClient.invalidateQueries({ queryKey: ["firms-infinite"] });
+        queryClient.invalidateQueries({ queryKey: ["firms-allocators-supplement"] });
+        queryClient.invalidateQueries({ queryKey: ["firms-search"] });
         queryClient.invalidateQueries({ queryKey: ["contacts"] });
         setMessages((prev) => [...prev, {
           role: "assistant",
@@ -431,7 +433,9 @@ export default function AIAssistant() {
         if (contactErrors.length > 0) {
           resultContent += `\n\n⚠️ **Some fields could not be updated:**\n${contactErrors.map((e) => `- ${e}`).join("\n")}`;
         }
-        queryClient.invalidateQueries({ queryKey: ["firms"] });
+        queryClient.invalidateQueries({ queryKey: ["firms-infinite"] });
+        queryClient.invalidateQueries({ queryKey: ["firms-allocators-supplement"] });
+        queryClient.invalidateQueries({ queryKey: ["firms-search"] });
         queryClient.invalidateQueries({ queryKey: ["contacts"] });
         setMessages((prev) => [...prev, {
           role: "assistant",
