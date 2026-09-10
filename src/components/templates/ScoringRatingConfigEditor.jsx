@@ -77,7 +77,7 @@ export default function ScoringRatingConfigEditor({ ratingConfig, onChange }) {
           <div className="border border-gray-200 rounded-md p-2 bg-white space-y-2">
             <button
               type="button"
-              onClick={() => update({ pass_fail_enabled: !cfg.pass_fail_enabled })}
+              onClick={() => update({ pass_fail_enabled: !cfg.pass_fail_enabled, rating_enabled: cfg.pass_fail_enabled ? cfg.rating_enabled : false })}
               className="flex items-center gap-1.5 text-xs font-medium text-gray-700"
             >
               {cfg.pass_fail_enabled ? <ToggleRight className="w-4 h-4 text-cyan-600" /> : <ToggleLeft className="w-4 h-4 text-gray-400" />}
@@ -102,7 +102,7 @@ export default function ScoringRatingConfigEditor({ ratingConfig, onChange }) {
           <div className="border border-gray-200 rounded-md p-2 bg-white space-y-2">
             <button
               type="button"
-              onClick={() => update({ rating_enabled: !cfg.rating_enabled })}
+              onClick={() => update({ rating_enabled: !cfg.rating_enabled, pass_fail_enabled: cfg.rating_enabled ? cfg.pass_fail_enabled : false })}
               className="flex items-center gap-1.5 text-xs font-medium text-gray-700"
             >
               {cfg.rating_enabled ? <ToggleRight className="w-4 h-4 text-cyan-600" /> : <ToggleLeft className="w-4 h-4 text-gray-400" />}
