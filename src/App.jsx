@@ -38,6 +38,7 @@ import ComplianceRenewalDashboard from './pages/ComplianceRenewalDashboard';
 import ContactNetwork from './pages/ContactNetwork';
 import DegreesOfSeparation from './pages/DegreesOfSeparation';
 import ContactNetworkDashboard from './pages/ContactNetworkDashboard';
+import ContactNetworkHealthDashboard from './pages/ContactNetworkHealthDashboard';
 import ContactInfluenceDashboard from './pages/ContactInfluenceDashboard';
 import ActivityTimelinePage from './pages/ActivityTimelinePage';
 import WeeklyInteractionReport from './pages/WeeklyInteractionReport';
@@ -156,6 +157,7 @@ const AuthenticatedApp = () => {
       <Route path="/ContactNetwork" element={<LayoutWrapper currentPageName="ContactNetwork"><ContactNetwork /></LayoutWrapper>} />
       <Route path="/DegreesOfSeparation" element={<LayoutWrapper currentPageName="DegreesOfSeparation"><DegreesOfSeparation /></LayoutWrapper>} />
       <Route path="/ContactNetworkDashboard" element={<LayoutWrapper currentPageName="ContactNetworkDashboard"><ContactNetworkDashboard /></LayoutWrapper>} />
+      <Route path="/ContactNetworkHealth" element={<LayoutWrapper currentPageName="ContactNetworkHealth"><ContactNetworkHealthDashboard /></LayoutWrapper>} />
       <Route path="/ContactInfluenceDashboard" element={<LayoutWrapper currentPageName="ContactInfluenceDashboard"><ContactInfluenceDashboard /></LayoutWrapper>} />
       <Route path="/ActivityTimeline" element={<LayoutWrapper currentPageName="ActivityTimeline"><ActivityTimelinePage /></LayoutWrapper>} />
       <Route path="/WeeklyInteractionReport" element={<LayoutWrapper currentPageName="WeeklyInteractionReport"><WeeklyInteractionReport /></LayoutWrapper>} />

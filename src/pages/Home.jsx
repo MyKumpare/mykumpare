@@ -1116,6 +1116,7 @@ export default function Home() {
     { label: "Products", icon: Package, ref: null, color: "text-violet-600", activeBg: "bg-violet-50", onClick: () => setProductPickerOpen(true) },
     { label: "Contacts", icon: User, ref: null, color: "text-pink-600", activeBg: "bg-pink-50", onClick: () => setContactPickerOpen(true), submenu: [
       { label: "Duplicate Matcher", icon: GitCompare, onClick: () => navigate("/ContactDuplicateMatcher") },
+      { label: "Network Health", icon: Network, onClick: () => navigate("/ContactNetworkHealth") },
     ] },
     { label: "Videos", icon: Video, ref: null, color: "text-orange-600", activeBg: "bg-orange-50", onClick: () => navigate("/VideoLibrary") },
     { label: "Record", icon: Circle, ref: null, color: "text-red-500", activeBg: "bg-red-50", onClick: triggerStartRecording },
