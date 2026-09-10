@@ -7,6 +7,7 @@ import { Plus, Trash2, GripVertical, ChevronDown, ChevronRight, Sparkles, Loader
 import { base44 } from "@/api/base44Client";
 import ScoringMatrixRubricAudit from "./ScoringMatrixRubricAudit";
 import ScoringRatingConfigEditor from "./ScoringRatingConfigEditor";
+import ScoringLevelRangeGenerator from "./ScoringLevelRangeGenerator";
 import { toast } from "@/components/ui/use-toast";
 import { computeEffectiveBlockWeights, hasActiveMultipliers } from "@/components/templates/scoringWeightLogic";
 
@@ -112,6 +113,16 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange, template
             descriptors: (c.descriptors || []).map((d) => (d.level === level ? { ...d, text } : d))
           };
         })
+      };
+    }));
+  };
+
+  const setDescriptors = (blockId, critId, newDescriptors) => {
+    onChange(blocks.map((b) => {
+      if (b.id !== blockId) return b;
+      return {
+        ...b,
+        criteria: (b.criteria || []).map((c) => (c.id === critId ? { ...c, descriptors: newDescriptors } : c))
       };
     }));
   };
@@ -380,6 +391,12 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange, template
                         <Trash2 className="w-3 h-3" />
                       </button>
                     </div>
+                  </div>
+                  <div className="pl-8">
+                    <ScoringLevelRangeGenerator
+                      descriptors={crit.descriptors || []}
+                      onGenerate={(newDescriptors) => setDescriptors(block.id, crit.id, newDescriptors)}
+                    />
                   </div>
                   <div className="grid grid-cols-1 gap-1.5 pl-8">
                     {(crit.descriptors || []).map((desc) => (
