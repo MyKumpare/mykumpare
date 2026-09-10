@@ -18,6 +18,7 @@ import QuestionBankPickerModal from "./QuestionBankPickerModal";
 import ScoringMatrixDocumentAnalyzer from "./ScoringMatrixDocumentAnalyzer";
 import ScoringMatrixTemplateEditor from "./ScoringMatrixTemplateEditor";
 import ScoringMatrixTestModeDialog from "./ScoringMatrixTestModeDialog";
+import ScoringMatrixSummaryDialog from "./ScoringMatrixSummaryDialog";
 import ProcessTemplateAudit from "./ProcessTemplateAudit";
 import ProcessLogicEditor from "./ProcessLogicEditor";
 import StageApproversEditor from "./StageApproversEditor";
@@ -92,6 +93,7 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
   const [stageApprovers, setStageApprovers] = useState([]);
   const [questionBankOpen, setQuestionBankOpen] = useState(false);
   const [testModeOpen, setTestModeOpen] = useState(false);
+  const [summaryOpen, setSummaryOpen] = useState(false);
   const [diffOpen, setDiffOpen] = useState(false);
 
   // "New version" mode: creating a new template record by copying a prior version.
@@ -369,7 +371,17 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
                 }}
               />
               <ScoringMatrixTemplateEditor blocks={scoringBlocks} onChange={setScoringBlocks} templateId={editTemplate?.id} templateName={editTemplate?.name} ratingConfig={ratingConfig} onRatingConfigChange={setRatingConfig} />
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs text-indigo-700 border-indigo-300 hover:bg-indigo-50"
+                  onClick={() => setSummaryOpen(true)}
+                  disabled={scoringBlocks.length === 0}
+                >
+                  <FileText className="w-3.5 h-3.5" /> Summary / Export
+                </Button>
                 <Button
                   type="button"
                   variant="outline"
@@ -512,6 +524,16 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
           open={testModeOpen}
           onOpenChange={setTestModeOpen}
           template={{ name: name || "Test Template", scoring_blocks: scoringBlocks }}
+        />
+      )}
+
+      {summaryOpen && (
+        <ScoringMatrixSummaryDialog
+          open={summaryOpen}
+          onOpenChange={setSummaryOpen}
+          templateName={name || "Untitled"}
+          blocks={scoringBlocks}
+          ratingConfig={ratingConfig}
         />
       )}
     </Dialog>
