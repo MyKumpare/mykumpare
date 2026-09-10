@@ -87,11 +87,15 @@ export default function ScoringRatingConfigEditor({ ratingConfig, onChange }) {
               <option value="%">Percentage (%)</option>
               <option value="pts">Points (pts)</option>
               <option value="x">Multiplier (x)</option>
+              <option value="$">Currency ($)</option>
+              <option value="bps">Basis points (bps)</option>
             </select>
             <span className="text-gray-400 text-[10px]">
               {cfg.unit === "%" ? "Values are in percent (e.g. 75 = 75%)" :
                cfg.unit === "pts" ? "Values are in points (e.g. 75 pts)" :
                cfg.unit === "x" ? "Values are multipliers (e.g. 1.5x)" :
+               cfg.unit === "$" ? "Values are currency amounts (e.g. 250000)" :
+               cfg.unit === "bps" ? "Values are in basis points (e.g. 50 bps)" :
                "Values are raw scores"}
             </span>
           </div>

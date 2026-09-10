@@ -199,6 +199,32 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange, template
         </div>
       </div>
 
+      {/* Unit of measurement for this assessment */}
+      <div className="flex items-center gap-2 text-xs border border-gray-200 rounded-md p-2 bg-gray-50/50">
+        <Label className="text-xs font-medium text-gray-700 whitespace-nowrap">Unit of measurement:</Label>
+        <select
+          value={(ratingConfig && ratingConfig.unit) || "none"}
+          onChange={(e) => onRatingConfigChange({ ...(ratingConfig || {}), unit: e.target.value })}
+          className="h-7 text-xs rounded-md border border-gray-200 bg-white px-2 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+          title="Unit of measure for all scores in this assessment"
+        >
+          <option value="none">No unit (raw score)</option>
+          <option value="%">Percentage (%)</option>
+          <option value="pts">Points (pts)</option>
+          <option value="x">Multiplier (x)</option>
+          <option value="$">Currency ($)</option>
+          <option value="bps">Basis points (bps)</option>
+        </select>
+        <span className="text-gray-400 text-[10px]">
+          {(ratingConfig && ratingConfig.unit) === "%" ? "Scores and thresholds are in percent" :
+           (ratingConfig && ratingConfig.unit) === "pts" ? "Scores and thresholds are in points" :
+           (ratingConfig && ratingConfig.unit) === "x" ? "Scores and thresholds are multipliers" :
+           (ratingConfig && ratingConfig.unit) === "$" ? "Scores and thresholds are currency amounts" :
+           (ratingConfig && ratingConfig.unit) === "bps" ? "Scores and thresholds are in basis points" :
+           "Scores are raw values with no unit"}
+        </span>
+      </div>
+
       {/* AI Modification Assistant */}
       <div className="border border-purple-200 rounded-lg p-2 bg-purple-50/30 space-y-2">
         <div className="flex items-center gap-1.5 text-xs font-medium text-purple-800">
