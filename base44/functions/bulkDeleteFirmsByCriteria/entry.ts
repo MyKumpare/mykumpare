@@ -30,8 +30,13 @@ async function fetchWithRetry(entity: any, filter: any, sort: string, limit: num
 
 function matchesCriterion(firm: any, criterion: any): boolean {
   if (!criterion.firm_type) return false;
+  const target = criterion.firm_type.toLowerCase().trim();
+  // Check the single-value firm_type field, AND the legacy firm_types array
+  // (older records may have firm_type: null but firm_types: ["Investment Consultant"]).
   const ft = (firm.firm_type || '').toLowerCase().trim();
-  if (ft !== criterion.firm_type.toLowerCase().trim()) return false;
+  const legacyTypes: string[] = Array.isArray(firm.firm_types) ? firm.firm_types : [];
+  const typeMatch = ft === target || legacyTypes.some((t: string) => (t || '').toLowerCase().trim() === target);
+  if (!typeMatch) return false;
   if (criterion.allocator_type_contains) {
     const needle = criterion.allocator_type_contains.toLowerCase();
     const types = Array.isArray(firm.allocator_types) ? firm.allocator_types : [];
@@ -62,10 +67,34 @@ export default async function(req: Request): Promise<Response> {
 
     for (const criterion of criteria) {
       const ftRegex = criterion.firm_type;
+      // Query 1: firms with firm_type matching the regex (the normal case)
       let cursor: string | null = null;
       while (true) {
         const filter: any = {
           firm_type: { $regex: `^${ftRegex}$`, $options: 'i' },
+          deleted_at: null,
+        };
+        if (cursor) filter.created_date = { $lt: cursor };
+        const batch = await fetchWithRetry(svc.entities.Firm, filter, '-created_date', 500);
+        for (const f of batch) {
+          if (!matchesCriterion(f, criterion)) continue;
+          if (!seenIds.has(f.id)) {
+            seenIds.add(f.id);
+            targetFirmIds.push(f.id);
+          }
+        }
+        if (batch.length < 500) break;
+        cursor = batch[batch.length - 1]?.created_date;
+        if (!cursor) break;
+        await sleep(500);
+      }
+      // Query 2: firms with firm_type null but legacy firm_types array containing
+      // the target type (older records from the multi-select model). The DB filter
+      // matches firm_type: null; matchesCriterion does the exact type check on firm_types.
+      cursor = null;
+      while (true) {
+        const filter: any = {
+          firm_type: null,
           deleted_at: null,
         };
         if (cursor) filter.created_date = { $lt: cursor };
