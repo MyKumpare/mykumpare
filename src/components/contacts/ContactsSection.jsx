@@ -53,6 +53,7 @@ const SIDEBAR_FILTER_CONFIG = {
   disability_status: { field: "disability_status", default: "Undetermined" },
   salutation: { field: "salutation", default: "" },
   contact_role: { field: "contact_role", default: "" },
+  firm_type: { firmType: true },
   contact_type: { field: "contact_type", isArray: true },
   contact_roles: { field: "contact_roles", isArray: true },
   contact_firm_roles: { field: "contact_firm_roles", isArray: true },
@@ -379,6 +380,9 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
       const sel = filterValues[key];
       if (!sel || sel.size === 0) continue;
       result = result.filter((c) => {
+        if (cfg.firmType) {
+          return contactFirmTypes(c).some((t) => sel.has(t));
+        }
         if (cfg.isArray) {
           const val = c[cfg.field] || [];
           return Array.isArray(val) && val.some((v) => sel.has(v));
@@ -401,7 +405,11 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
       const count = {};
       for (const c of allContacts) {
         if (c.deleted_at) continue;
-        if (cfg.isArray) {
+        if (cfg.firmType) {
+          contactFirmTypes(c).forEach((t) => {
+            if (t) count[t] = (count[t] || 0) + 1;
+          });
+        } else if (cfg.isArray) {
           const val = c[cfg.field] || [];
           (Array.isArray(val) ? val : []).forEach((v) => {
             if (v) count[v] = (count[v] || 0) + 1;
@@ -431,6 +439,13 @@ export default function ContactsSection({ contacts, firms, products, portfolios,
       }
       dynamicOpts[key] = Array.from(set).sort().map((v) => ({ value: v, label: v }));
     }
+    // Firm Type options are derived from the associated firms' firm_type fields.
+    const firmTypeSet = new Set();
+    for (const c of allContacts) {
+      if (c.deleted_at) continue;
+      contactFirmTypes(c).forEach((t) => t && firmTypeSet.add(t));
+    }
+    dynamicOpts.firm_type = Array.from(firmTypeSet).sort().map((v) => ({ value: v, label: v }));
     return contactFilterGroups.map((g) =>
       g.options && g.options.length === 0 && dynamicOpts[g.key]
         ? { ...g, options: dynamicOpts[g.key] }

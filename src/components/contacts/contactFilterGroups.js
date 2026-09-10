@@ -173,6 +173,14 @@ export const contactFilterGroups = [
     defaultOpen: false,
   },
   {
+    key: "firm_type",
+    label: "Firm Type",
+    icon: Building2,
+    type: "checkbox",
+    options: [], // dynamically populated from associated firm data
+    defaultOpen: false,
+  },
+  {
     key: "contact_type",
     label: "Contact Type",
     icon: Tag,
