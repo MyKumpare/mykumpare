@@ -32,7 +32,7 @@ const OPERATORS = [
  */
 export default function ScoringRatingConfigEditor({ ratingConfig, onChange }) {
   const [expanded, setExpanded] = useState(false);
-  const cfg = ratingConfig || { pass_fail_enabled: false, pass_threshold: 3, rating_enabled: false, rating_options: [] };
+  const cfg = ratingConfig || { pass_fail_enabled: false, pass_threshold: 3, rating_enabled: false, rating_options: [], unit: "none" };
 
   const update = (patch) => onChange({ ...cfg, ...patch });
 
@@ -73,6 +73,28 @@ export default function ScoringRatingConfigEditor({ ratingConfig, onChange }) {
             Define how the system auto-assigns an overall assessment (Pass/Fail and a rating) to a finalized scoring matrix based on its weighted final score.
           </p>
 
+          {/* Unit of measure */}
+          <div className="flex items-center gap-2 text-xs px-1">
+            <Label className="text-xs text-gray-600 whitespace-nowrap">Score unit:</Label>
+            <select
+              value={cfg.unit || "none"}
+              onChange={(e) => update({ unit: e.target.value })}
+              className="h-7 text-xs rounded-md border border-gray-200 bg-white px-2 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+              title="Unit of measure for the scoring matrix values"
+            >
+              <option value="none">No unit (raw score)</option>
+              <option value="%">Percentage (%)</option>
+              <option value="pts">Points (pts)</option>
+              <option value="x">Multiplier (x)</option>
+            </select>
+            <span className="text-gray-400 text-[10px]">
+              {cfg.unit === "%" ? "Values are in percent (e.g. 75 = 75%)" :
+               cfg.unit === "pts" ? "Values are in points (e.g. 75 pts)" :
+               cfg.unit === "x" ? "Values are multipliers (e.g. 1.5x)" :
+               "Values are raw scores"}
+            </span>
+          </div>
+
           {/* Pass / Fail */}
           <div className="border border-gray-200 rounded-md p-2 bg-white space-y-2">
             <button
@@ -93,6 +115,9 @@ export default function ScoringRatingConfigEditor({ ratingConfig, onChange }) {
                   onChange={(e) => update({ pass_threshold: parseFloat(e.target.value) || 0 })}
                   className="h-7 w-20 text-xs text-center"
                 />
+                {cfg.unit && cfg.unit !== "none" && (
+                  <span className="text-gray-500 text-xs font-medium">{cfg.unit}</span>
+                )}
                 <span className="text-gray-400 text-[10px]">Score ≥ threshold = Pass; below = Fail</span>
               </div>
             )}
@@ -110,13 +135,13 @@ export default function ScoringRatingConfigEditor({ ratingConfig, onChange }) {
             </button>
             {cfg.rating_enabled && (
               <div className="pl-6 space-y-1.5">
-                <div className="grid grid-cols-[1.5rem_6rem_5.5rem_3.5rem_1rem_3.5rem_1.5rem_1.5rem] gap-1 items-center text-[10px] font-medium text-gray-400 px-1">
+                <div className="grid grid-cols-[1.5rem_6rem_5.5rem_4rem_1rem_4rem_1.5rem_1.5rem] gap-1 items-center text-[10px] font-medium text-gray-400 px-1">
                   <span>#</span>
                   <span>Label</span>
                   <span>Operator</span>
-                  <span>Value</span>
+                  <span>Value{cfg.unit && cfg.unit !== "none" ? ` (${cfg.unit})` : ""}</span>
                   <span></span>
-                  <span>Max</span>
+                  <span>Max{cfg.unit && cfg.unit !== "none" ? ` (${cfg.unit})` : ""}</span>
                   <span>Color</span>
                   <span></span>
                 </div>
@@ -124,7 +149,7 @@ export default function ScoringRatingConfigEditor({ ratingConfig, onChange }) {
                   const op = (opt.operator || "between");
                   const isBetween = op === "between";
                   return (
-                    <div key={opt.id} className="grid grid-cols-[1.5rem_6rem_5.5rem_3.5rem_1rem_3.5rem_1.5rem_1.5rem] gap-1 items-center">
+                    <div key={opt.id} className="grid grid-cols-[1.5rem_6rem_5.5rem_4rem_1rem_4rem_1.5rem_1.5rem] gap-1 items-center">
                       <span className="text-[10px] text-gray-400">{i + 1}</span>
                       <Input
                         value={opt.label}
