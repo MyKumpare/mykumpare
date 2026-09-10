@@ -127,6 +127,30 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange, template
     }));
   };
 
+  const deleteDescriptor = (blockId, critId, level) => {
+    onChange(blocks.map((b) => {
+      if (b.id !== blockId) return b;
+      return {
+        ...b,
+        criteria: (b.criteria || []).map((c) =>
+          c.id === critId ? { ...c, descriptors: (c.descriptors || []).filter((d) => d.level !== level) } : c)
+      };
+    }));
+  };
+
+  const updateDescriptorLevel = (blockId, critId, oldLevel, newLevel) => {
+    onChange(blocks.map((b) => {
+      if (b.id !== blockId) return b;
+      return {
+        ...b,
+        criteria: (b.criteria || []).map((c) => {
+          if (c.id !== critId) return c;
+          return { ...c, descriptors: (c.descriptors || []).map((d) => (d.level === oldLevel ? { ...d, level: newLevel } : d)) };
+        })
+      };
+    }));
+  };
+
   const handleAiModify = async () => {
     if (!aiPrompt.trim()) return;
     setAiLoading(true);
@@ -400,22 +424,33 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange, template
                   </div>
                   <div className="grid grid-cols-1 gap-1.5 pl-8">
                     {(crit.descriptors || []).map((desc) => (
-                      <div key={desc.level} className="flex items-start gap-2">
-                        <span className={`text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          desc.level === 1 ? "bg-red-100 text-red-700" :
-                          desc.level === 2 ? "bg-orange-100 text-orange-700" :
-                          desc.level === 3 ? "bg-yellow-100 text-yellow-700" :
-                          desc.level === 4 ? "bg-lime-100 text-lime-700" :
-                          "bg-green-100 text-green-700"
-                        }`}>
-                          {desc.level}
-                        </span>
+                      <div key={desc.level} className="flex items-start gap-2 group">
+                        <Input
+                          type="number"
+                          value={desc.level}
+                          onChange={(e) => updateDescriptorLevel(block.id, crit.id, desc.level, parseFloat(e.target.value))}
+                          className={`text-xs font-bold w-10 h-7 text-center flex-shrink-0 px-1 ${
+                            desc.level === 1 ? "bg-red-50 text-red-700 border-red-200" :
+                            desc.level === 2 ? "bg-orange-50 text-orange-700 border-orange-200" :
+                            desc.level === 3 ? "bg-yellow-50 text-yellow-700 border-yellow-200" :
+                            desc.level === 4 ? "bg-lime-50 text-lime-700 border-lime-200" :
+                            "bg-green-50 text-green-700 border-green-200"
+                          }`}
+                        />
                         <Textarea
                           value={desc.text}
                           onChange={(e) => updateDescriptor(block.id, crit.id, desc.level, e.target.value)}
                           className="text-xs min-h-[40px] flex-1"
                           placeholder={`Level ${desc.level} descriptor...`}
                         />
+                        <button
+                          type="button"
+                          onClick={() => deleteDescriptor(block.id, crit.id, desc.level)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-600 flex-shrink-0 mt-1"
+                          title="Delete level"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     ))}
                   </div>
