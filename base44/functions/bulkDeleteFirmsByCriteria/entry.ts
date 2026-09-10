@@ -138,19 +138,33 @@ export default async function(req: Request): Promise<Response> {
     }
     counts.products = prodCount;
 
-    // 2. Soft-delete contacts (firm_ids array contains any target firm ID)
-    let contactCount = 0;
-    for (let i = 0; i < targetFirmIds.length; i += CHUNK) {
-      const chunk = targetFirmIds.slice(i, i + CHUNK);
-      let hasMore = true;
-      while (hasMore) {
-        const r: any = await svc.entities.Contact.updateMany(
-          { firm_ids: { $in: chunk }, deleted_at: { $exists: false } },
-          { $set: { deleted_at: now } },
-        );
-        contactCount += r.updated || 0;
-        hasMore = r.has_more;
+    // 2. Soft-delete contacts (firm_ids array contains any target firm ID).
+    //    In-memory filtering is used instead of updateMany with $in on the
+    //    firm_ids array — the SDK's updateMany does not reliably match array
+    //    fields with $in (contacts were silently skipped, leaving orphans).
+    const targetFirmIdSet = new Set(targetFirmIds);
+    const contactIdsToDelete: string[] = [];
+    let contactCursor: string | null = null;
+    while (true) {
+      const cFilter: any = { deleted_at: null };
+      if (contactCursor) cFilter.created_date = { $lt: contactCursor };
+      const cBatch = await fetchWithRetry(svc.entities.Contact, cFilter, '-created_date', 500);
+      for (const c of cBatch) {
+        if (Array.isArray(c.firm_ids) && c.firm_ids.some((fid: string) => targetFirmIdSet.has(fid))) {
+          contactIdsToDelete.push(c.id);
+        }
       }
+      if (cBatch.length < 500) break;
+      contactCursor = cBatch[cBatch.length - 1]?.created_date;
+      if (!contactCursor) break;
+      await sleep(500);
+    }
+    let contactCount = 0;
+    for (let i = 0; i < contactIdsToDelete.length; i += CHUNK) {
+      const chunk = contactIdsToDelete.slice(i, i + CHUNK);
+      const updates = chunk.map((id) => ({ id, deleted_at: now }));
+      const r: any = await svc.entities.Contact.bulkUpdate(updates);
+      contactCount += chunk.length;
     }
     counts.contacts = contactCount;
 
