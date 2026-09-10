@@ -13,12 +13,19 @@ function normalizeNamePart(s) {
   if (!s) return "";
   return s.toLowerCase().trim().replace(/[.'’-]/g, " ").split(/\s+/).filter((t) => t && !NAME_STOPWORDS.has(t)).join(" ").trim();
 }
+// Suffixes and designations are sometimes embedded in the last_name field
+// after a comma (e.g. "Gonzales, Jr." or "Gonzales, Jr., CMFC"). Take only
+// the part before the first comma so the core surname is used for matching.
+function stripTrailingSuffixes(name) {
+  if (!name) return "";
+  return name.split(",")[0].trim();
+}
 function nameKey(c) {
   // Use only the first token of the first name so records that store a middle
   // name inside first_name ("Tina Byles") still match records that don't
   // ("Tina"). Last name is kept in full to preserve compound surnames.
   const first = (normalizeNamePart(c.first_name) || "").split(" ")[0] || "";
-  const last = normalizeNamePart(c.last_name) || "";
+  const last = normalizeNamePart(stripTrailingSuffixes(c.last_name)) || "";
   return `${first}|${last}`;
 }
 // Normalized name tokens (first/middle/last, stopwords removed) used for
@@ -28,7 +35,7 @@ function contactNameTokens(c) {
   return [
     normalizeNamePart(c.first_name),
     normalizeNamePart(c.middle_name),
-    normalizeNamePart(c.last_name),
+    normalizeNamePart(stripTrailingSuffixes(c.last_name)),
   ].filter(Boolean).flatMap((p) => p.split(/\s+/).filter(Boolean));
 }
 // Collapse duplicate contacts: when two contacts share the same normalized
