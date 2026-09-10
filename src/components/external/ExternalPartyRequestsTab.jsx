@@ -46,7 +46,9 @@ export default function ExternalPartyRequestsTab() {
       });
 
       queryClient.invalidateQueries({ queryKey: ["external_party_requests"] });
-      queryClient.invalidateQueries({ queryKey: ["firms"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-infinite"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-allocators-supplement"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-search"] });
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
       queryClient.invalidateQueries({ queryKey: ["pending_invitations"] });
 

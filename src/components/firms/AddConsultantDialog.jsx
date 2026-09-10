@@ -174,7 +174,9 @@ export default function AddConsultantDialog({ open, onOpenChange, firmId, firmNa
           tenant_id: user?.linked_firm_id,
         });
         finalConsultantFirmId = newFirm.id;
-        queryClient.invalidateQueries({ queryKey: ["firms"] });
+        queryClient.invalidateQueries({ queryKey: ["firms-infinite"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-allocators-supplement"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-search"] });
       }
 
       // Build contacts array

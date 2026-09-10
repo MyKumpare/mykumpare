@@ -277,7 +277,9 @@ export default function LegalComplianceTab({ firmId, isEditing, contacts = [] })
     localStorage.setItem(`legal_compliance_${firmId}`, JSON.stringify(data));
     try {
       await base44.entities.Firm.update(firmId, { legal_compliance: data });
-      queryClient.invalidateQueries({ queryKey: ["firms"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-infinite"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-allocators-supplement"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-search"] });
       setDirty(false);
       toast({ title: "Saved", description: "Legal & Compliance information saved." });
     } catch (err) {

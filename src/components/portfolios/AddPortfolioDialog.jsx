@@ -787,7 +787,9 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
   // Called when AddFirmDialog saves
   const handleFirmSubmit = async (firmData) => {
     const created = await base44.entities.Firm.create(firmData);
-    queryClient.invalidateQueries({ queryKey: ["firms"] });
+    queryClient.invalidateQueries({ queryKey: ["firms-infinite"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-allocators-supplement"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-search"] });
     if (pendingFirmTarget === "allocator") setAllocatorId(created.id);
     if (pendingFirmTarget === "advisor") {
       setAdvisorFirmId(created.id);

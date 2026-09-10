@@ -21,7 +21,9 @@ export default function ImportJobStatus({ jobId, onReset }) {
         if (!active) return;
         setJob(j);
         if (j.status === "completed" || j.status === "failed") {
-          queryClient.invalidateQueries({ queryKey: ["firms"] });
+          queryClient.invalidateQueries({ queryKey: ["firms-infinite"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-allocators-supplement"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-search"] });
           queryClient.invalidateQueries({ queryKey: ["contacts"] });
           return;
         }

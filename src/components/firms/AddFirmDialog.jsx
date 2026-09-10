@@ -1069,7 +1069,9 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
     // Refresh the firms list when the dialog closes so any enrichment fields
     // persisted during apply (handleApplyEnrichment) are reflected in the list
     // and on a subsequent reopen — without re-rendering the dialog mid-edit.
-    queryClient.invalidateQueries({ queryKey: ["firms"] });
+    queryClient.invalidateQueries({ queryKey: ["firms-infinite"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-allocators-supplement"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-search"] });
     onOpenChange(false);
     setIsEditing(false);
     setShowEnrichment(false);

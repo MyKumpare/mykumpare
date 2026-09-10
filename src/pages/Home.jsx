@@ -1007,6 +1007,8 @@ export default function Home() {
       const data = res?.data ?? res ?? {};
       // Realtime subscriptions auto-invalidate most lists, but refresh explicitly too.
       queryClient.invalidateQueries({ queryKey: ["firms-infinite"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-allocators-supplement"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-search"] });
       queryClient.invalidateQueries({ queryKey: ["products-infinite"] });
       queryClient.invalidateQueries({ queryKey: ["contacts-infinite"] });
       queryClient.invalidateQueries({ queryKey: ["portfolios-infinite"] });

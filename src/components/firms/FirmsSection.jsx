@@ -369,7 +369,9 @@ export default function FirmsSection({
     setBulkBusy("status");
     try {
       await base44.entities.Firm.bulkUpdate(ids.map((id) => ({ id, funding_status: status })));
-      queryClient.invalidateQueries({ queryKey: ["firms"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-infinite"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-allocators-supplement"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-search"] });
       toast({
         title: "Funding status updated",
         description: `${ids.length} firm${ids.length !== 1 ? "s" : ""} set to "${status}".`,
@@ -389,7 +391,9 @@ export default function FirmsSection({
     setBulkBusy("type");
     try {
       await base44.entities.Firm.bulkUpdate(ids.map((id) => ({ id, firm_types: [type], firm_type: type })));
-      queryClient.invalidateQueries({ queryKey: ["firms"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-infinite"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-allocators-supplement"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-search"] });
       toast({
         title: "Firms moved",
         description: `${ids.length} firm${ids.length !== 1 ? "s" : ""} moved to "${type}".`,
@@ -408,7 +412,9 @@ export default function FirmsSection({
     setBulkBusy("region");
     try {
       await base44.entities.Firm.bulkUpdate(ids.map((id) => ({ id, geographic_region: region })));
-      queryClient.invalidateQueries({ queryKey: ["firms"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-infinite"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-allocators-supplement"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-search"] });
       toast({
         title: "Region updated",
         description: `${ids.length} firm${ids.length !== 1 ? "s" : ""} set to "${region}".`,
@@ -445,7 +451,9 @@ export default function FirmsSection({
       const idField = role === "primary" ? "primary_xponance_contact_id" : "secondary_xponance_contact_id";
       const nameField = role === "primary" ? "primary_xponance_contact_name" : "secondary_xponance_contact_name";
       await base44.entities.Firm.bulkUpdate(ids.map((id) => ({ id, [idField]: contact_id, [nameField]: contact_name })));
-      queryClient.invalidateQueries({ queryKey: ["firms"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-infinite"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-allocators-supplement"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-search"] });
       toast({
         title: "Xponance contact assigned",
         description: `${contact_name} set as ${role} for ${ids.length} firm${ids.length !== 1 ? "s" : ""}.`,
@@ -468,7 +476,9 @@ export default function FirmsSection({
     try {
       const nowIso = new Date().toISOString();
       await base44.entities.Firm.bulkUpdate(ids.map((id) => ({ id, deleted_at: nowIso })));
-      queryClient.invalidateQueries({ queryKey: ["firms"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-infinite"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-allocators-supplement"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-search"] });
       queryClient.invalidateQueries({ queryKey: ["deletedFirms"] });
       toast({
         title: "Firms deleted",

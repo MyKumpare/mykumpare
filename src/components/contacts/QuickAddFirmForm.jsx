@@ -40,7 +40,9 @@ export default function QuickAddFirmForm({ onFirmCreated, onCancel }) {
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Firm.create(data),
     onSuccess: (newFirm) => {
-      queryClient.invalidateQueries({ queryKey: ["firms"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-infinite"] });
+    queryClient.invalidateQueries({ queryKey: ["firms-allocators-supplement"] });
+    queryClient.invalidateQueries({ queryKey: ["firms-search"] });
       onFirmCreated(newFirm);
     },
   });

@@ -218,7 +218,11 @@ export async function recomputeFirmFundingStatus(firmId, queryClient) {
       await base44.entities.Firm.update(firmId, {
         funding_status: aggregate || undefined,
       });
-      if (queryClient) queryClient.invalidateQueries({ queryKey: ["firms"] });
+      if (queryClient) {
+    queryClient.invalidateQueries({ queryKey: ["firms-infinite"] });
+    queryClient.invalidateQueries({ queryKey: ["firms-allocators-supplement"] });
+    queryClient.invalidateQueries({ queryKey: ["firms-search"] });
+  }
     }
   } catch (err) {
     console.error("recomputeFirmFundingStatus failed:", err);

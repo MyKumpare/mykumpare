@@ -744,7 +744,9 @@ Return a JSON object. For education, each item: institution, degree, area_of_spe
     },
     onSuccess: (updated) => {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
-      queryClient.invalidateQueries({ queryKey: ["firms"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-infinite"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-allocators-supplement"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-search"] });
       toast({ title: "Linked to existing contact", description: "The firm was added to the existing contact.", variant: "default" });
       setDuplicateWarning(null);
       if (onContactCreated) onContactCreated(updated);

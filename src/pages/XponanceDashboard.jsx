@@ -40,7 +40,9 @@ export default function XponanceDashboard() {
   const tenantFirmId = user?.linked_firm_id;
 
   const handleAssignmentSaved = () => {
-    queryClient.invalidateQueries({ queryKey: ["firms"] });
+    queryClient.invalidateQueries({ queryKey: ["firms-infinite"] });
+    queryClient.invalidateQueries({ queryKey: ["firms-allocators-supplement"] });
+    queryClient.invalidateQueries({ queryKey: ["firms-search"] });
     queryClient.invalidateQueries({ queryKey: ["contacts"] });
   };
 
@@ -260,7 +262,9 @@ export default function XponanceDashboard() {
   const clearSelection = () => setSelectedIds(new Set());
   const handleBulkDone = () => {
     clearSelection();
-    queryClient.invalidateQueries({ queryKey: ["firms"] });
+    queryClient.invalidateQueries({ queryKey: ["firms-infinite"] });
+    queryClient.invalidateQueries({ queryKey: ["firms-allocators-supplement"] });
+    queryClient.invalidateQueries({ queryKey: ["firms-search"] });
     queryClient.invalidateQueries({ queryKey: ["contacts"] });
   };
 

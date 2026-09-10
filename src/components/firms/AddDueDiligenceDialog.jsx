@@ -283,7 +283,9 @@ function NewFirmForm({ existingFirms, onCreated, onCancel }) {
         payload.firm_types = [firmType];
       }
       const created = await base44.entities.Firm.create(payload);
-      queryClient.invalidateQueries({ queryKey: ["firms"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-infinite"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-allocators-supplement"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-search"] });
       onCreated?.(created);
     } catch (err) {
       console.error(err);

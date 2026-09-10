@@ -70,7 +70,9 @@ export default function QuickAddFirmFromProduct({
         firm_type: firmType,
         tenant_id: user?.linked_firm_id,
       });
-      queryClient.invalidateQueries({ queryKey: ["firms"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-infinite"] });
+    queryClient.invalidateQueries({ queryKey: ["firms-allocators-supplement"] });
+    queryClient.invalidateQueries({ queryKey: ["firms-search"] });
       toast({
         title: "✅ Firm created",
         description: `"${newFirm.name}" has been added and selected for this product.`,

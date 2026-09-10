@@ -303,7 +303,9 @@ export default function CsvFirmImport({ onStageChange } = {}) {
         tenant_id: user?.linked_firm_id,
       });
       const data = res?.data || res || {};
-      queryClient.invalidateQueries({ queryKey: ["firms"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-infinite"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-allocators-supplement"] });
+      queryClient.invalidateQueries({ queryKey: ["firms-search"] });
       queryClient.invalidateQueries({ queryKey: ["import-jobs"] });
       goStage("job_status");
       if ((data.created || 0) > 0 || (data.merged || 0) > 0) {
