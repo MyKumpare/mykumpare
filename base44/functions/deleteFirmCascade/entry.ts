@@ -69,10 +69,23 @@ Deno.serve(async (req) => {
     counts.return_series = rsCount;
 
     // --- Contacts tied to this firm (soft delete entirely, even if multi-firm) ---
-    const allContacts = await svc.entities.Contact.list('-created_date', 5000);
-    const firmContacts = allContacts.filter(
-      (c) => Array.isArray(c.firm_ids) && c.firm_ids.includes(firmId) && !c.deleted_at,
-    );
+    // Paginate through ALL contacts (not just the newest 5000) so contacts
+    // beyond the first page are not missed when the database is large.
+    const firmContacts: any[] = [];
+    let contactCursor: string | null = null;
+    while (true) {
+      const cFilter: any = { deleted_at: null };
+      if (contactCursor) cFilter.created_date = { $lt: contactCursor };
+      const cBatch = await svc.entities.Contact.filter(cFilter, '-created_date', 500);
+      for (const c of cBatch) {
+        if (Array.isArray(c.firm_ids) && c.firm_ids.includes(firmId)) {
+          firmContacts.push(c);
+        }
+      }
+      if (cBatch.length < 500) break;
+      contactCursor = cBatch[cBatch.length - 1]?.created_date;
+      if (!contactCursor) break;
+    }
     for (const c of firmContacts) {
       await svc.entities.Contact.update(c.id, { deleted_at: now });
     }
