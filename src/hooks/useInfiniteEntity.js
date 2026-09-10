@@ -18,6 +18,7 @@ export function useInfiniteEntity({
   batchSize = 500,
   staleTime = 300000,
   enabled = true,
+  refetchOnMount = true,
 }) {
   const query = useInfiniteQuery({
     queryKey,
@@ -26,6 +27,7 @@ export function useInfiniteEntity({
     getNextPageParam: (lastPage) => (lastPage?.hasMore ? lastPage.nextCursor : undefined),
     staleTime,
     enabled,
+    refetchOnMount,
   });
 
   return query;

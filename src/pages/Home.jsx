@@ -301,7 +301,8 @@ export default function Home() {
       return { records: data.records || [], nextCursor: data.nextCursor ?? null, hasMore: !!data.hasMore };
     },
     batchSize: 50,
-    staleTime: 300000,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
   const firms = useMemo(
     () => (firmsQuery.data ? firmsQuery.data.pages.flatMap((p) => (p.records || []).filter((f) => !f.deleted_at)) : []),
