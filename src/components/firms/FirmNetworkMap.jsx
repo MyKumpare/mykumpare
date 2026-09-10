@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { Network, Loader2, Info, Building2 } from "lucide-react";
+import { Network, Loader2, Info, Building2, Maximize2 } from "lucide-react";
 import ContactNetworkGraph from "@/components/network/ContactNetworkGraph";
 
 const FIRM_TYPE_COLORS = {
@@ -196,6 +196,15 @@ export default function FirmNetworkMap({ firmId, onFirmClick }) {
         <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-indigo-100 text-indigo-700 font-medium">
           <Building2 className="w-3 h-3" /> {nodes.length - 1} connected firm{(nodes.length - 1) !== 1 ? "s" : ""}
         </span>
+        {selectedId && (
+          <button
+            type="button"
+            onClick={() => setSelectedId(null)}
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 transition-colors"
+          >
+            <Maximize2 className="w-3 h-3" /> Show all
+          </button>
+        )}
         {[
           { key: "sub_manager", label: "Sub-manager", color: "bg-indigo-100 text-indigo-700" },
           { key: "consultant", label: "Consultant", color: "bg-amber-100 text-amber-700" },
@@ -240,9 +249,10 @@ export default function FirmNetworkMap({ firmId, onFirmClick }) {
               edges={edges}
               onNodeClick={(n) => {
                 if (n._isCenter) return;
-                setSelectedId(n.id);
+                setSelectedId((prev) => (prev === n.id ? null : n.id));
               }}
               highlightId={selectedId}
+              focusId={selectedId}
             />
           )}
 
@@ -287,7 +297,7 @@ export default function FirmNetworkMap({ firmId, onFirmClick }) {
           )}
 
           <div className="absolute top-3 right-3 text-xs text-gray-400 bg-white/80 px-2 py-1 rounded-md border border-gray-200 flex items-center gap-1">
-            <Info className="w-3 h-3" /> Firm-to-firm connections
+            <Info className="w-3 h-3" /> Click a firm to focus · Firm-to-firm connections
           </div>
         </div>
       )}

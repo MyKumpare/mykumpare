@@ -233,7 +233,7 @@ export default function ContactNetwork() {
   }, [firms, contacts, minConnections, firmTypeFilter, engagementStatusFilter, search, resetKey, highlightFirmId]);
 
   const handleNodeClick = (node) => {
-    setSelectedId(node.id);
+    setSelectedId((prev) => (prev === node.id ? null : node.id));
   };
 
   const selectedNode = nodes.find((n) => n.id === selectedId);
@@ -326,6 +326,15 @@ export default function ContactNetwork() {
               <List className="w-4 h-4 mr-1" /> List
             </Button>
           </div>
+          {view === "graph" && selectedId && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setSelectedId(null)}
+            >
+              <Maximize2 className="w-4 h-4 mr-1" /> Show all
+            </Button>
+          )}
           {view === "graph" && (
             <Button
               variant="outline"
@@ -406,6 +415,7 @@ export default function ContactNetwork() {
                 edges={edges}
                 onNodeClick={handleNodeClick}
                 highlightId={selectedId}
+                focusId={selectedId}
               />
             )}
 
@@ -443,7 +453,7 @@ export default function ContactNetwork() {
             {/* Help hint */}
             {view === "graph" && (
               <div className="absolute top-3 right-3 text-xs text-gray-400 bg-white/80 px-2 py-1 rounded-md border border-gray-200">
-                Drag nodes · Scroll to zoom · Hover to highlight
+                Drag nodes · Scroll to zoom · Click to focus · Hover to highlight
               </div>
             )}
 

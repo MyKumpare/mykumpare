@@ -9,7 +9,7 @@ import React, { useRef, useEffect, useState, useCallback } from "react";
  * Interactions: hover highlights a node and its connections; click fires
  * onNodeClick; nodes are draggable; background drag pans; wheel zooms.
  */
-export default function ContactNetworkGraph({ nodes, edges, onNodeClick, highlightId, highlightPath }) {
+export default function ContactNetworkGraph({ nodes, edges, onNodeClick, highlightId, highlightPath, focusId }) {
   const svgRef = useRef(null);
   const [simNodes, setSimNodes] = useState([]);
   const [hoverId, setHoverId] = useState(null);
@@ -227,6 +227,19 @@ export default function ContactNetworkGraph({ nodes, edges, onNodeClick, highlig
     return activeId && !(e.source === activeId || e.target === activeId);
   };
 
+  // Click-to-focus mode: when focusId is set, only the focused node and its
+  // direct neighbors are rendered — everything else is hidden entirely
+  // for a cleaner, less cluttered view.
+  const focusSet = focusId ? new Set([focusId]) : null;
+  if (focusSet) {
+    for (const e of edges) {
+      if (e.source === focusId) focusSet.add(e.target);
+      if (e.target === focusId) focusSet.add(e.source);
+    }
+  }
+  const visibleNodes = focusSet ? simNodes.filter((n) => focusSet.has(n.id)) : simNodes;
+  const visibleEdges = focusSet ? edges.filter((e) => focusSet.has(e.source) && focusSet.has(e.target)) : edges;
+
   return (
     <svg
       ref={svgRef}
@@ -242,7 +255,7 @@ export default function ContactNetworkGraph({ nodes, edges, onNodeClick, highlig
       <rect width={dims.w} height={dims.h} fill="transparent" />
       <g transform={`translate(${transform.x},${transform.y}) scale(${transform.k})`}>
         {/* Edges */}
-        {edges.map((e, i) => {
+        {visibleEdges.map((e, i) => {
           const s = simNodes.find((n) => n.id === e.source);
           const t = simNodes.find((n) => n.id === e.target);
           if (!s || !t) return null;
@@ -263,7 +276,7 @@ export default function ContactNetworkGraph({ nodes, edges, onNodeClick, highlig
         })}
 
         {/* Nodes */}
-        {simNodes.map((n) => {
+        {visibleNodes.map((n) => {
           const dim = isDimmed(n.id);
           const isFirm = n.type === "firm";
           const r = n.radius || (isFirm ? 18 : 12);

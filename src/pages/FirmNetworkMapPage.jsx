@@ -477,9 +477,10 @@ export default function FirmNetworkMapPage() {
                 key={resetKey}
                 nodes={nodes}
                 edges={edges}
-                onNodeClick={(n) => setSelectedId(n.id)}
+                onNodeClick={(n) => setSelectedId((prev) => (prev === n.id ? null : n.id))}
                 highlightId={selectedId || clusterFocusId}
                 highlightPath={pathHighlight}
+                focusId={selectedId}
               />
             )}
 
@@ -578,8 +579,18 @@ export default function FirmNetworkMapPage() {
               </div>
             )}
 
+            {selectedId && (
+              <button
+                type="button"
+                onClick={() => setSelectedId(null)}
+                className="absolute top-3 left-3 inline-flex items-center gap-1 px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 transition-colors text-xs border border-gray-200 z-10"
+              >
+                <Layers className="w-3 h-3" /> Show all
+              </button>
+            )}
+
             <div className="absolute top-3 right-3 text-xs text-gray-400 bg-white/80 px-2 py-1 rounded-md border border-gray-200 flex items-center gap-1">
-              <Info className="w-3 h-3" /> Click a node for details · Drag to rearrange · Scroll to zoom
+              <Info className="w-3 h-3" /> Click a node to focus · Drag to rearrange · Scroll to zoom
             </div>
 
             {vizMode === "strength" && (

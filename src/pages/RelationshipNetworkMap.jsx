@@ -150,7 +150,7 @@ export default function RelationshipNetworkMap() {
     };
   }, [relationships, contacts, typeFilter, search, resetKey]);
 
-  const handleNodeClick = (node) => setSelectedId(node.id);
+  const handleNodeClick = (node) => setSelectedId((prev) => (prev === node.id ? null : node.id));
   const selectedNode = nodes.find((n) => n.id === selectedId);
   const selectedEdges = selectedId ? edges.filter((e) => e.source === selectedId || e.target === selectedId) : [];
 
@@ -200,6 +200,11 @@ export default function RelationshipNetworkMap() {
               ))}
             </select>
           </div>
+          {selectedId && (
+            <Button variant="secondary" size="sm" onClick={() => setSelectedId(null)}>
+              <Maximize2 className="w-4 h-4 mr-1" /> Show all
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={() => { setResetKey((k) => k + 1); setSelectedId(null); }}>
             <Maximize2 className="w-4 h-4 mr-1" /> Re-center
           </Button>
@@ -260,6 +265,7 @@ export default function RelationshipNetworkMap() {
               edges={edges}
               onNodeClick={handleNodeClick}
               highlightId={selectedId}
+              focusId={selectedId}
             />
           )}
 
@@ -305,7 +311,7 @@ export default function RelationshipNetworkMap() {
 
           {/* Help hint */}
           <div className="absolute top-3 right-3 text-xs text-gray-400 bg-white/80 px-2 py-1 rounded-md border border-gray-200">
-            Drag nodes · Scroll to zoom · Hover to highlight
+            Drag nodes · Scroll to zoom · Click to focus · Hover to highlight
           </div>
         </div>
       </div>
