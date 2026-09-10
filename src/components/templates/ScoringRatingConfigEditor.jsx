@@ -9,6 +9,17 @@ const nextOptId = () => `sro_${Date.now()}_${++_optId}`;
 
 const DEFAULT_COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
 
+// Operator options for rating comparisons. "between" uses min..max; the rest
+// compare the score against a single threshold (stored in min_score).
+const OPERATORS = [
+  { value: "between", symbol: "between", label: "Between (min ≤ score ≤ max)" },
+  { value: "gte", symbol: "≥", label: "Greater than or equal (≥)" },
+  { value: "gt", symbol: ">", label: "Greater than (>)" },
+  { value: "lte", symbol: "≤", label: "Less than or equal (≤)" },
+  { value: "lt", symbol: "<", label: "Less than (<)" },
+  { value: "eq", symbol: "=", label: "Equal to (=)" },
+];
+
 /**
  * Editor for the overall rating configuration on a Scoring Matrix template.
  * Lets the user enable Pass/Fail (with a threshold) and create/edit/delete rating
@@ -30,6 +41,7 @@ export default function ScoringRatingConfigEditor({ ratingConfig, onChange }) {
     options.push({
       id: nextOptId(),
       label: "",
+      operator: "between",
       min_score: 0,
       max_score: 0,
       color: DEFAULT_COLORS[options.length % DEFAULT_COLORS.length]
@@ -98,58 +110,85 @@ export default function ScoringRatingConfigEditor({ ratingConfig, onChange }) {
             </button>
             {cfg.rating_enabled && (
               <div className="pl-6 space-y-1.5">
-                <div className="grid grid-cols-[1.5rem_7rem_4rem_1rem_4rem_1.5rem_1.5rem] gap-1 items-center text-[10px] font-medium text-gray-400 px-1">
+                <div className="grid grid-cols-[1.5rem_6rem_5.5rem_3.5rem_1rem_3.5rem_1.5rem_1.5rem] gap-1 items-center text-[10px] font-medium text-gray-400 px-1">
                   <span>#</span>
                   <span>Label</span>
-                  <span>Min</span>
+                  <span>Operator</span>
+                  <span>Value</span>
                   <span></span>
                   <span>Max</span>
                   <span>Color</span>
                   <span></span>
                 </div>
-                {(cfg.rating_options || []).map((opt, i) => (
-                  <div key={opt.id} className="grid grid-cols-[1.5rem_7rem_4rem_1rem_4rem_1.5rem_1.5rem] gap-1 items-center">
-                    <span className="text-[10px] text-gray-400">{i + 1}</span>
-                    <Input
-                      value={opt.label}
-                      onChange={(e) => updateOption(opt.id, { label: e.target.value })}
-                      className="h-7 text-xs"
-                      placeholder="e.g. A, Buy, 5"
-                    />
-                    <Input
-                      type="number"
-                      step="0.1"
-                      value={opt.min_score}
-                      onChange={(e) => updateOption(opt.id, { min_score: parseFloat(e.target.value) || 0 })}
-                      className="h-7 text-xs text-center"
-                      placeholder="min"
-                    />
-                    <span className="text-gray-400 text-[10px] text-center">to</span>
-                    <Input
-                      type="number"
-                      step="0.1"
-                      value={opt.max_score}
-                      onChange={(e) => updateOption(opt.id, { max_score: parseFloat(e.target.value) || 0 })}
-                      className="h-7 text-xs text-center"
-                      placeholder="max"
-                    />
-                    <input
-                      type="color"
-                      value={opt.color || "#10b981"}
-                      onChange={(e) => updateOption(opt.id, { color: e.target.value })}
-                      className="w-6 h-7 rounded border border-gray-200 cursor-pointer p-0"
-                      title="Rating badge color"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeOption(opt.id)}
-                      className="p-1 rounded hover:bg-red-100 text-red-500 justify-self-center"
-                      title="Delete rating option"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
+                {(cfg.rating_options || []).map((opt, i) => {
+                  const op = (opt.operator || "between");
+                  const isBetween = op === "between";
+                  return (
+                    <div key={opt.id} className="grid grid-cols-[1.5rem_6rem_5.5rem_3.5rem_1rem_3.5rem_1.5rem_1.5rem] gap-1 items-center">
+                      <span className="text-[10px] text-gray-400">{i + 1}</span>
+                      <Input
+                        value={opt.label}
+                        onChange={(e) => updateOption(opt.id, { label: e.target.value })}
+                        className="h-7 text-xs"
+                        placeholder="e.g. Pass, Buy, A"
+                      />
+                      <select
+                        value={op}
+                        onChange={(e) => updateOption(opt.id, { operator: e.target.value })}
+                        className="h-7 text-[11px] rounded-md border border-gray-200 bg-white px-1 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+                        title="Comparison operator for this rating"
+                      >
+                        {OPERATORS.map((o) => (
+                          <option key={o.value} value={o.value}>{o.symbol}</option>
+                        ))}
+                      </select>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        value={opt.min_score}
+                        onChange={(e) => updateOption(opt.id, { min_score: parseFloat(e.target.value) || 0 })}
+                        className="h-7 text-xs text-center"
+                        placeholder={isBetween ? "min" : "value"}
+                      />
+                      {isBetween ? (
+                        <>
+                          <span className="text-gray-400 text-[10px] text-center">to</span>
+                          <Input
+                            type="number"
+                            step="0.1"
+                            value={opt.max_score}
+                            onChange={(e) => updateOption(opt.id, { max_score: parseFloat(e.target.value) || 0 })}
+                            className="h-7 text-xs text-center"
+                            placeholder="max"
+                          />
+                        </>
+                      ) : (
+                        <>
+                          <span></span>
+                          <span></span>
+                        </>
+                      )}
+                      <input
+                        type="color"
+                        value={opt.color || "#10b981"}
+                        onChange={(e) => updateOption(opt.id, { color: e.target.value })}
+                        className="w-6 h-7 rounded border border-gray-200 cursor-pointer p-0"
+                        title="Rating badge color"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeOption(opt.id)}
+                        className="p-1 rounded hover:bg-red-100 text-red-500 justify-self-center"
+                        title="Delete rating option"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  );
+                })}
+                <p className="text-[10px] text-gray-400 px-1 pt-1">
+                  Use <span className="font-medium">≥</span> for "Pass if score ≥ 75", <span className="font-medium">&lt;</span> for "Fail if score &lt; 75", or <span className="font-medium">between</span> for a min–max range.
+                </p>
                 <Button type="button" variant="ghost" size="sm" onClick={addOption} className="text-xs h-7 text-cyan-600">
                   <Plus className="w-3 h-3" /> Add Rating Option
                 </Button>

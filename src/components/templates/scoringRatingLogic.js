@@ -19,9 +19,23 @@ export function computeOverallRating(weightedFinalScore, ratingConfig) {
 
   if (cfg.rating_enabled && Array.isArray(cfg.rating_options)) {
     const match = cfg.rating_options.find((opt) => {
-      const min = opt.min_score != null && !isNaN(opt.min_score) ? opt.min_score : -Infinity;
-      const max = opt.max_score != null && !isNaN(opt.max_score) ? opt.max_score : Infinity;
-      return weightedFinalScore >= min && weightedFinalScore <= max;
+      const op = opt.operator || "between";
+      const v = opt.min_score != null && !isNaN(opt.min_score) ? opt.min_score : null;
+      const max = opt.max_score != null && !isNaN(opt.max_score) ? opt.max_score : null;
+      if (v == null) return false;
+      switch (op) {
+        case "gte": return weightedFinalScore >= v;
+        case "gt": return weightedFinalScore > v;
+        case "lte": return weightedFinalScore <= v;
+        case "lt": return weightedFinalScore < v;
+        case "eq": return weightedFinalScore === v;
+        case "between":
+        default: {
+          const lo = v;
+          const hi = max != null ? max : Infinity;
+          return weightedFinalScore >= lo && weightedFinalScore <= hi;
+        }
+      }
     });
     if (match) {
       result.ratingLabel = match.label || "";
