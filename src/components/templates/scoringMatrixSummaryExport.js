@@ -17,6 +17,8 @@
  */
 
 import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 const OPERATOR_LABELS = {
   between: "between",
@@ -305,4 +307,60 @@ export function downloadScoringMatrixExcel(templateName, blocks = [], ratingConf
   XLSX.utils.book_append_sheet(wb, ws3, "Bonus-Penalty");
   XLSX.utils.book_append_sheet(wb, ws4, "Rating Config");
   XLSX.writeFile(wb, `${(templateName || "scoring-matrix").replace(/[^a-z0-9]+/gi, "-")}-summary.xlsx`);
+}
+
+/**
+ * Download the summary as a multi-page PDF. Renders the summary HTML into an
+ * off-screen container, captures it with html2canvas, and slices the image
+ * across PDF pages (A4 portrait).
+ */
+export async function downloadScoringMatrixPdf(templateName, blocks, ratingConfig) {
+  const html = buildSummaryHtml(templateName, blocks, ratingConfig);
+
+  // Off-screen container sized for A4-ish width
+  const container = document.createElement("div");
+  container.style.position = "fixed";
+  container.style.left = "-9999px";
+  container.style.top = "0";
+  container.style.width = "800px";
+  container.style.background = "#ffffff";
+  container.innerHTML = html;
+  document.body.appendChild(container);
+
+  try {
+    const canvas = await html2canvas(container, {
+      scale: 2,
+      backgroundColor: "#ffffff",
+      useCORS: true,
+      logging: false
+    });
+
+    const imgData = canvas.toDataURL("image/png");
+    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 8;
+    const usableWidth = pageWidth - margin * 2;
+    const imgWidth = usableWidth;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    let heightLeft = imgHeight;
+    let position = margin;
+
+    // First page
+    pdf.addImage(imgData, "PNG", margin, position, imgWidth, imgHeight);
+    heightLeft -= (pageHeight - margin * 2);
+
+    // Subsequent pages
+    while (heightLeft > 0) {
+      position = margin - (imgHeight - heightLeft);
+      pdf.addPage();
+      pdf.addImage(imgData, "PNG", margin, position, imgWidth, imgHeight);
+      heightLeft -= (pageHeight - margin * 2);
+    }
+
+    pdf.save(`${(templateName || "scoring-matrix").replace(/[^a-z0-9]+/gi, "-")}-summary.pdf`);
+  } finally {
+    document.body.removeChild(container);
+  }
 }

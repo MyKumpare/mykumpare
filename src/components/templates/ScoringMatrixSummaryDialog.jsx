@@ -1,8 +1,8 @@
 import React, { useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Printer, FileText, FileSpreadsheet, X } from "lucide-react";
-import { buildSummaryHtml, downloadScoringMatrixWord, downloadScoringMatrixExcel } from "./scoringMatrixSummaryExport";
+import { Printer, FileText, FileSpreadsheet, FileDown, X, Loader2 } from "lucide-react";
+import { buildSummaryHtml, downloadScoringMatrixWord, downloadScoringMatrixExcel, downloadScoringMatrixPdf } from "./scoringMatrixSummaryExport";
 
 /**
  * Read-only preview of a scoring matrix template summary, with Print,
@@ -19,6 +19,16 @@ export default function ScoringMatrixSummaryDialog({ open, onOpenChange, templat
     () => buildSummaryHtml(templateName, blocks, ratingConfig),
     [templateName, blocks, ratingConfig]
   );
+  const [pdfLoading, setPdfLoading] = React.useState(false);
+
+  const handleDownloadPdf = async () => {
+    setPdfLoading(true);
+    try {
+      await downloadScoringMatrixPdf(templateName, blocks, ratingConfig);
+    } finally {
+      setPdfLoading(false);
+    }
+  };
 
   const handlePrint = () => {
     const w = window.open("", "_blank", "width=900,height=700");
@@ -61,6 +71,17 @@ export default function ScoringMatrixSummaryDialog({ open, onOpenChange, templat
             onClick={() => downloadScoringMatrixExcel(templateName, blocks, ratingConfig)}
           >
             <FileSpreadsheet className="w-3.5 h-3.5" /> Download Excel
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-8"
+            onClick={handleDownloadPdf}
+            disabled={pdfLoading}
+          >
+            {pdfLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileDown className="w-3.5 h-3.5" />}
+            {pdfLoading ? "Generating..." : "Download PDF"}
           </Button>
           <Button
             type="button"
