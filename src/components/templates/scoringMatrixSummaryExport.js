@@ -121,13 +121,66 @@ export function buildSummaryHtml(templateName, blocks = [], ratingConfig = {}) {
       </div>`;
   }).join("");
 
-  // Overall rating configuration
-  const passFailHtml = cfg.pass_fail_enabled
-    ? `<div class="config-row"><strong>Pass / Fail:</strong> enabled — Pass threshold ≥ ${cfg.pass_threshold ?? 3}${unitSuffix(unit)}</div>`
-    : `<div class="config-row"><strong>Pass / Fail:</strong> <span class="muted">disabled</span></div>`;
+  // Category Max Score matrix — each section's max achievable score and its
+  // weighted contribution to the total. Placed right before the overall rating
+  // configuration.
+  const categoryRows = blocks.map((block, bIdx) => {
+    const criteria = block.criteria || [];
+    // Highest descriptor level across this section's criteria (raw max score)
+    const maxLevel = criteria.reduce((mx, crit) => {
+      const levels = (crit.descriptors || []).map((d) => Number(d.level)).filter((n) => !Number.isNaN(n));
+      const critMax = levels.length ? Math.max(...levels) : 0;
+      const critMult = crit.multiplier_enabled ? (crit.multiplier ?? 1) : 1;
+      return Math.max(mx, critMax * critMult);
+    }, 0);
+    const blockMult = block.multiplier_enabled ? (block.multiplier ?? 1) : 1;
+    const maxScore = maxLevel * blockMult;
+    const weighted = maxScore * ((block.weight || 0) / 100);
+    return `
+      <tr>
+        <td>${bIdx + 1}</td>
+        <td>${escapeHtml(block.name || "—")}</td>
+        <td class="num">${block.weight || 0}%</td>
+        <td class="num">${maxScore}${unitSuffix(unit)}</td>
+        <td class="num">${weighted.toFixed(2)}${unitSuffix(unit)}</td>
+      </tr>`;
+  }).join("");
 
-  const ratingOptionsHtml = cfg.rating_enabled
-    ? (cfg.rating_options || []).map((opt, i) => `
+  const totalMaxScore = blocks.reduce((sum, block) => {
+    const criteria = block.criteria || [];
+    const maxLevel = criteria.reduce((mx, crit) => {
+      const levels = (crit.descriptors || []).map((d) => Number(d.level)).filter((n) => !Number.isNaN(n));
+      const critMax = levels.length ? Math.max(...levels) : 0;
+      const critMult = crit.multiplier_enabled ? (crit.multiplier ?? 1) : 1;
+      return Math.max(mx, critMax * critMult);
+    }, 0);
+    const blockMult = block.multiplier_enabled ? (block.multiplier ?? 1) : 1;
+    return sum + maxLevel * blockMult * ((block.weight || 0) / 100);
+  }, 0);
+
+  const categoryMatrixHtml = `
+    <h2>Category Max Score</h2>
+    <table class="config cat-matrix">
+      <thead>
+        <tr><th>#</th><th>Category</th><th>Weight</th><th>Max Score</th><th>Weighted Score</th></tr>
+      </thead>
+      <tbody>
+        ${categoryRows || `<tr><td colspan="5" class="muted">No categories defined.</td></tr>`}
+        <tr class="total-row">
+          <td colspan="4"><strong>Total Weighted Score</strong></td>
+          <td class="num"><strong>${totalMaxScore.toFixed(2)}${unitSuffix(unit)}</strong></td>
+        </tr>
+      </tbody>
+    </table>`;
+
+  // Overall rating configuration — only render the selected option (pass/fail
+  // OR rating options), never show the disabled counterpart.
+  let ratingConfigHtml = "";
+  if (cfg.pass_fail_enabled) {
+    ratingConfigHtml = `
+      <div class="config-row"><strong>Pass / Fail:</strong> enabled — Pass threshold ≥ ${cfg.pass_threshold ?? 3}${unitSuffix(unit)}</div>`;
+  } else if (cfg.rating_enabled) {
+    const ratingOptionsHtml = (cfg.rating_options || []).map((opt, i) => `
         <tr>
           <td>${i + 1}</td>
           <td>
@@ -135,8 +188,16 @@ export function buildSummaryHtml(templateName, blocks = [], ratingConfig = {}) {
             ${escapeHtml(opt.label || "—")}
           </td>
           <td>${ratingOptionRange(opt, unit)}</td>
-        </tr>`).join("")
-    : `<tr><td colspan="3" class="muted">Rating options disabled</td></tr>`;
+        </tr>`).join("");
+    ratingConfigHtml = `
+      <div class="config-row"><strong>Rating Options:</strong></div>
+      <table class="config">
+        <thead><tr><th>#</th><th>Label</th><th>Range</th></tr></thead>
+        <tbody>${ratingOptionsHtml || `<tr><td colspan="3" class="muted">No rating options defined.</td></tr>`}</tbody>
+      </table>`;
+  } else {
+    ratingConfigHtml = `<div class="config-row muted">No overall rating configuration selected.</div>`;
+  }
 
   return `
 <!DOCTYPE html>
@@ -174,6 +235,8 @@ export function buildSummaryHtml(templateName, blocks = [], ratingConfig = {}) {
   table.config { width: 100%; border-collapse: collapse; margin-top: 6px; }
   table.config th, table.config td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; font-size: 12px; }
   table.config th { background: #f1f5f9; }
+  table.config td.num, table.config th.num { text-align: center; }
+  .cat-matrix .total-row td { background: #f8fafc; border-top: 2px solid #cbd5e1; }
   .color-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; vertical-align: middle; border: 1px solid #cbd5e1; }
   .footer { margin-top: 24px; color: #94a3b8; font-size: 11px; text-align: center; }
   @media print { body { margin: 12mm; } }
@@ -190,13 +253,10 @@ export function buildSummaryHtml(templateName, blocks = [], ratingConfig = {}) {
   <h2>Sections &amp; Sub-sections</h2>
   ${sectionsHtml || `<div class="muted">No sections defined.</div>`}
 
+  ${categoryMatrixHtml}
+
   <h2>Overall Rating Configuration</h2>
-  ${passFailHtml}
-  <div class="config-row"><strong>Rating Options:</strong></div>
-  <table class="config">
-    <thead><tr><th>#</th><th>Label</th><th>Range</th></tr></thead>
-    <tbody>${ratingOptionsHtml}</tbody>
-  </table>
+  ${ratingConfigHtml}
 
   <div class="footer">Generated by MyKumpare</div>
 </body>
