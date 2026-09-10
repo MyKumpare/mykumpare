@@ -429,7 +429,7 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange, template
                           type="number"
                           value={desc.level}
                           onChange={(e) => updateDescriptorLevel(block.id, crit.id, desc.level, parseFloat(e.target.value))}
-                          className={`text-xs font-bold w-10 h-7 text-center flex-shrink-0 px-1 ${
+                          className={`text-xs font-bold w-14 h-7 text-center flex-shrink-0 px-1 ${
                             desc.level === 1 ? "bg-red-50 text-red-700 border-red-200" :
                             desc.level === 2 ? "bg-orange-50 text-orange-700 border-orange-200" :
                             desc.level === 3 ? "bg-yellow-50 text-yellow-700 border-yellow-200" :
