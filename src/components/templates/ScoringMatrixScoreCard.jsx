@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Check, X, CheckCircle2, Circle, ChevronDown, ChevronRight, Sparkles, Loader2, FileText, Download, Brain, History, GitBranch, GitCompare, Lock, Calendar, AlertTriangle, PlusCircle, MinusCircle, Info, ToggleLeft, ToggleRight, Camera, Paperclip, Award, Star, Layers, Users } from "lucide-react";
+import { Check, X, CheckCircle2, Circle, ChevronDown, ChevronRight, Sparkles, Loader2, FileText, Download, Brain, History, GitBranch, GitCompare, Lock, Calendar, AlertTriangle, PlusCircle, MinusCircle, Info, ToggleLeft, ToggleRight, Camera, Paperclip, Award, Star, Layers, Users, Target } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend, Tooltip
@@ -39,38 +39,77 @@ const SCORE_COLORS = {
   5: "bg-green-100 text-green-700 border-green-300"
 };
 
-// Compute the min/max score range for a single criterion from its template config.
+// Compute the total score range for a single criterion (includes bonus/penalty adjustment).
 // - single mode: uses single_score_min / single_score_max
 // - levels mode: uses the min/max descriptor levels (defaults to 1-5)
 function getCriterionRange(templateCrit) {
   if (!templateCrit) return null;
+  let min, max;
   if (templateCrit.scoring_mode === "single") {
-    const min = Number.isFinite(templateCrit.single_score_min) ? templateCrit.single_score_min : 0;
-    const max = Number.isFinite(templateCrit.single_score_max) ? templateCrit.single_score_max : 100;
-    return { min, max };
+    min = Number.isFinite(templateCrit.single_score_min) ? templateCrit.single_score_min : 0;
+    max = Number.isFinite(templateCrit.single_score_max) ? templateCrit.single_score_max : 100;
+  } else {
+    const descs = templateCrit.descriptors;
+    if (Array.isArray(descs) && descs.length > 0) {
+      const levels = descs.map((d) => d.level).filter((n) => Number.isFinite(n));
+      if (levels.length > 0) { min = Math.min(...levels); max = Math.max(...levels); }
+      else { min = 1; max = 5; }
+    } else { min = 1; max = 5; }
   }
-  const descs = templateCrit.descriptors;
-  if (Array.isArray(descs) && descs.length > 0) {
-    const levels = descs.map((d) => d.level).filter((n) => Number.isFinite(n));
-    if (levels.length > 0) return { min: Math.min(...levels), max: Math.max(...levels) };
+  // Fold in bonus/penalty adjustment so this reflects the total possible score, not just the base scoring range
+  if (templateCrit.bonus_penalty_enabled && templateCrit.bonus_penalty_range) {
+    const bpMin = Number.isFinite(templateCrit.bonus_penalty_range.min) ? templateCrit.bonus_penalty_range.min : 0;
+    const bpMax = Number.isFinite(templateCrit.bonus_penalty_range.max) ? templateCrit.bonus_penalty_range.max : 0;
+    if (bpMin < 0) min += bpMin;
+    if (bpMax > 0) max += bpMax;
   }
-  return { min: 1, max: 5 };
+  return { min, max };
 }
 
-// Compute the overall min/max range for a block from the ranges of its criteria.
+// Compute the total score range for a section = sum of its criteria's total ranges.
+// The `max` is the total maximum points available for the section; the `min` is the
+// lowest possible total. Returns null when the section has no scorable criteria.
 function getBlockRange(block, templateCriteria) {
   const ranges = (block.criteria || [])
     .map((c) => getCriterionRange(templateCriteria?.[c.id]))
     .filter(Boolean);
   if (ranges.length === 0) return null;
-  return { min: Math.min(...ranges.map((r) => r.min)), max: Math.max(...ranges.map((r) => r.max)) };
+  return {
+    min: ranges.reduce((s, r) => s + r.min, 0),
+    max: ranges.reduce((s, r) => s + r.max, 0)
+  };
 }
 
-function RangeBadge({ range, className = "" }) {
+// Format a score value with the assessment's unit of measurement.
+// unit values: "none" | "%" | "pts" | "x" | "$" | "bps"
+function formatScoreValue(value, unit) {
+  const u = unit || "none";
+  if (u === "%") return `${value}%`;
+  if (u === "pts") return `${value} pts`;
+  if (u === "x") return `${value}x`;
+  if (u === "$") return `$${value}`;
+  if (u === "bps") return `${value} bps`;
+  return `${value}`;
+}
+
+function RangeBadge({ range, unit, className = "" }) {
   if (!range) return null;
   return (
-    <span className={`inline-flex items-center gap-0.5 text-[10px] font-medium text-gray-500 bg-gray-100 border border-gray-200 rounded px-1 py-0.5 ${className}`}>
-      {range.min}–{range.max}
+    <span className={`inline-flex items-center gap-1 text-xs font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded px-2 py-0.5 whitespace-nowrap ${className}`}>
+      <span className="text-[9px] uppercase tracking-wide text-gray-400">Range</span>
+      <span>{formatScoreValue(range.min, unit)} – {formatScoreValue(range.max, unit)}</span>
+    </span>
+  );
+}
+
+// Prominent badge showing the maximum possible score for a section or criterion.
+function MaxScoreBadge({ max, unit, className = "", label = "Max" }) {
+  if (max == null || !Number.isFinite(max)) return null;
+  return (
+    <span className={`inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2 py-0.5 whitespace-nowrap ${className}`} title="Total maximum points available">
+      <Target className="w-3 h-3 text-emerald-600" />
+      <span className="text-[9px] uppercase tracking-wide text-emerald-500">{label}</span>
+      <span>{formatScoreValue(max, unit)}</span>
     </span>
   );
 }
@@ -729,6 +768,7 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
   const overallRating = computeOverallRating(weightedFinalScoreNum, template?.rating_config);
   const ratingConfig = template?.rating_config;
   const hasRatingConfig = !!(ratingConfig && (ratingConfig.pass_fail_enabled || ratingConfig.rating_enabled));
+  const scoreUnit = ratingConfig?.unit;
 
   // Update the attachments array on the score record
   const updateAttachments = (newAttachments) => {
@@ -920,7 +960,7 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
                         <div className="flex items-center gap-1.5">
                           {expandedBlocks[block.id] ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                           {block.name} <span className="text-gray-400 font-normal">({block.weight}%)</span>
-                          <RangeBadge range={getBlockRange(block, templateCriteria)} />
+                          <MaxScoreBadge max={getBlockRange(block, templateCriteria)?.max} unit={scoreUnit} label="Section Max" />
                         </div>
                       </td>
                     </tr>
@@ -930,7 +970,7 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
                           <div className="flex flex-col gap-1">
                             <div className="flex items-center gap-1.5">
                               <span className="font-medium">{crit.name}</span>
-                              <RangeBadge range={getCriterionRange(templateCriteria[crit.id])} />
+                              <MaxScoreBadge max={getCriterionRange(templateCriteria[crit.id])?.max} unit={scoreUnit} />
                             </div>
                             {crit.category && <div className="text-gray-400 text-[10px]">{crit.category}</div>}
                             <ScoringAttachmentsManager
