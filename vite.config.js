@@ -47,6 +47,7 @@ export default defineConfig(({ mode }) => ({
       'lodash',
       'moment',
       'react-quill',
+      '@tanstack/react-query',
     ],
   },
 }));
