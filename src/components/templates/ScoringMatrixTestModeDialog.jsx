@@ -1,18 +1,18 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectTrigger, SelectValue } from "@/components/ui/select";
-import * as SelectPrimitive from "@radix-ui/react-select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Check, X, CheckCircle2, ChevronDown, ChevronRight, FlaskConical, RotateCcw, Lock, Unlock, ToggleLeft, ToggleRight, Info } from "lucide-react";
+import { Check, X, CheckCircle2, ChevronDown, ChevronRight, FlaskConical, RotateCcw, Lock, Target } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
-import {
-  Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
-  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
-  ResponsiveContainer, Legend, Tooltip
-} from "recharts";
 import ScoringAttachmentsManager from "@/components/templates/ScoringAttachmentsManager";
+import ScoringOverallRatingPanel from "@/components/templates/ScoringOverallRatingPanel";
+import { computeWeightedScoreMulti, effectiveAdjustedPrimary, effectiveFinalScore } from "@/components/templates/scoringWeightLogic";
+import TestModeChartTab from "@/components/templates/testmode/TestModeChartTab";
+import { TestScoreCell, TestBonusPenaltyCell, TestDeviationCell, TestNotesCell } from "@/components/templates/testmode/TestModeCells";
+import {
+  buildMockScore, getCriterionRange, getBlockRange, formatScoreValue,
+  computeTestTotals, computeBonusPenaltyTotal, unscoredCount, getOverallRating
+} from "@/components/templates/testmode/testModeUtils";
 
 const SCORE_COLORS = {
   1: "bg-red-100 text-red-700 border-red-300",
@@ -22,933 +22,39 @@ const SCORE_COLORS = {
   5: "bg-green-100 text-green-700 border-green-300"
 };
 
-// Custom SelectItem that only puts the score number in ItemText (what the trigger
-// displays after selection) and renders the descriptor text as a visual sibling
-// outside ItemText, so the trigger stays clean (just the number) while the
-// dropdown shows the full descriptor text.
-function DescriptorSelectItem({ value, scoreNumber, descriptorText }) {
-  const colorKey = Math.max(1, Math.min(5, scoreNumber));
+/** Slim progress bar showing current score / max. */
+function ScoreProgressBar({ value, max, unit, showLabel = true }) {
+  const numValue = Number(value);
+  const hasScore = Number.isFinite(numValue) && numValue > 0;
+  const pct = max && max > 0 && Number.isFinite(numValue) ? Math.max(0, Math.min(100, (numValue / max) * 100)) : 0;
   return (
-    <SelectPrimitive.Item
-      value={value}
-      className="relative flex w-full cursor-default select-none items-start rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
-    >
-      <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
-        <SelectPrimitive.ItemIndicator>
-          <Check className="h-4 w-4" />
-        </SelectPrimitive.ItemIndicator>
-      </span>
-      <SelectPrimitive.ItemText>
-        <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold border shrink-0 ${SCORE_COLORS[colorKey]}`}>{scoreNumber}</span>
-      </SelectPrimitive.ItemText>
-      {descriptorText && (
-        <span className="text-[11px] text-gray-600 leading-snug flex-1 ml-2 whitespace-normal self-center">
-          {descriptorText}
+    <div className="flex items-center gap-1.5">
+      <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden min-w-[50px]">
+        <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+      </div>
+      {showLabel && (
+        <span className="text-[10px] text-gray-500 whitespace-nowrap">
+          {hasScore ? `${formatScoreValue(numValue, unit)} / ${formatScoreValue(max, unit)}` : "not scored"}
         </span>
       )}
-    </SelectPrimitive.Item>
-  );
-}
-
-// Bonus/Penalty adjustment cell for test mode. Reads the template-defined
-// bonus/penalty config (denormalized onto the mock criterion) and the
-// analyst's active toggle + selected value. Mirrors the real scorecard's
-// BonusPenaltyCell but is always editable (test sandbox) unless the matrix
-// is closed.
-function TestBonusPenaltyCell({ criterion, disabled, onUpdate }) {
-  const [showGuidance, setShowGuidance] = useState(false);
-
-  const direction = criterion?.bonus_penalty_direction || "penalty";
-  const range = criterion?.bonus_penalty_range || { min: -1, max: 1 };
-  const step = Number.isFinite(criterion?.bonus_penalty_step) ? criterion.bonus_penalty_step : 1;
-  const genLevels = criterion?.bonus_penalty_levels;
-
-  // Selectable options: prefer template-generated levels, else compute from range + step.
-  const options = useMemo(() => {
-    if (Array.isArray(genLevels) && genLevels.length > 0) {
-      return genLevels
-        .map((l) => ({ level: Number(l.level), text: l.text || "" }))
-        .filter((o) => Number.isFinite(o.level));
-    }
-    const opts = [];
-    const st = step > 0 ? step : 1;
-    if (direction === "bonus") {
-      const max = Number.isFinite(range.max) ? range.max : 0;
-      for (let n = st; n <= max + 1e-9; n += st) opts.push({ level: Number(n.toFixed(4)), text: "" });
-    } else {
-      const min = Number.isFinite(range.min) ? range.min : 0;
-      for (let n = -st; n >= min - 1e-9; n -= st) opts.push({ level: Number(n.toFixed(4)), text: "" });
-    }
-    return opts;
-  }, [genLevels, direction, range.min, range.max, step]);
-
-  if (!criterion?.bonus_penalty_enabled) return null;
-
-  const isActive = criterion.bonus_penalty_active;
-  const value = criterion.bonus_penalty_value;
-  const guidance = criterion.bonus_penalty_guidance || "";
-
-  const handleToggle = () => {
-    if (disabled) return;
-    onUpdate({ bonus_penalty_active: !isActive, bonus_penalty_value: !isActive ? (options[0]?.level ?? 0) : value });
-  };
-  const handleValueChange = (v) => onUpdate({ bonus_penalty_value: Number(v) });
-
-  return (
-    <div className="flex flex-col items-center gap-0.5">
-      <div className="flex items-center gap-1">
-        <button
-          type="button"
-          onClick={handleToggle}
-          disabled={disabled}
-          className={`p-0.5 rounded text-xs ${isActive ? "text-indigo-600 bg-indigo-50 border border-indigo-200" : "text-gray-400 border border-gray-200"} ${disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-indigo-100"}`}
-          title={isActive ? "Deactivate bonus/penalty" : "Activate bonus/penalty"}
-        >
-          {isActive ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
-        </button>
-        {isActive && (
-          <div className="flex flex-col gap-0.5">
-            <div className="flex items-center gap-0.5">
-              <span
-                className={`px-1.5 py-0.5 rounded text-[10px] font-medium border ${direction === "bonus" ? "bg-green-100 border-green-400 text-green-700" : "bg-red-100 border-red-400 text-red-700"}`}
-                title={direction === "bonus" ? "Bonus adjustment (positive)" : "Penalty adjustment (negative)"}
-              >
-                {direction === "bonus" ? "+ Bonus" : "− Penalty"}
-              </span>
-            </div>
-            {options.length > 0 && (
-              <Select value={String(value ?? "")} onValueChange={handleValueChange} disabled={disabled}>
-                <SelectTrigger className="h-7 w-20 text-xs">
-                  <SelectValue placeholder="—" />
-                </SelectTrigger>
-                <SelectContent className={options.some((o) => o.text) ? "min-w-[260px] max-w-[360px]" : "max-h-60"}>
-                  {options.map((o) => (
-                    <SelectPrimitive.Item
-                      key={o.level}
-                      value={String(o.level)}
-                      className="relative flex w-full cursor-default select-none items-start rounded-sm py-1.5 pl-2 pr-8 text-xs outline-none focus:bg-accent focus:text-accent-foreground"
-                    >
-                      <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
-                        <SelectPrimitive.ItemIndicator>
-                          <Check className="h-4 w-4" />
-                        </SelectPrimitive.ItemIndicator>
-                      </span>
-                      <SelectPrimitive.ItemText>
-                        <span className="font-medium">{o.level > 0 ? `+${o.level}` : o.level}</span>
-                      </SelectPrimitive.ItemText>
-                      {o.text && <span className="text-[11px] text-gray-600 leading-snug flex-1 ml-2 whitespace-normal self-center">{o.text}</span>}
-                    </SelectPrimitive.Item>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-        )}
-        <button
-          type="button"
-          onClick={() => setShowGuidance(!showGuidance)}
-          className="p-0.5 text-gray-400 hover:text-indigo-600"
-          title="Show guidance"
-        >
-          <Info className="w-3.5 h-3.5" />
-        </button>
-      </div>
-      {showGuidance && guidance && (
-        <div className="text-[10px] text-indigo-700 bg-indigo-50 border border-indigo-100 rounded p-1.5 max-w-[200px] mt-0.5">
-          {guidance}
-        </div>
-      )}
-      {isActive && value != null && (
-        <div className="text-[10px] font-medium mt-0.5" style={{ color: (value || 0) > 0 ? "#166534" : (value || 0) < 0 ? "#991b1b" : "#6b7280" }}>
-          {(value || 0) > 0 ? "+" : ""}{value || 0}
-        </div>
-      )}
     </div>
   );
 }
 
-function ScoreCell({ score, onChange, disabled, placeholder = "—", descriptors, scoringMode, singleMin, singleMax }) {
-  const hasDesc = Array.isArray(descriptors) && descriptors.some((d) => d && d.text);
-  const descFor = (n) => (hasDesc ? descriptors.find((d) => d.level === n)?.text : null);
-  const selectedDesc = score != null ? descFor(score) : null;
-
-  // Single-score mode: dropdown of integers from min to max
-  if (scoringMode === "single") {
-    const min = Number.isFinite(singleMin) ? singleMin : 0;
-    const max = Number.isFinite(singleMax) ? singleMax : 100;
-    const options = [];
-    for (let n = min; n <= max; n++) options.push(n);
-    return (
-      <div className="flex flex-col gap-1 w-full">
-        <Select value={score != null ? score.toString() : ""} onValueChange={(v) => onChange(parseInt(v))} disabled={disabled}>
-          <SelectTrigger className="h-8 w-full text-xs">
-            <SelectValue placeholder={placeholder} />
-          </SelectTrigger>
-          <SelectContent className="max-h-60">
-            {options.map((n) => (
-              <SelectPrimitive.Item
-                key={n}
-                value={n.toString()}
-                className="relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-xs outline-none focus:bg-accent focus:text-accent-foreground"
-              >
-                <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
-                  <SelectPrimitive.ItemIndicator>
-                    <Check className="h-4 w-4" />
-                  </SelectPrimitive.ItemIndicator>
-                </span>
-                <SelectPrimitive.ItemText>{n}</SelectPrimitive.ItemText>
-              </SelectPrimitive.Item>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-    );
-  }
-
-  // Levels mode: use the actual descriptor levels saved on the template criterion
-  // (falls back to 1-5 only when no descriptors are defined)
-  const descLevels = (Array.isArray(descriptors) && descriptors.length > 0)
-    ? descriptors.map((d) => d.level).filter((n) => Number.isFinite(n))
-    : [1, 2, 3, 4, 5];
-
+/** Badge showing the total max score range for a criterion or section. */
+function MaxScoreBadge({ range, unit, className = "", label = "Max" }) {
+  if (!range || !Number.isFinite(range.max)) return null;
+  const showRange = Number.isFinite(range.min) && range.min !== range.max;
   return (
-    <div className="flex flex-col gap-1 w-full">
-      <Select value={score?.toString() || ""} onValueChange={(v) => onChange(parseInt(v))} disabled={disabled}>
-        <SelectTrigger className="h-8 w-full text-xs">
-          <SelectValue placeholder={placeholder} />
-        </SelectTrigger>
-        <SelectContent className={hasDesc ? "min-w-[320px] max-w-[420px]" : ""}>
-          {descLevels.map((n) => (
-            <DescriptorSelectItem
-              key={n}
-              value={n.toString()}
-              scoreNumber={n}
-              descriptorText={descFor(n)}
-            />
-          ))}
-        </SelectContent>
-      </Select>
-      {selectedDesc && (
-        <p className="text-[11px] text-gray-600 leading-relaxed text-left w-full whitespace-normal px-0.5 mt-0.5" title={selectedDesc}>
-          {selectedDesc}
-        </p>
-      )}
-    </div>
-  );
-}
-
-function DeviationCell({ baseScore, compareScore }) {
-  if (compareScore == null || baseScore == null) return <span className="text-xs text-gray-300">—</span>;
-  const diff = compareScore - baseScore;
-  if (diff === 0) return <span className="text-xs text-gray-500">{compareScore}</span>;
-  const intensity = Math.min(Math.abs(diff) / 4, 1);
-  const bg = diff > 0 ? `rgba(34, 197, 94, ${0.15 + intensity * 0.35})` : `rgba(239, 68, 68, ${0.15 + intensity * 0.35})`;
-  const text = diff > 0 ? "text-green-800" : "text-red-800";
-  return (
-    <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${text}`} style={{ background: bg }}>
-      {compareScore} ({diff > 0 ? "+" : ""}{diff})
+    <span className={`inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2 py-0.5 whitespace-nowrap ${className}`} title="Total maximum score range">
+      <Target className="w-3 h-3 text-emerald-600" />
+      <span className="text-[9px] uppercase tracking-wide text-emerald-500">{label}</span>
+      <span>{showRange ? `${formatScoreValue(range.min, unit)} – ${formatScoreValue(range.max, unit)}` : formatScoreValue(range.max, unit)}</span>
     </span>
   );
 }
 
-function buildMockScore(template) {
-  const blocks = (template?.scoring_blocks || []).map((b) => ({
-    id: b.id,
-    name: b.name,
-    weight: b.weight || 0,
-    criteria: (b.criteria || []).map((c) => ({
-      id: c.id,
-      number: c.number,
-      name: c.name,
-      category: c.category || "",
-      descriptors: c.descriptors || [],
-      scoring_mode: c.scoring_mode || "levels",
-      single_score_min: c.single_score_min,
-      single_score_max: c.single_score_max,
-      bonus_penalty_enabled: c.bonus_penalty_enabled || false,
-      bonus_penalty_direction: c.bonus_penalty_direction || "penalty",
-      bonus_penalty_range: c.bonus_penalty_range || null,
-      bonus_penalty_step: c.bonus_penalty_step,
-      bonus_penalty_levels: c.bonus_penalty_levels || [],
-      bonus_penalty_guidance: c.bonus_penalty_guidance || "",
-      bonus_penalty_active: false,
-      bonus_penalty_value: null,
-      primary_score: null,
-      primary_notes: "",
-      team_score: null,
-      team_notes: "",
-      team_status: "pending",
-      adjusted_primary_score: null,
-      adjusted_primary_notes: "",
-      ic_score: null,
-      ic_notes: "",
-      ic_status: "pending",
-      final_score: null,
-      final_notes: ""
-    }))
-  }));
-  return {
-    template_name: template?.name || "Test Template",
-    firm_name: "Test Firm (Sample)",
-    product_name: "Test Product (Sample)",
-    status: "primary_scoring",
-    primary_score_finalized: false,
-    team_review_status: "not_started",
-    adjusted_primary_finalized: false,
-    ic_review_status: "not_started",
-    final_score_finalized: false,
-    is_closed: false,
-    scoring_blocks: blocks,
-    attachments: []
-  };
-}
-
-export default function ScoringMatrixTestModeDialog({ open, onOpenChange, template }) {
-  const [score, setScore] = useState(() => buildMockScore(template));
-  const [expandedBlocks, setExpandedBlocks] = useState({});
-  const [activeTab, setActiveTab] = useState("scoring");
-  const [chartType, setChartType] = useState("radar");
-
-  // Rebuild mock score when template changes or dialog reopens
-  React.useEffect(() => {
-    if (open) {
-      setScore(buildMockScore(template));
-      setExpandedBlocks({});
-      setActiveTab("scoring");
-      setChartType("radar");
-    }
-  }, [open, template]);
-
-  const toggleBlock = (id) => setExpandedBlocks((p) => ({ ...p, [id]: !p[id] }));
-
-  const blocks = score.scoring_blocks || [];
-
-  const updateCriterion = (blockId, critId, updates) => {
-    setScore((prev) => ({
-      ...prev,
-      scoring_blocks: prev.scoring_blocks.map((b) => {
-        if (b.id !== blockId) return b;
-        return {
-          ...b,
-          criteria: (b.criteria || []).map((c) => (c.id === critId ? { ...c, ...updates } : c))
-        };
-      })
-    }));
-  };
-
-  const updateAllCriteria = (updatesFn) => {
-    setScore((prev) => ({
-      ...prev,
-      scoring_blocks: prev.scoring_blocks.map((b) => ({
-        ...b,
-        criteria: (b.criteria || []).map((c) => ({ ...c, ...updatesFn(c) }))
-      }))
-    }));
-  };
-
-  // Update attachments (local state in test mode — no backend persistence)
-  const updateAttachments = (newAttachments) => {
-    setScore((prev) => ({ ...prev, attachments: newAttachments }));
-  };
-
-  // Phase transitions (local only)
-  const finalizePrimary = () => {
-    setScore((prev) => ({
-      ...prev,
-      primary_score_finalized: true,
-      status: "team_review",
-      team_review_status: "not_started"
-    }));
-    toast({ title: "✓ Primary scores finalized (test)" });
-  };
-
-  const initTeamScores = () => {
-    updateAllCriteria((c) => ({
-      team_score: c.team_score ?? c.primary_score,
-      team_status: c.team_status || "pending"
-    }));
-    setScore((prev) => ({ ...prev, team_review_status: "in_progress", status: "team_review" }));
-    toast({ title: "✓ Team review started (test)" });
-  };
-
-  const finalizeTeamReview = () => {
-    setScore((prev) => ({
-      ...prev,
-      team_review_status: "completed",
-      adjusted_primary_finalized: true,
-      status: "ic_review"
-    }));
-    toast({ title: "✓ Team review completed (test)" });
-  };
-
-  const initICScores = () => {
-    updateAllCriteria((c) => ({
-      ic_score: c.ic_score ?? c.adjusted_primary_score ?? c.primary_score,
-      ic_status: c.ic_status || "pending"
-    }));
-    setScore((prev) => ({ ...prev, ic_review_status: "in_progress", status: "ic_review" }));
-    toast({ title: "✓ IC review started (test)" });
-  };
-
-  const finalizeICReview = () => {
-    setScore((prev) => ({
-      ...prev,
-      ic_review_status: "completed",
-      final_score_finalized: true,
-      status: "finalized",
-      is_closed: true
-    }));
-    toast({ title: "✓ Scoring matrix finalized (test)", description: "Nothing was saved — this is a test run." });
-  };
-
-  const resetTest = () => {
-    setScore(buildMockScore(template));
-    setExpandedBlocks({});
-    setActiveTab("scoring");
-    toast({ title: "Test reset", description: "All scores cleared." });
-  };
-
-  const acceptTeamScore = (blockId, critId) => {
-    const block = blocks.find((b) => b.id === blockId);
-    const crit = block?.criteria?.find((c) => c.id === critId);
-    updateCriterion(blockId, critId, {
-      team_status: "accepted",
-      adjusted_primary_score: crit?.team_score,
-      adjusted_primary_notes: crit?.team_notes || "Accepted team recommendation."
-    });
-  };
-
-  const rejectTeamScore = (blockId, critId) => {
-    const block = blocks.find((b) => b.id === blockId);
-    const crit = block?.criteria?.find((c) => c.id === critId);
-    updateCriterion(blockId, critId, {
-      team_status: "rejected",
-      adjusted_primary_score: crit?.primary_score,
-      adjusted_primary_notes: "Kept primary score."
-    });
-  };
-
-  const acceptICScore = (blockId, critId) => {
-    const block = blocks.find((b) => b.id === blockId);
-    const crit = block?.criteria?.find((c) => c.id === critId);
-    updateCriterion(blockId, critId, {
-      ic_status: "accepted",
-      final_score: crit?.ic_score,
-      final_notes: crit?.ic_notes || "Accepted IC recommendation."
-    });
-  };
-
-  const rejectICScore = (blockId, critId) => {
-    const block = blocks.find((b) => b.id === blockId);
-    const crit = block?.criteria?.find((c) => c.id === critId);
-    updateCriterion(blockId, critId, {
-      ic_status: "rejected",
-      final_score: crit?.adjusted_primary_score ?? crit?.primary_score,
-      final_notes: "Kept adjusted primary score."
-    });
-  };
-
-  // Weighted average that includes each criterion's active bonus/penalty
-  // adjustment, so the total reflects score + bonus/penalty per criterion.
-  const computeTotals = (scoreField) => {
-    let total = 0;
-    let totalWeight = 0;
-    blocks.forEach((block) => {
-      const blockWeight = (block.weight || 0) / 100;
-      (block.criteria || []).forEach((crit) => {
-        const s = crit[scoreField];
-        if (s != null) {
-          const adj = crit.bonus_penalty_active ? (crit.bonus_penalty_value || 0) : 0;
-          total += (s + adj) * blockWeight;
-          totalWeight += blockWeight;
-        }
-      });
-    });
-    return totalWeight > 0 ? (total / totalWeight).toFixed(2) : "—";
-  };
-
-  // Sum of all active bonus/penalty adjustments across every criterion.
-  const computeBonusPenaltyTotal = () => {
-    let sum = 0;
-    blocks.forEach((block) => {
-      (block.criteria || []).forEach((crit) => {
-        if (crit.bonus_penalty_active && crit.bonus_penalty_value != null) {
-          sum += crit.bonus_penalty_value || 0;
-        }
-      });
-    });
-    return sum;
-  };
-
-  // Count criteria still missing a score for a given phase field.
-  // Finalize is blocked until this reaches zero, mirroring the real scorecard's guard.
-  const unscoredCount = (scoreField) => {
-    let count = 0;
-    blocks.forEach((block) => {
-      (block.criteria || []).forEach((crit) => {
-        if (crit[scoreField] == null) count++;
-      });
-    });
-    return count;
-  };
-
-  const guardFinalize = (scoreField, label, fn) => {
-    const missing = unscoredCount(scoreField);
-    if (missing > 0) {
-      toast({
-        title: `Cannot finalize ${label}`,
-        description: `${missing} ${missing === 1 ? "item still needs" : "items still need"} a ${label.toLowerCase()} score.`,
-        variant: "destructive",
-      });
-      return;
-    }
-    fn();
-  };
-
-  const columns = [
-    { key: "primary_score", label: "Primary", color: "#3b82f6", getValue: (c) => c.primary_score },
-    { key: "team_score", label: "Team", color: "#f59e0b", getValue: (c) => c.team_score },
-    { key: "adjusted_primary_score", label: "Adj. Primary", color: "#8b5cf6", getValue: (c) => c.adjusted_primary_score },
-    { key: "ic_score", label: "IC", color: "#ec4899", getValue: (c) => c.ic_score },
-    { key: "final_score", label: "Final", color: "#10b981", getValue: (c) => c.final_score }
-  ];
-
-  const showTeam = score.primary_score_finalized;
-  const showAdjustedPrimary = score.team_review_status === "in_progress" || score.team_review_status === "completed" || score.adjusted_primary_finalized;
-  const showIC = score.adjusted_primary_finalized;
-  const showFinal = score.ic_review_status === "in_progress" || score.ic_review_status === "completed" || score.final_score_finalized;
-
-  const radarData = useMemo(() => {
-    const criteria = [];
-    blocks.forEach((block) => {
-      (block.criteria || []).forEach((crit) => {
-        const point = { criterion: crit.name || `#${crit.number}` };
-        columns.forEach((col) => {
-          point[col.key] = col.getValue(crit) || 0;
-        });
-        criteria.push(point);
-      });
-    });
-    return criteria;
-  }, [blocks]);
-
-  const visibleColumns = columns.filter((c) => {
-    if (c.key === "team_score") return showTeam;
-    if (c.key === "adjusted_primary_score") return showAdjustedPrimary;
-    if (c.key === "ic_score") return showIC;
-    if (c.key === "final_score") return showFinal;
-    return true;
-  });
-
-  if (!open) return null;
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-center justify-between gap-3 pr-8">
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5">
-                <FlaskConical className="w-5 h-5 text-cyan-600" />
-                <DialogTitle>Test Mode — Scoring Matrix</DialogTitle>
-              </div>
-            </div>
-            <Badge variant="outline" className="text-xs text-cyan-700 border-cyan-400 bg-cyan-50 flex items-center gap-1">
-              <Lock className="w-2.5 h-2.5" /> Nothing is saved
-            </Badge>
-          </div>
-        </DialogHeader>
-
-        {/* Test mode banner */}
-        <div className="border border-cyan-200 rounded-lg p-3 bg-cyan-50 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <FlaskConical className="w-4 h-4 text-cyan-600 shrink-0" />
-            <div>
-              <p className="text-sm font-medium text-cyan-900">You are testing this scoring matrix in a sandbox</p>
-              <p className="text-xs text-cyan-700">
-                All scores and workflow transitions are held in memory only. No data is saved, and no manager product is affected.
-              </p>
-            </div>
-          </div>
-          <Button variant="outline" size="sm" onClick={resetTest} className="border-cyan-400 text-cyan-700 hover:bg-cyan-100 text-xs shrink-0">
-            <RotateCcw className="w-3 h-3" /> Reset Test
-          </Button>
-        </div>
-
-        {/* Header info */}
-        <div className="flex items-center justify-between border-b pb-2 flex-wrap gap-2">
-          <div>
-            <h3 className="text-base font-semibold">{score.template_name}</h3>
-            <p className="text-xs text-gray-500">{score.firm_name} — {score.product_name}</p>
-            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-              <Badge variant="outline" className="text-xs">Status: {score.status}</Badge>
-              {score.is_closed && (
-                <Badge variant="outline" className="text-xs text-gray-500 border-gray-300 flex items-center gap-0.5">
-                  <Lock className="w-2.5 h-2.5" /> Closed
-                </Badge>
-              )}
-            </div>
-          </div>
-          <div className="flex gap-1.5 flex-wrap justify-end">
-            <Button variant="outline" size="sm" onClick={() => setActiveTab("scoring")}>Scoring</Button>
-            <Button variant="outline" size="sm" onClick={() => setActiveTab("chart")}>Radar Chart</Button>
-          </div>
-        </div>
-
-        {/* Scoring Tab */}
-        {activeTab === "scoring" && (
-          <div className="space-y-3">
-            {/* Phase action buttons */}
-            <div className="flex flex-wrap gap-2 items-center">
-              {!score.primary_score_finalized && (
-                <Button
-                  size="sm"
-                  onClick={() => guardFinalize("primary_score", "Primary", finalizePrimary)}
-                  disabled={unscoredCount("primary_score") > 0}
-                  title={unscoredCount("primary_score") > 0 ? `${unscoredCount("primary_score")} unscored item(s)` : undefined}
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Finalize Primary Scores
-                  {unscoredCount("primary_score") > 0 && (
-                    <Badge variant="outline" className="ml-1 text-[10px] bg-amber-50 border-amber-300 text-amber-700">
-                      {unscoredCount("primary_score")} unscored
-                    </Badge>
-                  )}
-                </Button>
-              )}
-              {score.primary_score_finalized && !showIC && score.team_review_status !== "completed" && (
-                <Button size="sm" variant="outline" onClick={initTeamScores}>
-                  Start Team Review
-                </Button>
-              )}
-              {showTeam && score.team_review_status === "in_progress" && (
-                <Button
-                  size="sm"
-                  onClick={() => guardFinalize("team_score", "Team", finalizeTeamReview)}
-                  disabled={unscoredCount("team_score") > 0}
-                  title={unscoredCount("team_score") > 0 ? `${unscoredCount("team_score")} unscored item(s)` : undefined}
-                >
-                  Finalize Adjusted Primary (End Team Review)
-                  {unscoredCount("team_score") > 0 && (
-                    <Badge variant="outline" className="ml-1 text-[10px] bg-amber-50 border-amber-300 text-amber-700">
-                      {unscoredCount("team_score")} unscored
-                    </Badge>
-                  )}
-                </Button>
-              )}
-              {score.adjusted_primary_finalized && !score.final_score_finalized && score.ic_review_status !== "in_progress" && (
-                <Button size="sm" variant="outline" onClick={initICScores}>
-                  Start IC Review
-                </Button>
-              )}
-              {showIC && score.ic_review_status === "in_progress" && (
-                <Button
-                  size="sm"
-                  onClick={() => guardFinalize("ic_score", "IC", finalizeICReview)}
-                  disabled={unscoredCount("ic_score") > 0}
-                  title={unscoredCount("ic_score") > 0 ? `${unscoredCount("ic_score")} unscored item(s)` : undefined}
-                >
-                  Finalize Scoring Matrix
-                  {unscoredCount("ic_score") > 0 && (
-                    <Badge variant="outline" className="ml-1 text-[10px] bg-amber-50 border-amber-300 text-amber-700">
-                      {unscoredCount("ic_score")} unscored
-                    </Badge>
-                  )}
-                </Button>
-              )}
-            </div>
-
-            {/* Scoring table */}
-            <div className="overflow-x-auto border border-gray-200 rounded-lg">
-              <table className="w-full text-xs">
-                <thead className="bg-gray-50 sticky top-0">
-                  <tr className="border-b">
-                    <th className="text-left p-2 font-medium text-gray-600 min-w-[200px]">Criterion</th>
-                    <th className="text-left p-2 font-medium text-gray-600 min-w-[300px]">Primary</th>
-                    {showTeam && <th className="text-left p-2 font-medium text-gray-600 min-w-[240px]">Team Rec.</th>}
-                    {showTeam && <th className="text-center p-2 font-medium text-gray-600">Δ</th>}
-                    {showAdjustedPrimary && <th className="text-center p-2 font-medium text-gray-600">Adj. Primary</th>}
-                    {showIC && <th className="text-left p-2 font-medium text-gray-600 min-w-[240px]">IC Rec.</th>}
-                    {showIC && <th className="text-center p-2 font-medium text-gray-600">Δ</th>}
-                    {showFinal && <th className="text-center p-2 font-medium text-gray-600">Final</th>}
-                    <th className="text-center p-2 font-medium text-gray-600 min-w-[120px]">Bonus/Penalty</th>
-                    <th className="text-left p-2 font-medium text-gray-600 min-w-[150px]">Notes</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {blocks.map((block) => (
-                    <React.Fragment key={block.id}>
-                      <tr className="bg-gray-100 cursor-pointer hover:bg-gray-200" onClick={() => toggleBlock(block.id)}>
-                        <td colSpan={2 + (showTeam ? 2 : 0) + (showAdjustedPrimary ? 1 : 0) + (showIC ? 2 : 0) + (showFinal ? 1 : 0) + 1 + 1} className="p-2 font-semibold text-gray-700">
-                          <div className="flex items-center gap-1.5">
-                            {expandedBlocks[block.id] ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-                            {block.name} <span className="text-gray-400 font-normal">({block.weight}%)</span>
-                          </div>
-                        </td>
-                      </tr>
-                      {expandedBlocks[block.id] && (block.criteria || []).map((crit) => (
-                        <tr key={crit.id} className="border-b hover:bg-gray-50">
-                          <td className="p-2">
-                            <div className="font-medium">{crit.name}</div>
-                            {crit.category && <div className="text-gray-400 text-[10px]">{crit.category}</div>}
-                            <ScoringAttachmentsManager
-                              attachments={score.attachments}
-                              scope={crit.id}
-                              canEdit={!score.primary_score_finalized || score.team_review_status === "in_progress" || score.ic_review_status === "in_progress"}
-                              onUpdate={updateAttachments}
-                              compact
-                            />
-                          </td>
-                          {/* Primary score */}
-                          <td className="p-2 text-left align-top">
-                            <ScoreCell
-                              score={crit.primary_score}
-                              onChange={(v) => updateCriterion(block.id, crit.id, { primary_score: v })}
-                              disabled={score.primary_score_finalized}
-                              descriptors={crit.descriptors}
-                              scoringMode={crit.scoring_mode}
-                              singleMin={crit.single_score_min}
-                              singleMax={crit.single_score_max}
-                            />
-                          </td>
-                          {/* Team recommended score */}
-                          {showTeam && (
-                            <>
-                              <td className="p-2 text-left align-top">
-                                <ScoreCell
-                                  score={crit.team_score}
-                                  onChange={(v) => updateCriterion(block.id, crit.id, { team_score: v })}
-                                  disabled={score.team_review_status === "completed"}
-                                  descriptors={crit.descriptors}
-                                  scoringMode={crit.scoring_mode}
-                                  singleMin={crit.single_score_min}
-                                  singleMax={crit.single_score_max}
-                                />
-                              </td>
-                              <td className="p-2 text-center">
-                                <DeviationCell baseScore={crit.primary_score} compareScore={crit.team_score} />
-                              </td>
-                            </>
-                          )}
-                          {/* Adjusted primary */}
-                          {showAdjustedPrimary && (
-                            <td className="p-2 text-center">
-                              {score.team_review_status === "in_progress" ? (
-                                <div className="flex items-center justify-center gap-1">
-                                  <button onClick={() => acceptTeamScore(block.id, crit.id)} className="p-1 rounded hover:bg-green-100 text-green-600" title="Accept team score">
-                                    <Check className="w-3.5 h-3.5" />
-                                  </button>
-                                  <button onClick={() => rejectTeamScore(block.id, crit.id)} className="p-1 rounded hover:bg-red-100 text-red-600" title="Reject team score">
-                                    <X className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              ) : (
-                                <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold border ${crit.adjusted_primary_score ? SCORE_COLORS[crit.adjusted_primary_score] : "border-gray-200"}`}>
-                                  {crit.adjusted_primary_score || "—"}
-                                </span>
-                              )}
-                              {crit.team_status === "accepted" && <div className="text-[10px] text-green-600 mt-0.5">accepted</div>}
-                              {crit.team_status === "rejected" && <div className="text-[10px] text-red-600 mt-0.5">rejected</div>}
-                            </td>
-                          )}
-                          {/* IC recommended score */}
-                          {showIC && (
-                            <>
-                              <td className="p-2 text-left align-top">
-                                <ScoreCell
-                                   score={crit.ic_score}
-                                   onChange={(v) => updateCriterion(block.id, crit.id, { ic_score: v })}
-                                   disabled={score.ic_review_status === "completed"}
-                                   descriptors={crit.descriptors}
-                                   scoringMode={crit.scoring_mode}
-                                   singleMin={crit.single_score_min}
-                                   singleMax={crit.single_score_max}
-                                 />
-                              </td>
-                              <td className="p-2 text-center">
-                                <DeviationCell baseScore={crit.adjusted_primary_score ?? crit.primary_score} compareScore={crit.ic_score} />
-                              </td>
-                            </>
-                          )}
-                          {/* Final score */}
-                          {showFinal && (
-                            <td className="p-2 text-center">
-                              {score.ic_review_status === "in_progress" ? (
-                                <div className="flex items-center justify-center gap-1">
-                                  <button onClick={() => acceptICScore(block.id, crit.id)} className="p-1 rounded hover:bg-green-100 text-green-600" title="Accept IC score">
-                                    <Check className="w-3.5 h-3.5" />
-                                  </button>
-                                  <button onClick={() => rejectICScore(block.id, crit.id)} className="p-1 rounded hover:bg-red-100 text-red-600" title="Reject IC score">
-                                    <X className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              ) : (
-                                <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold border ${crit.final_score ? SCORE_COLORS[crit.final_score] : "border-gray-200"}`}>
-                                  {crit.final_score || "—"}
-                                </span>
-                              )}
-                            </td>
-                          )}
-                          {/* Bonus / Penalty adjustment — always visible alongside scoring */}
-                          <td className="p-2 text-center">
-                            <TestBonusPenaltyCell
-                              criterion={crit}
-                              disabled={score.is_closed}
-                              onUpdate={(updates) => updateCriterion(block.id, crit.id, updates)}
-                            />
-                          </td>
-                          {/* Notes */}
-                          <td className="p-2">
-                            <TestNotesCell
-                              criterion={crit}
-                              showTeam={showTeam}
-                              showIC={showIC}
-                              showFinal={showFinal}
-                              onUpdate={(updates) => updateCriterion(block.id, crit.id, updates)}
-                            />
-                          </td>
-                        </tr>
-                      ))}
-                    </React.Fragment>
-                  ))}
-                </tbody>
-                <tfoot className="bg-gray-50">
-                  <tr className="border-t-2 font-semibold">
-                    <td className="p-2">Weighted Average (incl. bonus/penalty)</td>
-                    <td className="p-2 text-center">{computeTotals("primary_score")}</td>
-                    {showTeam && <td className="p-2 text-center">{computeTotals("team_score")}</td>}
-                    {showTeam && <td></td>}
-                    {showAdjustedPrimary && <td className="p-2 text-center">{computeTotals("adjusted_primary_score")}</td>}
-                    {showIC && <td className="p-2 text-center">{computeTotals("ic_score")}</td>}
-                    {showIC && <td></td>}
-                    {showFinal && <td className="p-2 text-center">{computeTotals("final_score")}</td>}
-                    <td className="p-2 text-center text-xs font-medium" style={{ color: computeBonusPenaltyTotal() > 0 ? "#166534" : computeBonusPenaltyTotal() < 0 ? "#991b1b" : "#6b7280" }}>
-                      {(() => { const t = computeBonusPenaltyTotal(); return t === 0 ? "—" : `${t > 0 ? "+" : ""}${t.toFixed(2)}`; })()}
-                    </td>
-                    <td></td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-
-            {/* Level descriptors reference (collapsible) */}
-            <DescriptorReference blocks={blocks} expandedBlocks={expandedBlocks} toggleBlock={toggleBlock} />
-          </div>
-        )}
-
-        {/* Chart Tab */}
-        {activeTab === "chart" && (
-          <div className="border border-gray-200 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-              <h4 className="text-sm font-semibold">Score Comparison Chart</h4>
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-gray-500">Chart type:</span>
-                <div className="inline-flex rounded-md border border-gray-200 overflow-hidden">
-                  {[
-                    { key: "radar", label: "Radar" },
-                    { key: "bar", label: "Bar" },
-                    { key: "line", label: "Line" }
-                  ].map((opt) => (
-                    <button
-                      key={opt.key}
-                      onClick={() => setChartType(opt.key)}
-                      className={`px-3 py-1 text-xs font-medium transition-colors ${
-                        chartType === opt.key
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-white text-gray-600 hover:bg-gray-50"
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            {radarData.length === 0 ? (
-              <p className="text-center text-xs text-gray-400 py-8">No criteria to display.</p>
-            ) : chartType === "radar" ? (
-              <ResponsiveContainer width="100%" height={350}>
-                <RadarChart data={radarData}>
-                  <PolarGrid />
-                  <PolarAngleAxis dataKey="criterion" tick={{ fontSize: 9 }} />
-                  <PolarRadiusAxis domain={[0, 5]} tick={{ fontSize: 9 }} />
-                  {visibleColumns.map((col) => (
-                    <Radar key={col.key} name={col.label} dataKey={col.key} stroke={col.color} fill={col.color} fillOpacity={0.15} />
-                  ))}
-                  <Legend />
-                  <Tooltip />
-                </RadarChart>
-              </ResponsiveContainer>
-            ) : chartType === "bar" ? (
-              <ResponsiveContainer width="100%" height={Math.max(350, radarData.length * 28)}>
-                <BarChart data={radarData} layout="vertical" margin={{ left: 120, right: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                  <XAxis type="number" domain={[0, 5]} tick={{ fontSize: 10 }} />
-                  <YAxis type="category" dataKey="criterion" tick={{ fontSize: 9 }} width={140} />
-                  {visibleColumns.map((col) => (
-                    <Bar key={col.key} dataKey={col.key} name={col.label} fill={col.color} />
-                  ))}
-                  <Legend />
-                  <Tooltip />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <ResponsiveContainer width="100%" height={Math.max(350, radarData.length * 28)}>
-                <LineChart data={radarData} layout="vertical" margin={{ left: 120, right: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                  <XAxis type="number" domain={[0, 5]} tick={{ fontSize: 10 }} />
-                  <YAxis type="category" dataKey="criterion" tick={{ fontSize: 9 }} width={140} />
-                  {visibleColumns.map((col) => (
-                    <Line key={col.key} type="monotone" dataKey={col.key} name={col.label} stroke={col.color} strokeWidth={2} dot={{ r: 3 }} />
-                  ))}
-                  <Legend />
-                  <Tooltip />
-                </LineChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function TestNotesCell({ criterion, showTeam, showIC, showFinal, onUpdate }) {
-  const [editing, setEditing] = useState(false);
-  const [notes, setNotes] = useState("");
-
-  const activeNotes = criterion.final_notes || criterion.adjusted_primary_notes || criterion.ic_notes || criterion.team_notes || criterion.primary_notes || "";
-  const notesLabel = showFinal ? "Final Notes" : showIC ? "IC Notes" : showTeam ? "Team Notes" : "Primary Notes";
-  const notesField = showFinal ? "final_notes" : showIC ? "ic_notes" : showTeam ? "team_notes" : "primary_notes";
-
-  if (editing) {
-    return (
-      <div className="space-y-1">
-        <Textarea
-          autoFocus
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          className="text-xs min-h-[60px]"
-          placeholder={`Justify your ${notesLabel.toLowerCase()}...`}
-          defaultValue={activeNotes}
-        />
-        <div className="flex gap-1">
-          <Button size="sm" className="h-6 text-xs" onClick={() => { onUpdate({ [notesField]: notes }); setEditing(false); }}>Save</Button>
-          <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => setEditing(false)}>Cancel</Button>
-        </div>
-      </div>
-    );
-  }
-  return (
-    <div className="cursor-pointer hover:bg-gray-100 rounded p-1 min-h-[40px]" onClick={() => { setNotes(activeNotes); setEditing(true); }}>
-      {activeNotes ? (
-        <span className="text-xs text-gray-600">{activeNotes}</span>
-      ) : (
-        <span className="text-xs text-gray-300 italic">Add {notesLabel.toLowerCase()}...</span>
-      )}
-    </div>
-  );
-}
-
+/** Collapsible descriptor reference showing all level descriptors. */
 function DescriptorReference({ blocks, expandedBlocks, toggleBlock }) {
   const [show, setShow] = useState(false);
   if (!show) {
@@ -992,5 +98,511 @@ function DescriptorReference({ blocks, expandedBlocks, toggleBlock }) {
         </div>
       ))}
     </div>
+  );
+}
+
+export default function ScoringMatrixTestModeDialog({ open, onOpenChange, template }) {
+  const [score, setScore] = useState(() => buildMockScore(template));
+  const [expandedBlocks, setExpandedBlocks] = useState({});
+  const [activeTab, setActiveTab] = useState("scoring");
+
+  useEffect(() => {
+    if (open) {
+      setScore(buildMockScore(template));
+      setExpandedBlocks({});
+      setActiveTab("scoring");
+    }
+  }, [open, template]);
+
+  const toggleBlock = (id) => setExpandedBlocks((p) => ({ ...p, [id]: !p[id] }));
+  const blocks = score.scoring_blocks || [];
+  const ratingConfig = score.rating_config;
+  const scoreUnit = ratingConfig?.unit;
+
+  // Build a lookup of template criteria (by id) to access bonus/penalty + scoring config
+  const templateCriteria = useMemo(() => {
+    const map = {};
+    (template?.scoring_blocks || []).forEach((block) => {
+      (block.criteria || []).forEach((c) => { map[c.id] = c; });
+    });
+    return map;
+  }, [template]);
+
+  const updateCriterion = (blockId, critId, updates) => {
+    setScore((prev) => ({
+      ...prev,
+      scoring_blocks: prev.scoring_blocks.map((b) => {
+        if (b.id !== blockId) return b;
+        return { ...b, criteria: (b.criteria || []).map((c) => (c.id === critId ? { ...c, ...updates } : c)) };
+      })
+    }));
+  };
+
+  const updateAllCriteria = (updatesFn) => {
+    setScore((prev) => ({
+      ...prev,
+      scoring_blocks: prev.scoring_blocks.map((b) => ({
+        ...b,
+        criteria: (b.criteria || []).map((c) => ({ ...c, ...updatesFn(c) }))
+      }))
+    }));
+  };
+
+  const updateAttachments = (newAttachments) => setScore((prev) => ({ ...prev, attachments: newAttachments }));
+
+  // ── Phase transitions (local only — nothing is saved) ──
+  const finalizePrimary = () => {
+    setScore((prev) => ({ ...prev, primary_score_finalized: true, status: "team_review", team_review_status: "not_started" }));
+    toast({ title: "✓ Primary scores finalized (test)" });
+  };
+  const initTeamScores = () => {
+    updateAllCriteria((c) => ({ team_score: c.team_score ?? c.primary_score, team_status: c.team_status || "pending" }));
+    setScore((prev) => ({ ...prev, team_review_status: "in_progress", status: "team_review" }));
+    toast({ title: "✓ Team review started (test)" });
+  };
+  const finalizeTeamReview = () => {
+    updateAllCriteria((c) => ({
+      adjusted_primary_score: c.team_status === "accepted" ? (c.team_score ?? c.primary_score) : (c.adjusted_primary_score ?? c.primary_score)
+    }));
+    setScore((prev) => ({ ...prev, team_review_status: "completed", adjusted_primary_finalized: true, status: "ic_review" }));
+    toast({ title: "✓ Team review completed (test)" });
+  };
+  const initICScores = () => {
+    updateAllCriteria((c) => ({
+      ic_score: c.ic_score ?? c.adjusted_primary_score ?? c.primary_score,
+      ic_status: c.ic_status || "pending"
+    }));
+    setScore((prev) => ({ ...prev, ic_review_status: "in_progress", status: "ic_review" }));
+    toast({ title: "✓ IC review started (test)" });
+  };
+  const finalizeICReview = () => {
+    updateAllCriteria((c) => {
+      const adjPrimary = c.team_status === "accepted" ? (c.team_score ?? c.primary_score) : (c.adjusted_primary_score ?? c.primary_score);
+      const final = c.ic_status === "accepted" ? (c.ic_score ?? adjPrimary) : (c.final_score ?? adjPrimary);
+      return { adjusted_primary_score: adjPrimary, final_score: final };
+    });
+    setScore((prev) => ({ ...prev, ic_review_status: "completed", final_score_finalized: true, status: "finalized", is_closed: true }));
+    toast({ title: "✓ Scoring matrix finalized (test)", description: "Nothing was saved — this is a test run." });
+  };
+  const resetTest = () => {
+    setScore(buildMockScore(template));
+    setExpandedBlocks({});
+    setActiveTab("scoring");
+    toast({ title: "Test reset", description: "All scores cleared." });
+  };
+
+  const acceptTeamScore = (blockId, critId) => {
+    const block = blocks.find((b) => b.id === blockId);
+    const crit = block?.criteria?.find((c) => c.id === critId);
+    updateCriterion(blockId, critId, { team_status: "accepted", adjusted_primary_score: crit?.team_score, adjusted_primary_notes: crit?.team_notes || "Accepted team recommendation." });
+  };
+  const rejectTeamScore = (blockId, critId) => {
+    const block = blocks.find((b) => b.id === blockId);
+    const crit = block?.criteria?.find((c) => c.id === critId);
+    updateCriterion(blockId, critId, { team_status: "rejected", adjusted_primary_score: crit?.primary_score, adjusted_primary_notes: "Kept primary score." });
+  };
+  const acceptICScore = (blockId, critId) => {
+    const block = blocks.find((b) => b.id === blockId);
+    const crit = block?.criteria?.find((c) => c.id === critId);
+    updateCriterion(blockId, critId, { ic_status: "accepted", final_score: crit?.ic_score, final_notes: crit?.ic_notes || "Accepted IC recommendation." });
+  };
+  const rejectICScore = (blockId, critId) => {
+    const block = blocks.find((b) => b.id === blockId);
+    const crit = block?.criteria?.find((c) => c.id === critId);
+    updateCriterion(blockId, critId, { ic_status: "rejected", final_score: crit?.adjusted_primary_score ?? crit?.primary_score, final_notes: "Kept adjusted primary score." });
+  };
+
+  // ── Weighted totals (uses real computeWeightedScoreMulti with multipliers) ──
+  const computeTotals = (scoreField) =>
+    computeTestTotals(blocks, scoreField, computeWeightedScoreMulti, effectiveAdjustedPrimary, effectiveFinalScore);
+
+  const bpTotal = useMemo(() => computeBonusPenaltyTotal(blocks), [blocks]);
+
+  const guardFinalize = (scoreField, label, fn) => {
+    const missing = unscoredCount(blocks, scoreField);
+    if (missing > 0) {
+      toast({ title: `Cannot finalize ${label}`, description: `${missing} ${missing === 1 ? "item still needs" : "items still need"} a ${label.toLowerCase()} score.`, variant: "destructive" });
+      return;
+    }
+    fn();
+  };
+
+  // ── Phase visibility flags ──
+  const showTeam = score.primary_score_finalized;
+  const showAdjustedPrimary = score.team_review_status === "in_progress" || score.team_review_status === "completed" || score.adjusted_primary_finalized;
+  const showIC = score.adjusted_primary_finalized;
+  const showFinal = score.ic_review_status === "in_progress" || score.ic_review_status === "completed" || score.final_score_finalized;
+
+  // ── Chart columns ──
+  const columns = [
+    { key: "primary_score", label: "Primary", color: "#3b82f6", getValue: (c) => c.primary_score },
+    { key: "team_score", label: "Team", color: "#f59e0b", getValue: (c) => c.team_score },
+    { key: "adjusted_primary_score", label: "Adj. Primary", color: "#8b5cf6", getValue: effectiveAdjustedPrimary },
+    { key: "ic_score", label: "IC", color: "#ec4899", getValue: (c) => c.ic_score },
+    { key: "final_score", label: "Final", color: "#10b981", getValue: effectiveFinalScore }
+  ];
+  const visibleColumns = columns.filter((c) => {
+    if (c.key === "team_score") return showTeam;
+    if (c.key === "adjusted_primary_score") return showAdjustedPrimary;
+    if (c.key === "ic_score") return showIC;
+    if (c.key === "final_score") return showFinal;
+    return true;
+  });
+
+  // ── Overall rating (pass/fail + rating label) ──
+  const overallRating = useMemo(
+    () => getOverallRating(blocks, ratingConfig, computeWeightedScoreMulti, effectiveFinalScore),
+    [blocks, ratingConfig]
+  );
+  const hasRatingConfig = !!(ratingConfig && (ratingConfig.pass_fail_enabled || ratingConfig.rating_enabled));
+
+  // ── Running total (most advanced score entered so far, weighted) ──
+  const getCriterionCurrentScore = (crit) => {
+    if (showFinal) { const v = effectiveFinalScore(crit); if (v != null) return v; }
+    if (showIC && crit.ic_score != null) return crit.ic_score;
+    if (showAdjustedPrimary) { const v = effectiveAdjustedPrimary(crit); if (v != null) return v; }
+    if (showTeam && crit.team_score != null) return crit.team_score;
+    return crit.primary_score;
+  };
+  const getBlockProgress = (block) => {
+    let value = 0, max = 0;
+    (block.criteria || []).forEach((crit) => {
+      const range = getCriterionRange(templateCriteria[crit.id]);
+      if (!range) return;
+      max += range.max;
+      const s = getCriterionCurrentScore(crit);
+      if (s != null && Number.isFinite(s)) value += Number(s);
+    });
+    return { value, max };
+  };
+  const weightedRunningTotal = useMemo(() => {
+    const getValue = (crit) => {
+      const s = getCriterionCurrentScore(crit);
+      if (s == null) return null;
+      return crit.bonus_penalty_active && crit.bonus_penalty_value ? s + crit.bonus_penalty_value : s;
+    };
+    return computeWeightedScoreMulti(blocks, "primary_score", { mode: "perCriterion", getValue });
+  }, [blocks, showFinal, showIC, showAdjustedPrimary, showTeam]);
+  const weightedMax = useMemo(() => {
+    return blocks.reduce((mx, b) => {
+      (b.criteria || []).forEach((crit) => {
+        const r = getCriterionRange(templateCriteria[crit.id]);
+        if (r && Number.isFinite(r.max) && r.max > mx) mx = r.max;
+      });
+      return mx;
+    }, 0);
+  }, [blocks, templateCriteria]);
+
+  // Number of score columns between Criterion and Notes (for the Total Score row colSpan)
+  const scoreColCount = showFinal ? 8 : showIC ? 6 : showAdjustedPrimary ? 4 : showTeam ? 3 : 1;
+  // Total columns for block header colSpan (criterion + score cols + bonus/penalty + notes)
+  const blockColSpan = 1 + scoreColCount + 1 + 1;
+
+  if (!open) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <div className="flex items-center justify-between gap-3 pr-8">
+            <div className="flex items-center gap-1.5">
+              <FlaskConical className="w-5 h-5 text-cyan-600" />
+              <DialogTitle>Test Mode — Scoring Matrix</DialogTitle>
+            </div>
+            <Badge variant="outline" className="text-xs text-cyan-700 border-cyan-400 bg-cyan-50 flex items-center gap-1">
+              <Lock className="w-2.5 h-2.5" /> Nothing is saved
+            </Badge>
+          </div>
+        </DialogHeader>
+
+        {/* Test mode banner */}
+        <div className="border border-cyan-200 rounded-lg p-3 bg-cyan-50 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <FlaskConical className="w-4 h-4 text-cyan-600 shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-cyan-900">You are testing this scoring matrix in a sandbox</p>
+              <p className="text-xs text-cyan-700">All scores and workflow transitions are held in memory only. No data is saved, and no manager product is affected.</p>
+            </div>
+          </div>
+          <Button variant="outline" size="sm" onClick={resetTest} className="border-cyan-400 text-cyan-700 hover:bg-cyan-100 text-xs shrink-0">
+            <RotateCcw className="w-3 h-3" /> Reset Test
+          </Button>
+        </div>
+
+        {/* Header info */}
+        <div className="flex items-center justify-between border-b pb-2 flex-wrap gap-2">
+          <div>
+            <h3 className="text-base font-semibold">{score.template_name}</h3>
+            <p className="text-xs text-gray-500">{score.firm_name} — {score.product_name}</p>
+            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+              <Badge variant="outline" className="text-xs">Status: {score.status}</Badge>
+              {score.is_closed && (
+                <Badge variant="outline" className="text-xs text-gray-500 border-gray-300 flex items-center gap-0.5">
+                  <Lock className="w-2.5 h-2.5" /> Closed
+                </Badge>
+              )}
+              {hasRatingConfig && overallRating.passFail && (
+                <Badge variant="outline" className={`text-xs ${overallRating.passFail === "Pass" ? "border-green-300 text-green-700 bg-green-50" : "border-red-300 text-red-700 bg-red-50"}`}>
+                  {overallRating.passFail}
+                </Badge>
+              )}
+              {hasRatingConfig && overallRating.ratingLabel && (
+                <Badge variant="outline" className="text-xs" style={overallRating.ratingColor ? { borderColor: overallRating.ratingColor, color: overallRating.ratingColor } : undefined}>
+                  {overallRating.ratingLabel}
+                </Badge>
+              )}
+            </div>
+          </div>
+          <div className="flex gap-1.5 flex-wrap justify-end">
+            <Button variant={activeTab === "scoring" ? "default" : "outline"} size="sm" onClick={() => setActiveTab("scoring")}>Scoring</Button>
+            <Button variant={activeTab === "chart" ? "default" : "outline"} size="sm" onClick={() => setActiveTab("chart")}>Chart</Button>
+          </div>
+        </div>
+
+        {/* Scoring Tab */}
+        {activeTab === "scoring" && (
+          <div className="space-y-3">
+            {/* Phase action buttons */}
+            <div className="flex flex-wrap gap-2 items-center">
+              {!score.primary_score_finalized && (
+                <Button size="sm" onClick={() => guardFinalize("primary_score", "Primary", finalizePrimary)} disabled={unscoredCount(blocks, "primary_score") > 0}>
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Finalize Primary Scores
+                  {unscoredCount(blocks, "primary_score") > 0 && (
+                    <Badge variant="outline" className="ml-1 text-[10px] bg-amber-50 border-amber-300 text-amber-700">{unscoredCount(blocks, "primary_score")} unscored</Badge>
+                  )}
+                </Button>
+              )}
+              {score.primary_score_finalized && !showIC && score.team_review_status !== "completed" && (
+                <Button size="sm" variant="outline" onClick={initTeamScores}>Start Team Review</Button>
+              )}
+              {showTeam && score.team_review_status === "in_progress" && (
+                <Button size="sm" onClick={() => guardFinalize("adjusted_primary_score", "Adjusted Primary", finalizeTeamReview)} disabled={unscoredCount(blocks, "adjusted_primary_score") > 0}>
+                  Finalize Adjusted Primary (End Team Review)
+                </Button>
+              )}
+              {score.adjusted_primary_finalized && !score.final_score_finalized && score.ic_review_status !== "in_progress" && (
+                <Button size="sm" variant="outline" onClick={initICScores}>Start IC Review</Button>
+              )}
+              {showIC && score.ic_review_status === "in_progress" && (
+                <Button size="sm" onClick={() => guardFinalize("final_score", "Final", finalizeICReview)} disabled={unscoredCount(blocks, "final_score") > 0}>
+                  Finalize Scoring Matrix
+                </Button>
+              )}
+            </div>
+
+            {/* Scoring table */}
+            <div className="overflow-x-auto border border-gray-200 rounded-lg">
+              <table className="w-full text-xs">
+                <thead className="bg-gray-50 sticky top-0">
+                  <tr className="border-b">
+                    <th className="text-left p-2 font-medium text-gray-600 min-w-[200px]">Criterion</th>
+                    <th className="text-left p-2 font-medium text-gray-600 min-w-[300px]">Primary</th>
+                    {showTeam && <th className="text-left p-2 font-medium text-gray-600 min-w-[240px]">Team Rec.</th>}
+                    {showTeam && <th className="text-center p-2 font-medium text-gray-600">Δ</th>}
+                    {showAdjustedPrimary && <th className="text-center p-2 font-medium text-gray-600 min-w-[120px]">Adj. Primary</th>}
+                    {showIC && <th className="text-left p-2 font-medium text-gray-600 min-w-[240px]">IC Rec.</th>}
+                    {showIC && <th className="text-center p-2 font-medium text-gray-600">Δ</th>}
+                    {showFinal && <th className="text-center p-2 font-medium text-gray-600">Final</th>}
+                    <th className="text-center p-2 font-medium text-gray-600 min-w-[120px]">Bonus/Penalty</th>
+                    <th className="text-left p-2 font-medium text-gray-600 min-w-[150px]">Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {blocks.map((block) => (
+                    <React.Fragment key={block.id}>
+                      <tr className="bg-gray-100 cursor-pointer hover:bg-gray-200" onClick={() => toggleBlock(block.id)}>
+                        <td colSpan={blockColSpan} className="p-2 font-semibold text-gray-700">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {expandedBlocks[block.id] ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                            {block.name} <span className="text-gray-400 font-normal">({block.weight}%)</span>
+                            {block.multiplier_enabled && block.multiplier !== 1 && (
+                              <Badge variant="outline" className="text-[10px] text-indigo-600 border-indigo-300">×{block.multiplier}</Badge>
+                            )}
+                            <MaxScoreBadge range={getBlockRange(block, templateCriteria)} unit={scoreUnit} label="Section Max" />
+                            {(() => { const p = getBlockProgress(block); return p.max > 0 ? <div className="w-44 ml-1"><ScoreProgressBar value={p.value} max={p.max} unit={scoreUnit} /></div> : null; })()}
+                          </div>
+                        </td>
+                      </tr>
+                      {expandedBlocks[block.id] && (block.criteria || []).map((crit) => {
+                        const tc = templateCriteria[crit.id] || crit;
+                        const range = getCriterionRange(tc);
+                        const currentScore = getCriterionCurrentScore(crit);
+                        return (
+                          <tr key={crit.id} className="border-b hover:bg-gray-50">
+                            <td className="p-2">
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-medium">{crit.name}</span>
+                                  <MaxScoreBadge range={range} unit={scoreUnit} />
+                                  {crit.multiplier_enabled && crit.multiplier !== 1 && (
+                                    <Badge variant="outline" className="text-[10px] text-indigo-600 border-indigo-300">×{crit.multiplier}</Badge>
+                                  )}
+                                </div>
+                                {crit.category && <div className="text-gray-400 text-[10px]">{crit.category}</div>}
+                                {range && range.max > 0 && <ScoreProgressBar value={currentScore} max={range.max} unit={scoreUnit} />}
+                                <ScoringAttachmentsManager
+                                  attachments={score.attachments}
+                                  scope={crit.id}
+                                  canEdit={!score.is_closed}
+                                  onUpdate={updateAttachments}
+                                  compact
+                                />
+                              </div>
+                            </td>
+                            {/* Primary score */}
+                            <td className="p-2 text-left align-top">
+                              <TestScoreCell
+                                score={crit.primary_score}
+                                onChange={(v) => updateCriterion(block.id, crit.id, { primary_score: v })}
+                                disabled={score.primary_score_finalized}
+                                descriptors={tc.descriptors}
+                                scoringMode={tc.scoring_mode}
+                                singleMin={tc.single_score_min}
+                                singleMax={tc.single_score_max}
+                              />
+                            </td>
+                            {/* Team recommended score */}
+                            {showTeam && (
+                              <>
+                                <td className="p-2 text-left align-top">
+                                  <TestScoreCell
+                                    score={crit.team_score}
+                                    onChange={(v) => updateCriterion(block.id, crit.id, { team_score: v })}
+                                    disabled={score.team_review_status === "completed"}
+                                    descriptors={tc.descriptors}
+                                    scoringMode={tc.scoring_mode}
+                                    singleMin={tc.single_score_min}
+                                    singleMax={tc.single_score_max}
+                                  />
+                                </td>
+                                <td className="p-2 text-center"><TestDeviationCell baseScore={crit.primary_score} compareScore={crit.team_score} /></td>
+                              </>
+                            )}
+                            {/* Adjusted primary */}
+                            {showAdjustedPrimary && (
+                              <td className="p-2 text-center">
+                                {score.team_review_status === "in_progress" ? (
+                                  <div className="flex items-center justify-center gap-1">
+                                    <button onClick={() => acceptTeamScore(block.id, crit.id)} className="p-1 rounded hover:bg-green-100 text-green-600" title="Accept team score"><Check className="w-3.5 h-3.5" /></button>
+                                    <button onClick={() => rejectTeamScore(block.id, crit.id)} className="p-1 rounded hover:bg-red-100 text-red-600" title="Reject team score"><X className="w-3.5 h-3.5" /></button>
+                                  </div>
+                                ) : (
+                                  <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold border ${crit.adjusted_primary_score ? SCORE_COLORS[Math.max(1, Math.min(5, crit.adjusted_primary_score))] : "border-gray-200"}`}>
+                                    {crit.adjusted_primary_score || "—"}
+                                  </span>
+                                )}
+                                {crit.team_status === "accepted" && <div className="text-[10px] text-green-600 mt-0.5">accepted</div>}
+                                {crit.team_status === "rejected" && <div className="text-[10px] text-red-600 mt-0.5">rejected</div>}
+                              </td>
+                            )}
+                            {/* IC recommended score */}
+                            {showIC && (
+                              <>
+                                <td className="p-2 text-left align-top">
+                                  <TestScoreCell
+                                    score={crit.ic_score}
+                                    onChange={(v) => updateCriterion(block.id, crit.id, { ic_score: v })}
+                                    disabled={score.ic_review_status === "completed"}
+                                    descriptors={tc.descriptors}
+                                    scoringMode={tc.scoring_mode}
+                                    singleMin={tc.single_score_min}
+                                    singleMax={tc.single_score_max}
+                                  />
+                                </td>
+                                <td className="p-2 text-center"><TestDeviationCell baseScore={crit.adjusted_primary_score ?? crit.primary_score} compareScore={crit.ic_score} /></td>
+                              </>
+                            )}
+                            {/* Final score */}
+                            {showFinal && (
+                              <td className="p-2 text-center">
+                                {score.ic_review_status === "in_progress" ? (
+                                  <div className="flex items-center justify-center gap-1">
+                                    <button onClick={() => acceptICScore(block.id, crit.id)} className="p-1 rounded hover:bg-green-100 text-green-600" title="Accept IC score"><Check className="w-3.5 h-3.5" /></button>
+                                    <button onClick={() => rejectICScore(block.id, crit.id)} className="p-1 rounded hover:bg-red-100 text-red-600" title="Reject IC score"><X className="w-3.5 h-3.5" /></button>
+                                  </div>
+                                ) : (
+                                  <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold border ${crit.final_score ? SCORE_COLORS[Math.max(1, Math.min(5, crit.final_score))] : "border-gray-200"}`}>
+                                    {crit.final_score || "—"}
+                                  </span>
+                                )}
+                              </td>
+                            )}
+                            {/* Bonus / Penalty — always visible alongside scoring */}
+                            <td className="p-2 text-center">
+                              <TestBonusPenaltyCell
+                                criterion={crit}
+                                disabled={score.is_closed}
+                                onUpdate={(updates) => updateCriterion(block.id, crit.id, updates)}
+                              />
+                            </td>
+                            {/* Notes */}
+                            <td className="p-2">
+                              <TestNotesCell
+                                criterion={crit}
+                                showTeam={showTeam}
+                                showIC={showIC}
+                                showFinal={showFinal}
+                                onUpdate={(updates) => updateCriterion(block.id, crit.id, updates)}
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </React.Fragment>
+                  ))}
+                </tbody>
+                <tfoot className="bg-gray-50">
+                  <tr className="border-t-2 font-semibold">
+                    <td className="p-2">Weighted Average (incl. bonus/penalty)</td>
+                    <td className="p-2 text-center">{computeTotals("primary_score")}</td>
+                    {showTeam && <td className="p-2 text-center">{computeTotals("team_score")}</td>}
+                    {showTeam && <td></td>}
+                    {showAdjustedPrimary && <td className="p-2 text-center">{computeTotals("adjusted_primary_score")}</td>}
+                    {showIC && <td className="p-2 text-center">{computeTotals("ic_score")}</td>}
+                    {showIC && <td></td>}
+                    {showFinal && <td className="p-2 text-center">{computeTotals("final_score")}</td>}
+                    <td className="p-2 text-center text-xs font-medium" style={{ color: bpTotal > 0 ? "#166534" : bpTotal < 0 ? "#991b1b" : "#6b7280" }}>
+                      {bpTotal === 0 ? "—" : `${bpTotal > 0 ? "+" : ""}${bpTotal.toFixed(2)}`}
+                    </td>
+                    <td></td>
+                  </tr>
+                  {/* Total Score row — weighted running total / max */}
+                  <tr className="border-t font-semibold bg-indigo-50/50">
+                    <td className="p-2">Total Score</td>
+                    <td className="p-2 text-center" colSpan={scoreColCount}>
+                      {weightedMax > 0 && weightedRunningTotal != null ? (
+                        <div className="flex flex-col items-center gap-0.5">
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className="text-indigo-600">{formatScoreValue(Number(weightedRunningTotal.toFixed(2)), scoreUnit)}</span>
+                            <span className="text-gray-400 font-normal">/</span>
+                            <span className="text-gray-500 font-normal">{formatScoreValue(weightedMax, scoreUnit)}</span>
+                            <span className="text-[10px] text-indigo-500 font-normal ml-1">(weighted running total)</span>
+                          </span>
+                        </div>
+                      ) : "—"}
+                    </td>
+                    <td className="p-2"></td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            {/* Overall rating panel — pass/fail + rating options */}
+            {hasRatingConfig && (
+              <ScoringOverallRatingPanel weightedScore={overallRating.weightedScore} ratingConfig={ratingConfig} />
+            )}
+
+            {/* Level descriptors reference (collapsible) */}
+            <DescriptorReference blocks={blocks} expandedBlocks={expandedBlocks} toggleBlock={toggleBlock} />
+          </div>
+        )}
+
+        {/* Chart Tab */}
+        {activeTab === "chart" && (
+          <TestModeChartTab blocks={blocks} columns={columns} visibleColumns={visibleColumns} />
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
