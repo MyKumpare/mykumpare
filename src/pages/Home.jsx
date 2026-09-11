@@ -303,7 +303,7 @@ export default function Home() {
       const data = res?.data ?? res ?? {};
       return { records: data.records || [], nextCursor: data.nextCursor ?? null, hasMore: !!data.hasMore };
     },
-    batchSize: 50,
+    batchSize: 500,
     staleTime: 300000,
     clearOnMount: true,
   });
@@ -376,7 +376,7 @@ export default function Home() {
       const data = res?.data ?? res ?? {};
       return { records: data.records || [], nextCursor: data.nextCursor ?? null, hasMore: !!data.hasMore };
     },
-    batchSize: 50,
+    batchSize: 500,
     staleTime: 300000,
   });
   const products = useMemo(
@@ -422,7 +422,7 @@ export default function Home() {
       const data = res?.data ?? res ?? {};
       return { records: data.records || [], nextCursor: data.nextCursor ?? null, hasMore: !!data.hasMore };
     },
-    batchSize: 50,
+    batchSize: 500,
     staleTime: 300000,
   });
   const contacts = useMemo(
@@ -483,7 +483,7 @@ export default function Home() {
       const data = res?.data ?? res ?? {};
       return { records: data.records || [], nextCursor: data.nextCursor ?? null, hasMore: !!data.hasMore };
     },
-    batchSize: 50,
+    batchSize: 500,
     staleTime: 300000,
   });
   const portfolios = useMemo(
@@ -527,28 +527,28 @@ export default function Home() {
   // between batches. Backend functions handle 429 retry backoff.
   useEffect(() => {
     if (firmsQuery.hasNextPage && !firmsQuery.isFetchingNextPage && !firmsQuery.isLoading) {
-      const t = setTimeout(() => firmsQuery.fetchNextPage(), 300);
+      const t = setTimeout(() => firmsQuery.fetchNextPage(), 100);
       return () => clearTimeout(t);
     }
   }, [firmsQuery.hasNextPage, firmsQuery.isFetchingNextPage, firmsQuery.isLoading]);
 
   useEffect(() => {
     if (productsQuery.hasNextPage && !productsQuery.isFetchingNextPage && !productsQuery.isLoading) {
-      const t = setTimeout(() => productsQuery.fetchNextPage(), 300);
+      const t = setTimeout(() => productsQuery.fetchNextPage(), 100);
       return () => clearTimeout(t);
     }
   }, [productsQuery.hasNextPage, productsQuery.isFetchingNextPage, productsQuery.isLoading]);
 
   useEffect(() => {
     if (contactsQuery.hasNextPage && !contactsQuery.isFetchingNextPage && !contactsQuery.isLoading) {
-      const t = setTimeout(() => contactsQuery.fetchNextPage(), 300);
+      const t = setTimeout(() => contactsQuery.fetchNextPage(), 100);
       return () => clearTimeout(t);
     }
   }, [contactsQuery.hasNextPage, contactsQuery.isFetchingNextPage, contactsQuery.isLoading]);
 
   useEffect(() => {
     if (portfoliosQuery.hasNextPage && !portfoliosQuery.isFetchingNextPage && !portfoliosQuery.isLoading) {
-      const t = setTimeout(() => portfoliosQuery.fetchNextPage(), 300);
+      const t = setTimeout(() => portfoliosQuery.fetchNextPage(), 100);
       return () => clearTimeout(t);
     }
   }, [portfoliosQuery.hasNextPage, portfoliosQuery.isFetchingNextPage, portfoliosQuery.isLoading]);
@@ -637,7 +637,6 @@ export default function Home() {
       });
       return res?.records || [];
     },
-    enabled: searchFocused,
   });
 
   // Supplementary backend search for due diligence: when the user types in the
