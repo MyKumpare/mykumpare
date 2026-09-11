@@ -550,7 +550,7 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
         <ScoringMatrixTestModeDialog
           open={testModeOpen}
           onOpenChange={setTestModeOpen}
-          template={{ name: name || "Test Template", scoring_blocks: scoringBlocks }}
+          template={{ name: name || "Test Template", scoring_blocks: scoringBlocks, rating_config: ratingConfig }}
         />
       )}
 
