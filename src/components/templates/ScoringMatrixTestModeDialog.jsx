@@ -2,13 +2,14 @@ import React, { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Check, X, CheckCircle2, ChevronDown, ChevronRight, FlaskConical, RotateCcw, Lock, Target } from "lucide-react";
+import { Check, X, CheckCircle2, ChevronDown, ChevronRight, FlaskConical, RotateCcw, Lock, Target, FileDown } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import ScoringAttachmentsManager from "@/components/templates/ScoringAttachmentsManager";
 import ScoringOverallRatingPanel from "@/components/templates/ScoringOverallRatingPanel";
 import { computeWeightedScoreMulti, effectiveAdjustedPrimary, effectiveFinalScore } from "@/components/templates/scoringWeightLogic";
 import TestModeChartTab from "@/components/templates/testmode/TestModeChartTab";
 import { TestScoreCell, TestDeviationCell, TestNotesCell } from "@/components/templates/testmode/TestModeCells";
+import { exportTestModeScoringPdf } from "@/components/templates/testmode/testModePdf";
 import {
   buildMockScore, getCriterionRange, getBlockRange, formatScoreValue,
   computeTestTotals, computeBonusPenaltyTotal, unscoredCount, getOverallRating
@@ -105,6 +106,7 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
   const [score, setScore] = useState(() => buildMockScore(template));
   const [expandedBlocks, setExpandedBlocks] = useState({});
   const [activeTab, setActiveTab] = useState("scoring");
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -189,6 +191,25 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
     setExpandedBlocks({});
     setActiveTab("scoring");
     toast({ title: "Test reset", description: "All scores cleared." });
+  };
+
+  const handleExportPdf = async () => {
+    setExporting(true);
+    try {
+      await exportTestModeScoringPdf({
+        score,
+        template,
+        templateCriteria,
+        showFlags: { showTeam, showAdjustedPrimary, showIC, showFinal },
+        overallRating,
+        weightedMax
+      });
+      toast({ title: "✓ PDF exported", description: "Test mode scorecard downloaded." });
+    } catch (err) {
+      toast({ title: "Export failed", description: err?.message || "Could not generate PDF.", variant: "destructive" });
+    } finally {
+      setExporting(false);
+    }
   };
 
   const acceptTeamScore = (blockId, critId) => {
@@ -353,9 +374,12 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
               )}
             </div>
           </div>
-          <div className="flex gap-1.5 flex-wrap justify-end">
+          <div className="flex gap-1.5 flex-wrap justify-end items-center">
             <Button variant={activeTab === "scoring" ? "default" : "outline"} size="sm" onClick={() => setActiveTab("scoring")}>Scoring</Button>
             <Button variant={activeTab === "chart" ? "default" : "outline"} size="sm" onClick={() => setActiveTab("chart")}>Chart</Button>
+            <Button variant="outline" size="sm" onClick={handleExportPdf} disabled={exporting}>
+              <FileDown className="w-3.5 h-3.5" /> {exporting ? "Exporting…" : "Export PDF"}
+            </Button>
           </div>
         </div>
 
