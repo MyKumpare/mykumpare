@@ -56,14 +56,15 @@ export default async function(req: Request): Promise<Response> {
       return Response.json({ records: batch, nextCursor, hasMore });
     }
 
-    // Legacy mode: fetch ALL records
+    // Legacy mode: fetch ALL records (non-deleted only)
     const BATCH = 5000;
     const all: any[] = [];
     let lastDate: string | null = null;
     let batchNum = 0;
 
     while (true) {
-      const filter = lastDate ? { created_date: { $lt: lastDate } } : {};
+      const filter: any = { deleted_at: null };
+      if (lastDate) filter.created_date = { $lt: lastDate };
 
       let batch: any[] | null = null;
       for (let outerRetry = 0; outerRetry < 3; outerRetry++) {

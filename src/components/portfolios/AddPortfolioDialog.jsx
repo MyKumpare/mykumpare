@@ -34,7 +34,7 @@ import PortfolioLineupTab from "./PortfolioLineupTab";
 import PortfolioBenchmarkComparisonTab from "./PortfolioBenchmarkComparisonTab";
 
 // ── Searchable dropdown ────────────────────────────────────────────────────────
-function SearchableSelect({ options, value, onChange, placeholder, onAddNew, addNewLabel }) {
+function SearchableSelect({ options, value, onChange, placeholder, onAddNew, addNewLabel, loading }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -70,7 +70,13 @@ function SearchableSelect({ options, value, onChange, placeholder, onAddNew, add
           />
         </div>
         <div className="max-h-52 overflow-y-auto py-1">
-          {filtered.length === 0 && (
+          {loading && (
+            <div className="px-3 py-2 text-sm text-gray-400 italic flex items-center gap-2">
+              <div className="w-3.5 h-3.5 border-2 border-gray-200 border-t-indigo-500 rounded-full animate-spin" />
+              Loading...
+            </div>
+          )}
+          {!loading && filtered.length === 0 && (
             <div className="px-3 py-2 text-sm text-gray-400 italic">No results</div>
           )}
           {filtered.map((opt) => (
@@ -408,7 +414,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
   // Use backend functions to fetch ALL firms/products (bypasses the default
   // list limit of ~100-500 records, which caused firms like "Sample Client"
   // to be missing from the dropdown when there are 5000+ firms).
-  const { data: firms = [] } = useQuery({
+  const { data: firms = [], isLoading: firmsLoading } = useQuery({
     queryKey: ["firms-all-dialog"],
     queryFn: async () => {
       const res = await base44.functions.invoke("fetchAllFirms", {});
@@ -418,7 +424,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
     staleTime: 300000,
   });
 
-  const { data: products = [] } = useQuery({
+  const { data: products = [], isLoading: productsLoading } = useQuery({
     queryKey: ["products-all-dialog"],
     queryFn: async () => {
       const res = await base44.functions.invoke("fetchAllProducts", {});
@@ -1158,6 +1164,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                   placeholder="Select allocator..."
                   onAddNew={handleAddAllocator}
                   addNewLabel="Add new Allocator..."
+                  loading={firmsLoading}
                 />
               </div>
 
@@ -1239,6 +1246,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
                   placeholder="Select Investment Manager..."
                   onAddNew={handleAddAdvisorFirm}
                   addNewLabel="Add new Investment Manager..."
+                  loading={firmsLoading}
                 />
               </div>
 
