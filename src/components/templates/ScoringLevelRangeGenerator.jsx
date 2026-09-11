@@ -22,7 +22,7 @@ export default function ScoringLevelRangeGenerator({ descriptors = [], onGenerat
 
   const [min, setMin] = useState(minExisting);
   const [max, setMax] = useState(maxExisting);
-  const [interval, setInterval] = useState(10);
+  const [interval, setInterval] = useState(1);
 
   const handleGenerate = () => {
     const lo = parseFloat(min);
