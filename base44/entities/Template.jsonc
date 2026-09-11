@@ -290,6 +290,23 @@
                   "type": "string",
                   "description": "Sub-category label (e.g. 'Investment research')"
                 },
+                "scoring_mode": {
+                  "type": "string",
+                  "enum": [
+                    "levels",
+                    "single"
+                  ],
+                  "default": "levels",
+                  "description": "How this criterion is scored. 'levels' = analyst picks from descriptor levels (1-5 with text); 'single' = analyst enters a single numeric score within a configured range. Defaults to 'levels' for backward compatibility."
+                },
+                "single_score_min": {
+                  "type": "number",
+                  "description": "Minimum allowed score for single-score mode. Only used when scoring_mode is 'single'."
+                },
+                "single_score_max": {
+                  "type": "number",
+                  "description": "Maximum allowed score for single-score mode. Only used when scoring_mode is 'single'."
+                },
                 "multiplier_enabled": {
                   "type": "boolean",
                   "default": false,
