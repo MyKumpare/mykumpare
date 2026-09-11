@@ -16,29 +16,41 @@ const nextBlockId = () => `smb_${Date.now()}_${++_blockId}`;
 let _critId = 0;
 const nextCritId = () => `smc_${Date.now()}_${++_critId}`;
 
-// Compute the min/max score range for a single criterion.
+// Compute the total score range for a single criterion (includes bonus/penalty adjustment).
 // - single mode: uses single_score_min / single_score_max
 // - levels mode: uses the min/max descriptor levels (defaults to 1-5)
 function getCriterionRange(crit) {
   if (!crit) return null;
+  let min, max;
   if (crit.scoring_mode === "single") {
-    const min = Number.isFinite(crit.single_score_min) ? crit.single_score_min : 0;
-    const max = Number.isFinite(crit.single_score_max) ? crit.single_score_max : 100;
-    return { min, max };
+    min = Number.isFinite(crit.single_score_min) ? crit.single_score_min : 0;
+    max = Number.isFinite(crit.single_score_max) ? crit.single_score_max : 100;
+  } else {
+    const descs = crit.descriptors;
+    if (Array.isArray(descs) && descs.length > 0) {
+      const levels = descs.map((d) => d.level).filter((n) => Number.isFinite(n));
+      if (levels.length > 0) { min = Math.min(...levels); max = Math.max(...levels); }
+      else { min = 1; max = 5; }
+    } else { min = 1; max = 5; }
   }
-  const descs = crit.descriptors;
-  if (Array.isArray(descs) && descs.length > 0) {
-    const levels = descs.map((d) => d.level).filter((n) => Number.isFinite(n));
-    if (levels.length > 0) return { min: Math.min(...levels), max: Math.max(...levels) };
+  // Fold in bonus/penalty adjustment so this reflects the total possible score, not just the base scoring range
+  if (crit.bonus_penalty_enabled && crit.bonus_penalty_range) {
+    const bpMin = Number.isFinite(crit.bonus_penalty_range.min) ? crit.bonus_penalty_range.min : 0;
+    const bpMax = Number.isFinite(crit.bonus_penalty_range.max) ? crit.bonus_penalty_range.max : 0;
+    if (bpMin < 0) min += bpMin;
+    if (bpMax > 0) max += bpMax;
   }
-  return { min: 1, max: 5 };
+  return { min, max };
 }
 
-// Compute the overall min/max range for a block from the ranges of its criteria.
+// Compute the total score range for a section = sum of its criteria's total ranges
 function getBlockRange(block) {
   const ranges = (block.criteria || []).map(getCriterionRange).filter(Boolean);
   if (ranges.length === 0) return null;
-  return { min: Math.min(...ranges.map((r) => r.min)), max: Math.max(...ranges.map((r) => r.max)) };
+  return {
+    min: ranges.reduce((s, r) => s + r.min, 0),
+    max: ranges.reduce((s, r) => s + r.max, 0)
+  };
 }
 
 function RangeBadge({ range, className = "" }) {
@@ -349,7 +361,7 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange, template
               />
               <span className="text-gray-500">%</span>
             </div>
-            <RangeBadge range={getBlockRange(block)} className="ml-1" title="Score range across this section's criteria" />
+            <RangeBadge range={getBlockRange(block)} className="ml-1" title="Total score range for this section (sum of its criteria)" />
             {/* Multiplier factor toggle (section level) */}
             <button
               type="button"
@@ -414,7 +426,7 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange, template
                       className="h-7 text-xs w-40"
                       placeholder="Category..."
                     />
-                    <RangeBadge range={getCriterionRange(crit)} title="Score range for this criterion" />
+                    <RangeBadge range={getCriterionRange(crit)} title="Total score range for this criterion (includes bonus/penalty)" />
                     {/* Multiplier factor toggle (sub-section / criterion level) */}
                     <button
                       type="button"
