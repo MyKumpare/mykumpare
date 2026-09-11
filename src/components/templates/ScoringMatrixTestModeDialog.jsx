@@ -8,7 +8,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Check, X, CheckCircle2, ChevronDown, ChevronRight, FlaskConical, RotateCcw, Lock, Unlock } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import {
-  Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend, Tooltip
+  Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
+  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
+  ResponsiveContainer, Legend, Tooltip
 } from "recharts";
 import ScoringAttachmentsManager from "@/components/templates/ScoringAttachmentsManager";
 
@@ -180,6 +182,7 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
   const [score, setScore] = useState(() => buildMockScore(template));
   const [expandedBlocks, setExpandedBlocks] = useState({});
   const [activeTab, setActiveTab] = useState("scoring");
+  const [chartType, setChartType] = useState("radar");
 
   // Rebuild mock score when template changes or dialog reopens
   React.useEffect(() => {
@@ -187,6 +190,7 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
       setScore(buildMockScore(template));
       setExpandedBlocks({});
       setActiveTab("scoring");
+      setChartType("radar");
     }
   }, [open, template]);
 
@@ -678,13 +682,37 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
           </div>
         )}
 
-        {/* Radar Chart Tab */}
+        {/* Chart Tab */}
         {activeTab === "chart" && (
           <div className="border border-gray-200 rounded-lg p-4">
-            <h4 className="text-sm font-semibold mb-3">Score Comparison Radar Chart</h4>
+            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+              <h4 className="text-sm font-semibold">Score Comparison Chart</h4>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-gray-500">Chart type:</span>
+                <div className="inline-flex rounded-md border border-gray-200 overflow-hidden">
+                  {[
+                    { key: "radar", label: "Radar" },
+                    { key: "bar", label: "Bar" },
+                    { key: "line", label: "Line" }
+                  ].map((opt) => (
+                    <button
+                      key={opt.key}
+                      onClick={() => setChartType(opt.key)}
+                      className={`px-3 py-1 text-xs font-medium transition-colors ${
+                        chartType === opt.key
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-white text-gray-600 hover:bg-gray-50"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
             {radarData.length === 0 ? (
               <p className="text-center text-xs text-gray-400 py-8">No criteria to display.</p>
-            ) : (
+            ) : chartType === "radar" ? (
               <ResponsiveContainer width="100%" height={350}>
                 <RadarChart data={radarData}>
                   <PolarGrid />
@@ -696,6 +724,32 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
                   <Legend />
                   <Tooltip />
                 </RadarChart>
+              </ResponsiveContainer>
+            ) : chartType === "bar" ? (
+              <ResponsiveContainer width="100%" height={Math.max(350, radarData.length * 28)}>
+                <BarChart data={radarData} layout="vertical" margin={{ left: 120, right: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                  <XAxis type="number" domain={[0, 5]} tick={{ fontSize: 10 }} />
+                  <YAxis type="category" dataKey="criterion" tick={{ fontSize: 9 }} width={140} />
+                  {visibleColumns.map((col) => (
+                    <Bar key={col.key} dataKey={col.key} name={col.label} fill={col.color} />
+                  ))}
+                  <Legend />
+                  <Tooltip />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <ResponsiveContainer width="100%" height={Math.max(350, radarData.length * 28)}>
+                <LineChart data={radarData} layout="vertical" margin={{ left: 120, right: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                  <XAxis type="number" domain={[0, 5]} tick={{ fontSize: 10 }} />
+                  <YAxis type="category" dataKey="criterion" tick={{ fontSize: 9 }} width={140} />
+                  {visibleColumns.map((col) => (
+                    <Line key={col.key} type="monotone" dataKey={col.key} name={col.label} stroke={col.color} strokeWidth={2} dot={{ r: 3 }} />
+                  ))}
+                  <Legend />
+                  <Tooltip />
+                </LineChart>
               </ResponsiveContainer>
             )}
           </div>
