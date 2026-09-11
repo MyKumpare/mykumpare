@@ -114,6 +114,27 @@ function MaxScoreBadge({ max, unit, className = "", label = "Max" }) {
   );
 }
 
+// Slim progress bar showing how much of the available score has been assigned so far
+// during the due diligence process. `value` is the current score (may be null/unscored);
+// `max` is the criterion or section maximum. Fills green as scores are entered.
+function ScoreProgressBar({ value, max, unit, className = "", showLabel = true }) {
+  const numValue = Number(value);
+  const hasScore = Number.isFinite(numValue) && numValue > 0;
+  const pct = max && max > 0 && Number.isFinite(numValue) ? Math.max(0, Math.min(100, (numValue / max) * 100)) : 0;
+  return (
+    <div className={`flex items-center gap-1.5 ${className}`}>
+      <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden min-w-[50px]">
+        <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+      </div>
+      {showLabel && (
+        <span className="text-[10px] text-gray-500 whitespace-nowrap">
+          {hasScore ? `${formatScoreValue(numValue, unit)} / ${formatScoreValue(max, unit)}` : "not scored"}
+        </span>
+      )}
+    </div>
+  );
+}
+
 function ScoreCell({ score, onChange, disabled, placeholder = "—", descriptors, scoringMode, singleMin, singleMax }) {
   const hasDesc = Array.isArray(descriptors) && descriptors.some((d) => d && d.text);
   const descFor = (n) => (hasDesc ? descriptors.find((d) => d.level === n)?.text : null);
@@ -770,6 +791,28 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
   const hasRatingConfig = !!(ratingConfig && (ratingConfig.pass_fail_enabled || ratingConfig.rating_enabled));
   const scoreUnit = ratingConfig?.unit;
 
+  // Most advanced score entered for a criterion so far (reflects DD progress).
+  // Falls back through the review phases to the earliest score available.
+  const getCriterionCurrentScore = (crit) => {
+    if (showFinal) { const v = effectiveFinalScore(crit); if (v != null) return v; }
+    if (showIC && crit.ic_score != null) return crit.ic_score;
+    if (showAdjustedPrimary) { const v = effectiveAdjustedPrimary(crit); if (v != null) return v; }
+    if (showTeam && crit.team_score != null) return crit.team_score;
+    return crit.primary_score;
+  };
+  // Aggregate progress for a section: sum of current scores / sum of max scores.
+  const getBlockProgress = (block) => {
+    let value = 0, max = 0;
+    (block.criteria || []).forEach((crit) => {
+      const range = getCriterionRange(templateCriteria[crit.id]);
+      if (!range) return;
+      max += range.max;
+      const s = getCriterionCurrentScore(crit);
+      if (s != null && Number.isFinite(s)) value += Number(s);
+    });
+    return { value, max };
+  };
+
   // Update the attachments array on the score record
   const updateAttachments = (newAttachments) => {
     updateMutation.mutate({ attachments: newAttachments });
@@ -961,6 +1004,9 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
                           {expandedBlocks[block.id] ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                           {block.name} <span className="text-gray-400 font-normal">({block.weight}%)</span>
                           <MaxScoreBadge max={getBlockRange(block, templateCriteria)?.max} unit={scoreUnit} label="Section Max" />
+                          {(() => { const p = getBlockProgress(block); return p.max > 0 ? (
+                            <div className="w-44 ml-1"><ScoreProgressBar value={p.value} max={p.max} unit={scoreUnit} /></div>
+                          ) : null; })()}
                         </div>
                       </td>
                     </tr>
@@ -973,6 +1019,9 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
                               <MaxScoreBadge max={getCriterionRange(templateCriteria[crit.id])?.max} unit={scoreUnit} />
                             </div>
                             {crit.category && <div className="text-gray-400 text-[10px]">{crit.category}</div>}
+                            {(() => { const range = getCriterionRange(templateCriteria[crit.id]); const s = getCriterionCurrentScore(crit); return range && range.max > 0 ? (
+                              <ScoreProgressBar value={s} max={range.max} unit={scoreUnit} />
+                            ) : null; })()}
                             <ScoringAttachmentsManager
                               attachments={score.attachments}
                               scope={crit.id}
