@@ -197,24 +197,31 @@ function ScoreCell({ score, onChange, disabled, placeholder = "—", descriptors
 function BonusPenaltyCell({ criterion, templateCriteria, isPrimaryAnalyst, isClosed, onUpdate }) {
   const [showGuidance, setShowGuidance] = useState(false);
   const templateCrit = templateCriteria?.[criterion.id];
-  const range = (templateCrit?.bonus_penalty_range) || { min: -1, max: 1 };
-  const STEP = 0.5;
+  const direction = templateCrit?.bonus_penalty_direction || "penalty";
+  const range = templateCrit?.bonus_penalty_range || { min: -1, max: 1 };
+  const step = Number.isFinite(templateCrit?.bonus_penalty_step) ? templateCrit.bonus_penalty_step : 1;
+  const genLevels = templateCrit?.bonus_penalty_levels;
 
-  // Build the allowed values for each direction (mutually exclusive).
-  // Bonus = positive values only (STEP → max); Penalty = negative values only (min → -STEP).
-  // Hooks must run before any early return.
-  const bonusOptions = useMemo(() => {
+  // Selectable options: prefer template-generated levels, else compute from range + step.
+  // Direction is locked by the template (bonus = positive, penalty = negative) so the
+  // analyst can only pick values from that one direction — never both.
+  const options = useMemo(() => {
+    if (Array.isArray(genLevels) && genLevels.length > 0) {
+      return genLevels
+        .map((l) => ({ level: Number(l.level), text: l.text || "" }))
+        .filter((o) => Number.isFinite(o.level));
+    }
     const opts = [];
-    const max = Number.isFinite(range.max) ? range.max : 0;
-    for (let n = STEP; n <= max + 1e-9; n += STEP) opts.push(Number(n.toFixed(2)));
+    const st = step > 0 ? step : 1;
+    if (direction === "bonus") {
+      const max = Number.isFinite(range.max) ? range.max : 0;
+      for (let n = st; n <= max + 1e-9; n += st) opts.push({ level: Number(n.toFixed(4)), text: "" });
+    } else {
+      const min = Number.isFinite(range.min) ? range.min : 0;
+      for (let n = -st; n >= min - 1e-9; n -= st) opts.push({ level: Number(n.toFixed(4)), text: "" });
+    }
     return opts;
-  }, [range.max]);
-  const penaltyOptions = useMemo(() => {
-    const opts = [];
-    const min = Number.isFinite(range.min) ? range.min : 0;
-    for (let n = -STEP; n >= min - 1e-9; n -= STEP) opts.push(Number(n.toFixed(2)));
-    return opts;
-  }, [range.min]);
+  }, [genLevels, direction, range.min, range.max, step]);
 
   if (!templateCrit?.bonus_penalty_enabled) return null;
 
@@ -223,18 +230,9 @@ function BonusPenaltyCell({ criterion, templateCriteria, isPrimaryAnalyst, isClo
   const guidance = templateCrit.bonus_penalty_guidance || "";
   const disabled = isClosed || !isPrimaryAnalyst;
 
-  const currentDir = (value || 0) > 0 ? "bonus" : (value || 0) < 0 ? "penalty" : null;
-
   const handleToggle = () => {
     if (disabled) return;
-    onUpdate({ bonus_penalty_active: !isActive, bonus_penalty_value: !isActive ? 0 : criterion.bonus_penalty_value });
-  };
-
-  const handleDirection = (dir) => {
-    if (disabled) return;
-    // Pick the smallest-magnitude value in the chosen direction as the default.
-    const v = dir === "bonus" ? (bonusOptions[0] ?? 0) : (penaltyOptions[0] ?? 0);
-    onUpdate({ bonus_penalty_value: v });
+    onUpdate({ bonus_penalty_active: !isActive, bonus_penalty_value: !isActive ? (options[0]?.level ?? 0) : criterion.bonus_penalty_value });
   };
 
   const handleValueChange = (v) => {
@@ -255,45 +253,26 @@ function BonusPenaltyCell({ criterion, templateCriteria, isPrimaryAnalyst, isClo
         </button>
         {isActive && (
           <div className="flex flex-col gap-0.5">
-            {/* Direction selector — mutually exclusive: Bonus OR Penalty */}
+            {/* Direction badge — locked by the template (bonus OR penalty, never both) */}
             <div className="flex items-center gap-0.5">
-              {bonusOptions.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => handleDirection("bonus")}
-                  disabled={disabled}
-                  className={`px-1.5 py-0.5 rounded text-[10px] font-medium border ${currentDir === "bonus" ? "bg-green-100 border-green-400 text-green-700" : "bg-white border-gray-200 text-gray-500 hover:text-green-700 hover:border-green-300"} ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
-                  title="Apply a bonus (positive adjustment)"
-                >
-                  + Bonus
-                </button>
-              )}
-              {penaltyOptions.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => handleDirection("penalty")}
-                  disabled={disabled}
-                  className={`px-1.5 py-0.5 rounded text-[10px] font-medium border ${currentDir === "penalty" ? "bg-red-100 border-red-400 text-red-700" : "bg-white border-gray-200 text-gray-500 hover:text-red-700 hover:border-red-300"} ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
-                  title="Apply a penalty (negative adjustment)"
-                >
-                  − Penalty
-                </button>
-              )}
-            </div>
-            {/* Value dropdown — scoped to the selected direction only */}
-            {currentDir && (
-              <Select
-                value={String(value ?? 0)}
-                onValueChange={handleValueChange}
-                disabled={disabled}
+              <span
+                className={`px-1.5 py-0.5 rounded text-[10px] font-medium border ${direction === "bonus" ? "bg-green-100 border-green-400 text-green-700" : "bg-red-100 border-red-400 text-red-700"}`}
+                title={direction === "bonus" ? "Bonus adjustment (positive)" : "Penalty adjustment (negative)"}
               >
+                {direction === "bonus" ? "+ Bonus" : "− Penalty"}
+              </span>
+            </div>
+            {/* Value dropdown — scoped to the configured direction */}
+            {options.length > 0 && (
+              <Select value={String(value ?? "")} onValueChange={handleValueChange} disabled={disabled}>
                 <SelectTrigger className="h-7 w-20 text-xs">
                   <SelectValue placeholder="—" />
                 </SelectTrigger>
-                <SelectContent className="max-h-60">
-                  {(currentDir === "bonus" ? bonusOptions : penaltyOptions).map((n) => (
-                    <SelectItem key={n} value={String(n)} className="text-xs">
-                      {n > 0 ? `+${n}` : n}
+                <SelectContent className={options.some((o) => o.text) ? "min-w-[260px] max-w-[360px]" : "max-h-60"}>
+                  {options.map((o) => (
+                    <SelectItem key={o.level} value={String(o.level)} className="text-xs items-start">
+                      <span className="font-medium">{o.level > 0 ? `+${o.level}` : o.level}</span>
+                      {o.text && <span className="text-[11px] text-gray-600 leading-snug flex-1 ml-2 whitespace-normal">{o.text}</span>}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -315,7 +294,7 @@ function BonusPenaltyCell({ criterion, templateCriteria, isPrimaryAnalyst, isClo
           {guidance}
         </div>
       )}
-      {isActive && currentDir && (
+      {isActive && value != null && (
         <div className="text-[10px] font-medium mt-0.5" style={{ color: (value || 0) > 0 ? "#166534" : (value || 0) < 0 ? "#991b1b" : "#6b7280" }}>
           {(value || 0) > 0 ? "+" : ""}{value || 0}
         </div>

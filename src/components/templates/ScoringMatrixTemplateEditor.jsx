@@ -53,6 +53,22 @@ function getBlockRange(block) {
   };
 }
 
+// Build the selectable adjustment levels for a bonus/penalty criterion from its
+// direction, range, and step. Bonus → positive values (step → max); penalty →
+// negative values (min → -step). 0 is excluded (it represents "no adjustment").
+function buildBonusPenaltyLevels(direction, range, step) {
+  const st = Number.isFinite(step) && step > 0 ? Number(step) : 1;
+  const levels = [];
+  if (direction === "bonus") {
+    const max = Number.isFinite(range?.max) ? Number(range.max) : 0;
+    for (let n = st; n <= max + 1e-9; n += st) levels.push({ level: Number(n.toFixed(4)), text: "" });
+  } else {
+    const min = Number.isFinite(range?.min) ? Number(range.min) : 0;
+    for (let n = -st; n >= min - 1e-9; n -= st) levels.push({ level: Number(n.toFixed(4)), text: "" });
+  }
+  return levels;
+}
+
 // Format a score value with the assessment's unit of measurement.
 // unit values: "none" | "%" | "pts" | "x" | "$" | "bps"
 function formatScoreValue(value, unit) {
@@ -128,7 +144,10 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange, template
       category: "",
       descriptors: [1, 2, 3, 4, 5].map((level) => ({ level, text: "" })),
       bonus_penalty_enabled: false,
+      bonus_penalty_direction: "penalty",
       bonus_penalty_range: { min: -1, max: 1 },
+      bonus_penalty_step: 1,
+      bonus_penalty_levels: [],
       bonus_penalty_guidance: ""
     };
     onChange(blocks.map((b) => (b.id === blockId ? { ...b, criteria: [...(b.criteria || []), newCrit] } : b)));
@@ -609,36 +628,137 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange, template
                       Bonus / Penalty Adjustment
                     </button>
                     {crit.bonus_penalty_enabled && (
-                      <div className="mt-1.5 space-y-1.5 bg-indigo-50/30 border border-indigo-100 rounded-md p-2">
+                      <div className="mt-1.5 space-y-2 bg-indigo-50/30 border border-indigo-100 rounded-md p-2">
+                        {/* Direction selector — mutually exclusive: Bonus OR Penalty */}
                         <div className="flex items-center gap-2 text-xs">
-                          <Label className="text-xs text-gray-600 whitespace-nowrap">Range:</Label>
+                          <Label className="text-xs text-gray-600 whitespace-nowrap">Type:</Label>
                           <div className="flex items-center gap-1">
-                            <Input
-                              type="number"
-                              step="0.5"
-                              value={crit.bonus_penalty_range?.min ?? -1}
-                              onChange={(e) => updateCriterion(block.id, crit.id, "bonus_penalty_range", {
-                                ...crit.bonus_penalty_range,
-                                min: parseFloat(e.target.value) || 0
-                              })}
-                              className="h-7 w-16 text-xs text-center"
-                              placeholder="min"
-                            />
-                            <span className="text-gray-400">to</span>
-                            <Input
-                              type="number"
-                              step="0.5"
-                              value={crit.bonus_penalty_range?.max ?? 1}
-                              onChange={(e) => updateCriterion(block.id, crit.id, "bonus_penalty_range", {
-                                ...crit.bonus_penalty_range,
-                                max: parseFloat(e.target.value) || 0
-                              })}
-                              className="h-7 w-16 text-xs text-center"
-                              placeholder="max"
-                            />
+                            <button
+                              type="button"
+                              onClick={() => updateCriterion(block.id, crit.id, "bonus_penalty_direction", "bonus")}
+                              className={`px-2 py-0.5 rounded text-[11px] font-medium border ${crit.bonus_penalty_direction === "bonus" ? "bg-green-100 border-green-400 text-green-700" : "bg-white border-gray-200 text-gray-500 hover:text-green-700 hover:border-green-300"}`}
+                              title="Bonus — positive adjustment added to the score"
+                            >
+                              + Bonus
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => updateCriterion(block.id, crit.id, "bonus_penalty_direction", "penalty")}
+                              className={`px-2 py-0.5 rounded text-[11px] font-medium border ${crit.bonus_penalty_direction === "penalty" ? "bg-red-100 border-red-400 text-red-700" : "bg-white border-gray-200 text-gray-500 hover:text-red-700 hover:border-red-300"}`}
+                              title="Penalty — negative adjustment subtracted from the score"
+                            >
+                              − Penalty
+                            </button>
                           </div>
-                          <span className="text-gray-400 text-[10px]">(negative = penalty, positive = bonus)</span>
+                          <span className="text-gray-400 text-[10px]">
+                            {crit.bonus_penalty_direction === "bonus" ? "(positive values added to the score)" : "(negative values subtracted from the score)"}
+                          </span>
                         </div>
+
+                        {/* Direction-aware range + step + generate */}
+                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                          <Label className="text-xs text-gray-600 whitespace-nowrap">Range:</Label>
+                          {crit.bonus_penalty_direction === "penalty" ? (
+                            <>
+                              <Input
+                                type="number"
+                                step="0.5"
+                                value={crit.bonus_penalty_range?.min ?? -1}
+                                onChange={(e) => updateCriterion(block.id, crit.id, "bonus_penalty_range", {
+                                  ...crit.bonus_penalty_range,
+                                  min: parseFloat(e.target.value) || 0,
+                                  max: 0
+                                })}
+                                className="h-7 w-16 text-xs text-center"
+                                placeholder="min"
+                              />
+                              <span className="text-gray-400">to</span>
+                              <Input
+                                type="number"
+                                value={0}
+                                disabled
+                                className="h-7 w-16 text-xs text-center bg-gray-50 text-gray-400"
+                                placeholder="max"
+                              />
+                            </>
+                          ) : (
+                            <>
+                              <Input
+                                type="number"
+                                value={0}
+                                disabled
+                                className="h-7 w-16 text-xs text-center bg-gray-50 text-gray-400"
+                                placeholder="min"
+                              />
+                              <span className="text-gray-400">to</span>
+                              <Input
+                                type="number"
+                                step="0.5"
+                                value={crit.bonus_penalty_range?.max ?? 1}
+                                onChange={(e) => updateCriterion(block.id, crit.id, "bonus_penalty_range", {
+                                  ...crit.bonus_penalty_range,
+                                  min: 0,
+                                  max: parseFloat(e.target.value) || 0
+                                })}
+                                className="h-7 w-16 text-xs text-center"
+                                placeholder="max"
+                              />
+                            </>
+                          )}
+                          <span className="text-gray-400">every</span>
+                          <Input
+                            type="number"
+                            min="0.5"
+                            step="0.5"
+                            value={crit.bonus_penalty_step ?? 1}
+                            onChange={(e) => updateCriterion(block.id, crit.id, "bonus_penalty_step", parseFloat(e.target.value) || 1)}
+                            className="h-7 w-14 text-xs text-center"
+                            placeholder="step"
+                          />
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              const levels = buildBonusPenaltyLevels(crit.bonus_penalty_direction, crit.bonus_penalty_range, crit.bonus_penalty_step);
+                              updateCriterion(block.id, crit.id, "bonus_penalty_levels", levels);
+                              if (levels.length === 0) toast({ title: "No levels generated", description: "Increase the range or decrease the step.", variant: "destructive" });
+                              else toast({ title: `Generated ${levels.length} level${levels.length === 1 ? "" : "s"}`, description: `${crit.bonus_penalty_direction === "bonus" ? "0 → " + (crit.bonus_penalty_range?.max ?? 0) : (crit.bonus_penalty_range?.min ?? 0) + " → 0"} every ${crit.bonus_penalty_step ?? 1}.` });
+                            }}
+                            className="h-7 text-xs border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+                          >
+                            <Sparkles className="w-3 h-3" /> Generate levels
+                          </Button>
+                        </div>
+
+                        {/* Generated levels — editable descriptor text per value */}
+                        {Array.isArray(crit.bonus_penalty_levels) && crit.bonus_penalty_levels.length > 0 && (
+                          <div className="space-y-1 bg-white/60 border border-indigo-100 rounded p-1.5">
+                            <span className="text-[10px] uppercase tracking-wide text-gray-400">Adjustment levels</span>
+                            {crit.bonus_penalty_levels.map((lvl, idx) => (
+                              <div key={idx} className="flex items-center gap-1.5">
+                                <span className={`inline-flex items-center justify-center w-12 text-[11px] font-semibold rounded px-1 py-0.5 ${lvl.level > 0 ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"}`} title={lvl.level > 0 ? "Bonus" : "Penalty"}>
+                                  {lvl.level > 0 ? "+" : ""}{lvl.level}
+                                </span>
+                                <Input
+                                  value={lvl.text || ""}
+                                  onChange={(e) => updateCriterion(block.id, crit.id, "bonus_penalty_levels", crit.bonus_penalty_levels.map((l, i) => i === idx ? { ...l, text: e.target.value } : l))}
+                                  className="h-7 flex-1 text-xs"
+                                  placeholder={`Descriptor for ${lvl.level > 0 ? "+" : ""}${lvl.level} (optional)`}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => updateCriterion(block.id, crit.id, "bonus_penalty_levels", crit.bonus_penalty_levels.filter((_, i) => i !== idx))}
+                                  className="p-1 text-gray-400 hover:text-red-500"
+                                  title="Remove level"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
                         <Textarea
                           value={crit.bonus_penalty_guidance || ""}
                           onChange={(e) => updateCriterion(block.id, crit.id, "bonus_penalty_guidance", e.target.value)}

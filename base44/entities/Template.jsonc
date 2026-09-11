@@ -322,17 +322,48 @@
                   "default": false,
                   "description": "Whether this criterion supports an optional bonus/penalty adjustment that analysts can activate during scoring review. When enabled, the analyst can apply a numeric adjustment within the configured range on top of the criterion's final score."
                 },
+                "bonus_penalty_direction": {
+                  "type": "string",
+                  "enum": [
+                    "bonus",
+                    "penalty"
+                  ],
+                  "default": "penalty",
+                  "description": "Whether this criterion's adjustment is a bonus (positive values only) or a penalty (negative values only). Mutually exclusive \u2014 the analyst can apply either a bonus or a penalty, never both, on a single score. Drives the range sign and the generated level values."
+                },
                 "bonus_penalty_range": {
                   "type": "object",
-                  "description": "The allowed range for the bonus/penalty adjustment on this criterion. The analyst's adjustment value must fall within [min, max]. Min is typically negative (penalty) and max is positive (bonus).",
+                  "description": "The allowed range for the bonus/penalty adjustment on this criterion. For a 'bonus' direction only the max (positive) is used; for a 'penalty' direction only the min (negative) is used. The unused bound is treated as 0.",
                   "properties": {
                     "min": {
                       "type": "number",
-                      "description": "Minimum adjustment value (e.g. -1 for a 1-point penalty)."
+                      "description": "Minimum adjustment value (e.g. -10 for a 10-point penalty). Used for the 'penalty' direction."
                     },
                     "max": {
                       "type": "number",
-                      "description": "Maximum adjustment value (e.g. +1 for a 1-point bonus)."
+                      "description": "Maximum adjustment value (e.g. +10 for a 10-point bonus). Used for the 'bonus' direction."
+                    }
+                  }
+                },
+                "bonus_penalty_step": {
+                  "type": "number",
+                  "default": 1,
+                  "description": "Interval between generated adjustment levels. The 'Generate levels' control produces one selectable value per step from the range (e.g. range 0\u201310 step 2 \u2192 2, 4, 6, 8, 10 for a bonus; range -10\u20130 step 2 \u2192 -2, -4, -6, -8, -10 for a penalty)."
+                },
+                "bonus_penalty_levels": {
+                  "type": "array",
+                  "description": "Generated selectable adjustment levels for this criterion, produced by the 'Generate levels' control from the range and step. Each level is a numeric adjustment value with optional descriptor text. The analyst picks one of these values during scoring review. Empty means the scorecard falls back to computing levels from range + step.",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "level": {
+                        "type": "number",
+                        "description": "Adjustment value for this level (positive for bonus, negative for penalty)."
+                      },
+                      "text": {
+                        "type": "string",
+                        "description": "Optional descriptor text for this adjustment level."
+                      }
                     }
                   }
                 },
