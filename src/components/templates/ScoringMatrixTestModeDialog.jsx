@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectTrigger, SelectValue } from "@/components/ui/select";
 import * as SelectPrimitive from "@radix-ui/react-select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Check, X, CheckCircle2, ChevronDown, ChevronRight, FlaskConical, RotateCcw, Lock, Unlock } from "lucide-react";
+import { Check, X, CheckCircle2, ChevronDown, ChevronRight, FlaskConical, RotateCcw, Lock, Unlock, ToggleLeft, ToggleRight, Info } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
@@ -47,6 +47,123 @@ function DescriptorSelectItem({ value, scoreNumber, descriptorText }) {
         </span>
       )}
     </SelectPrimitive.Item>
+  );
+}
+
+// Bonus/Penalty adjustment cell for test mode. Reads the template-defined
+// bonus/penalty config (denormalized onto the mock criterion) and the
+// analyst's active toggle + selected value. Mirrors the real scorecard's
+// BonusPenaltyCell but is always editable (test sandbox) unless the matrix
+// is closed.
+function TestBonusPenaltyCell({ criterion, disabled, onUpdate }) {
+  const [showGuidance, setShowGuidance] = useState(false);
+
+  const direction = criterion?.bonus_penalty_direction || "penalty";
+  const range = criterion?.bonus_penalty_range || { min: -1, max: 1 };
+  const step = Number.isFinite(criterion?.bonus_penalty_step) ? criterion.bonus_penalty_step : 1;
+  const genLevels = criterion?.bonus_penalty_levels;
+
+  // Selectable options: prefer template-generated levels, else compute from range + step.
+  const options = useMemo(() => {
+    if (Array.isArray(genLevels) && genLevels.length > 0) {
+      return genLevels
+        .map((l) => ({ level: Number(l.level), text: l.text || "" }))
+        .filter((o) => Number.isFinite(o.level));
+    }
+    const opts = [];
+    const st = step > 0 ? step : 1;
+    if (direction === "bonus") {
+      const max = Number.isFinite(range.max) ? range.max : 0;
+      for (let n = st; n <= max + 1e-9; n += st) opts.push({ level: Number(n.toFixed(4)), text: "" });
+    } else {
+      const min = Number.isFinite(range.min) ? range.min : 0;
+      for (let n = -st; n >= min - 1e-9; n -= st) opts.push({ level: Number(n.toFixed(4)), text: "" });
+    }
+    return opts;
+  }, [genLevels, direction, range.min, range.max, step]);
+
+  if (!criterion?.bonus_penalty_enabled) return null;
+
+  const isActive = criterion.bonus_penalty_active;
+  const value = criterion.bonus_penalty_value;
+  const guidance = criterion.bonus_penalty_guidance || "";
+
+  const handleToggle = () => {
+    if (disabled) return;
+    onUpdate({ bonus_penalty_active: !isActive, bonus_penalty_value: !isActive ? (options[0]?.level ?? 0) : value });
+  };
+  const handleValueChange = (v) => onUpdate({ bonus_penalty_value: Number(v) });
+
+  return (
+    <div className="flex flex-col items-center gap-0.5">
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={handleToggle}
+          disabled={disabled}
+          className={`p-0.5 rounded text-xs ${isActive ? "text-indigo-600 bg-indigo-50 border border-indigo-200" : "text-gray-400 border border-gray-200"} ${disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-indigo-100"}`}
+          title={isActive ? "Deactivate bonus/penalty" : "Activate bonus/penalty"}
+        >
+          {isActive ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
+        </button>
+        {isActive && (
+          <div className="flex flex-col gap-0.5">
+            <div className="flex items-center gap-0.5">
+              <span
+                className={`px-1.5 py-0.5 rounded text-[10px] font-medium border ${direction === "bonus" ? "bg-green-100 border-green-400 text-green-700" : "bg-red-100 border-red-400 text-red-700"}`}
+                title={direction === "bonus" ? "Bonus adjustment (positive)" : "Penalty adjustment (negative)"}
+              >
+                {direction === "bonus" ? "+ Bonus" : "− Penalty"}
+              </span>
+            </div>
+            {options.length > 0 && (
+              <Select value={String(value ?? "")} onValueChange={handleValueChange} disabled={disabled}>
+                <SelectTrigger className="h-7 w-20 text-xs">
+                  <SelectValue placeholder="—" />
+                </SelectTrigger>
+                <SelectContent className={options.some((o) => o.text) ? "min-w-[260px] max-w-[360px]" : "max-h-60"}>
+                  {options.map((o) => (
+                    <SelectPrimitive.Item
+                      key={o.level}
+                      value={String(o.level)}
+                      className="relative flex w-full cursor-default select-none items-start rounded-sm py-1.5 pl-2 pr-8 text-xs outline-none focus:bg-accent focus:text-accent-foreground"
+                    >
+                      <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
+                        <SelectPrimitive.ItemIndicator>
+                          <Check className="h-4 w-4" />
+                        </SelectPrimitive.ItemIndicator>
+                      </span>
+                      <SelectPrimitive.ItemText>
+                        <span className="font-medium">{o.level > 0 ? `+${o.level}` : o.level}</span>
+                      </SelectPrimitive.ItemText>
+                      {o.text && <span className="text-[11px] text-gray-600 leading-snug flex-1 ml-2 whitespace-normal self-center">{o.text}</span>}
+                    </SelectPrimitive.Item>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={() => setShowGuidance(!showGuidance)}
+          className="p-0.5 text-gray-400 hover:text-indigo-600"
+          title="Show guidance"
+        >
+          <Info className="w-3.5 h-3.5" />
+        </button>
+      </div>
+      {showGuidance && guidance && (
+        <div className="text-[10px] text-indigo-700 bg-indigo-50 border border-indigo-100 rounded p-1.5 max-w-[200px] mt-0.5">
+          {guidance}
+        </div>
+      )}
+      {isActive && value != null && (
+        <div className="text-[10px] font-medium mt-0.5" style={{ color: (value || 0) > 0 ? "#166534" : (value || 0) < 0 ? "#991b1b" : "#6b7280" }}>
+          {(value || 0) > 0 ? "+" : ""}{value || 0}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -148,6 +265,14 @@ function buildMockScore(template) {
       scoring_mode: c.scoring_mode || "levels",
       single_score_min: c.single_score_min,
       single_score_max: c.single_score_max,
+      bonus_penalty_enabled: c.bonus_penalty_enabled || false,
+      bonus_penalty_direction: c.bonus_penalty_direction || "penalty",
+      bonus_penalty_range: c.bonus_penalty_range || null,
+      bonus_penalty_step: c.bonus_penalty_step,
+      bonus_penalty_levels: c.bonus_penalty_levels || [],
+      bonus_penalty_guidance: c.bonus_penalty_guidance || "",
+      bonus_penalty_active: false,
+      bonus_penalty_value: null,
       primary_score: null,
       primary_notes: "",
       team_score: null,
@@ -529,6 +654,7 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
                     {showIC && <th className="text-left p-2 font-medium text-gray-600 min-w-[240px]">IC Rec.</th>}
                     {showIC && <th className="text-center p-2 font-medium text-gray-600">Δ</th>}
                     {showFinal && <th className="text-center p-2 font-medium text-gray-600">Final</th>}
+                    {showFinal && <th className="text-center p-2 font-medium text-gray-600">Bonus/Penalty</th>}
                     <th className="text-left p-2 font-medium text-gray-600 min-w-[150px]">Notes</th>
                   </tr>
                 </thead>
@@ -536,7 +662,7 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
                   {blocks.map((block) => (
                     <React.Fragment key={block.id}>
                       <tr className="bg-gray-100 cursor-pointer hover:bg-gray-200" onClick={() => toggleBlock(block.id)}>
-                        <td colSpan={showFinal ? 10 : showIC ? 8 : showAdjustedPrimary ? 6 : showTeam ? 4 : 2} className="p-2 font-semibold text-gray-700">
+                        <td colSpan={showFinal ? 11 : showIC ? 8 : showAdjustedPrimary ? 6 : showTeam ? 4 : 2} className="p-2 font-semibold text-gray-700">
                           <div className="flex items-center gap-1.5">
                             {expandedBlocks[block.id] ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                             {block.name} <span className="text-gray-400 font-normal">({block.weight}%)</span>
@@ -646,6 +772,16 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
                               )}
                             </td>
                           )}
+                          {/* Bonus / Penalty adjustment */}
+                          {showFinal && (
+                            <td className="p-2 text-center">
+                              <TestBonusPenaltyCell
+                                criterion={crit}
+                                disabled={score.is_closed}
+                                onUpdate={(updates) => updateCriterion(block.id, crit.id, updates)}
+                              />
+                            </td>
+                          )}
                           {/* Notes */}
                           <td className="p-2">
                             <TestNotesCell
@@ -671,6 +807,7 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
                     {showIC && <td className="p-2 text-center">{computeTotals("ic_score")}</td>}
                     {showIC && <td></td>}
                     {showFinal && <td className="p-2 text-center">{computeTotals("final_score")}</td>}
+                    {showFinal && <td></td>}
                     <td></td>
                   </tr>
                 </tfoot>
