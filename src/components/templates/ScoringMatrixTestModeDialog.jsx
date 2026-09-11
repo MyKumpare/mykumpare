@@ -2,7 +2,8 @@ import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectTrigger, SelectValue } from "@/components/ui/select";
+import * as SelectPrimitive from "@radix-ui/react-select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Check, X, CheckCircle2, ChevronDown, ChevronRight, FlaskConical, RotateCcw, Lock, Unlock } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
@@ -18,6 +19,34 @@ const SCORE_COLORS = {
   4: "bg-lime-100 text-lime-700 border-lime-300",
   5: "bg-green-100 text-green-700 border-green-300"
 };
+
+// Custom SelectItem that only puts the score number in ItemText (what the trigger
+// displays after selection) and renders the descriptor text as a visual sibling
+// outside ItemText, so the trigger stays clean (just the number) while the
+// dropdown shows the full descriptor text.
+function DescriptorSelectItem({ value, scoreNumber, descriptorText }) {
+  const colorKey = Math.max(1, Math.min(5, scoreNumber));
+  return (
+    <SelectPrimitive.Item
+      value={value}
+      className="relative flex w-full cursor-default select-none items-start rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+    >
+      <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
+        <SelectPrimitive.ItemIndicator>
+          <Check className="h-4 w-4" />
+        </SelectPrimitive.ItemIndicator>
+      </span>
+      <SelectPrimitive.ItemText>
+        <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold border shrink-0 ${SCORE_COLORS[colorKey]}`}>{scoreNumber}</span>
+      </SelectPrimitive.ItemText>
+      {descriptorText && (
+        <span className="text-[11px] text-gray-600 leading-snug flex-1 ml-2 whitespace-normal self-center">
+          {descriptorText}
+        </span>
+      )}
+    </SelectPrimitive.Item>
+  );
+}
 
 function ScoreCell({ score, onChange, disabled, placeholder = "—", descriptors, scoringMode, singleMin, singleMax }) {
   const hasDesc = Array.isArray(descriptors) && descriptors.some((d) => d && d.text);
@@ -38,7 +67,18 @@ function ScoreCell({ score, onChange, disabled, placeholder = "—", descriptors
           </SelectTrigger>
           <SelectContent className="max-h-60">
             {options.map((n) => (
-              <SelectItem key={n} value={n.toString()} className="text-xs">{n}</SelectItem>
+              <SelectPrimitive.Item
+                key={n}
+                value={n.toString()}
+                className="relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-xs outline-none focus:bg-accent focus:text-accent-foreground"
+              >
+                <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
+                  <SelectPrimitive.ItemIndicator>
+                    <Check className="h-4 w-4" />
+                  </SelectPrimitive.ItemIndicator>
+                </span>
+                <SelectPrimitive.ItemText>{n}</SelectPrimitive.ItemText>
+              </SelectPrimitive.Item>
             ))}
           </SelectContent>
         </Select>
@@ -59,16 +99,14 @@ function ScoreCell({ score, onChange, disabled, placeholder = "—", descriptors
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent className={hasDesc ? "min-w-[320px] max-w-[420px]" : ""}>
-          {descLevels.map((n) => {
-            const text = descFor(n);
-            const colorKey = Math.max(1, Math.min(5, n));
-            return (
-              <SelectItem key={n} value={n.toString()} className="items-start py-1.5">
-                <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold border shrink-0 ${SCORE_COLORS[colorKey]}`}>{n}</span>
-                {text && <span className="text-[11px] text-gray-600 leading-snug flex-1 ml-2 whitespace-normal">{text}</span>}
-              </SelectItem>
-            );
-          })}
+          {descLevels.map((n) => (
+            <DescriptorSelectItem
+              key={n}
+              value={n.toString()}
+              scoreNumber={n}
+              descriptorText={descFor(n)}
+            />
+          ))}
         </SelectContent>
       </Select>
       {selectedDesc && (
