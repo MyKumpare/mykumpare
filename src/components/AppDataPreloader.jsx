@@ -12,22 +12,22 @@ import { fetchAllRecords } from "@/lib/fetchAllRecords";
 export default function AppDataPreloader() {
   useInfiniteEntity({
     queryKey: ["firms-infinite"],
-    fetchFn: (cursor) => fetchAllRecords("fetchAllFirms", cursor),
+    fetchFn: () => fetchAllRecords("fetchAllFirms"),
     staleTime: 300000,
   });
   useInfiniteEntity({
     queryKey: ["products-infinite"],
-    fetchFn: (cursor) => fetchAllRecords("fetchAllProducts", cursor),
+    fetchFn: () => fetchAllRecords("fetchAllProducts"),
     staleTime: 300000,
   });
   useInfiniteEntity({
     queryKey: ["contacts-infinite"],
-    fetchFn: (cursor) => fetchAllRecords("fetchAllContacts", cursor),
+    fetchFn: () => fetchAllRecords("fetchAllContacts"),
     staleTime: 300000,
   });
   useInfiniteEntity({
     queryKey: ["portfolios-infinite"],
-    fetchFn: (cursor) => fetchAllRecords("fetchAllPortfolios", cursor),
+    fetchFn: () => fetchAllRecords("fetchAllPortfolios"),
     staleTime: 300000,
   });
   useQuery({

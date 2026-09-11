@@ -299,7 +299,7 @@ export default function Home() {
   // reflects the current database state when the user visits the page.
   const firmsQuery = useInfiniteEntity({
     queryKey: ["firms-infinite"],
-    fetchFn: (cursor) => fetchAllRecords("fetchAllFirms", cursor),
+    fetchFn: () => fetchAllRecords("fetchAllFirms"),
     batchSize: 500,
     staleTime: 300000,
   });
@@ -367,7 +367,7 @@ export default function Home() {
   // fetchAllProducts backend function (service role with 429 retry backoff).
   const productsQuery = useInfiniteEntity({
     queryKey: ["products-infinite"],
-    fetchFn: (cursor) => fetchAllRecords("fetchAllProducts", cursor),
+    fetchFn: () => fetchAllRecords("fetchAllProducts"),
     batchSize: 500,
     staleTime: 300000,
   });
@@ -409,7 +409,7 @@ export default function Home() {
   // fetchAllContacts backend function (service role with 429 retry backoff).
   const contactsQuery = useInfiniteEntity({
     queryKey: ["contacts-infinite"],
-    fetchFn: (cursor) => fetchAllRecords("fetchAllContacts", cursor),
+    fetchFn: () => fetchAllRecords("fetchAllContacts"),
     batchSize: 500,
     staleTime: 300000,
   });
@@ -466,7 +466,7 @@ export default function Home() {
   // fetchAllPortfolios backend function (service role with 429 retry backoff).
   const portfoliosQuery = useInfiniteEntity({
     queryKey: ["portfolios-infinite"],
-    fetchFn: (cursor) => fetchAllRecords("fetchAllPortfolios", cursor),
+    fetchFn: () => fetchAllRecords("fetchAllPortfolios"),
     batchSize: 500,
     staleTime: 300000,
   });
