@@ -8,6 +8,7 @@ import ScoringAttachmentsManager from "@/components/templates/ScoringAttachments
 import ScoringOverallRatingPanel from "@/components/templates/ScoringOverallRatingPanel";
 import { computeWeightedScoreMulti, effectiveAdjustedPrimary, effectiveFinalScore } from "@/components/templates/scoringWeightLogic";
 import TestModeChartTab from "@/components/templates/testmode/TestModeChartTab";
+import TestModeBonusPenaltyDetails from "@/components/templates/testmode/TestModeBonusPenaltyDetails";
 import { TestScoreCell, TestDeviationCell, TestNotesCell } from "@/components/templates/testmode/TestModeCells";
 import { exportTestModeScoringPdf } from "@/components/templates/testmode/testModePdf";
 import {
@@ -596,19 +597,15 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
                     {showFinal && <td className="p-2 text-center">{computeTotals("final_score")}</td>}
                     <td></td>
                   </tr>
-                  {/* Total Score row — weighted running total / max */}
+                  {/* Total Max Score row */}
                   <tr className="border-t font-semibold bg-indigo-50/50">
-                    <td className="p-2">Total Score</td>
+                    <td className="p-2">Total Max Score</td>
                     <td className="p-2 text-center" colSpan={scoreColCount}>
-                      {weightedMax > 0 && weightedRunningTotal != null ? (
-                        <div className="flex flex-col items-center gap-0.5">
-                          <span className="inline-flex items-center gap-1.5">
-                            <span className="text-indigo-600">{formatScoreValue(Number(weightedRunningTotal.toFixed(2)), scoreUnit)}</span>
-                            <span className="text-gray-400 font-normal">/</span>
-                            <span className="text-gray-500 font-normal">{formatScoreValue(weightedMax, scoreUnit)}</span>
-                            <span className="text-[10px] text-indigo-500 font-normal ml-1">(weighted running total)</span>
-                          </span>
-                        </div>
+                      {weightedMax > 0 ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="text-indigo-600">{formatScoreValue(weightedMax, scoreUnit)}</span>
+                          <span className="text-[10px] text-indigo-500 font-normal ml-1">(max achievable)</span>
+                        </span>
                       ) : "—"}
                     </td>
                     <td></td>
@@ -621,6 +618,9 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
             {hasRatingConfig && (
               <ScoringOverallRatingPanel weightedScore={overallRating.weightedScore} ratingConfig={ratingConfig} />
             )}
+
+            {/* Bonus & penalty adjustment options (collapsible) */}
+            <TestModeBonusPenaltyDetails blocks={blocks} templateCriteria={templateCriteria} scoreUnit={scoreUnit} />
 
             {/* Level descriptors reference (collapsible) */}
             <DescriptorReference blocks={blocks} expandedBlocks={expandedBlocks} toggleBlock={toggleBlock} />
