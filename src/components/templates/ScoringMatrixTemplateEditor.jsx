@@ -16,6 +16,40 @@ const nextBlockId = () => `smb_${Date.now()}_${++_blockId}`;
 let _critId = 0;
 const nextCritId = () => `smc_${Date.now()}_${++_critId}`;
 
+// Compute the min/max score range for a single criterion.
+// - single mode: uses single_score_min / single_score_max
+// - levels mode: uses the min/max descriptor levels (defaults to 1-5)
+function getCriterionRange(crit) {
+  if (!crit) return null;
+  if (crit.scoring_mode === "single") {
+    const min = Number.isFinite(crit.single_score_min) ? crit.single_score_min : 0;
+    const max = Number.isFinite(crit.single_score_max) ? crit.single_score_max : 100;
+    return { min, max };
+  }
+  const descs = crit.descriptors;
+  if (Array.isArray(descs) && descs.length > 0) {
+    const levels = descs.map((d) => d.level).filter((n) => Number.isFinite(n));
+    if (levels.length > 0) return { min: Math.min(...levels), max: Math.max(...levels) };
+  }
+  return { min: 1, max: 5 };
+}
+
+// Compute the overall min/max range for a block from the ranges of its criteria.
+function getBlockRange(block) {
+  const ranges = (block.criteria || []).map(getCriterionRange).filter(Boolean);
+  if (ranges.length === 0) return null;
+  return { min: Math.min(...ranges.map((r) => r.min)), max: Math.max(...ranges.map((r) => r.max)) };
+}
+
+function RangeBadge({ range, className = "" }) {
+  if (!range) return null;
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-[10px] font-medium text-gray-500 bg-gray-100 border border-gray-200 rounded px-1 py-0.5 whitespace-nowrap ${className}`}>
+      {range.min}–{range.max}
+    </span>
+  );
+}
+
 /**
  * Editor for scoring matrix template structure: blocks, criteria, and level descriptors.
  * Allows adding, removing, reordering, and editing all elements.
@@ -315,6 +349,7 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange, template
               />
               <span className="text-gray-500">%</span>
             </div>
+            <RangeBadge range={getBlockRange(block)} className="ml-1" title="Score range across this section's criteria" />
             {/* Multiplier factor toggle (section level) */}
             <button
               type="button"
@@ -379,6 +414,7 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange, template
                       className="h-7 text-xs w-40"
                       placeholder="Category..."
                     />
+                    <RangeBadge range={getCriterionRange(crit)} title="Score range for this criterion" />
                     {/* Multiplier factor toggle (sub-section / criterion level) */}
                     <button
                       type="button"
