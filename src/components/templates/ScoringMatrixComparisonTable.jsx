@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight, TrendingUp, AlertTriangle, CheckCircle2, Bar
 import { Badge } from "@/components/ui/badge";
 import ScoringMatrixBenchmarkChart from "./ScoringMatrixBenchmarkChart";
 import ScoringMatrixReviewNotes from "./ScoringMatrixReviewNotes";
+import CriterionTooltip from "@/components/scoring/CriterionTooltip";
 
 const SCORE_COLORS = {
   1: "bg-red-100 text-red-700 border-red-300",
@@ -249,7 +250,9 @@ export default function ScoringMatrixComparisonTable({ blocks, showSecondary, sh
                   return (
                     <tr key={crit.id} className={`border-b hover:bg-gray-50 ${hasSignificantDeviation ? "bg-amber-50" : ""}`}>
                       <td className="p-2">
-                        <div className="font-medium">{crit.name}</div>
+                        <CriterionTooltip criterion={crit} side="right">
+                          <div className="font-medium">{crit.name}</div>
+                        </CriterionTooltip>
                         {crit.category && <div className="text-gray-400 text-[10px]">{crit.category}</div>}
                       </td>
                       {/* Primary - shaded by deviation from final */}

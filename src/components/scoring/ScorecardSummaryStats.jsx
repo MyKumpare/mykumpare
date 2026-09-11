@@ -8,6 +8,7 @@ import {
 } from "@/components/templates/testmode/testModeUtils";
 import { computeOverallRating } from "@/components/templates/scoringRatingLogic";
 import { Award, ChevronRight, ChevronDown } from "lucide-react";
+import CriterionTooltip from "@/components/scoring/CriterionTooltip";
 
 const num = (v) => (v == null || isNaN(v) ? 1 : Number(v));
 const fmt = (n, d = 2) => (n == null || isNaN(n) ? "—" : Number(n).toFixed(d));
@@ -308,7 +309,11 @@ function ScorecardBreakdownTable({ breakdown, totalWeightedAvg, unit }) {
                       className="grid grid-cols-12 gap-1 px-3 py-1.5 items-center border-t border-gray-100"
                     >
                       <div className="col-span-5 pl-6 text-xs text-gray-600 truncate">
-                        {c.crit.number ? `#${c.crit.number} ` : ""}{c.crit.name}
+                        <CriterionTooltip criterion={c.crit} side="right">
+                          <span>
+                            {c.crit.number ? `#${c.crit.number} ` : ""}{c.crit.name}
+                          </span>
+                        </CriterionTooltip>
                       </div>
                       <div className="col-span-2 text-right text-xs tabular-nums text-gray-700">
                         {fmtU(c.scoreWithBp)}
