@@ -53,11 +53,24 @@ function getBlockRange(block) {
   };
 }
 
-function RangeBadge({ range, className = "" }) {
+// Format a score value with the assessment's unit of measurement.
+// unit values: "none" | "%" | "pts" | "x" | "$" | "bps"
+function formatScoreValue(value, unit) {
+  const u = unit || "none";
+  if (u === "%") return `${value}%`;
+  if (u === "pts") return `${value} pts`;
+  if (u === "x") return `${value}x`;
+  if (u === "$") return `$${value}`;
+  if (u === "bps") return `${value} bps`;
+  return `${value}`;
+}
+
+function RangeBadge({ range, unit, className = "" }) {
   if (!range) return null;
   return (
-    <span className={`inline-flex items-center gap-0.5 text-[10px] font-medium text-gray-500 bg-gray-100 border border-gray-200 rounded px-1 py-0.5 whitespace-nowrap ${className}`}>
-      {range.min}–{range.max}
+    <span className={`inline-flex items-center gap-1 text-xs font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded px-2 py-0.5 whitespace-nowrap ${className}`}>
+      <span className="text-[9px] uppercase tracking-wide text-gray-400">Range</span>
+      <span>{formatScoreValue(range.min, unit)} – {formatScoreValue(range.max, unit)}</span>
     </span>
   );
 }
@@ -338,6 +351,17 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange, template
         </div>
       )}
 
+      {blocks.length > 0 && (
+        <div className="flex items-center gap-2 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400 border-b border-gray-200">
+          <span className="w-9" title="Expand / drag"> </span>
+          <span className="flex-1">Section Name</span>
+          <span className="w-16 text-center" title="Section weight">Weight %</span>
+          <span className="ml-1" title="Total score range across this section's criteria">Total Score Range</span>
+          <span className="w-16 text-center" title="Multiplier factor">Multiplier</span>
+          <span className="w-[60px] text-center" title="Reorder / delete">Actions</span>
+        </div>
+      )}
+
       {blocks.map((block, bIdx) => (
         <div key={block.id} className="border border-gray-200 rounded-lg overflow-hidden">
           <div className="flex items-center gap-2 bg-gray-50 px-2 py-2">
@@ -361,7 +385,7 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange, template
               />
               <span className="text-gray-500">%</span>
             </div>
-            <RangeBadge range={getBlockRange(block)} className="ml-1" title="Total score range for this section (sum of its criteria)" />
+            <RangeBadge range={getBlockRange(block)} unit={(ratingConfig && ratingConfig.unit) || "none"} className="ml-1" title="Total score range for this section (sum of its criteria)" />
             {/* Multiplier factor toggle (section level) */}
             <button
               type="button"
@@ -426,7 +450,7 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange, template
                       className="h-7 text-xs w-40"
                       placeholder="Category..."
                     />
-                    <RangeBadge range={getCriterionRange(crit)} title="Total score range for this criterion (includes bonus/penalty)" />
+                    <RangeBadge range={getCriterionRange(crit)} unit={(ratingConfig && ratingConfig.unit) || "none"} title="Total score range for this criterion (includes bonus/penalty)" />
                     {/* Multiplier factor toggle (sub-section / criterion level) */}
                     <button
                       type="button"
