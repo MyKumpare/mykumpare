@@ -19,22 +19,52 @@ const SCORE_COLORS = {
   5: "bg-green-100 text-green-700 border-green-300"
 };
 
-function ScoreCell({ score, onChange, disabled, placeholder = "—", descriptors }) {
+function ScoreCell({ score, onChange, disabled, placeholder = "—", descriptors, scoringMode, singleMin, singleMax }) {
   const hasDesc = Array.isArray(descriptors) && descriptors.some((d) => d && d.text);
   const descFor = (n) => (hasDesc ? descriptors.find((d) => d.level === n)?.text : null);
   const selectedDesc = score != null ? descFor(score) : null;
+
+  // Single-score mode: dropdown of integers from min to max
+  if (scoringMode === "single") {
+    const min = Number.isFinite(singleMin) ? singleMin : 0;
+    const max = Number.isFinite(singleMax) ? singleMax : 100;
+    const options = [];
+    for (let n = min; n <= max; n++) options.push(n);
+    return (
+      <div className="flex flex-col gap-1 w-full">
+        <Select value={score != null ? score.toString() : ""} onValueChange={(v) => onChange(parseInt(v))} disabled={disabled}>
+          <SelectTrigger className="h-8 w-full text-xs">
+            <SelectValue placeholder={placeholder} />
+          </SelectTrigger>
+          <SelectContent className="max-h-60">
+            {options.map((n) => (
+              <SelectItem key={n} value={n.toString()} className="text-xs">{n}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    );
+  }
+
+  // Levels mode: use the actual descriptor levels saved on the template criterion
+  // (falls back to 1-5 only when no descriptors are defined)
+  const descLevels = (Array.isArray(descriptors) && descriptors.length > 0)
+    ? descriptors.map((d) => d.level).filter((n) => Number.isFinite(n))
+    : [1, 2, 3, 4, 5];
+
   return (
-    <div className="flex flex-col items-center gap-0.5">
+    <div className="flex flex-col gap-1 w-full">
       <Select value={score?.toString() || ""} onValueChange={(v) => onChange(parseInt(v))} disabled={disabled}>
-        <SelectTrigger className="h-8 w-16 text-xs">
+        <SelectTrigger className="h-8 w-full text-xs">
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
-        <SelectContent className={hasDesc ? "min-w-[300px] max-w-[360px]" : ""}>
-          {[1, 2, 3, 4, 5].map((n) => {
+        <SelectContent className={hasDesc ? "min-w-[320px] max-w-[420px]" : ""}>
+          {descLevels.map((n) => {
             const text = descFor(n);
+            const colorKey = Math.max(1, Math.min(5, n));
             return (
               <SelectItem key={n} value={n.toString()} className="items-start py-1.5">
-                <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold border shrink-0 ${SCORE_COLORS[n]}`}>{n}</span>
+                <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold border shrink-0 ${SCORE_COLORS[colorKey]}`}>{n}</span>
                 {text && <span className="text-[11px] text-gray-600 leading-snug flex-1 ml-2 whitespace-normal">{text}</span>}
               </SelectItem>
             );
@@ -42,9 +72,9 @@ function ScoreCell({ score, onChange, disabled, placeholder = "—", descriptors
         </SelectContent>
       </Select>
       {selectedDesc && (
-        <span className="text-[10px] text-gray-500 leading-tight text-center max-w-[140px] whitespace-normal" title={selectedDesc}>
+        <p className="text-[11px] text-gray-600 leading-relaxed text-left w-full whitespace-normal px-0.5 mt-0.5" title={selectedDesc}>
           {selectedDesc}
-        </span>
+        </p>
       )}
     </div>
   );
@@ -75,6 +105,9 @@ function buildMockScore(template) {
       name: c.name,
       category: c.category || "",
       descriptors: c.descriptors || [],
+      scoring_mode: c.scoring_mode || "levels",
+      single_score_min: c.single_score_min,
+      single_score_max: c.single_score_max,
       primary_score: null,
       primary_notes: "",
       team_score: null,
@@ -447,11 +480,11 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
                 <thead className="bg-gray-50 sticky top-0">
                   <tr className="border-b">
                     <th className="text-left p-2 font-medium text-gray-600 min-w-[200px]">Criterion</th>
-                    <th className="text-center p-2 font-medium text-gray-600">Primary</th>
-                    {showTeam && <th className="text-center p-2 font-medium text-gray-600">Team Rec.</th>}
+                    <th className="text-left p-2 font-medium text-gray-600 min-w-[300px]">Primary</th>
+                    {showTeam && <th className="text-left p-2 font-medium text-gray-600 min-w-[240px]">Team Rec.</th>}
                     {showTeam && <th className="text-center p-2 font-medium text-gray-600">Δ</th>}
                     {showAdjustedPrimary && <th className="text-center p-2 font-medium text-gray-600">Adj. Primary</th>}
-                    {showIC && <th className="text-center p-2 font-medium text-gray-600">IC Rec.</th>}
+                    {showIC && <th className="text-left p-2 font-medium text-gray-600 min-w-[240px]">IC Rec.</th>}
                     {showIC && <th className="text-center p-2 font-medium text-gray-600">Δ</th>}
                     {showFinal && <th className="text-center p-2 font-medium text-gray-600">Final</th>}
                     <th className="text-left p-2 font-medium text-gray-600 min-w-[150px]">Notes</th>
@@ -482,23 +515,29 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
                             />
                           </td>
                           {/* Primary score */}
-                          <td className="p-2 text-center">
+                          <td className="p-2 text-left align-top">
                             <ScoreCell
                               score={crit.primary_score}
                               onChange={(v) => updateCriterion(block.id, crit.id, { primary_score: v })}
                               disabled={score.primary_score_finalized}
                               descriptors={crit.descriptors}
+                              scoringMode={crit.scoring_mode}
+                              singleMin={crit.single_score_min}
+                              singleMax={crit.single_score_max}
                             />
                           </td>
                           {/* Team recommended score */}
                           {showTeam && (
                             <>
-                              <td className="p-2 text-center">
+                              <td className="p-2 text-left align-top">
                                 <ScoreCell
                                   score={crit.team_score}
                                   onChange={(v) => updateCriterion(block.id, crit.id, { team_score: v })}
                                   disabled={score.team_review_status === "completed"}
                                   descriptors={crit.descriptors}
+                                  scoringMode={crit.scoring_mode}
+                                  singleMin={crit.single_score_min}
+                                  singleMax={crit.single_score_max}
                                 />
                               </td>
                               <td className="p-2 text-center">
@@ -530,13 +569,16 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
                           {/* IC recommended score */}
                           {showIC && (
                             <>
-                              <td className="p-2 text-center">
+                              <td className="p-2 text-left align-top">
                                 <ScoreCell
-                                  score={crit.ic_score}
-                                  onChange={(v) => updateCriterion(block.id, crit.id, { ic_score: v })}
-                                  disabled={score.ic_review_status === "completed"}
-                                  descriptors={crit.descriptors}
-                                />
+                                   score={crit.ic_score}
+                                   onChange={(v) => updateCriterion(block.id, crit.id, { ic_score: v })}
+                                   disabled={score.ic_review_status === "completed"}
+                                   descriptors={crit.descriptors}
+                                   scoringMode={crit.scoring_mode}
+                                   singleMin={crit.single_score_min}
+                                   singleMax={crit.single_score_max}
+                                 />
                               </td>
                               <td className="p-2 text-center">
                                 <DeviationCell baseScore={crit.adjusted_primary_score ?? crit.primary_score} compareScore={crit.ic_score} />
