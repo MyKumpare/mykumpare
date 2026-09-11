@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Search, GitCompareArrows } from "lucide-react";
 import { computeWeightedScoreMulti, effectiveFinalScore } from "@/components/templates/scoringWeightLogic";
+import ScorecardSummaryStats from "@/components/scoring/ScorecardSummaryStats";
 
 const STATUS_STYLES = {
   draft: "bg-gray-100 text-gray-600",
@@ -158,21 +159,6 @@ function ReviewStatusGrid({ score }) {
   );
 }
 
-function TotalScoreCard({ score, accent }) {
-  const total = useMemo(() => {
-    if (!score?.scoring_blocks) return null;
-    return computeWeightedScoreMulti(score.scoring_blocks, "final_score", { applyBonusPenalty: true });
-  }, [score]);
-
-  return (
-    <div className={`rounded-lg border p-3 text-center ${accent}`}>
-      <div className="text-xs font-medium text-gray-500 mb-1">Total Adjusted Score</div>
-      <div className="text-3xl font-bold tabular-nums">{fmt(total)}</div>
-      <div className="text-xs text-gray-400 mt-0.5">weighted, bonus/penalty applied</div>
-    </div>
-  );
-}
-
 function BlockBreakdown({ score }) {
   if (!score?.scoring_blocks) return null;
   return (
@@ -239,6 +225,13 @@ function FirmComparisonColumn({ firmId, accent, label }) {
   );
   const activeScore = sortedScores.find((s) => s.id === selectedScoreId) || sortedScores[0];
 
+  // Fetch the scoring matrix template so we can compute total max scores
+  const { data: template } = useQuery({
+    queryKey: ["templateForScorecard", activeScore?.template_id],
+    queryFn: () => base44.entities.Template.get(activeScore.template_id),
+    enabled: !!activeScore?.template_id,
+  });
+
   if (!firmId) {
     return (
       <div className="border border-dashed border-gray-300 rounded-lg p-6 bg-gray-50/50 text-center text-sm text-gray-400 flex items-center justify-center min-h-[300px]">
@@ -279,7 +272,7 @@ function FirmComparisonColumn({ firmId, accent, label }) {
             <span className="text-gray-400"> · v{activeScore.version_number || 1}</span>
           </div>
           <ReviewStatusGrid score={activeScore} />
-          <TotalScoreCard score={activeScore} accent={accent} />
+          <ScorecardSummaryStats score={activeScore} template={template} accent={accent} />
           <BlockBreakdown score={activeScore} />
         </>
       )}
