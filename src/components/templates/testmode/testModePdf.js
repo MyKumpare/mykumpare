@@ -111,16 +111,10 @@ export async function exportTestModeScoringPdf({ score, template, templateCriter
     color: bpTotal > 0 ? BONUS_RGB : bpTotal < 0 ? PENALTY_RGB : MUTED_RGB
   });
 
-  // Final total (weighted running total / max)
-  const finalWeighted = computeTotals("final_score");
-  const bestWeighted = showFinal && finalWeighted !== "—" ? finalWeighted
-    : showIC && computeTotals("ic_score") !== "—" ? computeTotals("ic_score")
-    : showAdjustedPrimary && computeTotals("adjusted_primary_score") !== "—" ? computeTotals("adjusted_primary_score")
-    : showTeam && computeTotals("team_score") !== "—" ? computeTotals("team_score")
-    : finalWeighted;
+  // Total max score (the maximum achievable weighted score)
   summaryItems.push({
-    label: "Total Score",
-    value: weightedMax > 0 && bestWeighted !== "—" ? `${bestWeighted} / ${formatScoreValue(weightedMax, unit)}` : "—",
+    label: "Total Max Score",
+    value: weightedMax > 0 ? formatScoreValue(weightedMax, unit) : "—",
     color: [79, 70, 229]
   });
 
@@ -334,23 +328,32 @@ export async function exportTestModeScoringPdf({ score, template, templateCriter
     });
   });
 
-  // ── Bonus/Penalty detail section ──
-  const activeAdjustments = [];
+  // ── Bonus/Penalty detail section (all enabled criteria with dropdown options) ──
+  const bpEntries = [];
   blocks.forEach((b) => (b.criteria || []).forEach((c) => {
-    if (c.bonus_penalty_active && c.bonus_penalty_value) {
-      activeAdjustments.push({
-        criterion: c.name || `#${c.number}`,
-        block: b.name,
-        value: c.bonus_penalty_value,
-        notes: c.bonus_penalty_notes || c.primary_notes || "",
-        guidance: templateCriteria[c.id]?.bonus_penalty_guidance || "",
-        direction: templateCriteria[c.id]?.bonus_penalty_direction || c.bonus_penalty_direction || "penalty"
-      });
-    }
+    const tc = templateCriteria[c.id] || c;
+    if (!tc.bonus_penalty_enabled) return;
+    const direction = tc.bonus_penalty_direction || c.bonus_penalty_direction || "penalty";
+    const range = tc.bonus_penalty_range || c.bonus_penalty_range || null;
+    const levels = tc.bonus_penalty_levels || c.bonus_penalty_levels || [];
+    const guidance = tc.bonus_penalty_guidance || c.bonus_penalty_guidance || "";
+    const isActive = !!(c.bonus_penalty_active && c.bonus_penalty_value);
+    bpEntries.push({
+      criterion: c.name || `#${c.number}`,
+      block: b.name,
+      direction,
+      range,
+      levels,
+      guidance,
+      step: tc.bonus_penalty_step || c.bonus_penalty_step,
+      isActive,
+      value: c.bonus_penalty_value,
+      notes: c.bonus_penalty_notes || c.primary_notes || ""
+    });
   }));
 
-  if (activeAdjustments.length > 0) {
-    if (y > pageH - 120) {
+  if (bpEntries.length > 0) {
+    if (y > pageH - 140) {
       drawMyKumpareBranding(doc);
       doc.addPage();
       y = margin + 10;
@@ -367,42 +370,122 @@ export async function exportTestModeScoringPdf({ score, template, templateCriter
     doc.line(margin, y, pageW - margin, y);
     y += 14;
 
-    doc.setFontSize(7.5);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(75, 85, 99);
-    doc.text("Criterion", margin + 4, y + 10);
-    doc.text("Block", margin + 170, y + 10);
-    doc.text("Adjustment", margin + 300, y + 10);
-    doc.text("Justification", margin + 370, y + 10);
-    y += 16;
-
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7.5);
-    activeAdjustments.forEach((adj) => {
-      if (y > pageH - 60) {
+    bpEntries.forEach((entry) => {
+      if (y > pageH - 80) {
         drawMyKumpareBranding(doc);
         doc.addPage();
         y = margin + 10;
       }
-      const color = adj.value > 0 ? BONUS_RGB : PENALTY_RGB;
+
+      const dirColor = entry.direction === "bonus" ? BONUS_RGB : PENALTY_RGB;
+      const dirLabel = entry.direction === "bonus" ? "BONUS" : "PENALTY";
+
+      // Row 1: criterion + block + direction badge + applied value
       doc.setTextColor(INK_RGB[0], INK_RGB[1], INK_RGB[2]);
-      const critLines = doc.splitTextToSize(adj.criterion, 160);
-      doc.text(critLines[0], margin + 4, y + 10);
-      doc.setTextColor(MUTED_RGB[0], MUTED_RGB[1], MUTED_RGB[2]);
-      doc.text(adj.block, margin + 170, y + 10);
-      doc.setFillColor(color[0], color[1], color[2]);
-      doc.roundedRect(margin + 300, y + 2, 50, 14, 3, 3, "F");
       doc.setFont("helvetica", "bold");
-      doc.setTextColor(255, 255, 255);
-      doc.text(`${adj.value > 0 ? "+" : ""}${adj.value}`, margin + 310, y + 12);
+      doc.setFontSize(8);
+      const critLines = doc.splitTextToSize(entry.criterion, 200);
+      doc.text(critLines[0], margin + 4, y + 10);
       doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      doc.setTextColor(MUTED_RGB[0], MUTED_RGB[1], MUTED_RGB[2]);
+      doc.text(entry.block, margin + 210, y + 10);
+
+      // Direction badge
+      doc.setFillColor(dirColor[0], dirColor[1], dirColor[2]);
+      doc.roundedRect(margin + 300, y + 2, 52, 13, 3, 3, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(7);
+      doc.setTextColor(255, 255, 255);
+      doc.text(dirLabel, margin + 306, y + 11);
+
+      // Applied value or "not applied"
+      if (entry.isActive) {
+        doc.setFillColor(dirColor[0], dirColor[1], dirColor[2]);
+        doc.roundedRect(margin + 360, y + 2, 50, 13, 3, 3, "F");
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.setTextColor(255, 255, 255);
+        doc.text(`${entry.value > 0 ? "+" : ""}${entry.value}`, margin + 368, y + 11);
+      } else {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7);
+        doc.setTextColor(203, 213, 225);
+        doc.text("not applied", margin + 366, y + 11);
+      }
+      y += 16;
+
+      // Row 2: range + dropdown options
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      doc.setTextColor(MUTED_RGB[0], MUTED_RGB[1], MUTED_RGB[2]);
+      let rangeLabel = "Range: —";
+      if (entry.range && (entry.range.min != null || entry.range.max != null)) {
+        const min = entry.direction === "penalty" ? (entry.range.min ?? 0) : (entry.range.min ?? 0);
+        const max = entry.direction === "bonus" ? (entry.range.max ?? 0) : (entry.range.max ?? 0);
+        rangeLabel = `Range: ${min} to ${max}`;
+      }
+      if (entry.step) rangeLabel += `  (step ${entry.step})`;
+      doc.text(rangeLabel, margin + 4, y + 10);
+
+      // Dropdown options (levels)
+      doc.setTextColor(INK_RGB[0], INK_RGB[1], INK_RGB[2]);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(7);
+      doc.text("Options:", margin + 160, y + 10);
+      doc.setFont("helvetica", "normal");
+      const optsText = entry.levels.length > 0
+        ? entry.levels.map((lv) => `${lv.level > 0 ? "+" : ""}${lv.level}${lv.text ? ` (${lv.text})` : ""}`).join("  |  ")
+        : "— (no levels generated)";
+      const optsLines = doc.splitTextToSize(optsText, pageW - margin - 215);
       doc.setTextColor(107, 114, 128);
-      const noteLines = doc.splitTextToSize(adj.notes || "—", pageW - margin - 370);
-      doc.text(noteLines[0] || "—", margin + 370, y + 10);
-      y += Math.max(18, 10 + (critLines.length > 1 || noteLines.length > 1 ? 8 : 0));
-      doc.setDrawColor(243, 244, 246);
+      doc.text(optsLines[0] || "—", margin + 200, y + 10);
+      y += 12;
+      optsLines.slice(1, 3).forEach((line) => {
+        if (y > pageH - 60) { drawMyKumpareBranding(doc); doc.addPage(); y = margin + 10; }
+        doc.text(line, margin + 200, y + 10);
+        y += 9;
+      });
+
+      // Row 3: guidance
+      if (entry.guidance) {
+        if (y > pageH - 60) { drawMyKumpareBranding(doc); doc.addPage(); y = margin + 10; }
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(7);
+        doc.setTextColor(MUTED_RGB[0], MUTED_RGB[1], MUTED_RGB[2]);
+        doc.text("Guidance:", margin + 4, y + 10);
+        doc.setFont("helvetica", "normal");
+        const guideLines = doc.splitTextToSize(entry.guidance, pageW - margin - 70);
+        doc.setTextColor(107, 114, 128);
+        doc.text(guideLines[0] || "", margin + 60, y + 10);
+        y += 9;
+        guideLines.slice(1, 2).forEach((line) => {
+          if (y > pageH - 60) { drawMyKumpareBranding(doc); doc.addPage(); y = margin + 10; }
+          doc.text(line, margin + 60, y + 10);
+          y += 9;
+        });
+      }
+
+      // Row 4: justification (if applied)
+      if (entry.isActive && entry.notes) {
+        if (y > pageH - 60) { drawMyKumpareBranding(doc); doc.addPage(); y = margin + 10; }
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(7);
+        doc.setTextColor(MUTED_RGB[0], MUTED_RGB[1], MUTED_RGB[2]);
+        doc.text("Justification:", margin + 4, y + 10);
+        doc.setFont("helvetica", "normal");
+        const noteLines = doc.splitTextToSize(entry.notes, pageW - margin - 80);
+        doc.setTextColor(107, 114, 128);
+        doc.text(noteLines[0] || "", margin + 70, y + 10);
+        y += 9;
+      }
+
+      y += 6;
+      doc.setDrawColor(BORDER_RGB[0], BORDER_RGB[1], BORDER_RGB[2]);
       doc.line(margin, y, pageW - margin, y);
-      y += 4;
+      y += 8;
     });
   }
 
