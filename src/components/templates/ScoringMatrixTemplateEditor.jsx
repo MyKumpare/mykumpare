@@ -33,12 +33,17 @@ function getCriterionRange(crit) {
       else { min = 1; max = 5; }
     } else { min = 1; max = 5; }
   }
-  // Fold in bonus/penalty adjustment so this reflects the total possible score, not just the base scoring range
+  // Fold in bonus/penalty adjustment so this reflects the total possible score, not just the base scoring range.
+  // Direction-aware: penalty only lowers the min (max stays at the base scoring max);
+  // bonus only raises the max (min stays at the base scoring min).
   if (crit.bonus_penalty_enabled && crit.bonus_penalty_range) {
     const bpMin = Number.isFinite(crit.bonus_penalty_range.min) ? crit.bonus_penalty_range.min : 0;
     const bpMax = Number.isFinite(crit.bonus_penalty_range.max) ? crit.bonus_penalty_range.max : 0;
-    if (bpMin < 0) min += bpMin;
-    if (bpMax > 0) max += bpMax;
+    if (crit.bonus_penalty_direction === "bonus") {
+      if (bpMax > 0) max += bpMax;
+    } else {
+      if (bpMin < 0) min += bpMin;
+    }
   }
   return { min, max };
 }
