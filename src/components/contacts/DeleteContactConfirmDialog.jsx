@@ -44,7 +44,7 @@ export default function DeleteContactConfirmDialog({ open, onOpenChange, contact
         <AlertDialogFooter>
           <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
           <AlertDialogAction
-            onClick={onConfirm}
+            onClick={(e) => { e.preventDefault(); onConfirm(); }}
             disabled={deleting}
             className="bg-red-600 hover:bg-red-700 text-white"
           >
