@@ -59,6 +59,7 @@ import { findFirmFieldConflicts } from "./firmFieldDuplicateCheck";
 import LiveFieldConflictWarning from "./LiveFieldConflictWarning";
 import { isFirmNameSimilarToLinkedin } from "./firmNameSimilarity";
 import { findFirmNameDuplicates } from "./firmNameDuplicateCheck";
+import { titleCase } from "../contacts/titleCase";
 import LinkedinFirmMismatchDialog from "./LinkedinFirmMismatchDialog";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
@@ -676,7 +677,7 @@ export default function AddFirmDialog({ open, onOpenChange, onSubmit, onDelete, 
   };
 
   const performSubmit = (addrs) => {
-    onSubmit({ firm_type: firmTypes[0] || "", allocator_types: firmTypes.includes("Allocator") ? allocatorTypes : [], name: firmName.trim(), logo_url: logoUrl, website, email, linkedin_url: linkedinUrl, year_founded: yearFounded ? parseInt(yearFounded) : null, description, notes, addresses: addrs, phones, pending_contacts: pendingContacts.length > 0 ? pendingContacts : undefined, sourcing_sources: sourcingSources, sourcing_date: sourcingDate || null, sourcing_contact_name: sourcingContactName, sourcing_notes: sourcingNotes, geographic_region: geographicRegion || "Undefined", location: location || "", location_lat: locationLat, location_lng: locationLng, primary_xponance_contact_id: primaryXponanceId || null, primary_xponance_contact_name: primaryXponanceName || null, secondary_xponance_contact_id: secondaryXponanceId || null, secondary_xponance_contact_name: secondaryXponanceName || null });
+    onSubmit({ firm_type: firmTypes[0] || "", allocator_types: firmTypes.includes("Allocator") ? allocatorTypes : [], name: titleCase(firmName.trim()), logo_url: logoUrl, website, email, linkedin_url: linkedinUrl, year_founded: yearFounded ? parseInt(yearFounded) : null, description, notes, addresses: addrs, phones, pending_contacts: pendingContacts.length > 0 ? pendingContacts : undefined, sourcing_sources: sourcingSources, sourcing_date: sourcingDate || null, sourcing_contact_name: sourcingContactName, sourcing_notes: sourcingNotes, geographic_region: geographicRegion || "Undefined", location: location || "", location_lat: locationLat, location_lng: locationLng, primary_xponance_contact_id: primaryXponanceId || null, primary_xponance_contact_name: primaryXponanceName || null, secondary_xponance_contact_id: secondaryXponanceId || null, secondary_xponance_contact_name: secondaryXponanceName || null });
     // Also save AUM history (including client type breakdown) if it has unsaved changes
     if (aumSaveRef.current && aumDirty) {
       aumSaveRef.current();

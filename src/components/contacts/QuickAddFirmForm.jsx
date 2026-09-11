@@ -11,6 +11,7 @@ import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
 import { findFirmNameDuplicates } from "../firms/firmNameDuplicateCheck";
+import { titleCase } from "./titleCase";
 
 const FIRM_TYPES = [
   "Investment Manager",
@@ -56,7 +57,7 @@ export default function QuickAddFirmForm({ onFirmCreated, onCancel }) {
         return;
       }
     }
-    createMutation.mutate({ name: name.trim(), firm_type: firmType, tenant_id: user?.linked_firm_id });
+    createMutation.mutate({ name: titleCase(name.trim()), firm_type: firmType, tenant_id: user?.linked_firm_id });
   };
 
   return (
