@@ -166,6 +166,58 @@ export function computeTestTotals(blocks, scoreField, computeWeightedScoreMulti,
   return val != null ? val.toFixed(2) : "—";
 }
 
+/**
+ * Total (raw sum) of all criterion scores for a given phase, including
+ * active bonus/penalty adjustments. Unlike computeTestTotals (weighted
+ * average), this is a simple sum — not normalized by weights.
+ */
+export function computeTotalScore(blocks, scoreField, effectiveAdjustedPrimary, effectiveFinalScore) {
+  let getValue;
+  if (scoreField === "adjusted_primary_score") {
+    getValue = (crit) => {
+      const s = effectiveAdjustedPrimary(crit);
+      if (s == null) return null;
+      return crit.bonus_penalty_active && crit.bonus_penalty_value ? s + crit.bonus_penalty_value : s;
+    };
+  } else if (scoreField === "final_score") {
+    getValue = (crit) => {
+      const s = effectiveFinalScore(crit);
+      if (s == null) return null;
+      return crit.bonus_penalty_active && crit.bonus_penalty_value ? s + crit.bonus_penalty_value : s;
+    };
+  } else {
+    getValue = (crit) => {
+      let s = crit[scoreField];
+      if (s == null) return null;
+      if (crit.bonus_penalty_active && crit.bonus_penalty_value) {
+        s = s + crit.bonus_penalty_value;
+      }
+      return s;
+    };
+  }
+  let total = 0;
+  let hasAny = false;
+  (blocks || []).forEach((block) => {
+    (block.criteria || []).forEach((crit) => {
+      const v = getValue(crit);
+      if (v != null && Number.isFinite(v)) { total += Number(v); hasAny = true; }
+    });
+  });
+  return hasAny ? total : null;
+}
+
+/** Sum of all criterion max score ranges across every block — the total max achievable score. */
+export function computeTotalMaxScore(blocks, templateCriteria) {
+  let total = 0;
+  (blocks || []).forEach((block) => {
+    (block.criteria || []).forEach((crit) => {
+      const r = getCriterionRange(templateCriteria?.[crit.id]);
+      if (r && Number.isFinite(r.max)) total += r.max;
+    });
+  });
+  return total;
+}
+
 /** Sum of all active bonus/penalty adjustments across every criterion. */
 export function computeBonusPenaltyTotal(blocks) {
   let sum = 0;

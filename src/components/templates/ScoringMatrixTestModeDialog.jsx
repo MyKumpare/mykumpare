@@ -13,7 +13,8 @@ import { TestScoreCell, TestDeviationCell, TestNotesCell } from "@/components/te
 import { exportTestModeScoringPdf } from "@/components/templates/testmode/testModePdf";
 import {
   buildMockScore, getCriterionRange, getBlockRange, formatScoreValue,
-  computeTestTotals, computeBonusPenaltyTotal, unscoredCount, getOverallRating
+  computeTestTotals, computeTotalScore, computeTotalMaxScore,
+  computeBonusPenaltyTotal, unscoredCount, getOverallRating
 } from "@/components/templates/testmode/testModeUtils";
 
 const SCORE_COLORS = {
@@ -237,6 +238,22 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
   // ── Weighted totals (uses real computeWeightedScoreMulti with multipliers) ──
   const computeTotals = (scoreField) =>
     computeTestTotals(blocks, scoreField, computeWeightedScoreMulti, effectiveAdjustedPrimary, effectiveFinalScore);
+
+  // ── Total (raw sum) of scores including bonus/penalty, per phase column ──
+  const totalScore = (scoreField) => {
+    const v = computeTotalScore(blocks, scoreField, effectiveAdjustedPrimary, effectiveFinalScore);
+    return v != null ? v.toFixed(2) : "—";
+  };
+
+  // ── Total max achievable score (sum of all criterion max ranges) ──
+  const totalMaxScore = useMemo(() => computeTotalMaxScore(blocks, templateCriteria), [blocks, templateCriteria]);
+
+  // ── Total score over total max score, as a percentage ──
+  const scorePct = (scoreField) => {
+    const v = computeTotalScore(blocks, scoreField, effectiveAdjustedPrimary, effectiveFinalScore);
+    if (v == null || totalMaxScore <= 0) return "—";
+    return `${((v / totalMaxScore) * 100).toFixed(1)}%`;
+  };
 
   const bpTotal = useMemo(() => computeBonusPenaltyTotal(blocks), [blocks]);
 
@@ -579,15 +596,28 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
                   ))}
                 </tbody>
                 <tfoot className="bg-gray-50">
+                  {/* Total Score (incl. bonus/penalty) — raw sum per phase */}
                   <tr className="border-t-2 font-semibold">
                     <td className="p-2">
-                      Weighted Average (incl. bonus/penalty)
+                      Total Score (incl. bonus/penalty)
                       {bpTotal !== 0 && (
                         <span className="ml-1.5 text-[10px] font-medium" style={{ color: bpTotal > 0 ? "#166534" : "#991b1b" }}>
                           ({bpTotal > 0 ? "+" : ""}{bpTotal.toFixed(2)})
                         </span>
                       )}
                     </td>
+                    <td className="p-2 text-center">{totalScore("primary_score")}</td>
+                    {showTeam && <td className="p-2 text-center">{totalScore("team_score")}</td>}
+                    {showTeam && <td></td>}
+                    {showAdjustedPrimary && <td className="p-2 text-center">{totalScore("adjusted_primary_score")}</td>}
+                    {showIC && <td className="p-2 text-center">{totalScore("ic_score")}</td>}
+                    {showIC && <td></td>}
+                    {showFinal && <td className="p-2 text-center">{totalScore("final_score")}</td>}
+                    <td></td>
+                  </tr>
+                  {/* Weighted Average Score — based on category weights */}
+                  <tr className="border-t font-semibold">
+                    <td className="p-2">Weighted Average Score</td>
                     <td className="p-2 text-center">{computeTotals("primary_score")}</td>
                     {showTeam && <td className="p-2 text-center">{computeTotals("team_score")}</td>}
                     {showTeam && <td></td>}
@@ -597,13 +627,25 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
                     {showFinal && <td className="p-2 text-center">{computeTotals("final_score")}</td>}
                     <td></td>
                   </tr>
+                  {/* Total Score / Total Max Score — percentage per phase */}
+                  <tr className="border-t font-semibold">
+                    <td className="p-2">Total Score / Total Max Score</td>
+                    <td className="p-2 text-center">{scorePct("primary_score")}</td>
+                    {showTeam && <td className="p-2 text-center">{scorePct("team_score")}</td>}
+                    {showTeam && <td></td>}
+                    {showAdjustedPrimary && <td className="p-2 text-center">{scorePct("adjusted_primary_score")}</td>}
+                    {showIC && <td className="p-2 text-center">{scorePct("ic_score")}</td>}
+                    {showIC && <td></td>}
+                    {showFinal && <td className="p-2 text-center">{scorePct("final_score")}</td>}
+                    <td></td>
+                  </tr>
                   {/* Total Max Score row */}
                   <tr className="border-t font-semibold bg-indigo-50/50">
                     <td className="p-2">Total Max Score</td>
                     <td className="p-2 text-center" colSpan={scoreColCount}>
-                      {weightedMax > 0 ? (
+                      {totalMaxScore > 0 ? (
                         <span className="inline-flex items-center gap-1.5">
-                          <span className="text-indigo-600">{formatScoreValue(weightedMax, scoreUnit)}</span>
+                          <span className="text-indigo-600">{formatScoreValue(totalMaxScore, scoreUnit)}</span>
                           <span className="text-[10px] text-indigo-500 font-normal ml-1">(max achievable)</span>
                         </span>
                       ) : "—"}
