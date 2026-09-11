@@ -150,9 +150,9 @@ function ScoreCell({ score, onChange, disabled, placeholder = "—", descriptors
     const options = [];
     for (let n = min; n <= max; n++) options.push(n);
     return (
-      <div className="flex flex-col items-start gap-1 w-full">
+      <div className="flex flex-col gap-1 w-full">
         <Select value={score != null ? score.toString() : ""} onValueChange={(v) => onChange(parseInt(v))} disabled={disabled}>
-          <SelectTrigger className="h-8 w-20 text-xs">
+          <SelectTrigger className="h-8 w-full text-xs">
             <SelectValue placeholder={placeholder} />
           </SelectTrigger>
           <SelectContent className="max-h-60">
@@ -1041,12 +1041,12 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
               <thead className="bg-gray-50 sticky top-0">
                 <tr className="border-b">
                   <th className="text-left p-2 font-medium text-gray-600 min-w-[200px]">Criterion</th>
-                  <th className="text-left p-2 font-medium text-gray-600 min-w-[280px]">Primary</th>
-                  {showSecondary && <th className="text-left p-2 font-medium text-gray-600 min-w-[280px]">Secondary</th>}
-                  {showTeam && <th className="text-center p-2 font-medium text-gray-600 min-w-[180px]">Team Rec.</th>}
+                  <th className="text-left p-2 font-medium text-gray-600 min-w-[340px]">Primary</th>
+                  {showSecondary && <th className="text-left p-2 font-medium text-gray-600 min-w-[340px]">Secondary</th>}
+                  {showTeam && <th className="text-left p-2 font-medium text-gray-600 min-w-[260px]">Team Rec.</th>}
                   {showTeam && <th className="text-center p-2 font-medium text-gray-600">Δ</th>}
                   {showAdjustedPrimary && <th className="text-center p-2 font-medium text-gray-600 min-w-[200px]">Adj. Primary</th>}
-                  {showIC && <th className="text-center p-2 font-medium text-gray-600 min-w-[180px]">IC Rec.</th>}
+                  {showIC && <th className="text-left p-2 font-medium text-gray-600 min-w-[260px]">IC Rec.</th>}
                   {showIC && <th className="text-center p-2 font-medium text-gray-600">Δ</th>}
                   {showFinal && <th className="text-center p-2 font-medium text-gray-600 min-w-[120px]">Final</th>}
                   {showFinal && <th className="text-center p-2 font-medium text-gray-600">Bonus/Penalty</th>}
@@ -1119,7 +1119,7 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
                         {/* Team recommended score */}
                         {showTeam && (
                           <>
-                            <td className="p-2 text-center">
+                            <td className="p-2 text-left align-top">
                               {isPrimaryAnalyst ? (
                                 <ScoreCell
                                   score={crit.team_score}
@@ -1170,7 +1170,7 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
                         {/* IC recommended score */}
                         {showIC && (
                           <>
-                            <td className="p-2 text-center">
+                            <td className="p-2 text-left align-top">
                               {isPrimaryAnalyst ? (
                                 <ScoreCell
                                   score={crit.ic_score}
