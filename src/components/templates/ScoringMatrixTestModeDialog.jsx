@@ -448,6 +448,8 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
     });
   };
 
+  // Weighted average that includes each criterion's active bonus/penalty
+  // adjustment, so the total reflects score + bonus/penalty per criterion.
   const computeTotals = (scoreField) => {
     let total = 0;
     let totalWeight = 0;
@@ -456,12 +458,26 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
       (block.criteria || []).forEach((crit) => {
         const s = crit[scoreField];
         if (s != null) {
-          total += s * blockWeight;
+          const adj = crit.bonus_penalty_active ? (crit.bonus_penalty_value || 0) : 0;
+          total += (s + adj) * blockWeight;
           totalWeight += blockWeight;
         }
       });
     });
     return totalWeight > 0 ? (total / totalWeight).toFixed(2) : "—";
+  };
+
+  // Sum of all active bonus/penalty adjustments across every criterion.
+  const computeBonusPenaltyTotal = () => {
+    let sum = 0;
+    blocks.forEach((block) => {
+      (block.criteria || []).forEach((crit) => {
+        if (crit.bonus_penalty_active && crit.bonus_penalty_value != null) {
+          sum += crit.bonus_penalty_value || 0;
+        }
+      });
+    });
+    return sum;
   };
 
   // Count criteria still missing a score for a given phase field.
@@ -654,7 +670,7 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
                     {showIC && <th className="text-left p-2 font-medium text-gray-600 min-w-[240px]">IC Rec.</th>}
                     {showIC && <th className="text-center p-2 font-medium text-gray-600">Δ</th>}
                     {showFinal && <th className="text-center p-2 font-medium text-gray-600">Final</th>}
-                    {showFinal && <th className="text-center p-2 font-medium text-gray-600">Bonus/Penalty</th>}
+                    <th className="text-center p-2 font-medium text-gray-600 min-w-[120px]">Bonus/Penalty</th>
                     <th className="text-left p-2 font-medium text-gray-600 min-w-[150px]">Notes</th>
                   </tr>
                 </thead>
@@ -662,7 +678,7 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
                   {blocks.map((block) => (
                     <React.Fragment key={block.id}>
                       <tr className="bg-gray-100 cursor-pointer hover:bg-gray-200" onClick={() => toggleBlock(block.id)}>
-                        <td colSpan={showFinal ? 11 : showIC ? 8 : showAdjustedPrimary ? 6 : showTeam ? 4 : 2} className="p-2 font-semibold text-gray-700">
+                        <td colSpan={2 + (showTeam ? 2 : 0) + (showAdjustedPrimary ? 1 : 0) + (showIC ? 2 : 0) + (showFinal ? 1 : 0) + 1 + 1} className="p-2 font-semibold text-gray-700">
                           <div className="flex items-center gap-1.5">
                             {expandedBlocks[block.id] ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                             {block.name} <span className="text-gray-400 font-normal">({block.weight}%)</span>
@@ -772,16 +788,14 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
                               )}
                             </td>
                           )}
-                          {/* Bonus / Penalty adjustment */}
-                          {showFinal && (
-                            <td className="p-2 text-center">
-                              <TestBonusPenaltyCell
-                                criterion={crit}
-                                disabled={score.is_closed}
-                                onUpdate={(updates) => updateCriterion(block.id, crit.id, updates)}
-                              />
-                            </td>
-                          )}
+                          {/* Bonus / Penalty adjustment — always visible alongside scoring */}
+                          <td className="p-2 text-center">
+                            <TestBonusPenaltyCell
+                              criterion={crit}
+                              disabled={score.is_closed}
+                              onUpdate={(updates) => updateCriterion(block.id, crit.id, updates)}
+                            />
+                          </td>
                           {/* Notes */}
                           <td className="p-2">
                             <TestNotesCell
@@ -799,7 +813,7 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
                 </tbody>
                 <tfoot className="bg-gray-50">
                   <tr className="border-t-2 font-semibold">
-                    <td className="p-2">Weighted Average</td>
+                    <td className="p-2">Weighted Average (incl. bonus/penalty)</td>
                     <td className="p-2 text-center">{computeTotals("primary_score")}</td>
                     {showTeam && <td className="p-2 text-center">{computeTotals("team_score")}</td>}
                     {showTeam && <td></td>}
@@ -807,7 +821,9 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
                     {showIC && <td className="p-2 text-center">{computeTotals("ic_score")}</td>}
                     {showIC && <td></td>}
                     {showFinal && <td className="p-2 text-center">{computeTotals("final_score")}</td>}
-                    {showFinal && <td></td>}
+                    <td className="p-2 text-center text-xs font-medium" style={{ color: computeBonusPenaltyTotal() > 0 ? "#166534" : computeBonusPenaltyTotal() < 0 ? "#991b1b" : "#6b7280" }}>
+                      {(() => { const t = computeBonusPenaltyTotal(); return t === 0 ? "—" : `${t > 0 ? "+" : ""}${t.toFixed(2)}`; })()}
+                    </td>
                     <td></td>
                   </tr>
                 </tfoot>
