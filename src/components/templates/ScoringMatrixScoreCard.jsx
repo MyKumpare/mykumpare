@@ -829,6 +829,23 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
     const v = getCriterionCurrentScore(c);
     return s + (v != null && Number.isFinite(v) ? Number(v) : 0);
   }, 0), 0);
+  // Weighted running total: block-weighted average of the most advanced scores
+  // entered so far, honoring block weights and criterion multipliers (normalized
+  // to 100% total). This is the score that drives the overall rating and updates
+  // automatically as ratings are selected.
+  const weightedRunningTotal = computeWeightedScoreMulti(blocks, "primary_score", {
+    mode: "perCriterion",
+    getValue: getCriterionCurrentScore
+  });
+  // Max possible weighted score = the highest criterion max level (the weighted
+  // average is bounded by the score scale).
+  const weightedMax = blocks.reduce((mx, b) => {
+    (b.criteria || []).forEach((crit) => {
+      const r = getCriterionRange(templateCriteria[crit.id]);
+      if (r && Number.isFinite(r.max) && r.max > mx) mx = r.max;
+    });
+    return mx;
+  }, 0);
   // Number of score columns between Criterion and Notes (for the Total Score row colSpan).
   const scoreColCount = showFinal ? 10 : showIC ? 7 : showAdjustedPrimary ? 5 : showTeam ? 3 : showSecondary ? 2 : 1;
 
@@ -1207,7 +1224,21 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
                 <tr className="border-t-2 font-semibold">
                   <td className="p-2">Total Score</td>
                   <td className="p-2 text-center" colSpan={scoreColCount}>
-                    {totalRange.max > 0 ? (
+                    {weightedMax > 0 && weightedRunningTotal != null ? (
+                      <div className="flex flex-col items-center gap-0.5">
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="text-indigo-600">{formatScoreValue(Number(weightedRunningTotal.toFixed(2)), scoreUnit)}</span>
+                          <span className="text-gray-400 font-normal">/</span>
+                          <span className="text-gray-500 font-normal">{formatScoreValue(weightedMax, scoreUnit)}</span>
+                          <span className="text-[10px] text-indigo-500 font-normal ml-1">(weighted running total)</span>
+                        </span>
+                        {totalRange.max > 0 && (
+                          <span className="text-[10px] text-gray-400 font-normal">
+                            raw sum {formatScoreValue(totalCurrentScore, scoreUnit)} / {formatScoreValue(totalRange.max, scoreUnit)}
+                          </span>
+                        )}
+                      </div>
+                    ) : totalRange.max > 0 ? (
                       <span className="inline-flex items-center gap-1.5">
                         <span>{formatScoreValue(totalCurrentScore, scoreUnit)}</span>
                         <span className="text-gray-400 font-normal">/</span>
