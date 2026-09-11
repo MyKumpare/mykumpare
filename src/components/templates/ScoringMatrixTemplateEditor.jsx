@@ -146,7 +146,7 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange, template
       bonus_penalty_enabled: false,
       bonus_penalty_direction: "penalty",
       bonus_penalty_range: { min: -1, max: 1 },
-      bonus_penalty_step: 1,
+      bonus_penalty_step: 0,
       bonus_penalty_levels: [],
       bonus_penalty_guidance: ""
     };
@@ -710,8 +710,8 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange, template
                             type="number"
                             min="0.5"
                             step="0.5"
-                            value={crit.bonus_penalty_step ?? 1}
-                            onChange={(e) => updateCriterion(block.id, crit.id, "bonus_penalty_step", parseFloat(e.target.value) || 1)}
+                            value={crit.bonus_penalty_step ?? 0}
+                            onChange={(e) => updateCriterion(block.id, crit.id, "bonus_penalty_step", parseFloat(e.target.value) || 0)}
                             className="h-7 w-14 text-xs text-center"
                             placeholder="step"
                           />
