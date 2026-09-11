@@ -97,8 +97,8 @@ function RangeBadge({ range, unit, className = "" }) {
 }
 
 // Shared grid layout for the section header, each section row, and the total row,
-// so every column lines up exactly. Columns: expand/drag | name | weight | range | multiplier | actions.
-const SECTION_GRID = "grid items-center gap-2 grid-cols-[36px_1fr_84px_140px_160px_68px]";
+// so every column lines up exactly. Columns: expand/drag | name | weight | range | actions.
+const SECTION_GRID = "grid items-center gap-2 grid-cols-[36px_1fr_84px_140px_68px]";
 
 /**
  * Editor for scoring matrix template structure: blocks, criteria, and level descriptors.
@@ -391,7 +391,6 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange, template
           <span>Section Name</span>
           <span className="text-center" title="Section weight">Weight %</span>
           <span className="text-center" title="Total score range across this section's criteria">Total Score Range</span>
-          <span className="text-center" title="Multiplier factor">Multiplier</span>
           <span className="text-center" title="Reorder / delete">Actions</span>
         </div>
       )}
@@ -424,37 +423,6 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange, template
             <div className="flex justify-center">
               <RangeBadge range={getBlockRange(block)} unit={(ratingConfig && ratingConfig.unit) || "none"} title="Total score range for this section (sum of its criteria)" />
             </div>
-            {/* Multiplier factor toggle (section level) */}
-            <div className="flex items-center justify-center gap-1">
-              <button
-                type="button"
-                onClick={() => updateBlock(block.id, "multiplier_enabled", !block.multiplier_enabled)}
-                className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs border ${
-                  block.multiplier_enabled
-                    ? "bg-cyan-50 border-cyan-300 text-cyan-700"
-                    : "bg-white border-gray-200 text-gray-400 hover:text-gray-600"
-                }`}
-                title={block.multiplier_enabled ? "Disable multiplier factor" : "Enable multiplier factor for this section"}
-              >
-                {block.multiplier_enabled ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
-                ×
-              </button>
-              {block.multiplier_enabled && (
-                <>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    value={block.multiplier == null ? 1 : block.multiplier}
-                    onChange={(e) => updateBlock(block.id, "multiplier", parseFloat(e.target.value) || 1)}
-                    className="h-7 w-14 text-sm text-center"
-                    placeholder="1"
-                  />
-                  <span className="text-cyan-700 font-medium whitespace-nowrap text-[10px]" title="Effective weight after multiplier, normalized to 100% total">
-                    → {effByBlockId[block.id]?.normalizedPct.toFixed(1)}%
-                  </span>
-                </>
-              )}
-            </div>
             <div className="flex items-center justify-center gap-0.5">
               <button type="button" onClick={() => moveBlock(block.id, -1)} disabled={bIdx === 0} className="p-1 rounded hover:bg-gray-200 disabled:opacity-30 text-xs">
                 ↑
@@ -467,11 +435,6 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange, template
               </button>
             </div>
           </div>
-          {block.multiplier_enabled && (
-            <div className="px-2 pb-1.5 text-[10px] text-cyan-600 bg-cyan-50/40">
-              Section multiplier active — effective weight {effByBlockId[block.id]?.effectiveWeight.toFixed(1)} ({effByBlockId[block.id]?.normalizedPct.toFixed(1)}% of total). Overall score normalizes all sections to 100%.
-            </div>
-          )}
           {expandedBlocks[block.id] && (
             <div className="p-2 space-y-2">
               {(block.criteria || []).map((crit, cIdx) => (
@@ -791,9 +754,6 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange, template
           </span>
           <span className="flex justify-center" title="Total score range across all sections">
             {hasAnyRange ? <RangeBadge range={totalRange} unit={(ratingConfig && ratingConfig.unit) || "none"} /> : <span className="text-gray-400 font-normal">—</span>}
-          </span>
-          <span className="text-center text-gray-500 font-normal">
-            {multipliersActive ? "normalized 100%" : "—"}
           </span>
           <span />
         </div>
