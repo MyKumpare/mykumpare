@@ -4,7 +4,6 @@ import { base44 } from "@/api/base44Client";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Search, GitCompareArrows } from "lucide-react";
-import { computeWeightedScoreMulti, effectiveFinalScore } from "@/components/templates/scoringWeightLogic";
 import ScorecardSummaryStats from "@/components/scoring/ScorecardSummaryStats";
 
 const STATUS_STYLES = {
@@ -159,50 +158,6 @@ function ReviewStatusGrid({ score }) {
   );
 }
 
-function BlockBreakdown({ score }) {
-  if (!score?.scoring_blocks) return null;
-  return (
-    <div className="space-y-2">
-      {score.scoring_blocks.map((block) => {
-        const blockScore = computeWeightedScoreMulti([block], "final_score", { applyBonusPenalty: true });
-        const weightPct = block.weight || 0;
-        return (
-          <div key={block.id} className="border border-gray-200 rounded-md p-2">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-semibold text-gray-700">{block.name}</span>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-[10px]">{weightPct}%</Badge>
-                <span className="text-sm font-bold tabular-nums text-gray-800">{fmt(blockScore)}</span>
-              </div>
-            </div>
-            <div className="space-y-0.5">
-              {(block.criteria || []).map((crit) => {
-                const fs = effectiveFinalScore(crit);
-                const hasBp = crit.bonus_penalty_active && crit.bonus_penalty_value;
-                return (
-                  <div key={crit.id} className="flex items-center justify-between text-xs py-0.5">
-                    <span className="text-gray-600 truncate pr-2">
-                      {crit.number ? `#${crit.number} ` : ""}{crit.name}
-                    </span>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {hasBp && (
-                        <Badge className={`text-[9px] px-1 py-0 ${crit.bonus_penalty_value > 0 ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
-                          {crit.bonus_penalty_value > 0 ? "+" : ""}{crit.bonus_penalty_value}
-                        </Badge>
-                      )}
-                      <span className="font-semibold tabular-nums text-gray-800 w-6 text-right">{fs ?? "—"}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 function FirmComparisonColumn({ firmId, accent, label }) {
   const { data: scores = [], isLoading } = useQuery({
     queryKey: ["scorecardComparison", firmId],
@@ -273,7 +228,6 @@ function FirmComparisonColumn({ firmId, accent, label }) {
           </div>
           <ReviewStatusGrid score={activeScore} />
           <ScorecardSummaryStats score={activeScore} template={template} accent={accent} />
-          <BlockBreakdown score={activeScore} />
         </>
       )}
     </div>
