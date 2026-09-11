@@ -66,6 +66,7 @@ import OnsiteVisitFollowUpTasks from './pages/OnsiteVisitFollowUpTasks';
 import ContactShortBioDashboard from './pages/ContactShortBioDashboard';
 import FirmCategoryDashboard from './pages/FirmCategoryDashboard';
 import FirmScoringHistoryPage from './pages/FirmScoringHistoryPage';
+import ScorecardComparison from './pages/ScorecardComparison';
 import QuickNotesDrawer from "@/components/quicknotes/QuickNotesDrawer";
 import ScreenshotCaptureTool from "@/components/videolibrary/ScreenshotCaptureTool";
 import ScreenRecorderTool from "@/components/videolibrary/ScreenRecorderTool";
@@ -186,6 +187,7 @@ const AuthenticatedApp = () => {
       <Route path="/ContactShortBioDashboard" element={<LayoutWrapper currentPageName="ContactShortBioDashboard"><ContactShortBioDashboard /></LayoutWrapper>} />
       <Route path="/FirmCategoryDashboard" element={<LayoutWrapper currentPageName="FirmCategoryDashboard"><FirmCategoryDashboard /></LayoutWrapper>} />
       <Route path="/FirmScoringHistory" element={<LayoutWrapper currentPageName="FirmScoringHistory"><FirmScoringHistoryPage /></LayoutWrapper>} />
+      <Route path="/ScorecardComparison" element={<LayoutWrapper currentPageName="ScorecardComparison"><ScorecardComparison /></LayoutWrapper>} />
       <Route path="/register" element={<ExternalPartyRegister />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
