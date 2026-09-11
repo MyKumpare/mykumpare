@@ -1,11 +1,13 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, TrendingUp, History, Calendar, Lock } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, TrendingUp, History, Calendar, Lock, BarChart3, CheckCircle2, Clock } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine,
+  BarChart, Bar, Cell
 } from "recharts";
 
 const SCORE_COLORS = {
@@ -35,6 +37,17 @@ function computeWeightedFinal(score) {
   return totalWeight > 0 ? parseFloat((total / totalWeight).toFixed(2)) : null;
 }
 
+// Map a scorecard's workflow status to a simple In Progress / Completed bucket.
+// 'completed' = finalized (or closed); 'in_progress' = any active scoring phase.
+function getScorecardStatus(score) {
+  return score.status === "finalized" || score.is_closed ? "completed" : "in_progress";
+}
+
+const STATUS_META = {
+  completed: { label: "Completed", color: "#16a34a", badge: "bg-green-100 text-green-700 border-green-300", icon: CheckCircle2 },
+  in_progress: { label: "In Progress", color: "#f59e0b", badge: "bg-amber-100 text-amber-700 border-amber-300", icon: Clock },
+};
+
 /**
  * Entity-level scoring history. Aggregates ALL ScoringMatrixScore records for a
  * given firm (across every product and template) so the user can track how the
@@ -44,6 +57,7 @@ function computeWeightedFinal(score) {
  *  - firmId: required firm ID
  */
 export default function EntityScoringHistory({ firmId }) {
+  const [statusFilter, setStatusFilter] = useState("all");
   const { data: scores = [], isLoading } = useQuery({
     queryKey: ["firmScoringHistory", firmId],
     queryFn: () =>
@@ -90,6 +104,43 @@ export default function EntityScoringHistory({ firmId }) {
   const firstScore = chartData[0]?.weightedFinal;
   const lastScore = chartData[chartData.length - 1]?.weightedFinal;
   const delta = firstScore != null && lastScore != null ? parseFloat((lastScore - firstScore).toFixed(2)) : null;
+
+  // Apply the In Progress / Completed status filter to the list view.
+  const filteredSorted = useMemo(() => {
+    if (statusFilter === "all") return sorted;
+    return sorted.filter((s) => getScorecardStatus(s) === statusFilter);
+  }, [sorted, statusFilter]);
+
+  const inProgressCount = useMemo(() => sorted.filter((s) => getScorecardStatus(s) === "in_progress").length, [sorted]);
+  const completedCount = finalized.length;
+
+  // Summary comparison chart: latest weighted final score per product (investment manager),
+  // so the user can compare performance across managers at a glance.
+  const comparisonData = useMemo(() => {
+    const latestByProduct = new Map();
+    sorted.forEach((s) => {
+      const key = s.product_id || s.product_name || "—";
+      const existing = latestByProduct.get(key);
+      const date = s.scoring_start_date || s.created_date || "";
+      if (!existing || date.localeCompare(existing.scoring_start_date || existing.created_date || "") > 0) {
+        latestByProduct.set(key, s);
+      }
+    });
+    return [...latestByProduct.values()]
+      .map((s) => {
+        const wf = computeWeightedFinal(s);
+        const status = getScorecardStatus(s);
+        return {
+          product: s.product_name || "—",
+          score: wf,
+          status,
+          statusLabel: STATUS_META[status].label,
+          version: s.version_number || 1,
+        };
+      })
+      .filter((d) => d.score != null)
+      .sort((a, b) => b.score - a.score);
+  }, [sorted]);
 
   if (isLoading) {
     return (
@@ -176,10 +227,70 @@ export default function EntityScoringHistory({ firmId }) {
         </div>
       )}
 
-      {/* Full evaluation list */}
+      {/* Summary comparison chart — total score per investment manager (product) */}
+      {comparisonData.length > 0 && (
+        <div className="border border-gray-200 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <BarChart3 className="w-4 h-4 text-indigo-500" />
+            <span className="text-sm font-medium">Total Score by Manager</span>
+            <span className="text-[10px] text-gray-400 ml-auto">Latest evaluation per product · sorted high → low</span>
+          </div>
+          <ResponsiveContainer width="100%" height={Math.max(180, comparisonData.length * 44)}>
+            <BarChart data={comparisonData} layout="vertical" margin={{ top: 5, right: 30, bottom: 5, left: 10 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
+              <XAxis type="number" domain={[0, 5]} tick={{ fontSize: 11 }} />
+              <YAxis type="category" dataKey="product" tick={{ fontSize: 11 }} width={140} />
+              <Tooltip
+                contentStyle={{ fontSize: 12 }}
+                formatter={(value, name) => [value != null ? value : "Not scored", name === "score" ? "Weighted Final" : name]}
+                labelFormatter={(label, payload) => {
+                  const item = payload?.[0]?.payload;
+                  return item ? `${label} · ${item.statusLabel} (v${item.version})` : label;
+                }}
+              />
+              <ReferenceLine x={3} stroke="#94a3b8" strokeDasharray="2 2" />
+              <Bar dataKey="score" radius={[0, 4, 4, 0]} barSize={28}>
+                {comparisonData.map((entry, i) => (
+                  <Cell key={i} fill={entry.status === "completed" ? "#16a34a" : "#f59e0b"} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+          <div className="flex items-center gap-4 mt-2 text-[11px] text-gray-500">
+            <span className="inline-flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-green-500" />Completed</span>
+            <span className="inline-flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-amber-500" />In Progress</span>
+          </div>
+        </div>
+      )}
+
+      {/* Full evaluation list — with In Progress / Completed status indicators + filter */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <h4 className="text-sm font-semibold">Scorecards</h4>
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-xs text-gray-400">Filter:</span>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="h-8 w-[150px] text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All ({sorted.length})</SelectItem>
+              <SelectItem value="in_progress">In Progress ({inProgressCount})</SelectItem>
+              <SelectItem value="completed">Completed ({completedCount})</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
       <div className="space-y-2">
-        {[...sorted].reverse().map((s) => {
+        {filteredSorted.length === 0 && (
+          <div className="text-center text-xs text-gray-400 border border-gray-200 rounded-lg p-4 bg-gray-50/50">
+            No scorecards match this filter.
+          </div>
+        )}
+        {[...filteredSorted].reverse().map((s) => {
           const wf = computeWeightedFinal(s);
+          const status = getScorecardStatus(s);
+          const meta = STATUS_META[status];
+          const StatusIcon = meta.icon;
           return (
             <div key={s.id} className="border border-gray-200 rounded-lg p-3 bg-white">
               <div className="flex items-start justify-between gap-3">
@@ -187,7 +298,10 @@ export default function EntityScoringHistory({ firmId }) {
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-medium truncate">{s.product_name || "—"}</span>
                     <Badge variant="outline" className="text-[10px]">v{s.version_number || 1}</Badge>
-                    <Badge variant="outline" className="text-[10px]">{s.status}</Badge>
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${meta.badge}`} title={s.status}>
+                      <StatusIcon className="w-3 h-3" />
+                      {meta.label}
+                    </span>
                     {s.is_closed && <Lock className="w-3 h-3 text-gray-400" />}
                     {s.overall_pass_fail && (
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold text-white ${s.overall_pass_fail === "Pass" ? "bg-green-500" : "bg-red-500"}`}>
