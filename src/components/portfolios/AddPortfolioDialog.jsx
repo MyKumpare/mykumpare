@@ -32,6 +32,7 @@ import PortfolioReportModal from "./PortfolioReportModal";
 import PortfolioDashboardTab from "./PortfolioDashboardTab";
 import PortfolioLineupTab from "./PortfolioLineupTab";
 import PortfolioBenchmarkComparisonTab from "./PortfolioBenchmarkComparisonTab";
+import { fetchAllProductsBatched } from "@/components/shared/fetchAllProductsBatched";
 
 // ── Searchable dropdown ────────────────────────────────────────────────────────
 function SearchableSelect({ options, value, onChange, placeholder, onAddNew, addNewLabel, loading }) {
@@ -426,11 +427,7 @@ export default function AddPortfolioDialog({ open, onOpenChange, onSuccess, pres
 
   const { data: products = [], isLoading: productsLoading } = useQuery({
     queryKey: ["products-all-dialog"],
-    queryFn: async () => {
-      const res = await base44.functions.invoke("fetchAllProducts", {});
-      const data = res?.data ?? res ?? {};
-      return (data.records || []).filter((p) => !p.deleted_at);
-    },
+    queryFn: fetchAllProductsBatched,
     staleTime: 300000,
   });
 

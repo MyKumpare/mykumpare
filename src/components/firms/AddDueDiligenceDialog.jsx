@@ -24,6 +24,7 @@ import { syncDdNotifications, syncProductStatusFromDd } from "./ddNotificationSy
 import { saveStageNoteVersions } from "./ddNoteVersionSync";
 import { initAnalystHistory, computeAnalystHistory } from "@/lib/analystHistoryClient";
 import AnalystHistoryDialog from "./AnalystHistoryDialog";
+import { fetchAllProductsBatched } from "@/components/shared/fetchAllProductsBatched";
 const PRODUCT_TYPES = ["Investment Manager Product", "Multi-Manager Product"];
 const FIRM_TYPES = ["Investment Manager", "Allocator", "Investment Consultant", "Securities Brokerage", "Trade Organizations"];
 const NOT_STARTED_ALLOWED = ["In-process"];
@@ -442,11 +443,7 @@ export default function AddDueDiligenceDialog({ open, onOpenChange, firmId, firm
   // (including older Sample Client entries) appear in the dropdown.
   const { data: allFetchedProducts = [] } = useQuery({
     queryKey: ["products-all-dialog"],
-    queryFn: async () => {
-      const res = await base44.functions.invoke("fetchAllProducts", {});
-      const data = res?.data ?? res ?? {};
-      return (data.records || []).filter((p) => !p.deleted_at);
-    },
+    queryFn: fetchAllProductsBatched,
     staleTime: 300000,
   });
   const firmProducts = useMemo(
