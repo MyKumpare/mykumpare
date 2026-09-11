@@ -167,6 +167,12 @@ function ScoreCell({ score, onChange, disabled, placeholder = "—", descriptors
     );
   }
 
+  // Levels mode: use the actual descriptor levels configured on the template criterion.
+  // Falls back to 1-5 only when no descriptors are defined (backward compatibility).
+  const descLevels = (Array.isArray(descriptors) && descriptors.length > 0)
+    ? descriptors.map((d) => d.level).filter((n) => Number.isFinite(n))
+    : [1, 2, 3, 4, 5];
+
   return (
     <div className="flex flex-col items-start gap-1 w-full">
       <Select value={score?.toString() || ""} onValueChange={(v) => onChange(parseInt(v))} disabled={disabled}>
@@ -174,11 +180,12 @@ function ScoreCell({ score, onChange, disabled, placeholder = "—", descriptors
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent className={hasDesc ? "min-w-[320px] max-w-[420px]" : ""}>
-          {[1, 2, 3, 4, 5].map((n) => {
+          {descLevels.map((n) => {
             const text = descFor(n);
+            const colorKey = Math.max(1, Math.min(5, n));
             return (
               <SelectItem key={n} value={n.toString()} className="items-start py-1.5">
-                <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold border shrink-0 ${SCORE_COLORS[n]}`}>{n}</span>
+                <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold border shrink-0 ${SCORE_COLORS[colorKey]}`}>{n}</span>
                 {text && <span className="text-[11px] text-gray-600 leading-snug flex-1 ml-2 whitespace-normal">{text}</span>}
               </SelectItem>
             );
