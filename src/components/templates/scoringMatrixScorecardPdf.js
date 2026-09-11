@@ -18,11 +18,6 @@ const BLOCK_BG_RGB = [243, 244, 246];
 const BONUS_RGB = [22, 101, 52];   // green-800
 const PENALTY_RGB = [153, 27, 27]; // red-800
 
-function clampScore(s) {
-  if (s == null) return null;
-  return Math.max(1, Math.min(5, s));
-}
-
 /**
  * Exports an individual firm scorecard as a clean, formatted PDF report.
  * Includes the full scoring matrix with bonus/penalty adjustments, notes,

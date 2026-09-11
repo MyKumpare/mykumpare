@@ -109,7 +109,7 @@ export function computeWeightedScoreMulti(blocks, field, opts = {}) {
         let s = read(crit);
         if (s == null) return;
         if (applyBonusPenalty && field === "final_score" && crit.bonus_penalty_active && crit.bonus_penalty_value) {
-          s = Math.max(1, Math.min(5, s + crit.bonus_penalty_value));
+          s = s + crit.bonus_penalty_value;
         }
         const cm = num(crit.multiplier);
         cws += s * cm;
@@ -124,7 +124,7 @@ export function computeWeightedScoreMulti(blocks, field, opts = {}) {
         let s = read(crit);
         if (s == null) return;
         if (applyBonusPenalty && field === "final_score" && crit.bonus_penalty_active && crit.bonus_penalty_value) {
-          s = Math.max(1, Math.min(5, s + crit.bonus_penalty_value));
+          s = s + crit.bonus_penalty_value;
         }
         const w = blockEff * num(crit.multiplier);
         total += s * w;

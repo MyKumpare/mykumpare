@@ -27,18 +27,49 @@ const SCORE_COLORS = {
   5: "bg-green-100 text-green-700 border-green-300",
 };
 
-function InlineScoreCell({ value, onChange, disabled }) {
+function InlineScoreCell({ value, onChange, disabled, descriptors, scoringMode, singleMin, singleMax }) {
+  const hasDesc = Array.isArray(descriptors) && descriptors.some((d) => d && d.text);
+  const descFor = (n) => (hasDesc ? descriptors.find((d) => d.level === n)?.text : null);
+
+  if (scoringMode === "single") {
+    const min = Number.isFinite(singleMin) ? singleMin : 0;
+    const max = Number.isFinite(singleMax) ? singleMax : 100;
+    const options = [];
+    for (let n = min; n <= max; n++) options.push(n);
+    return (
+      <Select value={value != null ? value.toString() : ""} onValueChange={(v) => onChange(parseInt(v))} disabled={disabled}>
+        <SelectTrigger className="h-8 w-20 text-xs">
+          <SelectValue placeholder="—" />
+        </SelectTrigger>
+        <SelectContent className="max-h-60">
+          {options.map((n) => (
+            <SelectItem key={n} value={n.toString()} className="text-xs">{n}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    );
+  }
+
+  const descLevels = (Array.isArray(descriptors) && descriptors.length > 0)
+    ? descriptors.map((d) => d.level).filter((n) => Number.isFinite(n))
+    : [1, 2, 3, 4, 5];
+
   return (
     <Select value={value?.toString() || ""} onValueChange={(v) => onChange(parseInt(v))} disabled={disabled}>
-      <SelectTrigger className="h-8 w-16 text-xs">
+      <SelectTrigger className="h-8 w-20 text-xs">
         <SelectValue placeholder="—" />
       </SelectTrigger>
-      <SelectContent>
-        {[1, 2, 3, 4, 5].map((n) => (
-          <SelectItem key={n} value={n.toString()}>
-            <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold border ${SCORE_COLORS[n]}`}>{n}</span>
-          </SelectItem>
-        ))}
+      <SelectContent className={hasDesc ? "min-w-[300px] max-w-[400px]" : ""}>
+        {descLevels.map((n) => {
+          const text = descFor(n);
+          const colorKey = Math.max(1, Math.min(5, n));
+          return (
+            <SelectItem key={n} value={n.toString()} className="items-start py-1.5">
+              <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold border shrink-0 ${SCORE_COLORS[colorKey]}`}>{n}</span>
+              {text && <span className="text-[11px] text-gray-600 leading-snug flex-1 ml-2 whitespace-normal">{text}</span>}
+            </SelectItem>
+          );
+        })}
       </SelectContent>
     </Select>
   );
@@ -46,19 +77,24 @@ function InlineScoreCell({ value, onChange, disabled }) {
 
 // Compute the block-weighted average for a given score field.
 // Bonus/penalty adjustments are applied only to the final_score field (mirrors the scorecard logic).
+// Honors block and criterion multipliers (normalized to 100% total), and does NOT clamp
+// the adjusted score to 1-5 — the bonus/penalty value is already constrained by the
+// template's configured levels, so clamping would silently nullify the adjustment.
 function computeWeightedScoreNum(blocks, scoreField) {
+  const num = (v) => (v == null || isNaN(v) ? 1 : Number(v));
   let total = 0;
   let totalWeight = 0;
   (blocks || []).forEach((block) => {
-    const blockWeight = (block.weight || 0) / 100;
+    const blockEff = (block.weight || 0) * num(block.multiplier);
     (block.criteria || []).forEach((crit) => {
       let s = effectiveValue(crit, scoreField);
       if (s != null) {
         if (scoreField === "final_score" && crit.bonus_penalty_active && crit.bonus_penalty_value) {
-          s = Math.max(1, Math.min(5, s + crit.bonus_penalty_value));
+          s = s + crit.bonus_penalty_value;
         }
-        total += s * blockWeight;
-        totalWeight += blockWeight;
+        const w = blockEff * num(crit.multiplier);
+        total += s * w;
+        totalWeight += w;
       }
     });
   });
@@ -85,6 +121,15 @@ function computeWeightedScoreNum(blocks, scoreField) {
 export default function FinalizeGuardDialog({
   open, onClose, blocks, scoreField, label, template, updateCriterion, onConfirm, isPending,
 }) {
+  // Build a lookup of template criteria (by id) to access descriptor levels and scoring mode
+  const templateCriteria = React.useMemo(() => {
+    const map = {};
+    (template?.scoring_blocks || []).forEach((block) => {
+      (block.criteria || []).forEach((c) => { map[c.id] = c; });
+    });
+    return map;
+  }, [template]);
+
   const allCriteria = React.useMemo(() => {
     const list = [];
     (blocks || []).forEach((block) => {
@@ -145,6 +190,10 @@ export default function FinalizeGuardDialog({
                     value={crit[scoreField]}
                     onChange={(v) => handleScore(blockId, crit.id, v)}
                     disabled={isPending}
+                    descriptors={templateCriteria[crit.id]?.descriptors}
+                    scoringMode={templateCriteria[crit.id]?.scoring_mode}
+                    singleMin={templateCriteria[crit.id]?.single_score_min}
+                    singleMax={templateCriteria[crit.id]?.single_score_max}
                   />
                 </div>
               ))}
