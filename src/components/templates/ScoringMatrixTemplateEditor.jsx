@@ -86,7 +86,7 @@ function RangeBadge({ range, unit, className = "" }) {
   return (
     <span className={`inline-flex items-center gap-1 text-xs font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded px-2 py-0.5 whitespace-nowrap ${className}`}>
       <span className="text-[9px] uppercase tracking-wide text-gray-400">Range</span>
-      <span>{formatScoreValue(range.min, unit)} – {formatScoreValue(range.max, unit)}</span>
+      <span>{formatScoreValue(range.min, unit)} to {formatScoreValue(range.max, unit)}</span>
     </span>
   );
 }
