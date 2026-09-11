@@ -137,7 +137,7 @@ export function TestScoreCell({
             <SelectTrigger className={`h-8 w-full text-xs ${isBPActive ? (bpDirection === "bonus" ? "border-green-400 bg-green-50" : "border-red-400 bg-red-50") : ""}`}>
               <SelectValue placeholder={placeholder} />
             </SelectTrigger>
-            <SelectContent className={showWide ? "min-w-[320px] max-w-[420px]" : "max-h-72"}>
+            <SelectContent className={showWide ? "min-w-[340px] max-w-[680px] max-h-[480px] overflow-y-auto" : "max-h-72"} position="popper">
               {/* Standard scoring options */}
               {scoringMode === "single"
                 ? singleOptions.map((n) => (
@@ -287,7 +287,7 @@ export function TestBonusPenaltyCell({ criterion, disabled, onUpdate }) {
                 <SelectTrigger className="h-7 w-20 text-xs">
                   <SelectValue placeholder="—" />
                 </SelectTrigger>
-                <SelectContent className={options.some((o) => o.text) ? "min-w-[260px] max-w-[360px]" : "max-h-60"}>
+                <SelectContent className={options.some((o) => o.text) ? "min-w-[260px] max-w-[560px] max-h-[400px] overflow-y-auto" : "max-h-60"} position="popper">
                   {options.map((o) => (
                     <SelectPrimitive.Item
                       key={o.level}

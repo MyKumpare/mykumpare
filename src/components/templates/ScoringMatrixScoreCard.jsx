@@ -179,7 +179,7 @@ function ScoreCell({ score, onChange, disabled, placeholder = "—", descriptors
         <SelectTrigger className="h-8 w-full text-xs">
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
-        <SelectContent className={hasDesc ? "min-w-[320px] max-w-[420px]" : ""}>
+        <SelectContent className={hasDesc ? "min-w-[340px] max-w-[680px] max-h-[480px] overflow-y-auto" : ""} position="popper">
           {descLevels.map((n) => {
             const text = descFor(n);
             const colorKey = Math.max(1, Math.min(5, n));
@@ -275,7 +275,7 @@ function BonusPenaltyCell({ criterion, templateCriteria, isPrimaryAnalyst, isClo
                 <SelectTrigger className="h-7 w-20 text-xs">
                   <SelectValue placeholder="—" />
                 </SelectTrigger>
-                <SelectContent className={options.some((o) => o.text) ? "min-w-[260px] max-w-[360px]" : "max-h-60"}>
+                <SelectContent className={options.some((o) => o.text) ? "min-w-[260px] max-w-[560px] max-h-[400px] overflow-y-auto" : "max-h-60"} position="popper">
                   {options.map((o) => (
                     <SelectItem key={o.level} value={String(o.level)} className="text-xs items-start">
                       <span className="font-medium">{o.level > 0 ? `+${o.level}` : o.level}</span>
