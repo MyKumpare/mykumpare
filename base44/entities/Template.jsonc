@@ -381,6 +381,19 @@
       "type": "object",
       "description": "Overall rating configuration for Scoring Matrix templates. Defines a Pass/Fail threshold and a set of rating options (each with a score range) that the system auto-assigns to a finalized scoring matrix based on its weighted final score. Configured once on the template and applied to every scoring matrix that uses it.",
       "properties": {
+        "unit": {
+          "type": "string",
+          "enum": [
+            "none",
+            "%",
+            "pts",
+            "x",
+            "$",
+            "bps"
+          ],
+          "default": "none",
+          "description": "Unit of measurement for all scores and thresholds in this scoring matrix. 'none' = raw scores; '%' = percentage; 'pts' = points; 'x' = multiplier; '$' = currency; 'bps' = basis points."
+        },
         "pass_fail_enabled": {
           "type": "boolean",
           "default": false,
@@ -397,7 +410,7 @@
         },
         "rating_options": {
           "type": "array",
-          "description": "Ordered list of rating options. Each option pairs a label (numerical or text, e.g. 'A', 'Buy', '5', 'Strong Buy') with a min/max weighted final score range. When a scoring matrix is finalized, the system finds the option whose range contains the weighted final score and assigns its label as the overall rating. Users can create, edit, and delete these options.",
+          "description": "Ordered list of rating options. Each option pairs a label (numerical or text, e.g. 'A', 'Buy', '5', 'Strong Buy') with a comparison operator and score threshold(s). When a scoring matrix is finalized, the system finds the option whose condition matches the weighted final score and assigns its label as the overall rating. Users can create, edit, and delete these options.",
           "items": {
             "type": "object",
             "properties": {
@@ -406,15 +419,28 @@
               },
               "label": {
                 "type": "string",
-                "description": "Rating label (numerical or text) shown as the overall rating when the weighted final score falls within this option's range."
+                "description": "Rating label (numerical or text) shown as the overall rating when the weighted final score matches this option's condition."
+              },
+              "operator": {
+                "type": "string",
+                "enum": [
+                  "between",
+                  "gte",
+                  "gt",
+                  "lte",
+                  "lt",
+                  "eq"
+                ],
+                "default": "between",
+                "description": "Comparison operator used to match the weighted final score against this rating option. 'between' uses min_score..max_score (inclusive); 'gte' = score \u2265 min_score; 'gt' = score > min_score; 'lte' = score \u2264 min_score; 'lt' = score < min_score; 'eq' = score = min_score. For non-'between' operators, max_score is ignored."
               },
               "min_score": {
                 "type": "number",
-                "description": "Minimum weighted final score (inclusive) for this rating to apply."
+                "description": "Minimum weighted final score (inclusive) for this rating to apply. For 'between', this is the lower bound; for other operators, this is the comparison threshold."
               },
               "max_score": {
                 "type": "number",
-                "description": "Maximum weighted final score (inclusive) for this rating to apply."
+                "description": "Maximum weighted final score (inclusive) for this rating to apply. Only used when operator is 'between'; ignored for all other operators."
               },
               "color": {
                 "type": "string",

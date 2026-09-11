@@ -362,6 +362,7 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
                       rating_options: (data.ratingConfig.rating_options || []).map((opt, i) => ({
                         id: `sro_${Date.now()}_${i}`,
                         label: opt.label || "",
+                        operator: opt.operator || "between",
                         min_score: opt.min_score ?? 0,
                         max_score: opt.max_score ?? 0,
                         color: opt.color || DEFAULT_COLORS[i % DEFAULT_COLORS.length],
