@@ -174,9 +174,9 @@ function ScoreCell({ score, onChange, disabled, placeholder = "—", descriptors
     : [1, 2, 3, 4, 5];
 
   return (
-    <div className="flex flex-col items-start gap-1 w-full">
+    <div className="flex flex-col gap-1 w-full">
       <Select value={score?.toString() || ""} onValueChange={(v) => onChange(parseInt(v))} disabled={disabled}>
-        <SelectTrigger className="h-8 w-16 text-xs">
+        <SelectTrigger className="h-8 w-full text-xs">
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent className={hasDesc ? "min-w-[320px] max-w-[420px]" : ""}>
@@ -193,7 +193,7 @@ function ScoreCell({ score, onChange, disabled, placeholder = "—", descriptors
         </SelectContent>
       </Select>
       {selectedDesc && (
-        <p className="text-[11px] text-gray-500 leading-relaxed text-left w-full whitespace-normal px-0.5 mt-0.5" title={selectedDesc}>
+        <p className="text-[11px] text-gray-600 leading-relaxed text-left w-full whitespace-normal px-0.5 mt-0.5" title={selectedDesc}>
           {selectedDesc}
         </p>
       )}
