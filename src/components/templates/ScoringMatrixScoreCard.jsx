@@ -30,6 +30,7 @@ import BulkUpdateScoringDialog from "@/components/templates/BulkUpdateScoringDia
 import { exportScoringMatrixComparisonPdf } from "@/components/templates/scoringMatrixComparisonPdf";
 import { exportScoringMatrixScorecardPdf } from "@/components/templates/scoringMatrixScorecardPdf";
 import { createScoringNotification } from "@/components/templates/scoringNotificationHelper";
+import ScoringOverallRatingPanel from "@/components/templates/ScoringOverallRatingPanel";
 
 const SCORE_COLORS = {
   1: "bg-red-100 text-red-700 border-red-300",
@@ -102,14 +103,16 @@ function RangeBadge({ range, unit, className = "" }) {
   );
 }
 
-// Prominent badge showing the maximum possible score for a section or criterion.
-function MaxScoreBadge({ max, unit, className = "", label = "Max" }) {
-  if (max == null || !Number.isFinite(max)) return null;
+// Prominent badge showing the total maximum score RANGE for a section or criterion.
+// When the min differs from the max, displays "min – max"; otherwise just the max.
+function MaxScoreBadge({ range, unit, className = "", label = "Max" }) {
+  if (!range || !Number.isFinite(range.max)) return null;
+  const showRange = Number.isFinite(range.min) && range.min !== range.max;
   return (
-    <span className={`inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2 py-0.5 whitespace-nowrap ${className}`} title="Total maximum points available">
+    <span className={`inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2 py-0.5 whitespace-nowrap ${className}`} title="Total maximum score range">
       <Target className="w-3 h-3 text-emerald-600" />
       <span className="text-[9px] uppercase tracking-wide text-emerald-500">{label}</span>
-      <span>{formatScoreValue(max, unit)}</span>
+      <span>{showRange ? `${formatScoreValue(range.min, unit)} – ${formatScoreValue(range.max, unit)}` : formatScoreValue(range.max, unit)}</span>
     </span>
   );
 }
@@ -812,6 +815,22 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
     });
     return { value, max };
   };
+  // Total score range across all criteria (denominator for the Total Score row).
+  const totalRange = blocks.reduce((acc, b) => {
+    (b.criteria || []).forEach((crit) => {
+      const r = getCriterionRange(templateCriteria[crit.id]);
+      if (!r) return;
+      acc.min += r.min; acc.max += r.max;
+    });
+    return acc;
+  }, { min: 0, max: 0 });
+  // Sum of the most advanced scores entered so far (numerator for the Total Score row).
+  const totalCurrentScore = blocks.reduce((sum, b) => sum + (b.criteria || []).reduce((s, c) => {
+    const v = getCriterionCurrentScore(c);
+    return s + (v != null && Number.isFinite(v) ? Number(v) : 0);
+  }, 0), 0);
+  // Number of score columns between Criterion and Notes (for the Total Score row colSpan).
+  const scoreColCount = showFinal ? 10 : showIC ? 7 : showAdjustedPrimary ? 5 : showTeam ? 3 : showSecondary ? 2 : 1;
 
   // Update the attachments array on the score record
   const updateAttachments = (newAttachments) => {
@@ -873,9 +892,6 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
                   {overallRating.ratingLabel || "—"}
                 </Badge>
               )}
-              <Badge variant="outline" className="text-xs text-gray-500">
-                Weighted Final: {weightedFinalScoreNum != null ? weightedFinalScoreNum.toFixed(2) : "—"}
-              </Badge>
             </div>
           )}
         </div>
@@ -1003,7 +1019,7 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
                         <div className="flex items-center gap-1.5">
                           {expandedBlocks[block.id] ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                           {block.name} <span className="text-gray-400 font-normal">({block.weight}%)</span>
-                          <MaxScoreBadge max={getBlockRange(block, templateCriteria)?.max} unit={scoreUnit} label="Section Max" />
+                          <MaxScoreBadge range={getBlockRange(block, templateCriteria)} unit={scoreUnit} label="Section Max" />
                           {(() => { const p = getBlockProgress(block); return p.max > 0 ? (
                             <div className="w-44 ml-1"><ScoreProgressBar value={p.value} max={p.max} unit={scoreUnit} /></div>
                           ) : null; })()}
@@ -1016,7 +1032,7 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
                           <div className="flex flex-col gap-1">
                             <div className="flex items-center gap-1.5">
                               <span className="font-medium">{crit.name}</span>
-                              <MaxScoreBadge max={getCriterionRange(templateCriteria[crit.id])?.max} unit={scoreUnit} />
+                              <MaxScoreBadge range={getCriterionRange(templateCriteria[crit.id])} unit={scoreUnit} />
                             </div>
                             {crit.category && <div className="text-gray-400 text-[10px]">{crit.category}</div>}
                             {(() => { const range = getCriterionRange(templateCriteria[crit.id]); const s = getCriterionCurrentScore(crit); return range && range.max > 0 ? (
@@ -1189,27 +1205,31 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
               </tbody>
               <tfoot className="bg-gray-50">
                 <tr className="border-t-2 font-semibold">
-                  <td className="p-2">Weighted Average</td>
-                  <td className="p-2 text-center">{computeTotals("primary_score")}</td>
-                  {showSecondary && <td className="p-2 text-center">{computeTotals("secondary_score")}</td>}
-                  {showTeam && <td className="p-2 text-center">{computeTotals("team_score")}</td>}
-                  {showTeam && <td></td>}
-                  {showAdjustedPrimary && <td className="p-2 text-center">{computeTotals("adjusted_primary_score")}</td>}
-                  {showIC && <td className="p-2 text-center">{computeTotals("ic_score")}</td>}
-                  {showIC && <td></td>}
-                  {showFinal && <td className="p-2 text-center">{computeTotals("final_score")}</td>}
-                  {showFinal && <td className="p-2 text-center text-xs text-gray-500">{(() => {
-                    let adj = 0, count = 0;
-                    blocks.forEach(b => b.criteria?.forEach(c => {
-                      if (c.bonus_penalty_active && c.bonus_penalty_value) { adj += c.bonus_penalty_value; count++; }
-                    }));
-                    return count > 0 ? `${adj > 0 ? "+" : ""}${adj.toFixed(1)} (${count})` : "—";
-                  })()}</td>}
-                  <td></td>
+                  <td className="p-2">Total Score</td>
+                  <td className="p-2 text-center" colSpan={scoreColCount}>
+                    {totalRange.max > 0 ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span>{formatScoreValue(totalCurrentScore, scoreUnit)}</span>
+                        <span className="text-gray-400 font-normal">/</span>
+                        <span className="text-gray-500 font-normal">{formatScoreValue(totalRange.max, scoreUnit)}</span>
+                        {totalRange.min !== 0 && totalRange.min !== totalRange.max && (
+                          <span className="text-gray-400 text-[10px] font-normal ml-1">
+                            (range {formatScoreValue(totalRange.min, scoreUnit)}–{formatScoreValue(totalRange.max, scoreUnit)})
+                          </span>
+                        )}
+                      </span>
+                    ) : "—"}
+                  </td>
+                  <td className="p-2"></td>
                 </tr>
               </tfoot>
             </table>
           </div>
+
+          {/* Overall rating — options + logic, with the active selection highlighted */}
+          {hasRatingConfig && (showFinal || score.final_score_finalized) && (
+            <ScoringOverallRatingPanel weightedScore={weightedFinalScoreNum} ratingConfig={ratingConfig} />
+          )}
         </div>
       )}
 
