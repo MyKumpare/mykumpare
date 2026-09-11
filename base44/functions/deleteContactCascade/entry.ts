@@ -299,7 +299,13 @@ export default async function(req) {
     counts.org_charts_cleaned = orgChartsCleaned;
 
     // --- Finally, soft-delete the contact itself ---
-    await svc.entities.Contact.update(contactId, { deleted_at: now });
+    // Normalize legacy scalar contact_type to an array so the update passes
+    // schema validation (contact_type is defined as an array in the schema).
+    const contactUpdate: any = { deleted_at: now };
+    if (contact.contact_type != null && !Array.isArray(contact.contact_type)) {
+      contactUpdate.contact_type = [String(contact.contact_type)];
+    }
+    await svc.entities.Contact.update(contactId, contactUpdate);
 
     return Response.json({
       success: true,

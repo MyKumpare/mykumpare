@@ -102,10 +102,13 @@ export default function DuplicateContactsReview() {
     if (!deleteTarget) return;
     setBusy(true);
     try {
-      await base44.entities.Contact.update(deleteTarget.id, { deleted_at: new Date().toISOString() });
+      await base44.functions.invoke("deleteContactCascade", { contact_id: deleteTarget.id });
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
       queryClient.invalidateQueries({ queryKey: ["duplicateReviews"] });
+      queryClient.invalidateQueries({ queryKey: ["deletedContacts"] });
       setDeleteTarget(null);
+    } catch (error) {
+      console.error("Delete failed:", error);
     } finally {
       setBusy(false);
     }
