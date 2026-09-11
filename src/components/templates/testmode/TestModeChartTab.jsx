@@ -2,8 +2,11 @@ import React, { useState, useMemo, useEffect } from "react";
 import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
+  PieChart, Pie, Cell,
   ResponsiveContainer, Legend, Tooltip
 } from "recharts";
+
+const PIE_COLORS = ["#3b82f6", "#f59e0b", "#8b5cf6", "#ec4899", "#10b981", "#06b6d4", "#f43f5e", "#84cc16", "#a855f7", "#14b8a6", "#eab308", "#6366f1"];
 
 /**
  * Chart tab for Test Mode — supports Radar, Bar, and Line chart types
@@ -86,7 +89,8 @@ export default function TestModeChartTab({ blocks, columns, visibleColumns }) {
             {[
               { key: "radar", label: "Radar" },
               { key: "bar", label: "Bar" },
-              { key: "line", label: "Line" }
+              { key: "line", label: "Line" },
+              { key: "pie", label: "Pie" }
             ].map((opt) => (
               <button
                 key={opt.key}
@@ -175,7 +179,25 @@ export default function TestModeChartTab({ blocks, columns, visibleColumns }) {
             <Tooltip />
           </BarChart>
         </ResponsiveContainer>
-      ) : (
+      ) : chartType === "pie" ? (() => {
+        const pieCol = visibleCols[0];
+        const pieData = data.map((d, i) => ({
+          name: d.criterion,
+          value: pieCol ? (d[pieCol.key] || 0) : 0,
+          fill: PIE_COLORS[i % PIE_COLORS.length]
+        })).filter((d) => d.value > 0);
+        return (
+          <ResponsiveContainer width="100%" height={400}>
+            <PieChart>
+              <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={130} label={{ fontSize: 9, position: "outside" }}>
+                {pieData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
+              </Pie>
+              <Legend wrapperStyle={{ fontSize: 10 }} />
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        );
+      })() : (
         <ResponsiveContainer width="100%" height={Math.max(350, data.length * 28)}>
           <LineChart data={data} layout="vertical" margin={{ left: 120, right: 20 }}>
             <CartesianGrid strokeDasharray="3 3" horizontal={false} />

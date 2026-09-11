@@ -41,70 +41,177 @@ function DescriptorSelectItem({ value, scoreNumber, descriptorText }) {
 
 /**
  * Score selection cell — supports both "levels" mode (descriptor-based dropdown)
- * and "single" mode (numeric range dropdown). Mirrors the real ScoreCell.
+ * and "single" mode (numeric range dropdown). When combineBonusPenalty is true,
+ * the dropdown also includes the bonus/penalty adjustment options below a
+ * separator, so the user picks ONE value from the combined list. Selecting a
+ * standard level sets the score and deactivates bonus/penalty; selecting a
+ * bonus/penalty value activates the adjustment on top of the current base score.
  */
-export function TestScoreCell({ score, onChange, disabled, placeholder = "—", descriptors, scoringMode, singleMin, singleMax }) {
+export function TestScoreCell({
+  score, onChange, disabled, placeholder = "—",
+  descriptors, scoringMode, singleMin, singleMax,
+  combineBonusPenalty, criterion, bonusPenaltyConfig, onCombinedChange
+}) {
+  const [showGuidance, setShowGuidance] = useState(false);
   const hasDesc = Array.isArray(descriptors) && descriptors.some((d) => d && d.text);
   const descFor = (n) => (hasDesc ? descriptors.find((d) => d.level === n)?.text : null);
   const selectedDesc = score != null ? descFor(score) : null;
 
-  if (scoringMode === "single") {
-    const min = Number.isFinite(singleMin) ? singleMin : 0;
-    const max = Number.isFinite(singleMax) ? singleMax : 100;
-    const options = [];
-    for (let n = min; n <= max; n++) options.push(n);
-    return (
-      <div className="flex flex-col gap-1 w-full">
-        <Select value={score != null ? score.toString() : ""} onValueChange={(v) => onChange(parseInt(v))} disabled={disabled}>
-          <SelectTrigger className="h-8 w-full text-xs">
-            <SelectValue placeholder={placeholder} />
-          </SelectTrigger>
-          <SelectContent className="max-h-60">
-            {options.map((n) => (
-              <SelectPrimitive.Item
-                key={n}
-                value={n.toString()}
-                className="relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-xs outline-none focus:bg-accent focus:text-accent-foreground"
-              >
-                <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
-                  <SelectPrimitive.ItemIndicator>
-                    <Check className="h-4 w-4" />
-                  </SelectPrimitive.ItemIndicator>
-                </span>
-                <SelectPrimitive.ItemText>{n}</SelectPrimitive.ItemText>
-              </SelectPrimitive.Item>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-    );
-  }
+  // Build bonus/penalty options from template config
+  const bpOptions = useMemo(() => {
+    if (!combineBonusPenalty || !bonusPenaltyConfig?.enabled) return [];
+    const direction = bonusPenaltyConfig.direction || "penalty";
+    const range = bonusPenaltyConfig.range || { min: -1, max: 1 };
+    const step = Number.isFinite(bonusPenaltyConfig.step) ? bonusPenaltyConfig.step : 1;
+    const genLevels = bonusPenaltyConfig.levels;
+    if (Array.isArray(genLevels) && genLevels.length > 0) {
+      return genLevels.map((l) => ({ level: Number(l.level), text: l.text || "" })).filter((o) => Number.isFinite(o.level));
+    }
+    const opts = [];
+    const st = step > 0 ? step : 1;
+    if (direction === "bonus") {
+      const max = Number.isFinite(range.max) ? range.max : 0;
+      for (let n = st; n <= max + 1e-9; n += st) opts.push({ level: Number(n.toFixed(4)), text: "" });
+    } else {
+      const min = Number.isFinite(range.min) ? range.min : 0;
+      for (let n = -st; n >= min - 1e-9; n -= st) opts.push({ level: Number(n.toFixed(4)), text: "" });
+    }
+    return opts;
+  }, [combineBonusPenalty, bonusPenaltyConfig]);
 
+  const isBPActive = combineBonusPenalty && criterion?.bonus_penalty_active;
+  const bpValue = criterion?.bonus_penalty_value;
+  const bpDirection = bonusPenaltyConfig?.direction || "penalty";
+  const guidance = bonusPenaltyConfig?.guidance || "";
+
+  // Encoded value: std:N for standard levels, bp:N for bonus/penalty
+  const currentValue = isBPActive ? `bp:${bpValue}` : score != null ? `std:${score}` : "";
+
+  const handleCombinedChange = (encoded) => {
+    if (!onCombinedChange) return;
+    if (encoded.startsWith("std:")) {
+      const v = scoringMode === "single" ? parseFloat(encoded.slice(4)) : parseInt(encoded.slice(4));
+      onCombinedChange({ primary_score: v, bonus_penalty_active: false, bonus_penalty_value: null });
+    } else if (encoded.startsWith("bp:")) {
+      const v = Number(encoded.slice(3));
+      const updates = { bonus_penalty_active: true, bonus_penalty_value: v };
+      // Default base score to midpoint if none set yet
+      if (score == null) {
+        if (scoringMode === "single") {
+          const min = Number.isFinite(singleMin) ? singleMin : 0;
+          const max = Number.isFinite(singleMax) ? singleMax : 100;
+          updates.primary_score = Math.round((min + max) / 2);
+        } else {
+          const levels = (descriptors || []).map((d) => d.level).filter(Number.isFinite);
+          if (levels.length > 0) updates.primary_score = levels[Math.floor(levels.length / 2)];
+        }
+      }
+      onCombinedChange(updates);
+    }
+  };
+
+  // Standard options
   const descLevels = (Array.isArray(descriptors) && descriptors.length > 0)
     ? descriptors.map((d) => d.level).filter((n) => Number.isFinite(n))
     : [1, 2, 3, 4, 5];
 
+  const singleOptions = [];
+  if (scoringMode === "single") {
+    const min = Number.isFinite(singleMin) ? singleMin : 0;
+    const max = Number.isFinite(singleMax) ? singleMax : 100;
+    for (let n = min; n <= max; n++) singleOptions.push(n);
+  }
+
+  const handleValueChange = combineBonusPenalty
+    ? handleCombinedChange
+    : (v) => onChange(scoringMode === "single" ? parseFloat(v) : parseInt(v));
+
+  const selectValue = combineBonusPenalty ? currentValue : (score != null ? score.toString() : "");
+  const showWide = hasDesc || (combineBonusPenalty && bpOptions.some((o) => o.text));
+
   return (
     <div className="flex flex-col gap-1 w-full">
-      <Select value={score?.toString() || ""} onValueChange={(v) => onChange(parseInt(v))} disabled={disabled}>
-        <SelectTrigger className="h-8 w-full text-xs">
-          <SelectValue placeholder={placeholder} />
-        </SelectTrigger>
-        <SelectContent className={hasDesc ? "min-w-[320px] max-w-[420px]" : ""}>
-          {descLevels.map((n) => (
-            <DescriptorSelectItem
-              key={n}
-              value={n.toString()}
-              scoreNumber={n}
-              descriptorText={descFor(n)}
-            />
-          ))}
-        </SelectContent>
-      </Select>
-      {selectedDesc && (
+      <div className="flex items-center gap-1">
+        <div className="flex-1">
+          <Select value={selectValue} onValueChange={handleValueChange} disabled={disabled}>
+            <SelectTrigger className={`h-8 w-full text-xs ${isBPActive ? (bpDirection === "bonus" ? "border-green-400 bg-green-50" : "border-red-400 bg-red-50") : ""}`}>
+              <SelectValue placeholder={placeholder} />
+            </SelectTrigger>
+            <SelectContent className={showWide ? "min-w-[320px] max-w-[420px]" : "max-h-72"}>
+              {/* Standard scoring options */}
+              {scoringMode === "single"
+                ? singleOptions.map((n) => (
+                  <SelectPrimitive.Item
+                    key={combineBonusPenalty ? `std:${n}` : n.toString()}
+                    value={combineBonusPenalty ? `std:${n}` : n.toString()}
+                    className="relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-xs outline-none focus:bg-accent focus:text-accent-foreground"
+                  >
+                    <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
+                      <SelectPrimitive.ItemIndicator><Check className="h-4 w-4" /></SelectPrimitive.ItemIndicator>
+                    </span>
+                    <SelectPrimitive.ItemText>{n}</SelectPrimitive.ItemText>
+                  </SelectPrimitive.Item>
+                ))
+                : descLevels.map((n) => (
+                  <DescriptorSelectItem
+                    key={combineBonusPenalty ? `std:${n}` : n.toString()}
+                    value={combineBonusPenalty ? `std:${n}` : n.toString()}
+                    scoreNumber={n}
+                    descriptorText={descFor(n)}
+                  />
+                ))
+              }
+              {/* Bonus/penalty options — combined into the same dropdown */}
+              {combineBonusPenalty && bpOptions.length > 0 && (
+                <>
+                  <div className="my-1 border-t border-gray-200" />
+                  <div className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                    {bpDirection === "bonus" ? "Bonus Options" : "Penalty Options"}
+                  </div>
+                  {bpOptions.map((o) => (
+                    <SelectPrimitive.Item
+                      key={`bp:${o.level}`}
+                      value={`bp:${o.level}`}
+                      className="relative flex w-full cursor-default select-none items-start rounded-sm py-1.5 pl-2 pr-8 text-xs outline-none focus:bg-accent focus:text-accent-foreground"
+                    >
+                      <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
+                        <SelectPrimitive.ItemIndicator><Check className="h-4 w-4" /></SelectPrimitive.ItemIndicator>
+                      </span>
+                      <SelectPrimitive.ItemText>
+                        <span className={`font-medium ${o.level > 0 ? "text-green-700" : "text-red-700"}`}>
+                          {o.level > 0 ? `+${o.level}` : o.level}
+                        </span>
+                      </SelectPrimitive.ItemText>
+                      {o.text && <span className="text-[11px] text-gray-600 leading-snug flex-1 ml-2 whitespace-normal self-center">{o.text}</span>}
+                    </SelectPrimitive.Item>
+                  ))}
+                </>
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+        {combineBonusPenalty && guidance && (
+          <button type="button" onClick={() => setShowGuidance(!showGuidance)} className="p-0.5 text-gray-400 hover:text-indigo-600 shrink-0" title="Show bonus/penalty guidance">
+            <Info className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+      {selectedDesc && !isBPActive && (
         <p className="text-[11px] text-gray-600 leading-relaxed text-left w-full whitespace-normal px-0.5 mt-0.5" title={selectedDesc}>
           {selectedDesc}
         </p>
+      )}
+      {isBPActive && (
+        <p className="text-[11px] leading-relaxed text-left w-full px-0.5 mt-0.5">
+          <span className={`font-medium ${bpDirection === "bonus" ? "text-green-700" : "text-red-700"}`}>
+            {bpDirection === "bonus" ? "+ Bonus" : "− Penalty"}: {bpValue > 0 ? "+" : ""}{bpValue}
+          </span>
+        </p>
+      )}
+      {showGuidance && guidance && (
+        <div className="text-[10px] text-indigo-700 bg-indigo-50 border border-indigo-100 rounded p-1.5">
+          {guidance}
+        </div>
       )}
     </div>
   );

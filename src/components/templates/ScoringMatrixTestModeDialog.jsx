@@ -8,7 +8,7 @@ import ScoringAttachmentsManager from "@/components/templates/ScoringAttachments
 import ScoringOverallRatingPanel from "@/components/templates/ScoringOverallRatingPanel";
 import { computeWeightedScoreMulti, effectiveAdjustedPrimary, effectiveFinalScore } from "@/components/templates/scoringWeightLogic";
 import TestModeChartTab from "@/components/templates/testmode/TestModeChartTab";
-import { TestScoreCell, TestBonusPenaltyCell, TestDeviationCell, TestNotesCell } from "@/components/templates/testmode/TestModeCells";
+import { TestScoreCell, TestDeviationCell, TestNotesCell } from "@/components/templates/testmode/TestModeCells";
 import {
   buildMockScore, getCriterionRange, getBlockRange, formatScoreValue,
   computeTestTotals, computeBonusPenaltyTotal, unscoredCount, getOverallRating
@@ -295,8 +295,8 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
 
   // Number of score columns between Criterion and Notes (for the Total Score row colSpan)
   const scoreColCount = showFinal ? 8 : showIC ? 6 : showAdjustedPrimary ? 4 : showTeam ? 3 : 1;
-  // Total columns for block header colSpan (criterion + score cols + bonus/penalty + notes)
-  const blockColSpan = 1 + scoreColCount + 1 + 1;
+  // Total columns for block header colSpan (criterion + score cols + notes)
+  const blockColSpan = 1 + scoreColCount + 1;
 
   if (!open) return null;
 
@@ -403,7 +403,6 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
                     {showIC && <th className="text-left p-2 font-medium text-gray-600 min-w-[240px]">IC Rec.</th>}
                     {showIC && <th className="text-center p-2 font-medium text-gray-600">Δ</th>}
                     {showFinal && <th className="text-center p-2 font-medium text-gray-600">Final</th>}
-                    <th className="text-center p-2 font-medium text-gray-600 min-w-[120px]">Bonus/Penalty</th>
                     <th className="text-left p-2 font-medium text-gray-600 min-w-[150px]">Notes</th>
                   </tr>
                 </thead>
@@ -449,7 +448,7 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
                                 />
                               </div>
                             </td>
-                            {/* Primary score */}
+                            {/* Primary score — combined with bonus/penalty in one dropdown */}
                             <td className="p-2 text-left align-top">
                               <TestScoreCell
                                 score={crit.primary_score}
@@ -459,6 +458,17 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
                                 scoringMode={tc.scoring_mode}
                                 singleMin={tc.single_score_min}
                                 singleMax={tc.single_score_max}
+                                combineBonusPenalty={!!tc.bonus_penalty_enabled}
+                                criterion={crit}
+                                bonusPenaltyConfig={{
+                                  enabled: !!tc.bonus_penalty_enabled,
+                                  direction: tc.bonus_penalty_direction,
+                                  range: tc.bonus_penalty_range,
+                                  step: tc.bonus_penalty_step,
+                                  levels: tc.bonus_penalty_levels,
+                                  guidance: tc.bonus_penalty_guidance
+                                }}
+                                onCombinedChange={(updates) => updateCriterion(block.id, crit.id, updates)}
                               />
                             </td>
                             {/* Team recommended score */}
@@ -527,14 +537,6 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
                                 )}
                               </td>
                             )}
-                            {/* Bonus / Penalty — always visible alongside scoring */}
-                            <td className="p-2 text-center">
-                              <TestBonusPenaltyCell
-                                criterion={crit}
-                                disabled={score.is_closed}
-                                onUpdate={(updates) => updateCriterion(block.id, crit.id, updates)}
-                              />
-                            </td>
                             {/* Notes */}
                             <td className="p-2">
                               <TestNotesCell
@@ -553,7 +555,14 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
                 </tbody>
                 <tfoot className="bg-gray-50">
                   <tr className="border-t-2 font-semibold">
-                    <td className="p-2">Weighted Average (incl. bonus/penalty)</td>
+                    <td className="p-2">
+                      Weighted Average (incl. bonus/penalty)
+                      {bpTotal !== 0 && (
+                        <span className="ml-1.5 text-[10px] font-medium" style={{ color: bpTotal > 0 ? "#166534" : "#991b1b" }}>
+                          ({bpTotal > 0 ? "+" : ""}{bpTotal.toFixed(2)})
+                        </span>
+                      )}
+                    </td>
                     <td className="p-2 text-center">{computeTotals("primary_score")}</td>
                     {showTeam && <td className="p-2 text-center">{computeTotals("team_score")}</td>}
                     {showTeam && <td></td>}
@@ -561,9 +570,6 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
                     {showIC && <td className="p-2 text-center">{computeTotals("ic_score")}</td>}
                     {showIC && <td></td>}
                     {showFinal && <td className="p-2 text-center">{computeTotals("final_score")}</td>}
-                    <td className="p-2 text-center text-xs font-medium" style={{ color: bpTotal > 0 ? "#166534" : bpTotal < 0 ? "#991b1b" : "#6b7280" }}>
-                      {bpTotal === 0 ? "—" : `${bpTotal > 0 ? "+" : ""}${bpTotal.toFixed(2)}`}
-                    </td>
                     <td></td>
                   </tr>
                   {/* Total Score row — weighted running total / max */}
@@ -581,7 +587,6 @@ export default function ScoringMatrixTestModeDialog({ open, onOpenChange, templa
                         </div>
                       ) : "—"}
                     </td>
-                    <td className="p-2"></td>
                     <td></td>
                   </tr>
                 </tfoot>
