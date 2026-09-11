@@ -54,6 +54,11 @@ export default function ScoringOverallRatingPanel({ weightedScore, ratingConfig 
         <Award className="w-4 h-4 text-indigo-500" />
         <h4 className="text-sm font-semibold">Overall Rating</h4>
         <span className="text-xs text-gray-500">— rating logic applied to the total score</span>
+        {hasScore && (
+          <span className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-indigo-200 bg-indigo-50 text-xs font-semibold text-indigo-700">
+            Score: {formatScoreValue(Number(weightedScore.toFixed(2)), unit)}
+          </span>
+        )}
       </div>
 
       {cfg.pass_fail_enabled && (

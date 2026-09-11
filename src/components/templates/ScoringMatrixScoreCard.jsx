@@ -915,6 +915,12 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
           </div>
           {hasRatingConfig && (showFinal || score.final_score_finalized) && (
             <div className="flex items-center gap-2 mt-2 flex-wrap">
+              {weightedFinalScoreNum != null && (
+                <Badge variant="outline" className="text-xs flex items-center gap-1 border-indigo-300 text-indigo-700 bg-indigo-50">
+                  <Target className="w-3 h-3" />
+                  Score: {formatScoreValue(Number(weightedFinalScoreNum.toFixed(2)), scoreUnit)}
+                </Badge>
+              )}
               {ratingConfig.pass_fail_enabled && (
                 <Badge
                   variant="outline"
