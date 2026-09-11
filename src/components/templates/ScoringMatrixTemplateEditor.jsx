@@ -75,6 +75,10 @@ function RangeBadge({ range, unit, className = "" }) {
   );
 }
 
+// Shared grid layout for the section header, each section row, and the total row,
+// so every column lines up exactly. Columns: expand/drag | name | weight | range | multiplier | actions.
+const SECTION_GRID = "grid items-center gap-2 grid-cols-[36px_1fr_84px_140px_160px_68px]";
+
 /**
  * Editor for scoring matrix template structure: blocks, criteria, and level descriptors.
  * Allows adding, removing, reordering, and editing all elements.
@@ -272,6 +276,12 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange, template
   };
 
   const totalWeight = blocks.reduce((sum, b) => sum + (b.weight || 0), 0);
+  const totalRange = blocks.reduce((acc, b) => {
+    const r = getBlockRange(b);
+    if (r) { acc.min += r.min; acc.max += r.max; }
+    return acc;
+  }, { min: 0, max: 0 });
+  const hasAnyRange = blocks.some((b) => getBlockRange(b) != null);
   const multipliersActive = hasActiveMultipliers(blocks);
   const effectiveWeights = computeEffectiveBlockWeights(blocks);
   const effByBlockId = Object.fromEntries(effectiveWeights.map((b) => [b.id, b]));
@@ -352,30 +362,32 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange, template
       )}
 
       {blocks.length > 0 && (
-        <div className="flex items-center gap-2 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400 border-b border-gray-200">
-          <span className="w-9" title="Expand / drag"> </span>
-          <span className="flex-1">Section Name</span>
-          <span className="w-16 text-center" title="Section weight">Weight %</span>
-          <span className="ml-1" title="Total score range across this section's criteria">Total Score Range</span>
-          <span className="w-16 text-center" title="Multiplier factor">Multiplier</span>
-          <span className="w-[60px] text-center" title="Reorder / delete">Actions</span>
+        <div className={`${SECTION_GRID} px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400 border-b border-gray-200`}>
+          <span />
+          <span>Section Name</span>
+          <span className="text-center" title="Section weight">Weight %</span>
+          <span className="text-center" title="Total score range across this section's criteria">Total Score Range</span>
+          <span className="text-center" title="Multiplier factor">Multiplier</span>
+          <span className="text-center" title="Reorder / delete">Actions</span>
         </div>
       )}
 
       {blocks.map((block, bIdx) => (
         <div key={block.id} className="border border-gray-200 rounded-lg overflow-hidden">
-          <div className="flex items-center gap-2 bg-gray-50 px-2 py-2">
-            <button type="button" onClick={() => toggleBlock(block.id)} className="p-0.5 hover:bg-gray-200 rounded">
-              {expandedBlocks[block.id] ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-            </button>
-            <GripVertical className="w-3.5 h-3.5 text-gray-300" />
+          <div className={`${SECTION_GRID} bg-gray-50 px-2 py-2`}>
+            <div className="flex items-center gap-1">
+              <button type="button" onClick={() => toggleBlock(block.id)} className="p-0.5 hover:bg-gray-200 rounded">
+                {expandedBlocks[block.id] ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+              </button>
+              <GripVertical className="w-3.5 h-3.5 text-gray-300" />
+            </div>
             <Input
               value={block.name}
               onChange={(e) => updateBlock(block.id, "name", e.target.value)}
-              className="h-7 text-sm font-medium flex-1"
+              className="h-7 text-sm font-medium"
               placeholder="Block name..."
             />
-            <div className="flex items-center gap-1 text-xs">
+            <div className="flex items-center justify-center gap-1 text-xs">
               <Input
                 type="number"
                 value={block.weight}
@@ -385,37 +397,41 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange, template
               />
               <span className="text-gray-500">%</span>
             </div>
-            <RangeBadge range={getBlockRange(block)} unit={(ratingConfig && ratingConfig.unit) || "none"} className="ml-1" title="Total score range for this section (sum of its criteria)" />
+            <div className="flex justify-center">
+              <RangeBadge range={getBlockRange(block)} unit={(ratingConfig && ratingConfig.unit) || "none"} title="Total score range for this section (sum of its criteria)" />
+            </div>
             {/* Multiplier factor toggle (section level) */}
-            <button
-              type="button"
-              onClick={() => updateBlock(block.id, "multiplier_enabled", !block.multiplier_enabled)}
-              className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs border ${
-                block.multiplier_enabled
-                  ? "bg-cyan-50 border-cyan-300 text-cyan-700"
-                  : "bg-white border-gray-200 text-gray-400 hover:text-gray-600"
-              }`}
-              title={block.multiplier_enabled ? "Disable multiplier factor" : "Enable multiplier factor for this section"}
-            >
-              {block.multiplier_enabled ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
-              ×
-            </button>
-            {block.multiplier_enabled && (
-              <div className="flex items-center gap-1 text-xs">
-                <Input
-                  type="number"
-                  step="0.1"
-                  value={block.multiplier == null ? 1 : block.multiplier}
-                  onChange={(e) => updateBlock(block.id, "multiplier", parseFloat(e.target.value) || 1)}
-                  className="h-7 w-14 text-sm text-center"
-                  placeholder="1"
-                />
-                <span className="text-cyan-700 font-medium whitespace-nowrap" title="Effective weight after multiplier, normalized to 100% total">
-                  → {effByBlockId[block.id]?.normalizedPct.toFixed(1)}%
-                </span>
-              </div>
-            )}
-            <div className="flex items-center gap-0.5">
+            <div className="flex items-center justify-center gap-1">
+              <button
+                type="button"
+                onClick={() => updateBlock(block.id, "multiplier_enabled", !block.multiplier_enabled)}
+                className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs border ${
+                  block.multiplier_enabled
+                    ? "bg-cyan-50 border-cyan-300 text-cyan-700"
+                    : "bg-white border-gray-200 text-gray-400 hover:text-gray-600"
+                }`}
+                title={block.multiplier_enabled ? "Disable multiplier factor" : "Enable multiplier factor for this section"}
+              >
+                {block.multiplier_enabled ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
+                ×
+              </button>
+              {block.multiplier_enabled && (
+                <>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={block.multiplier == null ? 1 : block.multiplier}
+                    onChange={(e) => updateBlock(block.id, "multiplier", parseFloat(e.target.value) || 1)}
+                    className="h-7 w-14 text-sm text-center"
+                    placeholder="1"
+                  />
+                  <span className="text-cyan-700 font-medium whitespace-nowrap text-[10px]" title="Effective weight after multiplier, normalized to 100% total">
+                    → {effByBlockId[block.id]?.normalizedPct.toFixed(1)}%
+                  </span>
+                </>
+              )}
+            </div>
+            <div className="flex items-center justify-center gap-0.5">
               <button type="button" onClick={() => moveBlock(block.id, -1)} disabled={bIdx === 0} className="p-1 rounded hover:bg-gray-200 disabled:opacity-30 text-xs">
                 ↑
               </button>
@@ -641,6 +657,22 @@ export default function ScoringMatrixTemplateEditor({ blocks, onChange, template
           )}
         </div>
       ))}
+      {blocks.length > 0 && (
+        <div className={`${SECTION_GRID} px-2 py-2 bg-gray-100 border border-gray-200 rounded-lg text-xs font-semibold`}>
+          <span />
+          <span className="text-gray-600">Total</span>
+          <span className={`text-center ${totalWeight === 100 ? "text-green-600" : "text-orange-600"}`} title="Sum of all section weights">
+            {totalWeight}%
+          </span>
+          <span className="flex justify-center" title="Total score range across all sections">
+            {hasAnyRange ? <RangeBadge range={totalRange} unit={(ratingConfig && ratingConfig.unit) || "none"} /> : <span className="text-gray-400 font-normal">—</span>}
+          </span>
+          <span className="text-center text-gray-500 font-normal">
+            {multipliersActive ? "normalized 100%" : "—"}
+          </span>
+          <span />
+        </div>
+      )}
       <Button type="button" variant="outline" size="sm" onClick={addBlock} className="w-full text-xs">
         <Plus className="w-3.5 h-3.5" /> Add Block
       </Button>
