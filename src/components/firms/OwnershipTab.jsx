@@ -47,11 +47,22 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
   // Fetch contacts for THIS firm via the backend function (server-side cursor
   // pagination + deleted_at:null filter) so we don't miss contacts when the
   // tenant has more than the 5,000-row single-query cap on a broad list call.
+  // Falls back to a direct SDK filter if the backend function is rate-limited.
   const { data: allContacts = [] } = useQuery({
     queryKey: ["firmContacts", firmId],
     queryFn: async () => {
-      const res = await base44.functions.invoke("fetchContactsByFirm", { firm_id: firmId });
-      return res?.records || [];
+      try {
+        const res = await base44.functions.invoke("fetchContactsByFirm", { firm_id: firmId });
+        const records = res?.records || [];
+        if (records.length > 0) return records;
+        // Empty result — could be genuinely empty or a silent failure; fall
+        // back to direct SDK to be safe.
+        return base44.entities.Contact.filter({ firm_ids: firmId, deleted_at: null }, '-created_date', 5000);
+      } catch {
+        // Backend function failed (e.g. rate limit) — fall back to direct SDK
+        // call so the ownership picker still shows the firm's contacts.
+        return base44.entities.Contact.filter({ firm_ids: firmId, deleted_at: null }, '-created_date', 5000);
+      }
     },
     enabled: !!firmId,
   });
@@ -142,7 +153,7 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
       if (ownerContactIds.has(c.id)) return false;
       const coreName = normalizeName([c.first_name, c.middle_name, c.last_name].filter(Boolean).join(" "));
       if (coreName && ownerNames.has(coreName)) return false;
-      return c.employee_status === type;
+      return !c.employee_status || c.employee_status === type;
     });
   };
 
