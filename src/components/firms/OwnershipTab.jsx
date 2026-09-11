@@ -44,10 +44,16 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Fetch contacts for the firm (higher limit so owner lookups don't miss anyone)
+  // Fetch contacts for THIS firm via the backend function (server-side cursor
+  // pagination + deleted_at:null filter) so we don't miss contacts when the
+  // tenant has more than the 5,000-row single-query cap on a broad list call.
   const { data: allContacts = [] } = useQuery({
-    queryKey: ["contacts"],
-    queryFn: () => base44.entities.Contact.list("-created_date", 5000),
+    queryKey: ["firmContacts", firmId],
+    queryFn: async () => {
+      const res = await base44.functions.invoke("fetchContactsByFirm", { firm_id: firmId });
+      return res?.records || [];
+    },
+    enabled: !!firmId,
   });
 
   // Fetch ownership history
@@ -496,7 +502,7 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
       });
       const data = res?.data || res;
       if (data.updated > 0) {
-        queryClient.invalidateQueries({ queryKey: ["contacts"] });
+        queryClient.invalidateQueries({ queryKey: ["firmContacts", firmId] });
         queryClient.invalidateQueries({ queryKey: ["ownership", firmId] });
       }
       return data;
@@ -1584,7 +1590,7 @@ export default function OwnershipTab({ firmId, firmName, firmWebsite, defaultOwn
           onOpenChange={(open) => {
             if (!open) {
               setSelectedContact(null);
-              queryClient.invalidateQueries({ queryKey: ["contacts"] });
+              queryClient.invalidateQueries({ queryKey: ["firmContacts", firmId] });
               queryClient.invalidateQueries({ queryKey: ["ownership", firmId] });
             }
           }}
