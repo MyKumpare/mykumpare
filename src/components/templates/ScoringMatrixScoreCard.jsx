@@ -197,27 +197,48 @@ function ScoreCell({ score, onChange, disabled, placeholder = "—", descriptors
 function BonusPenaltyCell({ criterion, templateCriteria, isPrimaryAnalyst, isClosed, onUpdate }) {
   const [showGuidance, setShowGuidance] = useState(false);
   const templateCrit = templateCriteria?.[criterion.id];
+  const range = (templateCrit?.bonus_penalty_range) || { min: -1, max: 1 };
+  const STEP = 0.5;
+
+  // Build the allowed values for each direction (mutually exclusive).
+  // Bonus = positive values only (STEP → max); Penalty = negative values only (min → -STEP).
+  // Hooks must run before any early return.
+  const bonusOptions = useMemo(() => {
+    const opts = [];
+    const max = Number.isFinite(range.max) ? range.max : 0;
+    for (let n = STEP; n <= max + 1e-9; n += STEP) opts.push(Number(n.toFixed(2)));
+    return opts;
+  }, [range.max]);
+  const penaltyOptions = useMemo(() => {
+    const opts = [];
+    const min = Number.isFinite(range.min) ? range.min : 0;
+    for (let n = -STEP; n >= min - 1e-9; n -= STEP) opts.push(Number(n.toFixed(2)));
+    return opts;
+  }, [range.min]);
 
   if (!templateCrit?.bonus_penalty_enabled) return null;
 
-  const range = templateCrit.bonus_penalty_range || { min: -1, max: 1 };
   const isActive = criterion.bonus_penalty_active;
   const value = criterion.bonus_penalty_value;
   const guidance = templateCrit.bonus_penalty_guidance || "";
+  const disabled = isClosed || !isPrimaryAnalyst;
 
-  const clampValue = (v) => {
-    if (v == null || isNaN(v)) return 0;
-    return Math.max(range.min, Math.min(range.max, v));
-  };
+  const currentDir = (value || 0) > 0 ? "bonus" : (value || 0) < 0 ? "penalty" : null;
 
   const handleToggle = () => {
-    if (isClosed || !isPrimaryAnalyst) return;
+    if (disabled) return;
     onUpdate({ bonus_penalty_active: !isActive, bonus_penalty_value: !isActive ? 0 : criterion.bonus_penalty_value });
   };
 
+  const handleDirection = (dir) => {
+    if (disabled) return;
+    // Pick the smallest-magnitude value in the chosen direction as the default.
+    const v = dir === "bonus" ? (bonusOptions[0] ?? 0) : (penaltyOptions[0] ?? 0);
+    onUpdate({ bonus_penalty_value: v });
+  };
+
   const handleValueChange = (v) => {
-    const clamped = clampValue(parseFloat(v));
-    onUpdate({ bonus_penalty_value: clamped });
+    onUpdate({ bonus_penalty_value: Number(v) });
   };
 
   return (
@@ -226,40 +247,58 @@ function BonusPenaltyCell({ criterion, templateCriteria, isPrimaryAnalyst, isClo
         <button
           type="button"
           onClick={handleToggle}
-          disabled={isClosed || !isPrimaryAnalyst}
-          className={`p-0.5 rounded text-xs ${isActive ? "text-indigo-600 bg-indigo-50 border border-indigo-200" : "text-gray-400 border border-gray-200"} ${(isClosed || !isPrimaryAnalyst) ? "opacity-50 cursor-not-allowed" : "hover:bg-indigo-100"}`}
+          disabled={disabled}
+          className={`p-0.5 rounded text-xs ${isActive ? "text-indigo-600 bg-indigo-50 border border-indigo-200" : "text-gray-400 border border-gray-200"} ${disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-indigo-100"}`}
           title={isActive ? "Deactivate bonus/penalty" : "Activate bonus/penalty"}
         >
           {isActive ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
         </button>
         {isActive && (
-          <div className="flex items-center gap-0.5">
-            <button
-              type="button"
-              onClick={() => handleValueChange((value || 0) - 0.5)}
-              disabled={isClosed || !isPrimaryAnalyst}
-              className="p-0.5 rounded hover:bg-red-100 text-red-500 disabled:opacity-30"
-              title="Decrease"
-            >
-              <MinusCircle className="w-3.5 h-3.5" />
-            </button>
-            <Input
-              type="number"
-              step="0.5"
-              value={value ?? 0}
-              onChange={(e) => handleValueChange(e.target.value)}
-              disabled={isClosed || !isPrimaryAnalyst}
-              className="h-7 w-14 text-xs text-center"
-            />
-            <button
-              type="button"
-              onClick={() => handleValueChange((value || 0) + 0.5)}
-              disabled={isClosed || !isPrimaryAnalyst}
-              className="p-0.5 rounded hover:bg-green-100 text-green-500 disabled:opacity-30"
-              title="Increase"
-            >
-              <PlusCircle className="w-3.5 h-3.5" />
-            </button>
+          <div className="flex flex-col gap-0.5">
+            {/* Direction selector — mutually exclusive: Bonus OR Penalty */}
+            <div className="flex items-center gap-0.5">
+              {bonusOptions.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => handleDirection("bonus")}
+                  disabled={disabled}
+                  className={`px-1.5 py-0.5 rounded text-[10px] font-medium border ${currentDir === "bonus" ? "bg-green-100 border-green-400 text-green-700" : "bg-white border-gray-200 text-gray-500 hover:text-green-700 hover:border-green-300"} ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+                  title="Apply a bonus (positive adjustment)"
+                >
+                  + Bonus
+                </button>
+              )}
+              {penaltyOptions.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => handleDirection("penalty")}
+                  disabled={disabled}
+                  className={`px-1.5 py-0.5 rounded text-[10px] font-medium border ${currentDir === "penalty" ? "bg-red-100 border-red-400 text-red-700" : "bg-white border-gray-200 text-gray-500 hover:text-red-700 hover:border-red-300"} ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+                  title="Apply a penalty (negative adjustment)"
+                >
+                  − Penalty
+                </button>
+              )}
+            </div>
+            {/* Value dropdown — scoped to the selected direction only */}
+            {currentDir && (
+              <Select
+                value={String(value ?? 0)}
+                onValueChange={handleValueChange}
+                disabled={disabled}
+              >
+                <SelectTrigger className="h-7 w-20 text-xs">
+                  <SelectValue placeholder="—" />
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                  {(currentDir === "bonus" ? bonusOptions : penaltyOptions).map((n) => (
+                    <SelectItem key={n} value={String(n)} className="text-xs">
+                      {n > 0 ? `+${n}` : n}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
         )}
         <button
@@ -276,7 +315,7 @@ function BonusPenaltyCell({ criterion, templateCriteria, isPrimaryAnalyst, isClo
           {guidance}
         </div>
       )}
-      {isActive && (
+      {isActive && currentDir && (
         <div className="text-[10px] font-medium mt-0.5" style={{ color: (value || 0) > 0 ? "#166534" : (value || 0) < 0 ? "#991b1b" : "#6b7280" }}>
           {(value || 0) > 0 ? "+" : ""}{value || 0}
         </div>
