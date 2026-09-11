@@ -39,6 +39,42 @@ const SCORE_COLORS = {
   5: "bg-green-100 text-green-700 border-green-300"
 };
 
+// Compute the min/max score range for a single criterion from its template config.
+// - single mode: uses single_score_min / single_score_max
+// - levels mode: uses the min/max descriptor levels (defaults to 1-5)
+function getCriterionRange(templateCrit) {
+  if (!templateCrit) return null;
+  if (templateCrit.scoring_mode === "single") {
+    const min = Number.isFinite(templateCrit.single_score_min) ? templateCrit.single_score_min : 0;
+    const max = Number.isFinite(templateCrit.single_score_max) ? templateCrit.single_score_max : 100;
+    return { min, max };
+  }
+  const descs = templateCrit.descriptors;
+  if (Array.isArray(descs) && descs.length > 0) {
+    const levels = descs.map((d) => d.level).filter((n) => Number.isFinite(n));
+    if (levels.length > 0) return { min: Math.min(...levels), max: Math.max(...levels) };
+  }
+  return { min: 1, max: 5 };
+}
+
+// Compute the overall min/max range for a block from the ranges of its criteria.
+function getBlockRange(block, templateCriteria) {
+  const ranges = (block.criteria || [])
+    .map((c) => getCriterionRange(templateCriteria?.[c.id]))
+    .filter(Boolean);
+  if (ranges.length === 0) return null;
+  return { min: Math.min(...ranges.map((r) => r.min)), max: Math.max(...ranges.map((r) => r.max)) };
+}
+
+function RangeBadge({ range, className = "" }) {
+  if (!range) return null;
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-[10px] font-medium text-gray-500 bg-gray-100 border border-gray-200 rounded px-1 py-0.5 ${className}`}>
+      {range.min}–{range.max}
+    </span>
+  );
+}
+
 function ScoreCell({ score, onChange, disabled, placeholder = "—", descriptors, scoringMode, singleMin, singleMax }) {
   const hasDesc = Array.isArray(descriptors) && descriptors.some((d) => d && d.text);
   const descFor = (n) => (hasDesc ? descriptors.find((d) => d.level === n)?.text : null);
@@ -884,6 +920,7 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
                         <div className="flex items-center gap-1.5">
                           {expandedBlocks[block.id] ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                           {block.name} <span className="text-gray-400 font-normal">({block.weight}%)</span>
+                          <RangeBadge range={getBlockRange(block, templateCriteria)} />
                         </div>
                       </td>
                     </tr>
@@ -891,7 +928,10 @@ export default function ScoringMatrixScoreCard({ scoreId, dueDiligence, template
                       <tr key={crit.id} className="border-b hover:bg-gray-50">
                         <td className="p-2">
                           <div className="flex flex-col gap-1">
-                            <div className="font-medium">{crit.name}</div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-medium">{crit.name}</span>
+                              <RangeBadge range={getCriterionRange(templateCriteria[crit.id])} />
+                            </div>
                             {crit.category && <div className="text-gray-400 text-[10px]">{crit.category}</div>}
                             <ScoringAttachmentsManager
                               attachments={score.attachments}
