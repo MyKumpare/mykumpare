@@ -15,6 +15,7 @@ import DueDiligenceDashboard from './pages/DueDiligenceDashboard';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import OnboardingGuard from '@/components/onboarding/OnboardingGuard';
+import AppDataPreloader from '@/components/AppDataPreloader';
 import ExternalPartyRegister from './pages/ExternalPartyRegister';
 import ExternalParty from './pages/ExternalParty';
 import ActivityCalendar from './pages/ActivityCalendar';
@@ -111,6 +112,7 @@ const AuthenticatedApp = () => {
   return (
     <>
     {!isRegisterRoute && <OnboardingGuard />}
+    {!isRegisterRoute && <AppDataPreloader />}
     <Routes>
       <Route path="/" element={
         <LayoutWrapper currentPageName={mainPageKey}>

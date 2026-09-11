@@ -77,6 +77,7 @@ import { useVoiceSearch } from "@/hooks/useVoiceSearch";
 import { triggerStartRecording } from "@/components/videolibrary/recorderStore";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { useInfiniteEntity } from "@/hooks/useInfiniteEntity";
+import { fetchAllRecords } from "@/lib/fetchAllRecords";
 import AumAlertsBell from "@/components/firms/AumAlertsBell";
 import { DragDropContext, Droppable } from "@hello-pangea/dnd";
 import { useNavOrder, reorderNavItems } from "@/hooks/useNavOrder";
@@ -298,14 +299,9 @@ export default function Home() {
   // reflects the current database state when the user visits the page.
   const firmsQuery = useInfiniteEntity({
     queryKey: ["firms-infinite"],
-    fetchFn: async (cursor, limit) => {
-      const res = await base44.functions.invoke("fetchAllFirms", { cursor, limit });
-      const data = res?.data ?? res ?? {};
-      return { records: data.records || [], nextCursor: data.nextCursor ?? null, hasMore: !!data.hasMore };
-    },
+    fetchFn: (cursor) => fetchAllRecords("fetchAllFirms", cursor),
     batchSize: 500,
     staleTime: 300000,
-    clearOnMount: true,
   });
   const firms = useMemo(
     () => (firmsQuery.data ? firmsQuery.data.pages.flatMap((p) => (p.records || []).filter((f) => !f.deleted_at)) : []),
@@ -371,11 +367,7 @@ export default function Home() {
   // fetchAllProducts backend function (service role with 429 retry backoff).
   const productsQuery = useInfiniteEntity({
     queryKey: ["products-infinite"],
-    fetchFn: async (cursor, limit) => {
-      const res = await base44.functions.invoke("fetchAllProducts", { cursor, limit });
-      const data = res?.data ?? res ?? {};
-      return { records: data.records || [], nextCursor: data.nextCursor ?? null, hasMore: !!data.hasMore };
-    },
+    fetchFn: (cursor) => fetchAllRecords("fetchAllProducts", cursor),
     batchSize: 500,
     staleTime: 300000,
   });
@@ -417,11 +409,7 @@ export default function Home() {
   // fetchAllContacts backend function (service role with 429 retry backoff).
   const contactsQuery = useInfiniteEntity({
     queryKey: ["contacts-infinite"],
-    fetchFn: async (cursor, limit) => {
-      const res = await base44.functions.invoke("fetchAllContacts", { cursor, limit });
-      const data = res?.data ?? res ?? {};
-      return { records: data.records || [], nextCursor: data.nextCursor ?? null, hasMore: !!data.hasMore };
-    },
+    fetchFn: (cursor) => fetchAllRecords("fetchAllContacts", cursor),
     batchSize: 500,
     staleTime: 300000,
   });
@@ -478,11 +466,7 @@ export default function Home() {
   // fetchAllPortfolios backend function (service role with 429 retry backoff).
   const portfoliosQuery = useInfiniteEntity({
     queryKey: ["portfolios-infinite"],
-    fetchFn: async (cursor, limit) => {
-      const res = await base44.functions.invoke("fetchAllPortfolios", { cursor, limit });
-      const data = res?.data ?? res ?? {};
-      return { records: data.records || [], nextCursor: data.nextCursor ?? null, hasMore: !!data.hasMore };
-    },
+    fetchFn: (cursor) => fetchAllRecords("fetchAllPortfolios", cursor),
     batchSize: 500,
     staleTime: 300000,
   });
@@ -519,39 +503,6 @@ export default function Home() {
     const newOnes = supplementaryPortfolios.filter((p) => !existingIds.has(p.id) && !p.deleted_at);
     return newOnes.length ? [...portfolios, ...newOnes] : portfolios;
   }, [portfolios, supplementaryPortfolios]);
-
-  // ─── Proactive background loading ───
-  // Auto-fetch all remaining pages for each entity in the background so the
-  // user never has to wait for a section to load after clicking/scrolling.
-  // Each query independently paginates through its own pages with a small delay
-  // between batches. Backend functions handle 429 retry backoff.
-  useEffect(() => {
-    if (firmsQuery.hasNextPage && !firmsQuery.isFetchingNextPage && !firmsQuery.isLoading) {
-      const t = setTimeout(() => firmsQuery.fetchNextPage(), 100);
-      return () => clearTimeout(t);
-    }
-  }, [firmsQuery.hasNextPage, firmsQuery.isFetchingNextPage, firmsQuery.isLoading]);
-
-  useEffect(() => {
-    if (productsQuery.hasNextPage && !productsQuery.isFetchingNextPage && !productsQuery.isLoading) {
-      const t = setTimeout(() => productsQuery.fetchNextPage(), 100);
-      return () => clearTimeout(t);
-    }
-  }, [productsQuery.hasNextPage, productsQuery.isFetchingNextPage, productsQuery.isLoading]);
-
-  useEffect(() => {
-    if (contactsQuery.hasNextPage && !contactsQuery.isFetchingNextPage && !contactsQuery.isLoading) {
-      const t = setTimeout(() => contactsQuery.fetchNextPage(), 100);
-      return () => clearTimeout(t);
-    }
-  }, [contactsQuery.hasNextPage, contactsQuery.isFetchingNextPage, contactsQuery.isLoading]);
-
-  useEffect(() => {
-    if (portfoliosQuery.hasNextPage && !portfoliosQuery.isFetchingNextPage && !portfoliosQuery.isLoading) {
-      const t = setTimeout(() => portfoliosQuery.fetchNextPage(), 100);
-      return () => clearTimeout(t);
-    }
-  }, [portfoliosQuery.hasNextPage, portfoliosQuery.isFetchingNextPage, portfoliosQuery.isLoading]);
 
   const { data: deletedFirms = [] } = useQuery({
     queryKey: ["deletedFirms"],
