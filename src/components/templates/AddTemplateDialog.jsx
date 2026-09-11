@@ -116,7 +116,15 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
         setCreateDate(editTemplate.create_date || format(new Date(), "yyyy-MM-dd"));
         setStages(Array.isArray(editTemplate.stages) ? editTemplate.stages.map((s) => ({ ...s, sub_stages: (s.sub_stages || []).map((ss) => ({ ...ss })) })) : []);
         setDocChecklist(Array.isArray(editTemplate.documentation_checklist) ? editTemplate.documentation_checklist.map((it) => ({ ...it })) : []);
-        setScoringBlocks(Array.isArray(editTemplate.scoring_blocks) ? editTemplate.scoring_blocks.map((b) => ({ ...b, criteria: (b.criteria || []).map((c) => ({ ...c, descriptors: (c.descriptors || []).map((d) => ({ ...d })) })) })) : []);
+        setScoringBlocks(Array.isArray(editTemplate.scoring_blocks) ? editTemplate.scoring_blocks.map((b) => ({
+          ...b,
+          criteria: (b.criteria || []).map((c) => ({
+            ...c,
+            descriptors: (c.descriptors || []).map((d) => ({ ...d })),
+            bonus_penalty_range: c.bonus_penalty_range ? { ...c.bonus_penalty_range } : undefined,
+            bonus_penalty_levels: (c.bonus_penalty_levels || []).map((l) => ({ ...l }))
+          }))
+        })) : []);
         setRatingConfig(editTemplate.rating_config ? JSON.parse(JSON.stringify(editTemplate.rating_config)) : null);
         setSampleFileUrl(editTemplate.sample_file_url || "");
         setSampleFileName(editTemplate.sample_file_name || "");
@@ -132,7 +140,15 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
         setCreateDate(format(new Date(), "yyyy-MM-dd"));
         setStages(Array.isArray(newVersionFrom.stages) ? newVersionFrom.stages.map((s) => ({ ...s, sub_stages: (s.sub_stages || []).map((ss) => ({ ...ss })) })) : []);
         setDocChecklist(Array.isArray(newVersionFrom.documentation_checklist) ? newVersionFrom.documentation_checklist.map((it) => ({ ...it })) : []);
-        setScoringBlocks(Array.isArray(newVersionFrom.scoring_blocks) ? newVersionFrom.scoring_blocks.map((b) => ({ ...b, criteria: (b.criteria || []).map((c) => ({ ...c, descriptors: (c.descriptors || []).map((d) => ({ ...d })) })) })) : []);
+        setScoringBlocks(Array.isArray(newVersionFrom.scoring_blocks) ? newVersionFrom.scoring_blocks.map((b) => ({
+          ...b,
+          criteria: (b.criteria || []).map((c) => ({
+            ...c,
+            descriptors: (c.descriptors || []).map((d) => ({ ...d })),
+            bonus_penalty_range: c.bonus_penalty_range ? { ...c.bonus_penalty_range } : undefined,
+            bonus_penalty_levels: (c.bonus_penalty_levels || []).map((l) => ({ ...l }))
+          }))
+        })) : []);
         setRatingConfig(newVersionFrom.rating_config ? JSON.parse(JSON.stringify(newVersionFrom.rating_config)) : null);
         setSampleFileUrl(newVersionFrom.sample_file_url || "");
         setSampleFileName(newVersionFrom.sample_file_name || "");
@@ -215,14 +231,24 @@ export default function AddTemplateDialog({ open, onOpenChange, onCreated, editT
       id: b.id,
       name: b.name.trim(),
       weight: b.weight || 0,
+      multiplier_enabled: b.multiplier_enabled === true,
+      multiplier: b.multiplier_enabled ? (b.multiplier ?? 1) : undefined,
       criteria: (b.criteria || []).filter((c) => (c.name || "").trim()).map((c) => ({
         id: c.id,
         number: c.number,
         name: c.name.trim(),
         category: c.category || "",
+        scoring_mode: c.scoring_mode || "levels",
+        single_score_min: c.scoring_mode === "single" ? c.single_score_min : undefined,
+        single_score_max: c.scoring_mode === "single" ? c.single_score_max : undefined,
         descriptors: (c.descriptors || []).map((d) => ({ level: d.level, text: d.text })),
+        multiplier_enabled: c.multiplier_enabled === true,
+        multiplier: c.multiplier_enabled ? (c.multiplier ?? 1) : undefined,
         bonus_penalty_enabled: c.bonus_penalty_enabled === true,
+        bonus_penalty_direction: c.bonus_penalty_enabled ? (c.bonus_penalty_direction || "penalty") : undefined,
         bonus_penalty_range: c.bonus_penalty_enabled ? (c.bonus_penalty_range || { min: -1, max: 1 }) : undefined,
+        bonus_penalty_step: c.bonus_penalty_enabled ? (c.bonus_penalty_step ?? 0) : undefined,
+        bonus_penalty_levels: c.bonus_penalty_enabled ? (c.bonus_penalty_levels || []) : undefined,
         bonus_penalty_guidance: c.bonus_penalty_enabled ? (c.bonus_penalty_guidance || "") : undefined
       }))
     })) : undefined;
