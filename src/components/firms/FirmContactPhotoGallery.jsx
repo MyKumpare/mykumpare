@@ -11,6 +11,7 @@ function formatContactName(c) {
 
 export default function FirmContactPhotoGallery({ firmId, onContactClick }) {
   const [zoomPhoto, setZoomPhoto] = useState(null);
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const { data: contacts = [], isFetching } = useQuery({
     queryKey: ["contacts"],
@@ -29,8 +30,17 @@ export default function FirmContactPhotoGallery({ firmId, onContactClick }) {
     [contacts, firmId]
   );
 
-  const withPhotos = firmContacts.filter((c) => c.photo_url);
-  const withoutPhotos = firmContacts.filter((c) => !c.photo_url);
+  const activeCount = firmContacts.filter((c) => (c.contact_status || "Active") === "Active").length;
+  const inactiveCount = firmContacts.length - activeCount;
+
+  const visibleContacts = useMemo(() => {
+    if (statusFilter === "active") return firmContacts.filter((c) => (c.contact_status || "Active") === "Active");
+    if (statusFilter === "inactive") return firmContacts.filter((c) => (c.contact_status || "Active") === "Inactive");
+    return firmContacts;
+  }, [firmContacts, statusFilter]);
+
+  const withPhotos = visibleContacts.filter((c) => c.photo_url);
+  const withoutPhotos = visibleContacts.filter((c) => !c.photo_url);
 
   if (isFetching && firmContacts.length === 0) {
     return (

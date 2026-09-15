@@ -475,6 +475,29 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
                   {incompleteCount} incomplete
                 </span>
               )}
+              <div className="flex items-center rounded-md border border-gray-200 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => handleStatusFilter(null)}
+                  className={`px-2 py-1 text-xs font-medium transition-colors ${activeStatusFilter === null ? "bg-indigo-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+                >
+                  All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStatusFilter("Active")}
+                  className={`px-2 py-1 text-xs font-medium transition-colors border-l border-gray-200 ${activeStatusFilter === "Active" ? "bg-indigo-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+                >
+                  Active ({contactCounts.active})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStatusFilter("Inactive")}
+                  className={`px-2 py-1 text-xs font-medium transition-colors border-l border-gray-200 ${activeStatusFilter === "Inactive" ? "bg-indigo-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+                >
+                  Inactive ({contactCounts.inactive})
+                </button>
+              </div>
             </div>
           )}
         </div>
