@@ -429,11 +429,10 @@ export default function TeamHierarchyView({ people, firmName, firmId, editable, 
   const [printing, setPrinting] = useState(false);
   const hierarchyRef = useRef(null);
 
-  // Only show active contacts in the team structure.
-  const activePeople = useMemo(
-    () => (people || []).filter((p) => p.contact_status !== "Inactive"),
-    [people],
-  );
+  // Use the contacts as passed — the parent already applies the contact-status
+  // toggle and all classification/demographic filters, so the team structure
+  // stays synchronized with the list view.
+  const activePeople = people || [];
 
   // Persist on change
   const updateCategories = (next) => {
