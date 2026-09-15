@@ -128,28 +128,39 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
     [firmContacts, filterText, filterSelected]
   );
 
+  // Scope contacts by the employee-status filter so the top toggle counts
+  // stay synchronized with the chart's All / Employees Only / Non-Employees
+  // Only selector. When the chart narrows to employees, the top toggle's
+  // total / active / inactive counts reflect only that subset.
+  const empScopedContacts = useMemo(() => {
+    if (!empFilter || empFilter === "all") return firmContacts;
+    return firmContacts.filter((c) => c.employee_status === empFilter);
+  }, [firmContacts, empFilter]);
+
   // Count breakdown by employee status for a quick at-a-glance summary.
+  // Uses the employee-status-scoped set so counts link to the chart selector.
   const contactCounts = useMemo(() => {
     let employees = 0;
     let nonEmployees = 0;
     let unclassified = 0;
     let active = 0;
     let inactive = 0;
-    for (const c of firmContacts) {
+    for (const c of empScopedContacts) {
       if (c.employee_status === "Employee") employees += 1;
       else if (c.employee_status === "Non-Employee") nonEmployees += 1;
       else unclassified += 1;
       if ((c.contact_status || "Active") === "Active") active += 1;
       else inactive += 1;
     }
-    return { total: firmContacts.length, employees, nonEmployees, unclassified, active, inactive };
-  }, [firmContacts]);
+    return { total: empScopedContacts.length, employees, nonEmployees, unclassified, active, inactive };
+  }, [empScopedContacts]);
 
   // Count contacts missing essential details (email, title) — surfaces
-  // incomplete records after scraping or manual entry.
+  // incomplete records after scraping or manual entry. Uses the same scoped
+  // set so the incomplete badge stays linked to the chart selector.
   const incompleteCount = useMemo(
-    () => firmContacts.filter((c) => getMissingEssentialFields(c).length > 0).length,
-    [firmContacts]
+    () => empScopedContacts.filter((c) => getMissingEssentialFields(c).length > 0).length,
+    [empScopedContacts]
   );
 
   // Clicking a chart legend label toggles a filter on the corresponding field

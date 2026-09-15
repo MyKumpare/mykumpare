@@ -58,6 +58,27 @@ export default function FirmContactPhotoGallery({ firmId, onContactClick }) {
     );
   }
 
+  if (visibleContacts.length === 0) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 text-xs">
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-gray-100 text-gray-700 font-medium">
+            <Images className="w-3 h-3" />
+            {firmContacts.length} contact{firmContacts.length !== 1 ? "s" : ""}
+          </span>
+          <div className="flex items-center rounded-md border border-gray-200 overflow-hidden ml-1">
+            <button type="button" onClick={() => setStatusFilter("all")} className={`px-2 py-1 text-xs font-medium transition-colors ${statusFilter === "all" ? "bg-indigo-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>All</button>
+            <button type="button" onClick={() => setStatusFilter("active")} className={`px-2 py-1 text-xs font-medium transition-colors border-l border-gray-200 ${statusFilter === "active" ? "bg-indigo-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>Active ({activeCount})</button>
+            <button type="button" onClick={() => setStatusFilter("inactive")} className={`px-2 py-1 text-xs font-medium transition-colors border-l border-gray-200 ${statusFilter === "inactive" ? "bg-indigo-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>Inactive ({inactiveCount})</button>
+          </div>
+        </div>
+        <div className="text-sm text-gray-400 italic py-8 text-center border border-dashed border-gray-200 rounded-xl">
+          No {statusFilter} contacts
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* Summary bar */}
@@ -69,11 +90,34 @@ export default function FirmContactPhotoGallery({ firmId, onContactClick }) {
         <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-indigo-100 text-indigo-700 font-medium">
           {withPhotos.length} with photo{withPhotos.length !== 1 ? "s" : ""}
         </span>
+        <div className="flex items-center rounded-md border border-gray-200 overflow-hidden ml-1">
+          <button
+            type="button"
+            onClick={() => setStatusFilter("all")}
+            className={`px-2 py-1 text-xs font-medium transition-colors ${statusFilter === "all" ? "bg-indigo-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+          >
+            All
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter("active")}
+            className={`px-2 py-1 text-xs font-medium transition-colors border-l border-gray-200 ${statusFilter === "active" ? "bg-indigo-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+          >
+            Active ({activeCount})
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter("inactive")}
+            className={`px-2 py-1 text-xs font-medium transition-colors border-l border-gray-200 ${statusFilter === "inactive" ? "bg-indigo-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+          >
+            Inactive ({inactiveCount})
+          </button>
+        </div>
       </div>
 
       {/* Photo grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        {firmContacts.map((contact) => {
+        {visibleContacts.map((contact) => {
           const isActive = (contact.contact_status || "Active") === "Active";
           const initials = [contact.first_name?.[0], contact.last_name?.[0]].filter(Boolean).join("").toUpperCase();
           return (
