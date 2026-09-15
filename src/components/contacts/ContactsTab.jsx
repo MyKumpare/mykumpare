@@ -128,6 +128,18 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
     [firmContacts, filterText, filterSelected]
   );
 
+  // Employee-status scope from the chart's All / Employees Only / Non-Employees
+  // Only toggle. Unified with the employee_status filter so the contact list
+  // follows the same scope as the chart. Declared before empScopedContacts
+  // (which depends on it) to avoid a temporal-dead-zone reference error.
+  const empFilter = useMemo(() => {
+    const sel = filterSelected.employee_status;
+    if (!sel || sel.size === 0) return "all";
+    if (sel.size === 1 && sel.has("Employee")) return "Employee";
+    if (sel.size === 1 && sel.has("Non-Employee")) return "Non-Employee";
+    return "all";
+  }, [filterSelected]);
+
   // Scope contacts by the employee-status filter so the top toggle counts
   // stay synchronized with the chart's All / Employees Only / Non-Employees
   // Only selector. When the chart narrows to employees, the top toggle's
@@ -197,17 +209,6 @@ export default function ContactsTab({ firmId, firms = [], onNavigateToOwnership,
       return next;
     });
   };
-
-  // Employee-status scope from the chart's All / Employees Only / Non-Employees
-  // Only toggle. Unified with the employee_status filter so the contact list
-  // follows the same scope as the chart.
-  const empFilter = useMemo(() => {
-    const sel = filterSelected.employee_status;
-    if (!sel || sel.size === 0) return "all";
-    if (sel.size === 1 && sel.has("Employee")) return "Employee";
-    if (sel.size === 1 && sel.has("Non-Employee")) return "Non-Employee";
-    return "all";
-  }, [filterSelected]);
 
   const handleEmpFilter = (value) => {
     setFilterSelected((prev) => {
