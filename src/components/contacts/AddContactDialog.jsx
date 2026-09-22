@@ -150,6 +150,7 @@ export default function AddContactDialog({ open, onOpenChange, editingContact, c
   const [photoZoomOpen, setPhotoZoomOpen] = useState(false);
   const [vCardPreviewOpen, setVCardPreviewOpen] = useState(false);
   const [contactCardOpen, setContactCardOpen] = useState(false);
+  const [reportGenerating, setReportGenerating] = useState(false);
   const [pendingExperienceExtract, setPendingExperienceExtract] = useState(null);
 
   const { user } = useAuth();
