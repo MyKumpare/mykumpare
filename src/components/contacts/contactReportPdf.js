@@ -343,9 +343,10 @@ export async function generateContactReportPdf({ contact, firms = [], products =
     sectionHeader("Board Memberships");
     board.forEach((b, i) => {
       if (i > 0) y += 4;
-      const orgLine = [b.organization_name, b.start_year, b.end_year].filter(Boolean).join(" — ");
-      simpleRow("Organization", orgLine);
+      if (b.organization_name) simpleRow("Organization", b.organization_name);
       if (b.role) simpleRow("Role", b.role);
+      if (b.start_year) simpleRow("Start Year", b.start_year);
+      if (b.end_year) simpleRow("End Year", b.end_year);
     });
   }
 
