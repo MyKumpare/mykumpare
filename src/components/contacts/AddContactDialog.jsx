@@ -67,6 +67,7 @@ import ContactQuickNotesPanel from "./ContactQuickNotesPanel";
 import ContactEngagementStatusTracker from "./ContactEngagementStatusTracker";
 import { useTabPreferences } from "../common/useTabPreferences";
 import TabCustomizer from "../common/TabCustomizer";
+import { generateContactReportPdf } from "./contactReportPdf";
 
 const SALUTATIONS = ["Mr.", "Ms.", "Mrs.", "Dr.", "Prof.", "Hon."];
 const SUFFIXES = ["Jr.", "Sr.", "II", "III", "IV", "Esq.", "CFA", "CPA", "MBA", "PhD", "MD"];
