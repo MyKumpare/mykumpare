@@ -349,7 +349,7 @@ export async function generateContactReportPdf({ contact, firms = [], products =
       if (b.organization_name) simpleRow("Organization", b.organization_name);
       if (b.role) simpleRow("Role", b.role);
       simpleRow("Start Year", b.start_year || "—");
-      simpleRow("End Year", b.end_year || "—");
+      simpleRow("End Year", b.end_year || "Present");
     });
   }
 
