@@ -144,17 +144,20 @@ export async function generateContactReportPdf({ contact, firms = [], products =
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
     doc.setTextColor(100, 100, 100);
-    doc.text(`${key}:`, margin, y);
+    const keyLabel = `${key}:`;
+    doc.text(keyLabel, margin, y);
+    const keyWidth = doc.getTextWidth(keyLabel);
+    const valX = margin + keyWidth + 6;
     doc.setFont("helvetica", "normal");
     doc.setTextColor(60, 60, 60);
     const valStr = String(val);
-    const valLines = doc.splitTextToSize(valStr, contentW - 100);
+    const valLines = doc.splitTextToSize(valStr, contentW - keyWidth - 6);
     valLines.forEach((line, i) => {
       if (i > 0) {
         ensureSpace(14);
         y += 14;
       }
-      doc.text(line, margin + 90, y);
+      doc.text(line, valX, y);
     });
     y += 14;
   };
