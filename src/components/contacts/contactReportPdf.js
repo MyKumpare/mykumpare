@@ -371,9 +371,6 @@ export async function generateContactReportPdf({ contact, firms = [], products =
   simpleRow("Gender", contact.gender);
   if (contact.ethnicity?.length) simpleRow("Ethnicity", contact.ethnicity.join(", "));
   simpleRow("Disability Status", contact.disability_status);
-
-  // ─── Ownership ───
-  sectionHeader("Ownership");
   simpleRow("Veteran Status", contact.veteran_status);
 
   // ─── Addresses ───
