@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import {   X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload, TrendingUp, Tag, GraduationCap, Briefcase, Activity, Package, AlertTriangle, Linkedin, Loader2, ClipboardCheck, Image as ImageIcon, Bell, MessageSquare, Mail, Clock, Newspaper, Download, Users, Eye, Award, CalendarClock, ShieldCheck } from "lucide-react";
+import {   X, Plus, Building2, Pencil, Trash2, User, Phone, MapPin, Upload, TrendingUp, Tag, GraduationCap, Briefcase, Activity, Package, AlertTriangle, Linkedin, Loader2, ClipboardCheck, Image as ImageIcon, Bell, MessageSquare, Mail, Clock, Newspaper, Download, Users, Eye, Award, CalendarClock, ShieldCheck, FileText } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
@@ -67,7 +67,7 @@ import ContactQuickNotesPanel from "./ContactQuickNotesPanel";
 import ContactEngagementStatusTracker from "./ContactEngagementStatusTracker";
 import { useTabPreferences } from "../common/useTabPreferences";
 import TabCustomizer from "../common/TabCustomizer";
-import { generateContactReportPdf } from "./contactReportPdf";
+import { handleGenerateContactReport } from "./contactReportHandler";
 
 const SALUTATIONS = ["Mr.", "Ms.", "Mrs.", "Dr.", "Prof.", "Hon."];
 const SUFFIXES = ["Jr.", "Sr.", "II", "III", "IV", "Esq.", "CFA", "CPA", "MBA", "PhD", "MD"];
@@ -1032,6 +1032,27 @@ ${plainBio.substring(0, 8000)}
     setGeneratingShortBio(false);
   };
 
+  // Generate a comprehensive contact report PDF with executive summary and all tabs.
+  const handleGenerateReport = async () => {
+    if (!editingContact) return;
+    setReportGenerating(true);
+    try {
+      await handleGenerateContactReport(editingContact, {
+        photoUrl, salutation, firstName, middleName, lastName, suffix, title, email,
+        linkedinUrl, biography, shortBiography, designations, employeeStatus, contactStatus,
+        engagementStatus, contactRole, decisionRole, influenceLevel, contactType, contactRoles,
+        contactFirmRoles, investmentTeamRoles, tags, gender, ethnicity, veteranStatus,
+        disabilityStatus, notes, firmIds, education, professionalExperience, boardMemberships,
+        phones, addresses,
+      }, firms);
+      toast({ title: "✅ Report generated", description: "Contact report PDF has been downloaded." });
+    } catch (err) {
+      toast({ title: "Report failed", description: err?.message || "Could not generate report.", variant: "destructive" });
+    } finally {
+      setReportGenerating(false);
+    }
+  };
+
   return (
     <>
     {/* Similar address confirmation */}
@@ -1107,6 +1128,16 @@ ${plainBio.substring(0, 8000)}
                   >
                     <Award className="w-3 h-3" />
                     Contact Card
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleGenerateReport}
+                    disabled={reportGenerating}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors disabled:opacity-50"
+                    title="Generate a comprehensive contact report PDF"
+                  >
+                    {reportGenerating ? <Loader2 className="w-3 h-3 animate-spin" /> : <FileText className="w-3 h-3" />}
+                    {reportGenerating ? "Generating…" : "Report"}
                   </button>
                 </DialogTitle>
                 {firmIds.length > 0 && (
