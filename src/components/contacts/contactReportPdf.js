@@ -345,8 +345,8 @@ export async function generateContactReportPdf({ contact, firms = [], products =
       if (i > 0) y += 4;
       if (b.organization_name) simpleRow("Organization", b.organization_name);
       if (b.role) simpleRow("Role", b.role);
-      if (b.start_year) simpleRow("Start Year", b.start_year);
-      if (b.end_year) simpleRow("End Year", b.end_year);
+      simpleRow("Start Year", b.start_year || "—");
+      simpleRow("End Year", b.end_year || "—");
     });
   }
 
