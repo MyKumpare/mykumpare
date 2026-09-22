@@ -14,41 +14,50 @@ export async function handleGenerateContactReport(editingContact, state, firms) 
   if (!editingContact) return;
 
   // Fetch related products where this contact is on the investment team
-  const productsRes = await base44.functions.invoke("searchAppData", {
-    action: "search",
-    entity_name: "Product",
-    filter: { "investment_team.contact_id": editingContact.id, deleted_at: null },
-    limit: 100,
-    sort: "-updated_date",
-  });
-  const relatedProducts = productsRes?.records || [];
+  let relatedProducts = [];
+  try {
+    const productsRes = await base44.functions.invoke("searchAppData", {
+      action: "search",
+      entity_name: "Product",
+      filter: { "investment_team.contact_id": editingContact.id, deleted_at: null },
+      limit: 100,
+      sort: "-updated_date",
+    });
+    relatedProducts = productsRes?.records || [];
+  } catch (e) { console.warn("Product search failed:", e); }
 
   // Fetch due diligence records where this contact is assigned as analyst
-  const ddRes = await base44.functions.invoke("searchAppData", {
-    action: "search",
-    entity_name: "DueDiligence",
-    filter: {
-      $or: [
-        { primary_analyst_contact_id: editingContact.id },
-        { secondary_analyst_contact_id: editingContact.id },
-        { assigned_contact_ids: editingContact.id },
-      ],
-      deleted_at: null,
-    },
-    limit: 50,
-    sort: "-updated_date",
-  });
-  const relatedDd = ddRes?.records || [];
+  let relatedDd = [];
+  try {
+    const ddRes = await base44.functions.invoke("searchAppData", {
+      action: "search",
+      entity_name: "DueDiligence",
+      filter: {
+        $or: [
+          { primary_analyst_contact_id: editingContact.id },
+          { secondary_analyst_contact_id: editingContact.id },
+          { assigned_contact_ids: editingContact.id },
+        ],
+        deleted_at: null,
+      },
+      limit: 50,
+      sort: "-updated_date",
+    });
+    relatedDd = ddRes?.records || [];
+  } catch (e) { console.warn("DD search failed:", e); }
 
   // Fetch recent contact activities
-  const activitiesRes = await base44.functions.invoke("searchAppData", {
-    action: "search",
-    entity_name: "ContactActivity",
-    filter: { contact_id: editingContact.id, deleted_at: null },
-    limit: 50,
-    sort: "-activity_date",
-  });
-  const relatedActivities = activitiesRes?.records || [];
+  let relatedActivities = [];
+  try {
+    const activitiesRes = await base44.functions.invoke("searchAppData", {
+      action: "search",
+      entity_name: "ContactActivity",
+      filter: { contact_id: editingContact.id, deleted_at: null },
+      limit: 50,
+      sort: "-activity_date",
+    });
+    relatedActivities = activitiesRes?.records || [];
+  } catch (e) { console.warn("Activities search failed:", e); }
 
   // Build the full contact object from current state (so unsaved edits are reflected)
   const fullContact = {
