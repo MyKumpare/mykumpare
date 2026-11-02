@@ -129,31 +129,53 @@ export default async function(req: Request): Promise<Response> {
       const entity = entitiesProxy[entity_name];
       if (!entity) return Response.json({ error: `entity '${entity_name}' not found` }, { status: 404 });
 
-      const hasFilter = filter && typeof filter === "object" && Object.keys(filter).length > 0;
       const rowLimit = limit || 100;
+
+      // Soft-deleted records must never come back from a search. Unless the
+      // caller explicitly asks for deleted records (deleted_at in the filter,
+      // or include_deleted: true for the Deleted Records views), every search
+      // is narrowed to deleted_at: null. Entities without that field reject the
+      // query, in which case we retry with the caller's own filter.
+      const callerFilter = filter && typeof filter === "object" && Object.keys(filter).length > 0 ? filter : null;
+      const guardSoftDelete =
+        !body.include_deleted &&
+        !(filter && Object.prototype.hasOwnProperty.call(filter, "deleted_at"));
+      let effectiveFilter = guardSoftDelete ? { ...(callerFilter || {}), deleted_at: null } : callerFilter;
+
+      const runQuery = (f: any) => (f ? entity.filter(f, sort, rowLimit) : entity.list(sort, rowLimit));
 
       let records: any[] = [];
       let warning: string | undefined;
       try {
-        records = hasFilter
-          ? await entity.filter(filter, sort, rowLimit)
-          : await entity.list(sort, rowLimit);
+        records = await runQuery(effectiveFilter);
       } catch (filterError) {
-        // A query the database rejects must not fail the whole request — a 500
-        // here breaks callers such as the contact report generator. Retry
-        // without the filter and match the records in code instead.
-        warning = `filter not supported: ${(filterError as Error).message}`;
-        try {
-          const all = await entity.list(sort, 500);
-          const matched = hasFilter ? all.filter((r: any) => matchesFilter(r, filter)) : all;
-          records = matched.slice(0, rowLimit);
-        } catch (listError) {
-          return Response.json({
-            entity: entity_name,
-            count: 0,
-            records: [],
-            warning: (listError as Error).message,
-          });
+        // Either the implicit soft-delete guard or the caller's filter was
+        // rejected. Retry with just the caller's filter, then fall back to
+        // matching in code — a rejected query must never 500 the request.
+        let retried = false;
+        if (guardSoftDelete && effectiveFilter && Object.prototype.hasOwnProperty.call(effectiveFilter, "deleted_at")) {
+          effectiveFilter = callerFilter;
+          try {
+            records = await runQuery(callerFilter);
+            retried = true;
+          } catch {
+            // fall through to the in-memory path below
+          }
+        }
+        if (!retried) {
+          warning = `filter not supported: ${(filterError as Error).message}`;
+          try {
+            const all = await entity.list(sort, 500);
+            const matched = effectiveFilter ? all.filter((r: any) => matchesFilter(r, effectiveFilter)) : all;
+            records = matched.slice(0, rowLimit);
+          } catch (listError) {
+            return Response.json({
+              entity: entity_name,
+              count: 0,
+              records: [],
+              warning: (listError as Error).message,
+            });
+          }
         }
       }
 
