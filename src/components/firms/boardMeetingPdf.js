@@ -318,10 +318,14 @@ export function generateBoardMeetingPdf(meeting, opts = {}) {
     doc.setFontSize(9);
     for (const [label, url] of links) {
       const lines = doc.splitTextToSize(`${label}: ${url}`, contentW);
-      ensureSpace(lines.length * 12 + 2);
       doc.setTextColor(8, 145, 178);
-      doc.textWithLink(lines, margin, y, { url });
-      y += lines.length * 12 + 2;
+      // Draw line by line — textWithLink needs a single string per call.
+      for (const line of lines) {
+        ensureSpace(12);
+        doc.textWithLink(line, margin, y, { url });
+        y += 12;
+      }
+      y += 2;
     }
   }
 
