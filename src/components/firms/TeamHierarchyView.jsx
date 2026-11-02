@@ -8,6 +8,7 @@ import { toast } from "@/components/ui/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import { inlineTeamPhotos } from "./inlineTeamPhotos";
 
 // ─── Color palette (literal strings so Tailwind purger sees them) ───
 const COLORS = {
@@ -220,7 +221,7 @@ function PersonCard({ person, colorClass, onClick, canEdit, categories, assigned
       >
         <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 overflow-hidden border-2 border-white mb-1.5">
           {person.photo_url ? (
-            <img src={person.photo_url} alt="" className="w-full h-full object-cover" onError={(e) => { e.target.style.display = "none"; }} />
+            <img src={person.photo_url} data-photo-key={person.photo_url} alt="" className="w-full h-full object-cover" onError={(e) => { e.target.style.display = "none"; }} />
           ) : null}
         </div>
         <p className="text-[11px] font-semibold text-gray-800 text-center leading-tight break-words whitespace-normal" style={{ wordBreak: "break-word" }}>
@@ -567,11 +568,13 @@ export default function TeamHierarchyView({ people, firmName, firmId, editable, 
   const handleDownload = async () => {
     if (!hierarchyRef.current) return;
     setPrinting(true);
+    let restorePhotos = () => {};
     try {
       // Temporarily exit manage mode for a clean capture
       const wasManage = manageMode;
       if (wasManage) setManageMode(false);
       await new Promise(r => setTimeout(r, 300));
+      restorePhotos = await inlineTeamPhotos(hierarchyRef.current);
       const canvas = await captureCanvas();
       const link = document.createElement("a");
       link.download = `${(firmName || "team").replace(/[^a-z0-9]/gi, "_")}_structure.png`;
@@ -582,6 +585,7 @@ export default function TeamHierarchyView({ people, firmName, firmId, editable, 
     } catch (err) {
       toast({ title: "Download failed", description: err?.message || "Could not generate image.", variant: "destructive" });
     } finally {
+      restorePhotos();
       setPrinting(false);
     }
   };
@@ -589,10 +593,12 @@ export default function TeamHierarchyView({ people, firmName, firmId, editable, 
   const handlePrint = async () => {
     if (!hierarchyRef.current) return;
     setPrinting(true);
+    let restorePhotos = () => {};
     try {
       const wasManage = manageMode;
       if (wasManage) setManageMode(false);
       await new Promise(r => setTimeout(r, 300));
+      restorePhotos = await inlineTeamPhotos(hierarchyRef.current);
       const canvas = await captureCanvas();
       const img = canvas.toDataURL("image/png");
       const win = window.open("", "_blank");
@@ -612,6 +618,7 @@ export default function TeamHierarchyView({ people, firmName, firmId, editable, 
     } catch (err) {
       toast({ title: "Print failed", description: err?.message || "Could not print.", variant: "destructive" });
     } finally {
+      restorePhotos();
       setPrinting(false);
     }
   };
