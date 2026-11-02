@@ -32,6 +32,59 @@ const ENTITY_NAMES = [
   "ZipCode", "DuplicateReview", "ContactPipelineStage", "User",
 ];
 
+// In-memory fallback matcher used when the database rejects a filter.
+// Supports the operators the app actually sends (equality, null, $in/$nin,
+// $ne, $or, $regex) plus dotted paths into nested objects/arrays.
+const getPath = (record: any, path: string): any => {
+  const parts = path.split(".");
+  const walk = (value: any, idx: number): any => {
+    if (value == null) return undefined;
+    if (idx === parts.length) return value;
+    if (Array.isArray(value)) {
+      return value
+        .map((v) => walk(v, idx))
+        .filter((v) => v !== undefined);
+    }
+    return walk(value[parts[idx]], idx + 1);
+  };
+  const result = walk(record, 0);
+  return Array.isArray(result) && result.length === 1 ? result[0] : result;
+};
+
+const equalsValue = (actual: any, expected: any): boolean => {
+  if (Array.isArray(actual)) return actual.some((v) => equalsValue(v, expected));
+  if (expected === null) return actual === null || actual === undefined || actual === "";
+  return actual === expected || String(actual) === String(expected);
+};
+
+const matchesCondition = (actual: any, condition: any): boolean => {
+  if (condition && typeof condition === "object" && !Array.isArray(condition)) {
+    return Object.entries(condition).every(([op, operand]) => {
+      if (op === "$in") return (operand as any[]).some((v) => equalsValue(actual, v));
+      if (op === "$nin") return !(operand as any[]).some((v) => equalsValue(actual, v));
+      if (op === "$ne") return !equalsValue(actual, operand);
+      if (op === "$regex") {
+        const flags = (condition as any).$options || "";
+        try {
+          return new RegExp(String(operand), flags).test(String(actual ?? ""));
+        } catch {
+          return false;
+        }
+      }
+      if (op === "$in" || op === "$options") return true;
+      return false;
+    });
+  }
+  return equalsValue(actual, condition);
+};
+
+const matchesFilter = (record: any, filter: any): boolean =>
+  Object.entries(filter || {}).every(([key, condition]) => {
+    if (key === "$or") return (condition as any[]).some((c) => matchesFilter(record, c));
+    if (key === "$and") return (condition as any[]).every((c) => matchesFilter(record, c));
+    return matchesCondition(getPath(record, key), condition);
+  });
+
 export default async function(req: Request): Promise<Response> {
   try {
     const base44 = createClientFromRequest(req);
@@ -77,16 +130,44 @@ export default async function(req: Request): Promise<Response> {
       if (!entity) return Response.json({ error: `entity '${entity_name}' not found` }, { status: 404 });
 
       const hasFilter = filter && typeof filter === "object" && Object.keys(filter).length > 0;
-      const records = hasFilter
-        ? await entity.filter(filter, sort, limit || 100)
-        : await entity.list(sort, limit || 100);
+      const rowLimit = limit || 100;
+
+      let records: any[] = [];
+      let warning: string | undefined;
+      try {
+        records = hasFilter
+          ? await entity.filter(filter, sort, rowLimit)
+          : await entity.list(sort, rowLimit);
+      } catch (filterError) {
+        // A query the database rejects must not fail the whole request — a 500
+        // here breaks callers such as the contact report generator. Retry
+        // without the filter and match the records in code instead.
+        warning = `filter not supported: ${(filterError as Error).message}`;
+        try {
+          const all = await entity.list(sort, 500);
+          const matched = hasFilter ? all.filter((r: any) => matchesFilter(r, filter)) : all;
+          records = matched.slice(0, rowLimit);
+        } catch (listError) {
+          return Response.json({
+            entity: entity_name,
+            count: 0,
+            records: [],
+            warning: (listError as Error).message,
+          });
+        }
+      }
 
       // Trim large/nested payloads so the agent context stays manageable.
       const slim = records.map((r: any) => {
         const { aum_history, stages, sub_stages, messages, ...rest } = r;
         return rest;
       });
-      return Response.json({ entity: entity_name, count: records.length, records: slim });
+      return Response.json({
+        entity: entity_name,
+        count: records.length,
+        records: slim,
+        ...(warning ? { warning } : {}),
+      });
     }
 
     return Response.json({ error: `unknown action '${action}'` }, { status: 400 });

@@ -1,6 +1,16 @@
 import { base44 } from "@/api/base44Client";
 import { generateContactReportPdf } from "./contactReportPdf";
 
+// Run one data fetch; a failure in any single source must never block the report.
+const safeFetch = async (fn, fallback) => {
+  try {
+    return await fn();
+  } catch (err) {
+    console.warn("Report data fetch failed:", err);
+    return fallback;
+  }
+};
+
 /**
  * Gather all contact data + related records and generate a comprehensive
  * PDF report with an executive summary header and all profile sections.
@@ -12,52 +22,39 @@ import { generateContactReportPdf } from "./contactReportPdf";
  */
 export async function handleGenerateContactReport(editingContact, state, firms) {
   if (!editingContact) return;
+  const contactId = editingContact.id;
 
-  // Fetch related products where this contact is on the investment team
-  let relatedProducts = [];
-  try {
-    const productsRes = await base44.functions.invoke("searchAppData", {
-      action: "search",
-      entity_name: "Product",
-      filter: { "investment_team.contact_id": editingContact.id, deleted_at: null },
-      limit: 100,
-      sort: "-updated_date",
-    });
-    relatedProducts = productsRes?.records || [];
-  } catch (e) { console.warn("Product search failed:", e); }
-
-  // Fetch due diligence records where this contact is assigned as analyst
-  let relatedDd = [];
-  try {
-    const ddRes = await base44.functions.invoke("searchAppData", {
-      action: "search",
-      entity_name: "DueDiligence",
-      filter: {
-        $or: [
-          { primary_analyst_contact_id: editingContact.id },
-          { secondary_analyst_contact_id: editingContact.id },
-          { assigned_contact_ids: editingContact.id },
-        ],
-        deleted_at: null,
-      },
-      limit: 50,
-      sort: "-updated_date",
-    });
-    relatedDd = ddRes?.records || [];
-  } catch (e) { console.warn("DD search failed:", e); }
-
-  // Fetch recent contact activities
-  let relatedActivities = [];
-  try {
-    const activitiesRes = await base44.functions.invoke("searchAppData", {
-      action: "search",
-      entity_name: "ContactActivity",
-      filter: { contact_id: editingContact.id, deleted_at: null },
-      limit: 50,
-      sort: "-activity_date",
-    });
-    relatedActivities = activitiesRes?.records || [];
-  } catch (e) { console.warn("Activities search failed:", e); }
+  // Related records are read directly from the entities, in parallel. Each one
+  // is guarded so a slow or rejected query only omits its own section.
+  const [relatedProducts, relatedDd, relatedActivities] = await Promise.all([
+    safeFetch(async () => {
+      const res = await base44.entities.Product.filter(
+        { "investment_team.contact_id": contactId, deleted_at: null },
+        { sort: "-updated_date", limit: 100 },
+      );
+      return res.items || [];
+    }, []),
+    safeFetch(async () => {
+      const res = await base44.entities.DueDiligence.filter(
+        {
+          $or: [
+            { primary_analyst_contact_id: contactId },
+            { secondary_analyst_contact_id: contactId },
+            { assigned_contact_ids: contactId },
+          ],
+        },
+        { sort: "-updated_date", limit: 50 },
+      );
+      return res.items || [];
+    }, []),
+    safeFetch(async () => {
+      const res = await base44.entities.ContactActivity.filter(
+        { contact_id: contactId },
+        { sort: "-activity_date", limit: 50 },
+      );
+      return res.items || [];
+    }, []),
+  ]);
 
   // Build the full contact object from current state (so unsaved edits are reflected)
   const fullContact = {
@@ -98,7 +95,8 @@ export async function handleGenerateContactReport(editingContact, state, firms) 
     addresses: state.addresses,
   };
 
-  const relatedFirms = (firms || []).filter((f) => state.firmIds.includes(f.id));
+  const linkedFirmIds = Array.isArray(state.firmIds) ? state.firmIds : [];
+  const relatedFirms = (firms || []).filter((f) => linkedFirmIds.includes(f.id));
 
   await generateContactReportPdf({
     contact: fullContact,
