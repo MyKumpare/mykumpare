@@ -401,16 +401,16 @@ export default async function (req: Request): Promise<Response> {
     const sr = base44.asServiceRole;
 
     if (entity_type === "contact") {
-      const contacts = await sr.entities.Contact.list("-created_date", 5000);
+      const contacts = await sr.entities.Contact.filter({ deleted_at: null }, "-created_date", 5000);
       const result = buildContactDegrees(contacts, source_id, maxDeg);
       return Response.json(result);
     } else if (entity_type === "firm") {
       const [firms, portfolios, boardMeetings, contacts, news] = await Promise.all([
-        sr.entities.Firm.list("-created_date", 5000),
-        sr.entities.Portfolio.list("-created_date", 5000),
-        sr.entities.BoardMeeting.list("-meeting_date", 5000),
-        sr.entities.Contact.list("-created_date", 5000),
-        sr.entities.FirmNews.list("-news_date", 5000),
+        sr.entities.Firm.filter({ deleted_at: null }, "-created_date", 5000),
+        sr.entities.Portfolio.filter({ deleted_at: null }, "-created_date", 5000),
+        sr.entities.BoardMeeting.filter({ deleted_at: null }, "-meeting_date", 5000),
+        sr.entities.Contact.filter({ deleted_at: null }, "-created_date", 5000),
+        sr.entities.FirmNews.filter({ deleted_at: null }, "-news_date", 5000),
       ]);
       const result = buildFirmDegrees(firms, portfolios, boardMeetings, contacts, news, source_id, maxDeg);
       return Response.json(result);

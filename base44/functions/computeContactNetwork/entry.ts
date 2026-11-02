@@ -32,7 +32,7 @@ export default async function (req: Request): Promise<Response> {
     const body = await req.json().catch(() => ({}));
     const sr = base44.asServiceRole;
 
-    const contacts: ContactRecord[] = await sr.entities.Contact.list("-created_date", 5000);
+    const contacts: ContactRecord[] = await sr.entities.Contact.filter({ deleted_at: null }, "-created_date", 5000);
     const network = buildContactNetwork(contacts);
 
     const { activeContacts, contactMap, edges, adjacency, centrality, sortedByImportance } = network;

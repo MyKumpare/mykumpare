@@ -25,7 +25,7 @@ export default async function(req: Request): Promise<Response> {
     }
 
     const sr = base44.asServiceRole;
-    const contacts = await sr.entities.Contact.list('-created_date', 5000);
+    const contacts = await sr.entities.Contact.filter({ deleted_at: null }, '-created_date', 5000);
 
     const network = buildContactNetwork(contacts);
     const c = network.contactMap.get(contactId);

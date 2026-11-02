@@ -61,7 +61,7 @@ export default async function(req: Request): Promise<Response> {
 
     // 3. Fetch all products with the same asset class
     const similarProductsRaw = await base44.entities.Product.filter(
-      { asset_class: assetClass },
+      { asset_class: assetClass, deleted_at: null },
       '-created_date',
       500
     );
